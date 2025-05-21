@@ -1,9 +1,18 @@
-from .utility import cut
+import pygame
+# the first time utility is imported its namespace is initialized, every subsequent import
+# anywhere else reuses the namespace - intialization happens only once
+from . import utility
+from .utility import cut, file_resource
 
 class GuiManager:
     def __init__(self, surface):
         # surface to draw the widget to
         self.surface = surface
+        # set the screen in utility
+        utility.screen = surface
+        # set the default font for utility functions
+        utility.font_size = 16
+        utility.font_object = pygame.font.Font(file_resource('fonts', 'Ubuntu', 'Ubuntu-Medium.ttf'), utility.font_size)
         # widgets to be managed: key:value -> group_name:list_of_widgets
         self.widgets = {}
         # global widgets which are always shown and processed

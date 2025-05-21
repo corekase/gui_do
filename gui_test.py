@@ -2,9 +2,6 @@ import os
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-# the first time utility is imported its namespace is initialized, every subsequent import
-# anywhere else reuses the namespace - intialization happens only once
-from gui import utility
 from gui.guimanager import GuiManager
 from gui.frame import Frame
 from gui.label import Label
@@ -29,11 +26,8 @@ class Main:
         pygame.display.set_caption('Test')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
-        # set the screen in utility
-        utility.screen = self.screen
-        # set the default font for utility functions
-        utility.font_size = 16
-        utility.font_object = pygame.font.Font(file_resource('fonts', 'Ubuntu', 'Ubuntu-Medium.ttf'), utility.font_size)
+        # create a gui manager
+        self.gui_manager = GuiManager(self.screen)
         # dimensions of the main frame for gui objects
         width = 200
         height = 110
@@ -42,9 +36,7 @@ class Main:
         y = centre(self.screen.get_rect().height, height)
         # create a rect for those values
         frame = Rect(x, y, width, height)
-        # create a gui manager
-        self.gui_manager = GuiManager(self.screen)
-        # add the frame to it
+        # create and add a frame to the menu context
         self.gui_manager.add_widget('menu', Frame('frame', frame))
         # and a label
         label = Label((0, 0), 'gui_do Demo!')
@@ -54,7 +46,7 @@ class Main:
         # a button
         self.gui_manager.add_widget('menu', Button('Button_1',
                         Rect(x + 10, y + 45, width - 20, 20), 'button one'))
-        # another button
+        # and another button
         self.gui_manager.add_widget('menu', Button('Button_2',
                         Rect(x + 10, y + 70, width - 20, 20), 'button two'))
         # switch to the 'menu' context
