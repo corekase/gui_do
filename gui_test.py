@@ -1,0 +1,127 @@
+import os
+import pygame
+from pygame import Rect, FULLSCREEN, SCALED, QUIT
+from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
+# the first time utility is imported its namespace is initialized, every subsequent import
+# anywhere else reuses the namespace - intialization happens only once
+from gui import utility
+from gui.guimanager import GuiManager
+from gui.frame import Frame
+from gui.label import Label
+from gui.button import Button
+from gui.utility import image_alpha, cut, file_resource, centre
+
+if os.name == 'nt':
+    # fixes graphical scaling issues with Windows
+    # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080
+    # with FULLSCREEN and SCALED flags and Windows OS system scaling set to 150%
+    # without setting DPIAware below
+    import ctypes
+    ctypes.windll.user32.SetProcessDPIAware()
+
+class Main:
+    def __init__(self):
+        # initialize pygame
+        pygame.init()
+        # create main window surface, if not using vsync adjust fps in run()
+        self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED, vsync=1)
+        # set window caption
+        pygame.display.set_caption('Test')
+        # hide system mouse pointer
+        pygame.mouse.set_visible(False)
+        # set the screen in utility
+        utility.screen = self.screen
+        # set the default font for utility functions
+        utility.font_size = 16
+        utility.font_object = pygame.font.Font(file_resource('fonts', 'Ubuntu', 'Ubuntu-Medium.ttf'), utility.font_size)
+        # dimensions of the main frame for gui objects
+        width = 200
+        height = 110
+        # get centred pixel coordinates for that
+        x = centre(self.screen.get_rect().width, width)
+        y = centre(self.screen.get_rect().height, height)
+        # create a rect for those values
+        frame = Rect(x, y, width, height)
+        # create a gui manager
+        self.gui_manager = GuiManager(self.screen)
+        # add the frame to it
+        self.gui_manager.add_widget('menu', Frame('frame', frame))
+        # and a label
+        label = Label((0, 0), 'gui_do Demo!')
+        label.rect.x = frame.x + centre(frame.width, label.rect.width)
+        label.rect.y = y + 11
+        self.gui_manager.add_widget('menu', label)
+        # a button
+        self.gui_manager.add_widget('menu', Button('Button_1',
+                        Rect(x + 10, y + 45, width - 20, 20), 'button one'))
+        # another button
+        self.gui_manager.add_widget('menu', Button('Button_2',
+                        Rect(x + 10, y + 70, width - 20, 20), 'button two'))
+        # switch to the 'menu' context
+        self.gui_manager.switch_context('menu')
+        # load an image to be used for a cursor
+        self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
+        # read initial mouse position
+        self.mouse_position = pygame.mouse.get_pos()
+        # set a background image
+        self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
+
+    def run(self):
+        # fps to maintain, if 0 then unlimited
+        fps = 0
+        # a pygame clock to control the fps
+        clock = pygame.time.Clock()
+        while True:
+            # handle events
+            signal = self.handle_events()
+            # break on any event
+            if signal != None:
+                break
+            # draw gui widgets
+            self.gui_manager.draw_widgets()
+            # draw mouse graphic
+            mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
+            mouse_bitmap = cut(self.screen, mouse_rect)
+            self.screen.blit(self.cursor_image, mouse_rect)
+            # tick to desired frame-rate
+            clock.tick(fps)
+            # buffer to the screen
+            pygame.display.flip()
+            # undo mouse graphic draw
+            self.screen.blit(mouse_bitmap, mouse_rect)
+            # undraw gui widgets
+            self.gui_manager.undraw_widgets()
+        # release resources
+        pygame.quit()
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            # if the mouse moves update the internal position
+            if event.type == MOUSEMOTION:
+                self.mouse_position = event.pos
+            # check if any gui objects handle the event
+            gui_event = self.gui_manager.handle_event(event)
+            # if gui_event isn't None then there is a gui event
+            if gui_event != None:
+                # handle gui events
+                if gui_event == 'Button_1':
+                    # Button_1 was clicked
+                    return 'B1'
+                elif gui_event == 'Button_2':
+                    # Button_2 was clicked
+                    return 'B2'
+            else:
+                # handle window close widget
+                if event.type == QUIT:
+                    return 'exit'
+                # handle key presses
+                elif event.type == KEYDOWN:
+                    # handle escape key
+                    if event.key == K_ESCAPE:
+                        return 'exit'
+        # no events were handled
+        return None
+
+if __name__ == '__main__':
+    # Launch program
+    Main().run()
