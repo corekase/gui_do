@@ -41,5 +41,7 @@ class PushButtonGroup(Button):
         # mark this item armed
         self.state = State.ARMED
 
+    # -> To-do: add a method that returns which pushbutton is currently pressed
+
     def draw(self):
         super().draw()
