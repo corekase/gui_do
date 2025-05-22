@@ -61,10 +61,10 @@ class Main:
         self.gui_manager.add_widget(main, pb3)
         # create a vertical scrollbar
         sb1 = Scrollbar('S1', Rect(x + (button_width * 2) + 30, y + 45, 20, 140), False)
-        sb1.set(100, 0, 20)
+        sb1.set(100, 0, 30)
         # create a horizontal scrollbar
         sb2 = Scrollbar('S1', Rect(x + 10, y + height - 35, 210, 20), True)
-        sb2.set(100, 0, 20)
+        sb2.set(100, 0, 30)
         # add the scrollbars in
         self.gui_manager.add_widget(main, sb1)
         self.gui_manager.add_widget(main, sb2)
