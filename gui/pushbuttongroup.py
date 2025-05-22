@@ -43,6 +43,7 @@ class PushButtonGroup(Button):
             item.state = State.IDLE
         # mark this item armed
         self.state = State.ARMED
+        # make this id the currently selected one
         PushButtonGroup.selections[self.group] = self.id
 
     def read(self):
