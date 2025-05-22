@@ -2,10 +2,7 @@ import os
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-from gui.guimanager import GuiManager
-from gui.frame import Frame
-from gui.label import Label
-from gui.button import Button
+from gui import GuiManager, Frame, Label, Button
 from gui.utility import image_alpha, cut, file_resource, centre
 
 if os.name == 'nt':
