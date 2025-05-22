@@ -20,7 +20,7 @@ class Main:
         # create main window surface, if not using vsync adjust fps in run()
         self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED, vsync=1)
         # set window caption
-        pygame.display.set_caption('Test')
+        pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         # create a gui manager
@@ -41,7 +41,7 @@ class Main:
         # create and add a frame to the main context
         self.gui_manager.add_widget(main, Frame('frame', frame))
         # and a label
-        label = Label((0, 0), 'gui_do Demo!')
+        label = Label((0, 0), 'gui_do')
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y + 11
         self.gui_manager.add_widget(main, label)
