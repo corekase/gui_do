@@ -3,7 +3,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
-from gui import file_resource, image_alpha, cut, centre
+from gui import file_resource, image_alpha, cut, centre, render_text
 
 if os.name == 'nt':
     # fixes graphical scaling issues with Windows
@@ -35,6 +35,7 @@ class Main:
         # get centred pixel coordinates for that
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
+        self.x, self.y = x, y
         # create a rect for those values
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
@@ -52,10 +53,10 @@ class Main:
         self.gui_manager.add_widget(main, Button('Button_3',
                         Rect(x + 10, y + 95, button_width, button_height), 'Button'))
         # add in a pushbutton group
-        pb1 = PushButtonGroup('P1', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1')
-        pb2 = PushButtonGroup('P2', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1')
-        pb3 = PushButtonGroup('P3', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1')
-        self.gui_manager.add_widget(main, pb1)
+        self.pb1 = PushButtonGroup('One', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1')
+        pb2 = PushButtonGroup('Two', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1')
+        pb3 = PushButtonGroup('Three', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1')
+        self.gui_manager.add_widget(main, self.pb1)
         self.gui_manager.add_widget(main, pb2)
         self.gui_manager.add_widget(main, pb3)
         # create a vertical scrollbar
@@ -89,6 +90,9 @@ class Main:
             self.handle_events()
             # draw gui widgets
             self.gui_manager.draw_widgets()
+            # draw current pushbutton
+            bitmap = render_text(f'Selected: {self.pb1.read()}')
+            self.screen.blit(bitmap, (self.x + 10, self.y + 120))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)
