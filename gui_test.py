@@ -2,8 +2,7 @@ import os
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-from gui import GuiManager, Frame, Label, Button
-from gui.utility import image_alpha, cut, file_resource, centre
+from gui import GuiManager, Frame, Label, Button, image_alpha, cut, file_resource, centre
 
 if os.name == 'nt':
     # fixes graphical scaling issues with Windows
