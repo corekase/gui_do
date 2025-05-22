@@ -3,10 +3,9 @@ from .frame import State
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 
 class PushButtonGroup(Button):
-    # dictionary of key:value -> key is the name of the group. value is a list of
-    # PushButtonGroup objects
+    # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}
-    # dictionary of which id is selected for each group
+    # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
 
     def __init__(self, id, rect, text, group):
@@ -40,15 +39,15 @@ class PushButtonGroup(Button):
         return False
 
     def select(self):
-        # clear all other armed states in the group
+        # clear armed state for previous object
         PushButtonGroup.selections[self.group].state = State.IDLE
-        # mark this item armed
+        # mark this object armed
         self.state = State.ARMED
-        # make this id the currently selected one
+        # make this object the currently armed one
         PushButtonGroup.selections[self.group] = self
 
     def read(self):
-        # return the id of the active pushbutton
+        # return the id of the armed pushbutton
         return PushButtonGroup.selections[self.group].id
 
     def draw(self):
