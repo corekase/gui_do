@@ -6,8 +6,6 @@ class GuiManager:
     def __init__(self, surface):
         # surface to draw the widget to
         self.surface = surface
-        # set the screen in utility
-        utility.screen = surface
         # set the default font for utility functions
         utility.font_size = 16
         utility.font_object = pygame.font.Font(file_resource('fonts', 'Ubuntu', 'Ubuntu-Medium.ttf'), utility.font_size)

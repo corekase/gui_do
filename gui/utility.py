@@ -6,19 +6,19 @@ import pygame
 from pygame import Rect
 from .widget import colours
 
-# these are filled in during the initializer of Main()
+# -> To-do: make a font manager that stores font faces and sizes in a dictionary that
+#           gui widgets can select and use
 font_size = None
 font_object = None
-screen = None
-# filled in by Main() is the tile sheet tiles are cut out of
+# -> To-do: make tile_images a dictionary of dictionaries to add support for multiple
+#           tile image sets while still working within as a static module.  The first dictionary
+#           is names for keys, and each names value is another dictionary of tile images.
+#           Each named set stores a variable tile size and they do not have to be the same.
+# tile sheet tiles are cut out of
 tiles = None
-# graphic size of the tile, squared
+# graphic size of tiles, squared
 tile_size = 32
 # dictionary to cache images so one surface for one tile position and reused on later calls
-#   -> To-do: make tile_images a dictionary of dictionaries to add support for multiple
-#             tile image sets while still working within as a static module.  The first dictionary
-#             is names for keys, and each names value is another dictionary of tile images.
-#             Each named set stores a variable tile size and they do not have to be the same.
 tile_images = {}
 
 def cut(surface, rect, flags = 0):
