@@ -2,7 +2,7 @@ import os
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-from gui import GuiManager, Frame, Label, Button
+from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
 from gui import file_resource, image_alpha, cut, centre
 
 if os.name == 'nt':
@@ -26,8 +26,10 @@ class Main:
         # create a gui manager
         self.gui_manager = GuiManager(self.screen)
         # dimensions of the main frame for gui objects
-        width = 200
-        height = 110
+        width = 260
+        height = 200
+        button_width = 100
+        button_height = 20
         # name of the context
         main = 'main'
         # get centred pixel coordinates for that
@@ -42,12 +44,30 @@ class Main:
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y + 11
         self.gui_manager.add_widget(main, label)
-        # a button
+        # add buttons
         self.gui_manager.add_widget(main, Button('Button_1',
-                        Rect(x + 10, y + 45, width - 20, 20), 'button one'))
-        # and another button
+                        Rect(x + 10, y + 45, button_width, button_height), 'Exit'))
         self.gui_manager.add_widget(main, Button('Button_2',
-                        Rect(x + 10, y + 70, width - 20, 20), 'button two'))
+                        Rect(x + 10, y + 70, button_width, button_height), 'Button'))
+        self.gui_manager.add_widget(main, Button('Button_3',
+                        Rect(x + 10, y + 95, button_width, button_height), 'Button'))
+        # add in a pushbutton group
+        pb1 = PushButtonGroup('P1', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1')
+        pb2 = PushButtonGroup('P2', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1')
+        pb3 = PushButtonGroup('P3', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1')
+        pb1.select()
+        self.gui_manager.add_widget(main, pb1)
+        self.gui_manager.add_widget(main, pb2)
+        self.gui_manager.add_widget(main, pb3)
+        # create a vertical scrollbar
+        sb1 = Scrollbar('S1', Rect(x + (button_width * 2) + 30, y + 45, 20, 140), False)
+        sb1.set(100, 0, 20)
+        # create a horizontal scrollbar
+        sb2 = Scrollbar('S1', Rect(x + 10, y + height - 35, 210, 20), True)
+        sb2.set(100, 0, 20)
+        # add the scrollbars in
+        self.gui_manager.add_widget(main, sb1)
+        self.gui_manager.add_widget(main, sb2)
         # switch to the 'main' context
         self.gui_manager.switch_context(main)
         # load an image to be used for a cursor
@@ -98,10 +118,8 @@ class Main:
                 # handle gui events
                 if gui_event == 'Button_1':
                     # Button_1 was clicked
-                    pass
-                elif gui_event == 'Button_2':
-                    # Button_2 was clicked
-                    pass
+                    self.running = False
+                # elif other gui objects
             else:
                 # handle window close widget or alt-f4 keypress
                 if event.type == QUIT:
