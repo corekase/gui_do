@@ -15,6 +15,10 @@ tiles = None
 # graphic size of the tile, squared
 tile_size = 32
 # dictionary to cache images so one surface for one tile position and reused on later calls
+#   -> To-do: make tile_images a dictionary of dictionaries to add support for multiple
+#             tile image sets while still working within as a static module.  The first dictionary
+#             is names for keys, and each names value is another dictionary of tile images.
+#             Each named set stores a variable tile size and they do not have to be the same.
 tile_images = {}
 
 def cut(surface, rect, flags = 0):
