@@ -6,15 +6,15 @@ class PushButtonGroup(Button):
     # dictionary of key:value -> key is the name of the group. value is a list of
     # PushButtonGroup objects
     groups = {}
-    # group for which button is pushed
-    buttons = {}
+    # dictionary of which id is selected for each group
+    selections = {}
 
     def __init__(self, id, rect, text, group):
         super().__init__(id, rect, text)
         self.group = group
         if group not in PushButtonGroup.groups.keys():
             PushButtonGroup.groups[group] = []
-            PushButtonGroup.buttons[group] = None
+            PushButtonGroup.selections[group] = None
         PushButtonGroup.groups[group].append(self)
 
     def handle_event(self, event):
@@ -43,11 +43,11 @@ class PushButtonGroup(Button):
             item.state = State.IDLE
         # mark this item armed
         self.state = State.ARMED
-        PushButtonGroup.buttons[self.group] = self.id
+        PushButtonGroup.selections[self.group] = self.id
 
     def read(self):
         # return the id of the active pushbutton
-        return PushButtonGroup.buttons[self.group]
+        return PushButtonGroup.selections[self.group]
 
     def draw(self):
         super().draw()
