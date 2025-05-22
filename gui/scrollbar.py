@@ -40,6 +40,10 @@ class Scrollbar(Frame):
             x, y = x - self.graphic_rect.x, y - self.graphic_rect.y
             # test bounds for dragging
             escape = False
+            # -> To-do: if a horizontal bar adjust mouse vertical postion if outside of vertical bounds
+            #           for the widget. Do the same for vertical bar and horizontal outside of horizontal bounds
+            #           "keeps the mouse inside the widget while dragging".  "adjust" is pygame.mouse.set_pos()
+            #           because set_pos is used the event system shouldn't need any other changes
             if self.horizontal:
                 if x < 0 or x > self.graphic_rect.width:
                     escape = True
