@@ -2,7 +2,8 @@ import os
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-from gui import GuiManager, Frame, Label, Button, image_alpha, cut, file_resource, centre
+from gui import GuiManager, Frame, Label, Button
+from gui import file_resource, image_alpha, cut, centre
 
 if os.name == 'nt':
     # fixes graphical scaling issues with Windows
@@ -27,26 +28,28 @@ class Main:
         # dimensions of the main frame for gui objects
         width = 200
         height = 110
+        # name of the context
+        main = 'main'
         # get centred pixel coordinates for that
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
         # create a rect for those values
         frame = Rect(x, y, width, height)
-        # create and add a frame to the menu context
-        self.gui_manager.add_widget('menu', Frame('frame', frame))
+        # create and add a frame to the main context
+        self.gui_manager.add_widget(main, Frame('frame', frame))
         # and a label
         label = Label((0, 0), 'gui_do Demo!')
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y + 11
-        self.gui_manager.add_widget('menu', label)
+        self.gui_manager.add_widget(main, label)
         # a button
-        self.gui_manager.add_widget('menu', Button('Button_1',
+        self.gui_manager.add_widget(main, Button('Button_1',
                         Rect(x + 10, y + 45, width - 20, 20), 'button one'))
         # and another button
-        self.gui_manager.add_widget('menu', Button('Button_2',
+        self.gui_manager.add_widget(main, Button('Button_2',
                         Rect(x + 10, y + 70, width - 20, 20), 'button two'))
-        # switch to the 'menu' context
-        self.gui_manager.switch_context('menu')
+        # switch to the 'main' context
+        self.gui_manager.switch_context(main)
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position
