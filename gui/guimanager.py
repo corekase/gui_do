@@ -1,6 +1,4 @@
 import pygame
-# the first time utility is imported its namespace is initialized, every subsequent import
-# anywhere else reuses the namespace - intialization happens only once
 from . import utility
 from .utility import cut, file_resource
 
