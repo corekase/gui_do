@@ -13,8 +13,10 @@ class PushButtonGroup(Button):
         super().__init__(id, rect, text)
         self.group = group
         if group not in PushButtonGroup.groups.keys():
+            # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
-            PushButtonGroup.selections[group] = None
+            PushButtonGroup.selections[group] = self
+            self.select()
         PushButtonGroup.groups[group].append(self)
 
     def handle_event(self, event):
@@ -39,16 +41,15 @@ class PushButtonGroup(Button):
 
     def select(self):
         # clear all other armed states in the group
-        for item in PushButtonGroup.groups[self.group]:
-            item.state = State.IDLE
+        PushButtonGroup.selections[self.group].state = State.IDLE
         # mark this item armed
         self.state = State.ARMED
         # make this id the currently selected one
-        PushButtonGroup.selections[self.group] = self.id
+        PushButtonGroup.selections[self.group] = self
 
     def read(self):
         # return the id of the active pushbutton
-        return PushButtonGroup.selections[self.group]
+        return PushButtonGroup.selections[self.group].id
 
     def draw(self):
         super().draw()

@@ -55,7 +55,6 @@ class Main:
         pb1 = PushButtonGroup('P1', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1')
         pb2 = PushButtonGroup('P2', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1')
         pb3 = PushButtonGroup('P3', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1')
-        pb1.select()
         self.gui_manager.add_widget(main, pb1)
         self.gui_manager.add_widget(main, pb2)
         self.gui_manager.add_widget(main, pb3)
