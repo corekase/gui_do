@@ -57,18 +57,18 @@ class Main:
         self.mouse_position = pygame.mouse.get_pos()
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
+        # set running flag
+        self.running = True
 
     def run(self):
         # fps to maintain, if 0 then unlimited
         fps = 0
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        while True:
+
+        while self.running:
             # handle events
-            signal = self.handle_events()
-            # break on any event
-            if signal != None:
-                break
+            self.handle_events()
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw mouse graphic
@@ -87,32 +87,31 @@ class Main:
         pygame.quit()
 
     def handle_events(self):
+        # handle the pygame event queue
         for event in pygame.event.get():
             # if the mouse moves update the internal position
             if event.type == MOUSEMOTION:
                 self.mouse_position = event.pos
             # check if any gui objects handle the event
             gui_event = self.gui_manager.handle_event(event)
-            # if gui_event isn't None then there is a gui event
+            # if gui_event isn't None then it is a gui event
             if gui_event != None:
                 # handle gui events
                 if gui_event == 'Button_1':
                     # Button_1 was clicked
-                    return 'B1'
+                    pass
                 elif gui_event == 'Button_2':
                     # Button_2 was clicked
-                    return 'B2'
+                    pass
             else:
-                # handle window close widget
+                # handle window close widget or alt-f4 keypress
                 if event.type == QUIT:
-                    return 'exit'
+                    self.running = False
                 # handle key presses
                 elif event.type == KEYDOWN:
                     # handle escape key
                     if event.key == K_ESCAPE:
-                        return 'exit'
-        # no events were handled
-        return None
+                        self.running = False
 
 if __name__ == '__main__':
     # Launch program
