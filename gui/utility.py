@@ -54,6 +54,11 @@ def file_resource(*names):
     # return an os-independent filename inside data path
     return os.path.join('data', *names)
 
+# -> To-do: make padding functions for buttons. uses set_font state, make a "get_button_height" for the text
+#           size of that font, make a "grid" that takes x and y in button layout coordinates and returns
+#           graphical x and y taking into account button width and height also based on current set_font
+#    then, grid layouts of buttons are simple
+
 def padding(line, size):
     # text layout helper function
     # return = base + line height + spacer size
