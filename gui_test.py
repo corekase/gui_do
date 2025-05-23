@@ -69,6 +69,11 @@ class Main:
         self.mouse_position = pygame.mouse.get_pos()
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
+        # draw an outline frame
+        x, y, w, h = frame
+        outline = Frame('None', Rect(x - 10, y - 10, w + 20, h + 20))
+        outline.surface = self.screen
+        outline.draw()
         # set running flag
         self.running = True
 
