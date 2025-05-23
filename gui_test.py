@@ -41,11 +41,11 @@ class Main:
         # create and add a frame to the main context
         self.gui_manager.add_widget(main, Frame('frame', frame))
         # and a label
-        set_font('big')
+        set_font('biggest')
         label = Label((0, 0), 'gui_do')
         set_font('normal')
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
-        label.rect.y = y + 2
+        label.rect.y = y
         self.gui_manager.add_widget(main, label)
         # add buttons
         self.gui_manager.add_widget(main, Button('Button_1',
@@ -86,7 +86,8 @@ class Main:
         fps = 0
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-
+        # make the bigger font entry the default for new renders
+        set_font('bigger')
         while self.running:
             # handle events
             self.handle_events()
