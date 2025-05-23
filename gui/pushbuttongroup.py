@@ -37,6 +37,8 @@ class PushButtonGroup(Button):
         PushButtonGroup.groups[group].append(self)
 
     def make_radio_bitmap(self, text, col1, col2, highlight=False):
+        # -> To-do: make utility functions that cache and reuse just the graphical part of the
+        #           radio bitmap.  That is then combined with text in the bitmaps here
         text_bitmap = render_text(' ' + text, highlight)
         _, _, idle_width, idle_height = text_bitmap.get_rect()
         bitmap = pygame.surface.Surface((idle_height + idle_width, idle_height), pygame.SRCALPHA)
