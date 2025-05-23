@@ -3,7 +3,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
-from gui import file_resource, image_alpha, cut, centre, render_text
+from gui import file_resource, image_alpha, cut, centre, render_text, set_font
 
 if os.name == 'nt':
     # fixes graphical scaling issues with Windows
@@ -41,9 +41,11 @@ class Main:
         # create and add a frame to the main context
         self.gui_manager.add_widget(main, Frame('frame', frame))
         # and a label
+        set_font('big')
         label = Label((0, 0), 'gui_do')
+        set_font('normal')
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
-        label.rect.y = y + 11
+        label.rect.y = y + 2
         self.gui_manager.add_widget(main, label)
         # add buttons
         self.gui_manager.add_widget(main, Button('Button_1',
