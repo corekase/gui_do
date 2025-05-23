@@ -1,3 +1,5 @@
-The only required dependency for this program is pygame.
+This is a reusable gui for pygame programs.
 
-This is a reusable gui library for pygame programs.
+The only required dependency for the gui package is pygame.
+
+Website: https://github.com/corekase/gui_do
