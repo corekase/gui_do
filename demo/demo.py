@@ -1,7 +1,8 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
-from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
+from gui import GuiManager, PushButtonKind
+from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 from gui import file_resource, image_alpha, cut, centre, set_font, gprint
 
 class Demo:
@@ -46,9 +47,9 @@ class Demo:
         self.gui_manager.add_widget(main, Button('Button_3',
                         Rect(x + 10, y + 95, button_width, button_height), 'Button'))
         # add in a pushbutton group
-        self.pb1 = PushButtonGroup('One', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1')
-        pb2 = PushButtonGroup('Two', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1')
-        pb3 = PushButtonGroup('Three', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1')
+        self.pb1 = PushButtonGroup('One', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1', PushButtonKind.RADIO)
+        pb2 = PushButtonGroup('Two', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1', PushButtonKind.RADIO)
+        pb3 = PushButtonGroup('Three', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1', PushButtonKind.RADIO)
         self.gui_manager.add_widget(main, self.pb1)
         self.gui_manager.add_widget(main, pb2)
         self.gui_manager.add_widget(main, pb3)
