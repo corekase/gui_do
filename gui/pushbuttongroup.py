@@ -63,7 +63,7 @@ class PushButtonGroup(Button):
     def make_polygon(self, position, radius):
         points = []
         x, y = position
-        for point in range(0, 360, ):
+        for point in range(0, 360, 1):
             x1 = round(radius * cos(radians(point)))
             y1 = round(radius * sin(radians(point)))
             points += [(x + x1, y + y1)]
