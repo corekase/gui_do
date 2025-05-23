@@ -2,9 +2,9 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
-from gui import file_resource, image_alpha, cut, centre, render_text, set_font, gprint
+from gui import file_resource, image_alpha, cut, centre, set_font, gprint
 
-class Main:
+class Demo:
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -130,7 +130,3 @@ class Main:
                     # handle escape key
                     if event.key == K_ESCAPE:
                         self.running = False
-
-if __name__ == '__main__':
-    # Launch program
-    Main().run()
