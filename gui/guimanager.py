@@ -1,16 +1,14 @@
-import pygame
-from . import utility
-from .utility import cut, set_font
+from .utility import cut, load_font, set_font
 
 class GuiManager:
     def __init__(self, surface):
         # surface to draw the widget to
         self.surface = surface
         # load fonts for utility functions
-        utility.load_font('normal', 'Ubuntu-Medium.ttf', 16)
-        utility.load_font('bigger', 'Ubuntu-Medium.ttf', 24)
-        utility.load_font('biggest', 'Ubuntu-Medium.ttf', 36)
-        # set a default font
+        load_font('normal', 'Ubuntu-Medium.ttf', 16)
+        load_font('bigger', 'Ubuntu-Medium.ttf', 24)
+        load_font('biggest', 'Ubuntu-Medium.ttf', 36)
+        # set default font
         set_font('normal')
         # widgets to be managed: key:value -> group_name:list_of_widgets
         self.widgets = {}
