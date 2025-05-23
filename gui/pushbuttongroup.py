@@ -93,7 +93,11 @@ class PushButtonGroup(Button):
         if self.kind == PushButtonKind.BOX:
             return self.rect.collidepoint(position)
         elif self.kind == PushButtonKind.RADIO:
-            return self.rect.collidepoint(position)
+            collided = self.rect.collidepoint(position)
+            if collided:
+                if (position[0] - self.rect.left) < self.idle.get_rect().width:
+                    return True
+            return False
         elif self.kind == PushButtonKind.CHECK:
             return self.rect.collidepoint(position)
 
