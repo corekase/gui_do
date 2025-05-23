@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, Frame, Label, Button, PushButtonGroup, Scrollbar
-from gui import file_resource, image_alpha, cut, centre, render_text, set_font
+from gui import file_resource, image_alpha, cut, centre, render_text, set_font, gprint
 
 class Main:
     def __init__(self):
@@ -90,8 +90,7 @@ class Main:
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            bitmap = render_text(f'Selected: {self.pb1.read()}')
-            self.screen.blit(bitmap, (self.x + 10, self.y + 120))
+            gprint(self.screen, f'Selected: {self.pb1.read()}', (self.x + 10, self.y + 120))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)

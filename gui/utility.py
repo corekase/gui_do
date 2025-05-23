@@ -18,6 +18,10 @@ def set_font(name):
     global font_object
     font_object = fonts[name]
 
+def gprint(screen, text, position):
+    bitmap = render_text(text)
+    screen.blit(bitmap, position)
+
 # -> To-do: make tile_images a dictionary of dictionaries to add support for multiple
 #           tile image sets while still working within as a static module.  The first dictionary
 #           is names for keys, and each names value is another dictionary of tile images.
