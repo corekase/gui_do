@@ -26,8 +26,6 @@ class Demo:
         # get centred pixel coordinates for that
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
-        # origin for gprint's
-        self.x, self.y = x, y
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # create a rect for the frame for the display area
@@ -90,15 +88,17 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
-        set_font('normal')
+        set_font('bigger')
+        base_x1, base_y1, _, _ = gridded(1, 3)
+        base_x2, base_y2, _, _ = gridded(2, 3)
         while self.running:
             # handle events
             self.handle_events()
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            gprint(self.screen, f'Button group: {self.pb1.read()}', (self.x + 10, self.y + 120))
-            gprint(self.screen, f'Radio group: {self.pb4.read()}', (self.x + 10, self.y + 135))
+            gprint(self.screen, f'Button group: {self.pb1.read()}', (base_x1, base_y1))
+            gprint(self.screen, f'Radio group: {self.pb4.read()}', (base_x2, base_y2))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)
