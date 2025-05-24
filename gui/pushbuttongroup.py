@@ -22,11 +22,11 @@ class PushButtonGroup(Button):
         self.kind = kind
         if self.kind == PushButtonKind.RADIO:
             # idle radio
-            self.idle_bitmap = self.make_radio_button(text, colours['medium'], colours['full'])
+            self.idle_bitmap = self.make_radio_button(text, colours['light'], colours['dark'])
             # hover radio
-            self.hover_bitmap = self.make_radio_button(text, colours['full'], colours['dark'], True)
+            self.hover_bitmap = self.make_radio_button(text, colours['full'], colours['dark'])
             # armed radio
-            self.armed_bitmap = self.make_radio_button(text, colours['full'], colours['dark'], True)
+            self.armed_bitmap = self.make_radio_button(text, colours['full'], colours['dark'])
             # adjust vertical centre
             self.adjust_rect(self.idle_bitmap)
         if group not in PushButtonGroup.groups.keys():
