@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
 from gui import Label, Button, PushButtonGroup, Scrollbar
-from gui import file_resource, image_alpha, cut, centre, set_font, gprint
+from gui import file_resource, image_alpha, cut, centre, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import Window
 
@@ -23,7 +23,7 @@ class Demo:
         self.gui_manager.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         # width and height of the first window
         width = 440
-        height = 150
+        height = 175
         # position of the window
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
@@ -60,6 +60,11 @@ class Demo:
         self.gui_manager.add_widget(self.pb4)
         self.gui_manager.add_widget(pb5)
         self.gui_manager.add_widget(pb6)
+        # create labels for groups
+        self.label_button = Label(gridded(1, 3), 'N/A')
+        self.label_radio = Label(gridded(2, 3), 'N/A')
+        self.gui_manager.add_widget(self.label_button)
+        self.gui_manager.add_widget(self.label_radio)
         # create a vertical scrollbar
         sb1 = Scrollbar('S1', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb1.set(100, 0, 30)
@@ -86,10 +91,13 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
-        set_font('bigger')
         while self.running:
             # handle events
             self.handle_events()
+            set_font('normal')
+            self.label_button.label(f'Button: {self.pb1.read()}')
+            self.label_radio.label(f'Radio: {self.pb4.read()}')
+            set_last_font()
             # draw gui widgets
             self.gui_manager.draw_gui()
             # draw mouse graphic
