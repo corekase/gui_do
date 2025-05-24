@@ -44,7 +44,7 @@ class GuiManager:
             widgets = self.widgets['global'] + self.widgets.get(self.context, [])
         for widget in widgets:
             # test widget activation
-            if widget.handle_event(event):
+            if widget.handle_event(event, self.window):
                 # widget activated, return its id
                 return widget.id
         # no widget activated to this event
@@ -69,8 +69,8 @@ class GuiManager:
                 self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
                 # draw the widget
                 widget.draw()
-        #if self.window != None:
-        self.surface.blit(self.window.surface, (self.window.x, self.window.y))
+        if self.window != None:
+            self.surface.blit(self.window.surface, (self.window.x, self.window.y))
 
     def undraw_widgets(self):
         # reverse the bitmaps that were under each gui object drawn

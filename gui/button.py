@@ -1,6 +1,6 @@
 from .frame import Frame, State
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from .utility import render_text, centre
+from .utility import render_text, centre, screen_to_window
 
 class Button(Frame):
     def __init__(self, id, rect, text):
@@ -17,12 +17,16 @@ class Button(Frame):
         # store the position for later blitting
         self.position = text_x, text_y
 
-    def handle_event(self, event):
+    def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             # no matching events for button logic
             return False
         # is the mouse position within the button rect
-        collision = self.rect.collidepoint(event.pos)
+        if window != None:
+            pos = screen_to_window(event.pos, window)
+            collision = self.rect.collidepoint(pos)
+        else:
+            collision = self.rect.collidepoint(event.pos)
         # manage the state of the button
         if (self.state == State.IDLE) and collision:
             self.state = State.HOVER

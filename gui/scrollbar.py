@@ -2,8 +2,8 @@ from .frame import Frame, State
 from .widget import colours
 from pygame import Rect
 from pygame.draw import rect
-from pygame.mouse import set_pos
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
+from .utility import screen_to_window
 
 class Scrollbar(Frame):
     def __init__(self, id, rect, horizontal):
@@ -23,12 +23,16 @@ class Scrollbar(Frame):
         # -> set(total_range, start_position, bar_size)
         # once initialized then the scrollbar operates as intended
 
-    def handle_event(self, event):
+    def handle_event(self, event, window):
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
             # no matching events for scrollbar logic
             return False
         # manage the state of the scrollbar
-        if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(event.pos):
+        if window != None:
+            point = screen_to_window(event.pos, window)
+        else:
+            point = event.pos
+        if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # begin dragging the scrollbar
                 self.state = State.HOVER
@@ -36,7 +40,10 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = event.pos
+            if window != None:
+                x, y = screen_to_window(event.pos, window)
+            else:
+                x, y = event.pos
             # normalize x and y to graphic drawing area
             x, y = x - self.graphic_rect.x, y - self.graphic_rect.y
             # test bounds for dragging
@@ -46,21 +53,11 @@ class Scrollbar(Frame):
                     escape = True
                 else:
                     point = x
-                    # keep mouse pointer in bounds
-                    if y < 0:
-                        set_pos((event.pos[0], self.graphic_rect.top))
-                    elif y > self.graphic_rect.height:
-                        set_pos((event.pos[0], self.graphic_rect.bottom))
             else:
                 if y < 0 or y > self.graphic_rect.height:
                     escape = True
                 else:
                     point = y
-                    # keep mouse pointer in bounds
-                    if x < 0:
-                        set_pos((self.graphic_rect.left, event.pos[1]))
-                    elif x > self.graphic_rect.width:
-                        set_pos((self.graphic_rect.right, event.pos[1]))
             if escape:
                 # outside of bounds, reset
                 self.reset_state()

@@ -11,7 +11,7 @@ class Label(Widget):
         # initialize common widget values
         super().__init__('label', rect)
 
-    def handle_event(self, _):
+    def handle_event(self, _, _a):
         return False
 
     def draw(self):

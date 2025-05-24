@@ -7,3 +7,6 @@ class Window:
         self.x, self.y = pos
         self.surface = pygame.surface.Surface(size).convert()
         self.widgets = {}
+
+    def set_pos(self, pos):
+        self.x, self.y = pos

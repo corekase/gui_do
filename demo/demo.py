@@ -21,14 +21,17 @@ class Demo:
         self.gui_manager = GuiManager(self.screen)
         width = 460
         height = 200
+        # position of the window
+        x1 = centre(self.screen.get_rect().width, width)
+        y1 = centre(self.screen.get_rect().height, height)
         # name of the context
         main = 'main'
         # switch to the 'main' context
         self.gui_manager.switch_context(main)
-        window = Window((width, height), (200, 200))
+        window = Window((width, height), (x1, y1))
         self.gui_manager.add_window(window)
         self.gui_manager.set_window(window)
-        # dimensions of the main frame for gui objects
+        # layout origin
         x = y = 0
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)

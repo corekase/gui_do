@@ -3,7 +3,7 @@ from math import cos, sin, radians
 from pygame import Rect
 from .button import Button
 from .frame import State
-from .utility import render_text, centre
+from .utility import render_text, centre, screen_to_window
 from .widget import colours
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from enum import Enum
@@ -57,12 +57,16 @@ class PushButtonGroup(Button):
         button_complete.blit(text_bitmap, (int(radius * 2) + 4, 0))
         return button_complete
 
-    def handle_event(self, event):
+    def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             # no matching events for push button logic
             return False
         # is the mouse position within the push button rect
-        collision = self.check_collision(event.pos)
+        if window != None:
+            pos = screen_to_window(event.pos, window)
+            collision = self.check_collision(pos)
+        else:
+            collision = self.check_collision(event.pos)
         # manage the state of the push button
         if (self.state == State.IDLE) and collision:
             self.state = State.HOVER

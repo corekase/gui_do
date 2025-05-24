@@ -74,3 +74,8 @@ def cut(surface, rect, flags = 0):
     bitmap = pygame.Surface((rect.width, rect.height), flags)
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
+
+def screen_to_window(point, window):
+    x, y = point
+    wx, wy = window.x, window.y
+    return (x - wx, y - wy)

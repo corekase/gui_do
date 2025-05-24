@@ -9,7 +9,7 @@ class Frame(Widget):
         super().__init__(id, rect)
         self.state = State.IDLE
 
-    def handle_event(self, _):
+    def handle_event(self, _, _a):
         return False
 
     def draw(self):
