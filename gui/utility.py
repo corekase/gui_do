@@ -47,7 +47,7 @@ def set_spacing(spacing):
 
 def set_grid_properties(anchor, width, height, spacing):
     # set all the properties at once
-    global x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded, position_gridded
+    global position_gridded, x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded
     position_gridded = anchor
     x_size_pixels_gridded = width
     y_size_pixels_gridded = height
