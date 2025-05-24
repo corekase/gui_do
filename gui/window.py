@@ -31,7 +31,7 @@ class Window:
         frame.surface = title_surface
         frame.state = State.ARMED
         frame.draw()
-        title_surface.blit(text_bitmap, (4, centre(19, 10)))
+        title_surface.blit(text_bitmap, (4, centre(20, 10) - 2))
         set_last_font()
         return title_surface
 
