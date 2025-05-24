@@ -48,7 +48,7 @@ class PushButtonGroup(Button):
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
             y1 = int(round(radius * sin(radians(point))))
-            points += [(int(radius) + x1, y_offset + y1)]
+            points.append((int(radius) + x1, y_offset + y1))
         pygame.draw.polygon(radio_bitmap, col1, points, 0)
         pygame.draw.polygon(radio_bitmap, col2, points, 1)
         x_size = (radius * 2) + 4 + text_bitmap.get_rect().width + 1
