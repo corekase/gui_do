@@ -27,7 +27,7 @@ class Demo:
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
         # set grid layout properties
-        set_grid_properties((x + 10, y + 45), 140, 16, 4)
+        set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context

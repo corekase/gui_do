@@ -5,8 +5,8 @@ class GuiManager:
         # surface to draw the widget to
         self.surface = surface
         # load fonts for utility functions
-        load_font('normal', 'Ubuntu-Medium.ttf', 12)
-        load_font('bigger', 'Ubuntu-Medium.ttf', 16)
+        load_font('normal', 'Ubuntu-Medium.ttf', 14)
+        load_font('bigger', 'Ubuntu-Medium.ttf', 18)
         load_font('biggest', 'Ubuntu-Medium.ttf', 36)
         # set default font
         set_font('normal')
