@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
-from gui import Label, Button, PushButtonGroup, Scrollbar
+from gui import Label, Button, PushButtonGroup, Scrollbar, Frame
 from gui import file_resource, image_alpha, cut, centre, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import Window
@@ -21,6 +21,24 @@ class Demo:
         self.gui_manager = GuiManager(self.screen)
         # add an exit button
         self.gui_manager.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
+        x, y = 150, 100
+        set_grid_properties((x, y), 140, 20, 4)
+        self.gui_manager.add_widget(Frame('frame', Rect(x - 10, y - 10, 440, 90)))
+        self.gui_manager.add_widget(Button('Button_A', gridded(0, 0), 'Button'))
+        self.gui_manager.add_widget(Button('Button_B', gridded(0, 1), 'Button'))
+        self.gui_manager.add_widget(Button('Button_C', gridded(0, 2), 'Button'))
+        pb1a = PushButtonGroup('BB1', gridded(1, 0), 'Button 1', 'pb3', PushButtonKind.BOX)
+        pb2a = PushButtonGroup('BB2', gridded(1, 1), 'Button 2', 'pb3', PushButtonKind.BOX)
+        pb3a = PushButtonGroup('BB3', gridded(1, 2), 'Button 3', 'pb3', PushButtonKind.BOX)
+        self.gui_manager.add_widget(pb1a)
+        self.gui_manager.add_widget(pb2a)
+        self.gui_manager.add_widget(pb3a)
+        pb1b = PushButtonGroup('BC1', gridded(2, 0), 'Radio 1', 'pb4', PushButtonKind.RADIO)
+        pb2b = PushButtonGroup('BC2', gridded(2, 1), 'Radio 2', 'pb4', PushButtonKind.RADIO)
+        pb3b = PushButtonGroup('BC3', gridded(2, 2), 'Radio 3', 'pb4', PushButtonKind.RADIO)
+        self.gui_manager.add_widget(pb1b)
+        self.gui_manager.add_widget(pb2b)
+        self.gui_manager.add_widget(pb3b)
         # width and height of the first window
         width = 440
         height = 175
