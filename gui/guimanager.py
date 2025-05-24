@@ -55,9 +55,10 @@ class GuiManager:
         elif event.type == MOUSEBUTTONDOWN and not self.dragging:
             for window in self.windows:
                 if window.title_bar_rect.collidepoint(event.pos):
-                    self.dragging = True
-                    self.dragging_window = window
-                    self.cut_old(window)
+                    if event.button == 1:
+                        self.dragging = True
+                        self.dragging_window = window
+                        self.cut_old(window)
         # if a widget signals that it had an action return the widget id
         if len(self.windows) > 0:
             for window in self.windows:
