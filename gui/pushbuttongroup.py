@@ -19,14 +19,13 @@ class PushButtonGroup(Button):
         super().__init__(id, rect, text)
         self.group = group
         self.kind = kind
-        self.idle = self.hover = self.armed = None
         if self.kind == PushButtonKind.RADIO:
             # idle radio
-            self.idle = self.make_radio_bitmap(text, colours['medium'], colours['full'])
+            self.idle_bitmap = self.make_radio_bitmap(text, colours['medium'], colours['full'])
             # hover radio
-            self.hover = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
+            self.hover_bitmap = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
             # armed radio
-            self.armed = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
+            self.armed_bitmap = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -86,7 +85,7 @@ class PushButtonGroup(Button):
         elif self.kind == PushButtonKind.RADIO:
             collided = self.rect.collidepoint(position)
             if collided:
-                if (position[0] - self.rect.left) < self.idle.get_rect().width:
+                if (position[0] - self.rect.left) < self.idle_bitmap.get_rect().width:
                     return True
             return False
 
@@ -107,8 +106,8 @@ class PushButtonGroup(Button):
             super().draw()
         elif self.kind == PushButtonKind.RADIO:
             if self.state == State.IDLE:
-                self.surface.blit(self.idle, self.rect)
+                self.surface.blit(self.idle_bitmap, self.rect)
             elif self.state == State.HOVER:
-                self.surface.blit(self.hover, self.rect)
+                self.surface.blit(self.hover_bitmap, self.rect)
             elif self.state == State.ARMED:
-                self.surface.blit(self.armed, self.rect)
+                self.surface.blit(self.armed_bitmap, self.rect)
