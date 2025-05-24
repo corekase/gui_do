@@ -45,6 +45,14 @@ def set_anchor(pos):
     global position_gridded
     position_gridded = pos
 
+def set_grid_properties(width, height, spacing, anchor):
+    # set all the properties at once
+    global x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded, position_gridded
+    x_size_pixels_gridded = width
+    y_size_pixels_gridded = height
+    space_size_gridded = spacing
+    position_gridded = anchor
+
 def gridded(x, y):
     # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
     base_x, base_y = position_gridded

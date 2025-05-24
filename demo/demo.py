@@ -4,7 +4,7 @@ from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 from gui import file_resource, image_alpha, cut, centre, set_font, gprint
-from gui import set_width, set_height, set_spacing, set_anchor, gridded
+from gui import set_grid_properties, gridded
 
 class Demo:
     def __init__(self):
@@ -28,14 +28,8 @@ class Demo:
         y = centre(self.screen.get_rect().height, height)
         # origin for gprint's
         self.x, self.y = x, y
-        # set width of rect areas
-        set_width(140)
-        # set height of rect areas
-        set_height(20)
-        # spacing between rect areas
-        set_spacing(4)
-        # origin of rect areas
-        set_anchor((x + 10, y + 45))
+        # set grid layout properties
+        set_grid_properties(140, 20, 4, (x + 10, y + 45))
         # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
