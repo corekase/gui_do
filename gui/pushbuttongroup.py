@@ -7,7 +7,7 @@ from .widget import colours
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from enum import Enum
 
-PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO', 'CHECK'])
+PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
 
 class PushButtonGroup(Button):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
@@ -27,8 +27,6 @@ class PushButtonGroup(Button):
             self.hover = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
             # armed radio
             self.armed = self.make_radio_bitmap(text, colours['full'], colours['dark'], True)
-        elif self.kind == PushButtonKind.CHECK:
-            pass
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -39,16 +37,19 @@ class PushButtonGroup(Button):
     def make_radio_bitmap(self, text, col1, col2, highlight=False):
         # -> To-do: make utility functions that cache and reuse just the graphical part of the
         #           radio bitmap.  That is then combined with text in the bitmaps here
-        text_bitmap = render_text(' ' + text, highlight)
-        _, _, idle_width, idle_height = text_bitmap.get_rect()
-        bitmap = pygame.surface.Surface((idle_height + idle_width, idle_height), pygame.SRCALPHA)
-        offset = idle_height // 2
-        radius = offset // 2
+        text_bitmap = render_text(text, highlight)
+        text_height = text_bitmap.get_rect().height
+        radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
+        offset = int(round(text_height / 2))
+        radius = int(round(offset / 2))
         points = self.make_polygon((radius, offset), radius)
-        pygame.draw.polygon(bitmap, col1, points, 0)
-        pygame.draw.polygon(bitmap, col2, points, 1)
-        bitmap.blit(text_bitmap, (radius * 2, 0))
-        return bitmap
+        pygame.draw.polygon(radio_bitmap, col1, points, 0)
+        pygame.draw.polygon(radio_bitmap, col2, points, 1)
+        x_size = (radius * 2) + text_bitmap.get_rect().width + 4
+        button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
+        button_complete.blit(radio_bitmap, (0, 0))
+        button_complete.blit(text_bitmap, ((radius * 2) + 4, 0))
+        return button_complete
 
     def make_polygon(self, position, radius):
         points = []
@@ -88,8 +89,6 @@ class PushButtonGroup(Button):
                 if (position[0] - self.rect.left) < self.idle.get_rect().width:
                     return True
             return False
-        elif self.kind == PushButtonKind.CHECK:
-            return self.rect.collidepoint(position)
 
     def select(self):
         # clear armed state for previous object
@@ -106,7 +105,7 @@ class PushButtonGroup(Button):
     def draw(self):
         if self.kind == PushButtonKind.BOX:
             super().draw()
-        elif (self.kind == PushButtonKind.RADIO) or (self.kind == PushButtonKind.CHECK):
+        elif self.kind == PushButtonKind.RADIO:
             if self.state == State.IDLE:
                 self.surface.blit(self.idle, self.rect)
             elif self.state == State.HOVER:
