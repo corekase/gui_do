@@ -40,7 +40,7 @@ class PushButtonGroup(Button):
         text_height = text_bitmap.get_rect().height
         radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
         y_offset = int(round(text_height / 2))
-        radius = int(round(y_offset / 2))
+        radius = int(round(text_height / 4))
         points = []
         for point in range(0, 360, 5):
             x1 = round(radius * cos(radians(point)))
