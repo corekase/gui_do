@@ -23,12 +23,10 @@ def set_font(name):
     last_font_object = font_object
     font_object = fonts[name]
 
+# restore the previous font
 def set_last_font():
     global font_object
     font_object = last_font_object
-
-def from_temp():
-    return last_font_object
 
 # render text function
 def render_text(text, highlight=False):
@@ -84,6 +82,7 @@ def cut(surface, rect, flags = 0):
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
 
+# convert mouse position to a window position
 def screen_to_window(point, window):
     x, y = point
     wx, wy = window.x, window.y
