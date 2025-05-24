@@ -27,8 +27,8 @@ class Window:
         to_temp(utility.font_object)
         set_font('titlebar')
         text_bitmap = render_text('Titlebar')
-        title_surface = pygame.surface.Surface((self.width, 19)).convert()
-        frame = Frame('none', Rect(0, 0, self.width - 1, 19))
+        title_surface = pygame.surface.Surface((self.width, 20)).convert()
+        frame = Frame('none', Rect(0, 0, self.width, 20))
         frame.surface = title_surface
         frame.state = State.ARMED
         frame.draw()
@@ -41,4 +41,4 @@ class Window:
 
     def set_pos(self, pos):
         self.x, self.y = pos
-        self.title_bar_rect = Rect(self.x, self.y - 20, self.width - 1, 19)
+        self.title_bar_rect = Rect(self.x, self.y - 20, self.width, 20)
