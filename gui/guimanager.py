@@ -61,7 +61,7 @@ class GuiManager:
         # if a widget signals that it had an action return the widget id
         if len(self.windows) > 0:
             for window in self.windows:
-                widgets = window.widgets.get(window.group, [])
+                widgets = window.widgets.get('screen', [])
                 for widget in widgets:
                     # test widget activation
                     if widget.handle_event(event, window):
@@ -91,7 +91,7 @@ class GuiManager:
                 rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
                 self.bitmaps.insert(0, (cut(self.surface, rec), rec))
                 window.draw_title_bar()
-                widgets = window.widgets.get(window.group, [])
+                widgets = window.widgets.get('screen', [])
                 for widget in widgets:
                     # draw the widget
                     widget.draw()
@@ -105,13 +105,16 @@ class GuiManager:
     def add_window(self, window):
         self.windows.append(window)
 
+    def get_window(self, name):
+        pass
+
     def add_widget(self, widget):
         if self.window != None:
             widget.surface = self.window.surface
-            if self.group not in self.window.widgets.keys():
-                self.window.widgets[self.group] = []
+            if 'screen' not in self.window.widgets.keys():
+                self.window.widgets['screen'] = []
             # append the widget to the context
-            self.window.widgets[self.group].append(widget)
+            self.window.widgets['screen'].append(widget)
         else:
             # add a widget to the manager
             widget.surface = self.surface
