@@ -96,8 +96,8 @@ class Demo:
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            gprint(self.screen, f'Button group: {self.pb1.read()}', (base_x1, base_y1))
-            gprint(self.screen, f'Radio group: {self.pb4.read()}', (base_x2, base_y2))
+            gprint(self.screen, f'Button: {self.pb1.read()}', (base_x1, base_y1))
+            gprint(self.screen, f'Radio: {self.pb4.read()}', (base_x2, base_y2))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)
