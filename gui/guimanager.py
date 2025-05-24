@@ -40,11 +40,15 @@ class GuiManager:
         # if a widget signals that it had an action return the widget id
         if self.window != None:
             widgets = self.window.widgets.get(self.context, [])
-        else:
-            widgets = self.widgets['global'] + self.widgets.get(self.context, [])
+            for widget in widgets:
+                # test widget activation
+                if widget.handle_event(event, self.window):
+                    # widget activated, return its id
+                    return widget.id
+        widgets = self.widgets['global']
         for widget in widgets:
             # test widget activation
-            if widget.handle_event(event, self.window):
+            if widget.handle_event(event, None):
                 # widget activated, return its id
                 return widget.id
         # no widget activated to this event
@@ -53,6 +57,13 @@ class GuiManager:
     def draw_widgets(self):
         # draw all widgets to their surfaces
         self.bitmaps.clear()
+        widgets = self.widgets.get('global', [])
+        if len(widgets) > 0:
+            for widget in widgets:
+                # tuple of the bitmap and its rect, after loop ends in reverse order
+                self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+                # draw the widget
+                widget.draw()
         if len(self.windows) > 0:
             for window in self.windows:
                 widgets = window.widgets.get(self.context, [])
@@ -61,16 +72,7 @@ class GuiManager:
                     self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
                     # draw the widget
                     widget.draw()
-        else:
-            widgets = self.widgets['global']
-            #widgets = self.widgets['global'] + self.widgets.get(self.context, [])
-            for widget in widgets:
-                # tuple of the bitmap and its rect, after loop ends in reverse order
-                self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
-                # draw the widget
-                widget.draw()
-        if self.window != None:
-            self.surface.blit(self.window.surface, (self.window.x, self.window.y))
+                self.surface.blit(window.surface, (window.x, window.y))
 
     def undraw_widgets(self):
         # reverse the bitmaps that were under each gui object drawn
@@ -93,6 +95,7 @@ class GuiManager:
             self.window.widgets[context].append(widget)
         else:
             # add a widget to the manager
+            widget.surface = self.surface
             if context not in self.widgets.keys():
                 self.widgets[context] = []
             # append the widget to the context

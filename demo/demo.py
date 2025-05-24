@@ -19,6 +19,10 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui_manager = GuiManager(self.screen)
+        gui_global = 'global'
+        self.gui_manager.switch_context(gui_global)
+        self.gui_manager.add_widget(gui_global, Button('exit',
+                         Rect(10, 1050, 120, 20), 'Exit'))
         width = 460
         height = 200
         # position of the window
@@ -28,9 +32,7 @@ class Demo:
         main = 'main'
         # switch to the 'main' context
         self.gui_manager.switch_context(main)
-        window = Window((width, height), (x1, y1))
-        self.gui_manager.add_window(window)
-        self.gui_manager.set_window(window)
+        window = Window(self.gui_manager, (width, height), (x1, y1))
         # layout origin
         x = y = 0
         # set grid layout properties
@@ -47,8 +49,9 @@ class Demo:
         label.rect.y = y
         self.gui_manager.add_widget(main, label)
         # add buttons
-        self.gui_manager.add_widget(main, Button('Button_1', gridded(0, 0), 'Exit'))
+        self.gui_manager.add_widget(main, Button('Button_1', gridded(0, 0), 'Button'))
         self.gui_manager.add_widget(main, Button('Button_2', gridded(0, 1), 'Button'))
+        self.gui_manager.add_widget(main, Button('Button_3', gridded(0, 2), 'Button'))
         # add in a pushbutton group
         self.pb1 = PushButtonGroup('B1', gridded(1, 0), 'Button Group 1', 'pb1', PushButtonKind.BOX)
         pb2 = PushButtonGroup('B2', gridded(1, 1), 'Button Group 2', 'pb1', PushButtonKind.BOX)
@@ -122,7 +125,7 @@ class Demo:
             # if gui_event isn't None then it is a gui event
             if gui_event != None:
                 # handle gui events
-                if gui_event == 'Button_1':
+                if gui_event == 'exit':
                     # Button_1 was clicked
                     self.running = False
                 # elif other gui objects
