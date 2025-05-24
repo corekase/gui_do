@@ -36,7 +36,7 @@ class Demo:
         set_spacing(4)
         # origin of rect areas
         set_anchor((x + 10, y + 45))
-        # create a frame for the display area
+        # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
         self.gui_manager.add_widget(main, Frame('frame', frame))
