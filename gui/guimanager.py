@@ -16,9 +16,7 @@ class GuiManager:
         set_font('normal')
         # widgets to be managed: key:value -> group_name:list_of_widgets
         self.widgets = {}
-        # global widgets which are always shown and processed
-        self.widgets['global'] = []
-        # which key group to show
+        # which key group to use
         self.group = None
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
