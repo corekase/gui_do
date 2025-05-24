@@ -113,6 +113,5 @@ class PushButtonGroup(Button):
     def adjust_rect(self, bitmap):
         x, y, w, h = self.rect
         smaller = bitmap.get_rect().height
-        bigger = self.rect.height
         offset = centre(h, smaller)
         self.rect = Rect(x, y + offset, w, h)
