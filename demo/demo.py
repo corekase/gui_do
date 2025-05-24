@@ -19,7 +19,7 @@ class Demo:
         # create a gui manager
         self.gui_manager = GuiManager(self.screen)
         # dimensions of the main frame for gui objects
-        width = 500
+        width = 460
         height = 200
         # name of the context
         main = 'main'
