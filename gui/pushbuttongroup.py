@@ -1,8 +1,9 @@
 import pygame
 from math import cos, sin, radians
+from pygame import Rect
 from .button import Button
 from .frame import State
-from .utility import render_text
+from .utility import render_text, centre
 from .widget import colours
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from enum import Enum
@@ -26,6 +27,8 @@ class PushButtonGroup(Button):
             self.hover_bitmap = self.make_radio_button(text, colours['full'], colours['dark'], True)
             # armed radio
             self.armed_bitmap = self.make_radio_button(text, colours['full'], colours['dark'], True)
+            # adjust vertical centre
+            self.adjust_rect(self.idle_bitmap)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -106,3 +109,10 @@ class PushButtonGroup(Button):
                 self.surface.blit(self.hover_bitmap, self.rect)
             elif self.state == State.ARMED:
                 self.surface.blit(self.armed_bitmap, self.rect)
+
+    def adjust_rect(self, bitmap):
+        x, y, w, h = self.rect
+        smaller = bitmap.get_rect().height
+        bigger = self.rect.height
+        offset = centre(h, smaller)
+        self.rect = Rect(x, y + offset, w, h)

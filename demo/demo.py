@@ -27,7 +27,7 @@ class Demo:
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
         # set grid layout properties
-        set_grid_properties((x + 10, y + 45), 140, 20, 4)
+        set_grid_properties((x + 10, y + 45), 140, 16, 4)
         # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
@@ -42,7 +42,6 @@ class Demo:
         # add buttons
         self.gui_manager.add_widget(main, Button('Button_1', gridded(0, 0), 'Exit'))
         self.gui_manager.add_widget(main, Button('Button_2', gridded(0, 1), 'Button'))
-        self.gui_manager.add_widget(main, Button('Button_3', gridded(0, 2), 'Button'))
         # add in a pushbutton group
         self.pb1 = PushButtonGroup('B1', gridded(1, 0), 'Button Group 1', 'pb1', PushButtonKind.BOX)
         pb2 = PushButtonGroup('B2', gridded(1, 1), 'Button Group 2', 'pb1', PushButtonKind.BOX)
@@ -89,8 +88,8 @@ class Demo:
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
         set_font('bigger')
-        base_x1, base_y1, _, _ = gridded(1, 3)
-        base_x2, base_y2, _, _ = gridded(2, 3)
+        base_x1, base_y1, _, _ = gridded(1, 4)
+        base_x2, base_y2, _, _ = gridded(2, 4)
         while self.running:
             # handle events
             self.handle_events()
