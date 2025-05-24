@@ -1,5 +1,6 @@
 from .utility import cut, load_font, set_font
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
+from pygame import Rect
 
 class GuiManager:
     def __init__(self, surface):
@@ -27,6 +28,7 @@ class GuiManager:
         # dragging window
         self.dragging = None
         self.dragging_window = None
+        self.old_graphic = None
         # set the default group to the screen
         self.set_group('screen')
 
@@ -35,19 +37,27 @@ class GuiManager:
         self.group = group
         self.window = window
 
+    def cut_old(self, window):
+        rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
+        self.old_graphic = (cut(self.surface, rec), rec)
+
     def handle_event(self, event):
         # if inside a title bar
         # if mouse button
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
-        if event.type == MOUSEBUTTONDOWN and not self.dragging:
+            self.surface.blit(self.old_graphic[0], self.old_graphic[1])
+        elif event.type == MOUSEMOTION and self.dragging:
+            xdif, ydif = event.rel
+            self.surface.blit(self.old_graphic[0], self.old_graphic[1])
+            self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
+            self.cut_old(self.dragging_window)
+        elif event.type == MOUSEBUTTONDOWN and not self.dragging:
             for window in self.windows:
                 if window.title_bar_rect.collidepoint(event.pos):
                     self.dragging = True
                     self.dragging_window = window
-        if event.type == MOUSEMOTION and self.dragging:
-            xdif, ydif = event.rel
-            self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
+                    self.cut_old(window)
         # if a widget signals that it had an action return the widget id
         if len(self.windows) > 0:
             for window in self.windows:
@@ -78,7 +88,8 @@ class GuiManager:
                 widget.draw()
         if len(self.windows) > 0:
             for window in self.windows:
-                self.bitmaps.insert(0, (cut(self.surface, window.title_bar_rect), window.title_bar_rect))
+                rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
+                self.bitmaps.insert(0, (cut(self.surface, rec), rec))
                 window.draw_title_bar()
                 widgets = window.widgets.get(window.group, [])
                 for widget in widgets:
