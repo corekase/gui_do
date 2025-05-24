@@ -79,3 +79,11 @@ def screen_to_window(point, window):
     x, y = point
     wx, wy = window.x, window.y
     return (x - wx, y - wy)
+
+to_temp_item = None
+def to_temp(item):
+    global to_temp_item
+    to_temp_item = item
+
+def from_temp():
+    return to_temp_item

@@ -7,7 +7,7 @@ class GuiManager:
         # surface to draw the widget to
         self.surface = surface
         # load fonts for utility functions
-        load_font('small', 'Ubuntu-Medium.ttf', 8)
+        load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('bigger', 'Ubuntu-Medium.ttf', 18)
         load_font('biggest', 'Ubuntu-Medium.ttf', 36)
@@ -64,9 +64,7 @@ class GuiManager:
                 widget.draw()
         if len(self.windows) > 0:
             for window in self.windows:
-                frame = Frame('none', Rect(0, 0, window.width, window.height))
-                frame.surface = window.surface
-                frame.draw()
+                window.draw_title_bar()
                 widgets = window.widgets.get(window.group, [])
                 for widget in widgets:
                     # tuple of the bitmap and its rect, after loop ends in reverse order
