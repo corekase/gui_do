@@ -15,7 +15,7 @@ class GuiManager:
         # set default font
         set_font('normal')
         # widgets to be managed: key:value -> group_name:list_of_widgets
-        self.widgets = {}
+        self.widgets = []
         # which key group to use
         self.group = None
         # list of bitmaps overwritten by gui objects
@@ -29,11 +29,10 @@ class GuiManager:
         self.dragging_window = None
         self.old_graphic = None
         # set the default group to the screen
-        self.set_group('screen')
+        self.set_group()
 
-    def set_group(self, group, window=None):
+    def set_group(self, window=None):
         # set which key group is active
-        self.group = group
         self.window = window
 
     def cut_old(self, window):
@@ -58,16 +57,13 @@ class GuiManager:
                         self.dragging_window = window
                         self.cut_old(window)
         # if a widget signals that it had an action return the widget id
-        if len(self.windows) > 0:
-            for window in self.windows:
-                widgets = window.widgets.get('window', [])
-                for widget in widgets:
-                    # test widget activation
-                    if widget.handle_event(event, window):
-                        # widget activated, return its id
-                        return widget.id
-        widgets = self.widgets['screen']
-        for widget in widgets:
+        for window in self.windows:
+            for widget in window.widgets:
+                # test widget activation
+                if widget.handle_event(event, window):
+                    # widget activated, return its id
+                    return widget.id
+        for widget in self.widgets:
             # test widget activation
             if widget.handle_event(event, None):
                 # widget activated, return its id
@@ -78,23 +74,19 @@ class GuiManager:
     def draw_gui(self):
         # draw all widgets to their surfaces
         self.bitmaps.clear()
-        widgets = self.widgets['screen']
-        if len(widgets) > 0:
-            for widget in widgets:
-                # tuple of the bitmap and its rect, after loop ends in reverse order
-                self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+        for widget in self.widgets:
+            # tuple of the bitmap and its rect, after loop ends in reverse order
+            self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+            # draw the widget
+            widget.draw()
+        for window in self.windows:
+            rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
+            self.bitmaps.insert(0, (cut(self.surface, rec), rec))
+            window.draw_title_bar()
+            for widget in window.widgets:
                 # draw the widget
                 widget.draw()
-        if len(self.windows) > 0:
-            for window in self.windows:
-                rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
-                self.bitmaps.insert(0, (cut(self.surface, rec), rec))
-                window.draw_title_bar()
-                widgets = window.widgets.get('window', [])
-                for widget in widgets:
-                    # draw the widget
-                    widget.draw()
-                self.surface.blit(window.surface, (window.x, window.y))
+            self.surface.blit(window.surface, (window.x, window.y))
 
     def undraw_gui(self):
         # reverse the bitmaps that were under each gui object drawn
@@ -110,14 +102,10 @@ class GuiManager:
     def add_widget(self, widget):
         if self.window != None:
             widget.surface = self.window.surface
-            if 'window' not in self.window.widgets.keys():
-                self.window.widgets['window'] = []
             # append the widget to the context
-            self.window.widgets['window'].append(widget)
+            self.window.widgets.append(widget)
         else:
             # add a widget to the manager
             widget.surface = self.surface
-            if 'screen' not in self.widgets.keys():
-                self.widgets['screen'] = []
             # append the widget to the group
-            self.widgets['screen'].append(widget)
+            self.widgets.append(widget)
