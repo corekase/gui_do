@@ -17,27 +17,25 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
-        # create a gui manager
+        # create a gui manager and it makes the screen the active group
         self.gui_manager = GuiManager(self.screen)
-        self.gui_manager.set_group('global')
+        # add an exit button
         self.gui_manager.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
-        # size of the window
+        # width and height of the first window
         width = 460
         height = 200
         # position of the window
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
-        window = Window(self.gui_manager, 'main', (width, height), (x1, y1))
-        self.gui_manager.set_group('main', window)
+        # create the window and it adds itself to the gui_manager and makes itself the active group
+        Window(self.gui_manager, 'main', (width, height), (x1, y1))
         # layout origin
         x = y = 0
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
-        # create and add a frame to the main context
-        self.gui_manager.add_widget(Frame('frame', frame))
-        # and a label
+        # add title label
         set_font('biggest')
         label = Label((0, 0), 'gui_do')
         set_font('normal')
@@ -71,6 +69,8 @@ class Demo:
         # add the scrollbars in
         self.gui_manager.add_widget(sb1)
         self.gui_manager.add_widget(sb2)
+        # done gui setup
+        self.gui_manager.set_group(None)
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position

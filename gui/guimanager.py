@@ -1,4 +1,6 @@
 from .utility import cut, load_font, set_font
+from .frame import Frame
+from pygame import Rect
 
 class GuiManager:
     def __init__(self, surface):
@@ -22,6 +24,8 @@ class GuiManager:
         self.window = None
         # list of windows to process
         self.windows = []
+        # set the default group to the screen
+        self.set_group('screen')
 
     def set_group(self, group, window=None):
         # set which key group is active
@@ -38,7 +42,7 @@ class GuiManager:
                     if widget.handle_event(event, window):
                         # widget activated, return its id
                         return widget.id
-        widgets = self.widgets['global']
+        widgets = self.widgets['screen']
         for widget in widgets:
             # test widget activation
             if widget.handle_event(event, None):
@@ -50,7 +54,7 @@ class GuiManager:
     def draw_gui(self):
         # draw all widgets to their surfaces
         self.bitmaps.clear()
-        widgets = self.widgets['global']
+        widgets = self.widgets['screen']
         if len(widgets) > 0:
             for widget in widgets:
                 # tuple of the bitmap and its rect, after loop ends in reverse order
@@ -59,6 +63,9 @@ class GuiManager:
                 widget.draw()
         if len(self.windows) > 0:
             for window in self.windows:
+                frame = Frame('none', Rect(0, 0, window.width, window.height))
+                frame.surface = window.surface
+                frame.draw()
                 widgets = window.widgets.get(window.group, [])
                 for widget in widgets:
                     # tuple of the bitmap and its rect, after loop ends in reverse order
