@@ -42,8 +42,7 @@ class GuiManager:
         self.old_graphic = (cut(self.surface, rec), rec)
 
     def handle_event(self, event):
-        # if inside a title bar
-        # if mouse button
+        # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
             self.surface.blit(self.old_graphic[0], self.old_graphic[1])
