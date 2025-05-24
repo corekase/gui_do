@@ -52,21 +52,25 @@ class GuiManager:
 
     def draw_widgets(self):
         # draw all widgets to their surfaces
-        for window in self.windows:
-            pass
-        if self.window != None:
-            widgets = self.window.widgets.get(self.context, [])
-        else:
-            widgets = self.widgets['global'] + self.window.widgets.get(self.context, [])
-        # clear previous bitmaps
         self.bitmaps.clear()
-        for widget in widgets:
-            # tuple of the bitmap and its rect, after loop ends in reverse order
-            self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
-            # draw the widget
-            widget.draw()
-        if self.window != None:
-            self.surface.blit(self.window.surface, (self.window.x, self.window.y))
+        if len(self.windows) > 0:
+            for window in self.windows:
+                widgets = window.widgets.get(self.context, [])
+                for widget in widgets:
+                    # tuple of the bitmap and its rect, after loop ends in reverse order
+                    self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+                    # draw the widget
+                    widget.draw()
+        else:
+            widgets = self.widgets['global']
+            #widgets = self.widgets['global'] + self.widgets.get(self.context, [])
+            for widget in widgets:
+                # tuple of the bitmap and its rect, after loop ends in reverse order
+                self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+                # draw the widget
+                widget.draw()
+        #if self.window != None:
+        self.surface.blit(self.window.surface, (self.window.x, self.window.y))
 
     def undraw_widgets(self):
         # reverse the bitmaps that were under each gui object drawn
@@ -77,6 +81,7 @@ class GuiManager:
         self.windows.append(window)
 
     def set_window(self, window):
+        # which window add_widget adds to
         self.window = window
 
     def add_widget(self, context, widget):

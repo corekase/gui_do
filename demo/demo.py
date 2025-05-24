@@ -21,12 +21,14 @@ class Demo:
         self.gui_manager = GuiManager(self.screen)
         width = 460
         height = 200
-        window = Window((width, height), (0, 0))
+        # name of the context
+        main = 'main'
+        # switch to the 'main' context
+        self.gui_manager.switch_context(main)
+        window = Window((width, height), (200, 200))
         self.gui_manager.add_window(window)
         self.gui_manager.set_window(window)
         # dimensions of the main frame for gui objects
-        # name of the context
-        main = 'main'
         x = y = 0
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
@@ -67,8 +69,6 @@ class Demo:
         # add the scrollbars in
         self.gui_manager.add_widget(main, sb1)
         self.gui_manager.add_widget(main, sb2)
-        # switch to the 'main' context
-        self.gui_manager.switch_context(main)
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position
@@ -91,8 +91,8 @@ class Demo:
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            gprint(self.screen, f'Button: {self.pb1.read()}', gridded(1, 4))
-            gprint(self.screen, f'Radio: {self.pb4.read()}', gridded(2, 4))
+            #gprint(self.screen, f'Button: {self.pb1.read()}', gridded(1, 4))
+            #gprint(self.screen, f'Radio: {self.pb4.read()}', gridded(2, 4))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)
