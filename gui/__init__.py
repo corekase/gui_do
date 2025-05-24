@@ -12,6 +12,7 @@ from .button import Button
 from .scrollbar import Scrollbar
 from .pushbuttongroup import PushButtonKind
 from .pushbuttongroup import PushButtonGroup
+from .window import Window
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
     # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080

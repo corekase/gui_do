@@ -20,6 +20,10 @@ class GuiManager:
         self.locked_context = None
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
+        # active window
+        self.window = None
+        # list of windows to process
+        self.windows = []
 
     def switch_context(self, context):
         # if locked_context isn't None then ignore the switch_context call
@@ -34,7 +38,10 @@ class GuiManager:
 
     def handle_event(self, event):
         # if a widget signals that it had an action return the widget id
-        widgets = self.widgets['global'] + self.widgets.get(self.context, [])
+        if self.window != None:
+            widgets = self.window.widgets.get(self.context, [])
+        else:
+            widgets = self.widgets['global'] + self.widgets.get(self.context, [])
         for widget in widgets:
             # test widget activation
             if widget.handle_event(event):
@@ -45,7 +52,12 @@ class GuiManager:
 
     def draw_widgets(self):
         # draw all widgets to their surfaces
-        widgets = self.widgets['global'] + self.widgets.get(self.context, [])
+        for window in self.windows:
+            pass
+        if self.window != None:
+            widgets = self.window.widgets.get(self.context, [])
+        else:
+            widgets = self.widgets['global'] + self.window.widgets.get(self.context, [])
         # clear previous bitmaps
         self.bitmaps.clear()
         for widget in widgets:
@@ -53,17 +65,30 @@ class GuiManager:
             self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
+        if self.window != None:
+            self.surface.blit(self.window.surface, (self.window.x, self.window.y))
 
     def undraw_widgets(self):
         # reverse the bitmaps that were under each gui object drawn
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
 
+    def add_window(self, window):
+        self.windows.append(window)
+
+    def set_window(self, window):
+        self.window = window
+
     def add_widget(self, context, widget):
-        # add a widget to the manager
-        if context not in self.widgets.keys():
-            self.widgets[context] = []
-        # give the widget a reference to the screen
-        widget.surface = self.surface
-        # append the widget to the context
-        self.widgets[context].append(widget)
+        if self.window != None:
+            widget.surface = self.window.surface
+            if context not in self.window.widgets.keys():
+                self.window.widgets[context] = []
+            # append the widget to the context
+            self.window.widgets[context].append(widget)
+        else:
+            # add a widget to the manager
+            if context not in self.widgets.keys():
+                self.widgets[context] = []
+            # append the widget to the context
+            self.widgets[context].append(widget)

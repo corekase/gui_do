@@ -5,6 +5,7 @@ from gui import GuiManager, PushButtonKind
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 from gui import file_resource, image_alpha, cut, centre, set_font, gprint
 from gui import set_grid_properties, gridded
+from gui import Window
 
 class Demo:
     def __init__(self):
@@ -18,14 +19,15 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui_manager = GuiManager(self.screen)
-        # dimensions of the main frame for gui objects
         width = 460
         height = 200
+        window = Window((width, height), (0, 0))
+        self.gui_manager.add_window(window)
+        self.gui_manager.set_window(window)
+        # dimensions of the main frame for gui objects
         # name of the context
         main = 'main'
-        # get centred pixel coordinates for that
-        x = centre(self.screen.get_rect().width, width)
-        y = centre(self.screen.get_rect().height, height)
+        x = y = 0
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # create a rect for the frame for the display area
@@ -73,11 +75,6 @@ class Demo:
         self.mouse_position = pygame.mouse.get_pos()
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
-        # draw an outline frame
-        x, y, w, h = frame
-        outline = Frame('None', Rect(x - 10, y - 10, w + 20, h + 20))
-        outline.surface = self.screen
-        outline.draw()
         # set running flag
         self.running = True
 
