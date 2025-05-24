@@ -95,8 +95,8 @@ class Demo:
             # handle events
             self.handle_events()
             set_font('normal')
-            self.label_button.label(f'Button: {self.pb1.read()}')
-            self.label_radio.label(f'Radio: {self.pb4.read()}')
+            self.label_button.set_label(f'Button: {self.pb1.read()}')
+            self.label_radio.set_label(f'Radio: {self.pb4.read()}')
             set_last_font()
             # draw gui widgets
             self.gui_manager.draw_gui()
