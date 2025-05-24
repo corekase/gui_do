@@ -23,7 +23,12 @@ def gprint(screen, text, position):
     screen.blit(bitmap, position)
 
 # gridded layout variables and functions
-x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = position_gridded = None
+position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = None
+
+def set_anchor(pos):
+    # set the origin of gridded locations
+    global position_gridded
+    position_gridded = pos
 
 def set_width(x_pixels):
     # set x size of gridded location in pixels
@@ -40,18 +45,13 @@ def set_spacing(spacing):
     global space_size_gridded
     space_size_gridded = spacing
 
-def set_anchor(pos):
-    # set the origin of gridded locations
-    global position_gridded
-    position_gridded = pos
-
-def set_grid_properties(width, height, spacing, anchor):
+def set_grid_properties(anchor, width, height, spacing):
     # set all the properties at once
     global x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded, position_gridded
+    position_gridded = anchor
     x_size_pixels_gridded = width
     y_size_pixels_gridded = height
     space_size_gridded = spacing
-    position_gridded = anchor
 
 def gridded(x, y):
     # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor

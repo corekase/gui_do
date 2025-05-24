@@ -29,7 +29,7 @@ class Demo:
         # origin for gprint's
         self.x, self.y = x, y
         # set grid layout properties
-        set_grid_properties(140, 20, 4, (x + 10, y + 45))
+        set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # create a rect for the frame for the display area
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
