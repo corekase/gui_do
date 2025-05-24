@@ -1,6 +1,5 @@
 from .utility import cut, load_font, set_font
-from .frame import Frame
-from pygame import Rect
+from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 
 class GuiManager:
     def __init__(self, surface):
@@ -25,6 +24,9 @@ class GuiManager:
         self.window = None
         # list of windows to process
         self.windows = []
+        # dragging window
+        self.dragging = None
+        self.dragging_window = None
         # set the default group to the screen
         self.set_group('screen')
 
@@ -34,6 +36,18 @@ class GuiManager:
         self.window = window
 
     def handle_event(self, event):
+        # if inside a title bar
+        # if mouse button
+        if event.type == MOUSEBUTTONUP and self.dragging:
+            self.dragging = False
+        if event.type == MOUSEBUTTONDOWN and not self.dragging:
+            for window in self.windows:
+                if window.title_bar_rect.collidepoint(event.pos):
+                    self.dragging = True
+                    self.dragging_window = window
+        if event.type == MOUSEMOTION and self.dragging:
+            xdif, ydif = event.rel
+            self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
         # if a widget signals that it had an action return the widget id
         if len(self.windows) > 0:
             for window in self.windows:
@@ -64,6 +78,7 @@ class GuiManager:
                 widget.draw()
         if len(self.windows) > 0:
             for window in self.windows:
+                self.bitmaps.insert(0, (cut(self.surface, window.title_bar_rect), window.title_bar_rect))
                 window.draw_title_bar()
                 widgets = window.widgets.get(window.group, [])
                 for widget in widgets:

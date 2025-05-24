@@ -20,6 +20,8 @@ class Window:
         frame.surface = self.surface
         self.widgets[group].insert(0, frame)
         self.title_bar_graphic = self.make_title_bar_graphic()
+        self.title_bar_rect = self.title_bar_graphic.get_rect()
+        self.set_pos(pos)
 
     def make_title_bar_graphic(self):
         to_temp(utility.font_object)
@@ -39,3 +41,4 @@ class Window:
 
     def set_pos(self, pos):
         self.x, self.y = pos
+        self.title_bar_rect = Rect(self.x, self.y - 20, self.width - 1, 19)
