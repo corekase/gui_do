@@ -22,8 +22,8 @@ class Demo:
         # add an exit button
         self.gui_manager.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         # width and height of the first window
-        width = 460
-        height = 200
+        width = 440
+        height = 150
         # position of the window
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
@@ -64,7 +64,7 @@ class Demo:
         sb1 = Scrollbar('S1', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb1.set(100, 0, 30)
         # create a horizontal scrollbar
-        sb2 = Scrollbar('S2', Rect(x + 10, y + height - 30, frame.right - 50 - frame.x, 20), True)
+        sb2 = Scrollbar('S2', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True)
         sb2.set(100, 0, 30)
         # add the scrollbars in
         self.gui_manager.add_widget(sb1)
