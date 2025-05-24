@@ -2,7 +2,7 @@ from .frame import Frame, State
 import pygame
 from pygame import Rect
 from . import utility
-from .utility import to_temp, from_temp, set_font, render_text, centre
+from .utility import set_font, set_last_font, render_text, centre
 
 class Window:
     def __init__(self, gui_manager, title, group, size, pos):
@@ -24,7 +24,6 @@ class Window:
         self.set_pos(pos)
 
     def make_title_bar_graphic(self, title):
-        to_temp(utility.font_object)
         set_font('titlebar')
         text_bitmap = render_text(title)
         title_surface = pygame.surface.Surface((self.width, 20)).convert()
@@ -33,7 +32,7 @@ class Window:
         frame.state = State.ARMED
         frame.draw()
         title_surface.blit(text_bitmap, (4, centre(19, 10)))
-        utility.font_object = from_temp()
+        set_last_font()
         return title_surface
 
     def draw_title_bar(self):

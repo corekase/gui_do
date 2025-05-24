@@ -17,9 +17,18 @@ def load_font(name, font, size):
     fonts[name] = pygame.font.Font(file_resource('fonts', font), size)
 
 # make a font active
+last_font_object = None
 def set_font(name):
-    global font_object
+    global font_object, last_font_object
+    last_font_object = font_object
     font_object = fonts[name]
+
+def set_last_font():
+    global font_object
+    font_object = last_font_object
+
+def from_temp():
+    return last_font_object
 
 # render text function
 def render_text(text, highlight=False):
@@ -79,11 +88,3 @@ def screen_to_window(point, window):
     x, y = point
     wx, wy = window.x, window.y
     return (x - wx, y - wy)
-
-to_temp_item = None
-def to_temp(item):
-    global to_temp_item
-    to_temp_item = item
-
-def from_temp():
-    return to_temp_item
