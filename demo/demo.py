@@ -88,16 +88,14 @@ class Demo:
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
         set_font('bigger')
-        base_x1, base_y1, _, _ = gridded(1, 4)
-        base_x2, base_y2, _, _ = gridded(2, 4)
         while self.running:
             # handle events
             self.handle_events()
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            gprint(self.screen, f'Button: {self.pb1.read()}', (base_x1, base_y1))
-            gprint(self.screen, f'Radio: {self.pb4.read()}', (base_x2, base_y2))
+            gprint(self.screen, f'Button: {self.pb1.read()}', gridded(1, 4))
+            gprint(self.screen, f'Radio: {self.pb4.read()}', gridded(2, 4))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)

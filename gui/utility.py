@@ -33,7 +33,7 @@ def render_text(text, highlight=False):
 # graphical print function
 def gprint(screen, text, position):
     bitmap = render_text(text)
-    screen.blit(bitmap, position)
+    screen.blit(bitmap, (position[0], position[1]))
 
 # layout helper
 def centre(bigger, smaller):
