@@ -40,12 +40,12 @@ class PushButtonGroup(Button):
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
-        offset = int(round(text_height / 2))
-        radius = int(round(offset / 2))
-        points = self.make_polygon((radius, offset), radius)
+        y_offset = int(round(text_height / 2))
+        radius = int(round(y_offset / 2))
+        points = self.make_polygon((radius, y_offset), radius)
         pygame.draw.polygon(radio_bitmap, col1, points, 0)
         pygame.draw.polygon(radio_bitmap, col2, points, 1)
-        x_size = (radius * 2) + text_bitmap.get_rect().width + 4
+        x_size = (radius * 2) + 4 + text_bitmap.get_rect().width
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, 0))
         button_complete.blit(text_bitmap, ((radius * 2) + 4, 0))
