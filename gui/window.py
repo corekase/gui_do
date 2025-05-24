@@ -5,7 +5,7 @@ from . import utility
 from .utility import to_temp, from_temp, set_font, render_text, centre
 
 class Window:
-    def __init__(self, gui_manager, group, size, pos):
+    def __init__(self, gui_manager, title, group, size, pos):
         self.gui_manager = gui_manager
         self.group = group
         self.width, self.height = size
@@ -19,14 +19,14 @@ class Window:
         frame.state = State.IDLE
         frame.surface = self.surface
         self.widgets[group].insert(0, frame)
-        self.title_bar_graphic = self.make_title_bar_graphic()
+        self.title_bar_graphic = self.make_title_bar_graphic(title)
         self.title_bar_rect = self.title_bar_graphic.get_rect()
         self.set_pos(pos)
 
-    def make_title_bar_graphic(self):
+    def make_title_bar_graphic(self, title):
         to_temp(utility.font_object)
         set_font('titlebar')
-        text_bitmap = render_text('Titlebar')
+        text_bitmap = render_text(title)
         title_surface = pygame.surface.Surface((self.width, 20)).convert()
         frame = Frame('none', Rect(0, 0, self.width, 20))
         frame.surface = title_surface

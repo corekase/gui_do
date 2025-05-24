@@ -93,8 +93,6 @@ class GuiManager:
                 window.draw_title_bar()
                 widgets = window.widgets.get(window.group, [])
                 for widget in widgets:
-                    # tuple of the bitmap and its rect, after loop ends in reverse order
-                    self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
                     # draw the widget
                     widget.draw()
                 self.surface.blit(window.surface, (window.x, window.y))
