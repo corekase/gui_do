@@ -2,7 +2,7 @@
 import os
 # import utility functions into this package's namespace
 from .utility import cut, cut_tile, image_alpha, file_resource, padding, render_text, centre
-from .utility import load_font, set_font, gprint
+from .utility import load_font, set_font, gprint, set_width, set_height, set_spacing, set_anchor, gridded
 # import GuiManager and controls into this package's namespace
 from .guimanager import GuiManager
 from .frame import Frame

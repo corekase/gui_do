@@ -4,6 +4,7 @@ from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 from gui import file_resource, image_alpha, cut, centre, set_font, gprint
+from gui import set_width, set_height, set_spacing, set_anchor, gridded
 
 class Demo:
     def __init__(self):
@@ -18,7 +19,7 @@ class Demo:
         # create a gui manager
         self.gui_manager = GuiManager(self.screen)
         # dimensions of the main frame for gui objects
-        width = 260
+        width = 500
         height = 200
         button_width = 100
         button_height = 20
@@ -28,6 +29,10 @@ class Demo:
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
         self.x, self.y = x, y
+        set_width(140)
+        set_height(20)
+        set_spacing(4)
+        set_anchor((x + 10, y + 45))
         # create a rect for those values
         frame = Rect(x, y, width, height)
         # create and add a frame to the main context
@@ -40,24 +45,28 @@ class Demo:
         label.rect.y = y
         self.gui_manager.add_widget(main, label)
         # add buttons
-        self.gui_manager.add_widget(main, Button('Button_1',
-                        Rect(x + 10, y + 45, button_width, button_height), 'Exit'))
-        self.gui_manager.add_widget(main, Button('Button_2',
-                        Rect(x + 10, y + 70, button_width, button_height), 'Button'))
-        self.gui_manager.add_widget(main, Button('Button_3',
-                        Rect(x + 10, y + 95, button_width, button_height), 'Button'))
+        self.gui_manager.add_widget(main, Button('Button_1', gridded(0, 0), 'Exit'))
+        self.gui_manager.add_widget(main, Button('Button_2', gridded(0, 1), 'Button'))
+        self.gui_manager.add_widget(main, Button('Button_3', gridded(0, 2), 'Button'))
         # add in a pushbutton group
-        self.pb1 = PushButtonGroup('One', Rect(x + button_width + 20, y + 45, button_width, button_height), 'One', 'pb1', PushButtonKind.RADIO)
-        pb2 = PushButtonGroup('Two', Rect(x + button_width + 20, y + 70, button_width, button_height), 'Two', 'pb1', PushButtonKind.RADIO)
-        pb3 = PushButtonGroup('Three', Rect(x + button_width + 20, y + 95, button_width, button_height), 'Three', 'pb1', PushButtonKind.RADIO)
+        self.pb1 = PushButtonGroup('B1', gridded(1, 0), 'Button Group 1', 'pb1', PushButtonKind.BOX)
+        pb2 = PushButtonGroup('B2', gridded(1, 1), 'Button Group 2', 'pb1', PushButtonKind.BOX)
+        pb3 = PushButtonGroup('B3', gridded(1, 2), 'Button Group 3', 'pb1', PushButtonKind.BOX)
         self.gui_manager.add_widget(main, self.pb1)
         self.gui_manager.add_widget(main, pb2)
         self.gui_manager.add_widget(main, pb3)
+        # add another column of pushbuttons
+        self.pb4 = PushButtonGroup('R1', gridded(2, 0), 'Radio Group 1', 'pb2', PushButtonKind.RADIO)
+        pb5 = PushButtonGroup('R2', gridded(2, 1), 'Radio Group 2', 'pb2', PushButtonKind.RADIO)
+        pb6 = PushButtonGroup('R3', gridded(2, 2), 'Radio Group 3', 'pb2', PushButtonKind.RADIO)
+        self.gui_manager.add_widget(main, self.pb4)
+        self.gui_manager.add_widget(main, pb5)
+        self.gui_manager.add_widget(main, pb6)
         # create a vertical scrollbar
-        sb1 = Scrollbar('S1', Rect(x + (button_width * 2) + 30, y + 45, 20, 140), False)
+        sb1 = Scrollbar('S1', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb1.set(100, 0, 30)
         # create a horizontal scrollbar
-        sb2 = Scrollbar('S2', Rect(x + 10, y + height - 35, 210, 20), True)
+        sb2 = Scrollbar('S2', Rect(x + 10, y + height - 30, frame.right - 50 - frame.x, 20), True)
         sb2.set(100, 0, 30)
         # add the scrollbars in
         self.gui_manager.add_widget(main, sb1)
@@ -84,14 +93,15 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
-        set_font('bigger')
+        set_font('normal')
         while self.running:
             # handle events
             self.handle_events()
             # draw gui widgets
             self.gui_manager.draw_widgets()
             # draw current pushbutton
-            gprint(self.screen, f'Selected: {self.pb1.read()}', (self.x + 10, self.y + 120))
+            gprint(self.screen, f'Button group: {self.pb1.read()}', (self.x + 10, self.y + 120))
+            gprint(self.screen, f'Radio group: {self.pb4.read()}', (self.x + 10, self.y + 135))
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = cut(self.screen, mouse_rect)

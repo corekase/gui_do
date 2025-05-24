@@ -22,6 +22,36 @@ def gprint(screen, text, position):
     bitmap = render_text(text)
     screen.blit(bitmap, position)
 
+# gridded layout variables and functions
+x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = position_gridded = None
+
+def set_width(x_pixels):
+    # set x size of gridded location in pixels
+    global x_size_pixels_gridded
+    x_size_pixels_gridded = x_pixels
+
+def set_height(y_pixels):
+    # set y size of gridded location in pixels
+    global y_size_pixels_gridded
+    y_size_pixels_gridded = y_pixels
+
+def set_spacing(spacing):
+    # set spacing between gridded locations in pixels
+    global space_size_gridded
+    space_size_gridded = spacing
+
+def set_anchor(pos):
+    # set the origin of gridded locations
+    global position_gridded
+    position_gridded = pos
+
+def gridded(x, y):
+    # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
+    base_x, base_y = position_gridded
+    x_location = (x * x_size_pixels_gridded) + (space_size_gridded * x)
+    y_location = (y * y_size_pixels_gridded) + (space_size_gridded * y) + (y * 1)
+    return Rect(base_x + x_location, base_y + y_location, x_size_pixels_gridded, y_size_pixels_gridded)
+
 # -> To-do: make tile_images a dictionary of dictionaries to add support for multiple
 #           tile image sets while still working within as a static module.  The first dictionary
 #           is names for keys, and each names value is another dictionary of tile images.
