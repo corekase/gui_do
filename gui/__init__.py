@@ -2,8 +2,8 @@
 import os
 # import utility functions into this package's namespace
 from .utility import load_font, set_font, render_text, gprint
-from .utility import padding, centre, set_grid_properties, gridded
-from .utility import image_alpha, file_resource, cut, cut_tile
+from .utility import centre, set_grid_properties, gridded
+from .utility import image_alpha, file_resource, cut
 # import GuiManager and controls into this package's namespace
 from .guimanager import GuiManager
 from .frame import Frame
