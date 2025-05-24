@@ -11,13 +11,13 @@ class Window:
         self.x, self.y = pos
         self.surface = pygame.surface.Surface(size).convert()
         self.widgets = {}
-        self.widgets['screen'] = []
+        self.widgets['window'] = []
         self.gui_manager.add_window(self)
-        self.gui_manager.set_group('screen', self)
+        self.gui_manager.set_group('window', self)
         frame = Frame('none', Rect(0, 0, size[0], size[1]))
         frame.state = State.IDLE
         frame.surface = self.surface
-        self.widgets['screen'].insert(0, frame)
+        self.widgets['window'].insert(0, frame)
         self.title_bar_graphic = self.make_title_bar_graphic(title)
         self.title_bar_rect = self.title_bar_graphic.get_rect()
         self.set_pos(pos)
