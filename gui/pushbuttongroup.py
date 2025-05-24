@@ -42,7 +42,7 @@ class PushButtonGroup(Button):
         y_offset = int(round(text_height / 2))
         radius = int(round(y_offset / 2))
         points = []
-        for point in range(0, 360, 1):
+        for point in range(0, 360, 5):
             x1 = round(radius * cos(radians(point)))
             y1 = round(radius * sin(radians(point)))
             points += [(radius + x1, y_offset + y1)]
