@@ -21,17 +21,20 @@ class Demo:
         # dimensions of the main frame for gui objects
         width = 500
         height = 200
-        button_width = 100
-        button_height = 20
         # name of the context
         main = 'main'
         # get centred pixel coordinates for that
         x = centre(self.screen.get_rect().width, width)
         y = centre(self.screen.get_rect().height, height)
+        # origin for gprint's
         self.x, self.y = x, y
+        # set width of rect areas
         set_width(140)
+        # set height of rect areas
         set_height(20)
+        # spacing between rect areas
         set_spacing(4)
+        # origin of rect areas
         set_anchor((x + 10, y + 45))
         # create a rect for those values
         frame = Rect(x, y, width, height)
