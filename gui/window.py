@@ -7,7 +7,7 @@ from .utility import set_font, set_last_font, render_text, centre
 class Window:
     def __init__(self, name, title, pos, size):
         self.gui = GuiManager()
-        self.set_name(name)
+        self.name = name
         self.x, self.y = pos
         self.width, self.height = size
         self.titlebar_size = 20
@@ -45,10 +45,6 @@ class Window:
     def set_pos(self, pos):
         self.x, self.y = pos
         self.title_bar_rect = Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
-
-    def set_name(self, name):
-        # name the window
-        self.name = name
 
     def get_name(self):
         # return the name of the window
