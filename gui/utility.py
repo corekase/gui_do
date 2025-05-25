@@ -77,7 +77,7 @@ def copy_graphic_area(surface, rect, flags = 0):
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
 
-# convert mouse position to a window position
+# convert screen position to a window position
 def screen_to_window(point, window):
     if window != None:
         x, y = point
@@ -85,7 +85,7 @@ def screen_to_window(point, window):
         return (x - wx, y - wy)
     return point
 
-# improve this
+# convert window position to a screen position
 def window_to_screen(point, window):
     if window != None:
         x, y = point
