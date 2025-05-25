@@ -32,14 +32,14 @@ class GuiManager:
         self.bitmaps = []
         # active object
         self.active_object = None
+        # set the default object to the screen
+        self.set_active_object()
         # list of windows to process
         self.windows = []
         # dragging window
         self.dragging = None
         self.dragging_window = None
         self.saved_graphic = None
-        # set the default object to the screen
-        self.set_active_object()
         # current mouse position
         self.mouse_pos = None
         # cursor image and hotspot
@@ -48,6 +48,7 @@ class GuiManager:
         self.cursor_rect = None
 
     def set_surface(self, surface):
+        # gui screen surface
         self.surface = surface
 
     def set_active_object(self, object=None):
