@@ -83,9 +83,9 @@ class GuiManager:
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
             self.save_graphic(self.dragging_window)
         elif event.type == MOUSEBUTTONDOWN and not self.dragging:
-            for window in self.windows:
-                if window.title_bar_rect.collidepoint(event.pos):
-                    if event.button == 1:
+            if event.button == 1:
+                for window in self.windows:
+                    if window.title_bar_rect.collidepoint(event.pos):
                         self.dragging = True
                         self.dragging_window = window
                         self.save_graphic(window)
