@@ -10,7 +10,7 @@ class Demo:
     def __init__(self):
         # initialize pygame
         pygame.init()
-        # create main window surface, if not using vsync adjust fps in run()
+        # create main window surface
         self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED)
         # set window caption
         pygame.display.set_caption('gui_do')
