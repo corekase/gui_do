@@ -136,9 +136,6 @@ class Demo:
     def handle_events(self):
         # handle the pygame event queue
         for event in pygame.event.get():
-            # if the mouse moves update the internal position
-            if event.type == MOUSEMOTION:
-                self.mouse_position = event.pos
             # check if any gui objects handle the event
             gui_event = self.gui.handle_event(event)
             # if gui_event isn't None then it is a gui event
