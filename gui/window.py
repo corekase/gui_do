@@ -7,8 +7,6 @@ from .utility import set_font, set_last_font, render_text, centre
 class Window:
     def __init__(self, name, title, pos, size):
         self.gui = GuiManager()
-        # register the window name with the gui
-        self.gui.names[name] = self
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
         self.width, self.height = size
@@ -19,7 +17,7 @@ class Window:
         # widgets on that surface
         self.widgets = []
         # add this window to the gui
-        self.gui.add_window(self)
+        self.gui.add_window(name, self)
         # make this object the destination for gui.add commands
         self.gui.set_active_object(self)
         # make a frame for the backdrop of the window surface

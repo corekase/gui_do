@@ -48,6 +48,8 @@ class GuiManager:
         self.cursor_image = None
         self.cursor_hotspot = None
         self.cursor_rect = None
+        # area rect to lock the mouse position within, lock area is in screen coordinates not window
+        self.lock_area_rect = None
 
     def set_surface(self, surface):
         # gui screen surface
@@ -79,16 +81,25 @@ class GuiManager:
             # append the widget to the group
             self.widgets.append(widget)
 
-    def add_window(self, window):
+    def add_window(self, name, window):
+        self.names[name] = window
         self.windows.append(window)
 
     def get_window(self, name):
         return self.names[name]
 
+    def set_lock_area(self, area=None):
+        self.lock_area_rect = area
+
+    def lock_area(self, position):
+        if self.lock_area_rect != None:
+            pass
+        return position
+
     def handle_event(self, event):
         # update internal mouse position
         if event.type == MOUSEMOTION:
-            self.mouse_pos = event.pos
+            self.mouse_pos = self.lock_area(event.pos)
         # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
