@@ -46,6 +46,10 @@ class GuiManager:
     def set_surface(self, surface):
         self.surface = surface
 
+    def set_active_object(self, object=None):
+        # set which object is active
+        self.active_object = object
+
     def set_cursor_image(self, image):
         pass
 
@@ -56,9 +60,22 @@ class GuiManager:
         # return the mouse position
         return self.mouse_pos
 
-    def set_active_object(self, object=None):
-        # set which object is active
-        self.active_object = object
+    def add(self, widget):
+        if self.active_object != None:
+            widget.surface = self.active_object.surface
+            # append the widget to the object
+            self.active_object.widgets.append(widget)
+        else:
+            # add a widget to the screen
+            widget.surface = self.surface
+            # append the widget to the group
+            self.widgets.append(widget)
+
+    def add_window(self, window):
+        self.windows.append(window)
+
+    def get_window(self, name):
+        pass
 
     def handle_event(self, event):
         # -> To-do: make one collision function which takes into account screen and window
@@ -115,20 +132,3 @@ class GuiManager:
         # reverse the bitmaps that were under each gui object drawn
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
-
-    def add_window(self, window):
-        self.windows.append(window)
-
-    def get_window(self, name):
-        pass
-
-    def add_widget(self, widget):
-        if self.active_object != None:
-            widget.surface = self.active_object.surface
-            # append the widget to the object
-            self.active_object.widgets.append(widget)
-        else:
-            # add a widget to the screen
-            widget.surface = self.surface
-            # append the widget to the group
-            self.widgets.append(widget)

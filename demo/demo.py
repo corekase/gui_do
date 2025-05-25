@@ -22,25 +22,25 @@ class Demo:
         self.gui.set_surface(self.screen)
 
         # begin adding screen widgets
-        self.gui.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
+        self.gui.add(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         x, y = 150, 100
         set_grid_properties((x, y), 140, 20, 4)
-        self.gui.add_widget(Frame('frame', Rect(x - 10, y - 10, 440, 90)))
-        self.gui.add_widget(Button('Button_A', gridded(0, 0), 'Button'))
-        self.gui.add_widget(Button('Button_B', gridded(0, 1), 'Button'))
-        self.gui.add_widget(Button('Button_C', gridded(0, 2), 'Button'))
+        self.gui.add(Frame('frame', Rect(x - 10, y - 10, 440, 90)))
+        self.gui.add(Button('Button_A', gridded(0, 0), 'Button'))
+        self.gui.add(Button('Button_B', gridded(0, 1), 'Button'))
+        self.gui.add(Button('Button_C', gridded(0, 2), 'Button'))
         pb1a = PushButtonGroup('BB1', gridded(1, 0), 'Button 1', 'pb3', PushButtonKind.BOX)
         pb2a = PushButtonGroup('BB2', gridded(1, 1), 'Button 2', 'pb3', PushButtonKind.BOX)
         pb3a = PushButtonGroup('BB3', gridded(1, 2), 'Button 3', 'pb3', PushButtonKind.BOX)
-        self.gui.add_widget(pb1a)
-        self.gui.add_widget(pb2a)
-        self.gui.add_widget(pb3a)
+        self.gui.add(pb1a)
+        self.gui.add(pb2a)
+        self.gui.add(pb3a)
         pb1b = PushButtonGroup('BC1', gridded(2, 0), 'Radio 1', 'pb4', PushButtonKind.RADIO)
         pb2b = PushButtonGroup('BC2', gridded(2, 1), 'Radio 2', 'pb4', PushButtonKind.RADIO)
         pb3b = PushButtonGroup('BC3', gridded(2, 2), 'Radio 3', 'pb4', PushButtonKind.RADIO)
-        self.gui.add_widget(pb1b)
-        self.gui.add_widget(pb2b)
-        self.gui.add_widget(pb3b)
+        self.gui.add(pb1b)
+        self.gui.add(pb2b)
+        self.gui.add(pb3b)
         # done adding screen widgets
 
         # begin adding window widgets
@@ -64,30 +64,30 @@ class Demo:
         frame = Rect(x, y, width, height)
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y
-        self.gui.add_widget(label)
+        self.gui.add(label)
         # add buttons
-        self.gui.add_widget(Button('Button_1', gridded(0, 0), 'Button'))
-        self.gui.add_widget(Button('Button_2', gridded(0, 1), 'Button'))
-        self.gui.add_widget(Button('Button_3', gridded(0, 2), 'Button'))
+        self.gui.add(Button('Button_1', gridded(0, 0), 'Button'))
+        self.gui.add(Button('Button_2', gridded(0, 1), 'Button'))
+        self.gui.add(Button('Button_3', gridded(0, 2), 'Button'))
         # add in a pushbutton group
         self.pb1 = PushButtonGroup('B1', gridded(1, 0), 'Button Group 1', 'pb1', PushButtonKind.BOX)
         pb2 = PushButtonGroup('B2', gridded(1, 1), 'Button Group 2', 'pb1', PushButtonKind.BOX)
         pb3 = PushButtonGroup('B3', gridded(1, 2), 'Button Group 3', 'pb1', PushButtonKind.BOX)
-        self.gui.add_widget(self.pb1)
-        self.gui.add_widget(pb2)
-        self.gui.add_widget(pb3)
+        self.gui.add(self.pb1)
+        self.gui.add(pb2)
+        self.gui.add(pb3)
         # add another column of pushbuttons
         self.pb4 = PushButtonGroup('R1', gridded(2, 0), 'Radio Group 1', 'pb2', PushButtonKind.RADIO)
         pb5 = PushButtonGroup('R2', gridded(2, 1), 'Radio Group 2', 'pb2', PushButtonKind.RADIO)
         pb6 = PushButtonGroup('R3', gridded(2, 2), 'Radio Group 3', 'pb2', PushButtonKind.RADIO)
-        self.gui.add_widget(self.pb4)
-        self.gui.add_widget(pb5)
-        self.gui.add_widget(pb6)
+        self.gui.add(self.pb4)
+        self.gui.add(pb5)
+        self.gui.add(pb6)
         # create labels for groups
         self.label_button = Label(gridded(1, 3), 'N/A')
         self.label_radio = Label(gridded(2, 3), 'N/A')
-        self.gui.add_widget(self.label_button)
-        self.gui.add_widget(self.label_radio)
+        self.gui.add(self.label_button)
+        self.gui.add(self.label_radio)
         # create a vertical scrollbar
         sb1 = Scrollbar('S1', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb1.set(100, 0, 30)
@@ -95,8 +95,8 @@ class Demo:
         sb2 = Scrollbar('S2', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True)
         sb2.set(100, 0, 30)
         # add the scrollbars in
-        self.gui.add_widget(sb1)
-        self.gui.add_widget(sb2)
+        self.gui.add(sb1)
+        self.gui.add(sb2)
         # done adding window widgets
 
         # gui setup done
