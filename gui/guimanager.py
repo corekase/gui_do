@@ -60,13 +60,6 @@ class GuiManager:
         # set which object is active
         self.active_object = object
 
-    def save_graphic(self, window):
-        rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
-        self.saved_graphic = (copy_graphic_area(self.surface, rec), rec)
-
-    def restore_graphic(self):
-        self.surface.blit(self.saved_graphic[0], self.saved_graphic[1])
-
     def handle_event(self, event):
         # -> To-do: make one collision function which takes into account screen and window
         #           coordinates and converts as needed that all widgets can use in their event handling
@@ -76,19 +69,15 @@ class GuiManager:
         # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
-            self.restore_graphic()
         elif event.type == MOUSEMOTION and self.dragging:
             xdif, ydif = event.rel
-            self.restore_graphic()
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
-            self.save_graphic(self.dragging_window)
         elif event.type == MOUSEBUTTONDOWN and not self.dragging:
             if event.button == 1:
                 for window in self.windows:
                     if window.title_bar_rect.collidepoint(event.pos):
                         self.dragging = True
                         self.dragging_window = window
-                        self.save_graphic(window)
         # if a widget signals that it had an action return the widget id
         for window in self.windows:
             for widget in window.widgets:
