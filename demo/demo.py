@@ -40,6 +40,9 @@ class Demo:
         self.gui.add(pb1b)
         self.gui.add(pb2b)
         self.gui.add(pb3b)
+        sba = Scrollbar('sba', Rect(x + 10, y + 130, 200, 20), True)
+        sba.set(100, 0, 30)
+        self.gui.add(sba)
         # done adding screen widgets
         #
         # begin adding window widgets

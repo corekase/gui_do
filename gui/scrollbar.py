@@ -3,12 +3,15 @@ from .widget import colours
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from .utility import convert_to_screen
+from .utility import convert_to_screen, convert_to_window
+from .guimanager import GuiManager
 
 class Scrollbar(Frame):
     def __init__(self, id, rect, horizontal):
         # initialize common widget values
         super().__init__(id, rect)
+        # get a reference to the gui
+        self.gui = GuiManager()
         # maximum area that can be filled
         self.graphic_rect = Rect(self.rect.left + 4, self.rect.top + 4, self.rect.width - 8, self.rect.height - 8)
         # total size, start position, and bar size within the graphic rect
@@ -33,6 +36,13 @@ class Scrollbar(Frame):
         point = convert_to_screen(event.pos, window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
+                # lock mouse movement to scrollbar area
+                if window != None:
+                    x1, y1 = convert_to_window((self.graphic_rect[0], self.graphic_rect[1]), window)
+                    new_rect = Rect(x1, y1, self.graphic_rect.width, self.graphic_rect.height)
+                    self.gui.set_lock_area(new_rect)
+                else:
+                    self.gui.set_lock_area(self.graphic_rect)
                 # begin dragging the scrollbar
                 self.state = State.HOVER
                 self.dragging = True
@@ -41,24 +51,13 @@ class Scrollbar(Frame):
         if (event.type == MOUSEMOTION) and self.dragging:
             x, y = convert_to_screen(event.pos, window)
             # normalize x and y to graphic drawing area
-            x, y = x - self.graphic_rect.x, y - self.graphic_rect.y
+            x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging
-            escape = False
             if self.horizontal:
-                if x < 0 or x > self.graphic_rect.width:
-                    escape = True
-                else:
-                    point = x
+                point = x
             else:
-                if y < 0 or y > self.graphic_rect.height:
-                    escape = True
-                else:
-                    point = y
-            if escape:
-                # outside of bounds, reset
-                self.reset_state()
-                # signal no change
-                return False
+                point = y
+
             if self.last_mouse_pos != None:
                 # convert mouse position to total range units
                 mouse_pos = self.graphical_to_total(point)
@@ -83,6 +82,8 @@ class Scrollbar(Frame):
                 return False
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
+                # unlock mouse movement
+                self.gui.set_lock_area()
                 # return to default state
                 self.reset_state()
                 # signal there was a change
