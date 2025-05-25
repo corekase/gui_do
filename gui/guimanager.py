@@ -14,7 +14,7 @@ class GuiManager:
 
     # instead of an __init__ we have _populate_ and it is executed exactly once
     def _populate_(self):
-        # surface to draw the widget to
+        # gui drawing surface
         self.surface = None
         # load fonts for utility functions
         load_font('label', 'Ubuntu-Medium.ttf', 10)
