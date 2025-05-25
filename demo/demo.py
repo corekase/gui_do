@@ -18,27 +18,28 @@ class Demo:
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         # create a gui manager and it makes the screen the active group
-        self.gui_manager = GuiManager(self.screen)
+        self.gui = GuiManager()
+        self.gui.set_surface(self.screen)
         # add an exit button
-        self.gui_manager.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
+        self.gui.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         x, y = 150, 100
         set_grid_properties((x, y), 140, 20, 4)
-        self.gui_manager.add_widget(Frame('frame', Rect(x - 10, y - 10, 440, 90)))
-        self.gui_manager.add_widget(Button('Button_A', gridded(0, 0), 'Button'))
-        self.gui_manager.add_widget(Button('Button_B', gridded(0, 1), 'Button'))
-        self.gui_manager.add_widget(Button('Button_C', gridded(0, 2), 'Button'))
+        self.gui.add_widget(Frame('frame', Rect(x - 10, y - 10, 440, 90)))
+        self.gui.add_widget(Button('Button_A', gridded(0, 0), 'Button'))
+        self.gui.add_widget(Button('Button_B', gridded(0, 1), 'Button'))
+        self.gui.add_widget(Button('Button_C', gridded(0, 2), 'Button'))
         pb1a = PushButtonGroup('BB1', gridded(1, 0), 'Button 1', 'pb3', PushButtonKind.BOX)
         pb2a = PushButtonGroup('BB2', gridded(1, 1), 'Button 2', 'pb3', PushButtonKind.BOX)
         pb3a = PushButtonGroup('BB3', gridded(1, 2), 'Button 3', 'pb3', PushButtonKind.BOX)
-        self.gui_manager.add_widget(pb1a)
-        self.gui_manager.add_widget(pb2a)
-        self.gui_manager.add_widget(pb3a)
+        self.gui.add_widget(pb1a)
+        self.gui.add_widget(pb2a)
+        self.gui.add_widget(pb3a)
         pb1b = PushButtonGroup('BC1', gridded(2, 0), 'Radio 1', 'pb4', PushButtonKind.RADIO)
         pb2b = PushButtonGroup('BC2', gridded(2, 1), 'Radio 2', 'pb4', PushButtonKind.RADIO)
         pb3b = PushButtonGroup('BC3', gridded(2, 2), 'Radio 3', 'pb4', PushButtonKind.RADIO)
-        self.gui_manager.add_widget(pb1b)
-        self.gui_manager.add_widget(pb2b)
-        self.gui_manager.add_widget(pb3b)
+        self.gui.add_widget(pb1b)
+        self.gui.add_widget(pb2b)
+        self.gui.add_widget(pb3b)
         # width and height of the first window
         width = 440
         height = 175
@@ -46,7 +47,7 @@ class Demo:
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active group
-        Window(self.gui_manager, 'main', 'gui_do', (x1, y1), (width, height))
+        Window('main', 'gui_do', (x1, y1), (width, height))
         # layout origin
         x = y = 0
         # set grid layout properties
@@ -59,30 +60,30 @@ class Demo:
         set_font('normal')
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y
-        self.gui_manager.add_widget(label)
+        self.gui.add_widget(label)
         # add buttons
-        self.gui_manager.add_widget(Button('Button_1', gridded(0, 0), 'Button'))
-        self.gui_manager.add_widget(Button('Button_2', gridded(0, 1), 'Button'))
-        self.gui_manager.add_widget(Button('Button_3', gridded(0, 2), 'Button'))
+        self.gui.add_widget(Button('Button_1', gridded(0, 0), 'Button'))
+        self.gui.add_widget(Button('Button_2', gridded(0, 1), 'Button'))
+        self.gui.add_widget(Button('Button_3', gridded(0, 2), 'Button'))
         # add in a pushbutton group
         self.pb1 = PushButtonGroup('B1', gridded(1, 0), 'Button Group 1', 'pb1', PushButtonKind.BOX)
         pb2 = PushButtonGroup('B2', gridded(1, 1), 'Button Group 2', 'pb1', PushButtonKind.BOX)
         pb3 = PushButtonGroup('B3', gridded(1, 2), 'Button Group 3', 'pb1', PushButtonKind.BOX)
-        self.gui_manager.add_widget(self.pb1)
-        self.gui_manager.add_widget(pb2)
-        self.gui_manager.add_widget(pb3)
+        self.gui.add_widget(self.pb1)
+        self.gui.add_widget(pb2)
+        self.gui.add_widget(pb3)
         # add another column of pushbuttons
         self.pb4 = PushButtonGroup('R1', gridded(2, 0), 'Radio Group 1', 'pb2', PushButtonKind.RADIO)
         pb5 = PushButtonGroup('R2', gridded(2, 1), 'Radio Group 2', 'pb2', PushButtonKind.RADIO)
         pb6 = PushButtonGroup('R3', gridded(2, 2), 'Radio Group 3', 'pb2', PushButtonKind.RADIO)
-        self.gui_manager.add_widget(self.pb4)
-        self.gui_manager.add_widget(pb5)
-        self.gui_manager.add_widget(pb6)
+        self.gui.add_widget(self.pb4)
+        self.gui.add_widget(pb5)
+        self.gui.add_widget(pb6)
         # create labels for groups
         self.label_button = Label(gridded(1, 3), 'N/A')
         self.label_radio = Label(gridded(2, 3), 'N/A')
-        self.gui_manager.add_widget(self.label_button)
-        self.gui_manager.add_widget(self.label_radio)
+        self.gui.add_widget(self.label_button)
+        self.gui.add_widget(self.label_radio)
         # create a vertical scrollbar
         sb1 = Scrollbar('S1', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb1.set(100, 0, 30)
@@ -90,10 +91,10 @@ class Demo:
         sb2 = Scrollbar('S2', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True)
         sb2.set(100, 0, 30)
         # add the scrollbars in
-        self.gui_manager.add_widget(sb1)
-        self.gui_manager.add_widget(sb2)
+        self.gui.add_widget(sb1)
+        self.gui.add_widget(sb2)
         # done gui setup
-        self.gui_manager.set_active_object(None)
+        self.gui.set_active_object(None)
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position
@@ -117,7 +118,7 @@ class Demo:
             self.label_radio.set_label(f'Radio: {self.pb4.read()}')
             set_last_font()
             # draw gui widgets
-            self.gui_manager.draw_gui()
+            self.gui.draw_gui()
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
             mouse_bitmap = copy_graphic_area(self.screen, mouse_rect)
@@ -129,7 +130,7 @@ class Demo:
             # undo mouse graphic draw
             self.screen.blit(mouse_bitmap, mouse_rect)
             # undraw gui widgets
-            self.gui_manager.undraw_gui()
+            self.gui.undraw_gui()
         # release resources
         pygame.quit()
 
@@ -140,7 +141,7 @@ class Demo:
             if event.type == MOUSEMOTION:
                 self.mouse_position = event.pos
             # check if any gui objects handle the event
-            gui_event = self.gui_manager.handle_event(event)
+            gui_event = self.gui.handle_event(event)
             # if gui_event isn't None then it is a gui event
             if gui_event != None:
                 # handle gui events

@@ -3,9 +3,16 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
 class GuiManager:
-    def __init__(self, surface):
+    _instance_ = None
+    def __new__(cls):
+        if GuiManager._instance_ is None:
+            GuiManager._instance_ = object.__new__(cls)
+            GuiManager._instance_._populate_()
+        return GuiManager._instance_
+
+    def _populate_(self):
         # surface to draw the widget to
-        self.surface = surface
+        self.surface = None
         # load fonts for utility functions
         load_font('label', 'Ubuntu-Medium.ttf', 10)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 12)
@@ -32,6 +39,9 @@ class GuiManager:
         self.set_active_object()
         # current mouse position
         self.mouse_pos = None
+
+    def set_surface(self, surface):
+        self.surface = surface
 
     def set_cursor_image(self, image):
         pass

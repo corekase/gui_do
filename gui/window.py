@@ -1,3 +1,4 @@
+from .guimanager import GuiManager
 from .frame import Frame, State
 import pygame
 from pygame import Rect
@@ -5,8 +6,8 @@ from . import utility
 from .utility import set_font, set_last_font, render_text, centre
 
 class Window:
-    def __init__(self, gui_manager, name, title, pos, size):
-        self.gui_manager = gui_manager
+    def __init__(self, name, title, pos, size):
+        self.gui_manager = GuiManager()
         self.set_name(name)
         self.width, self.height = size
         self.x, self.y = pos
