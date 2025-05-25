@@ -31,6 +31,12 @@ class GuiManager:
         # set the default group to the screen
         self.set_group()
 
+    def set_cursor_image(self, image):
+        pass
+
+    def set_cursor_hotspot(self, position):
+        pass
+
     def set_group(self, window=None):
         # set which key group is active
         self.window = window
