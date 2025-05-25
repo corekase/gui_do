@@ -122,7 +122,7 @@ class GuiManager:
     def add_widget(self, widget):
         if self.active_object != None:
             widget.surface = self.active_object.surface
-            # append the widget to the context
+            # append the widget to the object
             self.active_object.widgets.append(widget)
         else:
             # add a widget to the screen
