@@ -76,8 +76,8 @@ def file_resource(*names):
     # return an os-independent filename inside data path
     return os.path.join('data', *names)
 
-# graphic cut helper
-def cut(surface, rect, flags = 0):
+# copy graphic helper
+def copy_graphic(surface, rect, flags = 0):
     bitmap = pygame.Surface((rect.width, rect.height), flags)
     bitmap.blit(surface, (0, 0), rect)
     return bitmap

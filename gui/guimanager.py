@@ -1,4 +1,4 @@
-from .utility import cut, load_font, set_font
+from .utility import copy_graphic, load_font, set_font
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
@@ -27,7 +27,7 @@ class GuiManager:
         # dragging window
         self.dragging = None
         self.dragging_window = None
-        self.old_graphic = None
+        self.saved_graphic = None
         # set the default group to the screen
         self.set_group()
 
@@ -35,27 +35,30 @@ class GuiManager:
         # set which key group is active
         self.window = window
 
-    def cut_old(self, window):
+    def save_graphic(self, window):
         rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
-        self.old_graphic = (cut(self.surface, rec), rec)
+        self.saved_graphic = (copy_graphic(self.surface, rec), rec)
+
+    def restore_graphic(self):
+        self.surface.blit(self.saved_graphic[0], self.saved_graphic[1])
 
     def handle_event(self, event):
         # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
-            self.surface.blit(self.old_graphic[0], self.old_graphic[1])
+            self.restore_graphic()
         elif event.type == MOUSEMOTION and self.dragging:
             xdif, ydif = event.rel
-            self.surface.blit(self.old_graphic[0], self.old_graphic[1])
+            self.restore_graphic()
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
-            self.cut_old(self.dragging_window)
+            self.save_graphic(self.dragging_window)
         elif event.type == MOUSEBUTTONDOWN and not self.dragging:
             for window in self.windows:
                 if window.title_bar_rect.collidepoint(event.pos):
                     if event.button == 1:
                         self.dragging = True
                         self.dragging_window = window
-                        self.cut_old(window)
+                        self.save_graphic(window)
         # if a widget signals that it had an action return the widget id
         for window in self.windows:
             for widget in window.widgets:
@@ -76,12 +79,12 @@ class GuiManager:
         self.bitmaps.clear()
         for widget in self.widgets:
             # tuple of the bitmap and its rect, after loop ends in reverse order
-            self.bitmaps.insert(0, (cut(self.surface, widget.rect), widget.rect))
+            self.bitmaps.insert(0, (copy_graphic(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
         for window in self.windows:
-            rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
-            self.bitmaps.insert(0, (cut(self.surface, rec), rec))
+            window_rect = Rect(window.x, window.y - 20, window.width, window.height + 20)
+            self.bitmaps.insert(0, (copy_graphic(self.surface, window_rect), window_rect))
             window.draw_title_bar()
             for widget in window.widgets:
                 # draw the widget
