@@ -5,7 +5,7 @@ from . import utility
 from .utility import set_font, set_last_font, render_text, centre
 
 class Window:
-    def __init__(self, gui_manager, name, title, size, pos):
+    def __init__(self, gui_manager, name, title, pos, size):
         self.gui_manager = gui_manager
         self.set_name(name)
         self.width, self.height = size
@@ -13,7 +13,7 @@ class Window:
         self.surface = pygame.surface.Surface(size).convert()
         self.widgets = []
         self.gui_manager.add_window(self)
-        self.gui_manager.set_group(self)
+        self.gui_manager.set_active_object(self)
         frame = Frame('none', Rect(0, 0, size[0], size[1]))
         frame.state = State.IDLE
         frame.surface = self.surface

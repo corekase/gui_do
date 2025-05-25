@@ -46,7 +46,7 @@ class Demo:
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active group
-        Window(self.gui_manager, 'main', 'gui_do', (width, height), (x1, y1))
+        Window(self.gui_manager, 'main', 'gui_do', (x1, y1), (width, height))
         # layout origin
         x = y = 0
         # set grid layout properties
