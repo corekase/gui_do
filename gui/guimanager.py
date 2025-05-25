@@ -4,7 +4,7 @@ from pygame import Rect
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
-    # No matter how many times it is instantiated the result is this object and its state
+    # No matter how many times it is instantiated the result is the one object and its state
     _instance_ = None
     def __new__(cls):
         if GuiManager._instance_ is None:
