@@ -19,7 +19,7 @@ class Demo:
         # create a gui manager and it makes the screen the active object
         self.gui = GuiManager()
         self.gui.set_surface(self.screen)
-
+        #
         # begin adding screen widgets
         self.gui.add(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         x, y = 150, 100
@@ -41,7 +41,7 @@ class Demo:
         self.gui.add(pb2b)
         self.gui.add(pb3b)
         # done adding screen widgets
-
+        #
         # begin adding window widgets
         # layout origin
         x = y = 0
@@ -97,7 +97,7 @@ class Demo:
         self.gui.add(sb1)
         self.gui.add(sb2)
         # done adding window widgets
-
+        #
         # gui setup done
         self.gui.set_active_object(None)
         # set cursor image
