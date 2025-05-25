@@ -44,7 +44,7 @@ class GuiManager:
         return self.mouse_pos
 
     def set_active_object(self, object=None):
-        # set which key group is active
+        # set which object is active
         self.active_object = object
 
     def save_graphic(self, window):
