@@ -3,7 +3,7 @@ from .widget import colours
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from .utility import screen_to_window
+from .utility import convert_to_screen
 
 class Scrollbar(Frame):
     def __init__(self, id, rect, horizontal):
@@ -30,7 +30,7 @@ class Scrollbar(Frame):
             # no matching events for scrollbar logic
             return False
         # manage the state of the scrollbar
-        point = screen_to_window(event.pos, window)
+        point = convert_to_screen(event.pos, window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # begin dragging the scrollbar
@@ -39,7 +39,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = screen_to_window(event.pos, window)
+            x, y = convert_to_screen(event.pos, window)
             # normalize x and y to graphic drawing area
             x, y = x - self.graphic_rect.x, y - self.graphic_rect.y
             # test bounds for dragging
