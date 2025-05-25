@@ -20,16 +20,16 @@ class GuiManager:
         self.group = None
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
-        # active window
-        self.window = None
+        # active object
+        self.active_object = None
         # list of windows to process
         self.windows = []
         # dragging window
         self.dragging = None
         self.dragging_window = None
         self.saved_graphic = None
-        # set the default group to the screen
-        self.set_group()
+        # set the default object to the screen
+        self.set_active_object()
         # current mouse position
         self.mouse_pos = None
 
@@ -43,9 +43,9 @@ class GuiManager:
         # return the mouse position
         return self.mouse_pos
 
-    def set_group(self, window=None):
+    def set_active_object(self, object=None):
         # set which key group is active
-        self.window = window
+        self.active_object = object
 
     def save_graphic(self, window):
         rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
@@ -120,12 +120,12 @@ class GuiManager:
         pass
 
     def add_widget(self, widget):
-        if self.window != None:
-            widget.surface = self.window.surface
+        if self.active_object != None:
+            widget.surface = self.active_object.surface
             # append the widget to the context
-            self.window.widgets.append(widget)
+            self.active_object.widgets.append(widget)
         else:
-            # add a widget to the manager
+            # add a widget to the screen
             widget.surface = self.surface
             # append the widget to the group
             self.widgets.append(widget)

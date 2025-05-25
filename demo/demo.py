@@ -93,7 +93,7 @@ class Demo:
         self.gui_manager.add_widget(sb1)
         self.gui_manager.add_widget(sb2)
         # done gui setup
-        self.gui_manager.set_group(None)
+        self.gui_manager.set_active_object(None)
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position
