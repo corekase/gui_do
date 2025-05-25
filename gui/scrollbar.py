@@ -24,6 +24,8 @@ class Scrollbar(Frame):
         # once initialized then the scrollbar operates as intended
 
     def handle_event(self, event, window):
+        # -> To-do: add lock_area(rect), which keeps to mouse pos always inside that for the scrollbar
+        #           area when dragging
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
             # no matching events for scrollbar logic
             return False

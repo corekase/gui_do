@@ -88,6 +88,7 @@ def screen_to_window(point, window):
     wx, wy = window.x, window.y
     return (x - wx, y - wy)
 
+# improve this
 def window_to_screen(point, window):
     x, y = point
     wx, wy = window.x, window.y

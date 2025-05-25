@@ -55,6 +55,8 @@ class GuiManager:
         self.surface.blit(self.saved_graphic[0], self.saved_graphic[1])
 
     def handle_event(self, event):
+        # -> To-do: make one collision function which takes into account screen and window
+        #           coordinates and converts as needed that all widgets can use in their event handling
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self.mouse_pos = event.pos
