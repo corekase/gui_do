@@ -3,7 +3,7 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
 class GuiManager:
-    # the following code makes the GuiManager a singleton
+    # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
     # No matter how many times it is instantiated the result is this object and its state
     _instance_ = None
     def __new__(cls):
