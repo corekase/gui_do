@@ -3,6 +3,8 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
 class GuiManager:
+    # the following code makes the GuiManager a singleton
+    # No matter how many times it is instantiated the result is this object and its state
     _instance_ = None
     def __new__(cls):
         if GuiManager._instance_ is None:
@@ -10,6 +12,7 @@ class GuiManager:
             GuiManager._instance_._populate_()
         return GuiManager._instance_
 
+    # instead of an __init__ we have _populate_ and it is executed exactly once
     def _populate_(self):
         # surface to draw the widget to
         self.surface = None
@@ -112,8 +115,7 @@ class GuiManager:
             # draw the widget
             widget.draw()
         for window in self.windows:
-            window_rect = Rect(window.x, window.y - 20, window.width, window.height + 20)
-            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window_rect), window_rect))
+            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_rect()), window.get_rect()))
             window.draw_title_bar()
             for widget in window.widgets:
                 # draw the widget
