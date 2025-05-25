@@ -37,11 +37,6 @@ def render_text(text, highlight=False):
     # return a bitmap of the chosen colour
     return font_object.render(text, True, colour)
 
-# graphical print function
-def gprint(screen, text, position):
-    bitmap = render_text(text)
-    screen.blit(bitmap, (position[0], position[1]))
-
 # layout helper
 def centre(bigger, smaller):
     # helper function that returns a centred position
