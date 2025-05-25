@@ -116,8 +116,6 @@ class GuiManager:
         return None
 
     def draw_gui(self):
-        # -> To-do: gui handles the cursor, and because of that knows which window it is over for events
-        #           gui draws and undraws cursor, and tracks its location internally
         # draw all widgets to their surfaces
         self.bitmaps.clear()
         for widget in self.widgets:
