@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
 from gui import Label, Button, PushButtonGroup, Scrollbar, Frame
-from gui import file_resource, image_alpha, copy_graphic_area, centre, set_font, set_last_font
+from gui import file_resource, centre, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import Window
 
@@ -101,11 +101,10 @@ class Demo:
 
         # gui setup done
         self.gui.set_active_object(None)
-
-        # load an image to be used for a cursor
-        self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
-        # read initial mouse position
-        self.mouse_position = pygame.mouse.get_pos()
+        # set cursor image
+        self.gui.set_cursor_image('cursors', 'Icons8_cursor.png')
+        # set cursor hotspot
+        self.gui.set_cursor_hotspot((3, 0))
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag
@@ -126,16 +125,10 @@ class Demo:
             set_last_font()
             # draw gui widgets
             self.gui.draw_gui()
-            # draw mouse graphic
-            mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
-            mouse_bitmap = copy_graphic_area(self.screen, mouse_rect)
-            self.screen.blit(self.cursor_image, mouse_rect)
             # tick to desired frame-rate
             clock.tick(fps)
             # buffer to the screen
             pygame.display.flip()
-            # undo mouse graphic draw
-            self.screen.blit(mouse_bitmap, mouse_rect)
             # undraw gui widgets
             self.gui.undraw_gui()
         # release resources

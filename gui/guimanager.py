@@ -1,4 +1,4 @@
-from .utility import copy_graphic_area, load_font, set_font
+from .utility import copy_graphic_area, load_font, set_font, image_alpha
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
@@ -42,6 +42,10 @@ class GuiManager:
         self.set_active_object()
         # current mouse position
         self.mouse_pos = None
+        # cursor image and hotspot
+        self.cursor_image = None
+        self.cursor_hotspot = None
+        self.cursor_rect = None
 
     def set_surface(self, surface):
         self.surface = surface
@@ -50,11 +54,12 @@ class GuiManager:
         # set which object is active
         self.active_object = object
 
-    def set_cursor_image(self, image):
-        pass
+    def set_cursor_image(self, *image):
+        self.cursor_image = image_alpha(*image)
+        self.cursor_rect = self.cursor_image.get_rect()
 
     def set_cursor_hotspot(self, position):
-        pass
+        self.cursor_hotspot = position
 
     def get_mouse_pos(self):
         # return the mouse position
@@ -127,6 +132,11 @@ class GuiManager:
                 # draw the widget
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))
+        # draw mouse cursor
+        cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
+                           self.cursor_rect.width, self.cursor_rect.height)
+        self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
+        self.surface.blit(self.cursor_image, cursor_rect)
 
     def undraw_gui(self):
         # reverse the bitmaps that were under each gui object drawn
