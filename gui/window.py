@@ -5,8 +5,9 @@ from . import utility
 from .utility import set_font, set_last_font, render_text, centre
 
 class Window:
-    def __init__(self, gui_manager, title, size, pos):
+    def __init__(self, gui_manager, name, title, size, pos):
         self.gui_manager = gui_manager
+        self.set_name(name)
         self.width, self.height = size
         self.x, self.y = pos
         self.surface = pygame.surface.Surface(size).convert()
@@ -39,3 +40,11 @@ class Window:
     def set_pos(self, pos):
         self.x, self.y = pos
         self.title_bar_rect = Rect(self.x, self.y - 20, self.width, 20)
+
+    def set_name(self, name):
+        # name the window
+        self.name = name
+
+    def get_name(self):
+        # return the name of the window
+        return self.name
