@@ -55,6 +55,9 @@ class GuiManager:
         self.surface.blit(self.saved_graphic[0], self.saved_graphic[1])
 
     def handle_event(self, event):
+        # update internal mouse position
+        if event.type == MOUSEMOTION:
+            self.mouse_pos = event.pos
         # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
             self.dragging = False
