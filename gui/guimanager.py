@@ -24,7 +24,7 @@ class GuiManager:
         load_font('biggest', 'Ubuntu-Medium.ttf', 36)
         # set default font
         set_font('normal')
-        # widgets to be managed: key:value -> group_name:list_of_widgets
+        # list of widgets attached to the screen
         self.widgets = []
         # which key group to use
         self.group = None
