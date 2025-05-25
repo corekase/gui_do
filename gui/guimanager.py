@@ -1,4 +1,4 @@
-from .utility import copy_graphic, load_font, set_font
+from .utility import copy_graphic_area, load_font, set_font
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 
@@ -49,7 +49,7 @@ class GuiManager:
 
     def save_graphic(self, window):
         rec = Rect(window.x, window.y - 20, window.width, window.height + 20)
-        self.saved_graphic = (copy_graphic(self.surface, rec), rec)
+        self.saved_graphic = (copy_graphic_area(self.surface, rec), rec)
 
     def restore_graphic(self):
         self.surface.blit(self.saved_graphic[0], self.saved_graphic[1])
@@ -96,12 +96,12 @@ class GuiManager:
         self.bitmaps.clear()
         for widget in self.widgets:
             # tuple of the bitmap and its rect, after loop ends in reverse order
-            self.bitmaps.insert(0, (copy_graphic(self.surface, widget.rect), widget.rect))
+            self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
         for window in self.windows:
             window_rect = Rect(window.x, window.y - 20, window.width, window.height + 20)
-            self.bitmaps.insert(0, (copy_graphic(self.surface, window_rect), window_rect))
+            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window_rect), window_rect))
             window.draw_title_bar()
             for widget in window.widgets:
                 # draw the widget

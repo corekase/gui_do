@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
 from gui import GuiManager, PushButtonKind
 from gui import Label, Button, PushButtonGroup, Scrollbar, Frame
-from gui import file_resource, image_alpha, copy_graphic, centre, set_font, set_last_font
+from gui import file_resource, image_alpha, copy_graphic_area, centre, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import Window
 
@@ -120,7 +120,7 @@ class Demo:
             self.gui_manager.draw_gui()
             # draw mouse graphic
             mouse_rect = Rect(self.mouse_position[0] - 3, self.mouse_position[1], 16, 16)
-            mouse_bitmap = copy_graphic(self.screen, mouse_rect)
+            mouse_bitmap = copy_graphic_area(self.screen, mouse_rect)
             self.screen.blit(self.cursor_image, mouse_rect)
             # tick to desired frame-rate
             clock.tick(fps)

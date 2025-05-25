@@ -77,7 +77,7 @@ def file_resource(*names):
     return os.path.join('data', *names)
 
 # copy graphic helper
-def copy_graphic(surface, rect, flags = 0):
+def copy_graphic_area(surface, rect, flags = 0):
     bitmap = pygame.Surface((rect.width, rect.height), flags)
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
