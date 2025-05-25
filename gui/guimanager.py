@@ -24,6 +24,8 @@ class GuiManager:
         load_font('biggest', 'Ubuntu-Medium.ttf', 36)
         # set default font
         set_font('normal')
+        # dictionary of window names to their objects: key:value -> name, object
+        self.names = {}
         # list of widgets attached to the screen
         self.widgets = []
         # which key group to use
@@ -81,7 +83,7 @@ class GuiManager:
         self.windows.append(window)
 
     def get_window(self, name):
-        pass
+        return self.names[name]
 
     def handle_event(self, event):
         # -> To-do: make one collision function which takes into account screen and window
