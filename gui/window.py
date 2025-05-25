@@ -35,6 +35,7 @@ class Window:
         return title_surface
 
     def draw_title_bar(self):
+        # -> To-do: combine title_bar_rect and the window_rect into one rect
         self.gui_manager.surface.blit(self.title_bar_graphic, (self.x, self.y - 20))
 
     def set_pos(self, pos):
