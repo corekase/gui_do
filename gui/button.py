@@ -22,11 +22,7 @@ class Button(Frame):
             # no matching events for button logic
             return False
         # is the mouse position within the button rect
-        if window != None:
-            pos = screen_to_window(event.pos, window)
-            collision = self.rect.collidepoint(pos)
-        else:
-            collision = self.rect.collidepoint(event.pos)
+        collision = self.rect.collidepoint(screen_to_window(event.pos, window))
         # manage the state of the button
         if (self.state == State.IDLE) and collision:
             self.state = State.HOVER

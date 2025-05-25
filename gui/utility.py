@@ -79,12 +79,16 @@ def copy_graphic_area(surface, rect, flags = 0):
 
 # convert mouse position to a window position
 def screen_to_window(point, window):
-    x, y = point
-    wx, wy = window.x, window.y
-    return (x - wx, y - wy)
+    if window != None:
+        x, y = point
+        wx, wy = window.x, window.y
+        return (x - wx, y - wy)
+    return point
 
 # improve this
 def window_to_screen(point, window):
-    x, y = point
-    wx, wy = window.x, window.y
-    return (x + wx, y + wy)
+    if window != None:
+        x, y = point
+        wx, wy = window.x, window.y
+        return (x + wx, y + wy)
+    return point

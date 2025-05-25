@@ -30,10 +30,7 @@ class Scrollbar(Frame):
             # no matching events for scrollbar logic
             return False
         # manage the state of the scrollbar
-        if window != None:
-            point = screen_to_window(event.pos, window)
-        else:
-            point = event.pos
+        point = screen_to_window(event.pos, window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # begin dragging the scrollbar
@@ -42,10 +39,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            if window != None:
-                x, y = screen_to_window(event.pos, window)
-            else:
-                x, y = event.pos
+            x, y = screen_to_window(event.pos, window)
             # normalize x and y to graphic drawing area
             x, y = x - self.graphic_rect.x, y - self.graphic_rect.y
             # test bounds for dragging
