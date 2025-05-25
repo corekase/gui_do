@@ -30,12 +30,18 @@ class GuiManager:
         self.saved_graphic = None
         # set the default group to the screen
         self.set_group()
+        # current mouse position
+        self.mouse_pos = None
 
     def set_cursor_image(self, image):
         pass
 
     def set_cursor_hotspot(self, position):
         pass
+
+    def get_mouse_pos(self):
+        # return the mouse position
+        return self.mouse_pos
 
     def set_group(self, window=None):
         # set which key group is active
