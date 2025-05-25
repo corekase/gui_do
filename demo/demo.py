@@ -97,7 +97,7 @@ class Demo:
         # add the scrollbars in
         self.gui.add_widget(sb1)
         self.gui.add_widget(sb2)
-        # end adding window widgets
+        # done adding window widgets
 
         # gui setup done
         self.gui.set_active_object(None)
