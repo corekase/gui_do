@@ -17,10 +17,11 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
-        # create a gui manager and it makes the screen the active group
+        # create a gui manager and it makes the screen the active object
         self.gui = GuiManager()
         self.gui.set_surface(self.screen)
-        # add an exit button
+
+        # begin adding screen widgets
         self.gui.add_widget(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         x, y = 150, 100
         set_grid_properties((x, y), 140, 20, 4)
@@ -40,24 +41,27 @@ class Demo:
         self.gui.add_widget(pb1b)
         self.gui.add_widget(pb2b)
         self.gui.add_widget(pb3b)
+        # done adding screen widgets
+
+        # begin adding window widgets
+        # layout origin
+        x = y = 0
         # width and height of the first window
         width = 440
         height = 175
         # position of the window
         x1 = centre(self.screen.get_rect().width, width)
         y1 = centre(self.screen.get_rect().height, height)
-        # create the window and it adds itself to the gui_manager and makes itself the active group
+        # create the window and it adds itself to the gui_manager and makes itself the active object
         Window('main', 'gui_do', (x1, y1), (width, height))
-        # layout origin
-        x = y = 0
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
-        # create a rect for the frame for the display area
-        frame = Rect(x, y, width, height)
         # add title label
         set_font('biggest')
         label = Label((0, 0), 'gui_do')
         set_font('normal')
+        # create a rect for the frame for the display area
+        frame = Rect(x, y, width, height)
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y
         self.gui.add_widget(label)
@@ -93,8 +97,11 @@ class Demo:
         # add the scrollbars in
         self.gui.add_widget(sb1)
         self.gui.add_widget(sb2)
-        # done gui setup
+        # end adding window widgets
+
+        # gui setup done
         self.gui.set_active_object(None)
+
         # load an image to be used for a cursor
         self.cursor_image = image_alpha('cursors', 'Icons8_cursor.png')
         # read initial mouse position
