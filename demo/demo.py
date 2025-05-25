@@ -11,7 +11,7 @@ class Demo:
         # initialize pygame
         pygame.init()
         # create main window surface, if not using vsync adjust fps in run()
-        self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED, vsync=1)
+        self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED)
         # set window caption
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
@@ -111,7 +111,7 @@ class Demo:
 
     def run(self):
         # fps to maintain, if 0 then unlimited
-        fps = 0
+        fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # make the bigger font entry the default for new renders
