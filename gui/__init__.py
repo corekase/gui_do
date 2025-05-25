@@ -10,8 +10,7 @@ from .frame import Frame
 from .label import Label
 from .button import Button
 from .scrollbar import Scrollbar
-from .pushbuttongroup import PushButtonKind
-from .pushbuttongroup import PushButtonGroup
+from .pushbuttongroup import PushButtonGroup, PushButtonKind
 from .window import Window
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
