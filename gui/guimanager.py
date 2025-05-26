@@ -53,15 +53,13 @@ class GuiManager:
         self.active_object = object
 
     def set_cursor_image(self, *image):
+        # set the cursor image
         self.cursor_image = image_alpha(*image)
         self.cursor_rect = self.cursor_image.get_rect()
 
     def set_cursor_hotspot(self, position):
+        # set the cursor's hotspot
         self.cursor_hotspot = position
-
-    def get_mouse_pos(self):
-        # return the mouse position
-        return self.mouse_pos
 
     def add(self, widget):
         if self.active_object != None:
