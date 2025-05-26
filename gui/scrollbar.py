@@ -59,7 +59,7 @@ class Scrollbar(Frame):
                 point = 0
                 self.last_mouse_pos = 0
                 return True
-            if point > self.total_range:
+            elif point > self.total_range:
                 self.start_pos = self.total_range - self.bar_size
                 self.last_mouse_pos = self.total_range - self.bar_size
                 return True
@@ -89,18 +89,14 @@ class Scrollbar(Frame):
             if event.button == 1:
                 # unlock mouse movement
                 self.gui.set_lock_area(None)
-                # return to default state
-                self.reset_state()
+                # reset state to default values
+                self.state = State.IDLE
+                self.dragging = False
+                self.last_mouse_pos = None
                 # signal there was a change
                 return True
         # signal no changes
         return False
-
-    def reset_state(self):
-        # reset state to default values
-        self.state = State.IDLE
-        self.dragging = False
-        self.last_mouse_pos = None
 
     def get(self):
         # return scrollbar start position
