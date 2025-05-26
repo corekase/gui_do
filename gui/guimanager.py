@@ -88,7 +88,7 @@ class GuiManager:
         # returns a window object for the given name
         return self.names[name]
 
-    # -> To-do: implement show/hide for widgets and windows.  Widgets inside a window
+    # -> To-do: implement show/hide for widgets and windows. widgets inside a window
     #           could be hidden, screen widgets could be hidden, and entire windows can be
     #           hidden
     #
