@@ -15,7 +15,7 @@ class GuiManager:
 
     # instead of an __init__ we have _populate_ and it is executed exactly once
     def _populate_(self):
-        # gui drawing surface
+        # screen surface
         self.surface = None
         # load fonts for utility functions
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
@@ -44,7 +44,7 @@ class GuiManager:
         self.lock_area_rect = None
 
     def set_surface(self, surface):
-        # gui screen surface
+        # set gui screen surface
         self.surface = surface
 
     def set_active_object(self, object=None):
