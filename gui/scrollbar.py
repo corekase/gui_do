@@ -54,9 +54,9 @@ class Scrollbar(Frame):
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging
             if self.horizontal:
-                point = x
+                point = self.graphical_to_total(x)
             else:
-                point = y
+                point = self.graphical_to_total(y)
             # if point < min or point > max make them
             if point < 0:
                 point = 0
@@ -66,10 +66,10 @@ class Scrollbar(Frame):
                 new_pos = self.graphical_to_total(y)
             if new_pos > self.total_range - self.bar_size:
                 self.start_pos = self.total_range - self.bar_size
-                self.last_mouse_pos = self.total_range - self.bar_size
+                self.last_mouse_pos = new_pos
             if self.last_mouse_pos != None:
                 # convert mouse position to total range units
-                mouse_pos = self.graphical_to_total(point)
+                mouse_pos = point
                 # find the difference in mouse movement between handle calls
                 mouse_delta = mouse_pos - self.last_mouse_pos
                 # calculate new position
@@ -86,7 +86,7 @@ class Scrollbar(Frame):
                 return True
             else:
                 # if there is no last mouse position make it this one
-                self.last_mouse_pos = self.graphical_to_total(point)
+                self.last_mouse_pos = point
                 # signal no change
                 return False
         if (event.type == MOUSEBUTTONUP) and self.dragging:
