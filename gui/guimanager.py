@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
-from .utility import copy_graphic_area, load_font, set_font, image_alpha
+from .utility import copy_graphic_area, load_font, image_alpha
 
 
 class GuiManager:
