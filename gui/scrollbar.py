@@ -39,7 +39,7 @@ class Scrollbar(Frame):
                 # lock mouse movement to scrollbar area
                 if window != None:
                     x1, y1 = convert_to_window((self.graphic_rect[0], self.graphic_rect[1]), window)
-                    new_rect = Rect(x1, y1, self.graphic_rect.width, self.graphic_rect.height)
+                    new_rect = Rect(x1 + 1, y1 + 1, self.graphic_rect.width - 2, self.graphic_rect.height - 2)
                     self.gui.set_lock_area(new_rect)
                 else:
                     self.gui.set_lock_area(self.graphic_rect)
@@ -57,7 +57,16 @@ class Scrollbar(Frame):
                 point = x
             else:
                 point = y
-
+            # if point < min or point > max make them
+            if point < 0:
+                point = 0
+            if self.horizontal:
+                new_pos = self.graphical_to_total(x)
+            else:
+                new_pos = self.graphical_to_total(y)
+            if new_pos > self.total_range - self.bar_size:
+                self.start_pos = self.total_range - self.bar_size
+                self.last_mouse_pos = self.total_range - self.bar_size
             if self.last_mouse_pos != None:
                 # convert mouse position to total range units
                 mouse_pos = self.graphical_to_total(point)

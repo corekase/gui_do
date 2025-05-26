@@ -110,7 +110,6 @@ class GuiManager:
                 adjusted = True
             if adjusted:
                 set_pos(x, y)
-                pass
             return (x, y)
         return position
 
