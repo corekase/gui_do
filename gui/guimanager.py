@@ -112,6 +112,12 @@ class GuiManager:
     #    code executing into the object bank will use manipulators like how set_font() is used, to control
     #    which bank names and routes to the leaf lists are constructed
 
+    def load_bank(self):
+        # loads a bank entry into the root datastructure. entries are instantiated in the bank and by
+        # reference they are moved to the root to and from the root. the root is a "working-memory" of
+        # whatever happens to be loaded into it
+        pass
+
     def set_lock_area(self, area=None):
         # lock area rect is in main surface coordinates
         self.lock_area_rect = area
