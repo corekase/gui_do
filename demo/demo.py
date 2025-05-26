@@ -158,22 +158,22 @@ class Demo:
         # handle the pygame event queue
         for event in pygame.event.get():
             # check if any gui objects handle the event
-            gui_event = self.gui.handle_event(event)
-            # if gui_event isn't None then it is a gui event
-            # if a gui_event is '<CONSUMED>' then ignore it - this id prevents event
+            widget_id = self.gui.handle_event(event)
+            # if a widget_id is '<CONSUMED>' then ignore it - this id prevents event
             # fall-through to the gui client
-            if gui_event != None:
-                # handle gui event ids
-                if gui_event == 'exit':
+            if widget_id != None:
+                # widget_id is the widget identifier
+                if widget_id == 'exit':
                     # exit was clicked
                     self.running = False
-                # elif other gui objects
+                # elif other widget ids
             else:
-                # handle window close widget or alt-f4 keypress
+                # client event handling begins here
                 if event.type == QUIT:
+                    # handle window close widget or alt-f4 keypress
                     self.running = False
-                # handle key presses
                 elif event.type == KEYDOWN:
-                    # handle escape key
+                    # handle key presses
                     if event.key == K_ESCAPE:
+                        # handle escape key
                         self.running = False
