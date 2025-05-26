@@ -33,6 +33,8 @@ class Window:
         self.title_bar_rect = self.title_bar_graphic.get_rect()
         # set the window to the position passed in
         self.set_pos(pos)
+        # whether a window is shown or hidden
+        self.visible = True
 
     def make_title_bar_graphic(self, title):
         set_font('titlebar')

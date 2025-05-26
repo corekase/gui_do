@@ -15,6 +15,8 @@ class Widget:
         self.rect = Rect(rect)
         # callback function
         self.callback = None
+        # whether a widget is shown or hidden
+        self.visible = True
 
     def handle_event(self, _, _a):
         # implement in subclasses
