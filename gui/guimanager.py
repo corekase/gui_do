@@ -75,18 +75,21 @@ class GuiManager:
             self.widgets.append(widget)
 
     def add_window(self, name, window):
+        # store the window object by name
         self.names[name] = window
+        # add the window object to the list of windows
         self.windows.append(window)
 
     def get_window(self, name):
         # returns a window object for the given name
         return self.names[name]
 
-    # lock area rect is in main surface coordinates
     def set_lock_area(self, area=None):
+        # lock area rect is in main surface coordinates
         self.lock_area_rect = area
 
     def lock_area(self, position):
+        # keep the position within the lock area rect
         if self.lock_area_rect != None:
             x, y = position
             adjusted = False
