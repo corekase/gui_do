@@ -59,7 +59,7 @@ class GuiManager:
 
     def add(self, widget, callback=None):
         if widget.id == '<CONSUMED>':
-            raise Exception(f'<CONSUMED> is a reserved widget id')
+            raise Exception(f'<CONSUMED> is a reserved widget identifier')
         widget.callback = callback
         if self.active_object != None:
             widget.surface = self.active_object.surface
@@ -126,26 +126,27 @@ class GuiManager:
                         self.dragging_window = window
                         # consume this event, do not process it any further and do not pass it to client code
                         return '<CONSUMED>'
-        # if a widget signals that it had an action return the widget id
+        # for each window handle their widgets
         for window in self.windows:
             for widget in window.widgets:
-                # test widget activation
-                if widget.handle_event(event, window):
-                    # widget activated, return its id
-                    if widget.callback != None:
-                        widget.callback()
-                    else:
-                        return widget.id
-        for widget in self.widgets:
-            # test widget activation
-            if widget.handle_event(event, None):
-                # widget activated, return its id
-                if widget.callback != None:
-                    widget.callback()
-                else:
+                if self.handle_widget(widget, event, window):
                     return widget.id
+        # handle screen widgets
+        for widget in self.widgets:
+            if self.handle_widget(widget, event):
+                return widget.id
         # no widget activated to this event
         return None
+
+    def handle_widget(self, widget, event, window=None):
+        # if a widget signals that it had an activation use the callback or return the widget id
+        if widget.handle_event(event, window):
+            # widget activated
+            if widget.callback != None:
+                widget.callback()
+                return False
+            else:
+                return True
 
     def draw_gui(self):
         # draw all widgets to their surfaces
