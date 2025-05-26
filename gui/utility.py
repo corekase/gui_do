@@ -1,6 +1,4 @@
 # utility is a module
-# the first time utility is imported from anywhere its namespace is initialized, every
-# subsequent import anywhere else reuses the namespace - intialization happens only once
 import os
 import pygame
 from pygame import Rect
