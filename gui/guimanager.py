@@ -79,6 +79,7 @@ class GuiManager:
         self.windows.append(window)
 
     def get_window(self, name):
+        # returns a window object for the given name
         return self.names[name]
 
     # lock area rect is in main surface coordinates
