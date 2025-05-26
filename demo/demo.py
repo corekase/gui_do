@@ -24,7 +24,7 @@ class Demo:
         self.gui.add(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
         x, y = 150, 120
         set_grid_properties((x, y), 140, 20, 4)
-        self.gui.add(Frame('frame', Rect(x - 10, y - 10, 440, 135)))
+        self.gui.add(Frame('frame', Rect(x - 10, y - 10, 440, 145)))
         self.gui.add(Button('Button_A', gridded(0, 0), 'Button'))
         self.gui.add(Button('Button_B', gridded(0, 1), 'Button'))
         self.gui.add(Button('Button_C', gridded(0, 2), 'Button'))
@@ -44,10 +44,10 @@ class Demo:
         self.screen_label_radio = Label(gridded(2, 3), 'N/A')
         self.gui.add(self.screen_label_button)
         self.gui.add(self.screen_label_radio)
-        sba = Scrollbar('sba', Rect(x, y + 95, 390, 20), True)
+        sba = Scrollbar('sba', Rect(x, y + 105, 390, 20), True)
         sba.set(100, 0, 30)
         self.gui.add(sba)
-        sbb = Scrollbar('sbb', Rect(x + 400, y, 20, 115), False)
+        sbb = Scrollbar('sbb', Rect(x + 400, y, 20, 125), False)
         sbb.set(100, 0, 30)
         self.gui.add(sbb)
         # done adding screen widgets
