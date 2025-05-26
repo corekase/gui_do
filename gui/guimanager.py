@@ -1,7 +1,8 @@
+import pygame
 from .utility import copy_graphic_area, load_font, set_font, image_alpha, screen_coord_to_window_coord
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
-from pygame.mouse import set_pos
+
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -109,7 +110,7 @@ class GuiManager:
                 y = self.lock_area_rect.bottom
                 adjusted = True
             if adjusted:
-                set_pos(x, y)
+                pygame.mouse.set_pos(x, y)
             return (x, y)
         else:
             return position
