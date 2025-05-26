@@ -1,7 +1,7 @@
-from .frame import Frame, State
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from .utility import render_text, centre, convert_to_window
 from .guimanager import GuiManager
+from .utility import render_text, centre, convert_to_window
+from .frame import Frame, State
 
 class Button(Frame):
     def __init__(self, id, rect, text):

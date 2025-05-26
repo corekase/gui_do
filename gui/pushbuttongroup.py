@@ -1,12 +1,12 @@
-import pygame
+from enum import Enum
 from math import cos, sin, radians
+import pygame
 from pygame import Rect
+from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
+from .utility import render_text, centre, convert_to_window
 from .button import Button
 from .frame import State
-from .utility import render_text, centre, convert_to_window
 from .widget import colours
-from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from enum import Enum
 
 PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
 

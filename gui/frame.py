@@ -1,7 +1,7 @@
-from .widget import Widget, colours
-from pygame.draw import rect, line
-
 from enum import Enum
+from pygame.draw import rect, line
+from .widget import Widget, colours
+
 State = Enum('State', ['IDLE', 'HOVER', 'ARMED'])
 
 class Frame(Widget):

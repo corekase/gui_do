@@ -1,8 +1,8 @@
-from .guimanager import GuiManager
-from .frame import Frame, State
 import pygame
 from pygame import Rect
+from .guimanager import GuiManager
 from .utility import set_font, set_last_font, render_text, centre
+from .frame import Frame, State
 
 class Window:
     def __init__(self, name, title, pos, size):
