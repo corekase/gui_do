@@ -39,7 +39,7 @@ class Scrollbar(Frame):
                 # lock mouse movement to scrollbar area
                 if window != None:
                     x1, y1 = convert_to_window((self.graphic_rect[0], self.graphic_rect[1]), window)
-                    new_rect = Rect(x1 + 1, y1 + 1, self.graphic_rect.width - 2, self.graphic_rect.height - 2)
+                    new_rect = Rect(x1, y1, self.graphic_rect.width, self.graphic_rect.height)
                     self.gui.set_lock_area(new_rect)
                 else:
                     self.gui.set_lock_area(self.graphic_rect)
