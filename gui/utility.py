@@ -77,16 +77,16 @@ def copy_graphic_area(surface, rect, flags = 0):
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
 
-# get a screen coordinate, handling a window if needed
-def convert_to_screen(point, window):
+# convert the point from a main surface one to a window point
+def screen_coord_to_window_coord(point, window):
     if window != None:
         x, y = point
         wx, wy = window.x, window.y
         return (x - wx, y - wy)
     return point
 
-# get a window coordinate from a screen coordinate and a window object
-def convert_to_window(point, window):
+# convert the point from a window point to a main surface one
+def window_coord_to_screen_coord(point, window):
     if window != None:
         x, y = point
         wx, wy = window.x, window.y

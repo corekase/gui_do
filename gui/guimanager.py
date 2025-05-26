@@ -1,4 +1,4 @@
-from .utility import copy_graphic_area, load_font, set_font, image_alpha, convert_to_screen
+from .utility import copy_graphic_area, load_font, set_font, image_alpha, screen_coord_to_window_coord
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from pygame import Rect
 from pygame.mouse import set_pos
