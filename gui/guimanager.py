@@ -41,7 +41,7 @@ class GuiManager:
         self.cursor_image = None
         self.cursor_hotspot = None
         self.cursor_rect = None
-        # area rect to lock the mouse position within, lock area is in screen coordinates not window
+        # area rect to lock the mouse position within
         self.lock_area_rect = None
 
     def set_surface(self, surface):
