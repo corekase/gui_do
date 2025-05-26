@@ -42,6 +42,13 @@ class GuiManager:
         self.cursor_rect = None
         # area rect to keep the mouse position within
         self.lock_area_rect = None
+        # object bank dictionary
+        # dictionary of key:value -> name
+        #   dictionary of key:value -> bank
+        #     dictionary of key:screen and key:windows
+        #       -> for the lists
+        # object_bank[name][bank][screen|windows]=lists
+        self.object_bank = {}
 
     def set_surface(self, surface):
         # set gui screen surface
@@ -83,17 +90,25 @@ class GuiManager:
 
     # -> To-do: implement show/hide for widgets and windows.  Widgets inside a window
     #           could be hidden, screen widgets could be hidden, and entire windows can be
-    #           hidden.
+    #           hidden
 
-    # -> To-do: object banks. for the list of screen widgets and the list of windows and their
-    #           lists of widgets: implement a "AMOS bank" system.  where you could define the gui
-    #           elements, and switch between different sets of them depending on the state of
-    #           your application. so, having one gui manager singleton might complicate a main-menu
-    #           where you pass a screen and a new run() instantiates everything from there and releases
-    #           the data when it returns. with a singleton gui that menu wouldn't work. but, switch out
-    #           banks at the root of the data structures then multiple applications sharing a screen work.
-    #           object banks could also be divided into specific windows or forms, and you could bank in and
-    #           out different ones to a shared root data structure where they operate together.
+    # -> To-do: object banks
+    #    for the list of screen widgets and the list of windows and their
+    #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
+    #    elements, and switch between different sets of them depending on the state of
+    #    your application
+    #
+    #    so, having one gui manager singleton might complicate a main-menu
+    #    where you pass a screen and a new run() instantiates everything from there and releases
+    #    the data when it returns. with a singleton gui that menu wouldn't work. but, switch out
+    #    banks at the root of the data structures then multiple applications sharing a screen work
+    #
+    #    object banks could also be divided into specific windows or forms, and you could bank in and
+    #    out different ones to a shared root data structure where they operate together.
+    #    code definitions for gui layouts can be put into any source file in a function or method that
+    #    has the gui manager singleton. as the code executes it creates all the data in the banks, and
+    #    then in the application load and mix the bank data as needed
+
 
     def set_lock_area(self, area=None):
         # lock area rect is in main surface coordinates
