@@ -38,9 +38,9 @@ class Scrollbar(Frame):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
                 if window != None:
-                    x1, y1 = convert_to_window((self.graphic_rect[0], self.graphic_rect[1]), window)
-                    new_rect = Rect(x1, y1, self.graphic_rect.width, self.graphic_rect.height)
-                    self.gui.set_lock_area(new_rect)
+                    x, y = convert_to_window((self.graphic_rect[0], self.graphic_rect[1]), window)
+                    lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
+                    self.gui.set_lock_area(lock_rect)
                 else:
                     self.gui.set_lock_area(self.graphic_rect)
                 # begin dragging the scrollbar
