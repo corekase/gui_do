@@ -49,7 +49,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = convert_to_screen(event.pos, window)
+            x, y = convert_to_screen(self.gui.lock_area(event.pos), window)
             # normalize x and y to graphic drawing area
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging
@@ -57,7 +57,6 @@ class Scrollbar(Frame):
                 point = self.graphical_to_total(x)
             else:
                 point = self.graphical_to_total(y)
-            # if point < min or point > max make them
             if point < 0:
                 point = 0
                 self.last_mouse_pos = 0
