@@ -22,8 +22,6 @@ class GuiManager:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
-        # set default font
-        set_font('normal')
         # dictionary of window names to their objects: key:value -> name, object
         self.names = {}
         # list of widgets attached to the screen

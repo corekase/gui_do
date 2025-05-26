@@ -19,6 +19,7 @@ class Demo:
         # create a gui manager and it makes the screen the active object
         self.gui = GuiManager()
         self.gui.set_surface(self.screen)
+        set_font('normal')
         #
         # begin adding screen widgets
         # exit button
@@ -78,7 +79,7 @@ class Demo:
         # title label
         set_font('gui_do')
         label = Label((0, 0), 'gui_do')
-        set_font('normal')
+        set_last_font()
         # main window label
         frame = Rect(x, y, width, height)
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
