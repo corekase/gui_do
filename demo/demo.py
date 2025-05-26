@@ -165,7 +165,7 @@ class Demo:
                 if widget_id == 'exit':
                     # exit was clicked
                     self.running = False
-                # elif other widget ids
+                # elif other widget_ids
             else:
                 # client event handling begins here
                 if event.type == QUIT:
