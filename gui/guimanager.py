@@ -51,8 +51,8 @@ class GuiManager:
         # set which object is active
         self.active_object = object
 
-    def set_cursor_image(self, hotspot, *image):
-        # set the cursor image
+    def set_cursor(self, hotspot, *image):
+        # set the cursor image and hotspot
         self.cursor_image = image_alpha(*image)
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
