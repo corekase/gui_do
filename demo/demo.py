@@ -173,7 +173,7 @@ class Demo:
         for event in pygame.event.get():
             # check if any gui objects handle the event
             widget_id = self.gui.handle_event(event)
-            # if widget_id isn't None then it means the widget was activated
+            # if widget_id isn't None or <CONSUMED> then it means the widget was activated. ignore consumed events
             if widget_id != None:
                 # widget_id is the widget identifier
                 if widget_id == 'exit':
