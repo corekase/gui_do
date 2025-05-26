@@ -88,10 +88,10 @@ class GuiManager:
     # -> To-do: object banks. for the list of screen widgets and the list of windows and their
     #           lists of widgets: implement a "AMOS bank" system.  Where you could define the gui
     #           elements, and switch between different sets of them depending on the state of
-    #           your application.  So, having one gui manager singleton might make a main-menu
-    #           where you pass a screen and it instantiates everything from there and releases
-    #           the data when it returns to the menu wouldn't work.  But, switch out banks at
-    #           the root of the data structures then multi-screen applications work.
+    #           your application.  So, having one gui manager singleton might complicate a main-menu
+    #           where you pass a screen and a new run() instantiates everything from there and releases
+    #           the data when it returns.  With a singleton gui that menu wouldn't work.  But, switch out
+    #           banks at the root of the data structures then multiple applications sharing a screen work.
 
     def set_lock_area(self, area=None):
         # lock area rect is in main surface coordinates
