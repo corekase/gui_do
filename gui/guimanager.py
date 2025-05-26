@@ -113,7 +113,9 @@ class GuiManager:
     #    which bank names and routes to the leaf lists are constructed
 
     def set_active_bank(self):
-        # bank manipulator, sets destination bank for add widget and window commands
+        # bank manipulator, sets destination bank for add widget and window commands.
+        # as items are added, their surfaces are still the screen or a window while they are being
+        # instantiated. then loading and unloading just determine which are active at any given time
         pass
 
     def load_bank(self):
