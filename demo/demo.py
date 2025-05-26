@@ -63,8 +63,7 @@ class Demo:
         self.gui.add(sb3)
         # done adding screen widgets
         #
-        # begin adding window widgets
-        # window layout, all window layouts have an x and y of 0's for the origin
+        # begin window layout, all window layouts have an x and y of 0's for the origin
         x, y, width, height = 0, 0, 440, 175
         # position of the window
         window_x = centre(self.screen.get_rect().width, width)
@@ -73,6 +72,9 @@ class Demo:
         Window('main', 'gui_do', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
+        # done window layout
+        #
+        # begin adding window widgets
         # title label
         set_font('gui_do')
         label = Label((0, 0), 'gui_do')

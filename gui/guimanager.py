@@ -3,7 +3,6 @@ from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from .utility import copy_graphic_area, load_font, image_alpha
 
-
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
     # No matter how many times it is instantiated the result is the one object and its state
