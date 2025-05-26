@@ -53,11 +53,11 @@ class Demo:
         self.gui.add(self.screen_label_button)
         self.gui.add(self.screen_label_radio)
         # horizontal scrollbar
-        sb4 = Scrollbar('S1', Rect(x + 10, y + 115, 385, 20), True)
+        sb4 = Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True)
         sb4.set(100, 0, 30)
         self.gui.add(sb4)
         # vertical scrollbar
-        sb3 = Scrollbar('S2', Rect(x + 400, y + 10, 20, 125), False)
+        sb3 = Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False)
         sb3.set(100, 0, 30)
         self.gui.add(sb3)
         # done adding screen widgets
