@@ -137,12 +137,16 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            #
+            # gui_do client screen drawing code begins here
             set_font('normal')
             self.screen_label_button.set_label(f'Button: {self.pb1.read()}')
             self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
             self.window_label_button.set_label(f'Button: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
             set_last_font()
+            # gui_do client screen drawing code ends here
+            #
             # draw gui
             self.gui.draw_gui()
             # tick to desired frame-rate
