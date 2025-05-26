@@ -18,10 +18,12 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager and it makes the screen the active object
         self.gui = GuiManager()
+        # set the drawing surface of the gui manager
         self.gui.set_surface(self.screen)
         set_font('normal')
         #
-        # begin adding screen widgets
+        # -> begin adding screen widgets
+        #
         # exit button
         self.gui.add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'))
         # layout origin
@@ -29,7 +31,7 @@ class Demo:
         x, y = centre(screen_rect.width, 440), screen_rect.height - 155
         set_grid_properties((x + 10, y + 10), 140, 20, 4)
         # background frame
-        self.gui.add(Frame('frame', Rect(x, y, 440, 145)))
+        self.gui.add(Frame('none', Rect(x, y, 440, 145)))
         # regular buttons
         self.gui.add(Button('Button_1', gridded(0, 0), 'Button 1'))
         self.gui.add(Button('Button_2', gridded(0, 1), 'Button 2'))
@@ -61,9 +63,11 @@ class Demo:
         sb3 = Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False)
         sb3.set(100, 0, 30)
         self.gui.add(sb3)
-        # done adding screen widgets
         #
-        # begin window layout, all window layouts have an x and y of 0's for the origin
+        # -> end adding screen widgets
+        #
+        # -> begin window layout, all window layouts have an x and y of 0's for the origin
+        #
         x, y, width, height = 0, 0, 440, 175
         # position of the window
         window_x = centre(self.screen.get_rect().width, width)
@@ -72,9 +76,11 @@ class Demo:
         Window('main', 'gui_do', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
-        # done window layout
         #
-        # begin adding window widgets
+        # -> end window layout
+        #
+        # -> begin adding window widgets
+        #
         # title label
         set_font('gui_do')
         label = Label((0, 0), 'gui_do')
@@ -115,9 +121,11 @@ class Demo:
         sb4 = Scrollbar('S4', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb4.set(100, 0, 30)
         self.gui.add(sb4)
-        # done adding window widgets
         #
-        # gui setup done
+        # -> end adding window widgets
+        #
+        # -> gui setup done
+        #
         self.gui.set_active_object(None)
         # set cursor image
         self.gui.set_cursor_image('cursors', 'Icons8_cursor.png')
@@ -138,14 +146,16 @@ class Demo:
             # handle events
             self.handle_events()
             #
-            # gui_do client screen drawing code begins here
+            # -> gui_do client screen drawing code begins here
+            #
             set_font('normal')
             self.screen_label_button.set_label(f'Button: {self.pb1.read()}')
             self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
             self.window_label_button.set_label(f'Button: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
             set_last_font()
-            # gui_do client screen drawing code ends here
+            #
+            # -> gui_do client screen drawing code ends here
             #
             # draw gui
             self.gui.draw_gui()
@@ -171,7 +181,9 @@ class Demo:
                     self.running = False
                 # elif other widget_ids
             else:
-                # client event handling begins here
+                #
+                # -> gui_do client event handling begins here
+                #
                 if event.type == QUIT:
                     # handle window close widget or alt-f4 keypress
                     self.running = False
