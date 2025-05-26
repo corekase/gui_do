@@ -139,7 +139,7 @@ class GuiManager:
         return None
 
     def handle_widget(self, widget, event, window=None):
-        # if a widget signals that it had an activation use the callback or return the widget id
+        # if a widget has an activation use the callback or signal that its id be returned from handle_event()
         if widget.handle_event(event, window):
             # widget activated
             if widget.callback != None:
