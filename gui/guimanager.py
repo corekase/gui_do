@@ -61,6 +61,8 @@ class GuiManager:
         self.cursor_hotspot = position
 
     def add(self, widget):
+        if widget.id == '<CONSUMED>':
+            raise Exception(f'<CONSUMED> is a reserved widget id')
         if self.active_object != None:
             widget.surface = self.active_object.surface
             # append the widget to the object
@@ -124,8 +126,9 @@ class GuiManager:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
                         self.dragging = True
                         self.dragging_window = window
-                        # consume this event, do not process it any further
-                        return None
+                        # consume this event, do not process it any further, client gui event handling
+                        # must ignore this id. it prevents event fall-through from the gui to the client
+                        return '<CONSUMED>'
         # if a widget signals that it had an action return the widget id
         for window in self.windows:
             for widget in window.widgets:

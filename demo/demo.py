@@ -160,8 +160,10 @@ class Demo:
             # check if any gui objects handle the event
             gui_event = self.gui.handle_event(event)
             # if gui_event isn't None then it is a gui event
+            # if a gui_event is '<CONSUMED>' then ignore it - this id prevents event
+            # fall-through to the gui client
             if gui_event != None:
-                # handle gui events
+                # handle gui event ids
                 if gui_event == 'exit':
                     # exit was clicked
                     self.running = False
