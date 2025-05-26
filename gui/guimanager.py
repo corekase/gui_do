@@ -147,6 +147,7 @@ class GuiManager:
                 return False
             else:
                 return True
+        return False
 
     def draw_gui(self):
         # draw all widgets to their surfaces
