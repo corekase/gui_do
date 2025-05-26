@@ -127,7 +127,7 @@ class GuiManager:
         pass
 
     def set_lock_area(self, area=None):
-        # lock area rect is in main surface coordinates
+        # lock area rect is in screen coordinates
         self.lock_area_rect = area
 
     def lock_area(self, position):
