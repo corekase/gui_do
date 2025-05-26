@@ -1,6 +1,6 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
-from pygame.locals import MOUSEMOTION, KEYDOWN, K_ESCAPE
+from pygame.locals import KEYDOWN, K_ESCAPE
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 from gui import file_resource, centre, set_font, set_last_font
