@@ -51,14 +51,11 @@ class GuiManager:
         # set which object is active
         self.active_object = object
 
-    def set_cursor_image(self, *image):
+    def set_cursor_image(self, hotspot, *image):
         # set the cursor image
         self.cursor_image = image_alpha(*image)
         self.cursor_rect = self.cursor_image.get_rect()
-
-    def set_cursor_hotspot(self, position):
-        # set the cursor's hotspot
-        self.cursor_hotspot = position
+        self.cursor_hotspot = hotspot
 
     def add(self, widget):
         if widget.id == '<CONSUMED>':

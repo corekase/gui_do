@@ -128,9 +128,7 @@ class Demo:
         #
         self.gui.set_active_object(None)
         # set cursor image
-        self.gui.set_cursor_image('cursors', 'Icons8_cursor.png')
-        # set cursor hotspot
-        self.gui.set_cursor_hotspot((4, 0))
+        self.gui.set_cursor_image((4, 0), 'cursors', 'Icons8_cursor.png')
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag
