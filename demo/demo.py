@@ -22,7 +22,7 @@ class Demo:
         #
         # begin adding screen widgets
         # exit button
-        self.gui.add(Button('exit', Rect(10, 1050, 120, 20), 'Exit'))
+        self.gui.add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'))
         # layout origin
         screen_rect = self.screen.get_rect()
         x, y = centre(screen_rect.width, 440), screen_rect.height - 155
