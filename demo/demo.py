@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, set_font, set_last_font
-from gui import set_grid_properties, gridded
+from gui import set_grid_properties, gridded, gprint
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
@@ -153,10 +153,11 @@ class Demo:
             self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
             self.window_label_button.set_label(f'Button: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
-            set_last_font()
             #
             # -> gui_do client screen drawing code ends here
             #
+            set_font('gui_do')
+            bitmap, bitmap_rect = gprint(self.screen, 'Welcome to gui_do!', (40, 40), True)
             # draw gui
             self.gui.draw_gui()
             # tick to desired frame-rate
@@ -165,6 +166,10 @@ class Demo:
             pygame.display.flip()
             # undraw gui
             self.gui.undraw_gui()
+            #
+            # -> gui_do client screen undrawing code begins here
+            #
+            self.screen.blit(bitmap, bitmap_rect)
         # release resources
         pygame.quit()
 

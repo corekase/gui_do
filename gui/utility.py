@@ -75,6 +75,18 @@ def copy_graphic_area(surface, rect, flags = 0):
     bitmap.blit(surface, (0, 0), rect)
     return bitmap
 
+# print to position helper
+def gprint(screen, text, position, make_copy=False):
+    bitmap = render_text(text)
+    bitmap_rect = bitmap.get_rect()
+    new_rect = Rect(position[0], position[1], bitmap_rect.width, bitmap_rect.height)
+    if make_copy == True:
+        saved = copy_graphic_area(screen, new_rect)
+    screen.blit(bitmap, new_rect)
+    if make_copy == True:
+        return saved, new_rect
+    return None, None
+
 # convert the point from a main surface one to a window point
 def convert_to_window(point, window):
     # fall-through function, perform the conversion only if necessary
