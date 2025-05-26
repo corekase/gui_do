@@ -13,6 +13,8 @@ class Widget:
         self.id = id
         # rect for widget position and size on the surface
         self.rect = Rect(rect)
+        # callback function
+        self.callback = None
 
     def handle_event(self, _, _a):
         # implement in subclasses

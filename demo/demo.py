@@ -24,8 +24,8 @@ class Demo:
         #
         # -> begin adding screen widgets
         #
-        # exit button
-        self.gui.add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'))
+        # exit button, uses a callback function
+        self.gui.add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'), self.exit)
         # layout origin
         screen_rect = self.screen.get_rect()
         x, y = centre(screen_rect.width, 440), screen_rect.height - 155
@@ -173,10 +173,11 @@ class Demo:
             widget_id = self.gui.handle_event(event)
             # if widget_id isn't None or <CONSUMED> then it means the widget was activated. ignore consumed events
             if widget_id != None:
-                # widget_id is the widget identifier
-                if widget_id == 'exit':
-                    # exit was clicked
-                    self.running = False
+                # widget_id is the widget identifier. either handle the identifier here or use a callback
+                pass
+                # if widget_id == 'exit':
+                #     # exit was clicked
+                #     self.running = False
                 # elif other widget_ids
             else:
                 #
@@ -190,3 +191,7 @@ class Demo:
                     if event.key == K_ESCAPE:
                         # handle escape key
                         self.running = False
+
+    # callbacks
+    def exit(self):
+        self.running = False

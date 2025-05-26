@@ -57,9 +57,10 @@ class GuiManager:
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
-    def add(self, widget):
+    def add(self, widget, callback=None):
         if widget.id == '<CONSUMED>':
             raise Exception(f'<CONSUMED> is a reserved widget id')
+        widget.callback = callback
         if self.active_object != None:
             widget.surface = self.active_object.surface
             # append the widget to the object
@@ -131,12 +132,18 @@ class GuiManager:
                 # test widget activation
                 if widget.handle_event(event, window):
                     # widget activated, return its id
-                    return widget.id
+                    if widget.callback != None:
+                        widget.callback()
+                    else:
+                        return widget.id
         for widget in self.widgets:
             # test widget activation
             if widget.handle_event(event, None):
                 # widget activated, return its id
-                return widget.id
+                if widget.callback != None:
+                    widget.callback()
+                else:
+                    return widget.id
         # no widget activated to this event
         return None
 
