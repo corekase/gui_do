@@ -64,16 +64,13 @@ class Demo:
         # done adding screen widgets
         #
         # begin adding window widgets
-        # layout origin
-        x = y = 0
-        # window size
-        width = 440
-        height = 175
+        # window layout, all window layouts have an x and y of 0's for the origin
+        x, y, width, height = 0, 0, 440, 175
         # position of the window
-        x1 = centre(self.screen.get_rect().width, width)
-        y1 = centre(self.screen.get_rect().height, height)
+        window_x = centre(self.screen.get_rect().width, width)
+        window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main', 'gui_do', (x1, y1), (width, height))
+        Window('main', 'gui_do', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # title label
