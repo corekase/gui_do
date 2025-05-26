@@ -33,7 +33,7 @@ class Scrollbar(Frame):
             # no matching events for scrollbar logic
             return False
         # manage the state of the scrollbar
-        point = convert_to_screen(event.pos, window)
+        point = convert_to_screen(self.gui.lock_area(event.pos), window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
