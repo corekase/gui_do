@@ -91,7 +91,7 @@ class Scrollbar(Frame):
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
                 # unlock mouse movement
-                self.gui.set_lock_area()
+                self.gui.set_lock_area(None)
                 # return to default state
                 self.reset_state()
                 # signal there was a change
