@@ -141,6 +141,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
+        # begin main loop
         while self.running:
             # handle events
             self.handle_events()
