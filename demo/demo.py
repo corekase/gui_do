@@ -143,13 +143,13 @@ class Demo:
             self.window_label_button.set_label(f'Button: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
             set_last_font()
-            # draw gui widgets
+            # draw gui
             self.gui.draw_gui()
             # tick to desired frame-rate
             clock.tick(fps)
             # buffer to the screen
             pygame.display.flip()
-            # undraw gui widgets
+            # undraw gui
             self.gui.undraw_gui()
         # release resources
         pygame.quit()
