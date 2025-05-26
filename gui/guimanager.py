@@ -124,6 +124,8 @@ class GuiManager:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
                         self.dragging = True
                         self.dragging_window = window
+                        # consume this event, do not process it any further
+                        return None
         # if a widget signals that it had an action return the widget id
         for window in self.windows:
             for widget in window.widgets:
