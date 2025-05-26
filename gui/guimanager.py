@@ -90,8 +90,8 @@ class GuiManager:
         if self.lock_area_rect != None:
             x, y = position
             adjusted = False
-            if x < self.lock_area_rect.x:
-                x = self.lock_area_rect.x
+            if x < self.lock_area_rect.left:
+                x = self.lock_area_rect.left
                 adjusted = True
             elif x > self.lock_area_rect.right:
                 x = self.lock_area_rect.right
