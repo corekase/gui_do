@@ -26,20 +26,15 @@ class GuiManager:
         self.names = {}
         # list of widgets attached to the screen
         self.widgets = []
-        # which key group to use
-        self.group = None
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
         # active object
         self.active_object = None
-        # set the default object to the screen
-        self.set_active_object()
-        # list of windows to process
+        # list of windows
         self.windows = []
         # dragging window
         self.dragging = None
         self.dragging_window = None
-        self.saved_graphic = None
         # current mouse position
         self.mouse_pos = None
         # cursor image and hotspot
