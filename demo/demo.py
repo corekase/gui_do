@@ -141,7 +141,6 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # make the bigger font entry the default for new renders
         while self.running:
             # handle events
             self.handle_events()
