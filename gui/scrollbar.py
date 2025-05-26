@@ -3,7 +3,7 @@ from .widget import colours
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from .utility import screen_coord_to_window_coord, window_coord_to_screen_coord
+from .utility import convert_to_window, convert_to_screen
 from .guimanager import GuiManager
 
 class Scrollbar(Frame):
@@ -31,12 +31,12 @@ class Scrollbar(Frame):
             # no matching events for scrollbar logic
             return False
         # manage the state of the scrollbar
-        point = screen_coord_to_window_coord(self.gui.lock_area(event.pos), window)
+        point = convert_to_window(self.gui.lock_area(event.pos), window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
                 if window != None:
-                    x, y = window_coord_to_screen_coord((self.graphic_rect[0], self.graphic_rect[1]), window)
+                    x, y = convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
                     lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
                     self.gui.set_lock_area(lock_rect)
                 else:
@@ -47,7 +47,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = screen_coord_to_window_coord(self.gui.lock_area(event.pos), window)
+            x, y = convert_to_window(self.gui.lock_area(event.pos), window)
             # normalize x and y to graphic drawing area
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging

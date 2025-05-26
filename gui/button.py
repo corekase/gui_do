@@ -1,11 +1,13 @@
 from .frame import Frame, State
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from .utility import render_text, centre, screen_coord_to_window_coord
+from .utility import render_text, centre, convert_to_window
+from .guimanager import GuiManager
 
 class Button(Frame):
     def __init__(self, id, rect, text):
         # initialize common widget values
         super().__init__(id, rect)
+        self.gui = GuiManager()
         # button state
         self.state = State.IDLE
         # text bitmaps
@@ -22,7 +24,7 @@ class Button(Frame):
             # no matching events for button logic
             return False
         # is the mouse position within the button rect
-        collision = self.rect.collidepoint(screen_coord_to_window_coord(event.pos, window))
+        collision = self.rect.collidepoint(convert_to_window(self.gui.lock_area(event.pos), window))
         # manage the state of the button
         if (self.state == State.IDLE) and collision:
             self.state = State.HOVER
