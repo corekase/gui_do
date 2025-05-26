@@ -91,7 +91,7 @@ class GuiManager:
     # -> To-do: implement show/hide for widgets and windows.  Widgets inside a window
     #           could be hidden, screen widgets could be hidden, and entire windows can be
     #           hidden
-
+    #
     # -> To-do: object banks
     #    for the list of screen widgets and the list of windows and their
     #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
@@ -108,7 +108,9 @@ class GuiManager:
     #    code definitions for gui layouts can be put into any source file in a function or method that
     #    has the gui manager singleton. as the code executes it creates all the data in the banks, and
     #    then in the application load and mix the bank data as needed
-
+    #
+    #    code executing into the object bank will use manipulators like how set_font() is used, to control
+    #    which bank names and routes to the leaf lists are constructed
 
     def set_lock_area(self, area=None):
         # lock area rect is in main surface coordinates
