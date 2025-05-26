@@ -76,7 +76,7 @@ class Demo:
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         # title label
-        set_font('biggest')
+        set_font('gui_do')
         label = Label((0, 0), 'gui_do')
         set_font('normal')
         # main window label
