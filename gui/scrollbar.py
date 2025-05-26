@@ -60,6 +60,8 @@ class Scrollbar(Frame):
             # if point < min or point > max make them
             if point < 0:
                 point = 0
+                self.last_mouse_pos = 0
+                return True
             if point > self.total_range:
                 self.start_pos = self.total_range - self.bar_size
                 self.last_mouse_pos = self.total_range - self.bar_size

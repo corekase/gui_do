@@ -111,7 +111,8 @@ class GuiManager:
             if adjusted:
                 set_pos(x, y)
             return (x, y)
-        return position
+        else:
+            return position
 
     def handle_event(self, event):
         # update internal mouse position
