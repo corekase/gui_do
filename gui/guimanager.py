@@ -114,8 +114,12 @@ class GuiManager:
 
     def load_bank(self):
         # loads a bank entry into the root datastructure. entries are instantiated in the bank and by
-        # reference they are moved to the root to and from the root. the root is a "working-memory" of
+        # reference they are moved to the root and from the root. the root is a "working-memory" of
         # whatever happens to be loaded into it
+        pass
+
+    def unload_bank(self):
+        # removes a bank from the root
         pass
 
     def set_lock_area(self, area=None):
