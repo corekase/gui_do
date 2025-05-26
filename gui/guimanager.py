@@ -90,6 +90,7 @@ class GuiManager:
     def get_window(self, name):
         return self.names[name]
 
+    # lock area rect is in main surface coordinates
     def set_lock_area(self, area=None):
         self.lock_area_rect = area
 
