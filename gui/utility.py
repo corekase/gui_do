@@ -2,7 +2,7 @@
 import os
 import pygame
 from pygame import Rect
-from .widget import colours
+from .widgets.widget import colours
 
 # font object variables and functions
 # current font object

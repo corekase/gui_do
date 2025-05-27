@@ -1,4 +1,4 @@
-from .utility import render_text
+from ..utility import render_text
 from .widget import Widget
 
 class Label(Widget):

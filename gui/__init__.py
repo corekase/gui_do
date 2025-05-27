@@ -6,11 +6,11 @@ from .utility import centre, set_grid_properties, gridded
 from .utility import image_alpha, file_resource, copy_graphic_area, gprint
 # import GuiManager and controls into this package's namespace
 from .guimanager import GuiManager
-from .frame import Frame
-from .label import Label
-from .button import Button
-from .scrollbar import Scrollbar
-from .pushbuttongroup import PushButtonGroup, PushButtonKind
+from .widgets.frame import Frame
+from .widgets.label import Label
+from .widgets.button import Button
+from .widgets.scrollbar import Scrollbar
+from .widgets.pushbuttongroup import PushButtonGroup, PushButtonKind
 from .window import Window
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
