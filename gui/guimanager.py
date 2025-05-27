@@ -186,6 +186,7 @@ class GuiManager:
         window_consumed = False
         widget_consumed = False
         raise_flag = False
+        # handle windows and their widgets
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
@@ -209,6 +210,7 @@ class GuiManager:
                             widget_consumed = True
             if window_consumed or widget_consumed or raise_flag:
                 return '<CONSUMED>'
+        # clean dirty window widgets
         for window in working_windows:
             for widget in window.widgets:
                 self.clean_widget(widget, window)
@@ -222,6 +224,7 @@ class GuiManager:
                 widget_consumed = True
         if widget_consumed:
             return '<CONSUMED>'
+        # clean dirty screen widgets
         for widget in self.widgets:
             self.clean_widget(widget)
         # no widget or window activated to this event
