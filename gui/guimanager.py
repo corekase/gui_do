@@ -189,6 +189,12 @@ class GuiManager:
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
                 window_consumed = True
+                if event.type == MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        if self.active_window != window:
+                            self.raise_window(window)
+                            self.active_window = window
+                            return None
                 for widget in window.widgets:
                     if self.handle_widget(widget, event, window):
                         return widget.id
