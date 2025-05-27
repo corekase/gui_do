@@ -223,6 +223,7 @@ class GuiManager:
             for widget in window.widgets:
                 self.clean_widget(widget, window)
         # handle screen widgets
+        widget_consumed = False
         for widget in self.widgets:
             if self.handle_widget(widget, event):
                 return widget.id
