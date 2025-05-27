@@ -1,6 +1,6 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
-from pygame.locals import KEYDOWN, K_ESCAPE
+from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, set_font, set_last_font
 from gui import set_grid_properties, gridded, gprint
 from gui import GuiManager, Window
@@ -178,6 +178,9 @@ class Demo:
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag
         self.running = True
+        # drop test for consumed events
+        self.drop_test_frame = Frame('drop_test', (0, 0, 30, 30))
+        self.drop_test_frame.surface = self.screen
 
     def run(self):
         # fps to maintain, if 0 then unlimited
@@ -252,6 +255,12 @@ class Demo:
                     if event.key == K_ESCAPE:
                         # handle escape key
                         self.running = False
+                elif event.type == MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        x, y = self.gui.get_mouse_pos()
+                        self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2), (y - self.drop_test_frame.rect.height// 2),
+                                                         self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
+                        self.drop_test_frame.draw()
 
     # callbacks
     def exit(self):
