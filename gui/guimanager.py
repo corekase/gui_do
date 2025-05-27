@@ -181,7 +181,6 @@ class GuiManager:
                             self.dragging_window = window
                             if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
                                 self.lower_window(window)
-                                self.active_window = None
                                 return '<CONSUMED>'
         # for each window handle their widgets
         window_consumed = False
@@ -198,7 +197,6 @@ class GuiManager:
                     if event.button == 1:
                         if self.active_window != window:
                             self.raise_window(window)
-                            self.active_window = window
                             raise_flag = True
                 for widget in window.widgets:
                         if self.handle_widget(widget, event, window):
@@ -217,8 +215,6 @@ class GuiManager:
                 return widget.id
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
-                if self.active_object != None:
-                    self.active_object.leave()
                 self.active_object = widget
                 widget_consumed = True
         if widget_consumed:
@@ -241,9 +237,11 @@ class GuiManager:
         # move window to the beginning of the window evaluation, which is done in reverse for the window list
         # so last item first
         self.windows.append(self.windows.pop(self.windows.index(window)))
+        self.active_window = window
 
     def lower_window(self, window):
         self.windows.insert(0, self.windows.pop(self.windows.index(window)))
+        self.active_window = self.windows[-1]
 
     def draw_gui(self):
         # draw all widgets to their surfaces
