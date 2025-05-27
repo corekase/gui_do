@@ -234,7 +234,7 @@ class GuiManager:
             return '<CONSUMED>'
         for widget in self.widgets:
             if widget.dirty:
-                collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                collision = widget.get_rect().collidepoint(self.get_mouse_pos())
                 if not collision:
                     widget.leave()
                     widget.dirty = False
