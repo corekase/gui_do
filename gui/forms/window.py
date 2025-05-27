@@ -54,8 +54,8 @@ class Window:
         surface = pygame.surface.Surface((self.titlebar_size, self.titlebar_size), pygame.SRCALPHA)
         rect(surface, col1, Rect(2, 2, 8, 8))
         rect(surface, colours['none'], Rect(2, 2, 8, 8), 1)
-        rect(surface, col2, Rect(6, 6, 8, 8))
-        rect(surface, colours['none'], Rect(6, 6, 8, 8), 1)
+        rect(surface, col2, Rect(4, 4, 8, 8))
+        rect(surface, colours['none'], Rect(4, 4, 8, 8), 1)
         return surface
 
     def draw_title_bar(self):

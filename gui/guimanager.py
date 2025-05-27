@@ -177,10 +177,12 @@ class GuiManager:
                 for window in self.windows:
                     if window.get_rect().collidepoint(self.get_mouse_pos()):
                         if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
-                            if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
-                                self.lower_window(window)
                             self.dragging = True
                             self.dragging_window = window
+                            if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
+                                self.lower_window(window)
+                                self.active_window = None
+                                return '<CONSUMED>'
         # for each window handle their widgets
         window_consumed = False
         widget_consumed = False
