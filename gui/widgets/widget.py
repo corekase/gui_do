@@ -29,3 +29,7 @@ class Widget:
     def draw(self):
         # implement in subclasses
         pass
+
+    def leave(self):
+        # what to do when a widget loses focus
+        pass

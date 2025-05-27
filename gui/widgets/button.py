@@ -45,6 +45,9 @@ class Button(Frame):
         # button not clicked
         return False
 
+    def leave(self):
+        self.state = State.IDLE
+
     def draw(self):
         # draw the button frame
         super().draw()

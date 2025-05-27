@@ -188,6 +188,9 @@ class GuiManager:
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
+                if self.active_object != None:
+                    self.active_object.leave()
+                    self.active_object = None
                 window_consumed = True
                 if event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -196,11 +199,12 @@ class GuiManager:
                             self.active_window = window
                             return None
                 for widget in window.widgets:
-                    if self.handle_widget(widget, event, window):
-                        return widget.id
-                    collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                    if collision:
-                        widget_consumed = True
+                        if self.handle_widget(widget, event, window):
+                            return widget.id
+                        collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                        if collision:
+                            self.active_object = widget
+                            widget_consumed = True
             if window_consumed or widget_consumed:
                 return '<CONSUMED>'
         # handle screen widgets
