@@ -50,6 +50,8 @@ class GuiManager:
         #       -> for the lists
         # object_bank[name][bank][screen|windows]=lists
         self.object_bank = {}
+        # which window is active
+        self.active_window = None
 
     def set_surface(self, surface):
         # set gui screen surface
@@ -176,26 +178,25 @@ class GuiManager:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
                         self.dragging = True
                         self.dragging_window = window
-                        self.raise_window(window)
+                        if self.active_window != window:
+                            self.raise_window(window)
+                            self.active_window = window
+                            return None
         # for each window handle their widgets
         window_consumed = False
-        for window in self.windows[:]:
+        widget_consumed = False
+        working_windows = self.windows.copy()[::-1]
+        for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
                 window_consumed = True
-                widget_consumed = False
-                if event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        self.raise_window(window)
                 for widget in window.widgets:
-                    if widget.rect.collidepoint(convert_to_screen(self.mouse_pos, window)):
-                        if self.handle_widget(widget, event, window):
-                            return widget.id
+                    if self.handle_widget(widget, event, window):
+                        return widget.id
+                    collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                    if collision:
                         widget_consumed = True
-                        break
-                if widget_consumed:
-                    break
-        if window_consumed:
-            return '<CONSUMED>'
+            if window_consumed or widget_consumed:
+                return '<CONSUMED>'
         # handle screen widgets
         for widget in self.widgets:
             if self.handle_widget(widget, event):
@@ -209,6 +210,7 @@ class GuiManager:
             # widget activated
             if widget.callback != None:
                 widget.callback()
+                return False
             else:
                 return True
         return False

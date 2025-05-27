@@ -22,6 +22,10 @@ class Widget:
         # implement in subclasses
         pass
 
+    def get_rect(self):
+        # return the widget rect
+        return Rect(self.rect)
+
     def draw(self):
         # implement in subclasses
         pass
