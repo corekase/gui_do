@@ -214,7 +214,7 @@ class GuiManager:
                 widget_consumed = True
         if widget_consumed:
             return '<CONSUMED>'
-        # no widget activated to this event
+        # no widget or window activated to this event
         return None
 
     def handle_widget(self, widget, event, window=None):
