@@ -99,6 +99,11 @@ class PushButtonGroup(Button):
         # return the id of the armed pushbutton
         return PushButtonGroup.selections[self.group].id
 
+    def leave(self):
+        # if hover then idle when left
+        if self.state == State.HOVER:
+            self.state = State.IDLE
+
     def draw(self):
         if self.kind == PushButtonKind.BOX:
             super().draw()
