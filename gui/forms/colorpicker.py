@@ -1,0 +1,1 @@
+# stub, color picker dialog
