@@ -2,6 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from .utility import copy_graphic_area, load_font, image_alpha
+from .utility import convert_to_window, convert_to_screen
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -35,7 +36,7 @@ class GuiManager:
         self.dragging = None
         self.dragging_window = None
         # current mouse position
-        self.mouse_pos = None
+        self.mouse_pos = pygame.mouse.get_pos()
         # cursor image and hotspot
         self.cursor_image = None
         self.cursor_hotspot = None
@@ -63,6 +64,10 @@ class GuiManager:
         self.cursor_image = image_alpha(*image)
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
+
+    def get_mouse_pos(self):
+        # if a gui_do client needs the mouse position they use this method
+        return self.mouse_pos
 
     def add(self, widget, callback=None):
         if widget.id == '<CONSUMED>':
@@ -174,10 +179,21 @@ class GuiManager:
                         # consume this event, do not process it any further and do not pass it to client code
                         return '<CONSUMED>'
         # for each window handle their widgets
+        window_consumed = False
         for window in self.windows:
+            if window.get_rect().collidepoint(self.lock_area(self.mouse_pos)):
+                window_consumed = True
+            widget_consumed = False
             for widget in window.widgets:
                 if self.handle_widget(widget, event, window):
                     return widget.id
+                if widget.rect.collidepoint(convert_to_screen(self.lock_area(self.mouse_pos), window)):
+                    widget_consumed = True
+                    break
+            if widget_consumed:
+                break
+        if window_consumed:
+            return '<CONSUMED>'
         # handle screen widgets
         for widget in self.widgets:
             if self.handle_widget(widget, event):
@@ -191,7 +207,6 @@ class GuiManager:
             # widget activated
             if widget.callback != None:
                 widget.callback()
-                return False
             else:
                 return True
         return False
@@ -199,10 +214,6 @@ class GuiManager:
     def raise_window(self, window):
         # move window to the first in the window list
         pass
-
-    def hit(self, hit_rect):
-        # returns True or False for whether the mouse_pos is inside hit_rect
-        return hit_rect.collidepoint(self.mouse_pos)
 
     def draw_gui(self):
         # draw all widgets to their surfaces
