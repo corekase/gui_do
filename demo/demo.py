@@ -255,6 +255,7 @@ class Demo:
                     if event.key == K_ESCAPE:
                         # handle escape key
                         self.running = False
+                # test whether gui events are consumed
                 elif event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:
                         x, y = self.gui.get_mouse_pos()
