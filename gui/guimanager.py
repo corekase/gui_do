@@ -52,8 +52,6 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
-        # whether a window was raised
-        self.raise_flag = False
 
     def set_surface(self, surface):
         # set gui screen surface
@@ -184,6 +182,7 @@ class GuiManager:
         # for each window handle their widgets
         window_consumed = False
         widget_consumed = False
+        raise_flag = False
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
@@ -196,7 +195,7 @@ class GuiManager:
                         if self.active_window != window:
                             self.raise_window(window)
                             self.active_window = window
-                            self.raise_flag = True
+                            raise_flag = True
                 for widget in window.widgets:
                         if self.handle_widget(widget, event, window):
                             return widget.id
@@ -204,9 +203,7 @@ class GuiManager:
                         if collision:
                             self.active_object = widget
                             widget_consumed = True
-            if window_consumed or widget_consumed or self.raise_flag:
-                if self.raise_flag:
-                    self.raise_flag = False
+            if window_consumed or widget_consumed or raise_flag:
                 return '<CONSUMED>'
         # handle screen widgets
         for widget in self.widgets:
