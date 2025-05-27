@@ -67,7 +67,7 @@ class GuiManager:
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
-        return self.mouse_pos
+        return self.lock_area(self.mouse_pos)
 
     def add(self, widget, callback=None):
         if widget.id == '<CONSUMED>':
@@ -180,18 +180,22 @@ class GuiManager:
                         return '<CONSUMED>'
         # for each window handle their widgets
         window_consumed = False
-        for window in self.windows:
-            if window.get_rect().collidepoint(self.lock_area(self.mouse_pos)):
+        for window in self.windows[:]:
+            if window.get_rect().collidepoint(self.get_mouse_pos()):
                 window_consumed = True
-            widget_consumed = False
-            for widget in window.widgets:
-                if self.handle_widget(widget, event, window):
-                    return widget.id
-                if widget.rect.collidepoint(convert_to_screen(self.lock_area(self.mouse_pos), window)):
-                    widget_consumed = True
+                widget_consumed = False
+                if event.type == MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        self.raise_window(window)
+                for widget in window.widgets:
+                    if widget.rect.collidepoint(convert_to_screen(self.get_mouse_pos(), window)):
+                        if self.handle_widget(widget, event, window):
+                            return widget.id
+                        widget_consumed = True
+                    if widget_consumed:
+                        break
+                if widget_consumed:
                     break
-            if widget_consumed:
-                break
         if window_consumed:
             return '<CONSUMED>'
         # handle screen widgets
@@ -213,7 +217,9 @@ class GuiManager:
 
     def raise_window(self, window):
         # move window to the first in the window list
-        pass
+        index = self.windows.index(window)
+        temp_window = self.windows.pop(index)
+        self.windows.append(temp_window)
 
     def draw_gui(self):
         # draw all widgets to their surfaces
