@@ -188,12 +188,6 @@ class GuiManager:
         raise_flag = False
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
-            for widget in window.widgets:
-                collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                if not collision:
-                    if widget.dirty:
-                        widget.leave()
-                        widget.dirty = False
             if window.get_rect().collidepoint(self.get_mouse_pos()):
                 if self.active_object != None:
                     self.active_object.leave()
@@ -217,11 +211,7 @@ class GuiManager:
                 return '<CONSUMED>'
         for window in working_windows:
             for widget in window.widgets:
-                if widget.dirty:
-                    collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                    if not collision:
-                        widget.leave()
-                        widget.dirty = False
+                self.clean_widget(widget, window)
         # handle screen widgets
         for widget in self.widgets:
             if self.handle_widget(widget, event):
@@ -233,13 +223,17 @@ class GuiManager:
         if widget_consumed:
             return '<CONSUMED>'
         for widget in self.widgets:
-            if widget.dirty:
-                collision = widget.get_rect().collidepoint(self.get_mouse_pos())
-                if not collision:
-                    widget.leave()
-                    widget.dirty = False
+            self.clean_widget(widget)
         # no widget or window activated to this event
         return None
+
+    def clean_widget(self, widget, window=None):
+        # clean up the state of widgets that were left in an intermediate one
+        if widget.dirty:
+            collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+            if not collision:
+                widget.leave()
+                widget.dirty = False
 
     def handle_widget(self, widget, event, window=None):
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
