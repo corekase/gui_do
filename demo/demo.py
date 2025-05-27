@@ -124,7 +124,6 @@ class Demo:
         #
         # -> end adding window widgets
         #
-        # -> To-do: toggle button widget
         #
         # -> gui setup done
         #
