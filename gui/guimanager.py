@@ -177,6 +177,8 @@ class GuiManager:
                 for window in self.windows:
                     if window.get_rect().collidepoint(self.get_mouse_pos()):
                         if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
+                            if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
+                                self.lower_window(window)
                             self.dragging = True
                             self.dragging_window = window
         # for each window handle their widgets
@@ -233,6 +235,9 @@ class GuiManager:
         # move window to the beginning of the window evaluation, which is done in reverse for the window list
         # so last item first
         self.windows.append(self.windows.pop(self.windows.index(window)))
+
+    def lower_window(self, window):
+        self.windows.insert(0, self.windows.pop(self.windows.index(window)))
 
     def draw_gui(self):
         # draw all widgets to their surfaces

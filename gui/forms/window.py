@@ -1,8 +1,9 @@
 import pygame
 from pygame import Rect
+from pygame.draw import rect
 from ..guimanager import GuiManager
 from ..utility import set_font, set_last_font, render_text, centre
-from ..widgets.frame import Frame, State
+from ..widgets.frame import Frame, State, colours
 
 class Window:
     def __init__(self, name, title, pos, size):
@@ -46,14 +47,27 @@ class Window:
         frame.draw()
         title_surface.blit(text_bitmap, (4, centre(self.titlebar_size, 10) - 2))
         set_last_font()
+        self.window_widget_raised = self.make_window_widget(colours['full'], colours['medium'])
         return title_surface
+
+    def make_window_widget(self, col1, col2):
+        surface = pygame.surface.Surface((self.titlebar_size, self.titlebar_size), pygame.SRCALPHA)
+        rect(surface, col1, Rect(2, 2, 8, 8))
+        rect(surface, colours['none'], Rect(2, 2, 8, 8), 1)
+        rect(surface, col2, Rect(6, 6, 8, 8))
+        rect(surface, colours['none'], Rect(6, 6, 8, 8), 1)
+        return surface
 
     def draw_title_bar(self):
         self.gui.surface.blit(self.title_bar_graphic, (self.x, self.y - self.titlebar_size))
+        self.gui.surface.blit(self.window_widget_raised, self.get_widget_rect())
 
     def get_rect(self):
         # total rect of the window including titlebar and surface
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.height + self.titlebar_size)
+
+    def get_widget_rect(self):
+        return Rect(self.x + self.width - self.titlebar_size + 2, self.y - self.titlebar_size + 2, self.titlebar_size, self.titlebar_size)
 
     def set_pos(self, pos):
         self.x, self.y = pos
