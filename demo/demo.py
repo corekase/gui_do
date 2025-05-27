@@ -261,7 +261,8 @@ class Demo:
                 elif event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:
                         x, y = self.gui.get_mouse_pos()
-                        self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2), (y - self.drop_test_frame.rect.height// 2),
+                        self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2),
+                                                        (y - self.drop_test_frame.rect.height // 2),
                                                          self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
                         self.drop_test_frame.draw()
 
