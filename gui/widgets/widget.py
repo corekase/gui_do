@@ -19,6 +19,8 @@ class Widget:
         self.visible = True
         # whether the widget is dirty
         self.dirty = False
+        # whether to save the graphic area under the widget
+        self.save = True
 
     def handle_event(self, _, _a):
         # implement in subclasses

@@ -20,6 +20,8 @@ class Demo:
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
         self.gui.set_surface(self.screen)
+        # manipulator to control whether a widget saves the graphic underneath it
+        self.gui.set_save(False)
         set_font('normal')
         #
         # -> begin adding screen widgets

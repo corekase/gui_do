@@ -52,6 +52,12 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
+        # whether to save graphic area under widgets
+        self.save = True
+
+    def set_save(self, flag):
+        # whether to set the state of a widget to save the graphic under it
+        self.save = flag
 
     def set_surface(self, surface):
         # set gui screen surface
@@ -75,6 +81,8 @@ class GuiManager:
         if widget.id == '<CONSUMED>':
             raise Exception(f'<CONSUMED> is a reserved widget identifier')
         widget.callback = callback
+        # set_save manipulator controls this setting
+        widget.save = self.save
         if self.active_object != None:
             widget.surface = self.active_object.surface
             # append the widget to the object
@@ -264,7 +272,8 @@ class GuiManager:
         self.bitmaps.clear()
         for widget in self.widgets:
             # tuple of the bitmap and its rect, after loop ends in reverse order
-            self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
+            if widget.save:
+                self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
         for window in self.windows:
