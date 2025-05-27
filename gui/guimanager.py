@@ -230,7 +230,8 @@ class GuiManager:
         return False
 
     def raise_window(self, window):
-        # move window to the first in the window list
+        # move window to the beginning of the window evaluation, which is done in reverse for the window list
+        # so last item first
         self.windows.append(self.windows.pop(self.windows.index(window)))
 
     def draw_gui(self):
