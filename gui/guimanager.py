@@ -176,8 +176,7 @@ class GuiManager:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
                         self.dragging = True
                         self.dragging_window = window
-                        # consume this event, do not process it any further and do not pass it to client code
-                        return '<CONSUMED>'
+                        self.raise_window(window)
         # for each window handle their widgets
         window_consumed = False
         for window in self.windows[:]:
@@ -188,11 +187,10 @@ class GuiManager:
                     if event.button == 1:
                         self.raise_window(window)
                 for widget in window.widgets:
-                    if widget.rect.collidepoint(convert_to_screen(self.get_mouse_pos(), window)):
+                    if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), window)):
                         if self.handle_widget(widget, event, window):
                             return widget.id
                         widget_consumed = True
-                    if widget_consumed:
                         break
                 if widget_consumed:
                     break
