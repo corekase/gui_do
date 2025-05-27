@@ -187,7 +187,7 @@ class GuiManager:
                     if event.button == 1:
                         self.raise_window(window)
                 for widget in window.widgets:
-                    if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), window)):
+                    if widget.rect.collidepoint(convert_to_screen(self.mouse_pos, window)):
                         if self.handle_widget(widget, event, window):
                             return widget.id
                         widget_consumed = True
@@ -215,9 +215,7 @@ class GuiManager:
 
     def raise_window(self, window):
         # move window to the first in the window list
-        index = self.windows.index(window)
-        temp_window = self.windows.pop(index)
-        self.windows.append(temp_window)
+        self.windows.append(self.windows.pop(self.windows.index(window)))
 
     def draw_gui(self):
         # draw all widgets to their surfaces
