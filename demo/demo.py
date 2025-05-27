@@ -124,6 +124,50 @@ class Demo:
         #
         # -> end adding window widgets
         #
+        # -> begin window layout, all window layouts have an x and y of 0's for the origin
+        #
+        x, y, width, height = 0, 0, 115, 55
+        # position of the window
+        window_x = 50
+        window_y = 150
+        # create the window and it adds itself to the gui_manager and makes itself the active object
+        Window('main2', 'Win 1', (window_x, window_y), (width, height))
+        # set grid layout properties
+        set_grid_properties((x + 5, y + 5), 50, 20, 4)
+        #
+        # -> end window layout
+        #
+        # -> begin adding window widgets
+        #
+        self.gui.add(Button('main2_Button_1', gridded(0, 0), 'One'))
+        self.gui.add(Button('main2_Button_2', gridded(0, 1), 'Two'))
+        self.gui.add(Button('main2_Button_3', gridded(1, 0), 'Three'))
+        self.gui.add(Button('main2_Button_4', gridded(1, 1), 'Four'))
+        #
+        # -> end adding window widgets
+        #
+        # -> begin window layout, all window layouts have an x and y of 0's for the origin
+        #
+        x, y, width, height = 0, 0, 115, 55
+        # position of the window
+        window_x = 50
+        window_y = 250
+        # create the window and it adds itself to the gui_manager and makes itself the active object
+        Window('main3', 'Win 2', (window_x, window_y), (width, height))
+        # set grid layout properties
+        set_grid_properties((x + 5, y + 5), 50, 20, 4)
+        #
+        # -> end window layout
+        #
+        # -> begin adding window widgets
+        #
+        self.gui.add(Button('main3_Button_1', gridded(0, 0), 'One'))
+        self.gui.add(Button('main3_Button_2', gridded(0, 1), 'Two'))
+        self.gui.add(Button('main3_Button_3', gridded(1, 0), 'Three'))
+        self.gui.add(Button('main3_Button_4', gridded(1, 1), 'Four'))
+        #
+        # -> end adding window widgets
+        #
         #
         # -> gui setup done
         #
