@@ -194,13 +194,6 @@ class GuiManager:
                     if widget.dirty:
                         widget.leave()
                         widget.dirty = False
-        for window in working_windows:
-            for widget in window.widgets:
-                collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                if not collision:
-                    if widget.dirty:
-                        widget.leave()
-                        widget.dirty = False
             if window.get_rect().collidepoint(self.get_mouse_pos()):
                 if self.active_object != None:
                     self.active_object.leave()
@@ -222,13 +215,14 @@ class GuiManager:
                             widget_consumed = True
             if window_consumed or widget_consumed or raise_flag:
                 return '<CONSUMED>'
+        for window in working_windows:
+            for widget in window.widgets:
+                collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                if not collision:
+                    if widget.dirty:
+                        widget.leave()
+                        widget.dirty = False
         # handle screen widgets
-        for widget in self.widgets:
-            collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-            if not collision:
-                if widget.dirty:
-                    widget.leave()
-                    widget.dirty = False
         for widget in self.widgets:
             if self.handle_widget(widget, event):
                 return widget.id
@@ -238,6 +232,12 @@ class GuiManager:
                 widget_consumed = True
         if widget_consumed:
             return '<CONSUMED>'
+        for widget in self.widgets:
+            collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+            if not collision:
+                if widget.dirty:
+                    widget.leave()
+                    widget.dirty = False
         # no widget or window activated to this event
         return None
 
