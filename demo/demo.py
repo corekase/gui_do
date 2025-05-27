@@ -153,11 +153,14 @@ class Demo:
             self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
             self.window_label_button.set_label(f'Button: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
+            set_font('gui_do')
+            bitmap, bitmap_rect = gprint(self.screen, 'Welcome to gui_do!', (40, 40), True)
             #
             # -> gui_do client screen drawing code ends here
             #
-            set_font('gui_do')
-            bitmap, bitmap_rect = gprint(self.screen, 'Welcome to gui_do!', (40, 40), True)
+            #
+            # -> begin keep everything in this block
+            #
             # draw gui
             self.gui.draw_gui()
             # tick to desired frame-rate
@@ -167,9 +170,14 @@ class Demo:
             # undraw gui
             self.gui.undraw_gui()
             #
+            # -> end keep everything in this block
+            #
             # -> gui_do client screen undrawing code begins here
             #
             self.screen.blit(bitmap, bitmap_rect)
+            #
+            # -> gui_do client screen undrawing code ends here
+            #
         # release resources
         pygame.quit()
 
@@ -180,6 +188,7 @@ class Demo:
             widget_id = self.gui.handle_event(event)
             # if widget_id isn't None or <CONSUMED> then it means the widget was activated. ignore consumed events
             if widget_id != None:
+                # gui_do client widget handling is done here
                 # widget_id is the widget identifier. either handle the identifier here or use a callback
                 pass
                 # if widget_id == 'exit':
@@ -189,6 +198,8 @@ class Demo:
             else:
                 #
                 # -> gui_do client event handling begins here
+                #
+                # this is where your program parses events as normal for your client code
                 #
                 if event.type == QUIT:
                     # handle window close widget or alt-f4 keypress
