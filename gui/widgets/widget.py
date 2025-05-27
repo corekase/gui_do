@@ -17,6 +17,8 @@ class Widget:
         self.callback = None
         # whether a widget is shown or hidden
         self.visible = True
+        # whether the widget is dirty
+        self.dirty = False
 
     def handle_event(self, _, _a):
         # implement in subclasses
