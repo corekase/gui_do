@@ -196,6 +196,14 @@ class GuiManager:
                 return True
         return False
 
+    def raise_window(self, window):
+        # move window to the first in the window list
+        pass
+
+    def hit(self, hit_rect):
+        # returns True or False for whether the mouse_pos is inside hit_rect
+        return hit_rect.collidepoint(self.mouse_pos)
+
     def draw_gui(self):
         # draw all widgets to their surfaces
         self.bitmaps.clear()
