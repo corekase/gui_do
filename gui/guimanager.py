@@ -186,7 +186,7 @@ class GuiManager:
         window_consumed = False
         widget_consumed = False
         raise_flag = False
-        # handle windows and their widgets
+        # work on a copy of the window list in case the list is modified by raising
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
