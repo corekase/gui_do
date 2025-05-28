@@ -1,5 +1,4 @@
 import pygame
-from math import cos, sin, radians
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, QUIT
 from pygame import Rect
