@@ -62,16 +62,6 @@ class GuiManager:
         # set gui screen surface
         self.surface = surface
 
-    def set_active_object(self, object=None):
-        # set which object is active
-        self.active_object = object
-
-    def set_cursor(self, hotspot, *image):
-        # set the cursor image and hotspot
-        self.cursor_image = image_alpha(*image)
-        self.cursor_rect = self.cursor_image.get_rect()
-        self.cursor_hotspot = hotspot
-
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)

@@ -2,7 +2,8 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, set_font, set_last_font
-from gui import set_grid_properties, gridded, gprint, set_save
+from gui import set_grid_properties, gridded, gprint
+from gui import set_active_object, set_cursor, set_save
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
@@ -174,9 +175,9 @@ class Demo:
         #
         # -> gui setup done
         #
-        self.gui.set_active_object(None)
+        set_active_object(None)
         # set cursor image
-        self.gui.set_cursor((4, 0), 'cursors', 'Icons8_cursor.png')
+        set_cursor((4, 0), 'cursors', 'Icons8_cursor.png')
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag

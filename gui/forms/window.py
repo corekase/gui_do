@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.draw import rect
 from ..guimanager import GuiManager
-from ..utility import set_font, set_last_font, render_text, centre
+from ..utility import set_font, set_last_font, render_text, centre, set_active_object
 from ..widgets.frame import Frame, State, colours
 
 class Window:
@@ -20,7 +20,7 @@ class Window:
         # add this window to the gui
         self.gui.add_window(name, self)
         # make this object the destination for gui.add commands
-        self.gui.set_active_object(self)
+        set_active_object(self)
         # make a frame for the backdrop of the window surface
         frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
         frame.state = State.IDLE

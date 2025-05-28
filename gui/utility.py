@@ -112,3 +112,17 @@ def set_save(flag):
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.save = flag
+
+def set_active_object(object=None):
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    # set which object is active
+    gui.active_object = object
+
+def set_cursor(hotspot, *image):
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    # set the cursor image and hotspot
+    gui.cursor_image = image_alpha(*image)
+    gui.cursor_rect = gui.cursor_image.get_rect()
+    gui.cursor_hotspot = hotspot
