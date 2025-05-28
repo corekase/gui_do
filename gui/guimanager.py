@@ -98,23 +98,23 @@ class GuiManager:
         if event.type == MOUSEMOTION:
             self.mouse_pos = self.lock_area(event.pos)
         # handle window dragging and lower widget
-        if event.type == MOUSEBUTTONUP and self.dragging:
+        if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
                 self.dragging = False
-        elif event.type == MOUSEMOTION and self.dragging:
+                self.dragging_window = None
+        elif (event.type == MOUSEMOTION) and self.dragging:
             xdif, ydif = event.rel
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
-        elif event.type == MOUSEBUTTONDOWN and not self.dragging:
+        elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
             if event.button == 1:
                 for window in self.windows:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
-                        self.dragging = True
-                        self.dragging_window = window
                         if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
                             self.lower_window(window)
-                            self.dragging = False
-                            self.dragging_window = None
-                            return '<CONSUMED>'
+                        else:
+                            self.dragging = True
+                            self.dragging_window = window
+                        return '<CONSUMED>'
         # for each window handle their widgets
         window_consumed = False
         widget_consumed = False
