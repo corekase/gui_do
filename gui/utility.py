@@ -144,3 +144,4 @@ def add(widget, callback=None):
         widget.surface = gui.surface
         # append the widget to the group
         gui.widgets.append(widget)
+    return widget
