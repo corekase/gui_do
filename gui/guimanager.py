@@ -1,8 +1,7 @@
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
-from .utility import copy_graphic_area, load_font, image_alpha
-from .utility import convert_to_window
+from .utility import copy_graphic_area, convert_to_window
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -18,10 +17,6 @@ class GuiManager:
     def _populate_(self):
         # screen surface
         self.surface = None
-        # load fonts for utility functions
-        load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
-        load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
-        load_font('normal', 'Ubuntu-Medium.ttf', 14)
         # dictionary of window names to their objects: key:value -> name, object
         self.names = {}
         # list of widgets attached to the screen

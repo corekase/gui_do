@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
-from gui import file_resource, centre, set_font, set_last_font
+from gui import file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, gprint
 from gui import set_active_object, set_cursor, set_save
 from gui import GuiManager, Window
@@ -21,6 +21,10 @@ class Demo:
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
         self.gui.set_surface(self.screen)
+        # load fonts
+        load_font('normal', 'Ubuntu-Medium.ttf', 14)
+        load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
+        load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # manipulator to control whether a screen widget saves the graphic underneath it
         set_save(False)
         # manipulator to set one of the loaded font names
