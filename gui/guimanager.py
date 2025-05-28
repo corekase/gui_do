@@ -52,6 +52,8 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
+        # active object for add()
+        self.active_object = None
         # whether to save graphic area under widgets
         self.save = True
 
@@ -198,9 +200,6 @@ class GuiManager:
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
-                if self.active_object != None:
-                    self.active_object.leave()
-                    self.active_object = None
                 window_consumed = True
                 if event.type == MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -212,9 +211,6 @@ class GuiManager:
                             return widget.id
                         collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                         if collision:
-                            if self.active_object != None:
-                                self.active_object.leave()
-                            self.active_object = widget
                             widget_consumed = True
             if window_consumed or widget_consumed or raise_flag:
                 return '<CONSUMED>'
@@ -229,7 +225,6 @@ class GuiManager:
                 return widget.id
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
-                self.active_object = widget
                 widget_consumed = True
         if widget_consumed:
             return '<CONSUMED>'
