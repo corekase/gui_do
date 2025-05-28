@@ -5,7 +5,7 @@ from pygame import FULLSCREEN, SCALED, QUIT
 from pygame import Rect
 from gui import GuiManager, Window, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
 from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
-from gui import centre, set_grid_properties, set_last_font, gridded
+from gui import centre, set_grid_properties, gridded
 
 class Demo:
     def __init__(self):
