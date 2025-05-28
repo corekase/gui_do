@@ -34,6 +34,7 @@ class Demo:
         #
         # exit button, uses a callback function
         add(Button('exit_callback', Rect(10, 1050, 140, 20), 'Exit (Callback)'), self.exit)
+        # exit button, uses an event signal
         add(Button('exit_signal', Rect(160, 1050, 140, 20), 'Exit (Signal)'))
         # layout origin
         screen_rect = self.screen.get_rect()
@@ -204,9 +205,9 @@ class Demo:
             # -> gui_do client screen drawing code begins here
             #
             set_font('normal')
-            self.screen_label_button.set_label(f'Button: {self.pb1.read()}')
+            self.screen_label_button.set_label(f'PushBox: {self.pb1.read()}')
             self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
-            self.window_label_button.set_label(f'Button: {self.pb7.read()}')
+            self.window_label_button.set_label(f'PushBox: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
             #
             # -> gui_do client screen drawing code ends here
@@ -244,7 +245,7 @@ class Demo:
                 # gui_do client widget handling is done here
                 # widget_id is the widget identifier. either handle the identifier here or use a callback
                 if widget_id == '<CONSUMED>':
-                    pass
+                    return
                 elif widget_id == 'exit_signal':
                     # exit signal button was clicked
                     self.running = False
