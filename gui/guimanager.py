@@ -223,6 +223,7 @@ class GuiManager:
                 return '<CONSUMED>'
         # handle screen widgets
         widget_hit = None
+        consumed = False
         for widget in self.widgets:
             if self.handle_widget(widget, event):
                 self.last_object = widget
@@ -230,11 +231,12 @@ class GuiManager:
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
                 widget_hit = widget
-        if widget_hit != None:
-            if self.last_object != widget_hit:
-                if self.last_object != None:
-                    self.last_object.leave()
-                self.last_object = widget_hit
+                consumed = True
+        if self.last_object != widget_hit:
+            if self.last_object != None:
+                self.last_object.leave()
+            self.last_object = widget_hit
+        if consumed:
             return '<CONSUMED>'
         # no widget or window activated to this event
         return None

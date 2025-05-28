@@ -35,12 +35,9 @@ class Scrollbar(Frame):
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
-                if window != None:
-                    x, y = convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
-                    lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
-                    self.gui.set_lock_area(lock_rect)
-                else:
-                    self.gui.set_lock_area(self.graphic_rect)
+                x, y = convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
+                lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
+                self.gui.set_lock_area(lock_rect)
                 # begin dragging the scrollbar
                 self.state = State.HOVER
                 self.dragging = True
@@ -87,16 +84,22 @@ class Scrollbar(Frame):
                 return False
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
-                # unlock mouse movement
-                self.gui.set_lock_area(None)
-                # reset state to default values
-                self.state = State.IDLE
-                self.dragging = False
-                self.last_mouse_pos = None
+                self.reset()
                 # signal there was a change
                 return True
         # signal no changes
         return False
+
+    def leave(self):
+        pass
+
+    def reset(self):
+        # unlock mouse movement
+        self.gui.set_lock_area(None)
+        # reset state to default values
+        self.state = State.IDLE
+        self.dragging = False
+        self.last_mouse_pos = None
 
     def get(self):
         # return scrollbar start position
