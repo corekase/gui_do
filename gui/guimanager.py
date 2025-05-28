@@ -200,8 +200,8 @@ class GuiManager:
                             return widget.id
                         collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                         if collision:
-                            widget_hit = widget
                             widget_consumed = True
+                            widget_hit = widget
             if self.last_window_object != widget_hit:
                 if self.last_window_object != None:
                     self.last_window_object.leave()
