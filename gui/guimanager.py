@@ -214,15 +214,12 @@ class GuiManager:
                         if collision:
                             widget_hit = widget
                             widget_consumed = True
-            if window_consumed or widget_consumed or raise_flag:
-                break
-        if widget_hit != None:
             if self.last_object != widget_hit:
                 if self.last_object != None:
                     self.last_object.leave()
                 self.last_object = widget_hit
-        if window_consumed or widget_consumed or raise_flag:
-            return '<CONSUMED>'
+            if window_consumed or widget_consumed or raise_flag:
+                return '<CONSUMED>'
         # handle screen widgets
         widget_consumed = False
         widget_hit = None
@@ -233,11 +230,10 @@ class GuiManager:
             if collision:
                 widget_hit = widget
                 widget_consumed = True
-        if widget_hit != None:
-            if self.last_object != widget_hit:
-                if self.last_object != None:
-                    self.last_object.leave()
-                self.last_object = widget_hit
+        if self.last_object != widget_hit:
+            if self.last_object != None:
+                self.last_object.leave()
+            self.last_object = widget_hit
         if widget_consumed:
             return '<CONSUMED>'
         # no widget or window activated to this event
