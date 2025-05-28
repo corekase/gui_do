@@ -109,17 +109,17 @@ class Demo:
         Window(id, name, (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((5, 5), 50, 20, 4)
+        counter += 1
         button_id = f'{id}{name}{window_x}{window_y}{counter}'
-        counter += 1
         add(Button(button_id, gridded(0, 0), 'One'))
-        button_id = f'{id}{window_x}x{window_y}-{counter}'
         counter += 1
+        button_id = f'{id}{name}{window_x}{window_y}{counter}'
         add(Button(button_id, gridded(1, 0), 'Two'))
-        button_id = f'{id}{window_x}x{window_y}-{counter}'
         counter += 1
+        button_id = f'{id}{name}{window_x}{window_y}{counter}'
         add(Button(button_id, gridded(0, 1), 'Three'))
-        button_id = f'{id}{window_x}x{window_y}-{counter}'
         counter += 1
+        button_id = f'{id}{name}{window_x}{window_y}{counter}'
         add(Button(button_id, gridded(1, 1), 'Four'))
 
     def run(self):
@@ -127,7 +127,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        boxes = 50
+        boxes = 150
         size = 15
         points = []
         for _ in range(boxes):
@@ -139,7 +139,7 @@ class Demo:
                 dx = -dx
             if choice([True, False]):
                 dy = -dy
-            points.append([x, y, dx, dy])
+            points.append((x, y, dx, dy))
         frame = Frame('none', Rect(0, 0, 1, 1))
         frame.state = FrameState.ARMED
         frame.surface = self.screen
@@ -155,6 +155,7 @@ class Demo:
             self.window_label_radio.set_label(f'PushRadio: {self.pb10.read()}')
             bitmaps = []
             new_points = []
+            # copy all the areas that are going to be overwritten
             for x, y, dx, dy in points:
                 x += dx
                 y += dy
@@ -166,10 +167,11 @@ class Demo:
                 new_points += [(x, y, dx, dy)]
                 bitmap = copy_graphic_area(self.screen, rec)
                 bitmaps.append((bitmap, rec))
-
+            # then with the graphics saved draw on those areas
             for x, y, dx, dy in new_points:
                 frame.rect = Rect(x, y, size, size)
                 frame.draw()
+            # swap the lists to start again
             points = new_points
             # draw gui
             self.gui.draw_gui()
@@ -179,6 +181,7 @@ class Demo:
             pygame.display.flip()
             # undraw gui
             self.gui.undraw_gui()
+            # restore the saved areas that were drawn over
             for bitmap, rec in bitmaps:
                 self.screen.blit(bitmap, rec)
         pygame.quit()
@@ -196,6 +199,7 @@ class Demo:
                     # handle window close widget or alt-f4 keypress
                     self.running = False
 
+    # callback
     def exit(self):
         self.running = False
 
