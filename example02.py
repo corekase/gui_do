@@ -129,7 +129,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        boxes = 4000
+        boxes = 2000
         size = 15
         points = []
         for _ in range(boxes):
