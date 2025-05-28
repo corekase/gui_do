@@ -2,7 +2,7 @@ from enum import Enum
 from pygame.draw import rect, line
 from .widget import Widget, colours
 
-FrameState = Enum('State', ['IDLE', 'HOVER', 'ARMED'])
+FrameState = Enum('FrameState', ['IDLE', 'HOVER', 'ARMED'])
 
 class Frame(Widget):
     def __init__(self, id, rect):
