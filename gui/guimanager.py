@@ -54,7 +54,7 @@ class GuiManager:
         self.active_window = None
         # whether to save graphic area under widgets
         self.save = True
-        # last object
+        # last objects
         self.last_window_object = None
         self.last_screen_object = None
 
@@ -239,10 +239,10 @@ class GuiManager:
         if self.last_screen_object != widget_hit:
             if self.last_screen_object != None:
                 self.last_screen_object.leave()
-        if self.last_window_object != None:
-            self.last_window_object.leave()
-            self.last_window_object = None
-        self.last_screen_object = widget_hit
+            if self.last_window_object != None:
+                self.last_window_object.leave()
+                self.last_window_object = None
+            self.last_screen_object = widget_hit
         if consumed:
             return '<CONSUMED>'
         # no widget or window activated to this event
