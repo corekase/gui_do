@@ -55,7 +55,8 @@ class GuiManager:
         # whether to save graphic area under widgets
         self.save = True
         # last object
-        self.last_object = None
+        self.last_window_object = None
+        self.last_screen_object = None
 
     def set_save(self, flag):
         # whether to set the state of a widget to save the graphic under it
@@ -209,33 +210,39 @@ class GuiManager:
                             raise_flag = True
                 for widget in window.widgets:
                         if self.handle_widget(widget, event, window):
-                            self.last_object = widget
+                            self.last_window_object = widget
                             return widget.id
                         collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                         if collision:
                             widget_hit = widget
                             widget_consumed = True
-            if self.last_object != widget_hit:
-                if self.last_object != None:
-                    self.last_object.leave()
-                self.last_object = widget_hit
+            if self.last_window_object != widget_hit:
+                if self.last_window_object != None:
+                    self.last_window_object.leave()
+                if self.last_screen_object != None:
+                    self.last_screen_object.leave()
+                    self.last_screen_object = None
+                self.last_window_object = widget_hit
             if window_consumed or widget_consumed or raise_flag:
                 return '<CONSUMED>'
         # handle screen widgets
-        widget_hit = None
         consumed = False
+        widget_hit = None
         for widget in self.widgets:
             if self.handle_widget(widget, event):
-                self.last_object = widget
+                self.last_screen_object = widget
                 return widget.id
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
-                widget_hit = widget
                 consumed = True
-        if self.last_object != widget_hit:
-            if self.last_object != None:
-                self.last_object.leave()
-            self.last_object = widget_hit
+                widget_hit = widget
+        if self.last_screen_object != None:
+            if self.last_screen_object != widget:
+                self.last_screen_object.leave()
+            if self.last_window_object != None:
+                self.last_window_object.leave()
+                self.last_window_object = None
+            self.last_screen_object = widget_hit
         if consumed:
             return '<CONSUMED>'
         # no widget or window activated to this event

@@ -91,7 +91,7 @@ class Scrollbar(Frame):
         return False
 
     def leave(self):
-        pass
+        self.reset()
 
     def reset(self):
         # unlock mouse movement

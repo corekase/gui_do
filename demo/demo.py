@@ -238,8 +238,9 @@ class Demo:
             if widget_id != None:
                 # gui_do client widget handling is done here
                 # widget_id is the widget identifier. either handle the identifier here or use a callback
-                pass
-                # if widget_id == 'exit':
+                if widget_id == '<CONSUMED>':
+                    pass
+                # elif widget_id == 'exit':
                 #     # exit was clicked
                 #     self.running = False
                 # elif other widget_ids
