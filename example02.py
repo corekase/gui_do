@@ -97,10 +97,12 @@ class Demo:
         sb4.set(100, 0, 30)
         add(sb4)
         # add a grid of windows
+        win_num = 0
         for x in range(15):
             for y in range(9):
+                win_num += 1
                 self.make_window(10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55,
-                                 f'{x},{y}', f'Win {x * 5 + y + 1}')
+                                 f'{x},{y}', f'Win {win_num}')
         # set running flag
         self.running = True
 
