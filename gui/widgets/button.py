@@ -1,7 +1,7 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..utility import render_text, centre, convert_to_window
-from .frame import Frame, State
+from .frame import Frame, FrameState
 
 class Button(Frame):
     def __init__(self, id, rect, text):
@@ -9,7 +9,7 @@ class Button(Frame):
         super().__init__(id, rect)
         self.gui = GuiManager()
         # button state
-        self.state = State.IDLE
+        self.state = FrameState.IDLE
         # text bitmaps
         self.text_bitmap = render_text(text)
         self.text_highlight_bitmap = render_text(text, True)
@@ -26,34 +26,34 @@ class Button(Frame):
         # is the mouse position within the button rect
         collision = self.rect.collidepoint(convert_to_window(self.gui.lock_area(event.pos), window))
         # manage the state of the button
-        if (self.state == State.IDLE) and collision:
-            self.state = State.HOVER
-        if self.state == State.HOVER:
+        if (self.state == FrameState.IDLE) and collision:
+            self.state = FrameState.HOVER
+        if self.state == FrameState.HOVER:
             if (event.type == MOUSEMOTION) and (not collision):
-                self.state = State.IDLE
+                self.state = FrameState.IDLE
             if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
-                    self.state = State.ARMED
-        if self.state == State.ARMED:
+                    self.state = FrameState.ARMED
+        if self.state == FrameState.ARMED:
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
                     # button clicked
-                    self.state = State.IDLE
+                    self.state = FrameState.IDLE
                     return True
             if (event.type == MOUSEMOTION) and (not collision):
-                self.state = State.IDLE
+                self.state = FrameState.IDLE
         # button not clicked
         return False
 
     def leave(self):
 
-        self.state = State.IDLE
+        self.state = FrameState.IDLE
 
     def draw(self):
         # draw the button frame
         super().draw()
         # draw the button text
-        if self.state == State.ARMED:
+        if self.state == FrameState.ARMED:
             bitmap = self.text_highlight_bitmap
         else:
             bitmap = self.text_bitmap

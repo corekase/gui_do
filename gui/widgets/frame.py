@@ -2,23 +2,23 @@ from enum import Enum
 from pygame.draw import rect, line
 from .widget import Widget, colours
 
-State = Enum('State', ['IDLE', 'HOVER', 'ARMED'])
+FrameState = Enum('State', ['IDLE', 'HOVER', 'ARMED'])
 
 class Frame(Widget):
     def __init__(self, id, rect):
         super().__init__(id, rect)
-        self.state = State.IDLE
+        self.state = FrameState.IDLE
 
     def handle_event(self, _, _a):
         return False
 
     def draw(self):
         # determine which colours to use depending on State
-        if self.state == State.IDLE:
+        if self.state == FrameState.IDLE:
             self.draw_frame(colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
-        elif self.state == State.HOVER:
+        elif self.state == FrameState.HOVER:
             self.draw_frame(colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'])
-        elif self.state == State.ARMED:
+        elif self.state == FrameState.ARMED:
             self.draw_frame(colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
 
     def draw_frame(self, ul, lr, ul_d, lr_d, background):

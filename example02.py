@@ -3,7 +3,7 @@ from math import cos, sin, radians
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, QUIT
 from pygame import Rect
-from gui import GuiManager, Window, Label, Frame, State, Button, PushButtonGroup, Scrollbar, PushButtonKind
+from gui import GuiManager, Window, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
 from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
 from gui import centre, set_grid_properties, set_last_font, gridded
 
@@ -141,7 +141,7 @@ class Demo:
                 dy = -dy
             points.append([x, y, dx, dy])
         frame = Frame('none', Rect(0, 0, 1, 1))
-        frame.state = State.ARMED
+        frame.state = FrameState.ARMED
         frame.surface = self.screen
         # set a background image
         self.screen.blit(pygame.image.load(file_resource(

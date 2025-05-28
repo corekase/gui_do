@@ -5,7 +5,7 @@ from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility import render_text, centre, convert_to_window
 from .button import Button
-from .frame import State
+from .frame import FrameState
 from .widget import colours
 
 PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
@@ -64,11 +64,11 @@ class PushButtonGroup(Button):
         # is the mouse position within the push button rect
         collision = self.check_collision(convert_to_window(self.gui.lock_area(event.pos), window))
         # manage the state of the push button
-        if (self.state == State.IDLE) and collision:
-            self.state = State.HOVER
-        if self.state == State.HOVER:
+        if (self.state == FrameState.IDLE) and collision:
+            self.state = FrameState.HOVER
+        if self.state == FrameState.HOVER:
             if (event.type == MOUSEMOTION) and (not collision):
-                self.state = State.IDLE
+                self.state = FrameState.IDLE
             if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
                     # push button was clicked
@@ -89,9 +89,9 @@ class PushButtonGroup(Button):
 
     def select(self):
         # clear armed state for previous object
-        PushButtonGroup.selections[self.group].state = State.IDLE
+        PushButtonGroup.selections[self.group].state = FrameState.IDLE
         # mark this object armed
-        self.state = State.ARMED
+        self.state = FrameState.ARMED
         # make this object the currently armed one
         PushButtonGroup.selections[self.group] = self
 
@@ -101,18 +101,18 @@ class PushButtonGroup(Button):
 
     def leave(self):
         # if hover then idle when left
-        if self.state == State.HOVER:
-            self.state = State.IDLE
+        if self.state == FrameState.HOVER:
+            self.state = FrameState.IDLE
 
     def draw(self):
         if self.kind == PushButtonKind.BOX:
             super().draw()
         elif self.kind == PushButtonKind.RADIO:
-            if self.state == State.IDLE:
+            if self.state == FrameState.IDLE:
                 self.surface.blit(self.idle_bitmap, self.rect)
-            elif self.state == State.HOVER:
+            elif self.state == FrameState.HOVER:
                 self.surface.blit(self.hover_bitmap, self.rect)
-            elif self.state == State.ARMED:
+            elif self.state == FrameState.ARMED:
                 self.surface.blit(self.armed_bitmap, self.rect)
 
     def adjust_rect(self, bitmap):

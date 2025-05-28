@@ -3,7 +3,7 @@ from pygame import Rect
 from pygame.draw import rect
 from ..guimanager import GuiManager
 from ..utility import set_font, set_last_font, render_text, centre, set_active_object
-from ..widgets.frame import Frame, State, colours
+from ..widgets.frame import Frame, FrameState, colours
 
 class Window:
     def __init__(self, name, title, pos, size):
@@ -23,7 +23,7 @@ class Window:
         set_active_object(self)
         # make a frame for the backdrop of the window surface
         frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
-        frame.state = State.IDLE
+        frame.state = FrameState.IDLE
         frame.surface = self.surface
         # and make that frame the first widget in the surface list
         # and it is not added to the gui manager, only the list
@@ -42,7 +42,7 @@ class Window:
         text_bitmap = render_text(title)
         title_surface = pygame.surface.Surface((self.width, self.titlebar_size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, self.width, self.titlebar_size))
-        frame.state = State.ARMED
+        frame.state = FrameState.ARMED
         frame.surface = title_surface
         frame.draw()
         title_surface.blit(text_bitmap, (4, centre(self.titlebar_size, 10) - 2))
