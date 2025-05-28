@@ -193,6 +193,7 @@ class Demo:
             if widget_id != None:
                 if widget_id == '<CONSUMED>':
                     continue
+                # elif widget_id for more signals
             else:
                 if event.type == QUIT:
                     # handle window close widget or alt-f4 keypress
