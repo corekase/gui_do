@@ -22,7 +22,7 @@ class Demo:
         # set the drawing surface of the gui manager
         self.gui.set_surface(self.screen)
         # set cursor image
-        set_cursor((4, 0), 'cursors', 'Icons8_cursor.png')
+        set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
         # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
