@@ -160,7 +160,8 @@ class GuiManager:
             self.mouse_pos = self.lock_area(event.pos)
         # handle window dragging
         if event.type == MOUSEBUTTONUP and self.dragging:
-            self.dragging = False
+            if event.button == 1:
+                self.dragging = False
         elif event.type == MOUSEMOTION and self.dragging:
             xdif, ydif = event.rel
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
