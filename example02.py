@@ -129,7 +129,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        boxes = 2000
+        boxes = 1000
         # setup a frame to draw on our surface
         size = 15
         frame = Frame('none', Rect(0, 0, size, size))
@@ -167,9 +167,9 @@ class Demo:
             for x, y, dx, dy in points:
                 x += dx
                 y += dy
-                if x < 0 or x > self.screen.get_rect().width - size:
+                if x < 0 or x > (self.screen.get_rect().width - size):
                     dx = -dx
-                if y < 0 or y > self.screen.get_rect().height - size:
+                if y < 0 or y > (self.screen.get_rect().height - size):
                     dy = -dy
                 rec = Rect(x - 1, y - 1, size + 2, size + 2)
                 new_points += [(x, y, dx, dy)]
