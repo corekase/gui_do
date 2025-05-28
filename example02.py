@@ -48,7 +48,14 @@ class Demo:
         add(sb3)
         set_grid_properties((x + 10, y + 10), 100, 20, 4)
         add(Button('exit', gridded(0, 0), 'Exit'), self.exit)
-        add(Button('a', gridded(1, 0), 'Button'))
+        self.pb_label = Label(gridded(1, 0), 'N/A')
+        add(self.pb_label)
+        set_grid_properties((x + 10, y + 110), 86, 20, 4)
+        self.pb = PushButtonGroup('One', gridded(0, 0), 'One', 'pb', PushButtonKind.BOX)
+        add(self.pb)
+        add(PushButtonGroup('Two', gridded(1, 0), 'Two', 'pb', PushButtonKind.BOX))
+        add(PushButtonGroup('Three', gridded(0, 1), 'Three', 'pb', PushButtonKind.RADIO))
+        add(PushButtonGroup('Four', gridded(1, 1), 'Four', 'pb', PushButtonKind.RADIO))
         x, y, width, height = 0, 0, 440, 140
         # position of the window
         window_x = centre(self.screen.get_rect().width, width)
@@ -141,6 +148,7 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            self.pb_label.set_label(f'PushBox: {self.pb.read()}')
             self.window_label_button.set_label(f'PushBox: {self.pb7.read()}')
             self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
             bitmaps = []
