@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, set_font, set_last_font
-from gui import set_grid_properties, gridded, gprint
+from gui import set_grid_properties, gridded, gprint, set_save
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
@@ -20,8 +20,9 @@ class Demo:
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
         self.gui.set_surface(self.screen)
-        # manipulator to control whether a widget saves the graphic underneath it
-        self.gui.set_save(False)
+        # manipulator to control whether a screen widget saves the graphic underneath it
+        set_save(False)
+        # manipulator to set one of the loaded font names
         set_font('normal')
         #
         # -> begin adding screen widgets

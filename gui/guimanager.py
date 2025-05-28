@@ -52,15 +52,11 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
-        # whether to save graphic area under widgets
+        # whether to save graphic area under screen widgets, controlled by set_save manipulator in utility
         self.save = True
         # last objects
         self.last_window_object = None
         self.last_screen_object = None
-
-    def set_save(self, flag):
-        # whether to set the state of a widget to save the graphic under it
-        self.save = flag
 
     def set_surface(self, surface):
         # set gui screen surface
