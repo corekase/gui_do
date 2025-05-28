@@ -130,7 +130,16 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         boxes = 2000
+        # setup a frame to draw on our surface
         size = 15
+        frame = Frame('none', Rect(0, 0, size, size))
+        frame.state = FrameState.ARMED
+        # create our bitmap
+        frame_bitmap = pygame.surface.Surface((size, size))
+        # point the frame object at it
+        frame.surface = frame_bitmap
+        # and render onto that surface
+        frame.draw()
         points = []
         for _ in range(boxes):
             x = randrange(0, self.screen.get_rect().width - size)
@@ -142,9 +151,6 @@ class Demo:
             if choice([True, False]):
                 dy = -dy
             points.append((x, y, dx, dy))
-        frame = Frame('none', Rect(0, 0, 1, 1))
-        frame.state = FrameState.ARMED
-        frame.surface = self.screen
         # set a background image
         self.screen.blit(pygame.image.load(file_resource(
                                            'images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
@@ -170,8 +176,7 @@ class Demo:
                 bitmaps.append((copy_graphic_area(self.screen, rec), rec))
             # then with the graphics saved draw on those areas
             for x, y, dx, dy in new_points:
-                frame.rect = Rect(x, y, size, size)
-                frame.draw()
+                self.screen.blit(frame_bitmap, Rect(x, y, size, size))
             # swap the lists to start again
             points = new_points
             # draw gui
