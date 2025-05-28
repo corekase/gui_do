@@ -28,7 +28,7 @@ class GuiManager:
         self.widgets = []
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
-        # active object
+        # active object for add()
         self.active_object = None
         # list of windows
         self.windows = []
@@ -52,8 +52,6 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
-        # active object for add()
-        self.active_object = None
         # whether to save graphic area under widgets
         self.save = True
 
