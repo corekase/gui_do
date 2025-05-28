@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, load_font, set_font, set_last_font
-from gui import set_grid_properties, gridded, gprint
+from gui import set_grid_properties, gridded
 from gui import set_active_object, set_cursor, set_save
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
