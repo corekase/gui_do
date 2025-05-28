@@ -127,7 +127,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        boxes = 150
+        boxes = 200
         size = 15
         points = []
         for _ in range(boxes):
@@ -165,8 +165,7 @@ class Demo:
                     dy = -dy
                 rec = Rect(x - 1, y - 1, size + 2, size + 2)
                 new_points += [(x, y, dx, dy)]
-                bitmap = copy_graphic_area(self.screen, rec)
-                bitmaps.append((bitmap, rec))
+                bitmaps.append((copy_graphic_area(self.screen, rec), rec))
             # then with the graphics saved draw on those areas
             for x, y, dx, dy in new_points:
                 frame.rect = Rect(x, y, size, size)
