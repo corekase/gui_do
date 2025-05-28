@@ -61,7 +61,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main', 'gui_do', (window_x, window_y), (width, height))
+        Window('main', 'gui_do', (window_x, window_y + 400), (width, height))
         frame = Frame('none', Rect(0, 0, 440, 140))
         # set grid layout properties
         set_grid_properties((x + 10, y + 10), 140, 20, 4)
@@ -77,9 +77,9 @@ class Demo:
         add(pb8)
         add(pb9)
         # pushbutton radios
-        self.pb10 = PushButtonGroup('PR1', gridded(2, 0), 'Radio 1', 'pb2', PushButtonKind.RADIO)
-        pb11 = PushButtonGroup('PR2', gridded(2, 1), 'Radio 2', 'pb2', PushButtonKind.RADIO)
-        pb12 = PushButtonGroup('PR3', gridded(2, 2), 'Radio 3', 'pb2', PushButtonKind.RADIO)
+        self.pb10 = PushButtonGroup('PR1', gridded(2, 0), 'RadioButton', 'pb2', PushButtonKind.RADIO)
+        pb11 = PushButtonGroup('PR2', gridded(2, 1), 'RadioButton', 'pb2', PushButtonKind.RADIO)
+        pb12 = PushButtonGroup('PR3', gridded(2, 2), 'RadioButton', 'pb2', PushButtonKind.RADIO)
         add(self.pb10)
         add(pb11)
         add(pb12)
@@ -96,26 +96,11 @@ class Demo:
         sb4 = Scrollbar('S4', Rect(frame.rect.right - 30, y + 10, 20, frame.rect.bottom - 20 - frame.rect.y), False)
         sb4.set(100, 0, 30)
         add(sb4)
-        self.make_window(50, 150, 115, 55, 'main1', 'Win 1')
-        self.make_window(50, 250, 115, 55, 'main2', 'Win 2')
-        self.make_window(50, 350, 115, 55, 'main3', 'Win 3')
-        self.make_window(50, 450, 115, 55, 'main4', 'Win 4')
-        self.make_window(50, 550, 115, 55, 'main5', 'Win 5')
-        self.make_window(175, 150, 115, 55, 'main6', 'Win 6')
-        self.make_window(175, 250, 115, 55, 'main7', 'Win 7')
-        self.make_window(175, 350, 115, 55, 'main8', 'Win 8')
-        self.make_window(175, 450, 115, 55, 'main9', 'Win 9')
-        self.make_window(175, 550, 115, 55, 'main10', 'Win 10')
-        self.make_window(300, 150, 115, 55, 'main11', 'Win 11')
-        self.make_window(300, 250, 115, 55, 'main12', 'Win 12')
-        self.make_window(300, 350, 115, 55, 'main13', 'Win 13')
-        self.make_window(300, 450, 115, 55, 'main14', 'Win 14')
-        self.make_window(300, 550, 115, 55, 'main15', 'Win 15')
-        self.make_window(425, 150, 115, 55, 'main16', 'Win 16')
-        self.make_window(425, 250, 115, 55, 'main17', 'Win 17')
-        self.make_window(425, 350, 115, 55, 'main18', 'Win 18')
-        self.make_window(425, 450, 115, 55, 'main19', 'Win 19')
-        self.make_window(425, 550, 115, 55, 'main20', 'Win 20')
+        # add a grid of windows
+        for x in range(15):
+            for y in range(9):
+                self.make_window(10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55,
+                                 f'{x},{y}', f'Win {x * 5 + y + 1}')
         # set running flag
         self.running = True
 
@@ -124,7 +109,7 @@ class Demo:
         Window(id, name, (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((5, 5), 50, 20, 4)
-        button_id = f'{id}{window_x}x{window_y}-{counter}'
+        button_id = f'{id}{name}{window_x}{window_y}{counter}'
         counter += 1
         add(Button(button_id, gridded(0, 0), 'One'))
         button_id = f'{id}{window_x}x{window_y}-{counter}'
