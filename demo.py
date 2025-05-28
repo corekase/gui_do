@@ -272,3 +272,6 @@ class Demo:
     # callbacks
     def exit(self):
         self.running = False
+
+if __name__ == '__main__':
+    Demo().run()
