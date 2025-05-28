@@ -28,7 +28,7 @@ class GuiManager:
         # list of windows
         self.windows = []
         # dragging window
-        self.dragging = None
+        self.dragging = False
         self.dragging_window = None
         # current mouse position
         self.mouse_pos = pygame.mouse.get_pos()
