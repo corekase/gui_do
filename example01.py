@@ -245,7 +245,7 @@ class Demo:
                 # gui_do client widget handling is done here
                 # widget_id is the widget identifier. either handle the identifier here or use a callback
                 if widget_id == '<CONSUMED>':
-                    pass
+                    continue
                 elif widget_id == 'exit_signal':
                     # exit signal button was clicked
                     self.running = False
