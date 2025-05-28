@@ -27,7 +27,6 @@ class Button(Frame):
         collision = self.rect.collidepoint(convert_to_window(self.gui.lock_area(event.pos), window))
         # manage the state of the button
         if (self.state == State.IDLE) and collision:
-            self.dirty = True
             self.state = State.HOVER
         if self.state == State.HOVER:
             if (event.type == MOUSEMOTION) and (not collision):
@@ -39,15 +38,15 @@ class Button(Frame):
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
                     # button clicked
-                    self.state = State.HOVER
+                    self.state = State.IDLE
                     return True
             if (event.type == MOUSEMOTION) and (not collision):
                 self.state = State.IDLE
-                self.dirty = False
         # button not clicked
         return False
 
     def leave(self):
+
         self.state = State.IDLE
 
     def draw(self):

@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 from .utility import copy_graphic_area, load_font, image_alpha
-from .utility import convert_to_window, convert_to_screen
+from .utility import convert_to_window
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -54,6 +54,8 @@ class GuiManager:
         self.active_window = None
         # whether to save graphic area under widgets
         self.save = True
+        # last object
+        self.last_object = None
 
     def set_save(self, flag):
         # whether to set the state of a widget to save the graphic under it
@@ -194,6 +196,7 @@ class GuiManager:
         window_consumed = False
         widget_consumed = False
         raise_flag = False
+        widget_hit = None
         # work on a copy of the window list in case the list is modified by raising
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
@@ -209,36 +212,36 @@ class GuiManager:
                             return widget.id
                         collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                         if collision:
+                            widget_hit = widget
                             widget_consumed = True
             if window_consumed or widget_consumed or raise_flag:
-                return '<CONSUMED>'
-        # clean dirty window widgets
-        for window in working_windows:
-            for widget in window.widgets:
-                self.clean_widget(widget, window)
+                break
+        if widget_hit != None:
+            if self.last_object != widget_hit:
+                if self.last_object != None:
+                    self.last_object.leave()
+                self.last_object = widget_hit
+        if window_consumed or widget_consumed or raise_flag:
+            return '<CONSUMED>'
         # handle screen widgets
         widget_consumed = False
+        widget_hit = None
         for widget in self.widgets:
             if self.handle_widget(widget, event):
                 return widget.id
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
+                widget_hit = widget
                 widget_consumed = True
+        if widget_hit != None:
+            if self.last_object != widget_hit:
+                if self.last_object != None:
+                    self.last_object.leave()
+                self.last_object = widget_hit
         if widget_consumed:
             return '<CONSUMED>'
-        # clean dirty screen widgets
-        for widget in self.widgets:
-            self.clean_widget(widget)
         # no widget or window activated to this event
         return None
-
-    def clean_widget(self, widget, window=None):
-        # clean up the state of widgets that were left in an intermediate one
-        if widget.dirty:
-            collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-            if not collision:
-                widget.leave()
-                widget.dirty = False
 
     def handle_widget(self, widget, event, window=None):
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()

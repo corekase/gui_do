@@ -17,8 +17,6 @@ class Widget:
         self.callback = None
         # whether a widget is shown or hidden
         self.visible = True
-        # whether the widget is dirty
-        self.dirty = False
         # whether to save the graphic area under the widget
         self.save = True
 

@@ -98,6 +98,12 @@ class Scrollbar(Frame):
         # signal no changes
         return False
 
+    def leave(self):
+        self.gui.set_lock_area(None)
+        self.state = State.IDLE
+        self.dragging = False
+        self.last_mouse_pos = None
+
     def get(self):
         # return scrollbar start position
         return self.start_pos
