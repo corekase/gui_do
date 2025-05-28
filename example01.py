@@ -33,7 +33,8 @@ class Demo:
         # -> begin adding screen widgets
         #
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'), self.exit)
+        add(Button('exit_callback', Rect(10, 1050, 140, 20), 'Exit (Callback)'), self.exit)
+        add(Button('exit_signal', Rect(160, 1050, 140, 20), 'Exit (Signal)'))
         # layout origin
         screen_rect = self.screen.get_rect()
         x, y = centre(screen_rect.width, 440), screen_rect.height - 155
@@ -244,9 +245,9 @@ class Demo:
                 # widget_id is the widget identifier. either handle the identifier here or use a callback
                 if widget_id == '<CONSUMED>':
                     pass
-                # elif widget_id == 'exit':
-                #     # exit was clicked
-                #     self.running = False
+                elif widget_id == 'exit_signal':
+                    # exit signal button was clicked
+                    self.running = False
                 # elif other widget_ids
             else:
                 #
@@ -273,6 +274,7 @@ class Demo:
 
     # callbacks
     def exit(self):
+        # called from gui_manager automatically
         self.running = False
 
 if __name__ == '__main__':

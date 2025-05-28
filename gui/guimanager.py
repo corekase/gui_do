@@ -38,11 +38,6 @@ class GuiManager:
         self.cursor_rect = None
         # area rect to keep the mouse position within
         self.lock_area_rect = None
-        # object bank dictionary
-        # dictionary of key:value -> name
-        #   dictionary of key:value -> bank
-        #     dictionary of key:screen and key:windows
-        #       -> for the lists
         # object_bank[name][bank][screen|windows]=lists
         self.object_bank = {}
         # which window is active
@@ -57,10 +52,6 @@ class GuiManager:
         # set gui screen surface
         self.surface = surface
 
-    def get_mouse_pos(self):
-        # if a gui_do client needs the mouse position they use this method
-        return self.lock_area(self.mouse_pos)
-
     def add_window(self, name, window):
         # store the window object by name
         self.names[name] = window
@@ -71,45 +62,9 @@ class GuiManager:
         # returns a window object for the given name
         return self.names[name]
 
-    # -> To-do: implement show/hide for widgets and windows. widgets inside a window
-    #           could be hidden, screen widgets could be hidden, and entire windows can be
-    #           hidden
-    #
-    # -> To-do: object banks
-    #    for the list of screen widgets and the list of windows and their
-    #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
-    #    elements, and switch between different sets of them depending on the state of
-    #    your application
-    #
-    #    so, having one gui manager singleton might complicate a main-menu
-    #    where you pass a screen and a new run() instantiates everything from there and releases
-    #    the data when it returns. with a singleton gui that menu wouldn't work. but, switch out
-    #    banks at the root of the data structures then multiple applications sharing a screen work
-    #
-    #    object banks could also be divided into specific windows or forms, and you could bank in and
-    #    out different ones to a shared root data structure where they operate together.
-    #    code definitions for gui layouts can be put into any source file in a function or method that
-    #    has the gui manager singleton. as the code executes it creates all the data in the banks, and
-    #    then in the application load and mix the bank data as needed
-    #
-    #    code executing into the object bank will use manipulators like how set_font() is used, to control
-    #    which bank names and routes to the leaf lists are constructed
-
-    def set_active_bank(self):
-        # bank manipulator, sets destination bank for add widget and window commands.
-        # as items are added, their surfaces are still the screen or a window while they are being
-        # instantiated. then loading and unloading just determine which are active at any given time
-        pass
-
-    def load_bank(self):
-        # loads a bank entry into the root datastructure. entries are instantiated in the bank and by
-        # reference they are moved to the root and from the root. the root is a "working-memory" of
-        # whatever happens to be loaded into it
-        pass
-
-    def unload_bank(self):
-        # removes a bank from the root
-        pass
+    def get_mouse_pos(self):
+        # if a gui_do client needs the mouse position they use this method
+        return self.lock_area(self.mouse_pos)
 
     def set_lock_area(self, area=None):
         # lock area rect is in screen coordinates
@@ -142,7 +97,7 @@ class GuiManager:
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self.mouse_pos = self.lock_area(event.pos)
-        # handle window dragging
+        # handle window dragging and lower widget
         if event.type == MOUSEBUTTONUP and self.dragging:
             if event.button == 1:
                 self.dragging = False
@@ -164,7 +119,7 @@ class GuiManager:
         widget_consumed = False
         raise_flag = False
         widget_hit = None
-        # work on a copy of the window list in case the list is modified by raising
+        # work on a reversed copy of the window list. the copy is in case the list is modified by raising
         working_windows = self.windows.copy()[::-1]
         for window in working_windows:
             if window.get_rect().collidepoint(self.get_mouse_pos()):
@@ -226,12 +181,12 @@ class GuiManager:
         return False
 
     def raise_window(self, window):
-        # move window to the beginning of the window evaluation, which is done in reverse for the window list
-        # so last item first
+        # move the window to the last item in the list which has the highest priority
         self.windows.append(self.windows.pop(self.windows.index(window)))
         self.active_window = window
 
     def lower_window(self, window):
+        # move the window to the first item in the list which has the lowest priority
         self.windows.insert(0, self.windows.pop(self.windows.index(window)))
         self.active_window = self.windows[-1]
 
@@ -239,12 +194,14 @@ class GuiManager:
         # draw all widgets to their surfaces
         self.bitmaps.clear()
         for widget in self.widgets:
-            # tuple of the bitmap and its rect, after loop ends in reverse order
+            # if screen widgets never move then the contents under them don't need to be saved
             if widget.save:
+                # tuple of the bitmap and its rect, after loop ends in reverse order
                 self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
         for window in self.windows:
+            # windows always save contents for the window rect only and not for contained widgets
             self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_rect()), window.get_rect()))
             window.draw_title_bar()
             for widget in window.widgets:
@@ -261,3 +218,43 @@ class GuiManager:
         # reverse the bitmaps that were under each gui object drawn
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
+
+    # -> To-do: implement show/hide for widgets and windows. widgets inside a window
+    #           could be hidden, screen widgets could be hidden, and entire windows can be
+    #           hidden
+    #
+    # -> To-do: object banks
+    #    for the list of screen widgets and the list of windows and their
+    #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
+    #    elements, and switch between different sets of them depending on the state of
+    #    your application
+    #
+    #    so, having one gui manager singleton might complicate a main-menu
+    #    where you pass a screen and a new run() instantiates everything from there and releases
+    #    the data when it returns. with a singleton gui that menu wouldn't work. but, switch out
+    #    banks at the root of the data structures then multiple applications sharing a screen work
+    #
+    #    object banks could also be divided into specific windows or forms, and you could bank in and
+    #    out different ones to a shared root data structure where they operate together.
+    #    code definitions for gui layouts can be put into any source file in a function or method that
+    #    has the gui manager singleton. as the code executes it creates all the data in the banks, and
+    #    then in the application load and mix the bank data as needed
+    #
+    #    code executing into the object bank will use manipulators like how set_font() is used, to control
+    #    which bank names and routes to the leaf lists are constructed
+
+    def set_active_bank(self):
+        # bank manipulator, sets destination bank for add widget and window commands.
+        # as items are added, their surfaces are still the screen or a window while they are being
+        # instantiated. then loading and unloading just determine which are active at any given time
+        pass
+
+    def load_bank(self):
+        # loads a bank entry into the root datastructure. entries are instantiated in the bank and by
+        # reference they are moved to the root and from the root. the root is a "working-memory" of
+        # whatever happens to be loaded into it
+        pass
+
+    def unload_bank(self):
+        # removes a bank from the root
+        pass
