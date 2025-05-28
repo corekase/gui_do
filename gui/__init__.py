@@ -4,7 +4,7 @@ import os
 from .utility import load_font, set_font, set_last_font, render_text
 from .utility import centre, set_grid_properties, gridded
 from .utility import image_alpha, file_resource, copy_graphic_area, gprint
-from .utility import set_active_object, set_cursor, set_save
+from .utility import set_active_object, set_cursor, set_save, add
 # import GuiManager and controls into this package's namespace
 from .guimanager import GuiManager
 from .widgets.frame import Frame

@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED, QUIT
 from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
 from gui import file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded
-from gui import set_active_object, set_cursor, set_save
+from gui import set_active_object, set_cursor, set_save, add
 from gui import GuiManager, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
@@ -33,44 +33,44 @@ class Demo:
         # -> begin adding screen widgets
         #
         # exit button, uses a callback function
-        self.gui.add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'), self.exit)
+        add(Button('exit', Rect(10, 1050, 140, 20), 'Exit'), self.exit)
         # layout origin
         screen_rect = self.screen.get_rect()
         x, y = centre(screen_rect.width, 440), screen_rect.height - 155
         set_grid_properties((x + 10, y + 10), 140, 20, 4)
         # background frame
-        self.gui.add(Frame('none', Rect(x, y, 440, 145)))
+        add(Frame('none', Rect(x, y, 440, 145)))
         # regular buttons
-        self.gui.add(Button('Button_1', gridded(0, 0), 'Button 1'))
-        self.gui.add(Button('Button_2', gridded(0, 1), 'Button 2'))
-        self.gui.add(Button('Button_3', gridded(0, 2), 'Button 3'))
+        add(Button('Button_1', gridded(0, 0), 'Button 1'))
+        add(Button('Button_2', gridded(0, 1), 'Button 2'))
+        add(Button('Button_3', gridded(0, 2), 'Button 3'))
         # pushbutton boxes
         self.pb1 = PushButtonGroup('SB1', gridded(1, 0), 'Button 1', 'pb1', PushButtonKind.BOX)
         pb2 = PushButtonGroup('SB2', gridded(1, 1), 'Button 2', 'pb1', PushButtonKind.BOX)
         pb3 = PushButtonGroup('SB3', gridded(1, 2), 'Button 3', 'pb1', PushButtonKind.BOX)
-        self.gui.add(self.pb1)
-        self.gui.add(pb2)
-        self.gui.add(pb3)
+        add(self.pb1)
+        add(pb2)
+        add(pb3)
         # pushbutton radios
         self.pb4 = PushButtonGroup('SR1', gridded(2, 0), 'Radio 1', 'pb2', PushButtonKind.RADIO)
         pb5 = PushButtonGroup('SR2', gridded(2, 1), 'Radio 2', 'pb2', PushButtonKind.RADIO)
         pb6 = PushButtonGroup('SR3', gridded(2, 2), 'Radio 3', 'pb2', PushButtonKind.RADIO)
-        self.gui.add(self.pb4)
-        self.gui.add(pb5)
-        self.gui.add(pb6)
+        add(self.pb4)
+        add(pb5)
+        add(pb6)
         # labels
         self.screen_label_button = Label(gridded(1, 3), 'N/A')
         self.screen_label_radio = Label(gridded(2, 3), 'N/A')
-        self.gui.add(self.screen_label_button)
-        self.gui.add(self.screen_label_radio)
+        add(self.screen_label_button)
+        add(self.screen_label_radio)
         # horizontal scrollbar
         sb4 = Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True)
         sb4.set(100, 0, 30)
-        self.gui.add(sb4)
+        add(sb4)
         # vertical scrollbar
         sb3 = Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False)
         sb3.set(100, 0, 30)
-        self.gui.add(sb3)
+        add(sb3)
         #
         # -> end adding screen widgets
         #
@@ -97,38 +97,38 @@ class Demo:
         frame = Rect(x, y, width, height)
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y
-        self.gui.add(label)
+        add(label)
         # regular buttons
-        self.gui.add(Button('Button_4', gridded(0, 0), 'Button 4'))
-        self.gui.add(Button('Button_5', gridded(0, 1), 'Button 5'))
-        self.gui.add(Button('Button_6', gridded(0, 2), 'Button 6'))
+        add(Button('Button_4', gridded(0, 0), 'Button 4'))
+        add(Button('Button_5', gridded(0, 1), 'Button 5'))
+        add(Button('Button_6', gridded(0, 2), 'Button 6'))
         # pushbutton boxes
         self.pb7 = PushButtonGroup('WB4', gridded(1, 0), 'Button 4', 'pb3', PushButtonKind.BOX)
         pb8 = PushButtonGroup('WB5', gridded(1, 1), 'Button 5', 'pb3', PushButtonKind.BOX)
         pb9 = PushButtonGroup('WB6', gridded(1, 2), 'Button 6', 'pb3', PushButtonKind.BOX)
-        self.gui.add(self.pb7)
-        self.gui.add(pb8)
-        self.gui.add(pb9)
+        add(self.pb7)
+        add(pb8)
+        add(pb9)
         # pushbutton radios
         self.pb10 = PushButtonGroup('WR4', gridded(2, 0), 'Radio 4', 'pb4', PushButtonKind.RADIO)
         pb11 = PushButtonGroup('WR5', gridded(2, 1), 'Radio 5', 'pb4', PushButtonKind.RADIO)
         pb12 = PushButtonGroup('WR6', gridded(2, 2), 'Radio 6', 'pb4', PushButtonKind.RADIO)
-        self.gui.add(self.pb10)
-        self.gui.add(pb11)
-        self.gui.add(pb12)
+        add(self.pb10)
+        add(pb11)
+        add(pb12)
         # labels
         self.window_label_button = Label(gridded(1, 3), 'N/A')
         self.window_label_radio = Label(gridded(2, 3), 'N/A')
-        self.gui.add(self.window_label_button)
-        self.gui.add(self.window_label_radio)
+        add(self.window_label_button)
+        add(self.window_label_radio)
         # horizontal scrollbar
         sb3 = Scrollbar('S3', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True)
         sb3.set(100, 0, 30)
-        self.gui.add(sb3)
+        add(sb3)
         # vertical scrollbar
         sb4 = Scrollbar('S4', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False)
         sb4.set(100, 0, 30)
-        self.gui.add(sb4)
+        add(sb4)
         #
         # -> end adding window widgets
         #
@@ -147,10 +147,10 @@ class Demo:
         #
         # -> begin adding window widgets
         #
-        self.gui.add(Button('main2_Button_1', gridded(0, 0), 'One'))
-        self.gui.add(Button('main2_Button_2', gridded(0, 1), 'Two'))
-        self.gui.add(Button('main2_Button_3', gridded(1, 0), 'Three'))
-        self.gui.add(Button('main2_Button_4', gridded(1, 1), 'Four'))
+        add(Button('main2_Button_1', gridded(0, 0), 'One'))
+        add(Button('main2_Button_2', gridded(0, 1), 'Two'))
+        add(Button('main2_Button_3', gridded(1, 0), 'Three'))
+        add(Button('main2_Button_4', gridded(1, 1), 'Four'))
         #
         # -> end adding window widgets
         #
@@ -169,10 +169,10 @@ class Demo:
         #
         # -> begin adding window widgets
         #
-        self.gui.add(Button('main3_Button_1', gridded(0, 0), 'One'))
-        self.gui.add(Button('main3_Button_2', gridded(0, 1), 'Two'))
-        self.gui.add(Button('main3_Button_3', gridded(1, 0), 'Three'))
-        self.gui.add(Button('main3_Button_4', gridded(1, 1), 'Four'))
+        add(Button('main3_Button_1', gridded(0, 0), 'One'))
+        add(Button('main3_Button_2', gridded(0, 1), 'Two'))
+        add(Button('main3_Button_3', gridded(1, 0), 'Three'))
+        add(Button('main3_Button_4', gridded(1, 1), 'Four'))
         #
         # -> end adding window widgets
         #

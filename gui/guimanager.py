@@ -61,22 +61,6 @@ class GuiManager:
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
-    def add(self, widget, callback=None):
-        if widget.id == '<CONSUMED>':
-            raise Exception(f'<CONSUMED> is a reserved widget identifier')
-        widget.callback = callback
-        # set_save manipulator controls this setting
-        widget.save = self.save
-        if self.active_object != None:
-            widget.surface = self.active_object.surface
-            # append the widget to the object
-            self.active_object.widgets.append(widget)
-        else:
-            # add a widget to the screen
-            widget.surface = self.surface
-            # append the widget to the group
-            self.widgets.append(widget)
-
     def add_window(self, name, window):
         # store the window object by name
         self.names[name] = window

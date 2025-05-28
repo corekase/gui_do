@@ -126,3 +126,21 @@ def set_cursor(hotspot, *image):
     gui.cursor_image = image_alpha(*image)
     gui.cursor_rect = gui.cursor_image.get_rect()
     gui.cursor_hotspot = hotspot
+
+def add(widget, callback=None):
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    if widget.id == '<CONSUMED>':
+        raise Exception(f'<CONSUMED> is a reserved widget identifier')
+    widget.callback = callback
+    # set_save manipulator controls this setting
+    widget.save = gui.save
+    if gui.active_object != None:
+        widget.surface = gui.active_object.surface
+        # append the widget to the object
+        gui.active_object.widgets.append(widget)
+    else:
+        # add a widget to the screen
+        widget.surface = gui.surface
+        # append the widget to the group
+        gui.widgets.append(widget)
