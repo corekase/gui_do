@@ -76,7 +76,6 @@ class Demo:
         # horizontal scrollbar
         sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.rect.right - 45 - frame.rect.x, 20), True))
         sb3.set(100, 0, 30)
-
         # vertical scrollbar
         sb4 = add(Scrollbar('S4', Rect(frame.rect.right - 30, y + 10, 20, frame.rect.bottom - 20 - frame.rect.y), False))
         sb4.set(100, 0, 30)
