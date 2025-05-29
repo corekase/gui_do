@@ -21,6 +21,8 @@ class PushButtonGroup(Button):
         self.group = group
         self.kind = kind
         if self.kind == PushButtonKind.RADIO:
+            # radio buttons are transparent
+            self.transparent = True
             # idle radio
             self.idle_bitmap = self.make_radio_button(text, colours['light'], colours['dark'])
             # hover radio
