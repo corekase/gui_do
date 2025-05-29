@@ -83,8 +83,8 @@ class Demo:
         sb4.set(100, 0, 30)
         # add a grid of windows
         win_num = 0
-        for x in range(15):
-            for y in range(9):
+        for y in range(9):
+            for x in range(15):
                 win_num += 1
                 self.make_window(10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55,
                                  f'{x},{y}', f'Win {win_num}')
