@@ -3,7 +3,8 @@ from pygame import Rect
 from pygame.draw import rect
 from ..guimanager import GuiManager
 from ..utility import set_font, set_last_font, render_text, centre, set_active_object
-from ..widgets.frame import Frame, FrameState, colours
+from ..widgets.frame import Frame, FrameState
+from ..utility import colours
 
 class Window:
     def __init__(self, name, title, pos, size):
