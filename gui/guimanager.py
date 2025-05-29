@@ -115,6 +115,12 @@ class GuiManager:
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self.mouse_pos = self.lock_area(event.pos)
+        # check for alt-f4 or window quit button
+        if event.type == QUIT:
+            return self.event({'quit': None})
+        # check for a keypress
+        elif event.type == KEYDOWN:
+            return self.event({'keydown': event.key})
         # handle window dragging and lower widget
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
@@ -187,11 +193,7 @@ class GuiManager:
         if consumed:
             return self.event(None)
         # no widget activated to this event, now do pygame base events
-        if event.type == QUIT:
-            return self.event({'quit': None})
-        elif event.type == KEYDOWN:
-            return self.event({'keydown': event.key})
-        elif event.type == MOUSEBUTTONDOWN:
+        if event.type == MOUSEBUTTONDOWN:
             return self.event({'mousebuttondown': event.button})
         return self.event(None)
 
