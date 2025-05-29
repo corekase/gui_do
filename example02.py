@@ -44,10 +44,10 @@ class Demo:
         sb3.set(100, 0, 30)
         set_grid_properties((x + 10, y + 10), 100, 20, 4)
         add(Button('exit', gridded(0, 0), 'Exit'), self.exit)
-        self.pb_label = add(Label(gridded(1, 0), 'N/A'))
+        self.fps_label = add(Label(gridded(1, 0), 'N/A'))
         set_grid_properties((x + 10, y + 150), 70, 20, 4)
-        self.pb = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'pb', PushButtonKind.RADIO))
-        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'pb', PushButtonKind.RADIO))
+        self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
+        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
         x, y, width, height = 0, 0, 440, 140
         # position of the window
         window_x = centre(self.screen.get_rect().width, width)
@@ -62,16 +62,16 @@ class Demo:
         add(Button('Button_2', gridded(0, 1), 'Button'))
         add(Button('Button_3', gridded(0, 2), 'Button'))
         # pushbutton boxes
-        self.pb7 = add(PushButtonGroup('PB1', gridded(1, 0), 'PushButton', 'pb1', PushButtonKind.BOX))
-        add(PushButtonGroup('PB2', gridded(1, 1), 'PushButton', 'pb1', PushButtonKind.BOX))
-        add(PushButtonGroup('PB3', gridded(1, 2), 'PushButton', 'pb1', PushButtonKind.BOX))
+        self.window_push_box_widget = add(PushButtonGroup('Push 1', gridded(1, 0), 'PushButton', 'pb', PushButtonKind.BOX))
+        add(PushButtonGroup('Push 2', gridded(1, 1), 'PushButton', 'pb', PushButtonKind.BOX))
+        add(PushButtonGroup('Push 3', gridded(1, 2), 'PushButton', 'pb', PushButtonKind.BOX))
         # pushbutton radios
-        self.pb10 = add(PushButtonGroup('PR1', gridded(2, 0), 'RadioButton', 'pb2', PushButtonKind.RADIO))
-        add(PushButtonGroup('PR2', gridded(2, 1), 'RadioButton', 'pb2', PushButtonKind.RADIO))
-        add(PushButtonGroup('PR3', gridded(2, 2), 'RadioButton', 'pb2', PushButtonKind.RADIO))
+        self.window_radio_box_widget = add(PushButtonGroup('Radio 1', gridded(2, 0), 'RadioButton', 'pr', PushButtonKind.RADIO))
+        add(PushButtonGroup('Radio 2', gridded(2, 1), 'RadioButton', 'pr', PushButtonKind.RADIO))
+        add(PushButtonGroup('Radio 3', gridded(2, 2), 'RadioButton', 'pr', PushButtonKind.RADIO))
         # labels
-        self.window_label_button = add(Label(gridded(1, 3), 'N/A'))
-        self.window_label_radio = add(Label(gridded(2, 3), 'N/A'))
+        self.window_pushbox_label = add(Label(gridded(1, 3), 'N/A'))
+        self.window_radio_label = add(Label(gridded(2, 3), 'N/A'))
         # horizontal scrollbar
         sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.rect.right - 45 - frame.rect.x, 20), True))
         sb3.set(100, 0, 30)
@@ -141,13 +141,13 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
-            if self.pb.read() == '60fps':
+            if self.fps_control.read() == '60fps':
                 fps = 60
             else:
                 fps = 0
-            self.pb_label.set_label(f'FPS: {round(clock.get_fps())}')
-            self.window_label_button.set_label(f'PushBox: {self.pb7.read()}')
-            self.window_label_radio.set_label(f'PushRadio: {self.pb10.read()}')
+            self.fps_label.set_label(f'FPS: {round(clock.get_fps())}')
+            self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
+            self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
             bitmaps = []
             new_points = []
             # copy all the areas that are going to be overwritten
