@@ -45,11 +45,9 @@ class Demo:
         set_grid_properties((x + 10, y + 10), 100, 20, 4)
         add(Button('exit', gridded(0, 0), 'Exit'), self.exit)
         self.pb_label = add(Label(gridded(1, 0), 'N/A'))
-        set_grid_properties((x + 10, y + 110), 86, 20, 4)
-        self.pb = add(PushButtonGroup('One', gridded(0, 0), 'One', 'pb', PushButtonKind.BOX))
-        add(PushButtonGroup('Two', gridded(1, 0), 'Two', 'pb', PushButtonKind.RADIO))
-        add(PushButtonGroup('Three', gridded(0, 1), 'Three', 'pb', PushButtonKind.RADIO))
-        add(PushButtonGroup('Four', gridded(1, 1), 'Four', 'pb', PushButtonKind.BOX))
+        set_grid_properties((x + 10, y + 150), 70, 20, 4)
+        self.pb = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'pb', PushButtonKind.RADIO))
+        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'pb', PushButtonKind.RADIO))
         x, y, width, height = 0, 0, 440, 140
         # position of the window
         window_x = centre(self.screen.get_rect().width, width)
@@ -143,7 +141,11 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
-            self.pb_label.set_label(f'Push: {self.pb.read()}')
+            if self.pb.read() == '60fps':
+                fps = 60
+            else:
+                fps = 0
+            self.pb_label.set_label(f'FPS: {round(clock.get_fps())}')
             self.window_label_button.set_label(f'PushBox: {self.pb7.read()}')
             self.window_label_radio.set_label(f'PushRadio: {self.pb10.read()}')
             bitmaps = []
