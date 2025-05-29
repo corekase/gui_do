@@ -16,23 +16,39 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
+        #
         # create a gui manager and it makes the screen the active object
+        #
         self.gui = GuiManager()
+        #
         # set the drawing surface of the gui manager
+        #
         self.gui.set_surface(self.screen)
+        #
         # set cursor image
+        #
         set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
+        #
         # load fonts
+        #
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
+        #
         # manipulator to control whether a screen widget saves the graphic underneath it
+        #
+        # don't save because the frame in the screen widgets covers up everything anyway
         set_save(False)
+        #
+        # screen widgets
+        #
         # manipulator to set one of the loaded font names
         set_font('normal')
+        # dimensions of the screen widgets frame
         x, y, w, h = 10, self.screen.get_rect().height - 210, 228, 200
         rec = Rect(x, y, w, h)
         frame = add(Frame('panel', rec))
+        # gui_do label
         set_font('gui_do')
         add(Label(((x + centre(w, 120)), y + 40), 'gui_do'))
         set_font('normal')
@@ -49,6 +65,9 @@ class Demo:
         self.fps_label = add(Label(gridded(0, 0), 'N/A'))
         self.fps_control = add(PushButtonGroup('60fps', gridded(0, 1), '60 fps', 'fps', PushButtonKind.RADIO))
         add(PushButtonGroup('fpsupcapped', gridded(1, 1), 'Uncapped', 'fps', PushButtonKind.RADIO))
+        #
+        # main window setup
+        #
         # position of the window
         x, y, width, height = 0, 0, 440, 140
         window_x = centre(self.screen.get_rect().width, width)
@@ -79,6 +98,9 @@ class Demo:
         # vertical scrollbar
         sb4 = add(Scrollbar('S4', Rect(frame.rect.right - 30, y + 10, 20, frame.rect.bottom - 20 - frame.rect.y), False))
         sb4.set(100, 0, 30)
+        #
+        # tiled windows setup
+        #
         # add a grid of windows
         win_num = 0
         for y in range(9):
@@ -86,6 +108,9 @@ class Demo:
                 win_num += 1
                 self.make_window(10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55,
                                  f'{x},{y}', f'Win {win_num}')
+        #
+        # all done
+        #
         # set running flag
         self.running = True
 
@@ -141,6 +166,7 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            # handle program logic
             if self.fps_control.read() == '60fps':
                 fps = 60
             else:
@@ -166,6 +192,7 @@ class Demo:
                 self.screen.blit(frame_bitmap, Rect(x, y, size, size))
             # swap the lists to start again
             points = new_points
+            #
             # draw gui
             self.gui.draw_gui()
             # tick to desired frame-rate
@@ -174,6 +201,7 @@ class Demo:
             pygame.display.flip()
             # undraw gui
             self.gui.undraw_gui()
+            #
             # restore the saved areas that were drawn over
             for bitmap, rec in bitmaps:
                 self.screen.blit(bitmap, rec)
