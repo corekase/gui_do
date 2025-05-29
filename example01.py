@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import file_resource, centre, load_font, set_font, set_last_font
+from gui import set_surface, file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import set_active_object, set_cursor, set_save, add
 from gui import GuiManager, GKind, Window
@@ -20,7 +20,7 @@ class Demo:
         # create a gui manager and it makes the screen the active object
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
-        self.gui.set_surface(self.screen)
+        set_surface(self.screen)
         # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)

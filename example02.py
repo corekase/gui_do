@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
-from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
+from gui import set_surface, load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -23,7 +23,7 @@ class Demo:
         #
         # set the drawing surface of the gui manager
         #
-        self.gui.set_surface(self.screen)
+        set_surface(self.screen)
         #
         # set cursor image
         #

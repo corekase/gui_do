@@ -66,10 +66,6 @@ class GuiManager:
         self.last_window_object = None
         self.last_screen_object = None
 
-    def set_surface(self, surface):
-        # set gui screen surface
-        self.surface = surface
-
     def add_window(self, name, window):
         # store the window object by name
         self.names[name] = window

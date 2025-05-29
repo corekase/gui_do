@@ -145,3 +145,9 @@ def add(widget, callback=None):
         # append the widget to the group
         gui.widgets.append(widget)
     return widget
+
+def set_surface(surface):
+    # set the surface the gui manager draws to
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    gui.surface = surface
