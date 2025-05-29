@@ -21,6 +21,8 @@ class Widget:
         self.save = True
         # if the widget is transparent, so far only for labels and radio buttons
         self.transparent = False
+        # whether the widget is dirty for the gui manager, every widget starts dirty
+        self.dirty = True
 
     def handle_event(self, _, _a):
         # implement in subclasses
