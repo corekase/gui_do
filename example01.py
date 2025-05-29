@@ -184,6 +184,8 @@ class Demo:
             # handle events
             self.handle_events()
             #
+            # -> gui_do client program logic goes here
+            #
             # -> gui_do client screen drawing code begins here
             #
             set_font('normal')
