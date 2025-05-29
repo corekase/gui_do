@@ -1,6 +1,6 @@
 import pygame
 from random import randrange, choice
-from pygame import FULLSCREEN, SCALED, QUIT
+from pygame import FULLSCREEN, SCALED, QUIT, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
 from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
@@ -187,6 +187,9 @@ class Demo:
             if event.type == GKind.Quit:
                 # handle window close widget or alt-f4 keypress
                 self.running = False
+            if event.type == GKind.KeyDown:
+                if event.key == K_ESCAPE:
+                    self.running = False
 
     # callback
     def exit(self):
