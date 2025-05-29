@@ -23,6 +23,13 @@ class Widget:
         self.transparent = False
         # whether the widget is dirty for the gui manager, every widget starts dirty
         self.dirty = True
+        # before widget is first drawn, save what was there
+        self.pristine = None
+
+    def save_prisine(self):
+        # update the pristine bitmap
+        from ..utility import copy_graphic_area
+        self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
     def handle_event(self, _, _a):
         # implement in subclasses
