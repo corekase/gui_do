@@ -4,7 +4,7 @@ from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from .utility import copy_graphic_area, convert_to_window
 
-GKind = Enum('GKind', ['Quit', 'Pass', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMovement',
+GKind = Enum('GKind', ['Quit', 'Pass', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
 
 class GuiEvent:
@@ -118,7 +118,9 @@ class GuiManager:
         # check for alt-f4 or window quit button
         if event.type == QUIT:
             return self.event({'quit': None})
-        # check for a keypress
+        # check for a keys
+        if event.type == KEYUP:
+            return self.event({'keyup': event.key})
         elif event.type == KEYDOWN:
             return self.event({'keydown': event.key})
         # handle window dragging and lower widget
@@ -193,8 +195,12 @@ class GuiManager:
         if consumed:
             return self.event(None)
         # no widget or window consumed the event now do pygame base events
-        if event.type == MOUSEBUTTONDOWN:
+        if event.type == MOUSEBUTTONUP:
+            return self.event({'mousebuttonup': event.button})
+        elif event.type == MOUSEBUTTONDOWN:
             return self.event({'mousebuttondown': event.button})
+        if event.type == MOUSEMOTION:
+            return self.event({'mousemotion': event.rel})
         return self.event(None)
 
     def handle_widget(self, widget, event, window=None):
@@ -221,13 +227,24 @@ class GuiManager:
             gui_event.widget_id = event_dict['widget_id']
         elif 'quit' in keys:
             gui_event.type = GKind.Quit
+        elif 'keyup' in keys:
+            gui_event.type = GKind.KeyUp
+            gui_event.key = event_dict['keyup']
         elif 'keydown' in keys:
             gui_event.type = GKind.KeyDown
             gui_event.key = event_dict['keydown']
+        elif 'mousebuttonup' in keys:
+            gui_event.type = GKind.MouseButtonUp
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.button = event_dict['mousebuttonup']
         elif 'mousebuttondown' in keys:
             gui_event.type = GKind.MouseButtonDown
             gui_event.pos = self.get_mouse_pos()
             gui_event.button = event_dict['mousebuttondown']
+        elif 'mousemotion' in keys:
+            gui_event.type = GKind.MouseMotion
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.rel = event_dict['mousemotion']
         # elif more keys types
         return gui_event
 
