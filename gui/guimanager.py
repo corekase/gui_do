@@ -245,7 +245,7 @@ class GuiManager:
             gui_event.type = GKind.MouseMotion
             gui_event.pos = self.get_mouse_pos()
             gui_event.rel = event_dict['mousemotion']
-        # elif more keys types
+        # elif more key types
         return gui_event
 
     def raise_window(self, window):
