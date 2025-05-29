@@ -36,7 +36,7 @@ class Window:
         self.set_pos(pos)
         # whether a window is shown or hidden
         self.visible = True
-        # whether or not this window is dirty, starts True
+        # whether or not this window is dirty, starts dirty
         self.dirty = True
         # a list of dirty widgets
         self.dirty_widgets = []
