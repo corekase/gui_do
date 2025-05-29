@@ -201,7 +201,7 @@ class GuiManager:
             return self.event({'mousebuttondown': event.button})
         if event.type == MOUSEMOTION:
             return self.event({'mousemotion': event.rel})
-        # no event at all matched anything
+        # no event matched anything
         return self.event(None)
 
     def handle_widget(self, widget, event, window=None):
