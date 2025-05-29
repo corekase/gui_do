@@ -8,6 +8,7 @@ class Label(Widget):
         rect = self.text_bitmap.get_rect()
         rect.x, rect.y = position[0], position[1]
         super().__init__('label', rect)
+        self.transparent = True
 
     def set_label(self, text):
         # text bitmap
