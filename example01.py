@@ -243,8 +243,8 @@ class Demo:
                 if event.button == 1:
                     x, y = event.pos
                     self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2),
-                                                        y - (self.drop_test_frame.rect.height // 2),
-                                                        self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
+                                                     y - (self.drop_test_frame.rect.height // 2),
+                                                     self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
                     self.drop_test_frame.draw()
     # callbacks
     def exit(self):
