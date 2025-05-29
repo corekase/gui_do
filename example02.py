@@ -1,6 +1,6 @@
 import pygame
 from random import randrange, choice
-from pygame import FULLSCREEN, SCALED, QUIT, K_ESCAPE
+from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
 from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
