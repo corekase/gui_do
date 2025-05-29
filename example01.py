@@ -1,10 +1,10 @@
 import pygame
-from pygame import Rect, FULLSCREEN, SCALED, QUIT
-from pygame.locals import MOUSEBUTTONDOWN, KEYDOWN, K_ESCAPE
+from pygame import Rect, FULLSCREEN, SCALED
+from pygame.locals import K_ESCAPE
 from gui import file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded
 from gui import set_active_object, set_cursor, set_save, add
-from gui import GuiManager, Window
+from gui import GuiManager, GKind, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
 class Demo:
@@ -219,42 +219,31 @@ class Demo:
 
     def handle_events(self):
         # handle the pygame event queue
-        for event in pygame.event.get():
-            # check if any gui objects handle the event
-            widget_id = self.gui.handle_event(event)
-            # if widget_id isn't None or <CONSUMED> then it means the widget was activated. ignore consumed events
-            if widget_id != None:
-                # gui_do client widget handling is done here
-                # widget_id is the widget identifier. either handle the identifier here or use a callback
-                if widget_id == '<CONSUMED>':
-                    continue
-                elif widget_id == 'exit_signal':
-                    # exit signal button was clicked
+        for raw_event in pygame.event.get():
+            # process event queue
+            event = self.gui.handle_event(raw_event)
+            if event.type == GKind.Pass:
+                continue
+            if event.type == GKind.Quit:
+                # handle window close widget or alt-f4 keypress
+                self.running = False
+                return
+            if event.type == GKind.Widget:
+                if event.widget_id == 'exit_signal':
                     self.running = False
-                # elif other widget_ids
-            else:
-                #
-                # -> gui_do client event handling begins here
-                #
-                # this is where your program parses events as normal for your client code
-                #
-                if event.type == QUIT:
-                    # handle window close widget or alt-f4 keypress
+            elif event.type == GKind.KeyDown:
+                # handle key presses
+                if event.key == K_ESCAPE:
+                    # handle escape key
                     self.running = False
-                elif event.type == KEYDOWN:
-                    # handle key presses
-                    if event.key == K_ESCAPE:
-                        # handle escape key
-                        self.running = False
-                # test whether gui events are consumed
-                elif event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        x, y = self.gui.get_mouse_pos()
-                        self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2),
-                                                         y - (self.drop_test_frame.rect.height // 2),
-                                                         self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
-                        self.drop_test_frame.draw()
-
+            # test whether gui events are consumed
+            elif event.type == GKind.MouseButtonDown:
+                if event.button == 1:
+                    x, y = event.pos
+                    self.drop_test_frame.rect = Rect(x - (self.drop_test_frame.rect.width // 2),
+                                                        y - (self.drop_test_frame.rect.height // 2),
+                                                        self.drop_test_frame.rect.width, self.drop_test_frame.rect.height)
+                    self.drop_test_frame.draw()
     # callbacks
     def exit(self):
         # called from gui_manager automatically

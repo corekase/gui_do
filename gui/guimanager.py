@@ -1,7 +1,25 @@
 import pygame
+from enum import Enum
 from pygame import Rect
-from pygame.locals import MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
+from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from .utility import copy_graphic_area, convert_to_window
+
+GKind = Enum('GKind', ['Quit', 'Pass', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMovement',
+                       'Widget', 'Window'])
+
+class GuiEvent:
+    # an event object to be returned which includes pygame event information and gui_do information
+    def __init__(self):
+        self.type: GKind = None
+        # keyboard
+        self.key = None
+        # mouse
+        self.pos = None
+        self.rel = None
+        self.button = None
+        # gui
+        self.window_id = None
+        self.widget_id = None
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -111,11 +129,11 @@ class GuiManager:
                     if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
                         if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
                             self.lower_window(window)
-                            return '<CONSUMED>'
+                            return self.event(None)
                         self.raise_window(window)
                         self.dragging = True
                         self.dragging_window = window
-                        return '<CONSUMED>'
+                        return self.event(None)
         # for each window handle their widgets
         window_consumed = False
         widget_consumed = False
@@ -134,7 +152,7 @@ class GuiManager:
                 for widget in window.widgets:
                         if self.handle_widget(widget, event, window):
                             self.last_window_object = widget
-                            return widget.id
+                            return self.event({'widget_id': widget.id})
                         collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                         if collision:
                             widget_consumed = True
@@ -147,14 +165,14 @@ class GuiManager:
                     self.last_screen_object = None
                 self.last_window_object = widget_hit
             if window_consumed or widget_consumed or raise_flag:
-                return '<CONSUMED>'
+                return self.event(None)
         # handle screen widgets
         consumed = False
         widget_hit = None
         for widget in self.widgets:
             if self.handle_widget(widget, event):
                 self.last_screen_object = widget
-                return widget.id
+                return self.event({'widget_id': widget.id})
             collision = widget.get_rect().collidepoint(self.get_mouse_pos())
             if collision:
                 consumed = True
@@ -167,9 +185,15 @@ class GuiManager:
                 self.last_window_object = None
             self.last_screen_object = widget_hit
         if consumed:
-            return '<CONSUMED>'
-        # no widget activated to this event
-        return None
+            return self.event(None)
+        # no widget activated to this event, now do pygame base events
+        if event.type == QUIT:
+            return self.event({'quit': None})
+        elif event.type == KEYDOWN:
+            return self.event({'keydown': event.key})
+        elif event.type == MOUSEBUTTONDOWN:
+            return self.event({'mousebuttondown': event.button})
+        return self.event(None)
 
     def handle_widget(self, widget, event, window=None):
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
@@ -181,6 +205,29 @@ class GuiManager:
             else:
                 return True
         return False
+
+    def event(self, event_dict):
+        # construct an event to be returned to the client which includes both gui_do information and pygame
+        # event information
+        gui_event = GuiEvent()
+        if event_dict == None:
+            gui_event.type = GKind.Pass
+            return gui_event
+        keys = event_dict.keys()
+        if 'widget_id' in keys:
+            gui_event.type = GKind.Widget
+            gui_event.widget_id = event_dict['widget_id']
+        elif 'quit' in keys:
+            gui_event.type = GKind.Quit
+        elif 'keydown' in keys:
+            gui_event.type = GKind.KeyDown
+            gui_event.key = event_dict['keydown']
+        elif 'mousebuttondown' in keys:
+            gui_event.type = GKind.MouseButtonDown
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.button = event_dict['mousebuttondown']
+        # elif more keys types
+        return gui_event
 
     def raise_window(self, window):
         # move the window to the last item in the list which has the highest priority

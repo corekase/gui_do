@@ -6,7 +6,7 @@ from .utility import centre, set_grid_properties, gridded
 from .utility import image_alpha, file_resource, copy_graphic_area, gprint
 from .utility import set_active_object, set_cursor, set_save, add
 # import GuiManager and controls into this package's namespace
-from .guimanager import GuiManager
+from .guimanager import GuiManager, GKind
 from .widgets.frame import Frame, FrameState
 from .widgets.label import Label
 from .widgets.button import Button

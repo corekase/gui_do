@@ -2,7 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, QUIT
 from pygame import Rect
-from gui import GuiManager, Window, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
+from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
 from gui import load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
 from gui import centre, set_grid_properties, gridded
 
@@ -179,17 +179,14 @@ class Demo:
 
     def handle_events(self):
         # handle the pygame event queue
-        for event in pygame.event.get():
-            # check if any gui objects handle the event
-            widget_id = self.gui.handle_event(event)
-            if widget_id != None:
-                if widget_id == '<CONSUMED>':
-                    continue
-                # elif widget_id for more signals
-            else:
-                if event.type == QUIT:
-                    # handle window close widget or alt-f4 keypress
-                    self.running = False
+        for raw_event in pygame.event.get():
+            # process event queue
+            event = self.gui.handle_event(raw_event)
+            if event.type == GKind.Pass:
+                continue
+            if event.type == GKind.Quit:
+                # handle window close widget or alt-f4 keypress
+                self.running = False
 
     # callback
     def exit(self):
