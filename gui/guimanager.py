@@ -192,7 +192,7 @@ class GuiManager:
             self.last_screen_object = widget_hit
         if consumed:
             return self.event(None)
-        # no widget activated to this event, now do pygame base events
+        # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONDOWN:
             return self.event({'mousebuttondown': event.button})
         return self.event(None)
