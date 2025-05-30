@@ -225,12 +225,14 @@ class Demo:
             # process event queue
             event = self.gui.handle_event(raw_event)
             if event.type == GKind.Pass:
+                # no operation
                 continue
             if event.type == GKind.Quit:
                 # handle window close widget or alt-f4 keypress
                 self.running = False
                 return
             if event.type == GKind.Widget:
+                # handle signals
                 if event.widget_id == 'exit_signal':
                     self.running = False
             elif event.type == GKind.KeyDown:
@@ -238,7 +240,8 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # handle escape key
                     self.running = False
-            # test whether gui events are consumed
+            # test whether mouse events are consumed when they are over a window
+            # if you are over a window or widget then you don't get the MouseButtonDown event
             elif event.type == GKind.MouseButtonDown:
                 if event.button == 1:
                     x, y = event.pos
