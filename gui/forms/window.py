@@ -21,7 +21,7 @@ class Window:
         frame.state = FrameState.IDLE
         frame.surface = self.surface
         frame.draw()
-        self.save_prisine()
+        self.save_pristine()
         # widgets on that surface
         self.widgets = []
         # add this window to the gui
@@ -41,7 +41,7 @@ class Window:
         # a list of dirty widgets
         self.dirty_widgets = []
 
-    def save_prisine(self):
+    def save_pristine(self):
         # update the pristine bitmap
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
