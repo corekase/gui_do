@@ -39,7 +39,7 @@ class GraphicFactory:
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
-        y_offset = (text_height // 2) + 3
+        y_offset = (text_height // 2) + 2
         radius = text_height / 4.0
         points = []
         for point in range(0, 360, 5):
