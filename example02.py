@@ -62,7 +62,7 @@ class Demo:
         # exit button
         add(Button('exit', Rect(x + centre(w, 100), y + 10, 100, 20), 'Exit'), self.exit)
         # fps controls
-        self.fps_label = add(Label(Rect(x + 10, y + 136, 70, 20), 'N/A'))
+        self.fps_label = add(Label(Rect(x + 10, y + 136, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + 150), 70, 20, 4)
         self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
         add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
