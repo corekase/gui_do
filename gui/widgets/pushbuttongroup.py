@@ -4,7 +4,6 @@ from ..graphicfactory import GraphicFactory
 from ..utility import convert_to_window
 from .button import Button
 from .frame import FrameState
-from .widget import colours
 
 PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
 
