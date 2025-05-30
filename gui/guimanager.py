@@ -275,7 +275,7 @@ class GuiManager:
         # if the backdrop changes, and the widget is transparent then this method should be called
         # with the transparent widgets
         for widget in widgets:
-            widget.refresh_pristine()
+            widget.save_pristine()
 
     def draw_gui(self):
         # draw all widgets to their surfaces
