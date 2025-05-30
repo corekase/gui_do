@@ -7,6 +7,7 @@ from ..utility import render_text, centre, convert_to_window
 from .button import Button
 from .frame import FrameState
 from .widget import colours
+from ..graphicfactory import GraphicFactory
 
 PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
 
@@ -18,17 +19,13 @@ class PushButtonGroup(Button):
 
     def __init__(self, id, rect, text, group, kind=PushButtonKind.BOX):
         super().__init__(id, rect, text)
+        factory = GraphicFactory()
         self.group = group
         self.kind = kind
-        if self.kind == PushButtonKind.RADIO:
-            # idle radio
-            self.idle_bitmap = self.make_radio_button(text, colours['light'], colours['dark'])
-            # hover radio
-            self.hover_bitmap = self.make_radio_button(text, colours['highlight'], colours['dark'])
-            # armed radio
-            self.armed_bitmap = self.make_radio_button(text, colours['highlight'], colours['dark'])
-            # adjust vertical centre
-            self.adjust_rect(self.idle_bitmap)
+        if self.kind == PushButtonKind.BOX:
+            self.box_idle, self.box_hover, self.box_armed = factory.draw_button_graphic(text, rect)
+        elif self.kind == PushButtonKind.RADIO:
+            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_button_graphic(text, rect)
             self.transparent = True
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
@@ -85,7 +82,7 @@ class PushButtonGroup(Button):
         elif self.kind == PushButtonKind.RADIO:
             collided = self.rect.collidepoint(position)
             if collided:
-                if (position[0] - self.rect.left) < self.idle_bitmap.get_rect().width:
+                if (position[0] - self.rect.left) < self.radio_idle.get_rect().width:
                     return True
             return False
 
@@ -108,18 +105,23 @@ class PushButtonGroup(Button):
 
     def draw(self):
         if self.kind == PushButtonKind.BOX:
-            super().draw()
+            if self.state == FrameState.IDLE:
+                self.surface.blit(self.box_idle, (self.rect.x, self.rect.y))
+            elif self.state == FrameState.HOVER:
+                self.surface.blit(self.box_hover, (self.rect.x, self.rect.y))
+            elif self.state == FrameState.ARMED:
+                self.surface.blit(self.box_armed, (self.rect.x, self.rect.y))
         elif self.kind == PushButtonKind.RADIO:
             if self.pristine == None:
                 self.save_pristine()
             if self.transparent:
                 self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
             if self.state == FrameState.IDLE:
-                self.surface.blit(self.idle_bitmap, self.rect)
+                self.surface.blit(self.radio_idle, self.rect)
             elif self.state == FrameState.HOVER:
-                self.surface.blit(self.hover_bitmap, self.rect)
+                self.surface.blit(self.radio_hover, self.rect)
             elif self.state == FrameState.ARMED:
-                self.surface.blit(self.armed_bitmap, self.rect)
+                self.surface.blit(self.radio_armed, self.rect)
         self.add_dirty()
 
     def adjust_rect(self, bitmap):
