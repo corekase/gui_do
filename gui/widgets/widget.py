@@ -19,7 +19,7 @@ class Widget:
         self.visible = True
         # whether the widget is dirty for the gui manager, every widget starts dirty
         self.dirty = True
-        # before widget is first drawn, save what was there
+        # before widget is first drawn, save what was there in this bitmap
         self.pristine = None
 
     def save_pristine(self):
