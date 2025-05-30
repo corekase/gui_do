@@ -5,7 +5,7 @@ from pygame.draw import rect, line
 from .utility import set_font, set_last_font, render_text, centre
 from .widgets.widget import colours
 
-class GraphicFactory:
+class BitmapFactory:
 
     def draw_title_bar_graphic(self, title, width, size):
         from .widgets.frame import Frame, FrameState

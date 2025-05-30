@@ -2,14 +2,14 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..utility import convert_to_window
 from .frame import Frame, FrameState
-from ..graphicfactory import GraphicFactory
+from ..bitmapfactory import BitmapFactory
 
 class Button(Frame):
     def __init__(self, id, rect, text):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
-        factory = GraphicFactory()
+        factory = BitmapFactory()
         self.idle, self.hover, self.armed = factory.draw_button_bitmaps(text, rect)
         self.state = FrameState.IDLE
 

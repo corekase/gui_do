@@ -1,13 +1,13 @@
 from enum import Enum
 from .widget import Widget
-from ..graphicfactory import GraphicFactory
+from ..bitmapfactory import BitmapFactory
 
 FrameState = Enum('FrameState', ['IDLE', 'HOVER', 'ARMED'])
 
 class Frame(Widget):
     def __init__(self, id, rect):
         super().__init__(id, rect)
-        self.factory = GraphicFactory()
+        self.factory = BitmapFactory()
         self.idle, self.hover, self.armed = self.factory.draw_box_bitmaps(rect)
         self.state = FrameState.IDLE
 

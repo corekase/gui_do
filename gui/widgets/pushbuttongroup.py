@@ -1,6 +1,6 @@
 from enum import Enum
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..graphicfactory import GraphicFactory
+from ..bitmapfactory import BitmapFactory
 from ..utility import convert_to_window
 from .button import Button
 from .frame import FrameState
@@ -15,7 +15,7 @@ class PushButtonGroup(Button):
 
     def __init__(self, id, rect, text, group, kind=PushButtonKind.BOX):
         super().__init__(id, rect, text)
-        factory = GraphicFactory()
+        factory = BitmapFactory()
         self.group = group
         self.kind = kind
         if self.kind == PushButtonKind.BOX:

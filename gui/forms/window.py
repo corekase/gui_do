@@ -1,14 +1,14 @@
 import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
-from ..graphicfactory import GraphicFactory
+from ..bitmapfactory import BitmapFactory
 from ..utility import copy_graphic_area, set_active_object, colours
 from ..widgets.frame import Frame, FrameState
 
 class Window:
     def __init__(self, name, title, pos, size):
         self.gui = GuiManager()
-        factory = GraphicFactory()
+        factory = BitmapFactory()
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
         self.width, self.height = size
