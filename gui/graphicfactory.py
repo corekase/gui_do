@@ -78,7 +78,3 @@ class GraphicFactory:
         surface.set_at((x + width - 2, y + height - 2), lr_d)
         # unlock surface
         surface.unlock()
-
-if __name__ == '__main__':
-    pass
-    #GraphicFactory().run()
