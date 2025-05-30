@@ -11,8 +11,6 @@ class Widget:
         self.surface = None
         # window widget may be attached to
         self.window = None
-        # gui manager
-        self.gui = None
         # identifier for widget, can be any kind like int or string
         self.id = id
         # rect for widget position and size on the surface
@@ -30,10 +28,9 @@ class Widget:
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
     def add_dirty(self):
+        # screen widgets are ignored as they are always dirty because they are undrawn
         if self.window != None:
             self.window.dirty_widgets.append(self)
-        else:
-            self.gui.dirty_widgets.append(self)
 
     def handle_event(self, _, _a):
         # implement in subclasses
