@@ -272,7 +272,8 @@ class GuiManager:
 
     def refresh_pristine(self, widgets):
         # refresh the underlying image of the widgets in the list
-        # if the backdrop changes, and the widget is transparent then this method it called
+        # if the backdrop changes, and the widget is transparent then this method should be called
+        # with the transparent widgets
         for widget in widgets:
             widget.refresh_pristine()
 
