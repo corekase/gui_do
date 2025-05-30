@@ -48,22 +48,22 @@ class Demo:
         frame = add(Frame('panel', rec))
         # gui_do label
         set_font('gui_do')
-        #add(Label(((x + centre(w, 120)), y + 40), 'gui_do'))
+        add(Label(((x + centre(w, 120)), y + 40), 'gui_do'))
         set_font('normal')
         # horizontal scrollbar
-        #sb4 = add(Scrollbar('S1', Rect(x + 10, y + h - 30, 180, 20), True))
-        #sb4.set(100, 0, 30)
+        sb4 = add(Scrollbar('S1', Rect(x + 10, y + h - 30, 180, 20), True))
+        sb4.set(100, 0, 30)
         # vertical scrollbar
-        #sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 40, 20, 150), False))
-        #sb3.set(100, 0, 30)
+        sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 40, 20, 150), False))
+        sb3.set(100, 0, 30)
         # exit button
         add(Button('exit', Rect(x + centre(w, 100), y + 10, 100, 20), 'Exit'), self.exit)
         # fps controls
-        #self.fps_label = add(Label(Rect(x + 10, y + 136, 70, 20), 'N/A', 60))
+        self.fps_label = add(Label(Rect(x + 10, y + 136, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + 150), 70, 20, 4)
-        #self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
-        #add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
-        '''
+        self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
+        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
+
         #
         # main window setup
         #
@@ -111,7 +111,7 @@ class Demo:
         #
         # all done
         #
-        '''
+
         # set running flag
         self.running = True
 
@@ -165,13 +165,13 @@ class Demo:
             # handle events
             self.handle_events()
             # handle program logic
-            #if self.fps_control.read() == '60fps':
-            #    fps = 60
-            #else:
-            #    fps = 0
-            #self.fps_label.set_label(f'FPS: {round(clock.get_fps())}')
-            #self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
-            #self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
+            if self.fps_control.read() == '60fps':
+                fps = 60
+            else:
+                fps = 0
+            self.fps_label.set_label(f'FPS: {round(clock.get_fps())}')
+            self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
+            self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
             bitmaps = []
             new_points = []
             # copy all the areas that are going to be overwritten

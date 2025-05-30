@@ -1,23 +1,17 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
-from ..utility import render_text, centre, convert_to_window
+from ..utility import convert_to_window
 from .frame import Frame, FrameState
+from ..graphicfactory import GraphicFactory
 
 class Button(Frame):
     def __init__(self, id, rect, text):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
-        # button state
+        factory = GraphicFactory()
+        self.idle, self.hover, self.armed = factory.draw_button_graphic(text, rect)
         self.state = FrameState.IDLE
-        # text bitmaps
-        self.text_bitmap = render_text(text)
-        self.text_highlight_bitmap = render_text(text, True)
-        # get centred dimensions for both x and y ranges
-        text_x = self.rect.x + centre(self.rect.width, self.text_bitmap.get_rect().width) - 1
-        text_y = self.rect.y + centre(self.rect.height, self.text_bitmap.get_rect().height) - 1
-        # store the position for later blitting
-        self.position = text_x, text_y
         self.add_dirty()
 
     def handle_event(self, event, window):
@@ -50,11 +44,9 @@ class Button(Frame):
         self.state = FrameState.IDLE
 
     def draw(self):
-        # draw the button frame
-        super().draw()
-        # draw the button text
-        if self.state == FrameState.ARMED:
-            bitmap = self.text_highlight_bitmap
-        else:
-            bitmap = self.text_bitmap
-        self.surface.blit(bitmap, self.position)
+        if self.state == FrameState.IDLE:
+            self.surface.blit(self.idle, (self.rect.x, self.rect.y))
+        elif self.state == FrameState.HOVER:
+            self.surface.blit(self.hover, (self.rect.x, self.rect.y))
+        elif self.state == FrameState.ARMED:
+            self.surface.blit(self.armed, (self.rect.x, self.rect.y))
