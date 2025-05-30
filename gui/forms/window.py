@@ -39,12 +39,6 @@ class Window:
         # update the window pristine bitmap
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
-    def refresh_wigets_pristine(self):
-        # refresh the underlying image of the widgets pristine bitmap in the list
-        # if the backdrop changes, and the widget is transparent then this method should be called
-        for widget in self.widgets:
-            widget.save_pristine()
-
     def draw_title_bar(self):
         self.gui.surface.blit(self.title_bar_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
