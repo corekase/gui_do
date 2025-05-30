@@ -128,11 +128,13 @@ def add(widget, callback=None):
     # set_save manipulator controls this setting
     widget.save = gui.save
     if gui.active_object != None:
+        widget.window = gui.active_object
         widget.surface = gui.active_object.surface
         # append the widget to the object
         gui.active_object.widgets.append(widget)
     else:
         # add a widget to the screen
+        widget.gui = gui
         widget.surface = gui.surface
         # append the widget to the group
         gui.widgets.append(widget)

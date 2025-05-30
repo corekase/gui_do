@@ -39,6 +39,8 @@ class GuiManager:
         self.names = {}
         # list of widgets attached to the screen
         self.widgets = []
+        # dirty widgets
+        self.dirty_widgets = []
         # list of bitmaps overwritten by gui objects
         self.bitmaps = []
         # active object for add()

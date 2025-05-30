@@ -117,6 +117,7 @@ class PushButtonGroup(Button):
                 self.surface.blit(self.hover_bitmap, self.rect)
             elif self.state == FrameState.ARMED:
                 self.surface.blit(self.armed_bitmap, self.rect)
+        self.add_dirty()
 
     def adjust_rect(self, bitmap):
         x, y, w, h = bitmap.get_rect()

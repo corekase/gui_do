@@ -36,19 +36,12 @@ class Window:
         self.set_pos(pos)
         # whether a window is shown or hidden
         self.visible = True
-        # whether or not this window is dirty, starts dirty
-        self.dirty = True
         # a list of dirty widgets
         self.dirty_widgets = []
 
     def save_pristine(self):
         # update the pristine bitmap
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
-
-    def add_dirty_widget(self, widget):
-        # widgets use this method to inform the window they are dirty
-        self.dirty = True
-        self.dirty_widgets.append(widget)
 
     def make_title_bar_graphic(self, title):
         set_font('titlebar')

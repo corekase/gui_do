@@ -9,6 +9,10 @@ class Widget:
     def __init__(self, id, rect):
         # surface to draw the widget on
         self.surface = None
+        # window widget may be attached to
+        self.window = None
+        # gui manager
+        self.gui = None
         # identifier for widget, can be any kind like int or string
         self.id = id
         # rect for widget position and size on the surface
@@ -17,8 +21,6 @@ class Widget:
         self.callback = None
         # whether a widget is shown or hidden
         self.visible = True
-        # whether the widget is dirty for the gui manager, every widget starts dirty
-        self.dirty = True
         # before widget is first drawn, save what was there in this bitmap
         self.pristine = None
 
@@ -26,6 +28,12 @@ class Widget:
         # update the pristine bitmap
         from ..utility import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
+
+    def add_dirty(self):
+        if self.window != None:
+            self.window.dirty_widgets.append(self)
+        else:
+            self.gui.dirty_widgets.append(self)
 
     def handle_event(self, _, _a):
         # implement in subclasses
