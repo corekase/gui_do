@@ -218,12 +218,15 @@ class Demo:
             # process event queue
             event = self.gui.handle_event(raw_event)
             if event.type == GKind.Pass:
+                # no operation
                 continue
             if event.type == GKind.Quit:
                 # handle window close widget or alt-f4 keypress
                 self.running = False
             if event.type == GKind.KeyDown:
+                # handle key presses
                 if event.key == K_ESCAPE:
+                    # handle escape key
                     self.running = False
 
     # callback
