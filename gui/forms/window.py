@@ -64,7 +64,7 @@ class Window:
 
     def get_widget_rect(self):
         x, y, w, h = self.window_widget_lower_bitmap.get_rect()
-        return Rect(self.x + self.width - self.titlebar_size, self.y - self.titlebar_size + 2, w, h)
+        return Rect(self.x + self.width - self.titlebar_size + 1, self.y - self.titlebar_size + 1, w, h)
 
     def set_pos(self, pos):
         self.x, self.y = pos
