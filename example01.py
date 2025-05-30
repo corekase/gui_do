@@ -240,7 +240,7 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # handle escape key
                     self.running = False
-            # test whether mouse events are consumed when they are over a window
+            # test whether mouse events are consumed when they are over a window or widget
             # if you are over a window or widget then you don't get the MouseButtonDown event
             elif event.type == GKind.MouseButtonDown:
                 if event.button == 1:
