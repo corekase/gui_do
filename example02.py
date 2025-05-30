@@ -48,7 +48,7 @@ class Demo:
         frame = add(Frame('panel', rec))
         # gui_do label
         set_font('gui_do')
-        add(Label(((x + centre(w, 120)), y + 40), 'gui_do'))
+        add(Label(((x + centre(w, 120)), y + 5), 'gui_do'))
         set_font('normal')
         # horizontal scrollbar
         sb4 = add(Scrollbar('S1', Rect(x + 10, y + h - 30, 180, 20), True))
@@ -57,10 +57,10 @@ class Demo:
         sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 40, 20, 150), False))
         sb3.set(100, 0, 30)
         # exit button
-        add(Button('exit', Rect(x + centre(w, 100), y + 10, 100, 20), 'Exit'), self.exit)
+        add(Button('exit', Rect(x + 50, y + 145, 100, 20), 'Exit'), self.exit)
         # fps controls
-        self.fps_label = add(Label(Rect(x + 10, y + 96, 70, 20), 'N/A', 60))
-        set_grid_properties((x + 10, y + 120), 70, 20, 5)
+        self.fps_label = add(Label(Rect(x + 10, y + 116, 70, 20), 'N/A', 60))
+        set_grid_properties((x + 10, y + 60), 70, 20, 5)
         self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
         add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
         self.box_control = add(PushButtonGroup('boxon', gridded(0, 1), 'Boxes On', 'bx1', PushButtonKind.RADIO))
