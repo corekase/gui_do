@@ -110,6 +110,10 @@ class PushButtonGroup(Button):
         if self.kind == PushButtonKind.BOX:
             super().draw()
         elif self.kind == PushButtonKind.RADIO:
+            if self.save:
+                if self.pristine == None:
+                    self.save_pristine()
+                self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
             if self.state == FrameState.IDLE:
                 self.surface.blit(self.idle_bitmap, self.rect)
             elif self.state == FrameState.HOVER:
@@ -118,7 +122,7 @@ class PushButtonGroup(Button):
                 self.surface.blit(self.armed_bitmap, self.rect)
 
     def adjust_rect(self, bitmap):
-        x, y, w, h = self.rect
+        x, y, w, h = bitmap.get_rect()
         smaller = bitmap.get_rect().height
-        offset = centre(h, smaller)
-        self.rect = Rect(x, y + offset, w, h)
+        offset = centre(self.rect.height, smaller)
+        self.rect = Rect(self.rect.x, self.rect.y + offset, w, h)
