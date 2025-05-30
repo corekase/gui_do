@@ -122,11 +122,12 @@ class GuiManager:
         # find highest window
         top_window = None
         for window in self.windows:
-            if window.get_window_rect().collidepoint(self.lock_area(self.get_mouse_pos())):
+            if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                 top_window = window
         # if top_window is None then the mouse isn't over any window
         # otherwise its the highest priority window by being assigned last through the list
         if top_window != None:
+            # clicking on the window the mouse is over raises it
             if event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.raise_window(top_window)
@@ -134,6 +135,7 @@ class GuiManager:
             if self.active_window != top_window:
                 self.active_window = top_window
         else:
+            # no window is active, the mouse isn't over one
             self.active_window = None
         # handle window dragging and lower widget
         if (event.type == MOUSEBUTTONUP) and self.dragging:
@@ -167,11 +169,6 @@ class GuiManager:
             for window in working_windows:
                 if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                     window_consumed = True
-                    if event.type == MOUSEBUTTONDOWN:
-                        if event.button == 1:
-                            if self.active_window != window:
-                                self.raise_window(window)
-                                self.active_window = window
                     for widget in window.widgets:
                             if self.handle_widget(widget, event, window):
                                 self.last_window_object = widget
