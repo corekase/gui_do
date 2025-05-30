@@ -107,12 +107,6 @@ def convert_to_screen(point, window):
     # conversion not necessary
     return point
 
-def set_save(flag):
-    # whether to set the state of a widget to save the graphic under it
-    from .guimanager import GuiManager
-    gui = GuiManager()
-    gui.save = flag
-
 def set_active_object(object=None):
     from .guimanager import GuiManager
     gui = GuiManager()

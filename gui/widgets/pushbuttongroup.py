@@ -108,10 +108,9 @@ class PushButtonGroup(Button):
         if self.kind == PushButtonKind.BOX:
             super().draw()
         elif self.kind == PushButtonKind.RADIO:
-            if self.save:
-                if self.pristine == None:
-                    self.save_pristine()
-                self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
+            if self.pristine == None:
+                self.save_pristine()
+            self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
             if self.state == FrameState.IDLE:
                 self.surface.blit(self.idle_bitmap, self.rect)
             elif self.state == FrameState.HOVER:

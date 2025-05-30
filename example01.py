@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import set_surface, file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded
-from gui import set_active_object, set_cursor, set_save, add
+from gui import set_active_object, set_cursor, add
 from gui import GuiManager, GKind, Window
 from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
 
@@ -25,8 +25,6 @@ class Demo:
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
-        # manipulator to control whether a screen widget saves the graphic underneath it
-        set_save(False)
         # manipulator to set one of the loaded font names
         set_font('normal')
         #

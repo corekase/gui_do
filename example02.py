@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
-from gui import set_surface, load_font, set_save, set_font, add, set_cursor, file_resource, copy_graphic_area
+from gui import set_surface, load_font, set_font, add, set_cursor, file_resource, copy_graphic_area
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -40,9 +40,6 @@ class Demo:
         #
         # screen widgets
         #
-        # don't save the graphic area underneath them as the frame covers it all anyway
-        set_save(False)
-        #
         # manipulator to set one of the loaded font names
         set_font('normal')
         # dimensions of the screen widgets frame
@@ -69,10 +66,6 @@ class Demo:
         #
         # main window setup
         #
-        # save the contents under widgets
-        #
-        set_save(False)
-        #
         # position of the window
         x, y, width, height = 0, 0, 440, 140
         window_x = centre(self.screen.get_rect().width, width)
@@ -92,14 +85,12 @@ class Demo:
         add(PushButtonGroup('Box 3', gridded(1, 2), 'Push Box 3', 'pb', PushButtonKind.BOX))
         # pushbutton radios
         # save the graphic area under the radios and labels
-        set_save(True)
         self.window_radio_box_widget = add(PushButtonGroup('Radio 1', gridded(2, 0), 'Push Radio 1', 'pr', PushButtonKind.RADIO))
         add(PushButtonGroup('Radio 2', gridded(2, 1), 'Push Radio 2', 'pr', PushButtonKind.RADIO))
         add(PushButtonGroup('Radio 3', gridded(2, 2), 'Push Radio 3', 'pr', PushButtonKind.RADIO))
         # labels
         self.window_pushbox_label = add(Label(gridded(1, 3), 'N/A', 50))
         self.window_radio_label = add(Label(gridded(2, 3), 'N/A', 50))
-        set_save(False)
         # horizontal scrollbar
         sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.rect.right - 45 - frame.rect.x, 20), True))
         sb3.set(100, 0, 30)

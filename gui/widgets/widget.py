@@ -17,8 +17,6 @@ class Widget:
         self.callback = None
         # whether a widget is shown or hidden
         self.visible = True
-        # whether to save the graphic area under the widget
-        self.save = False
         # whether the widget is dirty for the gui manager, every widget starts dirty
         self.dirty = True
         # before widget is first drawn, save what was there
