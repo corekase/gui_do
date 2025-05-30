@@ -9,7 +9,7 @@ class Frame(Widget):
     def __init__(self, id, rect):
         super().__init__(id, rect)
         self.factory = GraphicFactory()
-        self.idle, self.hover, self.armed = self.factory.draw_box_graphic(rect)
+        self.idle, self.hover, self.armed = self.factory.draw_box_bitmaps(rect)
         self.state = FrameState.IDLE
         self.add_dirty()
 

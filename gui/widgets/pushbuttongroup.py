@@ -23,9 +23,9 @@ class PushButtonGroup(Button):
         self.group = group
         self.kind = kind
         if self.kind == PushButtonKind.BOX:
-            self.box_idle, self.box_hover, self.box_armed = factory.draw_button_graphic(text, rect)
+            self.box_idle, self.box_hover, self.box_armed = factory.draw_button_bitmap(text, rect)
         elif self.kind == PushButtonKind.RADIO:
-            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_graphic(text, rect)
+            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_bitmaps(text, rect)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []

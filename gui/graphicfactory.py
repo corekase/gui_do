@@ -28,13 +28,13 @@ class GraphicFactory:
         rect(surface, colours['none'], Rect(6, 6, 9, 9), 1)
         return surface
 
-    def draw_radio_graphic(self, text, rect):
-        self.idle_bitmap = self.draw_radio_button(text, rect, colours['light'], colours['dark'])
-        self.hover_bitmap = self.draw_radio_button(text, rect, colours['highlight'], colours['dark'])
-        self.armed_bitmap = self.draw_radio_button(text, rect, colours['highlight'], colours['dark'])
+    def draw_radio_bitmaps(self, text, rect):
+        self.idle_bitmap = self.draw_radio_pushbutton(text, rect, colours['light'], colours['dark'])
+        self.hover_bitmap = self.draw_radio_pushbutton(text, rect, colours['highlight'], colours['dark'])
+        self.armed_bitmap = self.draw_radio_pushbutton(text, rect, colours['highlight'], colours['dark'])
         return self.idle_bitmap, self.hover_bitmap, self.armed_bitmap
 
-    def draw_radio_button(self, text, rect, col1, col2, highlight=False):
+    def draw_radio_pushbutton(self, text, rect, col1, col2, highlight=False):
         x, y, w, h = rect
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
@@ -54,7 +54,7 @@ class GraphicFactory:
         button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
         return button_complete
 
-    def draw_button_graphic(self, text, rect):
+    def draw_button_bitmap(self, text, rect):
         x, y, w, h = rect
         saved = []
         set_font('normal')
@@ -62,49 +62,49 @@ class GraphicFactory:
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height) - 1
         idle_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(idle_surface, 'idle', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(idle_surface, 'idle', Rect(0, 0, w, h), colours)
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
         text_bitmap = render_text(text)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height) - 1
         hover_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(hover_surface, 'hover', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(hover_surface, 'hover', Rect(0, 0, w, h), colours)
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text(text, True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height) - 1
         armed_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(armed_surface, 'armed', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
         set_last_font()
         return saved
 
-    def draw_box_graphic(self, rect):
+    def draw_box_bitmaps(self, rect):
         x, y, w, h = rect
         saved = []
         idle_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(idle_surface, 'idle', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(idle_surface, 'idle', Rect(0, 0, w, h), colours)
         saved.append(idle_surface)
         hover_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(hover_surface, 'hover', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(hover_surface, 'hover', Rect(0, 0, w, h), colours)
         saved.append(hover_surface)
         armed_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_box(armed_surface, 'armed', Rect(0, 0, w, h), colours)
+        self.draw_box_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
         saved.append(armed_surface)
         return saved
 
-    def draw_box(self, surface, state, rect, colours):
+    def draw_box_bitmap(self, surface, state, rect, colours):
         if state == 'idle':
-            self.draw_box_frame(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'], rect)
+            self.draw_frame_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'], rect)
         elif state == 'hover':
-            self.draw_box_frame(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'], rect)
+            self.draw_frame_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'], rect)
         elif state == 'armed':
-            self.draw_box_frame(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'], rect)
+            self.draw_frame_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'], rect)
 
-    def draw_box_frame(self, surface, ul, lr, ul_d, lr_d, background, surface_rect):
+    def draw_frame_bitmap(self, surface, ul, lr, ul_d, lr_d, background, surface_rect):
         # ul, lr = upper and left, lower and right lines
         # ul_d, lr_d = upper-left dot, lower-right dot
         # get positions and sizes
