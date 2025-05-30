@@ -35,8 +35,6 @@ class GuiManager:
     def _populate_(self):
         # screen surface
         self.surface = None
-        # dictionary of window names to their objects: key:value -> name, object
-        self.names = {}
         # list of widgets attached to the screen
         self.widgets = []
         # list of bitmaps overwritten by gui objects
@@ -60,52 +58,47 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
-        # whether to save graphic area under screen widgets, controlled by set_save manipulator in utility
-        self.save = True
         # last objects
         self.last_window_object = None
         self.last_screen_object = None
-
-    def add_window(self, name, window):
-        # store the window object by name
-        self.names[name] = window
-        # add the window object to the list of windows
-        self.windows.append(window)
-
-    def get_window(self, name):
-        # returns a window object for the given name
-        return self.names[name]
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
-    def set_lock_area(self, area=None):
-        # lock area rect is in screen coordinates
-        self.lock_area_rect = area
-
-    def lock_area(self, position):
-        # keep the position within the lock area rect
-        if self.lock_area_rect != None:
-            x, y = position
-            adjusted = False
-            if x < self.lock_area_rect.left:
-                x = self.lock_area_rect.left
-                adjusted = True
-            elif x > self.lock_area_rect.right:
-                x = self.lock_area_rect.right
-                adjusted = True
-            if y < self.lock_area_rect.top:
-                y = self.lock_area_rect.top
-                adjusted = True
-            elif y > self.lock_area_rect.bottom:
-                y = self.lock_area_rect.bottom
-                adjusted = True
-            if adjusted:
-                pygame.mouse.set_pos(x, y)
-            return (x, y)
-        else:
-            return position
+    def event(self, event_dict):
+        # construct an event to be returned to the client which includes both gui_do information and pygame
+        # event information
+        gui_event = GuiEvent()
+        if event_dict == None:
+            gui_event.type = GKind.Pass
+            return gui_event
+        keys = event_dict.keys()
+        if 'widget_id' in keys:
+            gui_event.type = GKind.Widget
+            gui_event.widget_id = event_dict['widget_id']
+        elif 'quit' in keys:
+            gui_event.type = GKind.Quit
+        elif 'keyup' in keys:
+            gui_event.type = GKind.KeyUp
+            gui_event.key = event_dict['keyup']
+        elif 'keydown' in keys:
+            gui_event.type = GKind.KeyDown
+            gui_event.key = event_dict['keydown']
+        elif 'mousebuttonup' in keys:
+            gui_event.type = GKind.MouseButtonUp
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.button = event_dict['mousebuttonup']
+        elif 'mousebuttondown' in keys:
+            gui_event.type = GKind.MouseButtonDown
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.button = event_dict['mousebuttondown']
+        elif 'mousemotion' in keys:
+            gui_event.type = GKind.MouseMotion
+            gui_event.pos = self.get_mouse_pos()
+            gui_event.rel = event_dict['mousemotion']
+        # elif more key types
+        return gui_event
 
     def handle_event(self, event):
         # update internal mouse position
@@ -228,39 +221,36 @@ class GuiManager:
                 return True
         return False
 
-    def event(self, event_dict):
-        # construct an event to be returned to the client which includes both gui_do information and pygame
-        # event information
-        gui_event = GuiEvent()
-        if event_dict == None:
-            gui_event.type = GKind.Pass
-            return gui_event
-        keys = event_dict.keys()
-        if 'widget_id' in keys:
-            gui_event.type = GKind.Widget
-            gui_event.widget_id = event_dict['widget_id']
-        elif 'quit' in keys:
-            gui_event.type = GKind.Quit
-        elif 'keyup' in keys:
-            gui_event.type = GKind.KeyUp
-            gui_event.key = event_dict['keyup']
-        elif 'keydown' in keys:
-            gui_event.type = GKind.KeyDown
-            gui_event.key = event_dict['keydown']
-        elif 'mousebuttonup' in keys:
-            gui_event.type = GKind.MouseButtonUp
-            gui_event.pos = self.get_mouse_pos()
-            gui_event.button = event_dict['mousebuttonup']
-        elif 'mousebuttondown' in keys:
-            gui_event.type = GKind.MouseButtonDown
-            gui_event.pos = self.get_mouse_pos()
-            gui_event.button = event_dict['mousebuttondown']
-        elif 'mousemotion' in keys:
-            gui_event.type = GKind.MouseMotion
-            gui_event.pos = self.get_mouse_pos()
-            gui_event.rel = event_dict['mousemotion']
-        # elif more key types
-        return gui_event
+    def set_lock_area(self, area=None):
+        # lock area rect is in screen coordinates
+        self.lock_area_rect = area
+
+    def lock_area(self, position):
+        # keep the position within the lock area rect
+        if self.lock_area_rect != None:
+            x, y = position
+            adjusted = False
+            if x < self.lock_area_rect.left:
+                x = self.lock_area_rect.left
+                adjusted = True
+            elif x > self.lock_area_rect.right:
+                x = self.lock_area_rect.right
+                adjusted = True
+            if y < self.lock_area_rect.top:
+                y = self.lock_area_rect.top
+                adjusted = True
+            elif y > self.lock_area_rect.bottom:
+                y = self.lock_area_rect.bottom
+                adjusted = True
+            if adjusted:
+                pygame.mouse.set_pos(x, y)
+            return (x, y)
+        else:
+            return position
+
+    def add_window(self, window):
+        # add the window object to the list of windows
+        self.windows.append(window)
 
     def raise_window(self, window):
         # move the window to the last item in the list which has the highest priority

@@ -26,7 +26,7 @@ class Window:
         # widgets on that surface
         self.widgets = []
         # add this window to the gui
-        self.gui.add_window(name, self)
+        self.gui.add_window(self)
         # make this object the destination for gui add commands
         set_active_object(self)
         # set the window to the position passed in
