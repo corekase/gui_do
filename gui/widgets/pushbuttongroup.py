@@ -12,7 +12,6 @@ class PushButtonGroup(Button):
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
-
     def __init__(self, id, rect, text, group, kind=PushButtonKind.BOX):
         super().__init__(id, rect, text)
         factory = BitmapFactory()
