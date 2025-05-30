@@ -29,6 +29,10 @@ class Widget:
         from ..utility import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
+    def refresh_pristine(self):
+        # update the pristine bitmap if you update underlying surface
+        self.save_pristine()
+
     def handle_event(self, _, _a):
         # implement in subclasses
         pass
