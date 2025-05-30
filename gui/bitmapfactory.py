@@ -7,7 +7,7 @@ from .widgets.widget import colours
 
 class BitmapFactory:
 
-    def draw_title_bar_graphic(self, title, width, size):
+    def draw_title_bar_bitmap(self, title, width, size):
         from .widgets.frame import Frame, FrameState
         set_font('titlebar')
         text_bitmap = render_text(title)
