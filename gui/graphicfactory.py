@@ -39,7 +39,7 @@ class GraphicFactory:
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
-        y_offset = text_height // 2
+        y_offset = (text_height // 2) + 3
         radius = text_height / 4.0
         points = []
         for point in range(0, 360, 5):
@@ -51,7 +51,7 @@ class GraphicFactory:
         x_size = int((radius * 2) + 4 + text_bitmap.get_rect().width + 1)
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, 0))
-        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 0))
+        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
         return button_complete
 
     def draw_button_graphic(self, text, rect):
