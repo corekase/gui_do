@@ -18,6 +18,7 @@ class Button(Frame):
         text_y = self.rect.y + centre(self.rect.height, self.text_bitmap.get_rect().height) - 1
         # store the position for later blitting
         self.position = text_x, text_y
+        self.add_dirty()
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):

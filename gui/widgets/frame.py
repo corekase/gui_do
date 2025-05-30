@@ -8,6 +8,7 @@ class Frame(Widget):
     def __init__(self, id, rect):
         super().__init__(id, rect)
         self.state = FrameState.IDLE
+        self.add_dirty()
 
     def handle_event(self, _, _a):
         return False

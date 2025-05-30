@@ -270,13 +270,6 @@ class GuiManager:
         # move the window to the first item in the list which has the lowest priority
         self.windows.insert(0, self.windows.pop(self.windows.index(window)))
 
-    def refresh_pristine(self, widgets):
-        # refresh the underlying image of the widgets in the list
-        # if the backdrop changes, and the widget is transparent then this method should be called
-        # with the transparent widgets
-        for widget in widgets:
-            widget.save_pristine()
-
     def draw_gui(self):
         # draw all widgets to their surfaces
         self.bitmaps.clear()

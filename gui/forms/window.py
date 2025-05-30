@@ -21,7 +21,8 @@ class Window:
         frame.state = FrameState.IDLE
         frame.surface = self.surface
         frame.draw()
-        self.save_pristine()
+        self.pristine = None
+        self.window_save_pristine()
         # widgets on that surface
         self.widgets = []
         # add this window to the gui
@@ -39,9 +40,15 @@ class Window:
         # a list of dirty widgets
         self.dirty_widgets = []
 
-    def save_pristine(self):
-        # update the pristine bitmap
+    def window_save_pristine(self):
+        # update the window pristine bitmap
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
+
+    def refresh_wigets_pristine(self):
+        # refresh the underlying image of the widgets pristine bitmap in the list
+        # if the backdrop changes, and the widget is transparent then this method should be called
+        for widget in self.widgets:
+            widget.save_pristine()
 
     def make_title_bar_graphic(self, title):
         set_font('titlebar')

@@ -29,12 +29,14 @@ class PushButtonGroup(Button):
             self.armed_bitmap = self.make_radio_button(text, colours['highlight'], colours['dark'])
             # adjust vertical centre
             self.adjust_rect(self.idle_bitmap)
+            self.transparent = True
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
             PushButtonGroup.selections[group] = self
             self.select()
         PushButtonGroup.groups[group].append(self)
+        self.add_dirty()
 
     def make_radio_button(self, text, col1, col2, highlight=False):
         # -> To-do: make utility functions that cache and reuse just the graphical part of the
@@ -110,7 +112,8 @@ class PushButtonGroup(Button):
         elif self.kind == PushButtonKind.RADIO:
             if self.pristine == None:
                 self.save_pristine()
-            self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
+            if self.transparent:
+                self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
             if self.state == FrameState.IDLE:
                 self.surface.blit(self.idle_bitmap, self.rect)
             elif self.state == FrameState.HOVER:

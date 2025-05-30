@@ -10,6 +10,8 @@ class Label(Widget):
         if minimum_xsize != None:
             rect.width = minimum_xsize
         super().__init__('label', rect)
+        self.transparent = True
+        self.add_dirty()
 
     def set_label(self, text):
         # text bitmap

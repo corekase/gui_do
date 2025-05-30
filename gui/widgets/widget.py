@@ -19,13 +19,16 @@ class Widget:
         self.callback = None
         # whether a widget is shown or hidden
         self.visible = True
+        # whether the widget is transparent
+        self.transparent = False
         # before widget is first drawn, save what was there in this bitmap
         self.pristine = None
 
     def save_pristine(self):
         # update the pristine bitmap
-        from ..utility import copy_graphic_area
-        self.pristine = copy_graphic_area(self.surface, self.rect).convert()
+        if self.transparent:
+            from ..utility import copy_graphic_area
+            self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
     def add_dirty(self):
         # screen widgets are ignored as they are always dirty because they are undrawn
