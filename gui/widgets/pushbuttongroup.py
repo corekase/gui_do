@@ -3,7 +3,7 @@ from math import cos, sin, radians
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility import render_text, centre, convert_to_window
+from ..utility import centre, convert_to_window
 from .button import Button
 from .frame import FrameState
 from .widget import colours
@@ -25,7 +25,7 @@ class PushButtonGroup(Button):
         if self.kind == PushButtonKind.BOX:
             self.box_idle, self.box_hover, self.box_armed = factory.draw_button_graphic(text, rect)
         elif self.kind == PushButtonKind.RADIO:
-            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_button_graphic(text, rect)
+            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_graphic(text, rect)
             self.transparent = True
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
@@ -34,27 +34,6 @@ class PushButtonGroup(Button):
             self.select()
         PushButtonGroup.groups[group].append(self)
         self.add_dirty()
-
-    def make_radio_button(self, text, col1, col2, highlight=False):
-        # -> To-do: make utility functions that cache and reuse just the graphical part of the
-        #           radio bitmap.  That is then combined with text in the bitmaps here
-        text_bitmap = render_text(text, highlight)
-        text_height = text_bitmap.get_rect().height
-        radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
-        y_offset = int(round(text_height / 2))
-        radius = text_height / 4.0
-        points = []
-        for point in range(0, 360, 5):
-            x1 = int(round(radius * cos(radians(point))))
-            y1 = int(round(radius * sin(radians(point))))
-            points.append((int(radius) + x1, y_offset + y1))
-        pygame.draw.polygon(radio_bitmap, col1, points, 0)
-        pygame.draw.polygon(radio_bitmap, col2, points, 1)
-        x_size = int((radius * 2) + 4 + text_bitmap.get_rect().width + 1)
-        button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
-        button_complete.blit(radio_bitmap, (0, 0))
-        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 0))
-        return button_complete
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
