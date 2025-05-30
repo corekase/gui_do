@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.draw import rect
 from ..guimanager import GuiManager
-from ..utility import set_font, set_last_font, render_text, centre, set_active_object
+from ..utility import set_font, set_last_font, copy_graphic_area, render_text, centre, set_active_object
 from ..widgets.frame import Frame, FrameState
 from ..utility import colours
 
@@ -16,19 +16,18 @@ class Window:
         self.titlebar_size = 20
         # window surface
         self.surface = pygame.surface.Surface(size).convert()
+        # make a frame for the backdrop of the window surface
+        frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
+        frame.state = FrameState.IDLE
+        frame.surface = self.surface
+        frame.draw()
+        self.save_prisine()
         # widgets on that surface
         self.widgets = []
         # add this window to the gui
         self.gui.add_window(name, self)
         # make this object the destination for gui.add commands
         set_active_object(self)
-        # make a frame for the backdrop of the window surface
-        frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
-        frame.state = FrameState.IDLE
-        frame.surface = self.surface
-        # and make that frame the first widget in the surface list
-        # and it is not added to the gui manager, only the list
-        self.widgets.insert(0, frame)
         # make a title bar graphic
         self.title_bar_graphic = self.make_title_bar_graphic(title)
         # and store the rect for it
@@ -41,6 +40,10 @@ class Window:
         self.dirty = True
         # a list of dirty widgets
         self.dirty_widgets = []
+
+    def save_prisine(self):
+        # update the pristine bitmap
+        self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
     def add_dirty_widget(self, widget):
         # widgets use this method to inform the window they are dirty
@@ -72,7 +75,10 @@ class Window:
         self.gui.surface.blit(self.title_bar_graphic, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_raised, self.get_widget_rect())
 
-    def get_rect(self):
+    def get_title_bar_rect(self):
+        return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
+
+    def get_window_rect(self):
         # total rect of the window including titlebar and surface
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.height + self.titlebar_size)
 
@@ -81,7 +87,6 @@ class Window:
 
     def set_pos(self, pos):
         self.x, self.y = pos
-        self.title_bar_rect = Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
 
     def get_name(self):
         # return the name of the window

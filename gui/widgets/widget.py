@@ -26,7 +26,7 @@ class Widget:
         # before widget is first drawn, save what was there
         self.pristine = None
 
-    def save_prisine(self):
+    def save_pristine(self):
         # update the pristine bitmap
         from ..utility import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()

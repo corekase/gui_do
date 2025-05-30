@@ -46,7 +46,6 @@ class Button(Frame):
         return False
 
     def leave(self):
-
         self.state = FrameState.IDLE
 
     def draw(self):

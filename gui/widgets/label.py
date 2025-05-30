@@ -4,7 +4,7 @@ from .widget import Widget
 class Label(Widget):
     def __init__(self, position, text):
         # initialize common widget values
-        self.set_label(text)
+        self.text_bitmap = render_text(text)
         rect = self.text_bitmap.get_rect()
         rect.x, rect.y = position[0], position[1]
         super().__init__('label', rect)
@@ -18,4 +18,8 @@ class Label(Widget):
         return False
 
     def draw(self):
+        if self.save:
+            if self.pristine == None:
+                self.save_pristine()
+            self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
         self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))

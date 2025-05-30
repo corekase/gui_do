@@ -16,6 +16,9 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
+        # set a background image
+        self.screen.blit(pygame.image.load(file_resource(
+                                           'images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         #
         # create a gui manager and it makes the screen the active object
         #
@@ -35,12 +38,10 @@ class Demo:
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         #
-        # manipulator to control whether a screen widget saves the graphic underneath it
-        #
-        # don't save because the frame in the screen widgets covers up everything anyway
-        set_save(False)
-        #
         # screen widgets
+        #
+        # don't save the graphic area underneath them as the frame covers it all anyway
+        set_save(True)
         #
         # manipulator to set one of the loaded font names
         set_font('normal')
@@ -67,6 +68,10 @@ class Demo:
         add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
         #
         # main window setup
+        #
+        # save the contents under widgets
+        #
+        set_save(True)
         #
         # position of the window
         x, y, width, height = 0, 0, 440, 140
@@ -159,9 +164,6 @@ class Demo:
             if choice([True, False]):
                 dy = -dy
             points.append((x, y, dx, dy))
-        # set a background image
-        self.screen.blit(pygame.image.load(file_resource(
-                                           'images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # begin main loop
         while self.running:
             # handle events

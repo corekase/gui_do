@@ -129,67 +129,85 @@ class GuiManager:
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
         elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
             if event.button == 1:
+                # find highest window
+                top_window = None
                 for window in self.windows:
-                    if window.title_bar_rect.collidepoint(self.lock_area(event.pos)):
-                        if window.get_widget_rect().collidepoint(self.get_mouse_pos()):
+                    if window.get_window_rect().collidepoint(self.lock_area(event.pos)):
+                        top_window = window
+                # if top_window is None then the click wasn't on any window
+                if top_window != None:
+                    # if the highest window isn't active make it so
+                    if self.active_window != top_window:
+                        self.raise_window(top_window)
+                        self.active_window = top_window
+                else:
+                    # if the click isn't on a window then clear the active window
+                    self.active_window = None
+                # if there is an active window test for dragging
+                if self.active_window != None:
+                    # if within the title bar
+                    if self.active_window.get_title_bar_rect().collidepoint(self.lock_area(event.pos)):
+                        # if the lower widget
+                        if self.active_window.get_widget_rect().collidepoint(self.lock_area(event.pos)):
                             self.lower_window(window)
+                            self.active_window = self.windows[-1]
                             return self.event(None)
-                        self.raise_window(window)
+                        # begin dragging
                         self.dragging = True
-                        self.dragging_window = window
-                        return self.event(None)
-        # for each window handle their widgets
-        window_consumed = False
-        widget_consumed = False
-        raise_flag = False
-        widget_hit = None
-        # work on a reversed copy of the window list. the copy is in case the list is modified by raising
-        working_windows = self.windows.copy()[::-1]
-        for window in working_windows:
-            if window.get_rect().collidepoint(self.get_mouse_pos()):
-                window_consumed = True
-                if event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        if self.active_window != window:
-                            self.raise_window(window)
-                            raise_flag = True
-                for widget in window.widgets:
-                        if self.handle_widget(widget, event, window):
-                            self.last_window_object = widget
-                            return self.event({'widget_id': widget.id})
-                        collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                        if collision:
-                            widget_consumed = True
-                            widget_hit = widget
-            if self.last_window_object != widget_hit:
-                if self.last_window_object != None:
-                    self.last_window_object.leave()
+                        self.dragging_window = self.active_window
+        if self.active_window != None:
+            # for each window handle their widgets
+            window_consumed = False
+            widget_consumed = False
+            widget_hit = None
+            # work on a reversed copy of the window list. the copy is in case the list is modified by raising
+            working_windows = self.windows.copy()[::-1]
+            for window in working_windows:
+                if window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                    window_consumed = True
+                    if event.type == MOUSEBUTTONDOWN:
+                        if event.button == 1:
+                            if self.active_window != window:
+                                self.raise_window(window)
+                                self.active_window = window
+                    for widget in window.widgets:
+                            if self.handle_widget(widget, event, window):
+                                self.last_window_object = widget
+                                return self.event({'widget_id': widget.id})
+                            collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                            if collision:
+                                widget_consumed = True
+                                widget_hit = widget
+                if self.last_window_object != widget_hit:
+                    if self.last_window_object != None:
+                        self.last_window_object.leave()
+                    if self.last_screen_object != None:
+                        self.last_screen_object.leave()
+                        self.last_screen_object = None
+                    self.last_window_object = widget_hit
+                if window_consumed or widget_consumed:
+                    return self.event(None)
+        else:
+            # handle screen widgets
+            consumed = False
+            widget_hit = None
+            for widget in self.widgets:
+                if self.handle_widget(widget, event):
+                    self.last_screen_object = widget
+                    return self.event({'widget_id': widget.id})
+                collision = widget.get_rect().collidepoint(self.get_mouse_pos())
+                if collision:
+                    consumed = True
+                    widget_hit = widget
+            if self.last_screen_object != widget_hit:
                 if self.last_screen_object != None:
                     self.last_screen_object.leave()
-                    self.last_screen_object = None
-                self.last_window_object = widget_hit
-            if window_consumed or widget_consumed or raise_flag:
+                if self.last_window_object != None:
+                    self.last_window_object.leave()
+                    self.last_window_object = None
+                self.last_screen_object = widget_hit
+            if consumed:
                 return self.event(None)
-        # handle screen widgets
-        consumed = False
-        widget_hit = None
-        for widget in self.widgets:
-            if self.handle_widget(widget, event):
-                self.last_screen_object = widget
-                return self.event({'widget_id': widget.id})
-            collision = widget.get_rect().collidepoint(self.get_mouse_pos())
-            if collision:
-                consumed = True
-                widget_hit = widget
-        if self.last_screen_object != widget_hit:
-            if self.last_screen_object != None:
-                self.last_screen_object.leave()
-            if self.last_window_object != None:
-                self.last_window_object.leave()
-                self.last_window_object = None
-            self.last_screen_object = widget_hit
-        if consumed:
-            return self.event(None)
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
             return self.event({'mousebuttonup': event.button})
@@ -248,12 +266,10 @@ class GuiManager:
     def raise_window(self, window):
         # move the window to the last item in the list which has the highest priority
         self.windows.append(self.windows.pop(self.windows.index(window)))
-        self.active_window = window
 
     def lower_window(self, window):
         # move the window to the first item in the list which has the lowest priority
         self.windows.insert(0, self.windows.pop(self.windows.index(window)))
-        self.active_window = self.windows[-1]
 
     def draw_gui(self):
         # draw all widgets to their surfaces
@@ -267,9 +283,12 @@ class GuiManager:
             widget.draw()
         for window in self.windows:
             # windows always save contents for the window rect only and not for contained widgets
-            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_rect()), window.get_rect()))
+            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
             window.draw_title_bar()
             for widget in window.widgets:
+                if widget.save:
+                    # tuple of the bitmap and its rect, after loop ends in reverse order
+                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
                 # draw the widget
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))
