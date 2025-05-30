@@ -17,8 +17,6 @@ class Widget:
         self.rect = Rect(rect)
         # callback function
         self.callback = None
-        # whether a widget is shown or hidden
-        self.visible = True
         # before widget is first drawn, save what was there in this bitmap
         self.pristine = None
 
@@ -26,11 +24,6 @@ class Widget:
         # update the pristine bitmap
         from ..utility import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
-
-    def add_dirty(self):
-        # screen widgets are ignored as they are always dirty because they are undrawn
-        if self.window != None:
-            self.window.dirty_widgets.append(self)
 
     def handle_event(self, _, _a):
         # implement in subclasses

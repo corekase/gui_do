@@ -103,8 +103,8 @@ class Demo:
         add(PushButtonGroup('WR5', gridded(2, 1), 'Radio 5', 'pb4', PushButtonKind.RADIO))
         add(PushButtonGroup('WR6', gridded(2, 2), 'Radio 6', 'pb4', PushButtonKind.RADIO))
         # labels
-        self.window_label_button = add(Label(gridded(1, 3), 'N/A'))
-        self.window_label_radio = add(Label(gridded(2, 3), 'N/A'))
+        self.window_label_button = add(Label(gridded(1, 3), 'N/A', 100))
+        self.window_label_radio = add(Label(gridded(2, 3), 'N/A', 80))
         # horizontal scrollbar
         sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True))
         sb3.set(100, 0, 30)

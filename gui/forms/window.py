@@ -1,11 +1,9 @@
 import pygame
 from pygame import Rect
-from pygame.draw import rect
 from ..guimanager import GuiManager
 from ..graphicfactory import GraphicFactory
-from ..utility import copy_graphic_area, set_active_object
+from ..utility import copy_graphic_area, set_active_object, colours
 from ..widgets.frame import Frame, FrameState
-from ..utility import colours
 
 class Window:
     def __init__(self, name, title, pos, size):
@@ -29,14 +27,10 @@ class Window:
         self.widgets = []
         # add this window to the gui
         self.gui.add_window(name, self)
-        # make this object the destination for gui.add commands
+        # make this object the destination for gui add commands
         set_active_object(self)
         # set the window to the position passed in
         self.set_pos(pos)
-        # whether a window is shown or hidden
-        self.visible = True
-        # a list of dirty widgets
-        self.dirty_widgets = []
         self.title_bar_bitmap = factory.draw_title_bar_graphic(title, self.width, self.height)
         self.title_bar_rect = self.title_bar_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget(self.titlebar_size, colours['full'], colours['medium'])

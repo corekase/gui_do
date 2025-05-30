@@ -54,7 +54,7 @@ class GraphicFactory:
         button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
         return button_complete
 
-    def draw_button_bitmap(self, text, rect):
+    def draw_button_bitmaps(self, text, rect):
         x, y, w, h = rect
         saved = []
         set_font('normal')

@@ -1,13 +1,10 @@
 from enum import Enum
-from math import cos, sin, radians
-import pygame
-from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility import centre, convert_to_window
+from ..graphicfactory import GraphicFactory
+from ..utility import convert_to_window
 from .button import Button
 from .frame import FrameState
 from .widget import colours
-from ..graphicfactory import GraphicFactory
 
 PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
 
@@ -23,7 +20,7 @@ class PushButtonGroup(Button):
         self.group = group
         self.kind = kind
         if self.kind == PushButtonKind.BOX:
-            self.box_idle, self.box_hover, self.box_armed = factory.draw_button_bitmap(text, rect)
+            self.box_idle, self.box_hover, self.box_armed = factory.draw_button_bitmaps(text, rect)
         elif self.kind == PushButtonKind.RADIO:
             self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_bitmaps(text, rect)
         if group not in PushButtonGroup.groups.keys():
@@ -32,7 +29,6 @@ class PushButtonGroup(Button):
             PushButtonGroup.selections[group] = self
             self.select()
         PushButtonGroup.groups[group].append(self)
-        self.add_dirty()
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):

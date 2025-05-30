@@ -22,7 +22,6 @@ class Scrollbar(Frame):
         self.dragging = False
         # previous mouse position the last time the event was handled
         self.last_mouse_pos = None
-        self.add_dirty()
         # before handle_event() is called, set() must be called at least once to initialize state
         # -> set(total_range, start_position, bar_size)
         # once initialized then the scrollbar operates as intended

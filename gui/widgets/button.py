@@ -10,9 +10,8 @@ class Button(Frame):
         super().__init__(id, rect)
         self.gui = GuiManager()
         factory = GraphicFactory()
-        self.idle, self.hover, self.armed = factory.draw_button_bitmap(text, rect)
+        self.idle, self.hover, self.armed = factory.draw_button_bitmaps(text, rect)
         self.state = FrameState.IDLE
-        self.add_dirty()
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
