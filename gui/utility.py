@@ -125,8 +125,6 @@ def add(widget, callback=None):
     from .guimanager import GuiManager
     gui = GuiManager()
     widget.callback = callback
-    # set_save manipulator controls this setting
-    widget.save = gui.save
     if gui.active_object != None:
         widget.window = gui.active_object
         widget.surface = gui.active_object.surface

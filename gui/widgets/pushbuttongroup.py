@@ -26,7 +26,6 @@ class PushButtonGroup(Button):
             self.box_idle, self.box_hover, self.box_armed = factory.draw_button_graphic(text, rect)
         elif self.kind == PushButtonKind.RADIO:
             self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_graphic(text, rect)
-            self.transparent = True
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -93,18 +92,10 @@ class PushButtonGroup(Button):
         elif self.kind == PushButtonKind.RADIO:
             if self.pristine == None:
                 self.save_pristine()
-            if self.transparent:
-                self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
+            self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
             if self.state == FrameState.IDLE:
                 self.surface.blit(self.radio_idle, self.rect)
             elif self.state == FrameState.HOVER:
                 self.surface.blit(self.radio_hover, self.rect)
             elif self.state == FrameState.ARMED:
                 self.surface.blit(self.radio_armed, self.rect)
-        self.add_dirty()
-
-    def adjust_rect(self, bitmap):
-        x, y, w, h = bitmap.get_rect()
-        smaller = bitmap.get_rect().height
-        offset = centre(self.rect.height, smaller)
-        self.rect = Rect(self.rect.x, self.rect.y + offset, w, h)

@@ -274,20 +274,13 @@ class GuiManager:
         # draw all widgets to their surfaces
         self.bitmaps.clear()
         for widget in self.widgets:
-            # if screen widgets never move then the contents under them don't need to be saved
-            if widget.save:
-                # tuple of the bitmap and its rect, after loop ends in reverse order
-                self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
             # draw the widget
             widget.draw()
         for window in self.windows:
-            # windows always save contents for the window rect only and not for contained widgets
+            # save the bitmap area under the window
             self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
             window.draw_title_bar()
             for widget in window.widgets:
-                if widget.save:
-                    # tuple of the bitmap and its rect, after loop ends in reverse order
-                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.rect), widget.rect))
                 # draw the widget
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))

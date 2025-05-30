@@ -10,7 +10,6 @@ class Label(Widget):
         if minimum_xsize != None:
             rect.width = minimum_xsize
         super().__init__('label', rect)
-        self.transparent = True
         self.add_dirty()
 
     def set_label(self, text):
@@ -25,4 +24,3 @@ class Label(Widget):
             self.save_pristine()
         self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
         self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))
-        self.add_dirty()
