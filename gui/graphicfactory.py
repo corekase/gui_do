@@ -7,13 +7,34 @@ from .widgets.widget import colours
 
 class GraphicFactory:
 
+    def draw_title_bar_graphic(self, title, width, size):
+        from .widgets.frame import Frame, FrameState
+        set_font('titlebar')
+        text_bitmap = render_text(title)
+        title_surface = pygame.surface.Surface((width, size)).convert()
+        frame = Frame('titlebar_frame', Rect(0, 0, width, size))
+        frame.state = FrameState.ARMED
+        frame.surface = title_surface
+        frame.draw()
+        title_surface.blit(text_bitmap, (4, 4))
+        set_last_font()
+        return title_surface
+
+    def draw_window_lower_widget(self, size, col1, col2):
+        surface = pygame.surface.Surface((size, size), pygame.SRCALPHA)
+        rect(surface, col1, Rect(3, 3, 9, 9))
+        rect(surface, colours['none'], Rect(3, 3, 9, 9), 1)
+        rect(surface, col2, Rect(6, 6, 9, 9))
+        rect(surface, colours['none'], Rect(6, 6, 9, 9), 1)
+        return surface
+
     def draw_radio_graphic(self, text, rect):
-        self.idle_bitmap = self.make_radio_button(text, rect, colours['light'], colours['dark'])
-        self.hover_bitmap = self.make_radio_button(text, rect, colours['highlight'], colours['dark'])
-        self.armed_bitmap = self.make_radio_button(text, rect, colours['highlight'], colours['dark'])
+        self.idle_bitmap = self.draw_radio_button(text, rect, colours['light'], colours['dark'])
+        self.hover_bitmap = self.draw_radio_button(text, rect, colours['highlight'], colours['dark'])
+        self.armed_bitmap = self.draw_radio_button(text, rect, colours['highlight'], colours['dark'])
         return self.idle_bitmap, self.hover_bitmap, self.armed_bitmap
 
-    def make_radio_button(self, text, rect, col1, col2, highlight=False):
+    def draw_radio_button(self, text, rect, col1, col2, highlight=False):
         x, y, w, h = rect
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
