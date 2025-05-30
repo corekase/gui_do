@@ -119,6 +119,22 @@ class GuiManager:
             return self.event({'keyup': event.key})
         elif event.type == KEYDOWN:
             return self.event({'keydown': event.key})
+        # find highest window
+        top_window = None
+        for window in self.windows:
+            if window.get_window_rect().collidepoint(self.lock_area(self.get_mouse_pos())):
+                top_window = window
+        # if top_window is None then the mouse isn't over any window
+        # otherwise its the highest priority window by being assigned last through the list
+        if top_window != None:
+            if event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.raise_window(top_window)
+            # if the highest window isn't active make it so
+            if self.active_window != top_window:
+                self.active_window = top_window
+        else:
+            self.active_window = None
         # handle window dragging and lower widget
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
@@ -129,20 +145,6 @@ class GuiManager:
             self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
         elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
             if event.button == 1:
-                # find highest window
-                top_window = None
-                for window in self.windows:
-                    if window.get_window_rect().collidepoint(self.lock_area(event.pos)):
-                        top_window = window
-                # if top_window is None then the click wasn't on any window
-                if top_window != None:
-                    # if the highest window isn't active make it so
-                    if self.active_window != top_window:
-                        self.raise_window(top_window)
-                        self.active_window = top_window
-                else:
-                    # if the click isn't on a window then clear the active window
-                    self.active_window = None
                 # if there is an active window test for dragging
                 if self.active_window != None:
                     # if within the title bar
