@@ -31,7 +31,7 @@ class Demo:
         Window('image_window', 'Realize', (window_x, window_y), (width, height))
 
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
-        self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, "On", "Off"))
+        self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'On', 'Off'))
         # set cursor image
         set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
         # set a background image
