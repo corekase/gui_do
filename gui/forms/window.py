@@ -56,7 +56,3 @@ class Window:
 
     def set_pos(self, pos):
         self.x, self.y = pos
-
-    def get_name(self):
-        # return the name of the window
-        return self.name
