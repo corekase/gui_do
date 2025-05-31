@@ -107,7 +107,7 @@ def convert_to_screen(point, window):
     if window != None:
         x, y = point
         wx, wy = window.x, window.y
-        return gui.lock((x + wx, y + wy))
+        return gui.lock_area((x + wx, y + wy))
     # conversion not necessary
     return gui.lock_area(point)
 
