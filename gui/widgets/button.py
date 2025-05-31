@@ -18,7 +18,7 @@ class Button(Frame):
             # no matching events for button logic
             return False
         # is the mouse position within the button rect
-        collision = self.rect.collidepoint(convert_to_window(self.gui.lock_area(event.pos), window))
+        collision = self.rect.collidepoint(convert_to_window(event.pos, window))
         # manage the state of the button
         if (self.state == FrameState.IDLE) and collision:
             self.state = FrameState.HOVER

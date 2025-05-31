@@ -33,7 +33,7 @@ class PushButtonGroup(Button):
             # no matching events for push button logic
             return False
         # is the mouse position within the push button rect
-        collision = self.check_collision(convert_to_window(self.gui.lock_area(event.pos), window))
+        collision = self.check_collision(convert_to_window(event.pos, window))
         # manage the state of the push button
         if (self.state == FrameState.IDLE) and collision:
             self.state = FrameState.HOVER

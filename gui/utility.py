@@ -90,22 +90,26 @@ def gprint(screen, text, position, make_copy=False):
 # convert the point from a main surface one to a window point
 def convert_to_window(point, window):
     # fall-through function, perform the conversion only if necessary
+    from .guimanager import GuiManager
+    gui = GuiManager()
     if window != None:
-        x, y = point
+        x, y = gui.lock_area(point)
         wx, wy = window.x, window.y
         return (x - wx, y - wy)
     # conversion not necessary
-    return point
+    return gui.lock_area(point)
 
 # convert the point from a window point to a main surface one
 def convert_to_screen(point, window):
     # fall-through function, perform the conversion only if necessary
+    from .guimanager import GuiManager
+    gui = GuiManager()
     if window != None:
-        x, y = point
+        x, y = gui.lock_area(point)
         wx, wy = window.x, window.y
         return (x + wx, y + wy)
     # conversion not necessary
-    return point
+    return gui.lock_area(point)
 
 def set_active_object(object=None):
     from .guimanager import GuiManager
