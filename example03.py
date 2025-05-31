@@ -4,7 +4,7 @@ from pygame.locals import K_ESCAPE
 from gui import set_surface, file_resource, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, set_cursor, add
 from gui import GuiManager, GKind, Window
-from gui import Button, Image
+from gui import Button, Image, ToggleButton
 
 class Demo:
     def __init__(self):
@@ -27,11 +27,11 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
 
-        window_x, window_y, width, height = 50, 50, 180, 180
+        window_x, window_y, width, height = 50, 50, 180, 230
         Window('image_window', 'Realize', (window_x, window_y), (width, height))
 
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
-
+        self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, "On", "Off"))
         # set cursor image
         set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
         # set a background image
