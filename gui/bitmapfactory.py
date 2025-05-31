@@ -15,12 +15,12 @@ class BitmapFactory:
     # and stored at instance creation, you could have different factories used for different windows
     # and/or widgets existing and being managed at the same time by the gui
     def draw_title_bar_bitmap(self, title, width, size):
-        from .widgets.frame import Frame, FrameState
+        from .widgets.frame import Frame, State
         set_font('titlebar')
         text_bitmap = render_text(title)
         title_surface = pygame.surface.Surface((width, size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, width, size))
-        frame.state = FrameState.ARMED
+        frame.state = State.Armed
         frame.surface = title_surface
         frame.draw()
         title_surface.blit(text_bitmap, (4, 4))
