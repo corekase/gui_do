@@ -18,22 +18,25 @@ class Demo:
         pygame.mouse.set_visible(False)
         # blit a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
-
+        # create a gui manager
         self.gui = GuiManager()
         set_surface(self.screen)
+        # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
+        # add a title label to the screen
         set_font('gui_do')
         add(Label((50, 20), 'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-
+        # realize window
         window_x, window_y, width, height = 50, 110, 180, 205
         Window('Realize', (window_x, window_y), (width, height))
-
+        # add an image
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
+        # add a toggle button
         self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'On', 'Off'))
         # set cursor image
         set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
