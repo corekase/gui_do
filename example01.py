@@ -163,7 +163,7 @@ class Demo:
         #
         set_active_object(None)
         # set cursor image
-        set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
+        set_cursor((1, 1), 'Icons8_cursor.png')
         # set a background image
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag

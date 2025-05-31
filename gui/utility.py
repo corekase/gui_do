@@ -121,7 +121,7 @@ def set_cursor(hotspot, *image):
     from .guimanager import GuiManager
     gui = GuiManager()
     # set the cursor image and hotspot
-    gui.cursor_image = image_alpha(*image)
+    gui.cursor_image = image_alpha('cursors', *image)
     gui.cursor_rect = gui.cursor_image.get_rect()
     gui.cursor_hotspot = hotspot
 

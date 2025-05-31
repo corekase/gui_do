@@ -30,7 +30,7 @@ class Demo:
         #
         # set cursor image
         #
-        set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
+        set_cursor((1, 1), 'Icons8_cursor.png')
         #
         # load fonts
         #

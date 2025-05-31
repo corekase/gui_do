@@ -39,7 +39,7 @@ class Demo:
         # add a toggle button
         self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'On', 'Off'))
         # set cursor image
-        set_cursor((1, 1), 'cursors', 'Icons8_cursor.png')
+        set_cursor((1, 1), 'Icons8_cursor.png')
         # set running flag
         self.running = True
 
