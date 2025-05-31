@@ -8,8 +8,7 @@ class Image(Widget):
         super().__init__(id, rect)
         self.image = pygame.image.load(file_resource('images', image))
         if scale:
-            new_image = pygame.transform.smoothscale(self.image, (rect.width, rect.height))
-            self.image = new_image
+            self.image = pygame.transform.smoothscale(self.image, (rect.width, rect.height))
 
     def handle_event(self, _, _a):
         return False
