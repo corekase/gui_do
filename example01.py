@@ -5,7 +5,7 @@ from gui import set_surface, file_resource, centre, load_font, set_font, set_las
 from gui import set_grid_properties, gridded
 from gui import set_active_object, set_cursor, add
 from gui import GuiManager, GKind, Window
-from gui import Frame, Label, Button, PushButtonGroup, PushButtonKind, Scrollbar
+from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 
 class Demo:
     def __init__(self):
@@ -45,13 +45,13 @@ class Demo:
         add(Button('Button_2', gridded(0, 1), 'Button 2'))
         add(Button('Button_3', gridded(0, 2), 'Button 3'))
         # pushbutton boxes
-        self.pb1 = add(PushButtonGroup('SB1', gridded(1, 0), 'Button 1', 'pb1', PushButtonKind.BOX))
-        add(PushButtonGroup('SB2', gridded(1, 1), 'Button 2', 'pb1', PushButtonKind.BOX))
-        add(PushButtonGroup('SB3', gridded(1, 2), 'Button 3', 'pb1', PushButtonKind.BOX))
+        self.pb1 = add(PushButtonGroup('SB1', gridded(1, 0), 'Button 1', 'pb1', 0))
+        add(PushButtonGroup('SB2', gridded(1, 1), 'Button 2', 'pb1', 0))
+        add(PushButtonGroup('SB3', gridded(1, 2), 'Button 3', 'pb1', 0))
         # pushbutton radios
-        self.pb4 = add(PushButtonGroup('SR1', gridded(2, 0), 'Radio 1', 'pb2', PushButtonKind.RADIO))
-        add(PushButtonGroup('SR2', gridded(2, 1), 'Radio 2', 'pb2', PushButtonKind.RADIO))
-        add(PushButtonGroup('SR3', gridded(2, 2), 'Radio 3', 'pb2', PushButtonKind.RADIO))
+        self.pb4 = add(PushButtonGroup('SR1', gridded(2, 0), 'Radio 1', 'pb2', 1))
+        add(PushButtonGroup('SR2', gridded(2, 1), 'Radio 2', 'pb2', 1))
+        add(PushButtonGroup('SR3', gridded(2, 2), 'Radio 3', 'pb2', 1))
         # labels
         self.screen_label_button = Label(gridded(1, 3), 'N/A')
         self.screen_label_radio = Label(gridded(2, 3), 'N/A')
@@ -95,13 +95,13 @@ class Demo:
         add(Button('Button_5', gridded(0, 1), 'Button 5'))
         add(Button('Button_6', gridded(0, 2), 'Button 6'))
         # pushbutton boxes
-        self.pb7 = add(PushButtonGroup('WB4', gridded(1, 0), 'Button 4', 'pb3', PushButtonKind.BOX))
-        add(PushButtonGroup('WB5', gridded(1, 1), 'Button 5', 'pb3', PushButtonKind.BOX))
-        add(PushButtonGroup('WB6', gridded(1, 2), 'Button 6', 'pb3', PushButtonKind.BOX))
+        self.pb7 = add(PushButtonGroup('WB4', gridded(1, 0), 'Button 4', 'pb3', 0))
+        add(PushButtonGroup('WB5', gridded(1, 1), 'Button 5', 'pb3', 0))
+        add(PushButtonGroup('WB6', gridded(1, 2), 'Button 6', 'pb3', 0))
         # pushbutton radios
-        self.pb10 = add(PushButtonGroup('WR4', gridded(2, 0), 'Radio 4', 'pb4', PushButtonKind.RADIO))
-        add(PushButtonGroup('WR5', gridded(2, 1), 'Radio 5', 'pb4', PushButtonKind.RADIO))
-        add(PushButtonGroup('WR6', gridded(2, 2), 'Radio 6', 'pb4', PushButtonKind.RADIO))
+        self.pb10 = add(PushButtonGroup('WR4', gridded(2, 0), 'Radio 4', 'pb4', 1))
+        add(PushButtonGroup('WR5', gridded(2, 1), 'Radio 5', 'pb4', 1))
+        add(PushButtonGroup('WR6', gridded(2, 2), 'Radio 6', 'pb4', 1))
         # labels
         self.window_label_button = add(Label(gridded(1, 3), 'N/A', 100))
         self.window_label_radio = add(Label(gridded(2, 3), 'N/A', 80))

@@ -35,31 +35,13 @@ class BitmapFactory:
         rect(surface, colours['none'], Rect(6, 6, 9, 9), 1)
         return surface
 
-    def draw_radio_pushbutton_bitmaps(self, text, rect):
-        self.idle_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['light'], colours['dark'])
-        self.hover_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
-        self.armed_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
-        return self.idle_bitmap, self.hover_bitmap, self.armed_bitmap
-
-    def draw_radio_pushbutton_bitmap(self, text, rect, col1, col2, highlight=False):
-        x, y, w, h = rect
-        text_bitmap = render_text(text, highlight)
-        text_height = text_bitmap.get_rect().height
-        radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
-        y_offset = (text_height // 2) + 2
-        radius = text_height / 4.0
-        points = []
-        for point in range(0, 360, 5):
-            x1 = int(round(radius * cos(radians(point))))
-            y1 = int(round(radius * sin(radians(point))))
-            points.append((int(radius) + x1, y_offset + y1))
-        pygame.draw.polygon(radio_bitmap, col1, points, 0)
-        pygame.draw.polygon(radio_bitmap, col2, points, 1)
-        x_size = int((radius * 2) + 4 + text_bitmap.get_rect().width + 1)
-        button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
-        button_complete.blit(radio_bitmap, (0, 0))
-        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
-        return button_complete
+    def get_pushbutton_style_bitmaps(self, style, text, rect):
+        if style == 0:
+            return self.draw_box_button_bitmaps(text, rect)
+        elif style == 1:
+            return self.draw_radio_pushbutton_bitmaps(text, rect)
+        else:
+            raise Exception(f'style index {style} not implemented')
 
     def draw_box_button_bitmaps(self, text, rect):
         x, y, w, h = rect
@@ -88,6 +70,32 @@ class BitmapFactory:
         saved.append(armed_surface)
         set_last_font()
         return saved
+
+    def draw_radio_pushbutton_bitmaps(self, text, rect):
+        self.idle_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['light'], colours['dark'])
+        self.hover_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
+        self.armed_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
+        return self.idle_bitmap, self.hover_bitmap, self.armed_bitmap
+
+    def draw_radio_pushbutton_bitmap(self, text, rect, col1, col2, highlight=False):
+        x, y, w, h = rect
+        text_bitmap = render_text(text, highlight)
+        text_height = text_bitmap.get_rect().height
+        radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
+        y_offset = (text_height // 2) + 2
+        radius = text_height / 4.0
+        points = []
+        for point in range(0, 360, 5):
+            x1 = int(round(radius * cos(radians(point))))
+            y1 = int(round(radius * sin(radians(point))))
+            points.append((int(radius) + x1, y_offset + y1))
+        pygame.draw.polygon(radio_bitmap, col1, points, 0)
+        pygame.draw.polygon(radio_bitmap, col2, points, 1)
+        x_size = int((radius * 2) + 4 + text_bitmap.get_rect().width + 1)
+        button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
+        button_complete.blit(radio_bitmap, (0, 0))
+        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
+        return button_complete
 
     def draw_frame_bitmaps(self, rect):
         x, y, w, h = rect

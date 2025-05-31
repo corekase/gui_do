@@ -1,26 +1,22 @@
-from enum import Enum
+from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..bitmapfactory import BitmapFactory
 from ..utility import convert_to_window
 from .button import Button
 from .frame import FrameState
 
-PushButtonKind = Enum('PushButtonKind', ['BOX', 'RADIO'])
-
 class PushButtonGroup(Button):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
-    def __init__(self, id, rect, text, group, kind=PushButtonKind.BOX):
+    def __init__(self, id, rect, text, group, style):
         super().__init__(id, rect, text)
         factory = BitmapFactory()
         self.group = group
-        self.kind = kind
-        if self.kind == PushButtonKind.BOX:
-            self.box_idle, self.box_hover, self.box_armed = factory.draw_box_button_bitmaps(text, rect)
-        elif self.kind == PushButtonKind.RADIO:
-            self.radio_idle, self.radio_hover, self.radio_armed = factory.draw_radio_pushbutton_bitmaps(text, rect)
+        self.style = style
+        self.idle, self.hover, self.armed = factory.get_pushbutton_style_bitmaps(style, text, rect)
+        self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, self.idle.get_rect().height)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -33,7 +29,7 @@ class PushButtonGroup(Button):
             # no matching events for push button logic
             return False
         # is the mouse position within the push button rect
-        collision = self.check_collision(convert_to_window(event.pos, window))
+        collision = self.rect.collidepoint(convert_to_window(event.pos, window))
         # manage the state of the push button
         if (self.state == FrameState.IDLE) and collision:
             self.state = FrameState.HOVER
@@ -47,16 +43,6 @@ class PushButtonGroup(Button):
                     return True
         # push button not clicked
         return False
-
-    def check_collision(self, position):
-        if self.kind == PushButtonKind.BOX:
-            return self.rect.collidepoint(position)
-        elif self.kind == PushButtonKind.RADIO:
-            collided = self.rect.collidepoint(position)
-            if collided:
-                if (position[0] - self.rect.left) < self.radio_idle.get_rect().width:
-                    return True
-            return False
 
     def select(self):
         # clear armed state for previous object
@@ -76,20 +62,13 @@ class PushButtonGroup(Button):
             self.state = FrameState.IDLE
 
     def draw(self):
-        if self.kind == PushButtonKind.BOX:
-            if self.state == FrameState.IDLE:
-                self.surface.blit(self.box_idle, (self.rect.x, self.rect.y))
-            elif self.state == FrameState.HOVER:
-                self.surface.blit(self.box_hover, (self.rect.x, self.rect.y))
-            elif self.state == FrameState.ARMED:
-                self.surface.blit(self.box_armed, (self.rect.x, self.rect.y))
-        elif self.kind == PushButtonKind.RADIO:
+        if self.style == 1:
             if self.pristine == None:
                 self.save_pristine()
             self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
-            if self.state == FrameState.IDLE:
-                self.surface.blit(self.radio_idle, self.rect)
-            elif self.state == FrameState.HOVER:
-                self.surface.blit(self.radio_hover, self.rect)
-            elif self.state == FrameState.ARMED:
-                self.surface.blit(self.radio_armed, self.rect)
+        if self.state == FrameState.IDLE:
+            self.surface.blit(self.idle, (self.rect.x, self.rect.y))
+        elif self.state == FrameState.HOVER:
+            self.surface.blit(self.hover, (self.rect.x, self.rect.y))
+        elif self.state == FrameState.ARMED:
+            self.surface.blit(self.armed, (self.rect.x, self.rect.y))

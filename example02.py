@@ -2,7 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
-from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar, PushButtonKind
+from gui import GuiManager, Window, GKind, Label, Frame, FrameState, Button, PushButtonGroup, Scrollbar
 from gui import set_surface, load_font, set_font, add, set_cursor, file_resource, copy_graphic_area
 from gui import centre, set_grid_properties, gridded
 
@@ -61,10 +61,10 @@ class Demo:
         # fps controls
         self.fps_label = add(Label(Rect(x + 10, y + 116, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + 60), 70, 20, 5)
-        self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', PushButtonKind.RADIO))
-        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', PushButtonKind.RADIO))
-        self.box_control = add(PushButtonGroup('boxon', gridded(0, 1), 'Boxes On', 'bx1', PushButtonKind.RADIO))
-        add(PushButtonGroup('boxoff', gridded(1, 1), 'Boxes Off', 'bx1', PushButtonKind.RADIO))
+        self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', 1))
+        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', 1))
+        self.box_control = add(PushButtonGroup('boxon', gridded(0, 1), 'Boxes On', 'bx1', 1))
+        add(PushButtonGroup('boxoff', gridded(1, 1), 'Boxes Off', 'bx1', 1))
         #
         # main window setup
         #
@@ -82,14 +82,14 @@ class Demo:
         add(Button('Button_2', gridded(0, 1), 'Button 2'))
         add(Button('Button_3', gridded(0, 2), 'Button 3'))
         # pushbutton boxes
-        self.window_push_box_widget = add(PushButtonGroup('Box 1', gridded(1, 0), 'Push Box 1', 'pb', PushButtonKind.BOX))
-        add(PushButtonGroup('Box 2', gridded(1, 1), 'Push Box 2', 'pb', PushButtonKind.BOX))
-        add(PushButtonGroup('Box 3', gridded(1, 2), 'Push Box 3', 'pb', PushButtonKind.BOX))
+        self.window_push_box_widget = add(PushButtonGroup('Box 1', gridded(1, 0), 'Push Box 1', 'pb', 0))
+        add(PushButtonGroup('Box 2', gridded(1, 1), 'Push Box 2', 'pb', 0))
+        add(PushButtonGroup('Box 3', gridded(1, 2), 'Push Box 3', 'pb', 0))
         # pushbutton radios
         # save the graphic area under the radios and labels
-        self.window_radio_box_widget = add(PushButtonGroup('Radio 1', gridded(2, 0), 'Push Radio 1', 'pr', PushButtonKind.RADIO))
-        add(PushButtonGroup('Radio 2', gridded(2, 1), 'Push Radio 2', 'pr', PushButtonKind.RADIO))
-        add(PushButtonGroup('Radio 3', gridded(2, 2), 'Push Radio 3', 'pr', PushButtonKind.RADIO))
+        self.window_radio_box_widget = add(PushButtonGroup('Radio 1', gridded(2, 0), 'Push Radio 1', 'pr', 1))
+        add(PushButtonGroup('Radio 2', gridded(2, 1), 'Push Radio 2', 'pr', 1))
+        add(PushButtonGroup('Radio 3', gridded(2, 2), 'Push Radio 3', 'pr', 1))
         # labels
         self.window_pushbox_label = add(Label(gridded(1, 3), 'N/A', 50))
         self.window_radio_label = add(Label(gridded(2, 3), 'N/A', 50))

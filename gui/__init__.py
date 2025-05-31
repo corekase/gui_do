@@ -11,7 +11,7 @@ from .widgets.frame import Frame, FrameState
 from .widgets.label import Label
 from .widgets.button import Button
 from .widgets.scrollbar import Scrollbar
-from .widgets.pushbuttongroup import PushButtonGroup, PushButtonKind
+from .widgets.pushbuttongroup import PushButtonGroup
 from .widgets.image import Image
 from .widgets.togglebutton import ToggleButton
 from .forms.window import Window
