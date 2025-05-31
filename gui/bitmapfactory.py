@@ -89,7 +89,15 @@ class BitmapFactory:
         set_last_font()
         return saved
 
-    def draw_box_bitmaps(self, rect):
+    def draw_frame_state_bitmap(self, surface, state, rect, colours):
+        if state == 'idle':
+            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'], rect)
+        elif state == 'hover':
+            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'], rect)
+        elif state == 'armed':
+            self.draw_base_frame_definition_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'], rect)
+
+    def draw_frame_bitmaps(self, rect):
         x, y, w, h = rect
         saved = []
         idle_surface = pygame.surface.Surface((w, h)).convert()
@@ -102,14 +110,6 @@ class BitmapFactory:
         self.draw_frame_state_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
         saved.append(armed_surface)
         return saved
-
-    def draw_frame_state_bitmap(self, surface, state, rect, colours):
-        if state == 'idle':
-            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'], rect)
-        elif state == 'hover':
-            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'], rect)
-        elif state == 'armed':
-            self.draw_base_frame_definition_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'], rect)
 
     def draw_base_frame_definition_bitmap(self, surface, ul, lr, ul_d, lr_d, background, surface_rect):
         # ul, lr = upper and left, lower and right lines
