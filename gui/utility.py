@@ -105,9 +105,9 @@ def convert_to_screen(point, window):
     from .guimanager import GuiManager
     gui = GuiManager()
     if window != None:
-        x, y = gui.lock_area(point)
+        x, y = point
         wx, wy = window.x, window.y
-        return (x + wx, y + wy)
+        return gui.lock((x + wx, y + wy))
     # conversion not necessary
     return gui.lock_area(point)
 
