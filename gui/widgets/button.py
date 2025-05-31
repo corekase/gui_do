@@ -10,7 +10,7 @@ class Button(Frame):
         super().__init__(id, rect)
         self.gui = GuiManager()
         factory = BitmapFactory()
-        self.idle, self.hover, self.armed = factory.draw_button_bitmaps(text, rect)
+        self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
         self.state = FrameState.IDLE
 
     def handle_event(self, event, window):

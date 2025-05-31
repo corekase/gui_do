@@ -33,7 +33,7 @@ class Window:
         self.set_pos(pos)
         self.title_bar_bitmap = factory.draw_title_bar_bitmap(title, self.width, self.height)
         self.title_bar_rect = self.title_bar_bitmap.get_rect()
-        self.window_widget_lower_bitmap = factory.draw_window_lower_widget(self.titlebar_size, colours['full'], colours['medium'])
+        self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
 
     def window_save_pristine(self):
         # update the window pristine bitmap
