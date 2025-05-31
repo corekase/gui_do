@@ -7,6 +7,7 @@ from ..widgets.frame import Frame, FrameState
 
 class Window:
     def __init__(self, title, pos, size):
+        # windows don't need names because eventually they are going to be in banks which will be named
         self.gui = GuiManager()
         factory = BitmapFactory()
         # window x and y position from the main surface coordinate, not the titlebar
