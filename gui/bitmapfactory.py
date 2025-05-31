@@ -6,6 +6,9 @@ from .utility import set_font, set_last_font, render_text, centre
 from .widgets.widget import colours
 
 class BitmapFactory:
+    # this bitmap factory returns these graphic images. As long as the method names are
+    # the same then this bitmap factory could be switched out for another one and that
+    # would be a form of basic themeing for the gui
     def draw_title_bar_bitmap(self, title, width, size):
         from .widgets.frame import Frame, FrameState
         set_font('titlebar')
