@@ -2,16 +2,19 @@ from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..bitmapfactory import BitmapFactory
 from ..utility import convert_to_window
-from .button import Button
-from .frame import FrameState
+from .widget import Widget
+from enum import Enum
 
-class PushButtonGroup(Button):
+State = Enum('State', ['Idle', 'Hover', 'Armed'])
+
+class PushButtonGroup(Widget):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
     def __init__(self, id, rect, text, group, style):
-        super().__init__(id, rect, text)
+        super().__init__(id, rect)
+        self.state = State.Idle
         factory = BitmapFactory()
         self.group = group
         self.style = style
@@ -31,11 +34,11 @@ class PushButtonGroup(Button):
         # is the mouse position within the push button rect
         collision = self.rect.collidepoint(convert_to_window(event.pos, window))
         # manage the state of the push button
-        if (self.state == FrameState.IDLE) and collision:
-            self.state = FrameState.HOVER
-        if self.state == FrameState.HOVER:
+        if (self.state == State.Idle) and collision:
+            self.state = State.Hover
+        if self.state == State.Hover:
             if (event.type == MOUSEMOTION) and (not collision):
-                self.state = FrameState.IDLE
+                self.state = State.Idle
             if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
                     # push button was clicked
@@ -46,9 +49,9 @@ class PushButtonGroup(Button):
 
     def select(self):
         # clear armed state for previous object
-        PushButtonGroup.selections[self.group].state = FrameState.IDLE
+        PushButtonGroup.selections[self.group].state = State.Idle
         # mark this object armed
-        self.state = FrameState.ARMED
+        self.state = State.Armed
         # make this object the currently armed one
         PushButtonGroup.selections[self.group] = self
 
@@ -58,17 +61,17 @@ class PushButtonGroup(Button):
 
     def leave(self):
         # if hover then idle when left
-        if self.state == FrameState.HOVER:
-            self.state = FrameState.IDLE
+        if self.state == State.Hover:
+            self.state = State.Idle
 
     def draw(self):
         if self.style == 1:
             if self.pristine == None:
                 self.save_pristine()
             self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
-        if self.state == FrameState.IDLE:
+        if self.state == State.Idle:
             self.surface.blit(self.idle, (self.rect.x, self.rect.y))
-        elif self.state == FrameState.HOVER:
+        elif self.state == State.Hover:
             self.surface.blit(self.hover, (self.rect.x, self.rect.y))
-        elif self.state == FrameState.ARMED:
+        elif self.state == State.Armed:
             self.surface.blit(self.armed, (self.rect.x, self.rect.y))
