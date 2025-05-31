@@ -9,6 +9,11 @@ class BitmapFactory:
     # this bitmap factory returns these graphic images. As long as the method names are
     # the same then this bitmap factory could be switched out for another one and that
     # would be a form of basic themeing for the gui
+    #
+    # and how it could operate: in a test demo, select a factory, create a test window using
+    # that factory and it is themed differently from the test theme. since bitmaps are all created
+    # and stored at instance creation, you could have different factories used for different windows
+    # and/or widgets existing and being managed at the same time by the gui
     def draw_title_bar_bitmap(self, title, width, size):
         from .widgets.frame import Frame, FrameState
         set_font('titlebar')
