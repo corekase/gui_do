@@ -18,6 +18,7 @@ class GuiEvent:
         self.rel = None
         self.button = None
         # gui
+        self.surface = None
         self.window_id = None
         self.widget_id = None
 
