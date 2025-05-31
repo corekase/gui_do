@@ -31,7 +31,7 @@ class Demo:
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
 
         window_x, window_y, width, height = 50, 110, 180, 205
-        Window('image_window', 'Realize', (window_x, window_y), (width, height))
+        Window('Realize', (window_x, window_y), (width, height))
 
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'On', 'Off'))

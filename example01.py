@@ -73,7 +73,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main', 'gui_do', (window_x, window_y), (width, height))
+        Window('gui_do', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         #
@@ -121,7 +121,7 @@ class Demo:
         window_x = 50
         window_y = 150
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main2', 'Win 1', (window_x, window_y), (width, height))
+        Window('Win 1', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 5, y + 5), 50, 20, 4)
         #
@@ -143,7 +143,7 @@ class Demo:
         window_x = 50
         window_y = 250
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main3', 'Win 2', (window_x, window_y), (width, height))
+        Window('Win 2', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 5, y + 5), 50, 20, 4)
         #

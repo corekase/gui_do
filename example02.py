@@ -73,7 +73,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('main', 'gui_do', (window_x, window_y + 400), (width, height))
+        Window('gui_do', (window_x, window_y + 400), (width, height))
         frame = Frame('none', Rect(0, 0, 440, 140))
         # set grid layout properties
         set_grid_properties((x + 10, y + 10), 140, 20, 4)
@@ -107,30 +107,29 @@ class Demo:
         for y in range(9):
             for x in range(15):
                 win_num += 1
-                self.make_window(10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55,
-                                 f'{x},{y}', f'Win {win_num}')
+                self.make_window(f'Win {win_num}', 10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55)
         #
         # all done
         #
         # set running flag
         self.running = True
 
-    def make_window(self, window_x, window_y, width, height, id, name):
+    def make_window(self, title, window_x, window_y, width, height):
         counter = 0
-        Window(id, name, (window_x, window_y), (width, height))
+        Window(title, (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((5, 5), 50, 20, 4)
         counter += 1
-        button_id = f'{id}{name}{window_x}{window_y}{counter}'
+        button_id = f'{title}.{window_x}.{window_y}.{counter}'
         add(Button(button_id, gridded(0, 0), 'One'))
         counter += 1
-        button_id = f'{id}{name}{window_x}{window_y}{counter}'
+        button_id = f'{title}.{window_x}.{window_y}.{counter}'
         add(Button(button_id, gridded(1, 0), 'Two'))
         counter += 1
-        button_id = f'{id}{name}{window_x}{window_y}{counter}'
+        button_id = f'{title}.{window_x}.{window_y}.{counter}'
         add(Button(button_id, gridded(0, 1), 'Three'))
         counter += 1
-        button_id = f'{id}{name}{window_x}{window_y}{counter}'
+        button_id = f'{title}.{window_x}.{window_y}.{counter}'
         add(Button(button_id, gridded(1, 1), 'Four'))
 
     def run(self):

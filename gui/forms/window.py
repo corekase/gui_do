@@ -6,7 +6,7 @@ from ..utility import copy_graphic_area, set_active_object, colours
 from ..widgets.frame import Frame, FrameState
 
 class Window:
-    def __init__(self, name, title, pos, size):
+    def __init__(self, title, pos, size):
         self.gui = GuiManager()
         factory = BitmapFactory()
         # window x and y position from the main surface coordinate, not the titlebar
