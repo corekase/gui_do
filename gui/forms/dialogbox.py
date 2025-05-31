@@ -9,4 +9,5 @@
 # blocking dialog box in the gui manager dims the entire screen to 50% brightness
 # except for the dialog box and no other gui controls or widgets process until a
 # dialog selection is made. it is a state for the gui manager and client processing,
-# drawing, and undrawing proceeds as normal under the dialog state
+# drawing, and undrawing proceeds as normal under the dialog state. the blocking
+# dialog box may be moved around the dimmed screen
