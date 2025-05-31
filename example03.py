@@ -27,7 +27,7 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
 
-        window_x, window_y, width, height = 50, 50, 180, 230
+        window_x, window_y, width, height = 50, 50, 180, 205
         Window('image_window', 'Realize', (window_x, window_y), (width, height))
 
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
