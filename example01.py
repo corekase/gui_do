@@ -249,7 +249,7 @@ class Demo:
                     self.drop_test_frame.draw()
     # callbacks
     def exit(self):
-        # called from gui_manager automatically
+        # called from gui manager automatically
         self.running = False
 
 if __name__ == '__main__':
