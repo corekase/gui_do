@@ -130,15 +130,16 @@ def add(widget, callback=None):
     gui = GuiManager()
     widget.callback = callback
     if gui.active_object != None:
+        # store a reference to the window the widget is in
         widget.window = gui.active_object
+        # give the widget a reference to the window surface
         widget.surface = gui.active_object.surface
-        # append the widget to the object
+        # append the widget to the window's list
         gui.active_object.widgets.append(widget)
     else:
-        # add a widget to the screen
-        widget.gui = gui
+        # give the widget a reference to the screen surface
         widget.surface = gui.surface
-        # append the widget to the group
+        # append the widget to the screen list
         gui.widgets.append(widget)
     return widget
 
