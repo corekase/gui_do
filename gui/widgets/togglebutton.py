@@ -1,4 +1,4 @@
-from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
+from pygame.locals import MOUSEBUTTONDOWN
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
 from ..utility import convert_to_window
