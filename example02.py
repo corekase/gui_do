@@ -60,8 +60,8 @@ class Demo:
         # fps controls
         self.fps_label = add(Label(Rect(x + 10, y + h - 110, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + h - 90), 70, 20, 5)
-        self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', 1))
-        add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', 1))
+        self.fps_control = add(PushButtonGroup('60_fps', gridded(0, 0), '60 fps', 'fps', 1))
+        add(PushButtonGroup('full_fps', gridded(1, 0), 'Uncapped', 'fps', 1))
         # exit button and boxes toggle
         set_grid_properties((x + 10, y + h - 60), 70, 20, 5)
         # exit button
@@ -169,7 +169,7 @@ class Demo:
             # handle events
             self.handle_events()
             # handle program logic
-            if self.fps_control.read() == '60fps':
+            if self.fps_control.read() == '60_fps':
                 fps = 60
             else:
                 fps = 0
