@@ -53,7 +53,8 @@ class GuiManager:
         self.mouse_rel = (0, 0)
         # if locked is true then the mouse is switched to relative mode and then mouse_locked_pos
         # is updated with mouse_rel, the lock area is applied to that variable, and the mouse cursor
-        # is drawn at mouse_locked_pos instead of the normal mouse_pos
+        # is drawn at mouse_locked_pos instead of the normal mouse_pos when locked is false then
+        # mouse position goes back to mouse_pos
         #
         # switching to relative mode is because the mouse set_pos() function is very
         # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
