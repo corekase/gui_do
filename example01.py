@@ -60,10 +60,8 @@ class Demo:
         add(PushButtonGroup('SR2', gridded(2, 1), 'Radio 2', 'pb2', 1))
         add(PushButtonGroup('SR3', gridded(2, 2), 'Radio 3', 'pb2', 1))
         # labels
-        self.screen_label_button = Label(gridded(1, 3), 'N/A')
-        self.screen_label_radio = Label(gridded(2, 3), 'N/A')
-        add(self.screen_label_button)
-        add(self.screen_label_radio)
+        self.screen_label_button = add(Label(gridded(1, 3), 'N/A'))
+        self.screen_label_radio = add(Label(gridded(2, 3), 'N/A'))
         # horizontal scrollbar
         sb1 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True))
         sb1.set(100, 0, 30)
