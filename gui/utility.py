@@ -154,7 +154,7 @@ def set_surface(surface):
     gui = GuiManager()
     gui.surface = surface
 
-def set_backdrop(image, dest_surface=None):
+def set_backdrop(image, obj=None):
     # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
     from .guimanager import GuiManager
     gui = GuiManager()
@@ -168,7 +168,7 @@ def set_backdrop(image, dest_surface=None):
         raise Exception('set_backdrop() requires an image')
     gui.pristine = copy_graphic_area(gui.surface, gui.surface.get_rect()).convert()
 
-def update_pristine(area=None, source_surface=None, dest_surface=None):
+def update_pristine(area=None, obj=None):
     # copy area from screen surface to the pristine surface
     # if area is None then update entire surface
     from .guimanager import GuiManager
@@ -178,10 +178,10 @@ def update_pristine(area=None, source_surface=None, dest_surface=None):
     x, y, _, _ = area
     gui.pristine.blit(gui.surface, (x, y), area)
 
-def restore_pristine(area=None, source_surface=None, dest_surface=None):
-    # if source and dest are ommited then restore_pristine is from the screen
-    # pristine.  If they are supplied then the pristine dealing with would be a canvas
-    # pristine
+def restore_pristine(area=None, obj=None):
+    # if obj is ommited then restore_pristine is from the screen pristine.
+    # if obj is supplied the object must have a obj.surface and an obj.pristine
+    # to use here
     # restores a graphic area from the screen's pristine bitmap to the
     # screen surface. if area is None then restore entire surface
     from .guimanager import GuiManager
