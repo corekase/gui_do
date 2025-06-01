@@ -25,7 +25,7 @@ class Demo:
         #
         set_surface(self.screen)
         #
-        # blit a background image to the screen surface
+        # blit a background image to the screen surface, also saves that into the pristine surface
         #
         set_backdrop('watercolor-green-wallpaper-modified.jpg')
         #
@@ -139,9 +139,9 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         do_boxes = True
-        boxes = 1000
+        boxes = 200
         # setup a frame to draw on our surface
-        size = 15
+        size = 12
         frame = Frame('none', Rect(0, 0, size, size))
         frame.state = State.Armed
         # create our bitmap
@@ -178,7 +178,6 @@ class Demo:
             self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
             self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
             if do_boxes:
-                bitmaps = []
                 new_points = []
                 # copy all the areas that are going to be overwritten
                 for x, y, dx, dy in points:
@@ -188,14 +187,8 @@ class Demo:
                         dx = -dx
                     if y < 0 or y > (self.screen.get_rect().height - size):
                         dy = -dy
-                    rec = Rect(x - 1, y - 1, size + 2, size + 2)
-                    new_points += [(x, y, dx, dy)]
-                    bitmaps.append((copy_graphic_area(self.screen, rec), rec))
-                # then with the graphics saved draw on those areas
-                for x, y, dx, dy in new_points:
-                    self.screen.blit(frame_bitmap, Rect(x, y, size, size))
-                # swap the lists to start again
-                points = new_points
+                    self.screen.blit(frame_bitmap, (x, y))
+                    new_points.append(Rect(x, y, dx, dy))
             #
             # draw gui
             self.gui.draw_gui()
@@ -206,10 +199,13 @@ class Demo:
             # undraw gui
             self.gui.undraw_gui()
             #
-            # restore the saved areas that were drawn over
+            # restore the saved areas that were drawn over from the pristine bitmap
+            #
             if do_boxes:
-                for bitmap, rec in bitmaps:
-                    self.screen.blit(bitmap, rec)
+                for x, y, dx, dy in new_points:
+                    self.screen.blit(self.gui.pristine, (x, y), Rect(x, y, size, size))
+                # swap the lists to start again
+                points = new_points
         pygame.quit()
 
     def handle_events(self):
