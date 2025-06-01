@@ -49,7 +49,7 @@ class Demo:
         add(PushButtonGroup('SB2', gridded(1, 1), 'Button 2', 'pb1', 0))
         add(PushButtonGroup('SB3', gridded(1, 2), 'Button 3', 'pb1', 0))
         # pushbutton radios
-        self.pb4 = add(PushButtonGroup('SR1', gridded(2, 0), 'Radio 1', 'pb2', 1))
+        self.pb2 = add(PushButtonGroup('SR1', gridded(2, 0), 'Radio 1', 'pb2', 1))
         add(PushButtonGroup('SR2', gridded(2, 1), 'Radio 2', 'pb2', 1))
         add(PushButtonGroup('SR3', gridded(2, 2), 'Radio 3', 'pb2', 1))
         # labels
@@ -58,11 +58,11 @@ class Demo:
         add(self.screen_label_button)
         add(self.screen_label_radio)
         # horizontal scrollbar
-        sb4 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True))
-        sb4.set(100, 0, 30)
+        sb1 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True))
+        sb1.set(100, 0, 30)
         # vertical scrollbar
-        sb3 = add(Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False))
-        sb3.set(100, 0, 30)
+        sb2 = add(Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False))
+        sb2.set(100, 0, 30)
         #
         # -> end adding screen widgets
         #
@@ -95,11 +95,11 @@ class Demo:
         add(Button('Button_5', gridded(0, 1), 'Button 5'))
         add(Button('Button_6', gridded(0, 2), 'Button 6'))
         # pushbutton boxes
-        self.pb7 = add(PushButtonGroup('WB4', gridded(1, 0), 'Button 4', 'pb3', 0))
+        self.pb3 = add(PushButtonGroup('WB4', gridded(1, 0), 'Button 4', 'pb3', 0))
         add(PushButtonGroup('WB5', gridded(1, 1), 'Button 5', 'pb3', 0))
         add(PushButtonGroup('WB6', gridded(1, 2), 'Button 6', 'pb3', 0))
         # pushbutton radios
-        self.pb10 = add(PushButtonGroup('WR4', gridded(2, 0), 'Radio 4', 'pb4', 1))
+        self.pb4 = add(PushButtonGroup('WR4', gridded(2, 0), 'Radio 4', 'pb4', 1))
         add(PushButtonGroup('WR5', gridded(2, 1), 'Radio 5', 'pb4', 1))
         add(PushButtonGroup('WR6', gridded(2, 2), 'Radio 6', 'pb4', 1))
         # labels
@@ -188,9 +188,9 @@ class Demo:
             #
             set_font('normal')
             self.screen_label_button.set_label(f'PushBox: {self.pb1.read()}')
-            self.screen_label_radio.set_label(f'Radio: {self.pb4.read()}')
-            self.window_label_button.set_label(f'PushBox: {self.pb7.read()}')
-            self.window_label_radio.set_label(f'Radio: {self.pb10.read()}')
+            self.screen_label_radio.set_label(f'Radio: {self.pb2.read()}')
+            self.window_label_button.set_label(f'PushBox: {self.pb3.read()}')
+            self.window_label_radio.set_label(f'Radio: {self.pb4.read()}')
             #
             # -> gui_do client screen drawing code ends here
             #
