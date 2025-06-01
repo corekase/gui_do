@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, State, Button, PushButtonGroup, Scrollbar
-from gui import set_surface, load_font, set_font, add, set_cursor, file_resource, copy_graphic_area
+from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, copy_graphic_area
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -17,11 +17,6 @@ class Demo:
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         #
-        # blit a background image to the screen surface
-        #
-        self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
-        #
-        #
         # create a gui manager and it makes the screen the active object
         #
         self.gui = GuiManager()
@@ -29,6 +24,10 @@ class Demo:
         # set the drawing surface of the gui manager
         #
         set_surface(self.screen)
+        #
+        # blit a background image to the screen surface
+        #
+        set_backdrop('watercolor-green-wallpaper-modified.jpg')
         #
         # set cursor image
         #

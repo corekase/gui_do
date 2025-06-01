@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import set_surface, file_resource, centre, load_font, set_font, set_last_font
-from gui import set_grid_properties, gridded
+from gui import set_grid_properties, gridded, set_backdrop
 from gui import set_active_object, set_cursor, add
 from gui import GuiManager, GKind, Window
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
@@ -18,15 +18,16 @@ class Demo:
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         #
-        # blit a background image to the screen surface
-        #
-        self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
-        #
         # create a gui manager and it makes the screen the active object
         #
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
         set_surface(self.screen)
+        #
+        # blit a background image to the screen surface
+        #
+        set_backdrop('watercolor-green-wallpaper-modified.jpg')
+        #
         # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)

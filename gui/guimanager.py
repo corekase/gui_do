@@ -1,8 +1,9 @@
+import os
 import pygame
 from enum import Enum
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .utility import copy_graphic_area, convert_to_window
+from .utility import copy_graphic_area, convert_to_window, file_resource
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
@@ -62,6 +63,20 @@ class GuiManager:
         # last objects
         self.last_window_object = None
         self.last_screen_object = None
+        # the pristine state of the screen bitmap
+        self.pristine = None
+
+    def screen_save_pristine(self, image=None):
+        # update the screen pristine bitmap, if passed an image it will also load and blit that
+        # to the screen surface and then update the pristine bitmap. if passed, the image will be
+        # scaled to the screen size
+        if image != None:
+            data_path = os.path.join('data', 'images')
+            bitmap = pygame.image.load(os.path.join(data_path, image))
+            _, _, width, height = self.surface.get_rect()
+            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
+            self.surface.blit(scaled_bitmap.convert(), (0, 0))
+        self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

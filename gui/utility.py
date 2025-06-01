@@ -148,3 +148,9 @@ def set_surface(surface):
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = surface
+
+def set_backdrop(image):
+    # set the backdrop for the screen surface
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    gui.screen_save_pristine(image)
