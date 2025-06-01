@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, Window, GKind, Label, Frame, State, Button, PushButtonGroup, Scrollbar
-from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, copy_graphic_area
+from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, restore
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -150,7 +150,8 @@ class Demo:
         frame.surface = frame_bitmap
         # and render onto that surface
         frame.draw()
-        points = []
+        max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
+        areas = []
         for _ in range(boxes):
             x = randrange(0, self.screen.get_rect().width - size)
             y = randrange(0, self.screen.get_rect().height - size)
@@ -160,7 +161,7 @@ class Demo:
                 dx = -dx
             if choice([True, False]):
                 dy = -dy
-            points.append((x, y, dx, dy))
+            areas.append((x, y, dx, dy))
         # begin main loop
         while self.running:
             # handle events
@@ -178,17 +179,16 @@ class Demo:
             self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
             self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
             if do_boxes:
-                new_points = []
-                # copy all the areas that are going to be overwritten
-                for x, y, dx, dy in points:
+                new_areas = []
+                for x, y, dx, dy in areas:
                     x += dx
                     y += dy
-                    if x < 0 or x > (self.screen.get_rect().width - size):
+                    if x < 0 or x > max_x:
                         dx = -dx
-                    if y < 0 or y > (self.screen.get_rect().height - size):
+                    if y < 0 or y > max_y:
                         dy = -dy
                     self.screen.blit(frame_bitmap, (x, y))
-                    new_points.append(Rect(x, y, dx, dy))
+                    new_areas.append((x, y, dx, dy))
             #
             # draw gui
             self.gui.draw_gui()
@@ -199,13 +199,15 @@ class Demo:
             # undraw gui
             self.gui.undraw_gui()
             #
-            # restore the saved areas that were drawn over from the pristine bitmap
+            # restore saved areas that were drawn over
             #
             if do_boxes:
-                for x, y, dx, dy in new_points:
-                    self.screen.blit(self.gui.pristine, (x, y), Rect(x, y, size, size))
+                for x, y, dx, dy in new_areas:
+                    area = Rect(x, y, size, size)
+                    # restore a bitmap area from the screen's pristine bitmap to the main surface
+                    restore(area)
                 # swap the lists to start again
-                points = new_points
+                areas = new_areas
         pygame.quit()
 
     def handle_events(self):
