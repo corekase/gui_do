@@ -50,6 +50,17 @@ class GuiManager:
         self.dragging_window = None
         # current mouse position
         self.mouse_pos = pygame.mouse.get_pos()
+        self.mouse_rel = (0, 0)
+        # if locked is true then the mouse is switched to relative mode and then mouse_locked_pos
+        # is updated with mouse_rel, the lock area is applied to that variable, and the mouse cursor
+        # is drawn at mouse_locked_pos instead of the normal mouse_pos
+        #
+        # switching to relative mode is because the mouse set_pos() function is very
+        # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
+        # a Linux platform-specific bug
+        self.locked = False
+        # current lock cursor position
+        self.mouse_locked_pos = None
         # cursor image and hotspot
         self.cursor_image = None
         self.cursor_hotspot = None
@@ -65,11 +76,6 @@ class GuiManager:
         self.last_screen_object = None
         # the pristine state of the screen bitmap
         self.pristine = None
-        # if locked is true then the mouse is switched to relative mode within the lock
-        # area. switching to relative mode is because the mouse set_pos() function is very
-        # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
-        # a Linux platform-specific bug
-        self.locked = False
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
@@ -113,6 +119,7 @@ class GuiManager:
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self.mouse_pos = self.lock_area(event.pos)
+            self.mouse_rel = event.rel
         # check for alt-f4 or window quit button
         if event.type == QUIT:
             return self.event({'quit': None})
