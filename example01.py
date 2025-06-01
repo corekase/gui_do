@@ -17,7 +17,13 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
+        #
+        # blit a background image to the screen surface
+        #
+        self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
+        #
         # create a gui manager and it makes the screen the active object
+        #
         self.gui = GuiManager()
         # set the drawing surface of the gui manager
         set_surface(self.screen)
@@ -164,8 +170,6 @@ class Demo:
         set_active_object(None)
         # set cursor image
         set_cursor((1, 1), 'Icons8_cursor.png')
-        # set a background image
-        self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # set running flag
         self.running = True
         # drop test for consumed events
