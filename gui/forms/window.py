@@ -38,6 +38,7 @@ class Window:
 
     def window_save_pristine(self):
         # update the window pristine bitmap
+        # the window pristine bitmap can be used to undo widget bitmap damage to the contents
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
     def draw_title_bar(self):
