@@ -150,9 +150,7 @@ def set_surface(surface):
     gui.surface = surface
 
 def set_backdrop(image):
-    # set the backdrop for the screen surface
-    # if passed an image it will also load and blit that to the screen surface and then
-    # update the pristine bitmap. if passed, the image will be scaled to the screen size
+    # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
     from .guimanager import GuiManager
     gui = GuiManager()
     if image != None:
