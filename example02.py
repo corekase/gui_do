@@ -2,7 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
-from gui import GuiManager, Window, GKind, Label, Frame, State, Button, PushButtonGroup, Scrollbar
+from gui import GuiManager, GKind, Window, Label, Frame, State, Button, PushButtonGroup, Scrollbar, ToggleButton
 from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, restore
 from gui import centre, set_grid_properties, gridded
 
@@ -44,7 +44,7 @@ class Demo:
         # manipulator to set one of the loaded font names
         set_font('normal')
         # dimensions of the screen widgets frame
-        x, y, w, h = 10, self.screen.get_rect().height - 210, 228, 200
+        x, y, w, h = 10, self.screen.get_rect().height - 180, 228, 170
         rec = Rect(x, y, w, h)
         frame = add(Frame('panel', rec))
         # gui_do label
@@ -55,17 +55,19 @@ class Demo:
         sb4 = add(Scrollbar('S1', Rect(x + 10, y + h - 30, 180, 20), True))
         sb4.set(100, 0, 30)
         # vertical scrollbar
-        sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 40, 20, 150), False))
+        sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 10, 20, 150), False))
         sb3.set(100, 0, 30)
-        # exit button
-        add(Button('exit', Rect(x + 50, y + 145, 100, 20), 'Exit'), self.exit)
         # fps controls
-        self.fps_label = add(Label(Rect(x + 10, y + 116, 70, 20), 'N/A', 60))
-        set_grid_properties((x + 10, y + 60), 70, 20, 5)
+        self.fps_label = add(Label(Rect(x + 10, y + h - 110, 70, 20), 'N/A', 60))
+        set_grid_properties((x + 10, y + h - 90), 70, 20, 5)
         self.fps_control = add(PushButtonGroup('60fps', gridded(0, 0), '60 fps', 'fps', 1))
         add(PushButtonGroup('fpsupcapped', gridded(1, 0), 'Uncapped', 'fps', 1))
-        self.box_control = add(PushButtonGroup('boxon', gridded(0, 1), 'Boxes On', 'bx1', 1))
-        add(PushButtonGroup('boxoff', gridded(1, 1), 'Boxes Off', 'bx1', 1))
+        # exit button and boxes toggle
+        set_grid_properties((x + 10, y + h - 60), 70, 20, 5)
+        # exit button
+        add(Button('exit', gridded(0, 0), 'Exit'), self.exit)
+        # boxes toggle
+        self.box_control = add(ToggleButton('toggle', gridded(1, 0), True, 'Boxes'))
         #
         # main window setup
         #
@@ -171,14 +173,10 @@ class Demo:
                 fps = 60
             else:
                 fps = 0
-            if self.box_control.read() == 'boxon':
-                do_boxes = True
-            else:
-                do_boxes = False
             self.fps_label.set_label(f'FPS: {round(clock.get_fps())}')
             self.window_pushbox_label.set_label(f'{self.window_push_box_widget.read()}')
             self.window_radio_label.set_label(f'{self.window_radio_box_widget.read()}')
-            if do_boxes:
+            if self.box_control.read():
                 new_areas = []
                 for x, y, dx, dy in areas:
                     x += dx
@@ -201,7 +199,7 @@ class Demo:
             #
             # restore saved areas that were drawn over
             #
-            if do_boxes:
+            if self.box_control.read():
                 for x, y, dx, dy in new_areas:
                     area = Rect(x, y, size, size)
                     # restore a bitmap area from the screen's pristine bitmap to the main surface
