@@ -85,7 +85,7 @@ class Demo:
         set_font('gui_do')
         label = Label((0, 0), 'gui_do')
         set_last_font()
-        # main window label
+        # centre it within the window
         frame = Rect(x, y, width, height)
         label.rect.x = frame.x + centre(frame.width, label.rect.width)
         label.rect.y = y
