@@ -65,6 +65,11 @@ class GuiManager:
         self.last_screen_object = None
         # the pristine state of the screen bitmap
         self.pristine = None
+        # if locked is true then the mouse is switched to relative mode within the lock
+        # area. switching to relative mode is because the mouse set_pos() function is very
+        # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
+        # a Linux platform-specific bug
+        self.locked = False
 
     def screen_save_pristine(self, image=None):
         # update the screen pristine bitmap, if passed an image it will also load and blit that
