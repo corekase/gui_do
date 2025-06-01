@@ -151,9 +151,19 @@ def set_surface(surface):
 
 def set_backdrop(image):
     # set the backdrop for the screen surface
+    # if passed an image it will also load and blit that to the screen surface and then
+    # update the pristine bitmap. if passed, the image will be scaled to the screen size
     from .guimanager import GuiManager
     gui = GuiManager()
-    gui.screen_save_pristine(image)
+    if image != None:
+        data_path = os.path.join('data', 'images')
+        bitmap = pygame.image.load(os.path.join(data_path, image))
+        _, _, width, height = gui.surface.get_rect()
+        scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
+        gui.surface.blit(scaled_bitmap.convert(), (0, 0))
+    else:
+        raise Exception('set_backdrop() requires an image')
+    gui.pristine = copy_graphic_area(gui.surface, gui.surface.get_rect()).convert()
 
 def update_pristine(area=None):
     # copy area from screen surface to the pristine surface

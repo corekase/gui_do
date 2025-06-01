@@ -71,18 +71,6 @@ class GuiManager:
         # a Linux platform-specific bug
         self.locked = False
 
-    def screen_save_pristine(self, image=None):
-        # update the screen pristine bitmap, if passed an image it will also load and blit that
-        # to the screen surface and then update the pristine bitmap. if passed, the image will be
-        # scaled to the screen size
-        if image != None:
-            data_path = os.path.join('data', 'images')
-            bitmap = pygame.image.load(os.path.join(data_path, image))
-            _, _, width, height = self.surface.get_rect()
-            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-            self.surface.blit(scaled_bitmap.convert(), (0, 0))
-        self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
-
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
