@@ -243,6 +243,12 @@ class GuiManager:
 
     def set_lock_area(self, area=None):
         # lock area rect is in screen coordinates
+        if area != None:
+            # switch to relative mouse mode
+            self.locked = True
+        else:
+            # switch to absolute mouse mode
+            self.locked = False
         self.lock_area_rect = area
 
     def lock_area(self, position):
