@@ -72,12 +72,12 @@ class BitmapFactory:
         return saved
 
     def draw_radio_pushbutton_bitmaps(self, text, rect):
-        idle_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['light'], colours['dark'])
-        hover_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
-        armed_bitmap = self.draw_radio_pushbutton_bitmap(text, rect, colours['highlight'], colours['dark'])
+        idle_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['light'], colours['dark'])
+        hover_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
+        armed_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
         return idle_bitmap, hover_bitmap, armed_bitmap
 
-    def draw_radio_pushbutton_bitmap(self, text, rect, col1, col2, highlight=False):
+    def draw_radio_pushbutton_bitmap(self, text, col1, col2, highlight=False):
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = pygame.surface.Surface((text_height, text_height), pygame.SRCALPHA)
