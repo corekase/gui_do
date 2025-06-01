@@ -3,8 +3,8 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import set_surface, set_backdrop, centre, load_font, set_font, set_last_font
-from gui import set_grid_properties, gridded, set_cursor, add, restore_pristine
-from gui import GuiManager, GKind, Window
+from gui import set_grid_properties, gridded, set_cursor, add, restore_pristine, window
+from gui import GuiManager, GKind
 from gui import Button, Image, ToggleButton, Label, Frame, FrState
 
 class Demo:
@@ -34,7 +34,7 @@ class Demo:
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # realize window
         window_x, window_y, width, height = 50, 110, 180, 205
-        Window('Realize', (window_x, window_y), (width, height))
+        window('Realize', (window_x, window_y), (width, height))
         # add an image
         add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button

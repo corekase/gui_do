@@ -143,6 +143,11 @@ def add(widget, callback=None):
         gui.widgets.append(widget)
     return widget
 
+def window(title, pos, size):
+    # window constructor, return the window object if it is needed
+    from .forms.window import Window
+    return Window(title, pos, size)
+
 def set_surface(surface):
     # set the surface the gui manager draws to
     from .guimanager import GuiManager

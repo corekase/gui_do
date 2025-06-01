@@ -1,10 +1,10 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import set_surface, file_resource, centre, load_font, set_font, set_last_font
+from gui import set_surface, window, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, set_backdrop
 from gui import set_active_object, set_cursor, add
-from gui import GuiManager, GKind, Window
+from gui import GuiManager, GKind
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 
 class Demo:
@@ -78,7 +78,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('gui_do', (window_x, window_y), (width, height))
+        window('gui_do', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 10, y + 45), 140, 20, 4)
         #
@@ -126,7 +126,7 @@ class Demo:
         window_x = 50
         window_y = 150
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('Win 1', (window_x, window_y), (width, height))
+        window('Win 1', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 5, y + 5), 50, 20, 4)
         #
@@ -148,7 +148,7 @@ class Demo:
         window_x = 50
         window_y = 250
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('Win 2', (window_x, window_y), (width, height))
+        window('Win 2', (window_x, window_y), (width, height))
         # set grid layout properties
         set_grid_properties((x + 5, y + 5), 50, 20, 4)
         #
