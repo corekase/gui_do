@@ -32,7 +32,7 @@ class Window:
         set_active_object(self)
         # set the window to the position passed in
         self.set_pos(pos)
-        self.title_bar_bitmap = factory.draw_title_bar_bitmap(title, self.width, self.height)
+        self.title_bar_bitmap = factory.draw_window_title_bar_bitmap(title, self.width, self.height)
         self.title_bar_rect = self.title_bar_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
 

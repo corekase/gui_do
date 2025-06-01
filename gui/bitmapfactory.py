@@ -14,7 +14,7 @@ class BitmapFactory:
     # that factory and it is themed differently from the test theme. since bitmaps are all created
     # and stored at instance creation, you could have different factories used for different windows
     # and/or widgets existing and being managed at the same time by the gui
-    def draw_title_bar_bitmap(self, title, width, size):
+    def draw_window_title_bar_bitmap(self, title, width, size):
         from .widgets.frame import Frame, State
         set_font('titlebar')
         text_bitmap = render_text(title)
