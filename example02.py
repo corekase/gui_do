@@ -140,7 +140,6 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        do_boxes = True
         boxes = 200
         # setup a frame to draw on our surface
         size = 12
