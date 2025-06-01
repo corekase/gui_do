@@ -19,7 +19,7 @@ class PushButtonGroup(Widget):
         self.group = group
         self.style = style
         self.idle, self.hover, self.armed = factory.get_pushbutton_style_bitmaps(style, text, rect)
-        self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, self.idle.get_rect().height)
+        self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, rect.height)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
