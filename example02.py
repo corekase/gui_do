@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GuiManager, GKind, Window, Label, Frame, State, Button, PushButtonGroup, Scrollbar, ToggleButton
-from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, restore
+from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, restore_pristine
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -202,7 +202,7 @@ class Demo:
                 for x, y, dx, dy in new_areas:
                     area = Rect(x, y, size, size)
                     # restore a bitmap area from the screen's pristine bitmap to the main surface
-                    restore(area)
+                    restore_pristine(area)
                 # swap the lists to start again
                 areas = new_areas
         pygame.quit()

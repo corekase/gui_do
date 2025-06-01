@@ -155,10 +155,22 @@ def set_backdrop(image):
     gui = GuiManager()
     gui.screen_save_pristine(image)
 
-def restore(area):
-    # restores a graphic area from the screen's pristine bitmap to the
-    # screen surface
+def update_pristine(area=None):
+    # copy area from screen surface to the pristine surface
+    # if area is None then update entire surface
     from .guimanager import GuiManager
     gui = GuiManager()
+    if area == None:
+        area = gui.surface.get_rect()
+    x, y, _, _ = area
+    gui.pristine.blit(gui.surface, (x, y), area)
+
+def restore_pristine(area=None):
+    # restores a graphic area from the screen's pristine bitmap to the
+    # screen surface. if area is None then restore entire surface
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    if area == None:
+        area = gui.pristine.get_rect()
     x, y, _, _ = area
     gui.surface.blit(gui.pristine, (x, y), area)
