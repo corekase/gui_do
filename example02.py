@@ -2,7 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
-from gui import GuiManager, GKind, Window, Label, Frame, State, Button, PushButtonGroup, Scrollbar, ToggleButton
+from gui import GuiManager, GKind, Window, Label, Frame, FrState, Button, PushButtonGroup, Scrollbar, ToggleButton
 from gui import set_surface, load_font, set_font, add, set_cursor, set_backdrop, restore_pristine
 from gui import centre, set_grid_properties, gridded
 
@@ -145,7 +145,7 @@ class Demo:
         # setup a frame to draw on our surface
         size = 12
         frame = Frame('none', Rect(0, 0, size, size))
-        frame.state = State.Armed
+        frame.state = FrState.Armed
         # create our bitmap
         frame_bitmap = pygame.surface.Surface((size, size))
         # point the frame object at it

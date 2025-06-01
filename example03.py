@@ -5,7 +5,7 @@ from pygame.locals import K_ESCAPE
 from gui import set_surface, set_backdrop, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, set_cursor, add, restore_pristine
 from gui import GuiManager, GKind, Window
-from gui import Button, Image, ToggleButton, Label, Frame, State
+from gui import Button, Image, ToggleButton, Label, Frame, FrState
 
 class Demo:
     def __init__(self):
@@ -28,7 +28,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # add a title label to the screen
         set_font('gui_do')
-        add(Label((50, 20), 'gui_do'))
+        self.label = add(Label((50, 20), 'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -54,13 +54,15 @@ class Demo:
         # setup a frame to draw on our surface
         size = 12
         frame = Frame('none', Rect(0, 0, size, size))
-        frame.state = State.Armed
+        frame.state = FrState.Armed
         # create our bitmap
         frame_bitmap = pygame.surface.Surface((size, size))
         # point the frame object at it
         frame.surface = frame_bitmap
         # and render onto that surface
         frame.draw()
+        # pre-load the label's pristine bitmap
+        self.label.draw()
         max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
         areas = []
         for _ in range(boxes):
