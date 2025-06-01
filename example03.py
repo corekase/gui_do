@@ -49,6 +49,8 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
+        # pre-load the label's pristine bitmap
+        self.label.draw()
         # number of boxes to draw on screen
         boxes = 200
         # setup a frame to draw on our surface
@@ -61,8 +63,6 @@ class Demo:
         frame.surface = frame_bitmap
         # and render onto that surface
         frame.draw()
-        # pre-load the label's pristine bitmap
-        self.label.draw()
         max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
         areas = []
         for _ in range(boxes):
