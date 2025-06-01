@@ -16,7 +16,7 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
-        # blit a background image
+        # blit a background image to the screen surface
         self.screen.blit(pygame.image.load(file_resource('images', 'watercolor-green-wallpaper-modified.jpg')).convert(), (0, 0))
         # create a gui manager
         self.gui = GuiManager()
