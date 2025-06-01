@@ -63,7 +63,7 @@ class Demo:
         self.fps_control = add(PushButtonGroup('60_fps', gridded(0, 0), '60 fps', 'fps', 1))
         add(PushButtonGroup('full_fps', gridded(1, 0), 'Uncapped', 'fps', 1))
         # exit button and boxes toggle
-        set_grid_properties((x + 10, y + h - 60), 70, 20, 5)
+        set_grid_properties((x + 12, y + h - 60), 85, 20, 5)
         # exit button
         add(Button('exit', gridded(0, 0), 'Exit'), self.exit)
         # boxes toggle
