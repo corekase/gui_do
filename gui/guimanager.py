@@ -51,7 +51,7 @@ class GuiManager:
         # current mouse position
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_rel = (0, 0)
-        # if locked is true then the mouse is switched to relative mode and then mouse_locked_pos
+        # if locked is true then the mouse is switched to relative mode and then mouse_pos
         # is updated with mouse_rel, the lock area is applied to that variable, and the mouse cursor
         # is drawn at mouse_locked_pos instead of the normal mouse_pos when locked is false then
         # mouse position goes back to mouse_pos
@@ -59,15 +59,13 @@ class GuiManager:
         # switching to relative mode is because the mouse set_pos() function is very
         # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
         # a Linux platform-specific bug
-        self.locked = False
-        # current lock cursor position
-        self.mouse_locked_pos = None
+        self.mouse_locked = False
+        # area rect to keep the mouse position within
+        self.lock_area_rect = None
         # cursor image and hotspot
         self.cursor_image = None
         self.cursor_hotspot = None
         self.cursor_rect = None
-        # area rect to keep the mouse position within
-        self.lock_area_rect = None
         # object_bank[name][bank][screen|windows]=lists
         self.object_bank = {}
         # which window is active
@@ -119,8 +117,14 @@ class GuiManager:
     def handle_event(self, event):
         # update internal mouse position
         if event.type == MOUSEMOTION:
-            self.mouse_pos = self.lock_area(event.pos)
-            self.mouse_rel = event.rel
+            if self.mouse_locked:
+                x, y = self.mouse_pos
+                dx, dy = event.rel
+                x += dx
+                y += dy
+                self.mouse_pos = (x, y)
+            else:
+                self.mouse_pos = self.lock_area(event.pos)
         # check for alt-f4 or window quit button
         if event.type == QUIT:
             return self.event({'quit': None})
@@ -241,31 +245,26 @@ class GuiManager:
         # lock area rect is in screen coordinates
         if area != None:
             # switch to relative mouse mode
-            self.locked = True
+            self.mouse_locked = True
         else:
             # switch to absolute mouse mode
-            self.locked = False
+            self.mouse_locked = False
+            pygame.mouse.set_pos(self.mouse_pos)
         self.lock_area_rect = area
 
     def lock_area(self, position):
         # keep the position within the lock area rect
         if self.lock_area_rect != None:
-            x, y = position
-            adjusted = False
+            x, y = self.mouse_pos
             if x < self.lock_area_rect.left:
                 x = self.lock_area_rect.left
-                adjusted = True
             elif x > self.lock_area_rect.right:
                 x = self.lock_area_rect.right
-                adjusted = True
             if y < self.lock_area_rect.top:
                 y = self.lock_area_rect.top
-                adjusted = True
             elif y > self.lock_area_rect.bottom:
                 y = self.lock_area_rect.bottom
-                adjusted = True
-            if adjusted:
-                pygame.mouse.set_pos(x, y)
+            self.mouse_pos = (x, y)
             return (x, y)
         else:
             return position
