@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
-from ..utility import copy_graphic_area, set_active_object, colours
+from ..utility import copy_graphic_area, set_active_object, restore_pristine, colours
 from ..widgets.frame import Frame, FrState
 
 class Window:
@@ -35,6 +35,12 @@ class Window:
         self.title_bar_bitmap = factory.draw_window_title_bar_bitmap(title, self.width, self.height)
         self.title_bar_rect = self.title_bar_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
+        # whether or not the window is visible
+        self.visible = True
+
+    def handle_window(self):
+        # called when the gui manager is entering a window to process its widgets
+        restore_pristine(self.surface.get_rect(), self)
 
     def window_save_pristine(self):
         # update the window pristine bitmap

@@ -191,7 +191,9 @@ def restore_pristine(area=None, obj=None):
     # screen surface. if area is None then restore entire surface
     from .guimanager import GuiManager
     gui = GuiManager()
+    if obj == None:
+        obj = gui
     if area == None:
-        area = gui.pristine.get_rect()
+        area = obj.pristine.get_rect()
     x, y, _, _ = area
-    gui.surface.blit(gui.pristine, (x, y), area)
+    obj.surface.blit(obj.pristine, (x, y), area)

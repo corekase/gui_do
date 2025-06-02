@@ -28,8 +28,8 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        window1_toggle = add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), False, 'Window 1 Visible'))
-        window2_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), False, 'Window 2 Visible'))
+        self.window1_toggle = add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), False, 'Window 1 Visible'))
+        self.window2_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), False, 'Window 2 Visible'))
         # realize window
         _, _, screen_width, screen_height = self.screen.get_rect()
         window_width, window_height = 180, 205
@@ -37,7 +37,7 @@ class Demo:
         centre_y = centre(screen_height, window_height)
         window('Realize', (centre_x, centre_y), (window_width, window_height))
         # add an image
-        add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
+        self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
         self.toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'On', 'Off'))
         # set cursor image
@@ -79,6 +79,8 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            self.image.visible = self.toggle.read()
+            self.toggle.visible = self.window1_toggle.read()
             new_areas = []
             for x, y, dx, dy in areas:
                 x += dx
