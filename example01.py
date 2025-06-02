@@ -168,7 +168,7 @@ class Demo:
         #
         set_active_object(None)
         # set cursor image
-        set_cursor((1, 1), 'Icons8_cursor.png')
+        set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
         # drop test for consumed events

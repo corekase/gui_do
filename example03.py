@@ -54,7 +54,7 @@ class Demo:
         self.sb2 = add(Scrollbar('ver_scroll', Rect(170, 10, 20, 205), False))
         self.sb2.set(100, 0, 30)
         # set cursor image
-        set_cursor((1, 1), 'Icons8_cursor.png')
+        set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
 
