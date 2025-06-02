@@ -60,6 +60,7 @@ class GuiManager:
         # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
         # a Linux platform-specific bug
         self.mouse_locked = False
+        self.locked_pos = None
         # area rect to keep the mouse position within
         self.lock_area_rect = None
         # cursor image and hotspot
@@ -123,6 +124,7 @@ class GuiManager:
                 x += dx
                 y += dy
                 self.mouse_pos = (x, y)
+                self.locked_pos = (x, y)
             else:
                 self.mouse_pos = self.lock_area(event.pos)
         # check for alt-f4 or window quit button
@@ -246,11 +248,13 @@ class GuiManager:
         if area != None:
             # switch to relative mouse mode
             self.mouse_locked = True
+            self.locked_pos = self.mouse_pos
         else:
             if self.mouse_locked:
                 pygame.mouse.set_pos(self.mouse_pos)
             # switch to absolute mouse mode
             self.mouse_locked = False
+            self.locked_pos = None
         self.lock_area_rect = area
 
     def lock_area(self, position):
@@ -265,7 +269,7 @@ class GuiManager:
                 y = self.lock_area_rect.top
             elif y > self.lock_area_rect.bottom:
                 y = self.lock_area_rect.bottom
-            self.mouse_pos = (x, y)
+            self.locked_pos = (x, y)
             return (x, y)
         else:
             return position
@@ -297,6 +301,8 @@ class GuiManager:
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))
         # draw mouse cursor
+        if self.locked_pos != None:
+            self.mouse_pos = self.locked_pos
         cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
                            self.cursor_rect.width, self.cursor_rect.height)
         self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
