@@ -247,9 +247,10 @@ class GuiManager:
             # switch to relative mouse mode
             self.mouse_locked = True
         else:
+            if self.mouse_locked:
+                pygame.mouse.set_pos(self.mouse_pos)
             # switch to absolute mouse mode
             self.mouse_locked = False
-            pygame.mouse.set_pos(self.mouse_pos)
         self.lock_area_rect = area
 
     def lock_area(self, position):
