@@ -50,16 +50,9 @@ class GuiManager:
         self.dragging_window = None
         # current mouse position
         self.mouse_pos = pygame.mouse.get_pos()
-        self.mouse_rel = (0, 0)
-        # if locked is true then the mouse is switched to relative mode and then mouse_pos
-        # is updated with mouse_rel, the lock area is applied to that variable, and the mouse cursor
-        # is drawn at mouse_locked_pos instead of the normal mouse_pos when locked is false then
-        # mouse position goes back to mouse_pos
-        #
-        # switching to relative mode is because the mouse set_pos() function is very
-        # expensive on Linux and tanks the framerate. Windows is unaffected by that, it's
-        # a Linux platform-specific bug
+        # whether the mouse is in a locked area state
         self.mouse_locked = False
+        # where the mouse pointer is when an area is locked
         self.locked_pos = None
         # area rect to keep the mouse position within
         self.lock_area_rect = None
@@ -119,6 +112,10 @@ class GuiManager:
         # update internal mouse position
         if event.type == MOUSEMOTION:
             if self.mouse_locked:
+                # switching to relative mode is because the mouse set_pos() function is very
+                # expensive on Linux and tanks the framerate if called too much. Windows is
+                # unaffected by that, it's a Linux platform-specific bug and by being relative
+                # for the lock area set_pos is only called once, when the lock area is released
                 x, y = self.mouse_pos
                 dx, dy = event.rel
                 x += dx
