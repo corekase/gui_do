@@ -35,7 +35,7 @@ class Demo:
         window_width, window_height = 200, 225
         centre_x = centre(screen_width, window_width)
         centre_y = centre(screen_height, window_height)
-        self.win = window('Realize', (centre_x, centre_y), (window_width, window_height), 'gradient.jpg')
+        self.win = window('Realize', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
         # add an image
         self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
