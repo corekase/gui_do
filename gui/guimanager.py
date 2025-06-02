@@ -301,7 +301,7 @@ class GuiManager:
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))
         # draw mouse cursor
-        if self.locked_pos != None:
+        if self.mouse_locked:
             self.mouse_pos = self.locked_pos
         cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
                            self.cursor_rect.width, self.cursor_rect.height)
