@@ -27,6 +27,9 @@ class Widget:
         from ..utility import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
+    def set_visible(self, visible):
+        self.visible = visible
+
     def handle_event(self, _, _a):
         # implement in subclasses
         pass
