@@ -2,10 +2,10 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import set_surface, set_backdrop, centre, load_font, set_font, set_last_font
-from gui import set_grid_properties, gridded, set_cursor, add, restore_pristine, window
+from gui import set_surface, set_backdrop, centre, load_font
+from gui import set_cursor, add, restore_pristine, window
 from gui import GuiManager, GKind
-from gui import Button, Image, ToggleButton, Label, Frame, FrState
+from gui import Button, Image, ToggleButton, Frame, FrState, Scrollbar
 
 class Demo:
     def __init__(self):
@@ -32,7 +32,7 @@ class Demo:
         self.togglebutton_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), True, 'Togglebutton Visible'))
         # realize window
         _, _, screen_width, screen_height = self.screen.get_rect()
-        window_width, window_height = 180, 205
+        window_width, window_height = 200, 225
         centre_x = centre(screen_width, window_width)
         centre_y = centre(screen_height, window_height)
         self.win = window('Realize', (centre_x, centre_y), (window_width, window_height), 'gradient.jpg')
@@ -40,6 +40,12 @@ class Demo:
         self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
         self.image_toggle = add(ToggleButton('toggle3', Rect(15, 170, 145, 20), True, 'Image Visible'))
+        # horizontal scrollbar
+        sb1 = add(Scrollbar('hor_scroll', Rect(10, 195, 150, 20), True))
+        sb1.set(100, 0, 30)
+        # vertical scrollbar
+        sb2 = add(Scrollbar('ver_scroll', Rect(170, 10, 20, 205), False))
+        sb2.set(100, 0, 30)
         # set cursor image
         set_cursor((1, 1), 'Icons8_cursor.png')
         # set running flag
