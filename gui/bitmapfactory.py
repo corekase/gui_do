@@ -108,8 +108,8 @@ class BitmapFactory:
         glyph = pygame.surface.Surface((300, 300), pygame.SRCALPHA)
         # draw polygon
         points = ((0, 100), (0, 200), (200, 200), (200, 300), (300, 150), (200, 0), (200, 100))
-        pygame.draw.polygon(glyph, ['full'], points, 0)
-        pygame.draw.polygon(glyph, ['none'], points, 1)
+        pygame.draw.polygon(glyph, colours['full'], points, 0)
+        pygame.draw.polygon(glyph, colours['none'], points, 1)
         # rotate polygon to direction
         glyph = pygame.transform.rotate(glyph, direction)
         # scale polygon to bitmap size
