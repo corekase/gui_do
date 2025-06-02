@@ -297,9 +297,10 @@ class GuiManager:
                 # draw the widget
                 widget.draw()
             self.surface.blit(window.surface, (window.x, window.y))
-        # draw mouse cursor
+        # if locked mode is active always use the locked mode mouse position
         if self.mouse_locked:
             self.mouse_pos = self.locked_pos
+        # draw mouse cursor
         cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
                            self.cursor_rect.width, self.cursor_rect.height)
         self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
