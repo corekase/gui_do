@@ -28,6 +28,8 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        window1_toggle = add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), False, 'Window 1 Visible'))
+        window2_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), False, 'Window 2 Visible'))
         # realize window
         _, _, screen_width, screen_height = self.screen.get_rect()
         window_width, window_height = 180, 205
