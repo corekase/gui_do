@@ -147,7 +147,7 @@ def add(widget, callback=None):
 window_bank = None
 def window(title, pos, size, bank=None):
     # the purpose of this manipulator instead of calling Window directly
-    # is so that extra information like the window bank can be used
+    # is so that extra information like the window bank can be used.
     # window constructor, return the window object if it is needed
     global window_bank
     from .forms.window import Window
