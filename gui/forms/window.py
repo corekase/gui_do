@@ -2,11 +2,11 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
-from ..utility import copy_graphic_area, set_active_object, restore_pristine, colours
+from ..utility import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, colours
 from ..widgets.frame import Frame, FrState
 
 class Window:
-    def __init__(self, title, pos, size):
+    def __init__(self, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui = GuiManager()
         factory = BitmapFactory()
@@ -17,12 +17,15 @@ class Window:
         self.titlebar_size = 20
         # window surface
         self.surface = pygame.surface.Surface(size).convert()
-        # make a frame for the backdrop of the window surface
-        frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
-        frame.state = FrState.Idle
-        frame.surface = self.surface
-        frame.draw()
         self.pristine = None
+        if backdrop == None:
+            # make a frame for the backdrop of the window surface
+            frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
+            frame.state = FrState.Idle
+            frame.surface = self.surface
+            frame.draw()
+        else:
+            set_backdrop(backdrop, self)
         self.window_save_pristine()
         # widgets on that surface
         self.widgets = []

@@ -145,13 +145,13 @@ def add(widget, callback=None):
 
 # active window bank
 window_bank = None
-def window(title, pos, size, bank=None):
+def window(title, pos, size, backdrop=None):
     # the purpose of this manipulator instead of calling Window directly
     # is so that extra information like the window bank can be used.
     # window constructor, return the window object if it is needed
     global window_bank
     from .forms.window import Window
-    return Window(title, pos, size)
+    return Window(title, pos, size, backdrop)
 
 def set_surface(surface):
     # set the surface the gui manager draws to
@@ -168,9 +168,9 @@ def set_backdrop(image, obj=None):
     if image != None:
         data_path = os.path.join('data', 'images')
         bitmap = pygame.image.load(os.path.join(data_path, image))
-        _, _, width, height = gui.surface.get_rect()
+        _, _, width, height = obj.surface.get_rect()
         scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-        obj.surface.blit(scaled_bitmap.convert(), (0, 0))
+        obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
     else:
         raise Exception('set_backdrop() requires an image')
     obj.pristine = copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
