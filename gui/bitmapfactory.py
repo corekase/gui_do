@@ -94,6 +94,36 @@ class BitmapFactory:
         button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
         return button_complete
 
+    def draw_arrow_state_bitmaps(self, rect, direction):
+        # draw idle, hover, and armed bitmaps for the passed direction
+        # and return a list of those three
+        states = self.draw_frame_bitmaps(rect)
+        glyph_set = []
+        if rect.width <= rect.height:
+            size = rect.width
+        else:
+            size = rect.height
+        # create a polygon for the glyph then draw it in full colour filled
+        # then draw the polygon again in none colour 1 pixel outline
+        glyph = pygame.surface.Surface((300, 300), pygame.SRCALPHA)
+        # draw polygon
+        points = ((0, 100), (0, 200), (200, 200), (200, 300), (300, 150), (200, 0), (200, 100))
+        pygame.draw.polygon(glyph, ['full'], points, 0)
+        pygame.draw.polygon(glyph, ['none'], points, 1)
+        # rotate polygon to direction
+        glyph = pygame.transform.rotate(glyph, direction)
+        # scale polygon to bitmap size
+        glyph = pygame.transform.smoothscale(glyph, (size, size))
+        # centre the glyph in the state bitmap area
+        glyph_x = centre(rect.width, size)
+        glyph_y = centre(rect.height, size)
+        # draw each state with the glyph
+        for state in states:
+            # for each state of the frame bitmap add a glyph bitmap over it
+            state.blit(glyph, (glyph_x, glyph_y))
+            glyph_set.append(state)
+        return glyph_set
+
     def draw_frame_bitmaps(self, rect):
         x, y, w, h = rect
         saved = []
