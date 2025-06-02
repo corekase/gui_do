@@ -19,7 +19,4 @@ class Label(Widget):
         return False
 
     def draw(self):
-        if self.pristine == None:
-            self.save_pristine()
-        self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
         self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))

@@ -163,25 +163,29 @@ def set_backdrop(image, obj=None):
     # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
     from .guimanager import GuiManager
     gui = GuiManager()
+    if obj == None:
+        obj = gui
     if image != None:
         data_path = os.path.join('data', 'images')
         bitmap = pygame.image.load(os.path.join(data_path, image))
         _, _, width, height = gui.surface.get_rect()
         scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-        gui.surface.blit(scaled_bitmap.convert(), (0, 0))
+        obj.surface.blit(scaled_bitmap.convert(), (0, 0))
     else:
         raise Exception('set_backdrop() requires an image')
-    gui.pristine = copy_graphic_area(gui.surface, gui.surface.get_rect()).convert()
+    obj.pristine = copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
 def update_pristine(area=None, obj=None):
     # copy area from screen surface to the pristine surface
     # if area is None then update entire surface
     from .guimanager import GuiManager
     gui = GuiManager()
+    if obj == None:
+        obj = gui
     if area == None:
-        area = gui.surface.get_rect()
+        area = obj.surface.get_rect()
     x, y, _, _ = area
-    gui.pristine.blit(gui.surface, (x, y), area)
+    obj.pristine.blit(obj.surface, (x, y), area)
 
 def restore_pristine(area=None, obj=None):
     # if obj is ommited then restore_pristine is from the screen pristine.

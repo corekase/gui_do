@@ -179,26 +179,27 @@ class GuiManager:
             widget_hit = None
             working_windows = self.windows.copy()[::-1]
             for window in working_windows:
-                if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                    window_consumed = True
-                    for widget in window.widgets:
-                            if widget.visible:
-                                if self.handle_widget(widget, event, window):
-                                    self.last_window_object = widget
-                                    return self.event({'widget_id': widget.id})
-                                collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
-                                if collision:
-                                    widget_consumed = True
-                                    widget_hit = widget
-                if self.last_window_object != widget_hit:
-                    if self.last_window_object != None:
-                        self.last_window_object.leave()
-                    if self.last_screen_object != None:
-                        self.last_screen_object.leave()
-                        self.last_screen_object = None
-                    self.last_window_object = widget_hit
-                if window_consumed or widget_consumed:
-                    return self.event(None)
+                if window.visible:
+                    if window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                        window_consumed = True
+                        for widget in window.widgets:
+                                if widget.visible:
+                                    if self.handle_widget(widget, event, window):
+                                        self.last_window_object = widget
+                                        return self.event({'widget_id': widget.id})
+                                    collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
+                                    if collision:
+                                        widget_consumed = True
+                                        widget_hit = widget
+                    if self.last_window_object != widget_hit:
+                        if self.last_window_object != None:
+                            self.last_window_object.leave()
+                        if self.last_screen_object != None:
+                            self.last_screen_object.leave()
+                            self.last_screen_object = None
+                        self.last_window_object = widget_hit
+                    if window_consumed or widget_consumed:
+                        return self.event(None)
         else:
             # handle screen widgets
             consumed = False
@@ -293,15 +294,16 @@ class GuiManager:
             if widget.visible:
                 widget.draw()
         for window in self.windows:
-            # save the bitmap area under the window
-            self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
-            window.draw_title_bar()
-            window.handle_window()
-            for widget in window.widgets:
-                # draw the widget
-                if widget.visible:
-                    widget.draw()
-            self.surface.blit(window.surface, (window.x, window.y))
+            if window.visible:
+                # save the bitmap area under the window
+                self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
+                window.draw_title_bar()
+                window.draw_window()
+                for widget in window.widgets:
+                    # draw the widget
+                    if widget.visible:
+                        widget.draw()
+                self.surface.blit(window.surface, (window.x, window.y))
         # if locked mode is active always use the locked mode mouse position
         if self.mouse_locked:
             self.mouse_pos = self.locked_pos

@@ -38,10 +38,6 @@ class Window:
         # whether or not the window is visible
         self.visible = True
 
-    def handle_window(self):
-        # called when the gui manager is entering a window to process its widgets
-        restore_pristine(self.surface.get_rect(), self)
-
     def window_save_pristine(self):
         # update the window pristine bitmap
         # the window pristine bitmap can be used to undo widget bitmap damage to the contents
@@ -50,6 +46,10 @@ class Window:
     def draw_title_bar(self):
         self.gui.surface.blit(self.title_bar_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+
+    def draw_window(self):
+        # called when the gui manager is entering a window to process its widgets
+        restore_pristine(self.surface.get_rect(), self)
 
     def get_title_bar_rect(self):
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)

@@ -14,9 +14,5 @@ class Image(Widget):
         return False
 
     def draw(self):
-        # images may be transparent so save bitmap underneath
-        if self.pristine == None:
-            self.save_pristine()
-        self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
         # draw the image bitmap
         self.surface.blit(self.image, self.rect)

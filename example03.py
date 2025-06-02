@@ -35,7 +35,7 @@ class Demo:
         window_width, window_height = 180, 205
         centre_x = centre(screen_width, window_width)
         centre_y = centre(screen_height, window_height)
-        window('Realize', (centre_x, centre_y), (window_width, window_height))
+        self.win = window('Realize', (centre_x, centre_y), (window_width, window_height))
         # add an image
         self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
@@ -81,6 +81,7 @@ class Demo:
             self.handle_events()
             self.image.visible = self.toggle.read()
             self.toggle.visible = self.window1_toggle.read()
+            self.win.visible = self.window2_toggle.read()
             new_areas = []
             for x, y, dx, dy in areas:
                 x += dx
