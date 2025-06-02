@@ -190,10 +190,10 @@ class Demo:
             #
             # draw gui
             self.gui.draw_gui()
-            # tick to desired frame-rate
-            clock.tick(fps)
             # buffer to the screen
             pygame.display.flip()
+            # tick to desired frame-rate
+            clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
             #
