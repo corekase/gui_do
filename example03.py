@@ -32,20 +32,20 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # screen toggle buttons
-        add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), True, 'Window Visible'))
-        add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), True, 'Togglebutton Visible'))
-        add(ToggleButton('toggle3', Rect(450, 1050, 170, 20), True, 'Hor Scrollbar Visible'))
-        add(ToggleButton('toggle4', Rect(630, 1050, 170, 20), True, 'Ver Scrollbar Visible'))
+        add(ToggleButton('WindowVisibleToggleButton', Rect(90, 1050, 170, 20), True, 'Window Visible'))
+        add(ToggleButton('ToggleToggleButton', Rect(270, 1050, 170, 20), True, 'Togglebutton Visible'))
+        add(ToggleButton('HorScrollToggleButton', Rect(450, 1050, 170, 20), True, 'Hor Scrollbar Visible'))
+        add(ToggleButton('VerScrollToggleButton', Rect(630, 1050, 170, 20), True, 'Ver Scrollbar Visible'))
         # realize window
         _, _, screen_width, screen_height = self.screen.get_rect()
         window_width, window_height = 200, 225
         centre_x = centre(screen_width, window_width)
         centre_y = centre(screen_height, window_height)
-        self.win = window('Realize', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
+        self.win = window('Example 03 Visibility Demo', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
         # add an image
         self.image_toggle = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
-        self.image_toggle_button = add(ToggleButton('toggle5', Rect(10, 170, 150, 20), True, 'Image Visible'))
+        self.image_toggle_button = add(ToggleButton('ImageToggleButton', Rect(10, 170, 150, 20), True, 'Image Visible'))
         # horizontal scrollbar
         self.sb1 = add(Scrollbar('hor_scroll', Rect(10, 195, 150, 20), True))
         self.sb1.set(100, 0, 30)
@@ -91,7 +91,11 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            # restore pristine bitmap under the label rect
             restore_pristine(self.gui_do_label.get_rect())
+            #
+            # draw boxes
+            #
             new_areas = []
             for x, y, dx, dy in areas:
                 x += dx
@@ -102,7 +106,7 @@ class Demo:
                     dy = -dy
                 self.screen.blit(frame_bitmap, (x, y))
                 new_areas.append((x, y, dx, dy))
-            #
+
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -111,6 +115,9 @@ class Demo:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
+
+            #
+            # undraw boxes
             #
             for x, y, dx, dy in new_areas:
                 area = Rect(x, y, size, size)
@@ -135,15 +142,15 @@ class Demo:
                 self.running = False
                 return
             if event.type == GKind.Widget:
-                if event.widget_id == 'toggle1':
+                if event.widget_id == 'WindowVisibleToggleButton':
                     self.win.set_visible(not self.win.get_visible())
-                elif event.widget_id == 'toggle2':
+                elif event.widget_id == 'ToggleToggleButton':
                     self.image_toggle_button.set_visible(not self.image_toggle_button.get_visible())
-                elif event.widget_id == 'toggle3':
+                elif event.widget_id == 'HorScrollToggleButton':
                     self.sb1.set_visible(not self.sb1.get_visible())
-                elif event.widget_id == 'toggle4':
+                elif event.widget_id == 'VerScrollToggleButton':
                     self.sb2.set_visible(not self.sb2.get_visible())
-                elif event.widget_id == 'toggle5':
+                elif event.widget_id == 'ImageToggleButton':
                     self.image_toggle.set_visible(not self.image_toggle.get_visible())
             elif event.type == GKind.KeyDown:
                 # handle key presses
