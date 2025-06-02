@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import set_surface, set_backdrop, centre, load_font, set_font
 from gui import set_cursor, add, restore_pristine, window
-from gui import GuiManager, GKind
+from gui import GuiManager, GKind, ArrowBox
 from gui import Label, Button, Image, ToggleButton, Frame, FrState, Scrollbar
 
 class Demo:
@@ -35,6 +35,7 @@ class Demo:
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
+        self.a1 = add(ArrowBox('a1', Rect(10, 150, 20, 20), 0))
         self.running = True
 
     def run(self):
