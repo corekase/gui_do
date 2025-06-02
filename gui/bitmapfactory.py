@@ -46,7 +46,6 @@ class BitmapFactory:
     def draw_box_button_bitmaps(self, text, rect):
         x, y, w, h = rect
         saved = []
-        set_font('normal')
         text_bitmap = render_text(text)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height) - 1
@@ -68,7 +67,6 @@ class BitmapFactory:
         self.draw_frame_state_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
-        set_last_font()
         return saved
 
     def draw_radio_pushbutton_bitmaps(self, text, rect):
