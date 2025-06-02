@@ -30,6 +30,9 @@ class Widget:
     def set_visible(self, visible):
         self.visible = visible
 
+    def get_visible(self):
+        return self.visible
+
     def handle_event(self, _, _a):
         # implement in subclasses
         pass

@@ -65,5 +65,8 @@ class Window:
     def set_visible(self, visible):
         self.visible = visible
 
+    def get_visible(self):
+        return self.visible
+
     def set_pos(self, pos):
         self.x, self.y = pos

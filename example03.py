@@ -28,8 +28,8 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        self.togglebutton_toggle = add(ToggleButton('toggle1', Rect(270, 1050, 170, 20), False, 'Togglebutton Visible'))
-        self.window_toggle = add(ToggleButton('toggle2', Rect(90, 1050, 170, 20), False, 'Window Visible'))
+        self.window_toggle = add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), True, 'Window Visible'))
+        self.togglebutton_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), True, 'Togglebutton Visible'))
         # realize window
         _, _, screen_width, screen_height = self.screen.get_rect()
         window_width, window_height = 180, 205
@@ -39,7 +39,7 @@ class Demo:
         # add an image
         self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
-        self.image_toggle = add(ToggleButton('toggle', Rect(15, 170, 145, 20), True, 'Image Visible'))
+        self.image_toggle = add(ToggleButton('toggle3', Rect(15, 170, 145, 20), True, 'Image Visible'))
         # set cursor image
         set_cursor((1, 1), 'Icons8_cursor.png')
         # set running flag
@@ -79,9 +79,6 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
-            self.image.set_visible(self.image_toggle.read())
-            self.image_toggle.set_visible(self.togglebutton_toggle.read())
-            self.win.set_visible(self.window_toggle.read())
             new_areas = []
             for x, y, dx, dy in areas:
                 x += dx
@@ -125,7 +122,12 @@ class Demo:
                 self.running = False
                 return
             if event.type == GKind.Widget:
-                pass
+                if event.widget_id == 'toggle1':
+                    self.win.set_visible(not self.win.get_visible())
+                elif event.widget_id == 'toggle2':
+                    self.image_toggle.set_visible(not self.image_toggle.get_visible())
+                elif event.widget_id == 'toggle3':
+                    self.image.set_visible(not self.image.get_visible())
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
