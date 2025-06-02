@@ -26,10 +26,6 @@ class Demo:
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
-        # add a title label to the screen
-        set_font('gui_do')
-        self.label = add(Label((50, 20), 'gui_do'))
-        set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # realize window
@@ -49,8 +45,6 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # pre-load the label's pristine bitmap
-        self.label.draw()
         # number of boxes to draw on screen
         boxes = 200
         # setup a frame to draw on our surface
