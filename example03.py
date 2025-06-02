@@ -21,7 +21,7 @@ class Demo:
         self.gui = GuiManager()
         set_surface(self.screen)
         # blit a background image to the screen surface
-        set_backdrop('watercolor-green-wallpaper-modified.jpg')
+        set_backdrop('backdrop.jpg')
         # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)

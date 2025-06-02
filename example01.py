@@ -26,7 +26,7 @@ class Demo:
         #
         # blit a background image to the screen surface
         #
-        set_backdrop('watercolor-green-wallpaper-modified.jpg')
+        set_backdrop('backdrop.jpg')
         #
         # load fonts
         load_font('normal', 'Ubuntu-Medium.ttf', 14)

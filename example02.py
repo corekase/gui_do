@@ -27,7 +27,7 @@ class Demo:
         #
         # blit a background image to the screen surface, also saves that into the pristine surface
         #
-        set_backdrop('watercolor-green-wallpaper-modified.jpg')
+        set_backdrop('backdrop.jpg')
         #
         # set cursor image
         #
