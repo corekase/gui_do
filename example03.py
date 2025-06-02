@@ -2,10 +2,10 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import set_surface, set_backdrop, centre, load_font
+from gui import set_surface, set_backdrop, centre, load_font, set_font
 from gui import set_cursor, add, restore_pristine, window
 from gui import GuiManager, GKind
-from gui import Button, Image, ToggleButton, Frame, FrState, Scrollbar
+from gui import Label, Button, Image, ToggleButton, Frame, FrState, Scrollbar
 
 class Demo:
     def __init__(self):
@@ -26,8 +26,12 @@ class Demo:
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
+        # main label
+        set_font('gui_do')
+        self.label = add(Label((50, 50),'gui_do'))
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        # screen toggle buttons
         self.window_toggle = add(ToggleButton('toggle1', Rect(90, 1050, 170, 20), True, 'Window Visible'))
         self.togglebutton_toggle = add(ToggleButton('toggle2', Rect(270, 1050, 170, 20), True, 'Togglebutton Visible'))
         # realize window
@@ -39,7 +43,7 @@ class Demo:
         # add an image
         self.image = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
-        self.image_toggle = add(ToggleButton('toggle3', Rect(15, 170, 145, 20), True, 'Image Visible'))
+        self.image_toggle = add(ToggleButton('toggle3', Rect(10, 170, 150, 20), True, 'Image Visible'))
         # horizontal scrollbar
         sb1 = add(Scrollbar('hor_scroll', Rect(10, 195, 150, 20), True))
         sb1.set(100, 0, 30)
@@ -85,6 +89,7 @@ class Demo:
         while self.running:
             # handle events
             self.handle_events()
+            restore_pristine(self.label.get_rect())
             new_areas = []
             for x, y, dx, dy in areas:
                 x += dx
