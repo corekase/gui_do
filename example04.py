@@ -35,9 +35,9 @@ class Demo:
         sb1.set(100, 0, 30, 10)
         # hook up the arrowboxes to the scrollbar
         y += size + 1
-        add(ArrowBox('1', Rect(x, y, size, size), 0, sb1.increment))
-        y += size + 1
-        add(ArrowBox('3', Rect(x, y, size, size), 180, sb1.decrement))
+        add(ArrowBox('a', Rect(x, y, size, size), 180, sb1.decrement))
+        x += size + 1
+        add(ArrowBox('b', Rect(x, y, size, size), 0, sb1.increment))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
