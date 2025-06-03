@@ -8,12 +8,13 @@ from enum import Enum
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
 
 class Button(Widget):
-    def __init__(self, id, rect, text, callback=None):
+    def __init__(self, id, rect, text, callback=None, skip_factory=False):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
-        factory = BitmapFactory()
-        self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
+        if not skip_factory:
+            factory = BitmapFactory()
+            self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.callback = callback
