@@ -6,14 +6,21 @@ from .utility import set_font, set_last_font, render_text, centre
 from .widgets.widget import colours
 
 class BitmapFactory:
-    # this bitmap factory returns these graphic images. As long as the method names are
-    # the same then this bitmap factory could be switched out for another one and that
-    # would be a form of basic themeing for the gui
-    #
-    # and how it could operate: in a test demo, select a factory, create a test window using
-    # that factory and it is themed differently from the test theme. since bitmaps are all created
-    # and stored at instance creation, you could have different factories used for different windows
-    # and/or widgets existing and being managed at the same time by the gui
+    # the following code makes the BitmapFactory a singleton.
+    # No matter how many times it is instantiated the result is the one object and its state
+    _instance_ = None
+    def __new__(cls):
+        if BitmapFactory._instance_ is None:
+            BitmapFactory._instance_ = object.__new__(cls)
+            BitmapFactory._instance_._populate_()
+        return BitmapFactory._instance_
+
+    # instead of an __init__ we have _populate_ and it is executed exactly once
+    def _populate_(self):
+        # current theme the factory returns bitmaps for
+        # themes aren't implemented yet
+        self.theme = 'built_in'
+
     def draw_window_title_bar_bitmap(self, title, width, size):
         from .widgets.frame import Frame, FrState
         set_font('titlebar')
