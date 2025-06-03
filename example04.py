@@ -31,11 +31,14 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         x, y = 10, 120
-        sb1 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 0)
+        sb1 = ScrollbarArrows('a', Rect(x, y, 300, 20), True, 0)
         sb1.set(100, 0, 30, 10)
         y += 22
-        sb2 = ScrollbarArrows('d', Rect(x, y, 300, 20), True, 1)
+        sb2 = ScrollbarArrows('b', Rect(x, y, 300, 20), True, 1)
         sb2.set(100, 0, 30, 10)
+        y += 22
+        sb3 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 2)
+        sb3.set(100, 0, 30, 10)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
