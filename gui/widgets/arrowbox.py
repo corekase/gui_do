@@ -14,11 +14,9 @@ from .button import Button, State
 class ArrowBox(Button):
     def __init__(self, id, rect, direction, callback=None):
         # initialize common widget values
-        super().__init__(id, rect, None)
+        super().__init__(id, rect, None, callback)
         factory = BitmapFactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)
-        self.state = State.Idle
-        self.callback = callback
 
     def handle_event(self, event, window):
         super().handle_event(event, window)
