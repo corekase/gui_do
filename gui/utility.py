@@ -129,7 +129,7 @@ def gui_init(screen):
     # create a gui manager and set the screen for it
     from .guimanager import GuiManager
     gui = GuiManager()
-    set_surface(screen)
+    gui.surface = screen
     return gui
 
 def add(widget, callback=None):
@@ -159,12 +159,6 @@ def window(title, pos, size, backdrop=None):
     global window_bank
     from .forms.window import Window
     return Window(title, pos, size, backdrop)
-
-def set_surface(surface):
-    # set the surface the gui manager draws to
-    from .guimanager import GuiManager
-    gui = GuiManager()
-    gui.surface = surface
 
 def set_backdrop(image, obj=None):
     # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
