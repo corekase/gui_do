@@ -21,6 +21,8 @@ class Widget:
         self.pristine = None
         # whether or not the widget is visible
         self.visible = True
+        # callback of the widget
+        self.callback = None
 
     def save_pristine(self):
         # update the pristine bitmap
