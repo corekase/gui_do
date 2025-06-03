@@ -48,6 +48,9 @@ class Demo:
         x += 22
         sb6 = ScrollbarArrows('e', Rect(x, y, 20, 300), False, 1)
         sb6.set(100, 0, 30, 10)
+        x += 22
+        sb7 = ScrollbarArrows('f', Rect(x, y, 20, 300), False, 2)
+        sb7.set(100, 0, 30, 10)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag

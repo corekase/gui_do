@@ -158,9 +158,9 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
                 decrement_rect = Rect(width - (height * 2), 0, height, height)
                 increment_rect = Rect(width - height, 0, height, height)
             else:
-                scrollbar_rect = Rect()
-                decrement_rect = Rect()
-                increment_rect = Rect()
+                scrollbar_rect = Rect(0, 0, width, height - (width * 2))
+                decrement_rect = Rect(0, height - (width * 2), width, width)
+                increment_rect = Rect(0, height - width, width, width)
         elif layout == 3:
             if horizontal:
                 decrement_rect = Rect(0, 0, height, height)
