@@ -30,7 +30,7 @@ class Demo:
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        x, y, size = 10, 120, 50
+        x, y, size = 10, 120, 20
         add(ArrowBox('1', Rect(x, y, size, size), 0))
         y += size + 1
         add(ArrowBox('2', Rect(x, y, size, size), 90))
