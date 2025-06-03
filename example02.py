@@ -2,8 +2,8 @@ import pygame
 from random import randrange, choice
 from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
-from gui import GuiManager, GKind, Label, Frame, FrState, Button, PushButtonGroup, Scrollbar, ToggleButton
-from gui import set_surface, window, load_font, set_font, add, set_cursor, set_backdrop, restore_pristine
+from gui import GKind, Label, Frame, FrState, Button, PushButtonGroup, Scrollbar, ToggleButton
+from gui import gui_init, window, load_font, set_font, add, set_cursor, set_backdrop, restore_pristine
 from gui import centre, set_grid_properties, gridded
 
 class Demo:
@@ -19,11 +19,7 @@ class Demo:
         #
         # create a gui manager and it makes the screen the active object
         #
-        self.gui = GuiManager()
-        #
-        # set the drawing surface of the gui manager
-        #
-        set_surface(self.screen)
+        self.gui = gui_init(self.screen)
         #
         # blit a background image to the screen surface, also saves that into the pristine surface
         #

@@ -2,9 +2,9 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import set_surface, set_backdrop, centre, load_font, set_font
+from gui import gui_init, set_backdrop, centre, load_font, set_font
 from gui import set_cursor, add, restore_pristine, window
-from gui import GuiManager, GKind
+from gui import GKind
 from gui import Label, Button, Image, ToggleButton, Frame, FrState, Scrollbar
 
 class Demo:
@@ -18,8 +18,7 @@ class Demo:
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         # create a gui manager
-        self.gui = GuiManager()
-        set_surface(self.screen)
+        self.gui = gui_init(self.screen)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts

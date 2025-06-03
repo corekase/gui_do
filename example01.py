@@ -1,10 +1,10 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import set_surface, window, centre, load_font, set_font, set_last_font
+from gui import gui_init, window, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, set_backdrop
 from gui import set_active_object, set_cursor, add
-from gui import GuiManager, GKind
+from gui import GKind
 from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
 
 class Demo:
@@ -20,9 +20,7 @@ class Demo:
         #
         # create a gui manager and it makes the screen the active object
         #
-        self.gui = GuiManager()
-        # set the drawing surface of the gui manager
-        set_surface(self.screen)
+        self.gui = gui_init(self.screen)
         #
         # blit a background image to the screen surface
         #

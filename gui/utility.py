@@ -125,6 +125,13 @@ def set_cursor(hotspot, *image):
     gui.cursor_rect = gui.cursor_image.get_rect()
     gui.cursor_hotspot = hotspot
 
+def gui_init(screen):
+    # create a gui manager and set the screen for it
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    set_surface(screen)
+    return gui
+
 def add(widget, callback=None):
     from .guimanager import GuiManager
     gui = GuiManager()
