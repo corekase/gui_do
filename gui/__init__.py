@@ -5,6 +5,7 @@ from .utility import gui_init, load_font, set_font, set_last_font, render_text, 
 from .utility import centre, set_grid_properties, gridded
 from .utility import image_alpha, file_resource, copy_graphic_area, gprint
 from .utility import set_active_object, set_cursor, add, set_backdrop, update_pristine, restore_pristine
+from .utility import ScrollbarLayout
 # import GuiManager and controls into this package's namespace
 from .guimanager import GuiManager, GKind
 from .widgets.frame import Frame, FrState

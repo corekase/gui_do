@@ -132,17 +132,23 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
-def scrollbar_layout(overall_rect, layout):
+def ScrollbarLayout(id, overall_rect, horizontal, layout):
+    # this is a constructor for scrollbars with layouts and
+    # that is why the name is capitalized
+    from .widgets.scrollbar import Scrollbar
     if layout == 0:
-        pass
+        scroll_bar = Scrollbar(id, overall_rect, horizontal)
     # layout creates rects
-    pass
+    elif layout == 1:
+        pass
+    else:
+        raise Exception(f'layout {layout} not implemented')
     # now add the scrollbar and arrowboxs
     pass
     # link them together
     pass
     # return a reference to the scrollbar widget
-    pass
+    return add(scroll_bar)
 
 def add(widget, callback=None):
     from .guimanager import GuiManager
