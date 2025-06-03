@@ -114,7 +114,7 @@ class BitmapFactory:
         # then draw the polygon again in none colour 1 pixel outline
         glyph = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
         # draw polygon
-        points = ((50, 150), (50, 250), (250, 250), (250, 350), (350, 200), (250, 50), (250, 150))
+        points = ((390, 200), (100, 350), (100, 240), (20, 240), (20, 160), (100, 160), (100, 50), (390, 200))
         pygame.draw.polygon(glyph, colours['full'], points, 0)
         pygame.draw.polygon(glyph, colours['none'], points, 10)
         # rotate polygon to direction
