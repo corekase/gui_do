@@ -143,10 +143,8 @@ class Scrollbar(Frame):
         self.start_pos += self.inc_size
         if self.start_pos + self.bar_size > self.total_range:
             self.start_pos = self.total_range - self.bar_size
-        self.draw()
 
     def decrement(self):
         self.start_pos -= self.inc_size
         if self.start_pos < 0:
             self.start_pos = 0
-        self.draw()
