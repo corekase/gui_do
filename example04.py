@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, restore_pristine
-from gui import GKind, Label, Button, Frame, FrState, ArrowBox
+from gui import GKind, Label, Button, Frame, FrState, ArrowBox, Scrollbar
 
 class Demo:
     def __init__(self):
@@ -31,13 +31,13 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         x, y, size = 10, 120, 20
-        add(ArrowBox('1', Rect(x, y, size, size), 0))
+        sb1 = add(Scrollbar('a', Rect(x, y, 120, 20), True))
+        sb1.set(100, 0, 30, 10)
+        # hook up the arrowboxes to the scrollbar
         y += size + 1
-        add(ArrowBox('2', Rect(x, y, size, size), 90))
+        add(ArrowBox('1', Rect(x, y, size, size), 0, sb1.increment))
         y += size + 1
-        add(ArrowBox('3', Rect(x, y, size, size), 180))
-        y += size + 1
-        add(ArrowBox('4', Rect(x, y, size, size), 270))
+        add(ArrowBox('3', Rect(x, y, size, size), 180, sb1.decrement))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
