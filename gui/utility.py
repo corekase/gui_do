@@ -145,21 +145,31 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
         x, y, width, height = overall_rect
         if layout == 1:
             if horizontal:
+                decrement_rect = Rect()
+                scrollbar_rect = Rect()
+                increment_rect = Rect()
+            else:
+                decrement_rect = Rect()
+                scrollbar_rect = Rect()
+                increment_rect = Rect()
+        elif layout == 2:
+            if horizontal:
                 scrollbar_rect = Rect()
                 decrement_rect = Rect()
                 increment_rect = Rect()
             else:
-                pass
-        elif layout == 2:
-            if horizontal:
-                pass
-            else:
-                pass
+                scrollbar_rect = Rect()
+                decrement_rect = Rect()
+                increment_rect = Rect()
         elif layout == 3:
             if horizontal:
-                pass
+                decrement_rect = Rect()
+                increment_rect = Rect()
+                scrollbar_rect = Rect()
             else:
-                pass
+                decrement_rect = Rect()
+                increment_rect = Rect()
+                scrollbar_rect = Rect()
         else:
             raise Exception(f'layout {layout} not implemented')
     # now add the scrollbar and arrowboxs
