@@ -1,3 +1,6 @@
+# this is a template file to use as a starting point for your own applications,
+# copy this template to your client folder and rename it to your application name
+#
 import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
@@ -7,7 +10,7 @@ from gui import set_cursor, add, restore_pristine
 from gui import GuiManager, GKind
 from gui import Label, Button, Frame, FrState
 
-class Demo:
+class Template:
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -139,4 +142,4 @@ class Demo:
         self.running = False
 
 if __name__ == '__main__':
-    Demo().run()
+    Template().run()
