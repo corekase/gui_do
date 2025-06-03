@@ -40,8 +40,12 @@ class Button(Widget):
                     self.state = State.Idle
                     # invoke callback if present
                     if self.callback != None:
+                        # if a callback, it consumes the event
                         self.callback()
-                    return True
+                        return False
+                    else:
+                        # no callback, signal event
+                        return True
             if (event.type == MOUSEMOTION) and (not collision):
                 self.state = State.Idle
         # button not clicked
