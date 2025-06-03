@@ -31,8 +31,8 @@ class Demo:
         #
         # load fonts
         #
-        load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
+        load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         #
         # screen widgets

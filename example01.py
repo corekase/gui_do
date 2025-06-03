@@ -27,8 +27,8 @@ class Demo:
         set_backdrop('backdrop.jpg')
         #
         # load fonts
-        load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
+        load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # manipulator to set one of the loaded font names
         set_font('normal')
