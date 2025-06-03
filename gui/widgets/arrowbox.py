@@ -20,7 +20,33 @@ class ArrowBox(Button):
         self.state = State.Idle
 
     def handle_event(self, event, window):
-        super().handle_event(event, window)
+        if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            # no matching events for button logic
+            return False
+        # is the mouse position within the button rect
+        collision = self.rect.collidepoint(convert_to_window(event.pos, window))
+        # manage the state of the button
+        if (self.state == State.Idle) and collision:
+            self.state = State.Hover
+        if self.state == State.Hover:
+            if (event.type == MOUSEMOTION) and (not collision):
+                self.state = State.Idle
+            if (event.type == MOUSEBUTTONDOWN) and collision:
+                if event.button == 1:
+                    self.state = State.Armed
+        if self.state == State.Armed:
+            if (event.type == MOUSEBUTTONUP) and collision:
+                if event.button == 1:
+                    # button clicked
+                    self.state = State.Idle
+                    # call scrollbar increment or decrement
+                    pass
+                    # return arrowbox clicked
+                    return True
+            if (event.type == MOUSEMOTION) and (not collision):
+                self.state = State.Idle
+        # button not clicked
+        return False
 
     def leave(self):
         super().leave()
