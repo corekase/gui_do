@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, restore_pristine, ScrollbarLayout
+from gui import add, set_cursor, restore_pristine, ScrollbarArrows
 from gui import GKind, Label, Button, Frame, FrState, ArrowBox, Scrollbar
 
 class Demo:
@@ -40,7 +40,7 @@ class Demo:
         add(ArrowBox('b', Rect(x, y, size, size), 0, sb1.increment))
         x = 10
         y += size + 11
-        sb2 = ScrollbarLayout('c', Rect(x, y, 300, 20), True, 0)
+        sb2 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 0)
         sb2.set(100, 0, 30, 10)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
