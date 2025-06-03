@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, restore_pristine
-from gui import GKind, Label, Button, Frame, FrState
+from gui import GKind, Label, Button, Frame, FrState, ArrowBox
 
 class Demo:
     def __init__(self):
@@ -30,6 +30,14 @@ class Demo:
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        x, y, size = 10, 120, 50
+        add(ArrowBox('1', Rect(x, y, size, size), 0))
+        y += size + 1
+        add(ArrowBox('2', Rect(x, y, size, size), 90))
+        y += size + 1
+        add(ArrowBox('3', Rect(x, y, size, size), 180))
+        y += size + 1
+        add(ArrowBox('4', Rect(x, y, size, size), 270))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
