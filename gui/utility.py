@@ -132,6 +132,16 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
+def scrollbar_layout(rect, layout):
+    if layout == 0:
+        pass
+    # layout creates rects
+    pass
+    # now add the scrollbar and arrowboxs
+    pass
+    # link them together
+    pass
+
 def add(widget, callback=None):
     from .guimanager import GuiManager
     gui = GuiManager()
