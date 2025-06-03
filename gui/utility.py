@@ -132,7 +132,7 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
-def scrollbar_layout(rect, layout):
+def scrollbar_layout(overall_rect, layout):
     if layout == 0:
         pass
     # layout creates rects
