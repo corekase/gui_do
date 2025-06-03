@@ -138,6 +138,10 @@ class Scrollbar(Frame):
         # fill graphical area to represent the start position and size
         rect(self.surface, colours['full'], self.handle_area(), 0)
 
+    def register(self, obj):
+        # add the object to the visible list for future set_visible(boolean)
+        pass
+
     # callbacks
     def increment(self):
         self.start_pos += self.inc_size

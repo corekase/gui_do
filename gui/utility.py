@@ -136,32 +136,47 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
     # this is a constructor for scrollbars with layouts and
     # that is why the name is capitalized
     from .widgets.scrollbar import Scrollbar
+    from .widgets.arrowbox import ArrowBox
     if layout == 0:
-        scroll_bar = Scrollbar(id, overall_rect, horizontal)
-    # layout creates rects
-    elif layout == 1:
-        if horizontal:
-            pass
-        else:
-            pass
-    elif layout == 2:
-        if horizontal:
-            pass
-        else:
-            pass
-    elif layout == 3:
-        if horizontal:
-            pass
-        else:
-            pass
+        # pass through with no arrowboxes
+        scroll_bar = add(Scrollbar(id, overall_rect, horizontal))
     else:
-        raise Exception(f'layout {layout} not implemented')
+        # define rects for scrollbar and arrowboxes
+        x, y, width, height = overall_rect
+        if layout == 1:
+            if horizontal:
+                scrollbar_rect = Rect()
+                decrement_rect = Rect()
+                increment_rect = Rect()
+            else:
+                pass
+        elif layout == 2:
+            if horizontal:
+                pass
+            else:
+                pass
+        elif layout == 3:
+            if horizontal:
+                pass
+            else:
+                pass
+        else:
+            raise Exception(f'layout {layout} not implemented')
     # now add the scrollbar and arrowboxs
-    add(scroll_bar)
-    # link them together
-    pass
-    # return a reference to the scrollbar widget
-    return scroll_bar
+    if layout == 0:
+        return scroll_bar
+    else:
+        scroll_bar = add(Scrollbar(id, scrollbar_rect, horizontal))
+        if horizontal:
+            dec_degree = 0
+            inc_degree = 180
+        else:
+            dec_degree = 270
+            inc_degree = 90
+        scroll_bar.register(add(ArrowBox(f'{id}.decrement', decrement_rect, dec_degree, scroll_bar.decrement)))
+        scroll_bar.register(add(ArrowBox(f'{id}.increment', increment_rect, inc_degree, scroll_bar.increment)))
+        # return a reference to the scrollbar widget
+        return scroll_bar
 
 def add(widget, callback=None):
     from .guimanager import GuiManager
