@@ -30,17 +30,11 @@ class Demo:
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        x, y, size = 10, 120, 20
-        sb1 = add(Scrollbar('a', Rect(x, y, 300, 20), True))
+        x, y = 10, 120
+        sb1 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 0)
         sb1.set(100, 0, 30, 10)
-        # hook up the arrowboxes to the scrollbar
-        y += size + 1
-        add(ArrowBox('a', Rect(x, y, size, size), 180, sb1.decrement))
-        x += size + 1
-        add(ArrowBox('b', Rect(x, y, size, size), 0, sb1.increment))
-        x = 10
-        y += size + 11
-        sb2 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 0)
+        y += 22
+        sb2 = ScrollbarArrows('d', Rect(x, y, 300, 20), True, 1)
         sb2.set(100, 0, 30, 10)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')

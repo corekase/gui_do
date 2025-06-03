@@ -145,13 +145,13 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
         x, y, width, height = overall_rect
         if layout == 1:
             if horizontal:
-                decrement_rect = Rect()
-                scrollbar_rect = Rect()
-                increment_rect = Rect()
+                increment_rect = Rect(width - height, 0, height, height)
+                scrollbar_rect = Rect(height, 0, (width - height * 2), height)
+                decrement_rect = Rect(0, 0, height, height)
             else:
+                increment_rect = Rect()
                 decrement_rect = Rect()
                 scrollbar_rect = Rect()
-                increment_rect = Rect()
         elif layout == 2:
             if horizontal:
                 scrollbar_rect = Rect()
@@ -176,15 +176,19 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
     if layout == 0:
         return add(scroll_bar)
     else:
-        scroll_bar = add(Scrollbar(id, scrollbar_rect, horizontal))
+        x, y, width, height = overall_rect
+        scroll_absolute = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
+        increment_absolute = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
+        decrement_absolute = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
+        scroll_bar = add(Scrollbar(id, scroll_absolute, horizontal))
         if horizontal:
-            dec_degree = 0
-            inc_degree = 180
+            inc_degree = 0
+            dec_degree = 180
         else:
-            dec_degree = 270
-            inc_degree = 90
-        scroll_bar.register(add(ArrowBox(f'{id}.decrement', decrement_rect, dec_degree, scroll_bar.decrement)))
-        scroll_bar.register(add(ArrowBox(f'{id}.increment', increment_rect, inc_degree, scroll_bar.increment)))
+            inc_degree = 270
+            dec_degree = 90
+        scroll_bar.register(add(ArrowBox(f'{id}.increment', increment_absolute, inc_degree, scroll_bar.increment)))
+        scroll_bar.register(add(ArrowBox(f'{id}.decrement', decrement_absolute, dec_degree, scroll_bar.decrement)))
         # return a reference to the scrollbar widget
         return scroll_bar
 
