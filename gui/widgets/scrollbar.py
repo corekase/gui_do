@@ -105,9 +105,9 @@ class Scrollbar(Frame):
         # return scrollbar start position
         return self.start_pos
 
-    def set(self, total_range, start_pos, bar_size):
+    def set(self, total_range, start_pos, bar_size, inc_size):
         # set scrollbar data, all variables are in total units
-        self.total_range, self.start_pos, self.bar_size = total_range, start_pos, bar_size
+        self.total_range, self.start_pos, self.bar_size, self.inc_size = total_range, start_pos, bar_size, inc_size
 
     def handle_area(self):
         # calculate where the start point is and what the size is in graphical units
@@ -137,3 +137,14 @@ class Scrollbar(Frame):
         super().draw()
         # fill graphical area to represent the start position and size
         rect(self.surface, colours['full'], self.handle_area(), 0)
+
+    # callbacks
+    def increment(self):
+        self.start_pos += self.inc_size
+        if self.start_pos + self.bar_size > self.total_range:
+            self.start_pos = self.total_range - self.bar_size
+
+    def decrement(self):
+        self.start_pos -= self.inc_size
+        if self.start_pos < 0:
+            self.start_pos = 0

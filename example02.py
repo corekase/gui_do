@@ -49,10 +49,10 @@ class Demo:
         set_font('normal')
         # horizontal scrollbar
         sb4 = add(Scrollbar('S1', Rect(x + 10, y + h - 30, 180, 20), True))
-        sb4.set(100, 0, 30)
+        sb4.set(100, 0, 30, 10)
         # vertical scrollbar
         sb3 = add(Scrollbar('S2', Rect(x + w - 30, y + 10, 20, 150), False))
-        sb3.set(100, 0, 30)
+        sb3.set(100, 0, 30, 10)
         # fps controls
         self.fps_label = add(Label(Rect(x + 10, y + h - 110, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + h - 90), 70, 20, 5)
@@ -94,10 +94,10 @@ class Demo:
         self.window_radio_label = add(Label(gridded(2, 3), 'N/A', 50))
         # horizontal scrollbar
         sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.rect.right - 45 - frame.rect.x, 20), True))
-        sb3.set(100, 0, 30)
+        sb3.set(100, 0, 30, 10)
         # vertical scrollbar
         sb4 = add(Scrollbar('S4', Rect(frame.rect.right - 30, y + 10, 20, frame.rect.bottom - 20 - frame.rect.y), False))
-        sb4.set(100, 0, 30)
+        sb4.set(100, 0, 30, 10)
         #
         # tiled windows setup
         #
