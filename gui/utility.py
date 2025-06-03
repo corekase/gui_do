@@ -132,8 +132,8 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
-def ScrollbarArrows(id, overall_rect, horizontal, style):
-    # this is a constructor for scrollbars with layouts and
+def ScrollbarStyle(id, overall_rect, horizontal, style):
+    # this is a constructor for scrollbars with styles and
     # that is why the name is capitalized
     from .widgets.scrollbar import Scrollbar
     from .widgets.arrowbox import ArrowBox

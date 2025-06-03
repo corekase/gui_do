@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, restore_pristine, ScrollbarArrows
+from gui import add, set_cursor, restore_pristine, ScrollbarStyle
 from gui import GKind, Label, Button, Frame, FrState
 
 class Demo:
@@ -31,28 +31,28 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         x, y = 10, 120
-        sb1 = ScrollbarArrows('a', Rect(x, y, 300, 20), True, 0)
+        sb1 = ScrollbarStyle('a', Rect(x, y, 300, 20), True, 0)
         sb1.set(100, 0, 30, 10)
         y += 22
-        sb2 = ScrollbarArrows('b', Rect(x, y, 300, 20), True, 1)
+        sb2 = ScrollbarStyle('b', Rect(x, y, 300, 20), True, 1)
         sb2.set(100, 0, 30, 10)
         y += 22
-        sb3 = ScrollbarArrows('c', Rect(x, y, 300, 20), True, 2)
+        sb3 = ScrollbarStyle('c', Rect(x, y, 300, 20), True, 2)
         sb3.set(100, 0, 30, 10)
         y += 22
-        sb4 = ScrollbarArrows('d', Rect(x, y, 300, 20), True, 3)
+        sb4 = ScrollbarStyle('d', Rect(x, y, 300, 20), True, 3)
         sb4.set(100, 0, 30, 10)
         y += 22
-        sb5 = ScrollbarArrows('e', Rect(x, y, 20, 300), False, 0)
+        sb5 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 0)
         sb5.set(100, 0, 30, 10)
         x += 22
-        sb6 = ScrollbarArrows('e', Rect(x, y, 20, 300), False, 1)
+        sb6 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 1)
         sb6.set(100, 0, 30, 10)
         x += 22
-        sb7 = ScrollbarArrows('f', Rect(x, y, 20, 300), False, 2)
+        sb7 = ScrollbarStyle('f', Rect(x, y, 20, 300), False, 2)
         sb7.set(100, 0, 30, 10)
         x += 22
-        sb8 = ScrollbarArrows('g', Rect(x, y, 20, 300), False, 3)
+        sb8 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 3)
         sb8.set(100, 0, 30, 10)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
