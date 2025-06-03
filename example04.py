@@ -31,7 +31,7 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         x, y, size = 10, 120, 20
-        sb1 = add(Scrollbar('a', Rect(x, y, 120, 20), True))
+        sb1 = add(Scrollbar('a', Rect(x, y, 300, 20), True))
         sb1.set(100, 0, 30, 10)
         # hook up the arrowboxes to the scrollbar
         y += size + 1
