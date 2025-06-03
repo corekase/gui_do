@@ -1,6 +1,3 @@
-# this is a template file to use as a starting point for your own applications,
-# copy this template to your client folder and rename it to your application name
-#
 import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
