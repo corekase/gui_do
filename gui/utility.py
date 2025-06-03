@@ -141,6 +141,8 @@ def scrollbar_layout(rect, layout):
     pass
     # link them together
     pass
+    # return a reference to the scrollbar widget
+    pass
 
 def add(widget, callback=None):
     from .guimanager import GuiManager
