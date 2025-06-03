@@ -17,7 +17,7 @@ class Button(Widget):
             self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
-        self.callback = callback
+        self.button_callback = callback
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
@@ -40,9 +40,9 @@ class Button(Widget):
                     # button clicked
                     self.state = State.Idle
                     # invoke callback if present
-                    if self.callback != None:
+                    if self.button_callback != None:
                         # if a callback, it consumes the event
-                        self.callback()
+                        self.button_callback()
                         return False
                     else:
                         # no callback, signal event
