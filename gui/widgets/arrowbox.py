@@ -12,12 +12,13 @@ from ..bitmapfactory import BitmapFactory
 from .button import Button, State
 
 class ArrowBox(Button):
-    def __init__(self, id, rect, direction):
+    def __init__(self, id, rect, direction, callback=None):
         # initialize common widget values
         super().__init__(id, rect, None)
         factory = BitmapFactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)
         self.state = State.Idle
+        self.callback = callback
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
@@ -40,7 +41,8 @@ class ArrowBox(Button):
                     # button clicked
                     self.state = State.Idle
                     # call scrollbar increment or decrement
-                    pass
+                    if self.callback != None:
+                        self.callback()
                     # return arrowbox clicked
                     return True
             if (event.type == MOUSEMOTION) and (not collision):
