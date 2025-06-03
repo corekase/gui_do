@@ -15,6 +15,7 @@ class Button(Widget):
         factory = BitmapFactory()
         self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
         self.state = State.Idle
+        # button specific callback, this callback is separate from the add() callback
         self.callback = callback
 
     def handle_event(self, event, window):
