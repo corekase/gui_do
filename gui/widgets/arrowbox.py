@@ -5,11 +5,8 @@
 #
 # arrows are always in a square area, so if the rect isn't square then the drawn arrow area will be the
 # smaller dimension, either horizontal or vertical, squared, centered in the rect
-from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..guimanager import GuiManager
-from ..utility import convert_to_window
 from ..bitmapfactory import BitmapFactory
-from .button import Button, State
+from .button import Button
 
 class ArrowBox(Button):
     def __init__(self, id, rect, direction, callback=None):
