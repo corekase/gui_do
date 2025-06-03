@@ -132,18 +132,18 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
-def ScrollbarArrows(id, overall_rect, horizontal, layout):
+def ScrollbarArrows(id, overall_rect, horizontal, style):
     # this is a constructor for scrollbars with layouts and
     # that is why the name is capitalized
     from .widgets.scrollbar import Scrollbar
     from .widgets.arrowbox import ArrowBox
-    if layout == 0:
+    if style == 0:
         # pass through with no arrowboxes
         scroll_bar = Scrollbar(id, overall_rect, horizontal)
     else:
         # define rects for scrollbar and arrowboxes
         x, y, width, height = overall_rect
-        if layout == 1:
+        if style == 1:
             if horizontal:
                 increment_rect = Rect(width - height, 0, height, height)
                 scrollbar_rect = Rect(height, 0, (width - height * 2), height)
@@ -152,7 +152,7 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
                 increment_rect = Rect(0, height - width, width, width)
                 scrollbar_rect = Rect(0, width, width, height - width * 2)
                 decrement_rect = Rect(0, 0, width, width)
-        elif layout == 2:
+        elif style == 2:
             if horizontal:
                 scrollbar_rect = Rect(0, 0, (width - height * 2), height)
                 decrement_rect = Rect(width - (height * 2), 0, height, height)
@@ -161,7 +161,7 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
                 scrollbar_rect = Rect(0, 0, width, height - (width * 2))
                 decrement_rect = Rect(0, height - (width * 2), width, width)
                 increment_rect = Rect(0, height - width, width, width)
-        elif layout == 3:
+        elif style == 3:
             if horizontal:
                 decrement_rect = Rect(0, 0, height, height)
                 increment_rect = Rect(height, 0, height, height)
@@ -171,9 +171,9 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
                 increment_rect = Rect(0, width, width, width)
                 scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
         else:
-            raise Exception(f'layout {layout} not implemented')
+            raise Exception(f'style {style} not implemented')
     # now add the scrollbar and arrowboxs
-    if layout == 0:
+    if style == 0:
         return add(scroll_bar)
     else:
         x, y, width, height = overall_rect
