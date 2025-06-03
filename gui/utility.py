@@ -139,7 +139,7 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
     from .widgets.arrowbox import ArrowBox
     if layout == 0:
         # pass through with no arrowboxes
-        scroll_bar = add(Scrollbar(id, overall_rect, horizontal))
+        scroll_bar = Scrollbar(id, overall_rect, horizontal)
     else:
         # define rects for scrollbar and arrowboxes
         x, y, width, height = overall_rect
@@ -164,7 +164,7 @@ def ScrollbarArrows(id, overall_rect, horizontal, layout):
             raise Exception(f'layout {layout} not implemented')
     # now add the scrollbar and arrowboxs
     if layout == 0:
-        return scroll_bar
+        return add(scroll_bar)
     else:
         scroll_bar = add(Scrollbar(id, scrollbar_rect, horizontal))
         if horizontal:
