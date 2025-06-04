@@ -205,6 +205,7 @@ class Demo:
         pygame.quit()
 
     def handle_events(self):
+        self.gui.timers.update()
         # handle the pygame event queue
         for raw_event in pygame.event.get():
             # process event queue

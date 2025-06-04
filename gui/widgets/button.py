@@ -12,6 +12,7 @@ class Button(Widget):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
+        self.timer = None
         if not skip_factory:
             factory = BitmapFactory()
             self.idle, self.hover, self.armed = factory.draw_box_button_bitmaps(text, rect)
@@ -34,25 +35,27 @@ class Button(Widget):
             if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
                     self.state = State.Armed
+                    self.timer = self.gui.timers.add_timer(self.button_callback, 0.08)
         if self.state == State.Armed:
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
                     # button clicked
+                    self.gui.timers.remove_timer(self.timer)
                     self.state = State.Idle
-                    # invoke callback if present
                     if self.button_callback != None:
-                        # if a callback, it consumes the event
-                        self.button_callback()
+                        # if a callback exists, consume the event
                         return False
                     else:
                         # no callback, signal event
                         return True
             if (event.type == MOUSEMOTION) and (not collision):
+                self.gui.timers.remove_timer(self.timer)
                 self.state = State.Idle
         # button not clicked
         return False
 
     def leave(self):
+        self.gui.timers.remove_timer(self.timer)
         self.state = State.Idle
 
     def draw(self):

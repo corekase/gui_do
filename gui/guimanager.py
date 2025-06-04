@@ -1,4 +1,4 @@
-import os
+import time
 import pygame
 from enum import Enum
 from pygame import Rect
@@ -7,6 +7,45 @@ from .command import copy_graphic_area, convert_to_window
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
+
+class Timers:
+    class Timer:
+        def __init__(self, callback, duration):
+            self.timer = 0.0
+            self.previous_time = time.time()
+            self.callback = callback
+            self.duration = duration
+
+    _instance_ = None
+
+    def __new__(cls):
+        if Timers._instance_ is None:
+            Timers._instance_ = object.__new__(cls)
+            Timers._instance_._populate_()
+        return Timers._instance_
+
+    def _populate_(self):
+        self.timers = []
+
+    def add_timer(self, callback, duration):
+        timer = self.Timer(callback, duration)
+        self.timers.append(timer)
+        return timer
+
+    def remove_timer(self, timer):
+        if timer in self.timers:
+            self.timers.remove(timer)
+
+    def update(self):
+        now_time = time.time()
+        for obj in self.timers:
+            elapsed_time = now_time - obj.previous_time
+            obj.previous_time = now_time
+            obj.timer += elapsed_time
+            if obj.timer >= obj.duration:
+                obj.timer -= obj.duration
+                if obj.callback != None:
+                    obj.callback()
 
 class GuiEvent:
     # an event object to be returned which includes pygame event information and gui_do information
@@ -71,6 +110,8 @@ class GuiManager:
         self.pristine = None
         # locking object
         self.locking_object = None
+        # timers
+        self.timers = Timers()
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

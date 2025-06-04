@@ -9,7 +9,7 @@
 # To-do: the arrowbox can have a repeating signal or callback by tracking time in it, and when the interval
 # is reached then signal the widget
 from ..bitmapfactory import BitmapFactory
-from .button import Button
+from .button import Button, State
 
 class ArrowBox(Button):
     def __init__(self, id, rect, direction, callback=None):
