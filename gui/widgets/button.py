@@ -35,6 +35,8 @@ class Button(Widget):
             if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
                     self.state = State.Armed
+                    if self.button_callback != None:
+                        self.button_callback()
                     self.timer = self.gui.timers.add_timer(self.button_callback, 0.08)
         if self.state == State.Armed:
             if (event.type == MOUSEBUTTONUP) and collision:
