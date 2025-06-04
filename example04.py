@@ -2,9 +2,9 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, restore_pristine, ScrollbarStyle
-from gui import GKind, Label, Button, Frame, FrState
+from gui import gui_init, set_backdrop, load_font, set_font, centre
+from gui import add, set_cursor, restore_pristine, ScrollbarStyle, window
+from gui import GKind, Label, Button, Frame, FrState, Image
 
 class Demo:
     def __init__(self):
@@ -42,7 +42,7 @@ class Demo:
         y += 22
         sb4 = ScrollbarStyle('d', Rect(x, y, 300, 20), True, 3)
         sb4.set(100, 0, 30, 10)
-        y += 22
+        y += 24
         sb5 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 0)
         sb5.set(100, 0, 30, 10)
         x += 22
@@ -54,6 +54,40 @@ class Demo:
         x += 22
         sb8 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 3)
         sb8.set(100, 0, 30, 10)
+        # position of the window
+        x, y, width, height = 0, 0, 320, 412
+        window_x = centre(self.screen.get_rect().width, width)
+        window_y = centre(self.screen.get_rect().height, height)
+        # create the window and it adds itself to the gui_manager and makes itself the active object
+        window('Scrollbar Styles', (window_x, window_y), (width, height))
+        x, y = 10, 10
+        sb9 = ScrollbarStyle('a', Rect(x, y, 300, 20), True, 0)
+        sb9.set(100, 0, 30, 10)
+        y += 22
+        sb10 = ScrollbarStyle('b', Rect(x, y, 300, 20), True, 1)
+        sb10.set(100, 0, 30, 10)
+        y += 22
+        sb11 = ScrollbarStyle('c', Rect(x, y, 300, 20), True, 2)
+        sb11.set(100, 0, 30, 10)
+        y += 22
+        sb12 = ScrollbarStyle('d', Rect(x, y, 300, 20), True, 3)
+        sb12.set(100, 0, 30, 10)
+        y += 24
+        sb13 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 0)
+        sb13.set(100, 0, 30, 10)
+        x += 22
+        sb14 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 1)
+        sb14.set(100, 0, 30, 10)
+        x += 22
+        sb15 = ScrollbarStyle('f', Rect(x, y, 20, 300), False, 2)
+        sb15.set(100, 0, 30, 10)
+        x += 22
+        sb16 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 3)
+        sb16.set(100, 0, 30, 10)
+        add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
+        set_font('gui_do')
+        add(Label((110, 310), 'Scrollbars!'))
+        set_font('normal')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
