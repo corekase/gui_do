@@ -171,7 +171,7 @@ def Scrollbar(id, overall_rect, horizontal, style):
                 scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
         else:
             raise Exception(f'style {style} not implemented')
-    # now add the scrollbar and arrowboxs
+    # now add the scrollbar and arrowboxes
     if style == 0:
         return scroll_bar
     else:
