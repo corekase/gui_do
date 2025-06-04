@@ -46,12 +46,12 @@ class BitmapFactory:
         if style == 0:
             return self.draw_box_button_bitmaps(text, rect)
         elif style == 1:
-            return self.draw_radio_pushbutton_bitmaps(text, rect)
+            return self.draw_radio_pushbutton_bitmaps(text)
         else:
             raise Exception(f'style index {style} not implemented')
 
     def draw_box_button_bitmaps(self, text, rect):
-        x, y, w, h = rect
+        _, _, w, h = rect
         saved = []
         text_bitmap = render_text(text)
         text_x = centre(w, text_bitmap.get_rect().width)
@@ -76,7 +76,7 @@ class BitmapFactory:
         saved.append(armed_surface)
         return saved
 
-    def draw_radio_pushbutton_bitmaps(self, text, rect):
+    def draw_radio_pushbutton_bitmaps(self, text):
         idle_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['light'], colours['dark'])
         hover_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
         armed_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
