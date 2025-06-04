@@ -52,13 +52,13 @@ class Demo:
         sb5 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 0)
         sb5.set(100, 0, 30, 10)
         x += 22
-        sb6 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 1)
+        sb6 = ScrollbarStyle('f', Rect(x, y, 20, 300), False, 1)
         sb6.set(100, 0, 30, 10)
         x += 22
-        sb7 = ScrollbarStyle('f', Rect(x, y, 20, 300), False, 2)
+        sb7 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 2)
         sb7.set(100, 0, 30, 10)
         x += 22
-        sb8 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 3)
+        sb8 = ScrollbarStyle('h', Rect(x, y, 20, 300), False, 3)
         sb8.set(100, 0, 30, 10)
         add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
         set_font('gui_do')
