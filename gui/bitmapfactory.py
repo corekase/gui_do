@@ -21,10 +21,16 @@ class BitmapFactory:
         # themes aren't implemented yet
         self.theme = 'built_in'
 
-    def draw_window_title_bar_bitmap(self, title, width, size):
+    def draw_window_title_bar_bitmaps(self, title, width, size):
+        saved = []
+        saved.append(self.draw_window_title_bar_bitmap(title, width, size, False))
+        saved.append(self.draw_window_title_bar_bitmap(title, width, size, True))
+        return saved
+
+    def draw_window_title_bar_bitmap(self, title, width, size, highlight=False):
         from .widgets.frame import Frame, FrState
         set_font('titlebar')
-        text_bitmap = render_text(title)
+        text_bitmap = render_text(title, highlight)
         title_surface = pygame.surface.Surface((width, size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed

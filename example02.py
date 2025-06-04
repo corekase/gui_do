@@ -63,6 +63,16 @@ class Demo:
         # boxes toggle
         self.box_control = add(ToggleButton('toggle', gridded(1, 0), True, 'Boxes'))
         #
+        # tiled windows setup
+        #
+        # add a grid of windows
+        win_num = 0
+        for y in range(9):
+            for x in range(15):
+                win_num += 1
+                self.make_window(f'Win {win_num}', 10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55)
+        #
+        #
         # main window setup
         #
         # position of the window
@@ -94,15 +104,6 @@ class Demo:
         sb3 = add(Scrollbar('S3', (100, 0, 30, 10), Rect(x + 10, y + height - 30, frame.rect.right - 45 - frame.rect.x, 20), True, 1))
         # vertical scrollbar
         sb4 = add(Scrollbar('S4', (100, 0, 30, 10), Rect(frame.rect.right - 30, y + 10, 20, frame.rect.bottom - 20 - frame.rect.y), False, 1))
-        #
-        # tiled windows setup
-        #
-        # add a grid of windows
-        win_num = 0
-        for y in range(9):
-            for x in range(15):
-                win_num += 1
-                self.make_window(f'Win {win_num}', 10 + (x * 125) + x, 30 + (y * 90) + y, 115, 55)
         #
         # all done
         #

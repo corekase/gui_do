@@ -35,8 +35,8 @@ class WindowBase:
         set_active_object(self)
         # set the window to the position passed in
         self.set_pos(pos)
-        self.title_bar_bitmap = factory.draw_window_title_bar_bitmap(title, self.width, self.height)
-        self.title_bar_rect = self.title_bar_bitmap.get_rect()
+        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.height)
+        self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
         # whether or not the window is visible
         self.visible = True
@@ -46,8 +46,12 @@ class WindowBase:
         # the window pristine bitmap can be used to undo widget bitmap damage to the contents
         self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
-    def draw_title_bar(self):
-        self.gui.surface.blit(self.title_bar_bitmap, (self.x, self.y - self.titlebar_size))
+    def draw_title_bar_inactive(self):
+        self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
+        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+
+    def draw_title_bar_active(self):
+        self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_window(self):

@@ -338,7 +338,10 @@ class GuiManager:
             if window.visible:
                 # save the bitmap area under the window
                 self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
-                window.draw_title_bar()
+                if window is self.windows[-1]:
+                    window.draw_title_bar_active()
+                else:
+                    window.draw_title_bar_inactive()
                 window.draw_window()
                 for widget in window.widgets:
                     # draw the widget
