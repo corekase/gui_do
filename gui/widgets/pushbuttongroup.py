@@ -1,7 +1,6 @@
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..bitmapfactory import BitmapFactory
-from ..command import convert_to_window
 from .widget import Widget
 from enum import Enum
 
@@ -32,7 +31,7 @@ class PushButtonGroup(Widget):
             # no matching events for push button logic
             return False
         # is the mouse position within the push button rect
-        collision = self.rect.collidepoint(convert_to_window(event.pos, window))
+        collision = self.get_collide(window)
         # manage the state of the push button
         if (self.state == State.Idle) and collision:
             self.state = State.Hover

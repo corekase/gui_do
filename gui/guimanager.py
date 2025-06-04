@@ -103,9 +103,9 @@ class GuiManager:
         self.object_bank = {}
         # which window is active
         self.active_window = None
-        # last objects
-        self.last_window_object = None
-        self.last_screen_object = None
+        # current and last widgets
+        self.current_widget = None
+        self.last_widget = None
         # the pristine state of the screen bitmap
         self.pristine = None
         # locking object
@@ -227,21 +227,17 @@ class GuiManager:
                         window_consumed = True
                         for widget in window.widgets:
                                 if widget.visible:
+                                    collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
-                                        self.last_window_object = widget
                                         return self.event({'widget_id': widget.id})
-                                    collision = widget.get_rect().collidepoint(convert_to_window(self.get_mouse_pos(), window))
                                     if collision:
                                         widget_consumed = True
                                         widget_hit = widget
-                    if self.last_window_object != widget_hit:
-                        if self.last_window_object != None:
-                            self.last_window_object.leave()
-                        if self.last_screen_object != None:
-                            self.last_screen_object.leave()
-                            self.last_screen_object = None
-                        self.last_window_object = widget_hit
                     title_hit = self.active_window.get_title_bar_rect().collidepoint(self.get_mouse_pos())
+                    if title_hit or (widget_hit != self.last_widget):
+                        if self.last_widget != None:
+                            self.last_widget.leave()
+                            self.last_widget = None
                     if title_hit or (widget_hit != self.locking_object):
                         if self.locking_object != None:
                             self.locking_object.leave()
@@ -255,19 +251,10 @@ class GuiManager:
             for widget in self.widgets:
                 if widget.visible:
                     if self.handle_widget(widget, event):
-                        self.last_screen_object = widget
                         return self.event({'widget_id': widget.id})
-                    collision = widget.get_rect().collidepoint(self.get_mouse_pos())
-                    if collision:
+                    if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), None)):
                         consumed = True
                         widget_hit = widget
-            if self.last_screen_object != widget_hit:
-                if self.last_screen_object != None:
-                    self.last_screen_object.leave()
-                if self.last_window_object != None:
-                    self.last_window_object.leave()
-                    self.last_window_object = None
-                self.last_screen_object = widget_hit
             if self.locking_object != None:
                 if widget_hit != self.locking_object:
                     self.locking_object.leave()

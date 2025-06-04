@@ -7,6 +7,8 @@ colours = {'full': (255, 255, 255), 'light': (0, 200, 200), 'medium': (0, 150, 1
 # widget is the base class all gui widgets inherit from
 class Widget:
     def __init__(self, id, rect):
+        # gui for the widget
+        self.gui = None
         # surface to draw the widget on
         self.surface = None
         # window widget may be attached to
@@ -34,6 +36,18 @@ class Widget:
 
     def get_visible(self):
         return self.visible
+
+    def get_collide(self, window=None):
+        from ..command import convert_to_window
+        collide = self.rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
+        if collide:
+            if self.gui.last_widget != self.gui.current_widget:
+                if self.gui.last_widget != None:
+                    self.gui.last_widget.leave()
+                    self.gui.last_widget = None
+            self.gui.last_widget = self.gui.current_widget
+            self.gui.current_widget = self
+        return collide
 
     def handle_event(self, _, _a):
         # implement in subclasses

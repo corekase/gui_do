@@ -38,8 +38,9 @@ class ScrollbarBase(Frame):
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
             # no matching events for scrollbar logic
             return False
+        # do last object logic
         # manage the state of the scrollbar
-        point = convert_to_window(event.pos, window)
+        point = convert_to_window(self.gui.get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
@@ -52,7 +53,7 @@ class ScrollbarBase(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = convert_to_window(event.pos, window)
+            x, y = convert_to_window(self.gui.get_mouse_pos(), window)
             # normalize x and y to graphic drawing area
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging

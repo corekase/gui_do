@@ -185,6 +185,9 @@ def Scrollbar(id, params, overall_rect, horizontal, style):
 def add(widget, callback=None):
     from .guimanager import GuiManager
     gui = GuiManager()
+    # give a reference to the gui
+    widget.gui = gui
+    # callback
     widget.callback = callback
     if gui.active_object != None:
         # store a reference to the window the widget is in

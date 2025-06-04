@@ -1,6 +1,5 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
-from ..command import convert_to_window
 from ..bitmapfactory import BitmapFactory
 from .widget import Widget
 from enum import Enum
@@ -19,13 +18,15 @@ class Button(Widget):
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.button_callback = callback
+        # whether the mouse position is in collision with this rect
+        self.active = False
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             # no matching events for button logic
             return False
         # is the mouse position within the button rect
-        collision = self.rect.collidepoint(convert_to_window(event.pos, window))
+        collision = self.get_collide(window)
         # manage the state of the button
         if (self.state == State.Idle) and collision:
             self.state = State.Hover

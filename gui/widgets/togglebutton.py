@@ -1,7 +1,6 @@
 from pygame.locals import MOUSEBUTTONDOWN
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
-from ..command import convert_to_window
 
 class ToggleButton(Widget):
     def __init__(self, id, rect, pushed, pressed_text, raised_text=None):
@@ -16,7 +15,7 @@ class ToggleButton(Widget):
     def handle_event(self, event, window):
         if event.type == MOUSEBUTTONDOWN:
             if event.button == 1:
-                if self.rect.collidepoint(convert_to_window(event.pos, window)):
+                if self.get_collide(window):
                     # button was clicked
                     self.pushed = not self.pushed
                     return True
