@@ -1,7 +1,7 @@
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..bitmapfactory import BitmapFactory
-from ..utility import convert_to_window
+from ..command import convert_to_window
 from .widget import Widget
 from enum import Enum
 

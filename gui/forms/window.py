@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
-from ..utility import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, colours
+from ..command import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, colours
 from ..widgets.frame import Frame, FrState
 
 class WindowBase:

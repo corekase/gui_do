@@ -1,6 +1,6 @@
 import pygame
 from .widget import Widget
-from ..utility import file_resource
+from ..command import file_resource
 
 class Image(Widget):
     def __init__(self, id, rect, image, scale=True):

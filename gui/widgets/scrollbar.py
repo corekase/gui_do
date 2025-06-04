@@ -2,7 +2,7 @@ from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..guimanager import GuiManager
-from ..utility import convert_to_window, convert_to_screen
+from ..command import convert_to_window, convert_to_screen
 from .frame import Frame, FrState
 from .widget import colours
 

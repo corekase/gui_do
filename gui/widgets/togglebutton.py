@@ -1,7 +1,7 @@
 from pygame.locals import MOUSEBUTTONDOWN
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
-from ..utility import convert_to_window
+from ..command import convert_to_window
 
 class ToggleButton(Widget):
     def __init__(self, id, rect, pushed, pressed_text, raised_text=None):

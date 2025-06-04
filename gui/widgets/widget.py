@@ -26,7 +26,7 @@ class Widget:
 
     def save_pristine(self):
         # update the pristine bitmap
-        from ..utility import copy_graphic_area
+        from ..command import copy_graphic_area
         self.pristine = copy_graphic_area(self.surface, self.rect).convert()
 
     def set_visible(self, visible):

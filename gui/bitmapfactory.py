@@ -2,7 +2,7 @@ import pygame
 from math import cos, sin, radians
 from pygame import Rect
 from pygame.draw import rect, line
-from .utility import set_font, set_last_font, render_text, centre
+from .command import set_font, set_last_font, render_text, centre
 from .widgets.widget import colours
 
 class BitmapFactory:

@@ -1,11 +1,11 @@
 # gui is a package
 import os
 # import utility functions into this package's namespace
-from .utility import gui_init, load_font, set_font, set_last_font, render_text, Window
-from .utility import centre, set_grid_properties, gridded
-from .utility import image_alpha, file_resource, copy_graphic_area, gprint
-from .utility import set_active_object, set_cursor, add, set_backdrop, update_pristine, restore_pristine
-from .utility import Scrollbar
+from .command import gui_init, load_font, set_font, set_last_font, render_text, Window
+from .command import centre, set_grid_properties, gridded
+from .command import image_alpha, file_resource, copy_graphic_area, gprint
+from .command import set_active_object, set_cursor, add, set_backdrop, update_pristine, restore_pristine
+from .command import Scrollbar
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager, GKind
 from .widgets.frame import Frame, FrState

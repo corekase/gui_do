@@ -1,6 +1,6 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
-from ..utility import convert_to_window
+from ..command import convert_to_window
 from ..bitmapfactory import BitmapFactory
 from .widget import Widget
 from enum import Enum
