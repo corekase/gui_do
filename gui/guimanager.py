@@ -69,6 +69,8 @@ class GuiManager:
         self.last_screen_object = None
         # the pristine state of the screen bitmap
         self.pristine = None
+        # locking object
+        self.locking_object = None
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
@@ -198,6 +200,11 @@ class GuiManager:
                             self.last_screen_object.leave()
                             self.last_screen_object = None
                         self.last_window_object = widget_hit
+                    title_hit = self.active_window.get_title_bar_rect().collidepoint(self.get_mouse_pos())
+                    if title_hit or (widget_hit != self.locking_object):
+                        if self.locking_object != None:
+                            self.locking_object.leave()
+                            self.set_lock_area(None)
                     if window_consumed or widget_consumed:
                         return self.event(None)
         else:
@@ -220,6 +227,10 @@ class GuiManager:
                     self.last_window_object.leave()
                     self.last_window_object = None
                 self.last_screen_object = widget_hit
+            if self.locking_object != None:
+                if widget_hit != self.locking_object:
+                    self.locking_object.leave()
+                    self.set_lock_area(None)
             if consumed:
                 return self.event(None)
         # no widget or window consumed the event now do pygame base events
@@ -243,16 +254,18 @@ class GuiManager:
                 return True
         return False
 
-    def set_lock_area(self, area=None):
+    def set_lock_area(self, locking_object, area=None):
         # lock area rect is in screen coordinates
         if area != None:
             # switch to relative mouse mode
+            self.locking_object = locking_object
             self.mouse_locked = True
             self.locked_pos = self.mouse_pos
         else:
             if self.mouse_locked:
                 pygame.mouse.set_pos(self.mouse_pos)
             # switch to absolute mouse mode
+            self.locking_object = None
             self.mouse_locked = False
             self.locked_pos = None
         self.lock_area_rect = area

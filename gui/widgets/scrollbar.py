@@ -45,7 +45,7 @@ class ScrollbarBase(Frame):
                 # lock mouse movement to scrollbar area
                 x, y = convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
                 lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
-                self.gui.set_lock_area(lock_rect)
+                self.gui.set_lock_area(self, lock_rect)
                 # begin dragging the scrollbar
                 self.state = FrState.Hover
                 self.dragging = True
