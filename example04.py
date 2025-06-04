@@ -37,29 +37,21 @@ class Demo:
         # create the window and it adds itself to the gui_manager and makes itself the active object
         Window('Scrollbar Styles', (window_x, window_y), (width, height))
         x, y = 10, 10
-        sb1 = add(Scrollbar('a', Rect(x, y, 300, 20), True, 0))
-        sb1.set(100, 0, 30, 10)
+        sb1 = add(Scrollbar('a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
-        sb2 = add(Scrollbar('b', Rect(x, y, 300, 20), True, 1))
-        sb2.set(100, 0, 30, 10)
+        sb2 = add(Scrollbar('b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
         y += 22
-        sb3 = add(Scrollbar('c', Rect(x, y, 300, 20), True, 2))
-        sb3.set(100, 0, 30, 10)
+        sb3 = add(Scrollbar('c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
         y += 22
-        sb4 = add(Scrollbar('d', Rect(x, y, 300, 20), True, 3))
-        sb4.set(100, 0, 30, 10)
+        sb4 = add(Scrollbar('d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
         y += 24
-        sb5 = add(Scrollbar('e', Rect(x, y, 20, 250), False, 0))
-        sb5.set(100, 0, 30, 10)
+        sb5 = add(Scrollbar('e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
         x += 22
-        sb6 = add(Scrollbar('f', Rect(x, y, 20, 250), False, 1))
-        sb6.set(100, 0, 30, 10)
+        sb6 = add(Scrollbar('f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
         x += 22
-        sb7 = add(Scrollbar('g', Rect(x, y, 20, 250), False, 2))
-        sb7.set(100, 0, 30, 10)
+        sb7 = add(Scrollbar('g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
         x += 22
-        sb8 = add(Scrollbar('h', Rect(x, y, 20, 250), False, 3))
-        sb8.set(100, 0, 30, 10)
+        sb8 = add(Scrollbar('h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
         set_font('gui_do')
         add(Label((110, 310), 'Scrollbars!'))

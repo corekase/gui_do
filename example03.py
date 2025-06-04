@@ -47,11 +47,9 @@ class Demo:
         # add a toggle button
         self.image_toggle_button = add(ToggleButton('ImageToggleButton', Rect(10, 170, 150, 20), True, 'Image Visible'))
         # horizontal scrollbar
-        self.sb1 = add(Scrollbar('hor_scroll', Rect(10, 195, 150, 20), True, 1))
-        self.sb1.set(100, 0, 30, 10)
+        self.sb1 = add(Scrollbar('hor_scroll', (100, 0, 30, 10), Rect(10, 195, 150, 20), True, 1))
         # vertical scrollbar
-        self.sb2 = add(Scrollbar('ver_scroll', Rect(170, 10, 20, 205), False, 1))
-        self.sb2.set(100, 0, 30, 10)
+        self.sb2 = add(Scrollbar('ver_scroll', (100, 0, 30, 10), Rect(170, 10, 20, 205), False, 1))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag

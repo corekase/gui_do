@@ -61,11 +61,9 @@ class Demo:
         self.screen_label_button = add(Label(gridded(1, 3), 'N/A'))
         self.screen_label_radio = add(Label(gridded(2, 3), 'N/A'))
         # horizontal scrollbar
-        sb1 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True, 1))
-        sb1.set(100, 0, 30, 10)
+        sb1 = add(Scrollbar('S1', (100, 0, 30, 10), Rect(x + 10, y + 115, 395, 20), True, 1))
         # vertical scrollbar
-        sb2 = add(Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False, 1))
-        sb2.set(100, 0, 30, 10)
+        sb2 = add(Scrollbar('S2', (100, 0, 30, 10), Rect(x + 410, y + 10, 20, 125), False, 1))
         #
         # -> end adding screen widgets
         #
@@ -109,11 +107,9 @@ class Demo:
         self.window_label_button = add(Label(gridded(1, 3), 'N/A', 100))
         self.window_label_radio = add(Label(gridded(2, 3), 'N/A', 80))
         # horizontal scrollbar
-        sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True, 1))
-        sb3.set(100, 0, 30, 10)
+        sb3 = add(Scrollbar('S3', (100, 0, 30, 10), Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True, 1))
         # vertical scrollbar
-        sb4 = add(Scrollbar('S4', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False, 1))
-        sb4.set(100, 0, 30, 10)
+        sb4 = add(Scrollbar('S4', (100, 0, 30, 10), Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False, 1))
         #
         # -> end adding window widgets
         #
