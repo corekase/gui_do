@@ -3,7 +3,7 @@ import pygame
 from enum import Enum
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .command import copy_graphic_area, convert_to_window, file_resource
+from .command import copy_graphic_area, convert_to_window
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
