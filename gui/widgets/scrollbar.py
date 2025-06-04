@@ -24,11 +24,17 @@ class ScrollbarBase(Frame):
         self.last_mouse_pos = None
         # list of registered sub-widgets
         self.registered = []
+        # whether or not the arrowboxes modified the start_pos
+        self.hit = False
         # before handle_event() is called, set() must be called at least once to initialize state
         # -> set(total_range, start_position, bar_size)
         # once initialized then the scrollbar operates as intended
 
     def handle_event(self, event, window):
+        if self.hit:
+            # if the scrollbar state was modified by a callback then signal a change
+            self.hit = False
+            return True
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
             # no matching events for scrollbar logic
             return False
@@ -151,11 +157,13 @@ class ScrollbarBase(Frame):
 
     # callbacks
     def increment(self):
+        self.hit = True
         self.start_pos += self.inc_size
         if self.start_pos + self.bar_size > self.total_range:
             self.start_pos = self.total_range - self.bar_size
 
     def decrement(self):
+        self.hit = True
         self.start_pos -= self.inc_size
         if self.start_pos < 0:
             self.start_pos = 0
