@@ -5,7 +5,7 @@ from ..bitmapfactory import BitmapFactory
 from ..utility import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, colours
 from ..widgets.frame import Frame, FrState
 
-class Window:
+class WindowBase:
     def __init__(self, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui = GuiManager()

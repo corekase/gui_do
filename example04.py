@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
-from gui import add, set_cursor, restore_pristine, ScrollbarStyle, window
+from gui import add, set_cursor, restore_pristine, ScrollbarStyle, Window
 from gui import GKind, Label, Button, Frame, FrState, Image
 
 class Demo:
@@ -35,7 +35,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        window('Scrollbar Styles', (window_x, window_y), (width, height))
+        Window('Scrollbar Styles', (window_x, window_y), (width, height))
         x, y = 10, 10
         sb1 = ScrollbarStyle('a', Rect(x, y, 300, 20), True, 0)
         sb1.set(100, 0, 30, 10)

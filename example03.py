@@ -3,9 +3,9 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, centre, load_font, set_font
-from gui import set_cursor, add, restore_pristine, window, ScrollbarStyle
+from gui import set_cursor, add, restore_pristine, Window, ScrollbarStyle
 from gui import GKind
-from gui import Label, Button, Image, ToggleButton, Frame, FrState, Scrollbar
+from gui import Label, Button, Image, ToggleButton, Frame, FrState
 
 class Demo:
     def __init__(self):
@@ -41,7 +41,7 @@ class Demo:
         window_width, window_height = 200, 225
         centre_x = centre(screen_width, window_width)
         centre_y = centre(screen_height, window_height)
-        self.win = window('Example 03 Visibility Demo', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
+        self.win = Window('Example 03 Visibility Demo', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
         # add an image
         self.image_toggle = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
         # add a toggle button
