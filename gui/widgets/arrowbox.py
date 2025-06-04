@@ -20,8 +20,6 @@ class ArrowBox(Button):
 
     def handle_event(self, event, window):
         super().handle_event(event, window)
-        # here is where to implement repeating
-        # if self.state == State.Armed, do the timing logic
 
     def leave(self):
         super().leave()
