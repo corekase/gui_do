@@ -31,7 +31,7 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # position of the window
-        x, y, width, height = 0, 0, 320, 412
+        x, y, width, height = 0, 0, 320, 362
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
@@ -49,16 +49,16 @@ class Demo:
         sb4 = add(Scrollbar('d', Rect(x, y, 300, 20), True, 3))
         sb4.set(100, 0, 30, 10)
         y += 24
-        sb5 = add(Scrollbar('e', Rect(x, y, 20, 300), False, 0))
+        sb5 = add(Scrollbar('e', Rect(x, y, 20, 250), False, 0))
         sb5.set(100, 0, 30, 10)
         x += 22
-        sb6 = add(Scrollbar('f', Rect(x, y, 20, 300), False, 1))
+        sb6 = add(Scrollbar('f', Rect(x, y, 20, 250), False, 1))
         sb6.set(100, 0, 30, 10)
         x += 22
-        sb7 = add(Scrollbar('g', Rect(x, y, 20, 300), False, 2))
+        sb7 = add(Scrollbar('g', Rect(x, y, 20, 250), False, 2))
         sb7.set(100, 0, 30, 10)
         x += 22
-        sb8 = add(Scrollbar('h', Rect(x, y, 20, 300), False, 3))
+        sb8 = add(Scrollbar('h', Rect(x, y, 20, 250), False, 3))
         sb8.set(100, 0, 30, 10)
         add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
         set_font('gui_do')
