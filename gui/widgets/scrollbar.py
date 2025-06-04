@@ -22,6 +22,8 @@ class Scrollbar(Frame):
         self.dragging = False
         # previous mouse position the last time the event was handled
         self.last_mouse_pos = None
+        # list of registered sub-widgets
+        self.registered = []
         # before handle_event() is called, set() must be called at least once to initialize state
         # -> set(total_range, start_position, bar_size)
         # once initialized then the scrollbar operates as intended
@@ -138,9 +140,14 @@ class Scrollbar(Frame):
         # fill graphical area to represent the start position and size
         rect(self.surface, colours['full'], self.handle_area(), 0)
 
+    def set_visible(self, visible):
+        super().set_visible(visible)
+        for widget in self.registered:
+            widget.set_visible(visible)
+
     def register(self, obj):
         # add the object to the visible list for future set_visible(boolean)
-        pass
+        self.registered.append(obj)
 
     # callbacks
     def increment(self):
