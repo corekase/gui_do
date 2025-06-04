@@ -106,6 +106,7 @@ class ScrollbarBase(Frame):
         self.gui.set_lock_area(None)
         # reset state to default values
         self.state = FrState.Idle
+        self.hit = False
         self.dragging = False
         self.last_mouse_pos = None
 
