@@ -133,8 +133,7 @@ def gui_init(screen):
     return gui
 
 def Scrollbar(id, overall_rect, horizontal, style):
-    # this is a constructor for scrollbars with styles and
-    # that is why the name is capitalized
+    # Scrollbar constructor
     from .widgets.scrollbar import ScrollbarBase
     from .widgets.arrowbox import ArrowBox
     if style == 0:
@@ -213,9 +212,8 @@ def add(widget, callback=None):
 # active window bank
 window_bank = None
 def Window(title, pos, size, backdrop=None):
-    # the purpose of this manipulator instead of calling Window directly
-    # is so that extra information like the window bank can be used.
-    # window constructor, return the window object if it is needed
+    # window constructor
+    # extra information like the window bank is added here
     global window_bank
     from .forms.window import WindowBase
     return WindowBase(title, pos, size, backdrop)
