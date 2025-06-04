@@ -3,9 +3,9 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, Window, centre, load_font, set_font, set_last_font
 from gui import set_grid_properties, gridded, set_backdrop
-from gui import set_active_object, set_cursor, add
+from gui import set_active_object, set_cursor, add, Scrollbar
 from gui import GKind
-from gui import Frame, Label, Button, PushButtonGroup, Scrollbar
+from gui import Frame, Label, Button, PushButtonGroup
 
 class Demo:
     def __init__(self):
@@ -61,10 +61,10 @@ class Demo:
         self.screen_label_button = add(Label(gridded(1, 3), 'N/A'))
         self.screen_label_radio = add(Label(gridded(2, 3), 'N/A'))
         # horizontal scrollbar
-        sb1 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True))
+        sb1 = add(Scrollbar('S1', Rect(x + 10, y + 115, 395, 20), True, 1))
         sb1.set(100, 0, 30, 10)
         # vertical scrollbar
-        sb2 = add(Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False))
+        sb2 = add(Scrollbar('S2', Rect(x + 410, y + 10, 20, 125), False, 1))
         sb2.set(100, 0, 30, 10)
         #
         # -> end adding screen widgets
@@ -109,10 +109,10 @@ class Demo:
         self.window_label_button = add(Label(gridded(1, 3), 'N/A', 100))
         self.window_label_radio = add(Label(gridded(2, 3), 'N/A', 80))
         # horizontal scrollbar
-        sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True))
+        sb3 = add(Scrollbar('S3', Rect(x + 10, y + height - 30, frame.right - 45 - frame.x, 20), True, 1))
         sb3.set(100, 0, 30, 10)
         # vertical scrollbar
-        sb4 = add(Scrollbar('S4', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False))
+        sb4 = add(Scrollbar('S4', Rect(frame.right - 30, y + 10, 20, frame.bottom - 20 - frame.y), False, 1))
         sb4.set(100, 0, 30, 10)
         #
         # -> end adding window widgets

@@ -6,7 +6,7 @@ from ..utility import convert_to_window, convert_to_screen
 from .frame import Frame, FrState
 from .widget import colours
 
-class Scrollbar(Frame):
+class ScrollbarBase(Frame):
     def __init__(self, id, rect, horizontal):
         # initialize common widget values
         super().__init__(id, rect)

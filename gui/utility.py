@@ -132,14 +132,14 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
-def ScrollbarStyle(id, overall_rect, horizontal, style):
+def Scrollbar(id, overall_rect, horizontal, style):
     # this is a constructor for scrollbars with styles and
     # that is why the name is capitalized
-    from .widgets.scrollbar import Scrollbar
+    from .widgets.scrollbar import ScrollbarBase
     from .widgets.arrowbox import ArrowBox
     if style == 0:
         # pass through with no arrowboxes
-        scroll_bar = Scrollbar(id, overall_rect, horizontal)
+        scroll_bar = ScrollbarBase(id, overall_rect, horizontal)
     else:
         # define rects for scrollbar and arrowboxes
         x, y, width, height = overall_rect
@@ -174,13 +174,13 @@ def ScrollbarStyle(id, overall_rect, horizontal, style):
             raise Exception(f'style {style} not implemented')
     # now add the scrollbar and arrowboxs
     if style == 0:
-        return add(scroll_bar)
+        return scroll_bar
     else:
         x, y, width, height = overall_rect
         scroll_absolute = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
         increment_absolute = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
         decrement_absolute = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
-        scroll_bar = add(Scrollbar(id, scroll_absolute, horizontal))
+        scroll_bar = ScrollbarBase(id, scroll_absolute, horizontal)
         if horizontal:
             inc_degree = 0
             dec_degree = 180

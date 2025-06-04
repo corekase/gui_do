@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
-from gui import add, set_cursor, restore_pristine, ScrollbarStyle, Window
+from gui import add, set_cursor, restore_pristine, Scrollbar, Window
 from gui import GKind, Label, Button, Frame, FrState, Image
 
 class Demo:
@@ -37,28 +37,28 @@ class Demo:
         # create the window and it adds itself to the gui_manager and makes itself the active object
         Window('Scrollbar Styles', (window_x, window_y), (width, height))
         x, y = 10, 10
-        sb1 = ScrollbarStyle('a', Rect(x, y, 300, 20), True, 0)
+        sb1 = add(Scrollbar('a', Rect(x, y, 300, 20), True, 0))
         sb1.set(100, 0, 30, 10)
         y += 22
-        sb2 = ScrollbarStyle('b', Rect(x, y, 300, 20), True, 1)
+        sb2 = add(Scrollbar('b', Rect(x, y, 300, 20), True, 1))
         sb2.set(100, 0, 30, 10)
         y += 22
-        sb3 = ScrollbarStyle('c', Rect(x, y, 300, 20), True, 2)
+        sb3 = add(Scrollbar('c', Rect(x, y, 300, 20), True, 2))
         sb3.set(100, 0, 30, 10)
         y += 22
-        sb4 = ScrollbarStyle('d', Rect(x, y, 300, 20), True, 3)
+        sb4 = add(Scrollbar('d', Rect(x, y, 300, 20), True, 3))
         sb4.set(100, 0, 30, 10)
         y += 24
-        sb5 = ScrollbarStyle('e', Rect(x, y, 20, 300), False, 0)
+        sb5 = add(Scrollbar('e', Rect(x, y, 20, 300), False, 0))
         sb5.set(100, 0, 30, 10)
         x += 22
-        sb6 = ScrollbarStyle('f', Rect(x, y, 20, 300), False, 1)
+        sb6 = add(Scrollbar('f', Rect(x, y, 20, 300), False, 1))
         sb6.set(100, 0, 30, 10)
         x += 22
-        sb7 = ScrollbarStyle('g', Rect(x, y, 20, 300), False, 2)
+        sb7 = add(Scrollbar('g', Rect(x, y, 20, 300), False, 2))
         sb7.set(100, 0, 30, 10)
         x += 22
-        sb8 = ScrollbarStyle('h', Rect(x, y, 20, 300), False, 3)
+        sb8 = add(Scrollbar('h', Rect(x, y, 20, 300), False, 3))
         sb8.set(100, 0, 30, 10)
         add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
         set_font('gui_do')
