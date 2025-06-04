@@ -111,7 +111,7 @@ class ScrollbarBase(Frame):
         self.dragging = False
         self.last_mouse_pos = None
 
-    def get(self):
+    def read(self):
         # return scrollbar start position
         return self.start_pos
 
