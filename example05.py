@@ -5,7 +5,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, load_font, set_font
+from gui import gui_init, set_backdrop, load_font, set_font, centre
 from gui import add, set_cursor, restore_pristine, Window
 from gui import GKind, Label, Button, Frame, FrState, Canvas
 
@@ -33,11 +33,15 @@ class Demo:
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        # set cursor image
-        Window('Canvas', (400, 100), (650, 450))
+        # position of the window
+        width, height = 650, 450
+        window_x = centre(self.screen.get_rect().width, width)
+        window_y = centre(self.screen.get_rect().height, height)
+        Window('Canvas', (window_x, window_y), (width, height))
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430)))
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
+        # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
