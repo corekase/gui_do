@@ -149,12 +149,14 @@ class ScrollbarBase(Frame):
         rect(self.surface, colours['full'], self.handle_area(), 0)
 
     def set_visible(self, visible):
+        # call the parent set_visible, up to widget
         super().set_visible(visible)
+        # for each attached arrowbox also do their setting
         for widget in self.registered:
             widget.set_visible(visible)
 
     def register(self, obj):
-        # add the object to the visible list for future set_visible(boolean)
+        # add the object to a list that set_visible uses
         self.registered.append(obj)
 
     # callbacks
