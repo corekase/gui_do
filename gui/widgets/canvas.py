@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from .widget import Widget
 from .frame import Frame, FrState
-from ..command import copy_graphic_area, convert_to_window
+from ..command import copy_graphic_area, convert_to_window, set_backdrop
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None):
@@ -19,10 +19,7 @@ class Canvas(Widget):
             frame.surface = self.canvas
             frame.draw()
         else:
-            backdrop = pygame.transform.smoothscale(backdrop, (rect.width, rect.height))
-            self.canvas.blit(backdrop, (0, 0))
-        # copy the current contents of the canvas surface as the pristine surface
-        self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
+            set_backdrop(backdrop, self)
         # variables that the gui_do client can read
         self.last_x = self.last_y = None
         self.last_buttons = []
