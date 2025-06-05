@@ -20,9 +20,9 @@ class Canvas(Widget):
             frame.surface = self.canvas
             frame.draw()
             self.surface.blit(self.canvas, self.canvas.get_rect())
+            self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
             set_backdrop(backdrop, self)
-        self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         # variables that the gui_do client can read
         self.last_x = self.last_y = None
         self.last_buttons = []
