@@ -26,7 +26,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        self.gui_do_label = add(Label((50, 50),'gui_do', False))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -52,9 +52,9 @@ class Demo:
         sb7 = add(Scrollbar('g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
         x += 22
         sb8 = add(Scrollbar('h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
-        add(Image('realize', Rect(100, 100, 210, 210), 'realize.png'))
+        add(Image('realize', Rect(100, 100, 210, 210), 'realize.png', False))
         set_font('gui_do')
-        add(Label((110, 310), 'Scrollbars!'))
+        add(Label((110, 310), 'Scrollbars!', False))
         set_font('normal')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')

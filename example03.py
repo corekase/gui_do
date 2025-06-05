@@ -27,7 +27,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        self.gui_do_label = add(Label((50, 50),'gui_do', False))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -43,7 +43,7 @@ class Demo:
         centre_y = centre(screen_height, window_height)
         self.win = Window('Example 03 Visibility Demo', (centre_x, centre_y), (window_width, window_height), 'example03_clipart.jpg')
         # add an image
-        self.image_toggle = add(Image('image', Rect(15, 15, 145, 145), 'realize.png'))
+        self.image_toggle = add(Image('image', Rect(15, 15, 145, 145), 'realize.png', False))
         # add a toggle button
         self.image_toggle_button = add(ToggleButton('ImageToggleButton', Rect(10, 170, 150, 20), True, 'Image Visible'))
         # horizontal scrollbar

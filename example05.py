@@ -29,7 +29,7 @@ class Template:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        self.gui_do_label = add(Label((50, 50),'gui_do', False))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -73,10 +73,9 @@ class Template:
 
         # begin main loop
         while self.running:
+            restore_pristine(self.gui_do_label.rect)
             # handle events
             self.handle_events()
-            # restore pristine bitmap under the label rect
-            restore_pristine(self.gui_do_label.get_rect())
             if draw_boxes:
                 #
                 # draw boxes

@@ -33,7 +33,7 @@ def render_text(text, highlight=False):
     else:
         colour = colours['text']
     # return a bitmap of the chosen colour
-    return font_object.render(text, True, colour)
+    return font_object.render(text, True, colour, None)
 
 # layout helper
 def centre(bigger, smaller):

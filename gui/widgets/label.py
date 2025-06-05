@@ -1,9 +1,8 @@
-from pygame import Rect
 from ..command import render_text
 from .widget import Widget
 
 class Label(Widget):
-    def __init__(self, position, text, minimum_xsize=None):
+    def __init__(self, position, text, transparent, minimum_xsize=None):
         # initialize common widget values
         self.text_bitmap = render_text(text)
         self.rect = self.text_bitmap.get_rect()
@@ -11,6 +10,7 @@ class Label(Widget):
         if minimum_xsize != None:
             self.rect.width = minimum_xsize
         super().__init__('label', self.rect)
+        self.transparent = transparent
 
     def set_label(self, text):
         # text bitmap
@@ -20,4 +20,5 @@ class Label(Widget):
         return False
 
     def draw(self):
+        super().draw()
         self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))

@@ -64,8 +64,10 @@ class Widget:
         return Rect(self.rect)
 
     def draw(self):
-        # implement in subclasses
-        pass
+        from ..command import restore_pristine
+        # handle transparency
+        if self.transparent:
+            restore_pristine(self.rect, self.window)
 
     def leave(self):
         # what to do when a widget loses focus
