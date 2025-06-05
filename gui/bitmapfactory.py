@@ -22,16 +22,20 @@ class BitmapFactory:
         # in the bitmapfactory implement a 'theme bank' like how the gui will be
         # implementing an object bank. the factory really just returns bitmaps so
         # as gtk2 theme support develops this is where bitmaps for gui objects will
-        # be made and returned to the gui_do gui code.  gui_do is all bitmaps in its
-        # code and operations, and the bitmapfactory does its themes operations here
-        # and just returns bitmaps for everything, and gui_do takes it from there
+        # be made and returned to the gui_do gui code.
         #
-        #   theme_bank[theme]['bitmaps']={}
+        #   theme_bank[theme]['bitmaps'] = {}
         #   theme_bank[theme]['needed_list'] = []
         #   ..and so on for more theme keys
         #    -> theme_bank is a dict of themes which each contain a dict where 'bitmaps'
         #       is a key which is a dict of needed items. the theme key can also contain
         #       other needed items in addition to the 'bitmaps' key
+        #
+        # the bitmapfactory takes requests for bitmaps for specific kinds of widgets.
+        # then, when the request gets here, depending on self.theme, either the built-in
+        # theme is used, the only one so far, or the contents of theme_bank[theme]['bitmaps']
+        # are used to construct the bitmaps returned to gui_do. and gui_do is all bitmaps so it
+        # is theme-agnostic
         #
         #
         self.theme = 'built_in'
