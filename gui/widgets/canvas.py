@@ -48,6 +48,7 @@ class Canvas(Widget):
 
     def handle_event(self, event, window):
         if self.get_collide(window):
+            # if mousewheel event..
             self.last_x, self.last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
             self.last_buttons = pygame.mouse.get_pressed()
             # the mouse is over the canvas so signal activated and the above values are valid
