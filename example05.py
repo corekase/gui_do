@@ -34,7 +34,7 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # position of the window
-        width, height = 650, 450
+        width, height = 580, 450
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         Window('Canvas', (window_x, window_y), (width, height))
