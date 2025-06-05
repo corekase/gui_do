@@ -45,14 +45,14 @@ class Demo:
         frame = add(Frame('panel', rec))
         # gui_do label
         set_font('gui_do')
-        add(Label(((x + centre(w, 120)), y + 5), 'gui_do', False))
+        add(Label(((x + centre(w, 120)), y + 5), 'gui_do'))
         set_font('normal')
         # horizontal scrollbar
         sb1 = add(Scrollbar('S1', (100, 0, 30, 10), Rect(x + 10, y + h - 30, 180, 20), True, 1))
         # vertical scrollbar
         sb2 = add(Scrollbar('S2', (100, 0, 30, 10), Rect(x + w - 30, y + 10, 20, 150), False, 1))
         # fps controls
-        self.fps_label = add(Label(Rect(x + 10, y + h - 110, 70, 20), 'N/A', False, 60))
+        self.fps_label = add(Label(Rect(x + 10, y + h - 110, 70, 20), 'N/A', 60))
         set_grid_properties((x + 10, y + h - 90), 70, 20, 5)
         self.fps_control = add(PushButtonGroup('60_fps', gridded(0, 0), '60 fps', 'fps', 1))
         add(PushButtonGroup('full_fps', gridded(1, 0), 'Uncapped', 'fps', 1))

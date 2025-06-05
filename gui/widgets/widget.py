@@ -25,12 +25,10 @@ class Widget:
         self.visible = True
         # callback of the widget
         self.callback = None
-        # -> To-do:
-        #    if a widget is potentially transparent, like image and label,
-        #    then automatically handle, depending on this flag, the saving
-        #    and restoring of the pristine surface with the widget surface
-        #    because of incorrect screen output if you don't
-        self.transparent = False
+        # if this is true then if the widget calls the superclass draw defined in this
+        # class then this class will restore the pristine image, return, and subclasses
+        # continue drawing
+        self.auto_restore_pristine = False
 
     def save_pristine(self):
         # update the pristine bitmap
@@ -65,8 +63,8 @@ class Widget:
 
     def draw(self):
         from ..command import restore_pristine
-        # handle transparency
-        if self.transparent:
+        # if auto restore flag then restore the pristine bitmap
+        if self.auto_restore_pristine:
             restore_pristine(self.rect, self.window)
 
     def leave(self):
