@@ -40,6 +40,16 @@ class BitmapFactory:
         #
         self.theme = 'built_in'
 
+    def set_theme(self, theme):
+        # the current theme which controls which bitmaps are being rendered and returned to
+        # client widgets. when generating bitmaps the current theme is tried first, and if
+        # the definition to construct a bitmap isn't implemented yet - loading of gtk2 themes,
+        # then fall-back to the built-in theme.
+        #
+        # -> try to construct from self.theme, if any element is not implemented in gtk2 bitmap
+        #    loading and parsing functions then use the built_in generator instead
+        self.theme = theme
+
     def draw_window_title_bar_bitmaps(self, title, width, size):
         saved = []
         saved.append(self.draw_window_title_bar_bitmap(title, width, size, False))
