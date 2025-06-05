@@ -34,7 +34,6 @@ class Template:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # set cursor image
-        add(Canvas('canvas', Rect(100, 200, 200, 200)))
         Window('Canvas', (400, 100), (450, 450))
         self.canvas = add(Canvas('canvas2', Rect(10, 10, 430, 430)))
         set_cursor((1, 1), 'cursor.png')
