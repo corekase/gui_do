@@ -80,16 +80,12 @@ class Demo:
                 if choice([True, False]):
                     dy = -dy
                 areas.append((x, y, dx, dy))
-
         # begin main loop
         while self.running:
             restore_pristine(self.gui_do_label.rect)
             # handle events
             self.handle_events()
             if draw_boxes:
-                #
-                # draw boxes
-                #
                 new_areas = []
                 for x, y, dx, dy in areas:
                     x += dx
@@ -101,7 +97,6 @@ class Demo:
                     canvas_surface.blit(frame_bitmap, (x, y))
                     new_areas += [(x, y, dx, dy)]
                 areas = new_areas
-
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -110,13 +105,8 @@ class Demo:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
-
             if draw_boxes:
-                #
-                # undraw boxes
-                #
-                self.canvas.restore()
-
+                self.canvas.restore_pristine()
         # release resources
         pygame.quit()
 

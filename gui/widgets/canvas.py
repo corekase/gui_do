@@ -31,7 +31,7 @@ class Canvas(Widget):
         # return a reference to the canvas surface
         return self.canvas
 
-    def restore(self, area=None):
+    def restore_pristine(self, area=None):
         # copy an area from the pristine bitmap to the canvas bitmap
         if area == None:
             area = self.canvas.get_rect()
