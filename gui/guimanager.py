@@ -112,6 +112,8 @@ class GuiManager:
         self.locking_object = None
         # timers
         self.timers = Timers()
+        # whether or not drawing is buffered
+        self.buffered = True
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
@@ -336,8 +338,9 @@ class GuiManager:
                 widget.draw()
         for window in self.windows:
             if window.visible:
-                # save the bitmap area under the window
-                self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
+                # save the bitmap area under the window if buffered
+                if self.buffered:
+                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
                 if window is self.windows[-1]:
                     window.draw_title_bar_active()
                 else:
@@ -358,7 +361,8 @@ class GuiManager:
         self.surface.blit(self.cursor_image, cursor_rect)
 
     def undraw_gui(self):
-        # reverse the bitmaps that were under each gui object drawn
+        # reverse the bitmaps that were under each gui object drawn, if buffered is false then
+        # the client does not call this method at all
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
 

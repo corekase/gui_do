@@ -106,6 +106,17 @@ def gui_init(screen):
     gui.surface = screen
     return gui
 
+def set_buffered(buffered):
+    # if buffered is set to True then bitmaps under gui objects
+    # will be saved and the undraw will undo them
+    # if buffered is set to False then no bitmaps are saved, the
+    #   client doesn't call gui undraw, and instead they just
+    #   clear their screen or other client logic and draw the gui
+    #   again when they need it
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    gui.buffered = buffered
+
 def add(widget, callback=None):
     from .guimanager import GuiManager
     gui = GuiManager()
