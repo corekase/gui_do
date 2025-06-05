@@ -9,6 +9,7 @@ class Canvas(Widget):
         super().__init__(id, rect)
         # create widget surface
         self.surface = pygame.surface.Surface((rect.width, rect.height)).convert()
+        self.pristine = pygame.surface.Surface((rect.width, rect.height)).convert()
         # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()
         # if there is no backdrop make a frame as one otherwise load the backdrop
@@ -18,8 +19,10 @@ class Canvas(Widget):
             frame.state = FrState.Idle
             frame.surface = self.canvas
             frame.draw()
+            self.surface.blit(self.canvas, self.canvas.get_rect())
         else:
             set_backdrop(backdrop, self)
+        self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         # variables that the gui_do client can read
         self.last_x = self.last_y = None
         self.last_buttons = []
