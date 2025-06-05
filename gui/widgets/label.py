@@ -2,7 +2,7 @@ from ..command import render_text
 from .widget import Widget
 
 class Label(Widget):
-    def __init__(self, position, text, transparent, minimum_xsize=None):
+    def __init__(self, position, text, transparent=False, minimum_xsize=None):
         # initialize common widget values
         self.text_bitmap = render_text(text)
         self.rect = self.text_bitmap.get_rect()
