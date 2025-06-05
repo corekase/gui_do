@@ -138,9 +138,6 @@ class Demo:
                     (x, y), buttons = self.canvas.read()
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
                     self.buttons_label.set_label(f'{buttons}')
-                else:
-                    self.coordinate_label.set_label(f'N/A')
-                    self.buttons_label.set_label(f'N/A')
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
