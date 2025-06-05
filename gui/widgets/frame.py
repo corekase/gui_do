@@ -15,7 +15,6 @@ class Frame(Widget):
         return False
 
     def draw(self):
-        # determine which colours to use depending on State
         if self.state == FrState.Idle:
             self.surface.blit(self.idle, (self.rect.x, self.rect.y))
         elif self.state == FrState.Hover:
