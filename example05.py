@@ -7,7 +7,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
 from gui import add, set_cursor, restore_pristine, Window
-from gui import GKind, Label, Button, Frame, FrState, Canvas
+from gui import GKind, Label, Button, Frame, FrState, Canvas, ToggleButton
 
 class Demo:
     def __init__(self):
@@ -41,6 +41,7 @@ class Demo:
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430)))
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
+        self.toggle = add(ToggleButton('toggle', Rect(450, 50, 120, 20), True, 'Boxes'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
@@ -83,6 +84,7 @@ class Demo:
         # begin main loop
         while self.running:
             restore_pristine(self.gui_do_label.rect)
+            draw_boxes = self.toggle.read()
             # handle events
             self.handle_events()
             if draw_boxes:
