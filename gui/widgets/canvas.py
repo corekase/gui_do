@@ -4,7 +4,6 @@ import pygame
 from pygame import Rect
 from .widget import Widget
 from .frame import Frame, FrState
-from ..command import set_backdrop
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None):
