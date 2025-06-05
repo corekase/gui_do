@@ -40,7 +40,7 @@ class Canvas(Widget):
     def read(self):
         # returns last_x, last_y, and last mouse buttons
         # last_button is a three item list of true or false for the buttons
-        return self.last_x, self.last_y, self.last_buttons
+        return self.last_x - self.rect.x, self.last_y - self.rect.y, self.last_buttons
 
     def handle_event(self, event, window):
         if self.get_collide(window):

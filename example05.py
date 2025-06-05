@@ -34,8 +34,10 @@ class Demo:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # set cursor image
-        Window('Canvas', (400, 100), (450, 450))
+        Window('Canvas', (400, 100), (650, 450))
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430)))
+        self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
+        self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
@@ -128,7 +130,13 @@ class Demo:
                 self.running = False
                 return
             if event.type == GKind.Widget:
-                pass
+                if event.widget_id == 'canvas':
+                    x, y, buttons = self.canvas.read()
+                    self.coordinate_label.set_label(f'X: {x}, Y: {y}')
+                    self.buttons_label.set_label(f'{buttons}')
+                else:
+                    self.coordinate_label.set_label(f'N/A')
+                    self.buttons_label.set_label(f'N/A')
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
