@@ -99,26 +99,58 @@ def convert_to_screen(point, window):
     # conversion not necessary
     return gui.lock_area(point)
 
-def set_active_object(object=None):
-    from .guimanager import GuiManager
-    gui = GuiManager()
-    # set which object is active
-    gui.active_object = object
-
-def set_cursor(hotspot, *image):
-    from .guimanager import GuiManager
-    gui = GuiManager()
-    # set the cursor image and hotspot
-    gui.cursor_image = image_alpha('cursors', *image)
-    gui.cursor_rect = gui.cursor_image.get_rect()
-    gui.cursor_hotspot = hotspot
-
 def gui_init(screen):
     # create a gui manager and set the screen for it
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = screen
     return gui
+
+def add(widget, callback=None):
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    # give a reference to the gui
+    widget.gui = gui
+    # callback
+    widget.callback = callback
+    if gui.active_object != None:
+        # store a reference to the window the widget is in
+        widget.window = gui.active_object
+        # give the widget a reference to the window surface
+        widget.surface = gui.active_object.surface
+        # append the widget to the window's list
+        gui.active_object.widgets.append(widget)
+    else:
+        # give the widget a reference to the screen surface
+        widget.surface = gui.surface
+        # append the widget to the screen list
+        gui.widgets.append(widget)
+    return widget
+
+def set_active_object(object=None):
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    # set which object is active
+    gui.active_object = object
+
+# active window bank
+window_bank = None
+def Window(title, pos, size, backdrop=None):
+    # window constructor
+    # extra information like the window bank is added here
+    global window_bank
+    from .forms.window import WindowBase
+    return WindowBase(title, pos, size, backdrop)
+
+bank = None
+def set_active_bank(dest_bank):
+    # active bank manipulator, sets destination bank for add widget and window commands.
+    # as items are added, their surfaces are still the screen or a window while they are being
+    # instantiated. then loading and unloading just determine which are active at any given time
+    global bank
+    from .guimanager import GuiManager
+    gui = GuiManager()
+    pass
 
 def Scrollbar(id, params, overall_rect, horizontal, style):
     # Scrollbar constructor
@@ -182,35 +214,13 @@ def Scrollbar(id, params, overall_rect, horizontal, style):
         # return a reference to the scrollbar widget
         return scroll_bar
 
-def add(widget, callback=None):
+def set_cursor(hotspot, *image):
     from .guimanager import GuiManager
     gui = GuiManager()
-    # give a reference to the gui
-    widget.gui = gui
-    # callback
-    widget.callback = callback
-    if gui.active_object != None:
-        # store a reference to the window the widget is in
-        widget.window = gui.active_object
-        # give the widget a reference to the window surface
-        widget.surface = gui.active_object.surface
-        # append the widget to the window's list
-        gui.active_object.widgets.append(widget)
-    else:
-        # give the widget a reference to the screen surface
-        widget.surface = gui.surface
-        # append the widget to the screen list
-        gui.widgets.append(widget)
-    return widget
-
-# active window bank
-window_bank = None
-def Window(title, pos, size, backdrop=None):
-    # window constructor
-    # extra information like the window bank is added here
-    global window_bank
-    from .forms.window import WindowBase
-    return WindowBase(title, pos, size, backdrop)
+    # set the cursor image and hotspot
+    gui.cursor_image = image_alpha('cursors', *image)
+    gui.cursor_rect = gui.cursor_image.get_rect()
+    gui.cursor_hotspot = hotspot
 
 def set_backdrop(image, obj=None):
     # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
