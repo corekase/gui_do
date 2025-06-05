@@ -44,7 +44,7 @@ class Canvas(Widget):
         #           in a variable here to be read. when read, add code below that clears
         #           the mousewheel variable so the subsequent reads don't get it - it only
         #           is sent once
-        return self.last_x - self.rect.x, self.last_y - self.rect.y, self.last_buttons
+        return (self.last_x - self.rect.x, self.last_y - self.rect.y), self.last_buttons
 
     def handle_event(self, event, window):
         if self.get_collide(window):
