@@ -25,6 +25,12 @@ class Widget:
         self.visible = True
         # callback of the widget
         self.callback = None
+        # -> To-do:
+        #    if a widget is potentially transparent, like image and label,
+        #    then automatically handle, depending on this flag, the saving
+        #    and restoring of the pristine surface with the widget surface
+        #    because of incorrect screen output if you don't
+        self.transparent = False
 
     def save_pristine(self):
         # update the pristine bitmap
