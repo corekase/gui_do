@@ -20,13 +20,18 @@ class Canvas(Widget):
         else:
             backdrop = pygame.transform.smoothscale(backdrop, (rect.width, rect.height))
             self.canvas.blit(backdrop, (0, 0))
-        self.pristine = copy_graphic_area(self.canvas, Rect(0, 0, rect.width, rect.height)).convert()
+        self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
 
     def get_surface(self):
         return self.canvas
+
+    def restore(self, area=None):
+        if area == None:
+            area = self.canvas.get_rect()
+        self.canvas.blit(self.pristine, area)
 
     def handle_event(self, _, _a):
         return False
 
     def draw(self):
-        self.surface.blit(self.canvas, (self.rect.x, self.rect.y))
+        self.surface.blit(self.canvas, self.rect)

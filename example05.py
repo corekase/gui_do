@@ -50,7 +50,7 @@ class Template:
         draw_boxes = True
         if draw_boxes:
             # number of boxes to draw on screen
-            boxes = 200
+            boxes = 50
             # setup a frame to draw on our surface
             size = 12
             frame = Frame('none', Rect(0, 0, size, size))
@@ -61,12 +61,13 @@ class Template:
             frame.surface = frame_bitmap
             # and render onto that surface
             frame.draw()
-            canvas_surface = self.canvas.get_surface().get_rect()
-            max_x, max_y = canvas_surface.width - size, canvas_surface.height - size
+            canvas_surface = self.canvas.get_surface()
+            canvas_rect = canvas_surface.get_rect()
+            max_x, max_y = canvas_rect.width - size, canvas_rect.height - size
             areas = []
             for _ in range(boxes):
-                x = randrange(0, self.screen.get_rect().width - size)
-                y = randrange(0, self.screen.get_rect().height - size)
+                x = randrange(0, canvas_rect.width - size)
+                y = randrange(0, canvas_rect.height - size)
                 dx = randrange(2, 7)
                 dy = randrange(2, 7)
                 if choice([True, False]):
@@ -92,8 +93,9 @@ class Template:
                         dx = -dx
                     if y < 0 or y > max_y:
                         dy = -dy
-                    self.canvas.canvas.blit(frame_bitmap, (x, y))
-                    new_areas.append((x, y, dx, dy))
+                    canvas_surface.blit(frame_bitmap, (x, y))
+                    new_areas += [(x, y, dx, dy)]
+                areas = new_areas
 
             # draw gui
             self.gui.draw_gui()
@@ -108,9 +110,7 @@ class Template:
                 #
                 # undraw boxes
                 #
-                self.canvas.canvas.blit(self.canvas.pristine, (0, 0))
-                # swap the lists to start again
-                areas = new_areas
+                self.canvas.restore()
 
         # release resources
         pygame.quit()
