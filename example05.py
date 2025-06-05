@@ -61,7 +61,7 @@ class Template:
             frame.surface = frame_bitmap
             # and render onto that surface
             frame.draw()
-            canvas_surface = self.canvas.get_surface()
+            canvas_surface = self.canvas.get_canvas_surface()
             canvas_rect = canvas_surface.get_rect()
             max_x, max_y = canvas_rect.width - size, canvas_rect.height - size
             areas = []

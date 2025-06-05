@@ -22,7 +22,7 @@ class Canvas(Widget):
             self.canvas.blit(backdrop, (0, 0))
         self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
 
-    def get_surface(self):
+    def get_canvas_surface(self):
         return self.canvas
 
     def restore(self, area=None):
