@@ -26,9 +26,12 @@ class BitmapFactory:
         # code and operations, and the bitmapfactory does its themes operations here
         # and just returns bitmaps for everything, and gui_do takes it from there
         #
-        #   theme_bank[theme][bitmaps]={}
-        #    -> theme_bank is a dict of themes which contain a dict of bitmaps which
-        #       is a dict of needed items
+        #   theme_bank[theme]['bitmaps']={}
+        #   theme_bank[theme]['needed_list'] = []
+        #   ..and so on for more theme keys
+        #    -> theme_bank is a dict of themes which each contain a dict where 'bitmaps'
+        #       is a key which is a dict of needed items. the theme key can also contain
+        #       other needed items in addition to the 'bitmaps' key
         #
         #
         self.theme = 'built_in'
