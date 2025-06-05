@@ -6,8 +6,8 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, restore_pristine
-from gui import GKind, Label, Button, Frame, FrState
+from gui import add, set_cursor, restore_pristine, Window
+from gui import GKind, Label, Button, Frame, FrState, Canvas
 
 class Template:
     def __init__(self):
@@ -34,6 +34,9 @@ class Template:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # set cursor image
+        add(Canvas('canvas', Rect(100, 200, 200, 200)))
+        Window('Canvas', (400, 100), (450, 450))
+        add(Canvas('canvas2', Rect(10, 10, 430, 430)))
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
