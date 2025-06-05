@@ -36,7 +36,7 @@ class Template:
         # set cursor image
         add(Canvas('canvas', Rect(100, 200, 200, 200)))
         Window('Canvas', (400, 100), (450, 450))
-        add(Canvas('canvas2', Rect(10, 10, 430, 430)))
+        self.canvas = add(Canvas('canvas2', Rect(10, 10, 430, 430)))
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
@@ -61,7 +61,8 @@ class Template:
             frame.surface = frame_bitmap
             # and render onto that surface
             frame.draw()
-            max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
+            canvas_surface = self.canvas.get_surface().get_rect()
+            max_x, max_y = canvas_surface.width - size, canvas_surface.height - size
             areas = []
             for _ in range(boxes):
                 x = randrange(0, self.screen.get_rect().width - size)
@@ -91,7 +92,7 @@ class Template:
                         dx = -dx
                     if y < 0 or y > max_y:
                         dy = -dy
-                    self.screen.blit(frame_bitmap, (x, y))
+                    self.canvas.canvas.blit(frame_bitmap, (x, y))
                     new_areas.append((x, y, dx, dy))
 
             # draw gui
@@ -107,10 +108,7 @@ class Template:
                 #
                 # undraw boxes
                 #
-                for x, y, dx, dy in new_areas:
-                    area = Rect(x, y, size, size)
-                    # restore a bitmap area from the screen's pristine bitmap to the main surface
-                    restore_pristine(area)
+                self.canvas.canvas.blit(self.canvas.pristine, (0, 0))
                 # swap the lists to start again
                 areas = new_areas
 

@@ -4,6 +4,7 @@ import pygame
 from pygame import Rect
 from .widget import Widget
 from .frame import Frame, FrState
+from ..command import copy_graphic_area
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None):
@@ -18,8 +19,8 @@ class Canvas(Widget):
             frame.draw()
         else:
             backdrop = pygame.transform.smoothscale(backdrop, (rect.width, rect.height))
-            self.surface.blit(backdrop, (0, 0))
-        self.save_pristine()
+            self.canvas.blit(backdrop, (0, 0))
+        self.pristine = copy_graphic_area(self.canvas, Rect(0, 0, rect.width, rect.height)).convert()
 
     def get_surface(self):
         return self.canvas
