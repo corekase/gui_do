@@ -1,16 +1,17 @@
-# this will be a surface that the client code can draw directly on
-# and is displayed in the gui
 import pygame
 from pygame import Rect
 from .widget import Widget
 from .frame import Frame, FrState
-from ..command import copy_graphic_area
+from ..command import copy_graphic_area, convert_to_window
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None):
         super().__init__(id, rect)
+        # create widget surface
         self.surface = pygame.surface.Surface((rect.width, rect.height)).convert()
+        # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()
+        # if there is no backdrop make a frame as one otherwise load the backdrop
         if backdrop == None:
             # make a frame for the backdrop of the window surface
             frame = Frame('canvas_frame', Rect(0, 0, rect.width, rect.height))
@@ -20,18 +21,36 @@ class Canvas(Widget):
         else:
             backdrop = pygame.transform.smoothscale(backdrop, (rect.width, rect.height))
             self.canvas.blit(backdrop, (0, 0))
+        # copy the current contents of the canvas surface as the pristine surface
         self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
+        # variables that the gui_do client can read
+        self.last_x = self.last_y = None
+        self.last_buttons = []
 
     def get_canvas_surface(self):
+        # return a reference to the canvas surface
         return self.canvas
 
     def restore(self, area=None):
+        # copy an area from the pristine bitmap to the canvas bitmap
         if area == None:
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, area)
 
-    def handle_event(self, _, _a):
+    def read(self):
+        # returns last_x, last_y, and last mouse buttons
+        # last_button is a three item list of true or false for the buttons
+        return self.last_x, self.last_y, self.last_buttons
+
+    def handle_event(self, event, window):
+        if self.get_collide(window):
+            self.last_x, self.last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
+            self.last_buttons = pygame.mouse.get_pressed()
+            # the mouse is over the canvas so signal activated and the above values are valid
+            return True
+        # the mouse is not over the canvas
         return False
 
     def draw(self):
+        # copy the canvas surface to the widget surface
         self.surface.blit(self.canvas, self.rect)
