@@ -362,10 +362,6 @@ class GuiManager:
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
 
-    # -> To-do: implement show/hide for widgets and windows. widgets inside a window
-    #           could be hidden, screen widgets could be hidden, and entire windows can be
-    #           hidden
-    #
     # -> To-do: object banks
     #    for the list of screen widgets and the list of windows and their
     #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
