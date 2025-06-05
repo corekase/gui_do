@@ -21,6 +21,9 @@ class Canvas(Widget):
             self.surface.blit(backdrop, (0, 0))
         self.save_pristine()
 
+    def get_surface(self):
+        return self.canvas
+
     def handle_event(self, _, _a):
         return False
 
