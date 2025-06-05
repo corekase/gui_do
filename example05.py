@@ -9,7 +9,7 @@ from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, restore_pristine, Window
 from gui import GKind, Label, Button, Frame, FrState, Canvas
 
-class Template:
+class Demo:
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -140,4 +140,4 @@ class Template:
         self.running = False
 
 if __name__ == '__main__':
-    Template().run()
+    Demo().run()
