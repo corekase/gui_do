@@ -17,8 +17,20 @@ class BitmapFactory:
 
     # instead of an __init__ we have _populate_ and it is executed exactly once
     def _populate_(self):
-        # current theme the factory returns bitmaps for
-        # themes aren't implemented yet
+        #
+        #
+        # in the bitmapfactory implement a 'theme bank' like how the gui will be
+        # implementing an object bank. the factory really just returns bitmaps so
+        # as gtk2 theme support develops this is where bitmaps for gui objects will
+        # be made and returned to the gui_do gui code.  gui_do is all bitmaps in its
+        # code and operations, and the bitmapfactory does its themes operations here
+        # and just returns bitmaps for everything, and gui_do takes it from there
+        #
+        #   theme_bank[theme][bitmaps]={}
+        #    -> theme_bank is a dict of themes which contain a dict of bitmaps which
+        #       is a dict of needed items
+        #
+        #
         self.theme = 'built_in'
 
     def draw_window_title_bar_bitmaps(self, title, width, size):
