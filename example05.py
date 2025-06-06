@@ -56,9 +56,6 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # whether to draw the boxes
-        draw_boxes = True
-        draw_circles = True
         # number of boxes and their size to draw on screen
         boxes = 50
         boxes_size = 12
@@ -83,10 +80,12 @@ class Demo:
         circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
+            # update the toggle variables
             draw_boxes = self.boxes_toggle.read()
             draw_circles = self.circles_toggle.read()
             # handle events
             self.handle_events()
+            # draw the boxes and circles if their respective toggles are true
             if draw_boxes:
                 boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
             if draw_circles:
