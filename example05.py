@@ -40,12 +40,15 @@ class Demo:
         self.canvas_rect = self.canvas.get_rect()
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
-        self.boxes_toggle = add(ToggleButton('boxes_toggle', Rect(450, 50, 120, 20), True, 'Boxes'))
-        self.circles_toggle = add(ToggleButton('circles_toggle', Rect(450, 70, 120, 20), True, 'Circles'))
+        self.wheel_label = add(Label(Rect(450, 50, 100, 20), 'N/A'))
+        self.boxes_toggle = add(ToggleButton('boxes_toggle', Rect(450, 70, 120, 20), True, 'Boxes'))
+        self.circles_toggle = add(ToggleButton('circles_toggle', Rect(450, 90, 120, 20), True, 'Circles'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
+        # the last wheel state that isn't None
+        self.last_wheel = None
 
     def run(self):
         # fps to maintain, if 0 then unlimited
@@ -119,6 +122,15 @@ class Demo:
             if event.type == GKind.Widget:
                 if event.widget_id == 'canvas':
                     (x, y), buttons, mousewheel = self.canvas.read()
+                    if mousewheel != None:
+                        if mousewheel != self.last_wheel:
+                            self.last_wheel = mousewheel
+                            if self.last_wheel == 1:
+                                self.wheel_label.set_label('Wheel up')
+                            else:
+                                self.wheel_label.set_label('Wheel down')
+                    else:
+                        self.wheel_label.set_label('Wheel none')
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
                     self.buttons_label.set_label(f'{buttons}')
             elif event.type == GKind.KeyDown:
