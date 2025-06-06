@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, centre, Window
+from gui import add, set_cursor, centre, Window, colours
 from gui import GKind, Label, Button, Canvas, ToggleButton
 
 class Demo:
@@ -29,18 +29,25 @@ class Demo:
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
-        width, height = 450, 480
+        width, height = 700, 700
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         Window('Conway\'s Game of Life', (window_x, window_y), (width, height))
-        self.canvas = add(Canvas('life', Rect(10, 10, 430, 430), automatic_pristine=True))
+        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_rect()
-        self.origin_x, self.origin_y = self.canvas_rect.center
-        self.toggle = add(ToggleButton('run', Rect(10, 450, 120, 20), False, 'Stop', 'Start'))
-        self.button = add(Button('reset', Rect(140, 450, 120, 20), 'Reset'))
+        x_base = self.canvas_rect.x
+        y_base = self.canvas_rect.y
+        self.origin_x = self.canvas_rect.centerx - x_base
+        self.origin_y = self.canvas_rect.centery - y_base
+        self.viewport_x = 0
+        self.viewport_y = 0
+        self.toggle = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
+        self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset'))
+        self.cell_size = 4
         self.life = set()
         self.reset()
+        self.dragging = False
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
@@ -75,6 +82,8 @@ class Demo:
         # update internal gui timers
         self.gui.timers.update()
         # handle the pygame event queue
+        if not self.canvas.focused():
+            self.dragging = False
         for raw_event in pygame.event.get():
             # process event queue
             event = self.gui.handle_event(raw_event)
@@ -86,10 +95,28 @@ class Demo:
                 self.running = False
                 return
             if event.type == GKind.Widget:
-                pass
                 if event.widget_id == 'reset':
                     self.toggle.pushed = False
                     self.reset()
+                elif event.widget_id == 'life':
+                    (x, y), canvas_event = self.canvas.read_event()
+                    button = canvas_event.mousebuttondown
+                    if (button == 3) or (self.dragging == True):
+                        self.dragging = True
+                        motion = canvas_event.mousemotion
+                        if motion != None:
+                            self.viewport_x += motion[0]
+                            self.viewport_y += motion[1]
+                    button = canvas_event.mousebuttonup
+                    if button == 3:
+                        self.dragging = False
+                    wheel = canvas_event.mousewheel
+                    if wheel != None:
+                        self.cell_size += (wheel * 2)
+                        if self.cell_size < 3:
+                            self.cell_size = 3
+                        elif self.cell_size > 16:
+                            self.cell_size = 16
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
@@ -101,6 +128,8 @@ class Demo:
         self.running = False
 
     def reset(self):
+        self.viewport_x = self.viewport_y = 0
+        self.cell_size = 4
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
@@ -137,17 +166,16 @@ class Demo:
 
     def draw(self):
         # Draw contents of map onto display
-        cell_size = 4
         for cell in self.life:
             # Unpack x and y cell coordinates
             xpos, ypos = cell
-            xpos = self.origin_x + (xpos * cell_size)
-            ypos = self.origin_y + (ypos * cell_size)
+            xpos = self.origin_x + self.viewport_x + (xpos * self.cell_size)
+            ypos = self.origin_y + self.viewport_y + (ypos * self.cell_size)
             # Check to see if the cell is on screen and if so draw it
             bounded = (xpos >= 0) and (xpos <= self.canvas_rect.width) and \
                       (ypos >= 0) and (ypos <= self.canvas_rect.height)
             if bounded:
-                self.canvas_surface.fill('white', Rect(xpos, ypos, cell_size - 1, cell_size - 1))
+                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, self.cell_size - 1, self.cell_size - 1))
 
 if __name__ == '__main__':
     Demo().run()
