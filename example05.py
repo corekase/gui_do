@@ -122,15 +122,15 @@ class Demo:
             if event.type == GKind.Widget:
                 if event.widget_id == 'canvas':
                     (x, y), buttons, mousewheel = self.canvas.read()
-                    if mousewheel != None:
-                        if mousewheel != self.last_wheel:
-                            self.last_wheel = mousewheel
-                            if self.last_wheel == 1:
+                    if mousewheel != self.last_wheel:
+                        if mousewheel != None:
+                            if mousewheel == 1:
                                 self.wheel_label.set_label('Wheel up')
                             else:
                                 self.wheel_label.set_label('Wheel down')
                     else:
                         self.wheel_label.set_label('Wheel none')
+                    self.last_wheel = mousewheel
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
                     self.buttons_label.set_label(f'{buttons}')
             elif event.type == GKind.KeyDown:
