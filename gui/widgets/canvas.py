@@ -5,7 +5,7 @@ from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
 
 class Canvas(Widget):
-    def __init__(self, id, rect, backdrop=None):
+    def __init__(self, id, rect, backdrop=None, canvas_callback=None):
         super().__init__(id, rect)
         # create widget surface
         self.surface = pygame.surface.Surface((rect.width, rect.height)).convert()
@@ -26,6 +26,7 @@ class Canvas(Widget):
         # variables that the gui_do client can read
         self.last_x = self.last_y = None
         self.last_buttons = []
+        self.canvas_callback = canvas_callback
 
     def get_canvas_surface(self):
         # return a reference to the canvas surface
@@ -42,17 +43,28 @@ class Canvas(Widget):
         # value sequence of true or false for the buttons
         # -> To-do: if the canvas widget receives mousewheel events then put those here
         #           in a variable to be read.
-        return (self.last_x - self.rect.x, self.last_y - self.rect.y), self.last_buttons
+        return (self.last_x, self.last_y), self.last_buttons
 
     def handle_event(self, event, window):
         if self.get_collide(window):
-            # if mousewheel event..
+            # -> To-do: if mousewheel event..
+            # within the canvas so update information about that
             self.last_x, self.last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
+            self.last_x -= self.rect.x
+            self.last_y -= self.rect.y
             self.last_buttons = pygame.mouse.get_pressed()
-            # the mouse is over the canvas so signal activated and the above values are valid
-            return True
-        # the mouse is not over the canvas
-        return False
+            # the mouse is over the canvas so either do the callback or signal activated
+            if self.canvas_callback != None:
+                # do the callback
+                self.canvas_callback()
+                # callback consumes the event
+                return False
+            else:
+                # no callback, so signal the event instead
+                return True
+        else:
+            # the mouse is not over the canvas
+            return False
 
     def draw(self):
         # copy the canvas surface to the widget surface
