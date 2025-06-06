@@ -45,6 +45,7 @@ class Canvas(Widget):
         if self.queued_event == True:
             self.queued_event = False
             return self.CEvent
+        return None
 
     def focused(self):
         return self.focus
