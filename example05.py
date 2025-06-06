@@ -37,6 +37,7 @@ class Demo:
         window_y = centre(self.screen.get_rect().height, height)
         Window('Canvas', (window_x, window_y), (width, height))
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430), automatic_pristine=True))
+        self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_rect()
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
@@ -158,7 +159,7 @@ class Demo:
                 dx = -dx
             if y < 0 or y > self.canvas_rect.height - size:
                 dy = -dy
-            self.canvas.canvas.blit(bitmap, (x, y))
+            self.canvas_surface.blit(bitmap, (x, y))
             new_positions += [(x, y, dx, dy)]
         return new_positions
 
