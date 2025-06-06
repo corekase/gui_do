@@ -58,11 +58,10 @@ class Demo:
         if draw_boxes:
             # number of boxes to draw on screen
             boxes = 50
-            boxes_size = 18
+            boxes_size = 12
             # get a list of positions
             boxes_position_list = self.make_position_list(boxes, boxes_size)
             # setup a frame to draw on our surface
-            boxes_size = 16
             frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
             frame.state = FrState.Armed
             # create our bitmap
@@ -76,7 +75,7 @@ class Demo:
             factory = BitmapFactory()
             # number of circles to draw on screen
             circles = 50
-            circles_size = 16
+            circles_size = 12
             # get a position list for them
             circles_position_list = self.make_position_list(circles, circles_size)
             circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
