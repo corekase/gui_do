@@ -76,7 +76,7 @@ class Demo:
             factory = BitmapFactory()
             # number of circles to draw on screen
             circles = 50
-            circles_size = 26
+            circles_size = 16
             # get a position list for them
             circles_position_list = self.make_position_list(circles, circles_size)
             circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
@@ -99,6 +99,7 @@ class Demo:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
+            # clear canvas with the pristine bitmap if needed
             if draw_boxes or draw_circles:
                 self.canvas.restore_pristine()
         # release resources

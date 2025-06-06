@@ -120,27 +120,27 @@ class BitmapFactory:
     def draw_radio_pushbutton_bitmap(self, text, col1, col2, highlight=False):
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
-        radius = text_height / 4.0
-        radio_bitmap = self.draw_radio_checked_bitmap(text_height, col1, col2)
-        x_size = int((radius * 2) + 4 + text_bitmap.get_rect().width + 1)
+        radio_bitmap = self.draw_radio_checked_bitmap((text_height // 2) + 1, col1, col2)
+        x_size = text_height + text_bitmap.get_rect().width
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
-        button_complete.blit(radio_bitmap, (0, 0))
-        button_complete.blit(text_bitmap, (int(radius * 2) + 4, 2))
+        button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height) + 4))
+        button_complete.blit(text_bitmap, ((text_height // 2) + 2, 2))
         return button_complete
 
-    def draw_radio_checked_bitmap(self, size, col1, col2):
+    def draw_radio_checked_bitmap(self, diameter, col1, col2):
         # separate out from draw_radio_pushbutton_raised so the same bitmap can be used
         # in a checkbox too
-        radio_bitmap = pygame.surface.Surface((size, size), pygame.SRCALPHA)
-        y_offset = (size // 2) + 2
-        radius = size / 4.0
+        radio_bitmap = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
+        glyph = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
+        radius = 200
         points = []
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
             y1 = int(round(radius * sin(radians(point))))
-            points.append((int(radius) + x1, y_offset + y1))
+            points.append((radius + x1, radius + y1))
         pygame.draw.polygon(radio_bitmap, col1, points, 0)
-        pygame.draw.polygon(radio_bitmap, col2, points, 1)
+        pygame.draw.polygon(radio_bitmap, col2, points, 90)
+        radio_bitmap = pygame.transform.smoothscale(radio_bitmap, (diameter, diameter))
         return radio_bitmap
 
     def draw_arrow_state_bitmaps(self, rect, direction):
