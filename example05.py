@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
 from gui import add, set_cursor, Window
-from gui import GKind, Label, Button, Frame, FrState, Canvas, ToggleButton
+from gui import GKind, Label, Button, Frame, FrState, Canvas, CanvasKind, ToggleButton
 from gui import colours
 
 class Demo:
@@ -117,18 +117,20 @@ class Demo:
                 return
             if event.type == GKind.Widget:
                 if event.widget_id == 'canvas':
-                    (x, y), canvas_event = self.canvas.read_event()
+                    canvas_event = self.canvas.read_event()
+                    x, y = canvas_event.pos
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
-                    self.buttons_label.set_label(f'{canvas_event.mousebuttondown}')
-                    if canvas_event.mousewheel != self.last_wheel:
-                        if canvas_event.mousewheel != None:
-                            if canvas_event.mousewheel == 1:
-                                self.wheel_label.set_label('Wheel up')
-                            else:
-                                self.wheel_label.set_label('Wheel down')
-                    else:
-                        self.wheel_label.set_label('Wheel none')
-                    self.last_wheel = canvas_event.mousewheel
+                    self.buttons_label.set_label(f'{canvas_event.button}')
+                    if canvas_event.type == CanvasKind.MouseWheel:
+                        if canvas_event.y != self.last_wheel:
+                            if canvas_event.y != None:
+                                if canvas_event.y == 1:
+                                    self.wheel_label.set_label('Wheel up')
+                                else:
+                                    self.wheel_label.set_label('Wheel down')
+                        else:
+                            self.wheel_label.set_label('Wheel none')
+                    self.last_wheel = canvas_event.y
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:

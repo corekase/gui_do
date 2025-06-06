@@ -4,8 +4,9 @@ from pygame.locals import MOUSEWHEEL, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTIO
 from .widget import Widget
 from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
+from enum import Enum
 
-
+CanvasKind = Enum('GKind', ['Pass', 'MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp'])
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
@@ -43,7 +44,7 @@ class Canvas(Widget):
         # value sequence of true or false for the buttons, and then the last mousewheel
         if self.queued_event == True:
             self.queued_event = False
-            return (self.last_x, self.last_y), self.waiting_event
+            return self.waiting_event
 
     def focused(self):
         return self.focus
@@ -55,18 +56,23 @@ class Canvas(Widget):
                 self.queued_event = True
                 # within the canvas so update information about that
                 last_x, last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
-                self.last_x, self.last_y = last_x - self.rect.x, last_y - self.rect.y
                 # create a new event
                 self.waiting_event = CanvasEvent()
-                # if the event is for the mousewheel then update that information
+                # all events have the position field
+                self.waiting_event.pos = (last_x, last_y)
+                # and type specific fields
                 if event.type == MOUSEWHEEL:
-                    self.waiting_event.mousewheel = event.y
+                    self.waiting_event.type = CanvasKind.MouseWheel
+                    self.waiting_event.y = event.y
                 if event.type == MOUSEMOTION:
-                    self.waiting_event.mousemotion = event.rel
+                    self.waiting_event.type = CanvasKind.MouseMotion
+                    self.waiting_event.rel = event.rel
                 if event.type == MOUSEBUTTONDOWN:
-                    self.waiting_event.mousebuttondown = event.button
+                    self.waiting_event.type = CanvasKind.MouseButtonDown
+                    self.waiting_event.button = event.button
                 if event.type == MOUSEBUTTONUP:
-                    self.waiting_event.mousebuttonup = event.button
+                    self.waiting_event.type = CanvasKind.MouseButtonUp
+                    self.waiting_event.button = event.button
                 # the mouse is over the canvas so either do the callback or signal activated
                 if self.canvas_callback != None:
                     # do the callback
@@ -90,8 +96,8 @@ class Canvas(Widget):
 
 class CanvasEvent:
     def __init__(self):
-        self.position = None
-        self.mousewheel = None
-        self.mousemotion = None
-        self.mousebuttondown = None
-        self.mousebuttonup = None
+        self.type: CanvasKind = None
+        self.pos = None
+        self.y = None
+        self.rel = None
+        self.button = None

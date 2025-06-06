@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, centre, Window, colours
-from gui import GKind, Label, Button, Canvas, ToggleButton
+from gui import GKind, Label, Button, Canvas, CanvasKind, ToggleButton
 
 class Demo:
     def __init__(self):
@@ -99,24 +99,24 @@ class Demo:
                     self.toggle.pushed = False
                     self.reset()
                 elif event.widget_id == 'life':
-                    (x, y), canvas_event = self.canvas.read_event()
-                    button = canvas_event.mousebuttondown
-                    if (button == 3) or (self.dragging == True):
-                        self.dragging = True
-                        motion = canvas_event.mousemotion
-                        if motion != None:
-                            self.viewport_x += motion[0]
-                            self.viewport_y += motion[1]
-                    button = canvas_event.mousebuttonup
-                    if button == 3:
-                        self.dragging = False
-                    wheel = canvas_event.mousewheel
-                    if wheel != None:
-                        self.cell_size += (wheel * 2)
-                        if self.cell_size < 3:
-                            self.cell_size = 3
-                        elif self.cell_size > 16:
-                            self.cell_size = 16
+                    canvas_event = self.canvas.read_event()
+                    if canvas_event.type == CanvasKind.MouseButtonDown:
+                        if canvas_event.button == 3:
+                            self.dragging = True
+                    elif canvas_event.type == CanvasKind.MouseButtonUp:
+                        if canvas_event.button == 3:
+                            self.dragging = False
+                    elif canvas_event.type == CanvasKind.MouseMotion:
+                        if self.dragging:
+                            self.viewport_x += canvas_event.rel[0]
+                            self.viewport_y += canvas_event.rel[1]
+                    elif canvas_event.type == CanvasKind.MouseWheel:
+                        if canvas_event.y != None:
+                            self.cell_size += (canvas_event.y * 2)
+                            if self.cell_size < 3:
+                                self.cell_size = 3
+                            elif self.cell_size > 16:
+                                self.cell_size = 16
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
