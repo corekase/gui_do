@@ -117,18 +117,18 @@ class Demo:
                 return
             if event.type == GKind.Widget:
                 if event.widget_id == 'canvas':
-                    (x, y), buttons, mousewheel = self.canvas.read()
+                    (x, y), canvas_event = self.canvas.read_event()
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
-                    self.buttons_label.set_label(f'{buttons}')
-                    if mousewheel != self.last_wheel:
-                        if mousewheel != None:
-                            if mousewheel == 1:
+                    self.buttons_label.set_label(f'{canvas_event.mousebuttondown}')
+                    if canvas_event.mousewheel != self.last_wheel:
+                        if canvas_event.mousewheel != None:
+                            if canvas_event.mousewheel == 1:
                                 self.wheel_label.set_label('Wheel up')
                             else:
                                 self.wheel_label.set_label('Wheel down')
                     else:
                         self.wheel_label.set_label('Wheel none')
-                    self.last_wheel = mousewheel
+                    self.last_wheel = canvas_event.mousewheel
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
