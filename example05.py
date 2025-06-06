@@ -131,8 +131,8 @@ class Demo:
         positions = []
         size = 12
         for _ in range(num_items):
-            x = randrange(0, self.canvas_rect.width - size)
-            y = randrange(0, self.canvas_rect.height - size)
+            x = randrange(0, self.canvas_rect.width - size - 1)
+            y = randrange(0, self.canvas_rect.height - size - 1)
             dx = randrange(2, 7)
             dy = randrange(2, 7)
             if choice([True, False]):
