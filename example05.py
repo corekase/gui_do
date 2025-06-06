@@ -39,9 +39,11 @@ class Demo:
         window_y = centre(self.screen.get_rect().height, height)
         Window('Canvas', (window_x, window_y), (width, height))
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430)))
+        self.canvas_rect = self.canvas.get_rect()
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
-        self.toggle = add(ToggleButton('toggle', Rect(450, 50, 120, 20), True, 'Boxes'))
+        self.boxes_toggle = add(ToggleButton('boxes_toggle', Rect(450, 50, 120, 20), True, 'Boxes'))
+        self.circles_toggle = add(ToggleButton('circles_toggle', Rect(450, 70, 120, 20), True, 'Circles'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
@@ -54,9 +56,12 @@ class Demo:
         clock = pygame.time.Clock()
         # whether to draw the boxes
         draw_boxes = True
+        draw_circles = True
         if draw_boxes:
             # number of boxes to draw on screen
             boxes = 50
+            # get a list of positions
+            position_list = self.make_position_list(boxes)
             # setup a frame to draw on our surface
             size = 12
             frame = Frame('none', Rect(0, 0, size, size))
@@ -67,38 +72,16 @@ class Demo:
             frame.surface = frame_bitmap
             # and render onto that surface
             frame.draw()
-            canvas_surface = self.canvas.get_canvas_surface()
-            canvas_rect = canvas_surface.get_rect()
-            max_x, max_y = canvas_rect.width - size, canvas_rect.height - size
-            areas = []
-            for _ in range(boxes):
-                x = randrange(0, canvas_rect.width - size)
-                y = randrange(0, canvas_rect.height - size)
-                dx = randrange(2, 7)
-                dy = randrange(2, 7)
-                if choice([True, False]):
-                    dx = -dx
-                if choice([True, False]):
-                    dy = -dy
-                areas.append((x, y, dx, dy))
+        if draw_circles:
+            pass
         # begin main loop
         while self.running:
             restore_pristine(self.gui_do_label.rect)
-            draw_boxes = self.toggle.read()
+            draw_boxes = self.boxes_toggle.read()
             # handle events
             self.handle_events()
             if draw_boxes:
-                new_areas = []
-                for x, y, dx, dy in areas:
-                    x += dx
-                    y += dy
-                    if x < 0 or x > max_x:
-                        dx = -dx
-                    if y < 0 or y > max_y:
-                        dy = -dy
-                    canvas_surface.blit(frame_bitmap, (x, y))
-                    new_areas += [(x, y, dx, dy)]
-                areas = new_areas
+                position_list = self.draw_update_position_list(position_list, size, frame_bitmap)
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -107,7 +90,7 @@ class Demo:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
-            if draw_boxes:
+            if draw_boxes or draw_circles:
                 self.canvas.restore_pristine()
         # release resources
         pygame.quit()
@@ -135,6 +118,34 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # handle escape key
                     self.running = False
+
+    def make_position_list(self, num_items):
+        positions = []
+        size = 12
+        for _ in range(num_items):
+            x = randrange(0, self.canvas_rect.width - size)
+            y = randrange(0, self.canvas_rect.height - size)
+            dx = randrange(2, 7)
+            dy = randrange(2, 7)
+            if choice([True, False]):
+                dx = -dx
+            if choice([True, False]):
+                dy = -dy
+            positions.append((x, y, dx, dy))
+        return positions
+
+    def draw_update_position_list(self, positions, size, bitmap):
+        new_positions = []
+        for x, y, dx, dy in positions:
+            x += dx
+            y += dy
+            if x < 0 or x > self.canvas_rect.width - size:
+                dx = -dx
+            if y < 0 or y > self.canvas_rect.height - size:
+                dy = -dy
+            self.canvas.canvas.blit(bitmap, (x, y))
+            new_positions += [(x, y, dx, dy)]
+        return new_positions
 
     # callbacks
     def exit(self):
