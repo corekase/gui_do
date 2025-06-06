@@ -6,11 +6,8 @@ from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
 
 class Canvas(Widget):
-    def __init__(self, id, rect, backdrop=None, canvas_callback=None):
+    def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
         super().__init__(id, rect)
-        # create widget surface
-        self.surface = pygame.surface.Surface((rect.width, rect.height)).convert()
-        self.pristine = pygame.surface.Surface((rect.width, rect.height)).convert()
         # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()
         # if there is no backdrop make a frame as one otherwise load the backdrop
@@ -20,7 +17,6 @@ class Canvas(Widget):
             frame.state = FrState.Idle
             frame.surface = self.canvas
             frame.draw()
-            self.surface.blit(self.canvas, self.canvas.get_rect())
             self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
             set_backdrop(backdrop, self)
@@ -28,6 +24,7 @@ class Canvas(Widget):
         self.last_x = self.last_y = self.last_mousewheel = None
         self.last_buttons = []
         self.canvas_callback = canvas_callback
+        self.auto_restore_pristine = automatic_pristine
 
     def get_canvas_surface(self):
         # return a reference to the canvas surface
@@ -71,3 +68,6 @@ class Canvas(Widget):
     def draw(self):
         # copy the canvas surface to the widget surface
         self.surface.blit(self.canvas, self.rect)
+        # handle the pristine surface
+        if self.auto_restore_pristine:
+            self.restore_pristine()

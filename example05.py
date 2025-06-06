@@ -36,7 +36,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         Window('Canvas', (window_x, window_y), (width, height))
-        self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430)))
+        self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430), automatic_pristine=True))
         self.canvas_rect = self.canvas.get_rect()
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
@@ -100,9 +100,6 @@ class Demo:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
-            # clear canvas with the pristine bitmap if needed
-            if draw_boxes or draw_circles:
-                self.canvas.restore_pristine()
         # release resources
         pygame.quit()
 
