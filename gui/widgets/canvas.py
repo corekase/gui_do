@@ -40,8 +40,8 @@ class Canvas(Widget):
         self.canvas.blit(self.pristine, area)
 
     def read_event(self):
-        # returns (last_x, last_y) as a coordinate, and last mouse buttons as a three
-        # value sequence of true or false for the buttons, and then the last mousewheel
+        # canvas events are blocking, no new events will be generated until the previous one
+        # is read. either as a signal or in a callback, the first thing is to read the event
         if self.queued_event == True:
             self.queued_event = False
             return self.CEvent
