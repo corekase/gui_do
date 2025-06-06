@@ -27,7 +27,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        add(Label((50, 50),'gui_do', automatic_pristine=True))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -81,7 +81,6 @@ class Demo:
             circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
-            restore_pristine(self.gui_do_label.rect)
             draw_boxes = self.boxes_toggle.read()
             draw_circles = self.circles_toggle.read()
             # handle events
