@@ -58,30 +58,28 @@ class Demo:
         # whether to draw the boxes
         draw_boxes = True
         draw_circles = True
-        if draw_boxes:
-            # number of boxes to draw on screen
-            boxes = 50
-            boxes_size = 12
-            # get a list of positions
-            boxes_position_list = self.make_position_list(boxes, boxes_size)
-            # setup a frame to draw on our surface
-            frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
-            frame.state = FrState.Armed
-            # create our bitmap
-            frame_bitmap = pygame.surface.Surface((boxes_size, boxes_size))
-            # point the frame object at it
-            frame.surface = frame_bitmap
-            # and render onto that surface
-            frame.draw()
-        if draw_circles:
-            from gui.bitmapfactory import BitmapFactory
-            factory = BitmapFactory()
-            # number of circles to draw on screen
-            circles = 50
-            circles_size = 12
-            # get a position list for them
-            circles_position_list = self.make_position_list(circles, circles_size)
-            circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
+        # number of boxes and their size to draw on screen
+        boxes = 50
+        boxes_size = 12
+        # get a list of positions
+        boxes_position_list = self.make_position_list(boxes, boxes_size)
+        # setup a frame to draw on our surface
+        frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
+        frame.state = FrState.Armed
+        # create our bitmap
+        frame_bitmap = pygame.surface.Surface((boxes_size, boxes_size))
+        # point the frame object at it
+        frame.surface = frame_bitmap
+        # and render onto that surface
+        frame.draw()
+        # number of circles and their size to draw on screen
+        circles = 50
+        circles_size = 12
+        # get a position list for them
+        circles_position_list = self.make_position_list(circles, circles_size)
+        from gui.bitmapfactory import BitmapFactory
+        factory = BitmapFactory()
+        circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
             draw_boxes = self.boxes_toggle.read()
@@ -104,6 +102,7 @@ class Demo:
         pygame.quit()
 
     def handle_events(self):
+        # update internal gui timers
         self.gui.timers.update()
         # handle the pygame event queue
         for raw_event in pygame.event.get():
