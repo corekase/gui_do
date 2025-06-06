@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, restore_pristine
+from gui import add, set_cursor
 from gui import GKind, Label, Button
 
 class Template:
