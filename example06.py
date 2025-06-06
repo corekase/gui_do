@@ -136,7 +136,7 @@ class Demo:
     def generate(self):
         # Coordinates around a cell, given as a delta table
         neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
-                      (0,   1), ( 1, -1), ( 1, 0), (1,  1))
+                      ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
         def population(cell):
             count = 0
             # For the delta table entries generate tuples of (x, y) and
