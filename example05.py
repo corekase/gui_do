@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
-from gui import add, set_cursor, restore_pristine, Window
+from gui import add, set_cursor, Window
 from gui import GKind, Label, Button, Frame, FrState, Canvas, ToggleButton
 from gui import colours
 
