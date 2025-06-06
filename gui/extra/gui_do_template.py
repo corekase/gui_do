@@ -44,54 +44,11 @@ class Template:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # whether to draw the boxes
-        draw_boxes = True
-        if draw_boxes:
-            # number of boxes to draw on screen
-            boxes = 200
-            # setup a frame to draw on our surface
-            size = 12
-            frame = Frame('none', Rect(0, 0, size, size))
-            frame.state = FrState.Armed
-            # create our bitmap
-            frame_bitmap = pygame.surface.Surface((size, size))
-            # point the frame object at it
-            frame.surface = frame_bitmap
-            # and render onto that surface
-            frame.draw()
-            max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
-            areas = []
-            for _ in range(boxes):
-                x = randrange(0, self.screen.get_rect().width - size)
-                y = randrange(0, self.screen.get_rect().height - size)
-                dx = randrange(2, 7)
-                dy = randrange(2, 7)
-                if choice([True, False]):
-                    dx = -dx
-                if choice([True, False]):
-                    dy = -dy
-                areas.append((x, y, dx, dy))
-
-        # begin main loop
         while self.running:
             # handle events
             self.handle_events()
             # restore pristine bitmap under the label rect
             restore_pristine(self.gui_do_label.get_rect())
-            if draw_boxes:
-                #
-                # draw boxes
-                #
-                new_areas = []
-                for x, y, dx, dy in areas:
-                    x += dx
-                    y += dy
-                    if x < 0 or x > max_x:
-                        dx = -dx
-                    if y < 0 or y > max_y:
-                        dy = -dy
-                    self.screen.blit(frame_bitmap, (x, y))
-                    new_areas.append((x, y, dx, dy))
-
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -100,22 +57,11 @@ class Template:
             clock.tick(fps)
             # undraw gui
             self.gui.undraw_gui()
-
-            if draw_boxes:
-                #
-                # undraw boxes
-                #
-                for x, y, dx, dy in new_areas:
-                    area = Rect(x, y, size, size)
-                    # restore a bitmap area from the screen's pristine bitmap to the main surface
-                    restore_pristine(area)
-                # swap the lists to start again
-                areas = new_areas
-
         # release resources
         pygame.quit()
 
     def handle_events(self):
+        # update internal gui timers
         self.gui.timers.update()
         # handle the pygame event queue
         for raw_event in pygame.event.get():
@@ -130,6 +76,10 @@ class Template:
                 return
             if event.type == GKind.Widget:
                 pass
+                # if event.widget_id == 'widget_id':
+                #     pass
+                # elif event.widget_id == 'next_id':
+                #     pass
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
