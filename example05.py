@@ -118,6 +118,7 @@ class Demo:
             if event.type == GKind.Widget:
                 if event.widget_id == 'canvas':
                     canvas_event = self.canvas.read_event()
+                    # the position is always available in a canvas event
                     x, y = canvas_event.pos
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
                     self.buttons_label.set_label(f'{canvas_event.button}')
