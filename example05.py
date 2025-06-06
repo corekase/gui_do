@@ -58,10 +58,11 @@ class Demo:
         if draw_boxes:
             # number of boxes to draw on screen
             boxes = 50
+            boxes_size = 18
             # get a list of positions
-            boxes_position_list = self.make_position_list(boxes)
+            boxes_position_list = self.make_position_list(boxes, boxes_size)
             # setup a frame to draw on our surface
-            boxes_size = 12
+            boxes_size = 16
             frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
             frame.state = FrState.Armed
             # create our bitmap
@@ -75,9 +76,9 @@ class Demo:
             factory = BitmapFactory()
             # number of circles to draw on screen
             circles = 50
-            circles_size = 18
+            circles_size = 26
             # get a position list for them
-            circles_position_list = self.make_position_list(circles)
+            circles_position_list = self.make_position_list(circles, circles_size)
             circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
@@ -127,12 +128,11 @@ class Demo:
                     # handle escape key
                     self.running = False
 
-    def make_position_list(self, num_items):
+    def make_position_list(self, num_items, size):
         positions = []
-        size = 12
         for _ in range(num_items):
-            x = randrange(0, self.canvas_rect.width - size - 1)
-            y = randrange(0, self.canvas_rect.height - size - 1)
+            x = randrange(0, self.canvas_rect.width - (size * 2))
+            y = randrange(0, self.canvas_rect.height - (size * 2))
             dx = randrange(2, 7)
             dy = randrange(2, 7)
             if choice([True, False]):
