@@ -41,7 +41,7 @@ class Canvas(Widget):
         # returns (last_x, last_y) as a coordinate, and last mouse buttons as a three
         # value sequence of true or false for the buttons
         # -> To-do: if the canvas widget receives mousewheel events then put those here
-        #           in a variable here to be read.
+        #           in a variable to be read.
         return (self.last_x - self.rect.x, self.last_y - self.rect.y), self.last_buttons
 
     def handle_event(self, event, window):
