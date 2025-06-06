@@ -2,12 +2,11 @@
 # copy this template to your client folder and rename it to your application name
 #
 import pygame
-from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, restore_pristine
-from gui import GKind, Label, Button, Frame, FrState
+from gui import GKind, Label, Button
 
 class Template:
     def __init__(self):
@@ -29,7 +28,7 @@ class Template:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        self.gui_do_label = add(Label((50, 50),'gui_do', automatic_pristine=True))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -47,8 +46,6 @@ class Template:
         while self.running:
             # handle events
             self.handle_events()
-            # restore pristine bitmap under the label rect
-            restore_pristine(self.gui_do_label.get_rect())
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
