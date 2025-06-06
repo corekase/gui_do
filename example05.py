@@ -1,6 +1,3 @@
-# this is a template file to use as a starting point for your own applications,
-# copy this template to your client folder and rename it to your application name
-#
 import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
@@ -8,6 +5,7 @@ from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
 from gui import add, set_cursor, restore_pristine, Window
 from gui import GKind, Label, Button, Frame, FrState, Canvas, ToggleButton
+from gui import colours
 
 class Demo:
     def __init__(self):
@@ -61,27 +59,37 @@ class Demo:
             # number of boxes to draw on screen
             boxes = 50
             # get a list of positions
-            position_list = self.make_position_list(boxes)
+            boxes_position_list = self.make_position_list(boxes)
             # setup a frame to draw on our surface
-            size = 12
-            frame = Frame('none', Rect(0, 0, size, size))
+            boxes_size = 12
+            frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
             frame.state = FrState.Armed
             # create our bitmap
-            frame_bitmap = pygame.surface.Surface((size, size))
+            frame_bitmap = pygame.surface.Surface((boxes_size, boxes_size))
             # point the frame object at it
             frame.surface = frame_bitmap
             # and render onto that surface
             frame.draw()
         if draw_circles:
-            pass
+            from gui.bitmapfactory import BitmapFactory
+            factory = BitmapFactory()
+            # number of circles to draw on screen
+            circles = 50
+            circles_size = 18
+            # get a position list for them
+            circles_position_list = self.make_position_list(circles)
+            circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
             restore_pristine(self.gui_do_label.rect)
             draw_boxes = self.boxes_toggle.read()
+            draw_circles = self.circles_toggle.read()
             # handle events
             self.handle_events()
             if draw_boxes:
-                position_list = self.draw_update_position_list(position_list, size, frame_bitmap)
+                boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
+            if draw_circles:
+                circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen

@@ -8,6 +8,7 @@ from .command import set_active_object, set_cursor, add, set_backdrop, update_pr
 from .command import Scrollbar
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager, GKind
+from .widgets.widget import colours
 from .widgets.frame import Frame, FrState
 from .widgets.label import Label
 from .widgets.button import Button
