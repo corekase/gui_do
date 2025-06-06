@@ -1,5 +1,6 @@
 import pygame
 from pygame import Rect
+from pygame.locals import MOUSEWHEEL
 from .widget import Widget
 from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
@@ -24,7 +25,7 @@ class Canvas(Widget):
         else:
             set_backdrop(backdrop, self)
         # variables that the gui_do client can read
-        self.last_x = self.last_y = None
+        self.last_x = self.last_y = self.last_mousewheel = None
         self.last_buttons = []
         self.canvas_callback = canvas_callback
 
@@ -40,18 +41,20 @@ class Canvas(Widget):
 
     def read(self):
         # returns (last_x, last_y) as a coordinate, and last mouse buttons as a three
-        # value sequence of true or false for the buttons
-        # -> To-do: if the canvas widget receives mousewheel events then put those here
-        #           in a variable to be read.
-        return (self.last_x, self.last_y), self.last_buttons
+        # value sequence of true or false for the buttons, and then the last mousewheel
+        return (self.last_x, self.last_y), self.last_buttons, self.last_mousewheel
 
     def handle_event(self, event, window):
         if self.get_collide(window):
-            # -> To-do: if mousewheel event..
             # within the canvas so update information about that
             last_x, last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
             self.last_x, self.last_y = last_x - self.rect.x, last_y - self.rect.y
             self.last_buttons = pygame.mouse.get_pressed()
+            # if the event is for the mousewheel then update that information
+            if event.type == MOUSEWHEEL:
+                self.last_mousewheel = event.y
+            else:
+                self.last_mousewheel = None
             # the mouse is over the canvas so either do the callback or signal activated
             if self.canvas_callback != None:
                 # do the callback
