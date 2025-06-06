@@ -263,6 +263,9 @@ class GuiManager:
                     self.set_lock_area(None)
             if consumed:
                 return self.event(None)
+        #
+        if self.last_widget != None:
+            self.last_widget.leave()
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
             return self.event({'mousebuttonup': event.button})
