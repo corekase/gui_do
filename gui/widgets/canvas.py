@@ -49,9 +49,8 @@ class Canvas(Widget):
         if self.get_collide(window):
             # -> To-do: if mousewheel event..
             # within the canvas so update information about that
-            self.last_x, self.last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
-            self.last_x -= self.rect.x
-            self.last_y -= self.rect.y
+            last_x, last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
+            self.last_x, self.last_y = last_x - self.rect.x, last_y - self.rect.y
             self.last_buttons = pygame.mouse.get_pressed()
             # the mouse is over the canvas so either do the callback or signal activated
             if self.canvas_callback != None:
