@@ -131,7 +131,6 @@ class BitmapFactory:
         # separate out from draw_radio_pushbutton_raised so the same bitmap can be used
         # in a checkbox too
         radio_bitmap = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
-        glyph = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
         radius = 200
         points = []
         for point in range(0, 360, 5):
