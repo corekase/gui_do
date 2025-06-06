@@ -4,7 +4,7 @@ from pygame import FULLSCREEN, SCALED, K_ESCAPE
 from pygame import Rect
 from gui import GKind, Label, Frame, FrState, Button, PushButtonGroup, ToggleButton
 from gui import gui_init, Window, load_font, set_font, add, set_cursor, set_backdrop, restore_pristine
-from gui import centre, set_grid_properties, gridded, Scrollbar
+from gui import centre, set_grid_properties, gridded, Scrollbar, set_buffered
 
 class Demo:
     def __init__(self):
@@ -20,6 +20,7 @@ class Demo:
         # create a gui manager and it makes the screen the active object
         #
         self.gui = gui_init(self.screen)
+        set_buffered(False)
         #
         # blit a background image to the screen surface, also saves that into the pristine surface
         #
@@ -159,6 +160,7 @@ class Demo:
             areas.append((x, y, dx, dy))
         # begin main loop
         while self.running:
+            restore_pristine()
             # handle events
             self.handle_events()
             # handle program logic
@@ -187,8 +189,6 @@ class Demo:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
             #
             # restore saved areas that were drawn over
             #

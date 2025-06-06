@@ -2,8 +2,8 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, Window, centre, load_font, set_font, set_last_font
-from gui import set_grid_properties, gridded, set_backdrop
-from gui import set_active_object, set_cursor, add, Scrollbar
+from gui import set_grid_properties, gridded, set_backdrop, set_buffered
+from gui import set_active_object, set_cursor, add, Scrollbar, restore_pristine
 from gui import GKind
 from gui import Frame, Label, Button, PushButtonGroup
 
@@ -21,6 +21,9 @@ class Demo:
         # create a gui manager and it makes the screen the active object
         #
         self.gui = gui_init(self.screen)
+        # leave background management to the client. if the entire screen is going
+        # to change anyway then don't bother saving the previous bitmaps
+        set_buffered(False)
         #
         # blit a background image to the screen surface
         #
@@ -176,6 +179,7 @@ class Demo:
         clock = pygame.time.Clock()
         # begin main loop
         while self.running:
+            restore_pristine()
             # handle events
             self.handle_events()
             #
@@ -200,8 +204,6 @@ class Demo:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
             #
             # -> end keep everything in this block
             #

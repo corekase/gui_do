@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
-from gui import add, set_cursor, Window
+from gui import add, set_cursor, Window, set_buffered, restore_pristine
 from gui import GKind, Label, Button, Frame, FrState, Canvas, CKind, ToggleButton
 from gui import colours
 
@@ -19,6 +19,8 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
+        # do not buffer, when the entire screen is going to change anyway
+        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts
@@ -80,6 +82,7 @@ class Demo:
         circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
         # begin main loop
         while self.running:
+            restore_pristine()
             # update the toggle variables
             draw_boxes = self.boxes_toggle.read()
             draw_circles = self.circles_toggle.read()
@@ -96,8 +99,6 @@ class Demo:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
         # release resources
         pygame.quit()
 

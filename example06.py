@@ -1,8 +1,8 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, centre, Window, colours
+from gui import gui_init, set_backdrop, load_font, set_font, restore_pristine
+from gui import add, set_cursor, centre, Window, set_buffered, colours
 from gui import GKind, Label, Button, Canvas, CKind, ToggleButton
 
 class Demo:
@@ -19,6 +19,8 @@ class Demo:
         # create a gui manager
         #
         self.gui = gui_init(self.screen)
+        # don't buffer automatically
+        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts
@@ -78,6 +80,7 @@ class Demo:
         clock = pygame.time.Clock()
         # whether to draw the boxes
         while self.running:
+            restore_pristine()
             # handle events
             self.handle_events()
             # draw current cycle
@@ -91,8 +94,6 @@ class Demo:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
         # release resources
         pygame.quit()
 

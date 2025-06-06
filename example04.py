@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre, colours
-from gui import add, set_cursor, restore_pristine, Scrollbar, Window
+from gui import add, set_cursor, restore_pristine, Scrollbar, Window, set_buffered
 from gui import GKind, Label, Button, Frame, FrState, Image, ToggleButton
 
 class Demo:
@@ -19,6 +19,8 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
+        # do not buffer the screen, for applications where the screen is wiped each cycle
+        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts
@@ -114,8 +116,6 @@ class Demo:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
         # release resources
         pygame.quit()
 

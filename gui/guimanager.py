@@ -113,7 +113,7 @@ class GuiManager:
         # timers
         self.timers = Timers()
         # whether or not drawing is buffered
-        self.buffered = True
+        self.buffered = False
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

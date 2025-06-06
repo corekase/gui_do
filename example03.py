@@ -2,7 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, centre, load_font, set_font
+from gui import gui_init, set_backdrop, centre, load_font, set_font, set_buffered
 from gui import set_cursor, add, restore_pristine, Window, Scrollbar
 from gui import GKind
 from gui import Label, Button, Image, ToggleButton, Frame, FrState
@@ -19,6 +19,8 @@ class Demo:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
+        # don't automatically buffer
+        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts
@@ -60,70 +62,18 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # number of boxes to draw on screen
-        boxes = 200
-        # setup a frame to draw on our surface
-        size = 12
-        frame = Frame('none', Rect(0, 0, size, size))
-        frame.state = FrState.Armed
-        # create our bitmap
-        frame_bitmap = pygame.surface.Surface((size, size))
-        # point the frame object at it
-        frame.surface = frame_bitmap
-        # and render onto that surface
-        frame.draw()
-        max_x, max_y = self.screen.get_rect().width - size, self.screen.get_rect().height - size
-        areas = []
-        for _ in range(boxes):
-            x = randrange(0, self.screen.get_rect().width - size)
-            y = randrange(0, self.screen.get_rect().height - size)
-            dx = randrange(2, 7)
-            dy = randrange(2, 7)
-            if choice([True, False]):
-                dx = -dx
-            if choice([True, False]):
-                dy = -dy
-            areas.append((x, y, dx, dy))
 
         # begin main loop
         while self.running:
+            restore_pristine()
             # handle events
             self.handle_events()
-            # restore pristine bitmap under the label rect
-            restore_pristine(self.gui_do_label.get_rect())
-            #
-            # draw boxes
-            #
-            new_areas = []
-            for x, y, dx, dy in areas:
-                x += dx
-                y += dy
-                if x < 0 or x > max_x:
-                    dx = -dx
-                if y < 0 or y > max_y:
-                    dy = -dy
-                self.screen.blit(frame_bitmap, (x, y))
-                new_areas.append((x, y, dx, dy))
-
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
-
-            #
-            # undraw boxes
-            #
-            for x, y, dx, dy in new_areas:
-                area = Rect(x, y, size, size)
-                # restore a bitmap area from the screen's pristine bitmap to the main surface
-                restore_pristine(area)
-            # swap the lists to start again
-            areas = new_areas
-
         # release resources
         pygame.quit()
 
