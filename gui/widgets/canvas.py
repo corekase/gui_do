@@ -6,7 +6,7 @@ from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
 from enum import Enum
 
-CKind = Enum('GKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp'])
+CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp'])
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
