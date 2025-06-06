@@ -15,7 +15,9 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
+        #
         # create a gui manager
+        #
         self.gui = gui_init(self.screen)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
@@ -23,30 +25,46 @@ class Demo:
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
+        #
+        # screen widgets
+        #
         # main label
         set_font('gui_do')
         self.gui_do_label = add(Label((50, 50),'gui_do', automatic_pristine=True))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        #
+        # add a window
+        #
         width, height = 700, 700
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
+        #
         Window('Conway\'s Game of Life', (window_x, window_y), (width, height))
+        #
+        # add a canvas and store some of its properties
+        #
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_rect()
+        # these variables are used in drawing the surface
         x_base = self.canvas_rect.x
         y_base = self.canvas_rect.y
         self.origin_x = self.canvas_rect.centerx - x_base
         self.origin_y = self.canvas_rect.centery - y_base
         self.viewport_x = 0
         self.viewport_y = 0
-        self.toggle = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
-        self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset'))
         self.cell_size = 4
+        # a set to hold cell coordinates as tuples of x and y
         self.life = set()
+        # toggle whether or not the simulation is processing
+        self.toggle = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
+        # clicking this button resets the simulation to a default state, uses a callback function
+        self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
+        # reset the state of the simulation
         self.reset()
+        # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
@@ -64,7 +82,7 @@ class Demo:
             self.handle_events()
             # draw current cycle
             self.draw()
-            # generate new cycle
+            # generate a new cycle if the state of the button is pressed
             if self.toggle.read():
                 self.generate()
             # draw gui
@@ -81,9 +99,10 @@ class Demo:
     def handle_events(self):
         # update internal gui timers
         self.gui.timers.update()
-        # handle the pygame event queue
+        # if the mouse isn't over the canvas then end the dragging state
         if not self.canvas.focused():
             self.dragging = False
+        # handle the pygame event queue
         for raw_event in pygame.event.get():
             # process event queue
             event = self.gui.handle_event(raw_event)
@@ -95,28 +114,32 @@ class Demo:
                 self.running = False
                 return
             if event.type == GKind.Widget:
-                if event.widget_id == 'reset':
-                    self.toggle.pushed = False
-                    self.reset()
-                elif event.widget_id == 'life':
-                    canvas_event = self.canvas.read_event()
-                    if canvas_event.type == CKind.MouseButtonDown:
-                        if canvas_event.button == 3:
+                # the life canvas
+                if event.widget_id == 'life':
+                    # read the event from the canvas widget
+                    CEvent = self.canvas.read_event()
+                    # parse that event by kind and parameters
+                    if CEvent.type == CKind.MouseButtonDown:
+                        # right-mouse button hold, enter dragging state
+                        if CEvent.button == 3:
                             self.dragging = True
-                    elif canvas_event.type == CKind.MouseButtonUp:
-                        if canvas_event.button == 3:
+                    elif CEvent.type == CKind.MouseButtonUp:
+                        # right-mouse button released, exit dragging state
+                        if CEvent.button == 3:
                             self.dragging = False
-                    elif canvas_event.type == CKind.MouseMotion:
+                    elif CEvent.type == CKind.MouseMotion:
+                        # if dragging then track relative position
                         if self.dragging:
-                            self.viewport_x += canvas_event.rel[0]
-                            self.viewport_y += canvas_event.rel[1]
-                    elif canvas_event.type == CKind.MouseWheel:
-                        if canvas_event.y != None:
-                            self.cell_size += (canvas_event.y * 2)
-                            if self.cell_size < 3:
-                                self.cell_size = 3
-                            elif self.cell_size > 16:
-                                self.cell_size = 16
+                            self.viewport_x += CEvent.rel[0]
+                            self.viewport_y += CEvent.rel[1]
+                    elif CEvent.type == CKind.MouseWheel:
+                        # handle the mouse wheel
+                        if CEvent.y != None:
+                            self.cell_size += (CEvent.y * 2)
+                            if self.cell_size < 6:
+                                self.cell_size = 6
+                            elif self.cell_size > 24:
+                                self.cell_size = 24
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
@@ -129,7 +152,8 @@ class Demo:
 
     def reset(self):
         self.viewport_x = self.viewport_y = 0
-        self.cell_size = 4
+        self.cell_size = 6
+        self.toggle.pushed = False
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
