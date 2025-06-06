@@ -3,7 +3,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, centre, Window, colours
-from gui import GKind, Label, Button, Canvas, CanvasKind, ToggleButton
+from gui import GKind, Label, Button, Canvas, CKind, ToggleButton
 
 class Demo:
     def __init__(self):
@@ -100,17 +100,17 @@ class Demo:
                     self.reset()
                 elif event.widget_id == 'life':
                     canvas_event = self.canvas.read_event()
-                    if canvas_event.type == CanvasKind.MouseButtonDown:
+                    if canvas_event.type == CKind.MouseButtonDown:
                         if canvas_event.button == 3:
                             self.dragging = True
-                    elif canvas_event.type == CanvasKind.MouseButtonUp:
+                    elif canvas_event.type == CKind.MouseButtonUp:
                         if canvas_event.button == 3:
                             self.dragging = False
-                    elif canvas_event.type == CanvasKind.MouseMotion:
+                    elif canvas_event.type == CKind.MouseMotion:
                         if self.dragging:
                             self.viewport_x += canvas_event.rel[0]
                             self.viewport_y += canvas_event.rel[1]
-                    elif canvas_event.type == CanvasKind.MouseWheel:
+                    elif canvas_event.type == CKind.MouseWheel:
                         if canvas_event.y != None:
                             self.cell_size += (canvas_event.y * 2)
                             if self.cell_size < 3:

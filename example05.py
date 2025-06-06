@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font, centre
 from gui import add, set_cursor, Window
-from gui import GKind, Label, Button, Frame, FrState, Canvas, CanvasKind, ToggleButton
+from gui import GKind, Label, Button, Frame, FrState, Canvas, CKind, ToggleButton
 from gui import colours
 
 class Demo:
@@ -121,7 +121,7 @@ class Demo:
                     x, y = canvas_event.pos
                     self.coordinate_label.set_label(f'X: {x}, Y: {y}')
                     self.buttons_label.set_label(f'{canvas_event.button}')
-                    if canvas_event.type == CanvasKind.MouseWheel:
+                    if canvas_event.type == CKind.MouseWheel:
                         if canvas_event.y != self.last_wheel:
                             if canvas_event.y != None:
                                 if canvas_event.y == 1:
