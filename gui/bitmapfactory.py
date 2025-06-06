@@ -124,11 +124,11 @@ class BitmapFactory:
         x_size = text_height + text_bitmap.get_rect().width
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height) + 4))
-        button_complete.blit(text_bitmap, ((text_height // 2) + 2, 2))
+        button_complete.blit(text_bitmap, ((text_height // 2) + 4, 2))
         return button_complete
 
     def draw_radio_checked_bitmap(self, diameter, col1, col2):
-        # separate out from draw_radio_pushbutton_raised so the same bitmap can be used
+        # separate out from draw_radio_pushbutton_bitmap so the same bitmap can be used
         # in a checkbox too
         radio_bitmap = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
         radius = 200
