@@ -23,7 +23,6 @@ class Canvas(Widget):
             self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
             set_backdrop(backdrop, self)
-        # variables that the gui_do client can read
         self.canvas_callback = canvas_callback
         self.auto_restore_pristine = automatic_pristine
         self.queued_event = False
