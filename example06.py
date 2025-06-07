@@ -137,6 +137,10 @@ class Demo:
                         elif CEvent.type == CKind.MouseWheel:
                             # handle the mouse wheel
                             if CEvent.y != None:
+                                self.origin_x = self.origin_x + self.viewport_x
+                                self.origin_y = self.origin_y + self.viewport_y
+                                self.viewport_x = 0
+                                self.viewport_y = 0
                                 self.cell_size += (CEvent.y * 2)
                                 if self.cell_size < 6:
                                     self.cell_size = 6
