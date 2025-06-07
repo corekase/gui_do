@@ -122,7 +122,7 @@ class Demo:
                     if CEvent != None:
                         # parse that event by kind and parameters
                         if CEvent.type == CKind.MouseButtonDown:
-                            # right-mouse button hold, enter dragging state
+                            # right-mouse button pressed, enter dragging state
                             if CEvent.button == 3:
                                 self.dragging = True
                         elif CEvent.type == CKind.MouseButtonUp:
