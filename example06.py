@@ -159,6 +159,7 @@ class Demo:
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
+    # function to generate a cycle of life
     def generate(self):
         # Coordinates around a cell, given as a delta table
         neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
@@ -191,7 +192,7 @@ class Demo:
         self.life = new_life
 
     def draw(self):
-        # Draw contents of map onto display
+        # Draw contents of the life cells onto the canvas surface
         for cell in self.life:
             # Unpack x and y cell coordinates
             xpos, ypos = cell
