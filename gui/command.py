@@ -1,4 +1,3 @@
-# utility is a module
 import os
 import pygame
 from pygame import Rect
