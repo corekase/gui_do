@@ -50,14 +50,6 @@ class Demo:
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_rect()
-        # these variables are used in drawing the surface
-        x_base = self.canvas_rect.x
-        y_base = self.canvas_rect.y
-        self.origin_x = self.canvas_rect.centerx - x_base
-        self.origin_y = self.canvas_rect.centery - y_base
-        self.viewport_x = 0
-        self.viewport_y = 0
-        self.cell_size = 4
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
@@ -157,7 +149,12 @@ class Demo:
         self.running = False
 
     def reset(self):
-        self.viewport_x = self.viewport_y = 0
+        x_base = self.canvas_rect.x
+        y_base = self.canvas_rect.y
+        self.origin_x = self.canvas_rect.centerx - x_base
+        self.origin_y = self.canvas_rect.centery - y_base
+        self.viewport_x = 0
+        self.viewport_y = 0
         self.cell_size = 6
         self.toggle.pushed = False
         # the starting configuration of the Life grid
