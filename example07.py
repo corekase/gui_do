@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor
+from gui import add, set_cursor, set_buffered
 from gui import GKind, Label, Button
 
 class Template:
@@ -20,6 +20,8 @@ class Template:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
+        # don't buffer automatically
+        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load fonts
