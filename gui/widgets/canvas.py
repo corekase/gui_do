@@ -87,7 +87,7 @@ class Canvas(Widget):
                     # no callback, so signal the event instead
                     return True
             else:
-                # return no signal
+                # return no signal, there is a queued event waiting to be read
                 return False
         else:
             # the mouse is not over the canvas
