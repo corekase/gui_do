@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, set_buffered
+from gui import add, set_cursor, set_buffered, restore_pristine
 from gui import GKind, Label, Button
 
 class Template:
@@ -46,6 +46,8 @@ class Template:
         clock = pygame.time.Clock()
         # whether to draw the boxes
         while self.running:
+            # restore the pristine area to the screen before drawing
+            restore_pristine()
             # handle events
             self.handle_events()
             # draw gui

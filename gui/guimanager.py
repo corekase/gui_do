@@ -334,10 +334,14 @@ class GuiManager:
 
     def draw_gui(self):
         # draw all widgets to their surfaces
-        self.bitmaps.clear()
+        if self.buffered:
+            self.bitmaps.clear()
         for widget in self.widgets:
-            # draw the widget
             if widget.visible:
+                # save the bitmap area under the window if buffered
+                if self.buffered:
+                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.get_rect()), widget.get_rect()))
+                # draw the widget
                 widget.draw()
         for window in self.windows:
             if window.visible:
@@ -360,7 +364,9 @@ class GuiManager:
         # draw mouse cursor
         cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
                            self.cursor_rect.width, self.cursor_rect.height)
-        self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
+        # save the bitmap area under the window if buffered
+        if self.buffered:
+            self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
         self.surface.blit(self.cursor_image, cursor_rect)
 
     def undraw_gui(self):
