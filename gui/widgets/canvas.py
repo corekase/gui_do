@@ -82,6 +82,9 @@ class Canvas(Widget):
                 else:
                     # no callback, so signal the event instead
                     return True
+            else:
+                # return no signal
+                return False
         else:
             # the mouse is not over the canvas
             self.focus = False
