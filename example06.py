@@ -156,7 +156,7 @@ class Demo:
         self.viewport_x = 0
         self.viewport_y = 0
         self.cell_size = 6
-        self.toggle.pushed = False
+        self.toggle.set(False)
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 

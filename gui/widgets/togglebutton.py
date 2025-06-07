@@ -28,6 +28,10 @@ class ToggleButton(Widget):
         else:
             self.surface.blit(self.raised_text_bitmap, self.rect)
 
+    def set(self, pushed):
+        # set the boolean of the togglebutton
+        self.pushed = pushed
+
     def read(self):
         # return the state of the button as a bool
         return self.pushed
