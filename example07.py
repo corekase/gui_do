@@ -20,7 +20,7 @@ class Template:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
-        # don't buffer automatically
+        # don't save overdrawn bitmaps into a buffer automatically
         set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')

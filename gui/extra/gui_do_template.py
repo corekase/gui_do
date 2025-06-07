@@ -20,7 +20,12 @@ class Template:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
-        # don't buffer automatically
+        # set_buffered() controls whether to save overdrawn bitmaps into a buffer.
+        # set to True if you want to use the undraw_gui() method to restore
+        # the background bitmaps to their original state before the gui was drawn.
+        # if your screen bitmap doesn't change much then use True and call undraw_gui() after you
+        # flip your screen, but if everything changes every frame anyway, then don't save the
+        # bitmaps by using False and don't call undraw_gui()
         set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
