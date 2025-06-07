@@ -85,7 +85,7 @@ class Demo:
             self.handle_events()
             # draw current cycle
             self.draw()
-            # generate a new cycle if the state of the button is pressed
+            # generate a new cycle if the state of the togglebutton is pressed
             if self.toggle.read():
                 self.generate()
             # draw gui
