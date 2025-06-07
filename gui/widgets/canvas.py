@@ -26,7 +26,6 @@ class Canvas(Widget):
         self.canvas_callback = canvas_callback
         self.auto_restore_pristine = automatic_pristine
         self.queued_event = False
-        self.focus = False
 
     def get_canvas_surface(self):
         # return a reference to the canvas surface
