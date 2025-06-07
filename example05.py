@@ -133,7 +133,7 @@ class Demo:
                                         self.wheel_label.set_label('Wheel down')
                             else:
                                 self.wheel_label.set_label('Wheel none')
-                        self.last_wheel = CEvent.y
+                            self.last_wheel = CEvent.y
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:

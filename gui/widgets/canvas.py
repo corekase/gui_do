@@ -6,7 +6,7 @@ from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
 from enum import Enum
 
-CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp'])
+CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
 
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
@@ -73,6 +73,9 @@ class Canvas(Widget):
                 elif event.type == MOUSEBUTTONUP:
                     self.CEvent.type = CKind.MouseButtonUp
                     self.CEvent.button = event.button
+                else:
+                    # otherwise the catch-all event is MousePosition which is set above for all events
+                    self.CEvent.type = CKind.MousePosition
                 # the mouse is over the canvas so either do the callback or signal activated
                 if self.canvas_callback != None:
                     # do the callback
