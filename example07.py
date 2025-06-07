@@ -56,8 +56,6 @@ class Template:
             pygame.display.flip()
             # tick to desired frame-rate
             clock.tick(fps)
-            # undraw gui
-            self.gui.undraw_gui()
         # release resources
         pygame.quit()
 
