@@ -119,28 +119,29 @@ class Demo:
                 if event.widget_id == 'life':
                     # read the event from the canvas widget
                     CEvent = self.canvas.read_event()
-                    # parse that event by kind and parameters
-                    if CEvent.type == CKind.MouseButtonDown:
-                        # right-mouse button hold, enter dragging state
-                        if CEvent.button == 3:
-                            self.dragging = True
-                    elif CEvent.type == CKind.MouseButtonUp:
-                        # right-mouse button released, exit dragging state
-                        if CEvent.button == 3:
-                            self.dragging = False
-                    elif CEvent.type == CKind.MouseMotion:
-                        # if dragging then track relative position
-                        if self.dragging:
-                            self.viewport_x += CEvent.rel[0]
-                            self.viewport_y += CEvent.rel[1]
-                    elif CEvent.type == CKind.MouseWheel:
-                        # handle the mouse wheel
-                        if CEvent.y != None:
-                            self.cell_size += (CEvent.y * 2)
-                            if self.cell_size < 6:
-                                self.cell_size = 6
-                            elif self.cell_size > 24:
-                                self.cell_size = 24
+                    if CEvent != None:
+                        # parse that event by kind and parameters
+                        if CEvent.type == CKind.MouseButtonDown:
+                            # right-mouse button hold, enter dragging state
+                            if CEvent.button == 3:
+                                self.dragging = True
+                        elif CEvent.type == CKind.MouseButtonUp:
+                            # right-mouse button released, exit dragging state
+                            if CEvent.button == 3:
+                                self.dragging = False
+                        elif CEvent.type == CKind.MouseMotion:
+                            # if dragging then track relative position
+                            if self.dragging:
+                                self.viewport_x += CEvent.rel[0]
+                                self.viewport_y += CEvent.rel[1]
+                        elif CEvent.type == CKind.MouseWheel:
+                            # handle the mouse wheel
+                            if CEvent.y != None:
+                                self.cell_size += (CEvent.y * 2)
+                                if self.cell_size < 6:
+                                    self.cell_size = 6
+                                elif self.cell_size > 24:
+                                    self.cell_size = 24
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
