@@ -41,8 +41,8 @@ class Demo:
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_rect()
-        self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'N/A'))
-        self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'N/A'))
+        self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'X: none, Y: none'))
+        self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'Button: none'))
         self.wheel_label = add(Label(Rect(450, 50, 100, 20), 'Wheel none'))
         self.boxes_toggle = add(ToggleButton('boxes_toggle', Rect(450, 70, 120, 20), True, 'Boxes'))
         self.circles_toggle = add(ToggleButton('circles_toggle', Rect(450, 90, 120, 20), True, 'Circles'))
@@ -130,7 +130,7 @@ class Demo:
                         elif CEvent.button == 3:
                             b_text = 'Right'
                         else:
-                            b_text = 'None'
+                            b_text = 'none'
                         self.buttons_label.set_label(f'Button: {b_text}')
                         if CEvent.type == CKind.MouseWheel:
                             if CEvent.y != self.last_wheel:
@@ -139,8 +139,6 @@ class Demo:
                                         self.wheel_label.set_label('Wheel up')
                                     else:
                                         self.wheel_label.set_label('Wheel down')
-                            else:
-                                self.wheel_label.set_label('Wheel none')
                             self.last_wheel = CEvent.y
             elif event.type == GKind.KeyDown:
                 # handle key presses
