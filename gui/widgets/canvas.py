@@ -55,11 +55,11 @@ class Canvas(Widget):
             if self.queued_event == False:
                 self.queued_event = True
                 # within the canvas so update information about that
-                last_x, last_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
+                canvas_x, canvas_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
                 # create a new event
                 self.CEvent = CanvasEvent()
                 # all events have the position field
-                self.CEvent.pos = (last_x - self.rect.x, last_y - self.rect.y)
+                self.CEvent.pos = (canvas_x - self.rect.x, canvas_y - self.rect.y)
                 # and type specific fields
                 if event.type == MOUSEWHEEL:
                     self.CEvent.type = CKind.MouseWheel
