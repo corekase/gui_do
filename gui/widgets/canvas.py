@@ -47,6 +47,7 @@ class Canvas(Widget):
         return None
 
     def focused(self):
+        # return a boolean of whether or not the mouse is over the canvas
         return self.focus
 
     def handle_event(self, event, window):
