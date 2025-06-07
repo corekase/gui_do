@@ -73,6 +73,9 @@ class Demo:
         # whether to draw the boxes
         while self.running:
             restore_pristine()
+            # if the mouse isn't over the canvas then end the dragging state
+            if not self.canvas.focused():
+                self.dragging = False
             # handle events
             self.handle_events()
             # draw current cycle
@@ -92,9 +95,6 @@ class Demo:
     def handle_events(self):
         # update internal gui timers
         self.gui.timers.update()
-        # if the mouse isn't over the canvas then end the dragging state
-        if not self.canvas.focused():
-            self.dragging = False
         # handle the pygame event queue
         for raw_event in pygame.event.get():
             # process event queue
@@ -124,8 +124,12 @@ class Demo:
                         elif CEvent.type == CKind.MouseMotion:
                             # if dragging then track relative position
                             if self.dragging:
-                                self.viewport_x += CEvent.rel[0]
-                                self.viewport_y += CEvent.rel[1]
+                                x = CEvent.rel[0]
+                                y = CEvent.rel[1]
+                                self.origin_x = self.origin_x + x
+                                self.origin_y = self.origin_y + y
+                                self.viewport_x = 0
+                                self.viewport_y = 0
                         elif CEvent.type == CKind.MouseWheel:
                             # handle the mouse wheel
                             if CEvent.y != None:
@@ -197,8 +201,8 @@ class Demo:
         for cell in self.life:
             # Unpack x and y cell coordinates
             xpos, ypos = cell
-            xpos = self.origin_x + self.viewport_x + (xpos * self.cell_size)
-            ypos = self.origin_y + self.viewport_y + (ypos * self.cell_size)
+            xpos = self.origin_x + (xpos * self.cell_size)
+            ypos = self.origin_y + (ypos * self.cell_size)
             # Check to see if the cell is on screen and if so draw it
             bounded = (xpos >= 0) and (xpos <= self.canvas_rect.width) and \
                       (ypos >= 0) and (ypos <= self.canvas_rect.height)

@@ -48,7 +48,13 @@ class Canvas(Widget):
 
     def focused(self):
         # return a boolean of whether or not the mouse is over the canvas
-        return self.focus
+        point = convert_to_window(self.gui.get_mouse_pos(), self.window)
+        if self.rect.collidepoint(point):
+            self.focus = True
+            return True
+        else:
+            self.focus = False
+            return False
 
     def handle_event(self, event, window):
         if self.get_collide(window):
