@@ -1,6 +1,6 @@
 import pygame
 from pygame import Rect
-from pygame.locals import MOUSEWHEEL, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from .widget import Widget
 from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
