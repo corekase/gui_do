@@ -58,8 +58,10 @@ class Widget:
         pass
 
     def get_rect(self):
-        # return the widget rect
-        return Rect(self.rect)
+        # remove the x and y offset for where the widget is being drawn on a surface
+        # and return just the rect dimensions
+        _, _, w, h = self.rect
+        return Rect(0, 0, w, h)
 
     def draw(self):
         from ..command import restore_pristine
