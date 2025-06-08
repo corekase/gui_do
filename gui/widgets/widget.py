@@ -58,6 +58,10 @@ class Widget:
         pass
 
     def get_rect(self):
+        # rect that the guimanager uses for buffering
+        return Rect(self.rect)
+
+    def get_size(self):
         # remove the x and y offset for where the widget is being drawn on a surface
         # and return just the rect dimensions
         _, _, w, h = self.rect

@@ -40,7 +40,7 @@ class Demo:
         Window('Canvas', (window_x, window_y), (width, height))
         self.canvas = add(Canvas('canvas', Rect(10, 10, 430, 430), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
-        self.canvas_rect = self.canvas.get_rect()
+        self.canvas_rect = self.canvas.get_size()
         self.coordinate_label = add(Label(Rect(450, 10, 100, 20), 'X: none, Y: none'))
         self.buttons_label = add(Label(Rect(450, 30, 100, 20), 'Button: none'))
         self.wheel_label = add(Label(Rect(450, 50, 100, 20), 'Wheel none'))

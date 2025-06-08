@@ -49,7 +49,7 @@ class Demo:
         #
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
-        self.canvas_rect = self.canvas.get_rect()
+        self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
@@ -128,15 +128,9 @@ class Demo:
                                 y = CEvent.rel[1]
                                 self.origin_x = self.origin_x + x
                                 self.origin_y = self.origin_y + y
-                                self.viewport_x = 0
-                                self.viewport_y = 0
                         elif CEvent.type == CKind.MouseWheel:
                             # handle the mouse wheel
                             if CEvent.y != None:
-                                self.origin_x = self.origin_x + self.viewport_x
-                                self.origin_y = self.origin_y + self.viewport_y
-                                self.viewport_x = 0
-                                self.viewport_y = 0
                                 self.cell_size += (CEvent.y * 2)
                                 if self.cell_size < 6:
                                     self.cell_size = 6
@@ -153,12 +147,8 @@ class Demo:
         self.running = False
 
     def reset(self):
-        x_base = self.canvas_rect.x
-        y_base = self.canvas_rect.y
-        self.origin_x = self.canvas_rect.centerx - x_base
-        self.origin_y = self.canvas_rect.centery - y_base
-        self.viewport_x = 0
-        self.viewport_y = 0
+        self.origin_x = self.canvas_rect.centerx
+        self.origin_y = self.canvas_rect.centery
         self.cell_size = 6
         self.toggle.set(False)
         # the starting configuration of the Life grid
