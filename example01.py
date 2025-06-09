@@ -211,7 +211,7 @@ class Demo:
             new_positions += [(x, y, dx, dy)]
         return new_positions
 
-    # constuct some widgets, not saving any of the references that add() returns
+    # construct some widgets, not saving any of the references that add() returns
     def make_scrollbars(self, x, y, prefix):
         add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
