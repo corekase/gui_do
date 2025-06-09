@@ -29,13 +29,13 @@ class Demo:
         load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
         load_font('normal', 'Ubuntu-Medium.ttf', 14)
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
-        # main label
+        # screen label
         set_font('gui_do')
         add(Label((50, 50),'gui_do'))
         set_font('normal')
-        # add a frame as a backdrop behind the screen content widgets
+        # add a frame as a backdrop behind the screen scrollbar widgets
         add(Frame('backdrop', Rect(1570, 30, 320, 360)))
-        # add content widgets
+        # add scrollbar widgets
         self.make_scrollbars(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
@@ -77,21 +77,21 @@ class Demo:
         self.life = set()
         # toggle whether or not the simulation is processing
         self.toggle_life = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
-        # clicking this button resets the simulation to a default state, uses a callback function
+        # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
-        # reset the state of the simulation
-        self.reset()
-        # whether or not dragging with the right-mouse button over the canvas is active
-        self.dragging = False
         # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
-        # add content widgets, but this time the window is the active object
+        # add scrollbar widgets again, but this time the window is the active object
         self.make_scrollbars(10, 10, 'window')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
+        # reset the state of the simulation
+        self.reset()
+        # whether or not dragging with the right-mouse button over the canvas is active
+        self.dragging = False
         # set running flag
         self.running = True
 
