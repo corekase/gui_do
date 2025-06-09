@@ -42,24 +42,36 @@ class Demo:
         self.content(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        set_grid_properties((85, 1050), 120, 20, 4)
         # control whether the background boxes are drawn
-        self.boxes_toggle = add(ToggleButton('boxes', Rect(90, 1050, 70, 20), True, 'Boxes'))
+        self.boxes_toggle = add(ToggleButton('boxes', gridded(0, 0), True, 'Boxes'))
         # control whether the background circles are drawn
-        self.circles_toggle = add(ToggleButton('circles', Rect(170, 1050, 70, 20), True, 'Circles'))
-        Window('Pushboxes', (50, 150), (140, 110))
+        self.circles_toggle = add(ToggleButton('circles', gridded(1, 0), True, 'Circles'))
+        # control whether the pushboxes window is visible
+        self.push_window_toggle = add(ToggleButton('push_window', gridded(2, 0), True, 'Pushboxes'))
+        # control whether the pushradios window is visible
+        self.push_radio_toggle = add(ToggleButton('push_radio', gridded(3, 0), True, 'Pushradios'))
+        # control whether the life window is visible
+        self.push_life_toggle = add(ToggleButton('push_life', gridded(4, 0), True, 'Life'))
+        # control whether the scrollbar window is visible
+        self.scroll_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
+        # make the pushboxes window
+        self.pb_win = Window('Pushboxes', (50, 150), (140, 110))
         set_grid_properties((10, 10), 120, 20, 2)
         add(PushButtonGroup('pb1', gridded(0, 0), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb2', gridded(0, 1), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb3', gridded(0, 2), 'Pushbox', 'pb1', 0))
         add(Button('b1', gridded(0, 3), 'Button'))
-        Window('Pushradios', (50, 290), (140, 110))
+        # make the pushradios window
+        self.pr_win = Window('Pushradios', (50, 290), (140, 110))
         set_grid_properties((10, 10), 120, 20, 2)
         add(PushButtonGroup('pb4', gridded(0, 0), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb5', gridded(0, 1), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb6', gridded(0, 2), 'Pushradio', 'pb2', 1))
         add(Button('b2', gridded(0, 3), 'Button'))
+        # make the Conway's Game of Life window
         width, height = 500, 500
-        Window('Conway\'s Game of Life', (50, 430), (width, height))
+        self.life_win = Window('Conway\'s Game of Life', (50, 430), (width, height))
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
@@ -73,12 +85,12 @@ class Demo:
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
-        # position of the window
+        # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
-        Window('Scrollbar Styles', (window_x, window_y), (width, height))
+        self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add content widgets, but this time the window is the active object
         self.content(10, 10, 'window')
         # set cursor image
@@ -145,6 +157,10 @@ class Demo:
             # update the toggle variables
             draw_boxes = self.boxes_toggle.read()
             draw_circles = self.circles_toggle.read()
+            self.pb_win.set_visible(self.push_window_toggle.read())
+            self.pr_win.set_visible(self.push_radio_toggle.read())
+            self.life_win.set_visible(self.push_life_toggle.read())
+            self.sb_win.set_visible(self.scroll_toggle.read())
             # handle events
             self.handle_events()
             if draw_boxes:
