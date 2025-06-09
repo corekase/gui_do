@@ -55,21 +55,21 @@ class Demo:
         self.running = True
 
     def content(self, x, y, prefix):
-        sb1 = add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
+        add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
-        sb2 = add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
+        add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
         y += 22
-        sb3 = add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
+        add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
         y += 22
-        sb4 = add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
+        add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
         y += 24
-        sb5 = add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
+        add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
         x += 22
-        sb6 = add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
+        add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
         x += 22
-        sb7 = add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
+        add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
         x += 22
-        sb8 = add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
+        add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('gui_do')
         add(Label((x + 40, y + 210), 'Scrollbars!'))
