@@ -36,18 +36,23 @@ class Demo:
         set_font('gui_do')
         self.gui_do_label = add(Label((50, 50),'gui_do'))
         set_font('normal')
+        # add a frame as a backdrop behind the screen content widgets
         add(Frame('backdrop', Rect(1570, 30, 320, 360)))
+        # add content widgets
         self.content(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        # control whether the background boxes are drawn
         self.boxes_toggle = add(ToggleButton('boxes', Rect(90, 1050, 70, 20), True, 'Boxes'))
+        # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', Rect(170, 1050, 70, 20), True, 'Circles'))
         # position of the window
-        x, y, width, height = 0, 0, 320, 362
+        width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         # create the window and it adds itself to the gui_manager and makes itself the active object
         Window('Scrollbar Styles', (window_x, window_y), (width, height))
+        # add content widgets, but this time the window is the active object
         self.content(10, 10, 'window')
 
         # set cursor image
@@ -56,6 +61,7 @@ class Demo:
         self.running = True
 
     def content(self, x, y, prefix):
+        # constuct some widgets, not saving any of the references that add() returns
         add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
         add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
