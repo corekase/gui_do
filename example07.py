@@ -31,12 +31,12 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
-        self.gui_do_label = add(Label((50, 50),'gui_do'))
+        add(Label((50, 50),'gui_do'))
         set_font('normal')
         # add a frame as a backdrop behind the screen content widgets
         add(Frame('backdrop', Rect(1570, 30, 320, 360)))
         # add content widgets
-        self.content(1580, 40, 'screen')
+        self.make_scrollbars(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # setup for the togglebuttons
@@ -52,7 +52,7 @@ class Demo:
         # control whether the life window is visible
         self.push_life_toggle = add(ToggleButton('push_life', gridded(4, 0), True, 'Life'))
         # control whether the scrollbar window is visible
-        self.scroll_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
+        self.push_scroll_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
         # make the pushboxes window
         self.pb_win = Window('Pushboxes', (50, 150), (140, 110))
         set_grid_properties((10, 10), 120, 20, 2)
@@ -78,7 +78,7 @@ class Demo:
         # toggle whether or not the simulation is processing
         self.toggle_life = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
         # clicking this button resets the simulation to a default state, uses a callback function
-        self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
+        add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
         # reset the state of the simulation
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
@@ -89,33 +89,11 @@ class Demo:
         window_y = centre(self.screen.get_rect().height, height)
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add content widgets, but this time the window is the active object
-        self.content(10, 10, 'window')
+        self.make_scrollbars(10, 10, 'window')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
-
-    def content(self, x, y, prefix):
-        # constuct some widgets, not saving any of the references that add() returns
-        add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
-        y += 22
-        add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
-        y += 22
-        add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
-        y += 22
-        add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
-        y += 24
-        add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
-        x += 22
-        add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
-        x += 22
-        add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
-        x += 22
-        add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
-        add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
-        set_font('gui_do')
-        add(Label((x + 40, y + 210), 'Scrollbars!'))
-        set_font('normal')
 
     def run(self):
         # fps to maintain, if 0 then unlimited
@@ -158,7 +136,7 @@ class Demo:
             self.pb_win.set_visible(self.push_window_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
             self.life_win.set_visible(self.push_life_toggle.read())
-            self.sb_win.set_visible(self.scroll_toggle.read())
+            self.sb_win.set_visible(self.push_scroll_toggle.read())
             # handle events
             self.handle_events()
             if draw_boxes:
@@ -166,7 +144,7 @@ class Demo:
             if draw_circles:
                 circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
             # draw current life cycle
-            self.draw()
+            self.draw_life()
             # generate a new cycle if the state of the togglebutton is pressed
             if self.toggle_life.read():
                 self.generate()
@@ -220,7 +198,7 @@ class Demo:
             positions.append((x, y, dx, dy))
         return positions
 
-    # draw a bitmap at each position and update the position
+    # update the position and draw a bitmap at the position
     def draw_update_position_list(self, positions, size, bitmap):
         new_positions = []
         for x, y, dx, dy in positions:
@@ -233,6 +211,28 @@ class Demo:
             self.screen.blit(bitmap, (x, y))
             new_positions += [(x, y, dx, dy)]
         return new_positions
+
+    # constuct some widgets, not saving any of the references that add() returns
+    def make_scrollbars(self, x, y, prefix):
+        add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
+        y += 22
+        add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
+        y += 22
+        add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
+        y += 22
+        add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
+        y += 24
+        add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
+        x += 22
+        add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
+        x += 22
+        add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
+        x += 22
+        add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
+        add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
+        set_font('gui_do')
+        add(Label((x + 40, y + 210), 'Scrollbars!'))
+        set_font('normal')
 
     # reset the life simulation to a default state
     def reset(self):
@@ -275,7 +275,7 @@ class Demo:
         # Replace the old set with the new
         self.life = new_life
 
-    def draw(self):
+    def draw_life(self):
         # Draw contents of the life cells onto the canvas surface
         for cell in self.life:
             # Unpack x and y cell coordinates
