@@ -52,7 +52,7 @@ class Demo:
         # control whether the life window is visible
         self.push_life_toggle = add(ToggleButton('push_life', gridded(4, 0), True, 'Life'))
         # control whether the scrollbar window is visible
-        self.push_scroll_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
+        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
         # make the pushboxes window
         self.pb_win = Window('Pushboxes', (50, 150), (140, 110))
         set_grid_properties((10, 10), 120, 20, 2)
@@ -139,7 +139,7 @@ class Demo:
             self.pb_win.set_visible(self.push_box_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
             self.life_win.set_visible(self.push_life_toggle.read())
-            self.sb_win.set_visible(self.push_scroll_toggle.read())
+            self.sb_win.set_visible(self.push_scrollbars_toggle.read())
             # handle events
             self.handle_events()
             # draw current life cycle to the canvas
