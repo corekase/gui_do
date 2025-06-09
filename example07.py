@@ -36,7 +36,8 @@ class Demo:
         set_font('gui_do')
         self.gui_do_label = add(Label((50, 50),'gui_do'))
         set_font('normal')
-        self.content(1600, 20, 'screen')
+        add(Frame('backdrop', Rect(1570, 30, 320, 360)))
+        self.content(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         self.boxes_toggle = add(ToggleButton('boxes', Rect(90, 1050, 70, 20), True, 'Boxes'))
