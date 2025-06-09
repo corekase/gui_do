@@ -6,9 +6,9 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, set_buffered, restore_pristine
+from gui import add, set_cursor, set_buffered, restore_pristine, Canvas, CKind
 from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
-from gui import Frame, FrState, colours
+from gui import Frame, FrState, colours, PushButtonGroup, set_grid_properties, gridded
 
 class Demo:
     def __init__(self):
@@ -46,6 +46,33 @@ class Demo:
         self.boxes_toggle = add(ToggleButton('boxes', Rect(90, 1050, 70, 20), True, 'Boxes'))
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', Rect(170, 1050, 70, 20), True, 'Circles'))
+        Window('Pushboxes', (50, 150), (140, 110))
+        set_grid_properties((10, 10), 120, 20, 2)
+        add(PushButtonGroup('pb1', gridded(0, 0), 'Pushbox', 'pb1', 0))
+        add(PushButtonGroup('pb2', gridded(0, 1), 'Pushbox', 'pb1', 0))
+        add(PushButtonGroup('pb3', gridded(0, 2), 'Pushbox', 'pb1', 0))
+        add(Button('b1', gridded(0, 3), 'Button'))
+        Window('Pushradios', (50, 290), (140, 110))
+        set_grid_properties((10, 10), 120, 20, 2)
+        add(PushButtonGroup('pb4', gridded(0, 0), 'Pushradio', 'pb2', 1))
+        add(PushButtonGroup('pb5', gridded(0, 1), 'Pushradio', 'pb2', 1))
+        add(PushButtonGroup('pb6', gridded(0, 2), 'Pushradio', 'pb2', 1))
+        add(Button('b2', gridded(0, 3), 'Button'))
+        width, height = 500, 500
+        Window('Conway\'s Game of Life', (50, 430), (width, height))
+        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), canvas_callback=self.handle_canvas, automatic_pristine=True))
+        self.canvas_surface = self.canvas.get_canvas_surface()
+        self.canvas_rect = self.canvas.get_size()
+        # a set to hold cell coordinates as tuples of x and y
+        self.life = set()
+        # toggle whether or not the simulation is processing
+        self.toggle = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
+        # clicking this button resets the simulation to a default state, uses a callback function
+        self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
+        # reset the state of the simulation
+        self.reset()
+        # whether or not dragging with the right-mouse button over the canvas is active
+        self.dragging = False
         # position of the window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
@@ -54,7 +81,6 @@ class Demo:
         Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add content widgets, but this time the window is the active object
         self.content(10, 10, 'window')
-
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
@@ -113,6 +139,9 @@ class Demo:
         while self.running:
             # restore the pristine area to the screen before drawing
             restore_pristine()
+            # if the mouse isn't over the canvas then end the dragging state
+            if not self.canvas.focused():
+                self.dragging = False
             # update the toggle variables
             draw_boxes = self.boxes_toggle.read()
             draw_circles = self.circles_toggle.read()
@@ -122,6 +151,11 @@ class Demo:
                 boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
             if draw_circles:
                 circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
+            # draw current cycle
+            self.draw()
+            # generate a new cycle if the state of the togglebutton is pressed
+            if self.toggle.read():
+                self.generate()
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -183,6 +217,89 @@ class Demo:
             self.screen.blit(bitmap, (x, y))
             new_positions += [(x, y, dx, dy)]
         return new_positions
+
+    def handle_canvas(self):
+        # read the event from the canvas widget
+        CEvent = self.canvas.read_event()
+        if CEvent != None:
+            # parse that event by kind and parameters
+            if CEvent.type == CKind.MouseButtonDown:
+                # right-mouse button pressed, enter dragging state
+                if CEvent.button == 3:
+                    self.dragging = True
+            elif CEvent.type == CKind.MouseButtonUp:
+                # right-mouse button released, exit dragging state
+                if CEvent.button == 3:
+                    self.dragging = False
+            elif CEvent.type == CKind.MouseMotion:
+                # if dragging then track relative position
+                if self.dragging:
+                    x = CEvent.rel[0]
+                    y = CEvent.rel[1]
+                    self.origin_x = self.origin_x + x
+                    self.origin_y = self.origin_y + y
+            elif CEvent.type == CKind.MouseWheel:
+                # handle the mouse wheel
+                if CEvent.y != None:
+                    self.cell_size += (CEvent.y * 2)
+                    if self.cell_size < 6:
+                        self.cell_size = 6
+                    elif self.cell_size > 24:
+                        self.cell_size = 24
+
+
+    def reset(self):
+        self.origin_x = self.canvas_rect.centerx
+        self.origin_y = self.canvas_rect.centery
+        self.cell_size = 6
+        self.toggle.set(False)
+        # the starting configuration of the Life grid
+        self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
+
+    # function to generate a cycle of life
+    def generate(self):
+        # Coordinates around a cell, given as a delta table
+        neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
+                      ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
+        def population(cell):
+            count = 0
+            # For the delta table entries generate tuples of (x, y) and
+            # then test them for membership in the life set
+            for position in neighbours:
+                position_x = cell[0] + position[0]
+                position_y = cell[1] + position[1]
+                if (position_x, position_y) in self.life:
+                    count += 1
+            return count
+        # For every cell in the life set check the cell and its
+        # neighbours for the population conditions
+        new_life = set()
+        for cell in self.life:
+            # Check this cell
+            if population(cell) == 3 or \
+               population(cell) == 2:
+                   new_life.add(cell)
+            # Check all the neighbours of this cell
+            for new_cell in neighbours:
+                test_cell = (cell[0] + new_cell[0],
+                             cell[1] + new_cell[1])
+                if population(test_cell) == 3:
+                   new_life.add(test_cell)
+        # Replace the old set with the new
+        self.life = new_life
+
+    def draw(self):
+        # Draw contents of the life cells onto the canvas surface
+        for cell in self.life:
+            # Unpack x and y cell coordinates
+            xpos, ypos = cell
+            xpos = self.origin_x + (xpos * self.cell_size)
+            ypos = self.origin_y + (ypos * self.cell_size)
+            # Check to see if the cell is on screen and if so draw it
+            bounded = (xpos >= 0) and (xpos <= self.canvas_rect.width) and \
+                      (ypos >= 0) and (ypos <= self.canvas_rect.height)
+            if bounded:
+                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, self.cell_size - 1, self.cell_size - 1))
 
     # callbacks
     def exit(self):
