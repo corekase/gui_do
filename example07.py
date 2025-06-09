@@ -8,7 +8,7 @@ from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, set_buffered, restore_pristine
 from gui import GKind, Label, Button
 
-class Template:
+class Demo:
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -20,7 +20,7 @@ class Template:
         pygame.mouse.set_visible(False)
         # create a gui manager
         self.gui = gui_init(self.screen)
-        # don't save overdrawn bitmaps into a buffer automatically
+        # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
         set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
@@ -90,4 +90,4 @@ class Template:
         self.running = False
 
 if __name__ == '__main__':
-    Template().run()
+    Demo().run()
