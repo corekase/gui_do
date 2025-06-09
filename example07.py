@@ -1,6 +1,3 @@
-# this is a template file to use as a starting point for your own applications,
-# copy this template to your client folder and rename it to your application name
-#
 import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
@@ -42,6 +39,7 @@ class Demo:
         self.content(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        # setup for the togglebuttons
         set_grid_properties((85, 1050), 120, 20, 4)
         # control whether the background boxes are drawn
         self.boxes_toggle = add(ToggleButton('boxes', gridded(0, 0), True, 'Boxes'))
@@ -78,7 +76,7 @@ class Demo:
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
-        self.toggle = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
         # clicking this button resets the simulation to a default state, uses a callback function
         self.button = add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
         # reset the state of the simulation
@@ -89,7 +87,6 @@ class Demo:
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
-        # create the window and it adds itself to the gui_manager and makes itself the active object
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add content widgets, but this time the window is the active object
         self.content(10, 10, 'window')
@@ -125,7 +122,7 @@ class Demo:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # whether to draw the boxes
+        # number of boxes and their size
         boxes = 50
         boxes_size = 12
         # get a list of positions
@@ -139,11 +136,12 @@ class Demo:
         frame.surface = frame_bitmap
         # and render onto that surface
         frame.draw()
-        # number of circles and their size to draw on screen
+        # number of circles and their size
         circles = 50
         circles_size = 12
         # get a position list for them
         circles_position_list = self.make_position_list(circles, circles_size)
+        # make a bitmap for them
         from gui.bitmapfactory import BitmapFactory
         factory = BitmapFactory()
         circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
@@ -167,10 +165,10 @@ class Demo:
                 boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
             if draw_circles:
                 circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
-            # draw current cycle
+            # draw current life cycle
             self.draw()
             # generate a new cycle if the state of the togglebutton is pressed
-            if self.toggle.read():
+            if self.toggle_life.read():
                 self.generate()
             # draw gui
             self.gui.draw_gui()
@@ -207,6 +205,7 @@ class Demo:
                     # handle escape key
                     self.running = False
 
+    # make a random list of positions
     def make_position_list(self, num_items, size):
         positions = []
         for _ in range(num_items):
@@ -221,6 +220,7 @@ class Demo:
             positions.append((x, y, dx, dy))
         return positions
 
+    # draw a bitmap at each position and update the position
     def draw_update_position_list(self, positions, size, bitmap):
         new_positions = []
         for x, y, dx, dy in positions:
@@ -234,41 +234,12 @@ class Demo:
             new_positions += [(x, y, dx, dy)]
         return new_positions
 
-    def handle_canvas(self):
-        # read the event from the canvas widget
-        CEvent = self.canvas.read_event()
-        if CEvent != None:
-            # parse that event by kind and parameters
-            if CEvent.type == CKind.MouseButtonDown:
-                # right-mouse button pressed, enter dragging state
-                if CEvent.button == 3:
-                    self.dragging = True
-            elif CEvent.type == CKind.MouseButtonUp:
-                # right-mouse button released, exit dragging state
-                if CEvent.button == 3:
-                    self.dragging = False
-            elif CEvent.type == CKind.MouseMotion:
-                # if dragging then track relative position
-                if self.dragging:
-                    x = CEvent.rel[0]
-                    y = CEvent.rel[1]
-                    self.origin_x = self.origin_x + x
-                    self.origin_y = self.origin_y + y
-            elif CEvent.type == CKind.MouseWheel:
-                # handle the mouse wheel
-                if CEvent.y != None:
-                    self.cell_size += (CEvent.y * 2)
-                    if self.cell_size < 6:
-                        self.cell_size = 6
-                    elif self.cell_size > 24:
-                        self.cell_size = 24
-
-
+    # reset the life simulation to a default state
     def reset(self):
         self.origin_x = self.canvas_rect.centerx
         self.origin_y = self.canvas_rect.centery
         self.cell_size = 6
-        self.toggle.set(False)
+        self.toggle_life.set(False)
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
@@ -317,9 +288,39 @@ class Demo:
             if bounded:
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, self.cell_size - 1, self.cell_size - 1))
 
-    # callbacks
+    # callback function
     def exit(self):
         self.running = False
+
+    # callback function
+    def handle_canvas(self):
+        # read the event from the canvas widget
+        CEvent = self.canvas.read_event()
+        if CEvent != None:
+            # parse that event by kind and parameters
+            if CEvent.type == CKind.MouseButtonDown:
+                # right-mouse button pressed, enter dragging state
+                if CEvent.button == 3:
+                    self.dragging = True
+            elif CEvent.type == CKind.MouseButtonUp:
+                # right-mouse button released, exit dragging state
+                if CEvent.button == 3:
+                    self.dragging = False
+            elif CEvent.type == CKind.MouseMotion:
+                # if dragging then track relative position
+                if self.dragging:
+                    x = CEvent.rel[0]
+                    y = CEvent.rel[1]
+                    self.origin_x = self.origin_x + x
+                    self.origin_y = self.origin_y + y
+            elif CEvent.type == CKind.MouseWheel:
+                # handle the mouse wheel
+                if CEvent.y != None:
+                    self.cell_size += (CEvent.y * 2)
+                    if self.cell_size < 6:
+                        self.cell_size = 6
+                    elif self.cell_size > 24:
+                        self.cell_size = 24
 
 if __name__ == '__main__':
     Demo().run()
