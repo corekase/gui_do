@@ -77,8 +77,6 @@ def copy_graphic_area(surface, rect, flags = 0):
 # convert the point from a main surface one to a window point
 def convert_to_window(point, window):
     # fall-through function, perform the conversion only if necessary
-    from .guimanager import GuiManager
-    gui = GuiManager()
     if window != None:
         x, y = gui.lock_area(point)
         wx, wy = window.x, window.y
@@ -89,8 +87,6 @@ def convert_to_window(point, window):
 # convert the point from a window point to a main surface one
 def convert_to_screen(point, window):
     # fall-through function, perform the conversion only if necessary
-    from .guimanager import GuiManager
-    gui = GuiManager()
     if window != None:
         x, y = point
         wx, wy = window.x, window.y
@@ -98,7 +94,9 @@ def convert_to_screen(point, window):
     # conversion not necessary
     return gui.lock_area(point)
 
+gui = None
 def gui_init(screen):
+    global gui
     # create a gui manager and set the screen for it
     from .guimanager import GuiManager
     gui = GuiManager()
@@ -112,13 +110,9 @@ def set_buffered(buffered):
     #   client doesn't call gui undraw, and instead they just
     #   clear their screen or other client logic and draw the gui
     #   again when they need it
-    from .guimanager import GuiManager
-    gui = GuiManager()
     gui.buffered = buffered
 
 def add(widget, callback=None):
-    from .guimanager import GuiManager
-    gui = GuiManager()
     # give a reference to the gui
     widget.gui = gui
     # callback
@@ -138,8 +132,6 @@ def add(widget, callback=None):
     return widget
 
 def set_active_object(object=None):
-    from .guimanager import GuiManager
-    gui = GuiManager()
     # set which object is active
     gui.active_object = object
 
@@ -158,8 +150,6 @@ def set_active_bank(dest_bank):
     # as items are added, their surfaces are still the screen or a window while they are being
     # instantiated. then loading and unloading just determine which are active at any given time
     global bank
-    from .guimanager import GuiManager
-    gui = GuiManager()
     pass
 
 def Scrollbar(id, params, overall_rect, horizontal, style):
@@ -225,8 +215,6 @@ def Scrollbar(id, params, overall_rect, horizontal, style):
         return scroll_bar
 
 def set_cursor(hotspot, *image):
-    from .guimanager import GuiManager
-    gui = GuiManager()
     # set the cursor image and hotspot
     gui.cursor_image = image_alpha('cursors', *image)
     gui.cursor_rect = gui.cursor_image.get_rect()
@@ -234,8 +222,6 @@ def set_cursor(hotspot, *image):
 
 def set_backdrop(image, obj=None):
     # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
-    from .guimanager import GuiManager
-    gui = GuiManager()
     if obj == None:
         obj = gui
     if image != None:
@@ -251,8 +237,6 @@ def set_backdrop(image, obj=None):
 def update_pristine(area=None, obj=None):
     # copy area from screen surface to the pristine surface
     # if area is None then update entire surface
-    from .guimanager import GuiManager
-    gui = GuiManager()
     if obj == None:
         obj = gui
     if area == None:
@@ -266,8 +250,6 @@ def restore_pristine(area=None, obj=None):
     # to use here
     # restores a graphic area from the screen's pristine bitmap to the
     # screen surface. if area is None then restore entire surface
-    from .guimanager import GuiManager
-    gui = GuiManager()
     if obj == None:
         obj = gui
     if area == None:
