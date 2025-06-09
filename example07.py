@@ -2,11 +2,13 @@
 # copy this template to your client folder and rename it to your application name
 #
 import pygame
+from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, set_buffered, restore_pristine
-from gui import GKind, Label, Button
+from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
+from gui import Frame, FrState, colours
 
 class Demo:
     def __init__(self):
@@ -14,6 +16,8 @@ class Demo:
         pygame.init()
         # create main window surface
         self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED)
+        # screen rect
+        self.screen_rect = self.screen.get_rect()
         # set window caption
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
@@ -32,12 +36,44 @@ class Demo:
         set_font('gui_do')
         self.gui_do_label = add(Label((50, 50),'gui_do'))
         set_font('normal')
+        self.content(1600, 20, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        self.boxes_toggle = add(ToggleButton('boxes', Rect(90, 1050, 70, 20), True, 'Boxes'))
+        self.circles_toggle = add(ToggleButton('circles', Rect(170, 1050, 70, 20), True, 'Circles'))
+        # position of the window
+        x, y, width, height = 0, 0, 320, 362
+        window_x = centre(self.screen.get_rect().width, width)
+        window_y = centre(self.screen.get_rect().height, height)
+        # create the window and it adds itself to the gui_manager and makes itself the active object
+        Window('Scrollbar Styles', (window_x, window_y), (width, height))
+        self.content(10, 10, 'window')
+
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
+
+    def content(self, x, y, prefix):
+        sb1 = add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
+        y += 22
+        sb2 = add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
+        y += 22
+        sb3 = add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
+        y += 22
+        sb4 = add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
+        y += 24
+        sb5 = add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
+        x += 22
+        sb6 = add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
+        x += 22
+        sb7 = add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
+        x += 22
+        sb8 = add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
+        add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
+        set_font('gui_do')
+        add(Label((x + 40, y + 210), 'Scrollbars!'))
+        set_font('normal')
 
     def run(self):
         # fps to maintain, if 0 then unlimited
@@ -45,11 +81,40 @@ class Demo:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         # whether to draw the boxes
+        boxes = 50
+        boxes_size = 12
+        # get a list of positions
+        boxes_position_list = self.make_position_list(boxes, boxes_size)
+        # setup a frame to draw on our surface
+        frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
+        frame.state = FrState.Armed
+        # create our bitmap
+        frame_bitmap = pygame.surface.Surface((boxes_size, boxes_size))
+        # point the frame object at it
+        frame.surface = frame_bitmap
+        # and render onto that surface
+        frame.draw()
+        # number of circles and their size to draw on screen
+        circles = 50
+        circles_size = 12
+        # get a position list for them
+        circles_position_list = self.make_position_list(circles, circles_size)
+        from gui.bitmapfactory import BitmapFactory
+        factory = BitmapFactory()
+        circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
+
         while self.running:
             # restore the pristine area to the screen before drawing
             restore_pristine()
+            # update the toggle variables
+            draw_boxes = self.boxes_toggle.read()
+            draw_circles = self.circles_toggle.read()
             # handle events
             self.handle_events()
+            if draw_boxes:
+                boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
+            if draw_circles:
+                circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
@@ -84,6 +149,33 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # handle escape key
                     self.running = False
+
+    def make_position_list(self, num_items, size):
+        positions = []
+        for _ in range(num_items):
+            x = randrange(0, self.screen_rect.width - (size * 2))
+            y = randrange(0, self.screen_rect.height - (size * 2))
+            dx = randrange(2, 7)
+            dy = randrange(2, 7)
+            if choice([True, False]):
+                dx = -dx
+            if choice([True, False]):
+                dy = -dy
+            positions.append((x, y, dx, dy))
+        return positions
+
+    def draw_update_position_list(self, positions, size, bitmap):
+        new_positions = []
+        for x, y, dx, dy in positions:
+            x += dx
+            y += dy
+            if x < 0 or x > self.screen_rect.width - size:
+                dx = -dx
+            if y < 0 or y > self.screen_rect.height - size:
+                dy = -dy
+            self.screen.blit(bitmap, (x, y))
+            new_positions += [(x, y, dx, dy)]
+        return new_positions
 
     # callbacks
     def exit(self):
