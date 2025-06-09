@@ -46,7 +46,7 @@ class Demo:
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', gridded(1, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
-        self.push_window_toggle = add(ToggleButton('push_window', gridded(2, 0), True, 'Pushboxes'))
+        self.push_box_toggle = add(ToggleButton('push_window', gridded(2, 0), True, 'Pushboxes'))
         # control whether the pushradios window is visible
         self.push_radio_toggle = add(ToggleButton('push_radio', gridded(3, 0), True, 'Pushradios'))
         # control whether the life window is visible
@@ -130,22 +130,21 @@ class Demo:
             # if the mouse isn't over the canvas then end the dragging state
             if not self.canvas.focused():
                 self.dragging = False
-            # update the toggle variables
-            draw_boxes = self.boxes_toggle.read()
-            draw_circles = self.circles_toggle.read()
-            self.pb_win.set_visible(self.push_window_toggle.read())
+            # draw the boxes and circles if their toggles are pushed
+            if self.boxes_toggle.read():
+                boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
+            if self.circles_toggle.read():
+                circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
+            # update the visible windows
+            self.pb_win.set_visible(self.push_box_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
             self.life_win.set_visible(self.push_life_toggle.read())
             self.sb_win.set_visible(self.push_scroll_toggle.read())
             # handle events
             self.handle_events()
-            if draw_boxes:
-                boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
-            if draw_circles:
-                circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
-            # draw current life cycle
+            # draw current life cycle to the canvas
             self.draw_life()
-            # generate a new cycle if the state of the togglebutton is pressed
+            # generate a new cycle if the togglebutton is pressed
             if self.toggle_life.read():
                 self.generate()
             # draw gui
@@ -280,6 +279,7 @@ class Demo:
         for cell in self.life:
             # Unpack x and y cell coordinates
             xpos, ypos = cell
+            # calculate the graphical coordinate of the cell
             xpos = self.origin_x + (xpos * self.cell_size)
             ypos = self.origin_y + (ypos * self.cell_size)
             # Check to see if the cell is on screen and if so draw it
