@@ -31,7 +31,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # screen label
         set_font('gui_do')
-        add(Label((50, 50),'gui_do'))
+        add(Label((50, 50), 'gui_do'))
         set_font('normal')
         # add a frame as a backdrop behind the screen scrollbar widgets
         add(Frame('backdrop', Rect(1570, 30, 320, 360)))
