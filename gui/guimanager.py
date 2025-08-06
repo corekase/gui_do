@@ -83,7 +83,7 @@ class GuiManager:
         # parse additional information about the event
         if event_type == GKind.Pass or event_type == GKind.Quit:
             return gui_event
-        if event_type == GKind.Widget:
+        elif event_type == GKind.Widget:
             gui_event.widget_id = item1
         elif event_type == GKind.KeyUp:
             gui_event.key = item1

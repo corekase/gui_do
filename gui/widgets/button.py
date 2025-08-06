@@ -32,19 +32,6 @@ class Button(Widget):
         # is the mouse position within the button rect
         collision = self.get_collide(window)
         # manage the state of the button
-        if (self.state == State.Idle) and collision:
-            self.state = State.Hover
-        if self.state == State.Hover:
-            if (event.type == MOUSEMOTION) and (not collision):
-                self.state = State.Idle
-            if (event.type == MOUSEBUTTONDOWN) and collision:
-                if event.button == 1:
-                    self.state = State.Armed
-                    if self.button_callback != None:
-                        self.button_callback()
-                        self.timer = self.timers.add_timer(self.button_callback, 0.15)
-                    # don't signal a widget change, consume the signal by returning False
-                    return False
         if self.state == State.Armed:
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
@@ -58,13 +45,28 @@ class Button(Widget):
                         # no callback, signal event
                         return True
             if (event.type == MOUSEMOTION) and (not collision):
-                self.timers.remove_timer(self.timer)
+                if self.timer != None:
+                    self.timers.remove_timer(self.timer)
                 self.state = State.Idle
+        elif self.state == State.Hover:
+            if (event.type == MOUSEMOTION) and (not collision):
+                self.state = State.Idle
+            elif (event.type == MOUSEBUTTONDOWN) and collision:
+                if event.button == 1:
+                    self.state = State.Armed
+                    if self.button_callback != None:
+                        self.button_callback()
+                        self.timer = self.timers.add_timer(self.button_callback, 0.15)
+                    # don't signal a widget change, consume the signal by returning False
+                    return False
+        elif (self.state == State.Idle) and collision:
+            self.state = State.Hover
         # button not clicked
         return False
 
     def leave(self):
-        self.timers.remove_timer(self.timer)
+        if self.timer != None:
+            self.timers.remove_timer(self.timer)
         self.state = State.Idle
 
     def draw(self):
