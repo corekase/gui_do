@@ -32,37 +32,42 @@ class Button(Widget):
         if not collision:
             if self.timer != None:
                 self.gui.timers.remove_timer(self.timer)
+                self.timer = None
             self.state = State.Idle
             return False
         # manage the state of the button
+        if self.state == State.Idle:
+            self.state = State.Hover
+        if self.state == State.Hover:
+            if event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.state = State.Armed
+                    if self.button_callback != None:
+                        self.button_callback()
+                        if self.timer == None:
+                            self.timer = self.gui.timers.add_timer(self.button_callback, 0.15)
+                    # don't signal a widget change, consume the signal by returning False
+                    return False
         if self.state == State.Armed:
-            if (event.type == MOUSEBUTTONUP) and collision:
+            if event.type == MOUSEBUTTONUP:
                 if event.button == 1:
                     # button clicked
-                    self.gui.timers.remove_timer(self.timer)
+                    if self.timer != None:
+                        self.gui.timers.remove_timer(self.timer)
+                        self.timer = None
                     self.state = State.Idle
                     if self.button_callback != None:
                         # if a callback exists, consume the event
                         return False
                     # no callback, signal event
                     return True
-        elif self.state == State.Hover:
-            if (event.type == MOUSEBUTTONDOWN) and collision:
-                if event.button == 1:
-                    self.state = State.Armed
-                    if self.button_callback != None:
-                        self.button_callback()
-                        self.timer = self.gui.timers.add_timer(self.button_callback, 0.15)
-                    # don't signal a widget change, consume the signal by returning False
-                    return False
-        elif (self.state == State.Idle) and collision:
-            self.state = State.Hover
         # button not clicked
         return False
 
     def leave(self):
         if self.timer != None:
             self.gui.timers.remove_timer(self.timer)
+            self.timer = None
         self.state = State.Idle
 
     def draw(self):
