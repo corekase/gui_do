@@ -309,10 +309,9 @@ class Demo:
             elif CEvent.type == CKind.MouseMotion:
                 # if dragging then track relative position
                 if self.dragging:
-                    x = CEvent.rel[0]
-                    y = CEvent.rel[1]
-                    self.origin_x = self.origin_x + x
-                    self.origin_y = self.origin_y + y
+                    x, y = CEvent.rel[0], CEvent.rel[1]
+                    self.origin_x += x
+                    self.origin_y += y
             elif CEvent.type == CKind.MouseWheel:
                 # handle the mouse wheel
                 if CEvent.y != None:
