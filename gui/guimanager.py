@@ -7,21 +7,6 @@ from .command import copy_graphic_area, convert_to_window
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
 
-class GuiEvent:
-    # an event object to be returned which includes pygame event information and gui_do information
-    def __init__(self):
-        self.type: GKind = None
-        # keyboard
-        self.key = None
-        # mouse
-        self.pos = None
-        self.rel = None
-        self.button = None
-        # gui
-        self.surface = None
-        self.window_id = None
-        self.widget_id = None
-
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
     # No matter how many times it is instantiated the result is the one object and its state
@@ -77,37 +62,48 @@ class GuiManager:
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
-    def event(self, event_dict):
+    def event(self, kind, item_value=None):
+        class GuiEvent:
+            # an event object to be returned which includes pygame event information and gui_do information
+            def __init__(self):
+                self.type: GKind = None
+                # keyboard
+                self.key = None
+                # mouse
+                self.pos = None
+                self.rel = None
+                self.button = None
+                # gui
+                self.widget_id = None
         # construct an event to be returned to the client which includes both gui_do information and pygame
         # event information
         gui_event = GuiEvent()
-        if event_dict == None:
+        if kind == None:
             gui_event.type = GKind.Pass
             return gui_event
-        keys = event_dict.keys()
-        if 'widget_id' in keys:
+        if kind == 'widget_id':
             gui_event.type = GKind.Widget
-            gui_event.widget_id = event_dict['widget_id']
-        elif 'quit' in keys:
+            gui_event.widget_id = item_value
+        elif kind == 'quit':
             gui_event.type = GKind.Quit
-        elif 'keyup' in keys:
+        elif kind == 'keyup':
             gui_event.type = GKind.KeyUp
-            gui_event.key = event_dict['keyup']
-        elif 'keydown' in keys:
+            gui_event.key = item_value
+        elif kind == 'keydown':
             gui_event.type = GKind.KeyDown
-            gui_event.key = event_dict['keydown']
-        elif 'mousebuttonup' in keys:
+            gui_event.key = item_value
+        elif kind == 'mousebuttonup':
             gui_event.type = GKind.MouseButtonUp
             gui_event.pos = self.get_mouse_pos()
-            gui_event.button = event_dict['mousebuttonup']
-        elif 'mousebuttondown' in keys:
+            gui_event.button = item_value
+        elif kind == 'mousebuttondown':
             gui_event.type = GKind.MouseButtonDown
             gui_event.pos = self.get_mouse_pos()
-            gui_event.button = event_dict['mousebuttondown']
-        elif 'mousemotion' in keys:
+            gui_event.button = item_value
+        elif kind == 'mousemotion':
             gui_event.type = GKind.MouseMotion
             gui_event.pos = self.get_mouse_pos()
-            gui_event.rel = event_dict['mousemotion']
+            gui_event.rel = item_value
         # elif more key types
         return gui_event
 
@@ -129,12 +125,12 @@ class GuiManager:
                 self.mouse_pos = self.lock_area(event.pos)
         # check for alt-f4 or window quit button
         if event.type == QUIT:
-            return self.event({'quit': None})
+            return self.event('quit')
         # check for a keys
         if event.type == KEYUP:
-            return self.event({'keyup': event.key})
+            return self.event('keyup', event.key)
         elif event.type == KEYDOWN:
-            return self.event({'keydown': event.key})
+            return self.event('keydown', event.key)
         # find highest window
         top_window = None
         for window in self.windows:
@@ -189,7 +185,7 @@ class GuiManager:
                                 if widget.visible:
                                     collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
-                                        return self.event({'widget_id': widget.id})
+                                        return self.event('widget_id', widget.id)
                                     if collision:
                                         widget_consumed = True
                                         widget_hit = widget
@@ -211,7 +207,7 @@ class GuiManager:
             for widget in self.widgets:
                 if widget.visible:
                     if self.handle_widget(widget, event):
-                        return self.event({'widget_id': widget.id})
+                        return self.event('widget_id', widget.id)
                     if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), None)):
                         consumed = True
                         widget_hit = widget
@@ -226,11 +222,11 @@ class GuiManager:
             self.last_widget.leave()
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
-            return self.event({'mousebuttonup': event.button})
+            return self.event('mousebuttonup', event.button)
         elif event.type == MOUSEBUTTONDOWN:
-            return self.event({'mousebuttondown': event.button})
+            return self.event('mousebuttondown', event.button)
         if event.type == MOUSEMOTION:
-            return self.event({'mousemotion': event.rel})
+            return self.event('mousemotion', event.rel)
         # event did not match anything
         return self.event(None)
 
