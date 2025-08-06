@@ -39,4 +39,4 @@ class Timers:
                 if obj.callback != None:
                     obj.callback()
                 else:
-                    self.remove_timer(obj)
+                    self.timers.remove(obj)
