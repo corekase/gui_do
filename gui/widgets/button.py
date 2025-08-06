@@ -1,6 +1,7 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
+from ..timers import Timers
 from .widget import Widget
 from enum import Enum
 
@@ -11,6 +12,9 @@ class Button(Widget):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
+        # a reference to the Timer object
+        self.timers = Timers()
+        # this object's timer
         self.timer = None
         if not skip_factory:
             factory = BitmapFactory()
@@ -38,14 +42,14 @@ class Button(Widget):
                     self.state = State.Armed
                     if self.button_callback != None:
                         self.button_callback()
-                    self.timer = self.gui.timers.add_timer(self.button_callback, 0.15)
+                        self.timer = self.timers.add_timer(self.button_callback, 0.15)
                     # don't signal a widget change, consume the signal by returning False
                     return False
         if self.state == State.Armed:
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
                     # button clicked
-                    self.gui.timers.remove_timer(self.timer)
+                    self.timers.remove_timer(self.timer)
                     self.state = State.Idle
                     if self.button_callback != None:
                         # if a callback exists, consume the event
@@ -54,13 +58,13 @@ class Button(Widget):
                         # no callback, signal event
                         return True
             if (event.type == MOUSEMOTION) and (not collision):
-                self.gui.timers.remove_timer(self.timer)
+                self.timers.remove_timer(self.timer)
                 self.state = State.Idle
         # button not clicked
         return False
 
     def leave(self):
-        self.gui.timers.remove_timer(self.timer)
+        self.timers.remove_timer(self.timer)
         self.state = State.Idle
 
     def draw(self):

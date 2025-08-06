@@ -2,6 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
+from gui.timers import Timers
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, set_buffered, restore_pristine, Canvas, CKind
 from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
@@ -19,6 +20,8 @@ class Demo:
         pygame.display.set_caption('gui_do')
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
+        # create a timer manager
+        self.timers = Timers()
         # create a gui manager
         self.gui = gui_init(self.screen)
         # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
@@ -158,7 +161,7 @@ class Demo:
 
     def handle_events(self):
         # update internal gui timers
-        self.gui.timers.update()
+        self.timers.update()
         # handle the pygame event queue
         for raw_event in pygame.event.get():
             # process event queue
