@@ -62,7 +62,8 @@ class GuiManager:
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
-    def event(self, kind, item_value=None):
+    # if more items needed, item2=None and so on so they're always optional
+    def event(self, event_type, item1=None):
         class GuiEvent:
             # an event object to be returned which includes pygame event information and gui_do information
             def __init__(self):
@@ -75,36 +76,29 @@ class GuiManager:
                 self.button = None
                 # gui
                 self.widget_id = None
-        # construct an event to be returned to the client which includes both gui_do information and pygame
-        # event information
+        # construct an event to be returned to the client
         gui_event = GuiEvent()
-        if kind == None:
-            gui_event.type = GKind.Pass
+        # set the type of the event
+        gui_event.type = event_type
+        # parse additional information about the event
+        if event_type == GKind.Pass or event_type == GKind.Quit:
             return gui_event
-        if kind == 'widget_id':
-            gui_event.type = GKind.Widget
-            gui_event.widget_id = item_value
-        elif kind == 'quit':
-            gui_event.type = GKind.Quit
-        elif kind == 'keyup':
-            gui_event.type = GKind.KeyUp
-            gui_event.key = item_value
-        elif kind == 'keydown':
-            gui_event.type = GKind.KeyDown
-            gui_event.key = item_value
-        elif kind == 'mousebuttonup':
-            gui_event.type = GKind.MouseButtonUp
+        if event_type == GKind.Widget:
+            gui_event.widget_id = item1
+        elif event_type == GKind.KeyUp:
+            gui_event.key = item1
+        elif event_type == GKind.KeyDown:
+            gui_event.key = item1
+        elif event_type == GKind.MouseButtonUp:
             gui_event.pos = self.get_mouse_pos()
-            gui_event.button = item_value
-        elif kind == 'mousebuttondown':
-            gui_event.type = GKind.MouseButtonDown
+            gui_event.button = item1
+        elif event_type == GKind.MouseButtonDown:
             gui_event.pos = self.get_mouse_pos()
-            gui_event.button = item_value
-        elif kind == 'mousemotion':
-            gui_event.type = GKind.MouseMotion
+            gui_event.button = item1
+        elif event_type == GKind.MouseMotion:
             gui_event.pos = self.get_mouse_pos()
-            gui_event.rel = item_value
-        # elif more key types
+            gui_event.rel = item1
+        # elif more types
         return gui_event
 
     def handle_event(self, event):
@@ -125,12 +119,12 @@ class GuiManager:
                 self.mouse_pos = self.lock_area(event.pos)
         # check for alt-f4 or window quit button
         if event.type == QUIT:
-            return self.event('quit')
+            return self.event(GKind.Quit)
         # check for a keys
         if event.type == KEYUP:
-            return self.event('keyup', event.key)
+            return self.event(GKind.KeyUp, event.key)
         elif event.type == KEYDOWN:
-            return self.event('keydown', event.key)
+            return self.event(GKind.KeyDown, event.key)
         # find highest window
         top_window = None
         for window in self.windows:
@@ -167,7 +161,7 @@ class GuiManager:
                         if self.active_window.get_widget_rect().collidepoint(self.lock_area(event.pos)):
                             self.lower_window(window)
                             self.active_window = self.windows[-1]
-                            return self.event(None)
+                            return self.event(GKind.Pass)
                         # begin dragging
                         self.dragging = True
                         self.dragging_window = self.active_window
@@ -185,7 +179,7 @@ class GuiManager:
                                 if widget.visible:
                                     collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
-                                        return self.event('widget_id', widget.id)
+                                        return self.event(GKind.Widget, widget.id)
                                     if collision:
                                         widget_consumed = True
                                         widget_hit = widget
@@ -199,7 +193,7 @@ class GuiManager:
                             self.locking_object.leave()
                             self.set_lock_area(None)
                     if window_consumed or widget_consumed:
-                        return self.event(None)
+                        return self.event(GKind.Pass)
         else:
             # handle screen widgets
             consumed = False
@@ -207,7 +201,7 @@ class GuiManager:
             for widget in self.widgets:
                 if widget.visible:
                     if self.handle_widget(widget, event):
-                        return self.event('widget_id', widget.id)
+                        return self.event(GKind.Widget, widget.id)
                     if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), None)):
                         consumed = True
                         widget_hit = widget
@@ -216,19 +210,19 @@ class GuiManager:
                     self.locking_object.leave()
                     self.set_lock_area(None)
             if consumed:
-                return self.event(None)
+                return self.event(GKind.Pass)
         #
         if self.last_widget != None:
             self.last_widget.leave()
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
-            return self.event('mousebuttonup', event.button)
+            return self.event(GKind.MouseButtonUp, event.button)
         elif event.type == MOUSEBUTTONDOWN:
-            return self.event('mousebuttondown', event.button)
+            return self.event(GKind.MouseButtonDown, event.button)
         if event.type == MOUSEMOTION:
-            return self.event('mousemotion', event.rel)
+            return self.event(GKind.MouseMotion, event.rel)
         # event did not match anything
-        return self.event(None)
+        return self.event(GKind.Pass)
 
     def handle_widget(self, widget, event, window=None):
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
