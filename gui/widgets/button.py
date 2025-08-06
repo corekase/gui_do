@@ -12,8 +12,6 @@ class Button(Widget):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
-        # a reference to the Timers object
-        self.timers = Timers()
         # this object's timer
         self.timer = None
         if not skip_factory:
@@ -33,7 +31,7 @@ class Button(Widget):
         collision = self.get_collide(window)
         if not collision:
             if self.timer != None:
-                self.timers.remove_timer(self.timer)
+                self.gui.timers.remove_timer(self.timer)
             self.state = State.Idle
             return False
         # manage the state of the button
@@ -41,7 +39,7 @@ class Button(Widget):
             if (event.type == MOUSEBUTTONUP) and collision:
                 if event.button == 1:
                     # button clicked
-                    self.timers.remove_timer(self.timer)
+                    self.gui.timers.remove_timer(self.timer)
                     self.state = State.Idle
                     if self.button_callback != None:
                         # if a callback exists, consume the event
@@ -54,7 +52,7 @@ class Button(Widget):
                     self.state = State.Armed
                     if self.button_callback != None:
                         self.button_callback()
-                        self.timer = self.timers.add_timer(self.button_callback, 0.15)
+                        self.timer = self.gui.timers.add_timer(self.button_callback, 0.15)
                     # don't signal a widget change, consume the signal by returning False
                     return False
         elif (self.state == State.Idle) and collision:
@@ -64,7 +62,7 @@ class Button(Widget):
 
     def leave(self):
         if self.timer != None:
-            self.timers.remove_timer(self.timer)
+            self.gui.timers.remove_timer(self.timer)
         self.state = State.Idle
 
     def draw(self):

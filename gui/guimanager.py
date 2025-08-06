@@ -3,6 +3,7 @@ from enum import Enum
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .command import copy_graphic_area, convert_to_window
+from .timers import Timers
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
                        'Widget', 'Window'])
@@ -57,6 +58,8 @@ class GuiManager:
         self.locking_object = None
         # whether or not drawing is buffered
         self.buffered = False
+        # gui timers
+        self.timers = Timers()
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
