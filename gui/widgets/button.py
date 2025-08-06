@@ -31,6 +31,11 @@ class Button(Widget):
             return False
         # is the mouse position within the button rect
         collision = self.get_collide(window)
+        if not collision:
+            if self.timer != None:
+                self.timers.remove_timer(self.timer)
+            self.state = State.Idle
+            return False
         # manage the state of the button
         if self.state == State.Armed:
             if (event.type == MOUSEBUTTONUP) and collision:
@@ -41,17 +46,10 @@ class Button(Widget):
                     if self.button_callback != None:
                         # if a callback exists, consume the event
                         return False
-                    else:
-                        # no callback, signal event
-                        return True
-            if (event.type == MOUSEMOTION) and (not collision):
-                if self.timer != None:
-                    self.timers.remove_timer(self.timer)
-                self.state = State.Idle
+                    # no callback, signal event
+                    return True
         elif self.state == State.Hover:
-            if (event.type == MOUSEMOTION) and (not collision):
-                self.state = State.Idle
-            elif (event.type == MOUSEBUTTONDOWN) and collision:
+            if (event.type == MOUSEBUTTONDOWN) and collision:
                 if event.button == 1:
                     self.state = State.Armed
                     if self.button_callback != None:

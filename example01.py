@@ -80,7 +80,7 @@ class Demo:
         # toggle whether or not the simulation is processing
         self.toggle_life = add(ToggleButton('run', Rect(10, height - 30, 120, 20), False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset', self.reset))
+        add(Button('reset', Rect(140, height - 30, 120, 20), 'Reset'), self.reset)
         # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
