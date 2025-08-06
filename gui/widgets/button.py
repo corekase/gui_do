@@ -12,7 +12,7 @@ class Button(Widget):
         # initialize common widget values
         super().__init__(id, rect)
         self.gui = GuiManager()
-        # a reference to the Timer object
+        # a reference to the Timers object
         self.timers = Timers()
         # this object's timer
         self.timer = None

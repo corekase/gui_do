@@ -2,8 +2,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui.timers import Timers
-from gui import gui_init, set_backdrop, load_font, set_font
+from gui import Timers, gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, set_buffered, restore_pristine, Canvas, CKind
 from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
 from gui import Frame, FrState, colours, PushButtonGroup, set_grid_properties, gridded

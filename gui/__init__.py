@@ -16,6 +16,8 @@ from .widgets.pushbuttongroup import PushButtonGroup
 from .widgets.image import Image
 from .widgets.togglebutton import ToggleButton
 from .widgets.canvas import Canvas, CKind
+# import timer manager
+from .timers import Timers
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
     # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080
