@@ -58,7 +58,7 @@ class Demo:
         # add scrollbar widgets
         make_scrollbars(1580, 40, 'screen')
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1050), 120, 20, 4)
         # control whether the background boxes are drawn
@@ -207,19 +207,15 @@ class Demo:
         # handle the gui event queue
         for event in self.gui.events():
             if event.type == GKind.Quit:
-                # handle window close widget or alt-f4 keypress
+                # window close widget or alt-f4 keypress
                 self.running = False
-                return
-            if event.type == GKind.Widget:
-                pass
-                # if event.widget_id == 'widget_id':
-                #     pass
-                # elif event.widget_id == 'next_id':
-                #     pass
+            elif event.type == GKind.Widget:
+                if event.widget_id == 'exit':
+                    # exit button was clicked
+                    self.running = False
             elif event.type == GKind.KeyDown:
-                # handle key presses
                 if event.key == K_ESCAPE:
-                    # handle escape key
+                    # escape key pressed
                     self.running = False
 
     # reset the life simulation to a default state
@@ -288,11 +284,7 @@ class Demo:
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
         self.canvas_surface.set_clip(None)
 
-    # callback function
-    def exit(self):
-        self.running = False
-
-    # callback function
+    # canvas callback function
     def handle_canvas(self):
         # read the event from the canvas widget
         CEvent = self.canvas.read_event()
