@@ -47,20 +47,20 @@ class Scrollbar(Frame):
                     scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
             else:
                 raise Exception(f'style {style} not implemented')
-        # now add the scrollbar and arrowboxes
+        # add arrowboxes
         if style != 0:
             x, y, width, height = overall_rect
             rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
-            increment_absolute = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
-            decrement_absolute = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
+            inc_rect = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
+            dec_rect = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
             if horizontal:
                 inc_degree = 0
                 dec_degree = 180
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.register(add(ArrowBox(f'{id}.increment', increment_absolute, inc_degree, self.increment)))
-            self.register(add(ArrowBox(f'{id}.decrement', decrement_absolute, dec_degree, self.decrement)))
+            self.registered.append(add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
+            self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
         # initialize common widget values
         super().__init__(id, rect)
         # get a reference to the gui
@@ -203,10 +203,6 @@ class Scrollbar(Frame):
         # for each attached arrowbox also do their setting
         for widget in self.registered:
             widget.set_visible(visible)
-
-    def register(self, obj):
-        # add the object to a list that set_visible uses
-        self.registered.append(obj)
 
     # callbacks
     def increment(self):
