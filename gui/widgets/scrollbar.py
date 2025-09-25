@@ -2,33 +2,82 @@ from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..guimanager import GuiManager
-from ..command import convert_to_window, convert_to_screen
+from ..command import convert_to_window, convert_to_screen, add
 from .frame import Frame, FrState
+from .arrowbox import ArrowBox
 from .widget import colours
 
-class ScrollbarBase(Frame):
-    def __init__(self, id, rect, horizontal):
+class Scrollbar(Frame):
+    def __init__(self, id, params, overall_rect, horizontal, style):
+        # list of registered sub-widgets
+        self.registered = []
+        # parse the style
+        if style == 0:
+            # pass through with no arrowboxes
+            rect = overall_rect
+        else:
+            # define rects for scrollbar and arrowboxes
+            x, y, width, height = overall_rect
+            if style == 1:
+                if horizontal:
+                    increment_rect = Rect(width - height, 0, height, height)
+                    scrollbar_rect = Rect(height, 0, (width - height * 2), height)
+                    decrement_rect = Rect(0, 0, height, height)
+                else:
+                    increment_rect = Rect(0, height - width, width, width)
+                    scrollbar_rect = Rect(0, width, width, height - width * 2)
+                    decrement_rect = Rect(0, 0, width, width)
+            elif style == 2:
+                if horizontal:
+                    scrollbar_rect = Rect(0, 0, (width - height * 2), height)
+                    decrement_rect = Rect(width - (height * 2), 0, height, height)
+                    increment_rect = Rect(width - height, 0, height, height)
+                else:
+                    scrollbar_rect = Rect(0, 0, width, height - (width * 2))
+                    decrement_rect = Rect(0, height - (width * 2), width, width)
+                    increment_rect = Rect(0, height - width, width, width)
+            elif style == 3:
+                if horizontal:
+                    decrement_rect = Rect(0, 0, height, height)
+                    increment_rect = Rect(height, 0, height, height)
+                    scrollbar_rect = Rect(height * 2, 0, width - (height * 2), height)
+                else:
+                    decrement_rect = Rect(0, 0, width, width)
+                    increment_rect = Rect(0, width, width, width)
+                    scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
+            else:
+                raise Exception(f'style {style} not implemented')
+        # now add the scrollbar and arrowboxes
+        if style != 0:
+            x, y, width, height = overall_rect
+            rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
+            increment_absolute = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
+            decrement_absolute = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
+            if horizontal:
+                inc_degree = 0
+                dec_degree = 180
+            else:
+                inc_degree = 270
+                dec_degree = 90
+            self.register(add(ArrowBox(f'{id}.increment', increment_absolute, inc_degree, self.increment)))
+            self.register(add(ArrowBox(f'{id}.decrement', decrement_absolute, dec_degree, self.decrement)))
         # initialize common widget values
         super().__init__(id, rect)
         # get a reference to the gui
         self.gui = GuiManager()
         # maximum area that can be filled
         self.graphic_rect = Rect(self.rect.left + 4, self.rect.top + 4, self.rect.width - 8, self.rect.height - 8)
-        # total size, start position, and bar size within the graphic rect
-        self.total_range = self.start_pos = self.bar_size = None
+        # setup the parameters of the scrollbar
+        total, start, size, inc = params
+        self.set(total, start, size, inc)
         # whether the scrollbar is horizontal or vertical
         self.horizontal = horizontal
         # state to track if the scrollbar is currently dragging
         self.dragging = False
         # previous mouse position the last time the event was handled
         self.last_mouse_pos = None
-        # list of registered sub-widgets
-        self.registered = []
         # whether or not the arrowboxes modified the start_pos
         self.hit = False
-        # before handle_event() is called, set() must be called at least once to initialize state
-        # -> set(total_range, start_position, bar_size)
-        # once initialized then the scrollbar operates as intended
 
     def handle_event(self, event, window):
         if self.hit:

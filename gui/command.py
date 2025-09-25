@@ -152,68 +152,6 @@ def set_active_bank(dest_bank):
     global bank
     pass
 
-def Scrollbar(id, params, overall_rect, horizontal, style):
-    # Scrollbar constructor
-    from .widgets.scrollbar import ScrollbarBase
-    from .widgets.arrowbox import ArrowBox
-    total, start, size, inc = params
-    if style == 0:
-        # pass through with no arrowboxes
-        scroll_bar = ScrollbarBase(id, overall_rect, horizontal)
-    else:
-        # define rects for scrollbar and arrowboxes
-        x, y, width, height = overall_rect
-        if style == 1:
-            if horizontal:
-                increment_rect = Rect(width - height, 0, height, height)
-                scrollbar_rect = Rect(height, 0, (width - height * 2), height)
-                decrement_rect = Rect(0, 0, height, height)
-            else:
-                increment_rect = Rect(0, height - width, width, width)
-                scrollbar_rect = Rect(0, width, width, height - width * 2)
-                decrement_rect = Rect(0, 0, width, width)
-        elif style == 2:
-            if horizontal:
-                scrollbar_rect = Rect(0, 0, (width - height * 2), height)
-                decrement_rect = Rect(width - (height * 2), 0, height, height)
-                increment_rect = Rect(width - height, 0, height, height)
-            else:
-                scrollbar_rect = Rect(0, 0, width, height - (width * 2))
-                decrement_rect = Rect(0, height - (width * 2), width, width)
-                increment_rect = Rect(0, height - width, width, width)
-        elif style == 3:
-            if horizontal:
-                decrement_rect = Rect(0, 0, height, height)
-                increment_rect = Rect(height, 0, height, height)
-                scrollbar_rect = Rect(height * 2, 0, width - (height * 2), height)
-            else:
-                decrement_rect = Rect(0, 0, width, width)
-                increment_rect = Rect(0, width, width, width)
-                scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
-        else:
-            raise Exception(f'style {style} not implemented')
-    # now add the scrollbar and arrowboxes
-    if style == 0:
-        scroll_bar.set(total, start, size, inc)
-        return scroll_bar
-    else:
-        x, y, width, height = overall_rect
-        scroll_absolute = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
-        increment_absolute = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
-        decrement_absolute = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
-        scroll_bar = ScrollbarBase(id, scroll_absolute, horizontal)
-        scroll_bar.set(total, start, size, inc)
-        if horizontal:
-            inc_degree = 0
-            dec_degree = 180
-        else:
-            inc_degree = 270
-            dec_degree = 90
-        scroll_bar.register(add(ArrowBox(f'{id}.increment', increment_absolute, inc_degree, scroll_bar.increment)))
-        scroll_bar.register(add(ArrowBox(f'{id}.decrement', decrement_absolute, dec_degree, scroll_bar.decrement)))
-        # return a reference to the scrollbar widget
-        return scroll_bar
-
 def set_cursor(hotspot, *image):
     # set the cursor image and hotspot
     gui.cursor_image = image_alpha('cursors', *image)
