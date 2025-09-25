@@ -265,7 +265,7 @@ class Demo:
 
     def draw_life(self):
         # Draw contents of the life cells onto the canvas surface
-        self.canvas_surface.set_clip((1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
+        self.canvas_surface.set_clip(Rect(1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
         for cell in self.life:
             # set initial cell sizes
             size_x = size_y = self.cell_size
@@ -286,7 +286,7 @@ class Demo:
                     size_y = ypos + self.cell_size
                     ypos = 0
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
-        self.canvas_surface.set_clip()
+        self.canvas_surface.set_clip(None)
 
     # callback function
     def exit(self):
