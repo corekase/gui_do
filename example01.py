@@ -116,6 +116,33 @@ class Demo:
         self.running = True
 
     def run(self):
+        # make a random list of positions
+        def make_position_list(num_items, size):
+            positions = []
+            for _ in range(num_items):
+                x = randrange(0, self.screen_rect.width - (size * 2))
+                y = randrange(0, self.screen_rect.height - (size * 2))
+                dx = randrange(2, 7)
+                dy = randrange(2, 7)
+                if choice([True, False]):
+                    dx = -dx
+                if choice([True, False]):
+                    dy = -dy
+                positions.append((x, y, dx, dy))
+            return positions
+        # update the position and draw a bitmap at the position
+        def draw_update_position_list(positions, size, bitmap):
+            new_positions = []
+            for x, y, dx, dy in positions:
+                x += dx
+                y += dy
+                if x < 0 or x > self.screen_rect.width - size:
+                    dx = -dx
+                if y < 0 or y > self.screen_rect.height - size:
+                    dy = -dy
+                self.screen.blit(bitmap, (x, y))
+                new_positions += [(x, y, dx, dy)]
+            return new_positions
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
@@ -124,7 +151,7 @@ class Demo:
         boxes = 50
         boxes_size = 12
         # get a list of positions
-        boxes_position_list = self.make_position_list(boxes, boxes_size)
+        boxes_position_list = make_position_list(boxes, boxes_size)
         # setup a frame to draw on our surface
         frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
         frame.state = FrState.Armed
@@ -138,7 +165,7 @@ class Demo:
         circles = 50
         circles_size = 12
         # get a position list for them
-        circles_position_list = self.make_position_list(circles, circles_size)
+        circles_position_list = make_position_list(circles, circles_size)
         # make a bitmap for them
         from gui.bitmapfactory import BitmapFactory
         factory = BitmapFactory()
@@ -152,9 +179,9 @@ class Demo:
                 self.dragging = False
             # draw the boxes and circles if their toggles are pushed
             if self.boxes_toggle.read():
-                boxes_position_list = self.draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
+                boxes_position_list = draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
             if self.circles_toggle.read():
-                circles_position_list = self.draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
+                circles_position_list = draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
             # update the visible windows
             self.pb_win.set_visible(self.push_box_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
@@ -194,35 +221,6 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # handle escape key
                     self.running = False
-
-    # make a random list of positions
-    def make_position_list(self, num_items, size):
-        positions = []
-        for _ in range(num_items):
-            x = randrange(0, self.screen_rect.width - (size * 2))
-            y = randrange(0, self.screen_rect.height - (size * 2))
-            dx = randrange(2, 7)
-            dy = randrange(2, 7)
-            if choice([True, False]):
-                dx = -dx
-            if choice([True, False]):
-                dy = -dy
-            positions.append((x, y, dx, dy))
-        return positions
-
-    # update the position and draw a bitmap at the position
-    def draw_update_position_list(self, positions, size, bitmap):
-        new_positions = []
-        for x, y, dx, dy in positions:
-            x += dx
-            y += dy
-            if x < 0 or x > self.screen_rect.width - size:
-                dx = -dx
-            if y < 0 or y > self.screen_rect.height - size:
-                dy = -dy
-            self.screen.blit(bitmap, (x, y))
-            new_positions += [(x, y, dx, dy)]
-        return new_positions
 
     # reset the life simulation to a default state
     def reset(self):
