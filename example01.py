@@ -265,17 +265,28 @@ class Demo:
 
     def draw_life(self):
         # Draw contents of the life cells onto the canvas surface
+        self.canvas_surface.set_clip((1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
         for cell in self.life:
+            # set initial cell sizes
+            size_x = size_y = self.cell_size
             # Unpack x and y cell coordinates
             xpos, ypos = cell
             # calculate the graphical coordinate of the cell
             xpos = self.origin_x + (xpos * self.cell_size)
             ypos = self.origin_y + (ypos * self.cell_size)
             # Check to see if the cell is on screen and if so draw it
-            bounded = (xpos >= 0) and (xpos <= self.canvas_rect.width) and \
-                      (ypos >= 0) and (ypos <= self.canvas_rect.height)
+            bounded = (xpos >= -self.cell_size) and (xpos <= self.canvas_rect.width) and \
+                      (ypos >= -self.cell_size) and (ypos <= self.canvas_rect.height)
             if bounded:
-                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, self.cell_size - 1, self.cell_size - 1))
+                # if either xpos or ypos are less than zero trim the cell drawing size
+                if xpos < 0:
+                    size_x = xpos + self.cell_size
+                    xpos = 0
+                if ypos < 0:
+                    size_y = ypos + self.cell_size
+                    ypos = 0
+                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
+        self.canvas_surface.set_clip()
 
     # callback function
     def exit(self):
