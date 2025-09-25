@@ -9,6 +9,26 @@ from gui import Frame, FrState, colours, PushButtonGroup, set_grid_properties, g
 
 class Demo:
     def __init__(self):
+        def make_scrollbars(x, y, prefix):
+            add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
+            y += 22
+            add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
+            y += 22
+            add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
+            y += 22
+            add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
+            y += 24
+            add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
+            x += 22
+            add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
+            x += 22
+            add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
+            x += 22
+            add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
+            add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
+            set_font('gui_do')
+            add(Label((x + 40, y + 210), 'Scrollbars!'))
+            set_font('normal')
         # initialize pygame
         pygame.init()
         # create main window surface
@@ -36,7 +56,7 @@ class Demo:
         # add a frame as a backdrop behind the screen scrollbar widgets
         add(Frame('backdrop', Rect(1570, 30, 320, 360)))
         # add scrollbar widgets
-        self.make_scrollbars(1580, 40, 'screen')
+        make_scrollbars(1580, 40, 'screen')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
         # setup for the togglebuttons
@@ -85,7 +105,7 @@ class Demo:
         window_y = centre(self.screen.get_rect().height, height)
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add scrollbar widgets again, but this time the window is the active object
-        self.make_scrollbars(10, 10, 'window')
+        make_scrollbars(10, 10, 'window')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
@@ -210,28 +230,6 @@ class Demo:
             self.screen.blit(bitmap, (x, y))
             new_positions += [(x, y, dx, dy)]
         return new_positions
-
-    # construct some widgets, not saving any of the references that add() returns
-    def make_scrollbars(self, x, y, prefix):
-        add(Scrollbar(f'{prefix}a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
-        y += 22
-        add(Scrollbar(f'{prefix}b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
-        y += 22
-        add(Scrollbar(f'{prefix}c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
-        y += 22
-        add(Scrollbar(f'{prefix}d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
-        y += 24
-        add(Scrollbar(f'{prefix}e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
-        x += 22
-        add(Scrollbar(f'{prefix}f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
-        x += 22
-        add(Scrollbar(f'{prefix}g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
-        x += 22
-        add(Scrollbar(f'{prefix}h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
-        add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
-        set_font('gui_do')
-        add(Label((x + 40, y + 210), 'Scrollbars!'))
-        set_font('normal')
 
     # reset the life simulation to a default state
     def reset(self):
