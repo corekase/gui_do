@@ -104,6 +104,19 @@ class GuiManager:
         # elif more types
         return gui_event
 
+    def events(self):
+        # update internal gui timers
+        self.timers.update()
+        # process event queue
+        for raw_event in pygame.event.get():
+            # process event queue
+            event = self.handle_event(raw_event)
+            if event.type == GKind.Pass:
+                # no operation
+                continue
+            # yield current event
+            yield event
+
     def handle_event(self, event):
         # update internal mouse position
         if event.type == MOUSEMOTION:

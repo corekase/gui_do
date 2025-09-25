@@ -177,15 +177,8 @@ class Demo:
         pygame.quit()
 
     def handle_events(self):
-        # update internal gui timers
-        self.gui.timers.update()
-        # handle the pygame event queue
-        for raw_event in pygame.event.get():
-            # process event queue
-            event = self.gui.handle_event(raw_event)
-            if event.type == GKind.Pass:
-                # no operation
-                continue
+        # handle the gui event queue
+        for event in self.gui.events():
             if event.type == GKind.Quit:
                 # handle window close widget or alt-f4 keypress
                 self.running = False
