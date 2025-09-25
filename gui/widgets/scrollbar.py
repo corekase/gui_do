@@ -14,7 +14,7 @@ class Scrollbar(Frame):
         # parse the style
         if style == 0:
             # pass through with no arrowboxes
-            rect = overall_rect
+            scroll_area_rect = overall_rect
         else:
             # define rects for scrollbar and arrowboxes
             x, y, width, height = overall_rect
@@ -50,7 +50,7 @@ class Scrollbar(Frame):
         # add arrowboxes
         if style != 0:
             x, y, width, height = overall_rect
-            rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
+            scroll_area_rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
             inc_rect = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
             dec_rect = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
             if horizontal:
@@ -62,7 +62,7 @@ class Scrollbar(Frame):
             self.registered.append(add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
             self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
         # initialize common widget values
-        super().__init__(id, rect)
+        super().__init__(id, scroll_area_rect)
         # get a reference to the gui
         self.gui = GuiManager()
         # maximum area that can be filled
