@@ -109,7 +109,7 @@ class GuiManager:
         self.timers.update()
         # process event queue
         for raw_event in pygame.event.get():
-            # process event queue
+            # process event
             event = self.handle_event(raw_event)
             if event.type == GKind.Pass:
                 # no operation
