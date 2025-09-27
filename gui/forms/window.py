@@ -29,10 +29,6 @@ class WindowBase:
         self.window_save_pristine()
         # widgets on that surface
         self.widgets = []
-        # add this window to the gui
-        self.gui.add_window(self)
-        # make this object the destination for gui add commands
-        set_active_object(self)
         # set the window to the position passed in
         self.set_pos(pos)
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.height)

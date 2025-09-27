@@ -142,7 +142,12 @@ def Window(title, pos, size, backdrop=None):
     # extra information like the window bank is added here
     global window_bank
     from .forms.window import WindowBase
-    return WindowBase(title, pos, size, backdrop)
+    win = WindowBase(title, pos, size, backdrop)
+    # add this window to the gui
+    gui.add_window(win)
+    # make this object the destination for gui add commands
+    set_active_object(win)
+    return win
 
 bank = None
 def set_active_bank(dest_bank):
