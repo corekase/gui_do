@@ -5,7 +5,7 @@ from pygame.locals import K_ESCAPE
 from gui import gui_init, set_backdrop, load_font, set_font
 from gui import add, set_cursor, set_buffered, restore_pristine, Canvas, CKind
 from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
-from gui import Frame, FrState, colours, PushButtonGroup, set_grid_properties, gridded
+from gui import colours, PushButtonGroup, set_grid_properties, gridded
 
 class Demo:
     def __init__(self):
