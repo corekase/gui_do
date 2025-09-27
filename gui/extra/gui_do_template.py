@@ -33,7 +33,7 @@ class Template:
         add(Label((50, 50),'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'), self.exit)
+        add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
@@ -61,25 +61,18 @@ class Template:
     def handle_events(self):
         # handle the gui event queue
         for event in self.gui.events():
-            if event.type == GKind.Quit:
-                # handle window close widget or alt-f4 keypress
-                self.running = False
-                return
             if event.type == GKind.Widget:
-                pass
-                # if event.widget_id == 'widget_id':
-                #     pass
-                # elif event.widget_id == 'next_id':
-                #     pass
+                if event.widget_id == 'exit':
+                    # exit button clicked
+                     self.running = False
             elif event.type == GKind.KeyDown:
                 # handle key presses
                 if event.key == K_ESCAPE:
-                    # handle escape key
+                    # escape key pressed
                     self.running = False
-
-    # callbacks
-    def exit(self):
-        self.running = False
+            elif event.type == GKind.Quit:
+                # window close widget or alt-f4 keypress
+                self.running = False
 
 if __name__ == '__main__':
     Template().run()
