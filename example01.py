@@ -122,10 +122,8 @@ class Demo:
             y = randrange(0, self.screen_rect.height - (self.size * 2))
             dx = randrange(2, 7)
             dy = randrange(2, 7)
-            if choice([True, False]):
-                dx = -dx
-            if choice([True, False]):
-                dy = -dy
+            dx = -dx if choice([True, False]) else dx
+            dy = -dy if choice([True, False]) else dy
             self.positions.append((x, y, dx, dy, choice([True, False])))
         # fps to maintain, if 0 then unlimited
         fps = 60
@@ -187,11 +185,7 @@ class Demo:
                 dx = -dx
             if y < 0 or y > self.screen_rect.height - self.size:
                 dy = -dy
-            if a_b:
-                bitmap = self.circle_bitmap_a
-            else:
-                bitmap = self.circle_bitmap_b
-            self.screen.blit(bitmap, (x, y))
+            self.screen.blit(self.circle_bitmap_a if a_b else self.circle_bitmap_b, (x, y))
             new_positions.append((x, y, dx, dy, a_b))
         self.positions = new_positions
 
