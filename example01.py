@@ -35,18 +35,16 @@ class Demo:
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1050), 120, 20, 4)
-        # control whether the background boxes are drawn
-        self.boxes_toggle = add(ToggleButton('boxes', gridded(0, 0), True, 'Boxes'))
         # control whether the background circles are drawn
-        self.circles_toggle = add(ToggleButton('circles', gridded(1, 0), True, 'Circles'))
+        self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
-        self.push_box_toggle = add(ToggleButton('push_window', gridded(2, 0), True, 'Pushboxes'))
+        self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), True, 'Pushboxes'))
         # control whether the pushradios window is visible
-        self.push_radio_toggle = add(ToggleButton('push_radio', gridded(3, 0), True, 'Pushradios'))
+        self.push_radio_toggle = add(ToggleButton('push_radio', gridded(2, 0), True, 'Pushradios'))
         # control whether the life window is visible
-        self.push_life_toggle = add(ToggleButton('push_life', gridded(4, 0), True, 'Life'))
+        self.push_life_toggle = add(ToggleButton('push_life', gridded(3, 0), True, 'Life'))
         # control whether the scrollbar window is visible
-        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(5, 0), True, 'Scrollbars'))
+        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(4, 0), True, 'Scrollbars'))
         # make the pushboxes window
         self.pb_win = Window('Pushboxes', (50, 150), (140, 110))
         set_grid_properties((10, 10), 120, 20, 2)
@@ -105,64 +103,34 @@ class Demo:
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
+        # make a random list of positions
+        self.positions = []
+        # make bitmaps for circles
+        from gui.bitmapfactory import BitmapFactory
+        factory = BitmapFactory()
+        self.size = 12
+        self.circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
+        self.circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['highlight'], colours['none'])
         # set running flag
         self.running = True
 
     def run(self):
-        # make a random list of positions
-        def make_position_list(num_items, size):
-            positions = []
-            for _ in range(num_items):
-                x = randrange(0, self.screen_rect.width - (size * 2))
-                y = randrange(0, self.screen_rect.height - (size * 2))
-                dx = randrange(2, 7)
-                dy = randrange(2, 7)
-                if choice([True, False]):
-                    dx = -dx
-                if choice([True, False]):
-                    dy = -dy
-                positions.append((x, y, dx, dy))
-            return positions
-        # update the position and draw a bitmap at the position
-        def draw_update_position_list(positions, size, bitmap):
-            new_positions = []
-            for x, y, dx, dy in positions:
-                x += dx
-                y += dy
-                if x < 0 or x > self.screen_rect.width - size:
-                    dx = -dx
-                if y < 0 or y > self.screen_rect.height - size:
-                    dy = -dy
-                self.screen.blit(bitmap, (x, y))
-                new_positions += [(x, y, dx, dy)]
-            return new_positions
+        # number of circles and their size
+        circles = 64
+        for _ in range(circles):
+            x = randrange(0, self.screen_rect.width - (self.size * 2))
+            y = randrange(0, self.screen_rect.height - (self.size * 2))
+            dx = randrange(2, 7)
+            dy = randrange(2, 7)
+            if choice([True, False]):
+                dx = -dx
+            if choice([True, False]):
+                dy = -dy
+            self.positions.append((x, y, dx, dy, choice([True, False])))
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        # number of boxes and their size
-        boxes = 50
-        boxes_size = 12
-        # get a list of positions
-        boxes_position_list = make_position_list(boxes, boxes_size)
-        # setup a frame to draw on our surface
-        frame = Frame('none', Rect(0, 0, boxes_size, boxes_size))
-        frame.state = FrState.Armed
-        # create our bitmap
-        frame_bitmap = pygame.surface.Surface((boxes_size, boxes_size))
-        # point the frame object at it
-        frame.surface = frame_bitmap
-        # and render onto that surface
-        frame.draw()
-        # number of circles and their size
-        circles = 50
-        circles_size = 12
-        # get a position list for them
-        circles_position_list = make_position_list(circles, circles_size)
-        # make a bitmap for them
-        from gui.bitmapfactory import BitmapFactory
-        factory = BitmapFactory()
-        circle_bitmap = factory.draw_radio_checked_bitmap(circles_size, colours['full'], colours['none'])
 
         while self.running:
             # restore the pristine area to the screen before drawing
@@ -170,11 +138,9 @@ class Demo:
             # if the mouse isn't over the canvas then end the dragging state
             if not self.canvas.focused():
                 self.dragging = False
-            # draw the boxes and circles if their toggles are pushed
-            if self.boxes_toggle.read():
-                boxes_position_list = draw_update_position_list(boxes_position_list, boxes_size, frame_bitmap)
+            # draw the circles if their toggle is pushed
             if self.circles_toggle.read():
-                circles_position_list = draw_update_position_list(circles_position_list, circles_size, circle_bitmap)
+                self.update_circles()
             # update the visible windows
             self.pb_win.set_visible(self.push_box_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
@@ -210,6 +176,24 @@ class Demo:
             elif event.type == GKind.Quit:
                 # window close widget or alt-f4 keypress
                 self.running = False
+
+    # update the position and draw a bitmap at the position
+    def update_circles(self):
+        new_positions = []
+        for x, y, dx, dy, a_b in self.positions:
+            x += dx
+            y += dy
+            if x < 0 or x > self.screen_rect.width - self.size:
+                dx = -dx
+            if y < 0 or y > self.screen_rect.height - self.size:
+                dy = -dy
+            if a_b:
+                bitmap = self.circle_bitmap_a
+            else:
+                bitmap = self.circle_bitmap_b
+            self.screen.blit(bitmap, (x, y))
+            new_positions.append((x, y, dx, dy, a_b))
+        self.positions = new_positions
 
     # reset the life simulation to a default state
     def reset(self):
