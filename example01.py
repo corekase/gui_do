@@ -106,7 +106,7 @@ class Demo:
         # circle positions
         self.positions = []
         # size of circles
-        self.size = 12
+        self.size = 10
         # set running flag
         self.running = True
 
@@ -116,13 +116,13 @@ class Demo:
         # make bitmaps for circles
         from gui.bitmapfactory import BitmapFactory
         factory = BitmapFactory()
-        circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
-        circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['highlight'], colours['none'])
+        circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['light'], colours['none'])
+        circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
         for _ in range(circles):
-            x = randrange(0, self.screen_rect.width - (self.size * 2))
-            y = randrange(0, self.screen_rect.height - (self.size * 2))
-            dx = randrange(2, 7)
-            dy = randrange(2, 7)
+            x = randrange(self.size, self.screen_rect.width - (self.size * 2))
+            y = randrange(self.size, self.screen_rect.height - (self.size * 2))
+            dx = randrange(2, self.size - 2)
+            dy = randrange(2, self.size - 2)
             dx = -dx if choice([True, False]) else dx
             dy = -dy if choice([True, False]) else dy
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
@@ -182,9 +182,9 @@ class Demo:
         for x, y, dx, dy, bitmap in self.positions:
             x += dx
             y += dy
-            if x < 0 or x > self.screen_rect.width - self.size:
+            if x < self.size or x > self.screen_rect.width - self.size:
                 dx = -dx
-            if y < 0 or y > self.screen_rect.height - self.size:
+            if y < self.size or y > self.screen_rect.height - self.size:
                 dy = -dy
             self.screen.blit(bitmap, (x, y))
             new_positions.append((x, y, dx, dy, bitmap))
