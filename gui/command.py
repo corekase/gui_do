@@ -4,12 +4,15 @@ from pygame import Rect
 from .widgets.widget import colours
 
 gui = None
-def gui_init(screen):
+def gui_init(surface):
     global gui
-    # create a gui manager and set the screen for it
+    # create a gui manager and set the drawing surface for it
     from .guimanager import GuiManager
     gui = GuiManager()
-    gui.surface = screen
+    gui.surface = surface
+    # load system fonts
+    load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
+    load_font('normal', 'Ubuntu-Medium.ttf', 14)
     return gui
 
 def set_buffered(buffered):

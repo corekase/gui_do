@@ -25,9 +25,7 @@ class Demo:
         set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
-        # load fonts
-        load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
-        load_font('normal', 'Ubuntu-Medium.ttf', 14)
+        # load large font
         load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # screen label
         set_font('gui_do')
