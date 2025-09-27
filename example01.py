@@ -201,10 +201,7 @@ class Demo:
     def handle_events(self):
         # handle the gui event queue
         for event in self.gui.events():
-            if event.type == GKind.Quit:
-                # window close widget or alt-f4 keypress
-                self.running = False
-            elif event.type == GKind.Widget:
+            if event.type == GKind.Widget:
                 if event.widget_id == 'exit':
                     # exit button was clicked
                     self.running = False
@@ -212,6 +209,9 @@ class Demo:
                 if event.key == K_ESCAPE:
                     # escape key pressed
                     self.running = False
+            elif event.type == GKind.Quit:
+                # window close widget or alt-f4 keypress
+                self.running = False
 
     # reset the life simulation to a default state
     def reset(self):
