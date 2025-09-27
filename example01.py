@@ -103,20 +103,21 @@ class Demo:
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
-        # make a random list of positions
+        # circle positions
         self.positions = []
-        # make bitmaps for circles
-        from gui.bitmapfactory import BitmapFactory
-        factory = BitmapFactory()
+        # size of circles
         self.size = 12
-        self.circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
-        self.circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['highlight'], colours['none'])
         # set running flag
         self.running = True
 
     def run(self):
-        # number of circles and their size
+        # number of circles
         circles = 64
+        # make bitmaps for circles
+        from gui.bitmapfactory import BitmapFactory
+        factory = BitmapFactory()
+        circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
+        circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['highlight'], colours['none'])
         for _ in range(circles):
             x = randrange(0, self.screen_rect.width - (self.size * 2))
             y = randrange(0, self.screen_rect.height - (self.size * 2))
@@ -124,7 +125,7 @@ class Demo:
             dy = randrange(2, 7)
             dx = -dx if choice([True, False]) else dx
             dy = -dy if choice([True, False]) else dy
-            self.positions.append((x, y, dx, dy, choice([True, False])))
+            self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
@@ -178,15 +179,15 @@ class Demo:
     # update the position and draw a bitmap at the position
     def update_circles(self):
         new_positions = []
-        for x, y, dx, dy, a_b in self.positions:
+        for x, y, dx, dy, bitmap in self.positions:
             x += dx
             y += dy
             if x < 0 or x > self.screen_rect.width - self.size:
                 dx = -dx
             if y < 0 or y > self.screen_rect.height - self.size:
                 dy = -dy
-            self.screen.blit(self.circle_bitmap_a if a_b else self.circle_bitmap_b, (x, y))
-            new_positions.append((x, y, dx, dy, a_b))
+            self.screen.blit(bitmap, (x, y))
+            new_positions.append((x, y, dx, dy, bitmap))
         self.positions = new_positions
 
     # reset the life simulation to a default state
