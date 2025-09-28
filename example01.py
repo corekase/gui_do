@@ -120,10 +120,8 @@ class Demo:
         for _ in range(circles):
             x = randrange(self.size, self.screen_rect.width - (self.size * 2))
             y = randrange(self.size, self.screen_rect.height - (self.size * 2))
-            dx = randrange(2, self.size - 2)
-            dy = randrange(2, self.size - 2)
-            dx = -dx if choice([True, False]) else dx
-            dy = -dy if choice([True, False]) else dy
+            dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
+            dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
         # set running flag
         self.running = True
