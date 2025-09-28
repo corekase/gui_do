@@ -14,7 +14,7 @@ class WindowBase:
         self.x, self.y = pos
         self.width, self.height = size
         # titlebar size
-        self.titlebar_size = 20
+        self.titlebar_size = 24
         # window surface
         self.surface = pygame.surface.Surface(size).convert()
         self.pristine = None
@@ -44,11 +44,15 @@ class WindowBase:
 
     def draw_title_bar_inactive(self):
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
-        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+        lower_widget = self.get_widget_rect()
+        lower_widget.y += 3
+        self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
 
     def draw_title_bar_active(self):
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
-        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+        lower_widget = self.get_widget_rect()
+        lower_widget.y += 3
+        self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
 
     def draw_window(self):
         # called when the gui manager is entering a window to process its widgets

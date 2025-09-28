@@ -11,8 +11,8 @@ def gui_init(surface):
     gui = GuiManager()
     gui.surface = surface
     # load system fonts
-    load_font('titlebar', 'Ubuntu-Medium.ttf', 10)
-    load_font('normal', 'Ubuntu-Medium.ttf', 14)
+    load_font('titlebar', 'Ubuntu-Medium.ttf', 16)
+    load_font('normal', 'Ubuntu-Medium.ttf', 16)
     return gui
 
 def set_buffered(buffered):
