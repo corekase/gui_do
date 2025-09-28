@@ -90,21 +90,21 @@ class BitmapFactory:
         saved = []
         text_bitmap = render_text(text)
         text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height) - 1
+        text_y = centre(h, text_bitmap.get_rect().height)
         idle_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(idle_surface, 'idle', Rect(0, 0, w, h), colours)
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
         text_bitmap = render_text(text)
         text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height) - 1
+        text_y = centre(h, text_bitmap.get_rect().height)
         hover_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(hover_surface, 'hover', Rect(0, 0, w, h), colours)
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text(text, True)
         text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height) - 1
+        text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
         armed_surface.blit(text_bitmap, (text_x, text_y))
