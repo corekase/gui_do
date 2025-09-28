@@ -80,21 +80,21 @@ class Demo:
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
         # add scrollbar widgets again, but this time the window is the active object
         x = y = 10
-        add(Scrollbar(f'a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
+        add(Scrollbar(f'scrollbar_a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
-        add(Scrollbar(f'b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
+        add(Scrollbar(f'scrollbar_b', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 1))
         y += 22
-        add(Scrollbar(f'c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
+        add(Scrollbar(f'scrollbar_c', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 2))
         y += 22
-        add(Scrollbar(f'd', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
+        add(Scrollbar(f'scrollbar_d', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 3))
         y += 24
-        add(Scrollbar(f'e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
+        add(Scrollbar(f'scrollbar_e', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 0))
         x += 22
-        add(Scrollbar(f'f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
+        add(Scrollbar(f'scrollbar_f', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 1))
         x += 22
-        add(Scrollbar(f'g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
+        add(Scrollbar(f'scrollbar_g', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 2))
         x += 22
-        add(Scrollbar(f'h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
+        add(Scrollbar(f'scrollbar_h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
         add(Label((x + 40, y + 210), 'Scrollbars!'))
