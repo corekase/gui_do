@@ -194,8 +194,7 @@ class Demo:
 
     # reset the life simulation to a default state
     def reset(self):
-        self.origin_x = self.canvas_rect.centerx
-        self.origin_y = self.canvas_rect.centery
+        self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
         self.toggle_life.set(False)
         # the starting configuration of the Life grid
