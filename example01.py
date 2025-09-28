@@ -108,7 +108,7 @@ class Demo:
         # number of circles
         circles = 64
         # size of circles
-        self.size = 10
+        self.size = 12
         # circle positions
         self.positions = []
         # make bitmaps for circles
@@ -139,7 +139,7 @@ class Demo:
                 self.dragging = False
             # draw the circles if their toggle is pushed
             if self.circles_toggle.read():
-                self.update_circles()
+                self.update_circles(self.size)
             # update the visible windows
             self.pb_win.set_visible(self.push_box_toggle.read())
             self.pr_win.set_visible(self.push_radio_toggle.read())
@@ -179,14 +179,14 @@ class Demo:
                 self.running = False
 
     # update the position and draw a bitmap at the position
-    def update_circles(self):
+    def update_circles(self, size):
         new_positions = []
         for x, y, dx, dy, bitmap in self.positions:
             x += dx
             y += dy
-            if x < self.size or x > self.screen_rect.width - self.size:
+            if x < size or x > self.screen_rect.width - size:
                 dx = -dx
-            if y < self.size or y > self.screen_rect.height - self.size:
+            if y < size or y > self.screen_rect.height - size:
                 dy = -dy
             self.screen.blit(bitmap, (x, y))
             new_positions.append((x, y, dx, dy, bitmap))
