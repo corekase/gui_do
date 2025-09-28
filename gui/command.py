@@ -5,14 +5,16 @@ from .widgets.widget import colours
 
 gui = None
 def gui_init(surface):
-    global gui
+    # hide system mouse pointer
+    pygame.mouse.set_visible(False)
     # create a gui manager and set the drawing surface for it
+    global gui
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = surface
     # load system fonts
     load_font('titlebar', 'Ubuntu-Medium.ttf', 16)
-    load_font('normal', 'Ubuntu-Medium.ttf', 16)
+    load_font('normal', 'Ubuntu-Medium.ttf', 15)
     return gui
 
 def set_buffered(buffered):

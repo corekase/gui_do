@@ -16,9 +16,7 @@ class Demo:
         # screen rect
         self.screen_rect = self.screen.get_rect()
         # set window caption
-        pygame.display.set_caption('gui_do')
-        # hide system mouse pointer
-        pygame.mouse.set_visible(False)
+        pygame.display.set_caption('Demo')
         # create a gui manager
         self.gui = gui_init(self.screen)
         # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
