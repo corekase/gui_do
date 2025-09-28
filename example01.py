@@ -26,10 +26,12 @@ class Demo:
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load large font
-        load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
+        load_font('scroll', 'Ubuntu-Medium.ttf', 36)
+        # load larger font
+        load_font('gui_do', 'Ubuntu-Medium.ttf', 72)
         # screen label
         set_font('gui_do')
-        add(Label((50, 50), 'gui_do'))
+        add(Label((50, 30), 'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'))
@@ -94,7 +96,7 @@ class Demo:
         x += 22
         add(Scrollbar(f'h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
-        set_font('gui_do')
+        set_font('scroll')
         add(Label((x + 40, y + 210), 'Scrollbars!'))
         set_font('normal')
         # set cursor image
