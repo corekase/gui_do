@@ -105,21 +105,18 @@ class Demo:
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
-        # circle positions
-        self.positions = []
-        # size of circles
-        self.size = 10
-        # set running flag
-        self.running = True
-
-    def run(self):
         # number of circles
         circles = 64
+        # size of circles
+        self.size = 10
+        # circle positions
+        self.positions = []
         # make bitmaps for circles
         from gui.bitmapfactory import BitmapFactory
         factory = BitmapFactory()
         circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['light'], colours['none'])
         circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
+        # make position list for circles
         for _ in range(circles):
             x = randrange(self.size, self.screen_rect.width - (self.size * 2))
             y = randrange(self.size, self.screen_rect.height - (self.size * 2))
@@ -128,11 +125,14 @@ class Demo:
             dx = -dx if choice([True, False]) else dx
             dy = -dy if choice([True, False]) else dy
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
+        # set running flag
+        self.running = True
+
+    def run(self):
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-
         while self.running:
             # restore the pristine area to the screen before drawing
             restore_pristine()
