@@ -143,11 +143,11 @@ class GuiManager:
             return self.event(GKind.KeyDown, event.key)
         # find highest window
         top_window = None
-        for window in self.windows:
+        for window in self.windows[::-1]:
             if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                 top_window = window
+                break
         # if top_window is None then the mouse isn't over any window
-        # otherwise its the highest priority window by being assigned last through the list
         if top_window != None:
             # clicking on the window the mouse is over raises it
             if event.type == MOUSEBUTTONDOWN:
