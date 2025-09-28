@@ -65,7 +65,7 @@ class BitmapFactory:
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
-        title_surface.blit(text_bitmap, (4, 4))
+        title_surface.blit(text_bitmap, (4, 2))
         set_last_font()
         return title_surface
 
@@ -120,11 +120,11 @@ class BitmapFactory:
     def draw_radio_pushbutton_bitmap(self, text, col1, col2, highlight=False):
         text_bitmap = render_text(text, highlight)
         text_height = text_bitmap.get_rect().height
-        radio_bitmap = self.draw_radio_checked_bitmap((text_height // 2) + 1, col1, col2)
+        radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
-        button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height) + 4))
-        button_complete.blit(text_bitmap, ((text_height // 2) + 4, 2))
+        button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
+        button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
 
     def draw_radio_checked_bitmap(self, diameter, col1, col2):
