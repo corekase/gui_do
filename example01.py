@@ -149,11 +149,13 @@ class Demo:
             self.sb_win.set_visible(self.push_scrollbars_toggle.read())
             # handle events
             self.handle_events()
-            # draw current life cycle to the canvas
-            self.draw_life()
-            # generate a new cycle if the togglebutton is pressed
-            if self.toggle_life.read():
-                self.generate()
+            # if the life window is visible then handle it
+            if self.life_win.get_visible():
+                # generate a new cycle if the togglebutton is pressed
+                if self.toggle_life.read():
+                    self.generate()
+                # draw life cells on the canvas
+                self.draw_life()
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen
