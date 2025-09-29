@@ -160,15 +160,14 @@ def set_last_font():
     font_object = last_font_object
 
 # render text function
-def render_text(text, colour=None):
-    if colour == None:
-        colour = colours['text']
-    # return a bitmap of the chosen colour
+def render_text(text, colour=colours['text']):
+    # return a bitmap of the text in the given colour
     return font_object.render(text, True, colour, None)
 
-def render_text_shadow(text, colour=None):
+def render_text_shadow(text, colour=colours['text'], shadow_colour=colours['none']):
+    # return a bitmap of the text and a shadow of given colours
     text_bitmap = render_text(text, colour)
-    shadow_bitmap = render_text(text, colours['none'])
+    shadow_bitmap = render_text(text, shadow_colour)
     text_rect = text_bitmap.get_rect()
     bitmap = pygame.Surface((text_rect.width + 1, text_rect.height + 1), pygame.SRCALPHA)
     bitmap.blit(shadow_bitmap, (1, 1))
