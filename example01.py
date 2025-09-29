@@ -24,17 +24,17 @@ class Demo:
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # load large font
-        load_font('scroll', 'Ubuntu-Medium.ttf', 36)
+        load_font('scroll', 'Gimbot.ttf', 32)
         # load larger font
-        load_font('gui_do', 'Ubuntu-Medium.ttf', 72)
+        load_font('gui_do', 'Gimbot.ttf', 72)
         # screen label
         set_font('gui_do')
         add(Label((50, 30), 'gui_do', True))
         set_font('normal')
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1050, 70, 24), 'Exit'))
+        add(Button('exit', Rect(10, 1040, 70, 30), 'Exit'))
         # setup for the togglebuttons
-        set_grid_properties((85, 1050), 120, 24, 4)
+        set_grid_properties((85, 1040), 120, 30, 4)
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
@@ -46,31 +46,31 @@ class Demo:
         # control whether the scrollbar window is visible
         self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(4, 0), True, 'Scrollbars'))
         # make the pushboxes window
-        self.pb_win = Window('Pushboxes', (50, 150), (140, 125))
-        set_grid_properties((10, 10), 120, 24, 2)
+        self.pb_win = Window('Pushboxes', (50, 150), (140, 150))
+        set_grid_properties((10, 10), 120, 30, 2)
         add(PushButtonGroup('pb1', gridded(0, 0), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb2', gridded(0, 1), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb3', gridded(0, 2), 'Pushbox', 'pb1', 0))
         add(Button('b1', gridded(0, 3), 'Button'))
         # make the pushradios window
-        self.pr_win = Window('Pushradios', (50, 310), (140, 125))
-        set_grid_properties((10, 10), 120, 24, 2)
+        self.pr_win = Window('Pushradios', (50, 330), (140, 150))
+        set_grid_properties((10, 10), 120, 30, 2)
         add(PushButtonGroup('pb4', gridded(0, 0), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb5', gridded(0, 1), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb6', gridded(0, 2), 'Pushradio', 'pb2', 1))
         add(Button('b2', gridded(0, 3), 'Button'))
         # make the Conway's Game of Life window
         width, height = 500, 500
-        self.life_win = Window('Conway\'s Game of Life', (50, 470), (width, height))
-        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 50), canvas_callback=self.handle_canvas, automatic_pristine=True))
+        self.life_win = Window('Conway\'s Game of Life', (50, 510), (width, height))
+        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 60), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(10, height - 34, 120, 24), False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', Rect(10, height - 40, 120, 30), False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 34, 120, 24), 'Reset'), self.reset)
+        add(Button('reset', Rect(140, height - 40, 120, 30), 'Reset'), self.reset)
         # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
@@ -95,7 +95,7 @@ class Demo:
         add(Scrollbar(f'scrollbar_h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
-        add(Label((x + 40, y + 210), 'Scrollbars!', True))
+        add(Label((x + 30, y + 215), 'Scrollbars!', True))
         set_font('normal')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
