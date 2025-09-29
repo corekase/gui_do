@@ -144,9 +144,10 @@ class GuiManager:
         # find highest window
         top_window = None
         for window in self.windows[::-1]:
-            if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                top_window = window
-                break
+            if window.get_visible():
+                if window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                    top_window = window
+                    break
         # if top_window is None then the mouse isn't over any window
         if top_window != None:
             # clicking on the window the mouse is over raises it
@@ -188,11 +189,11 @@ class GuiManager:
             widget_hit = None
             working_windows = self.windows.copy()[::-1]
             for window in working_windows:
-                if window.visible:
+                if window.get_visible():
                     if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                         window_consumed = True
                         for widget in window.widgets:
-                                if widget.visible:
+                                if widget.get_visible():
                                     collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
                                         return self.event(GKind.Widget, widget.id)
@@ -215,7 +216,7 @@ class GuiManager:
             consumed = False
             widget_hit = None
             for widget in self.widgets:
-                if widget.visible:
+                if widget.get_visible():
                     if self.handle_widget(widget, event):
                         return self.event(GKind.Widget, widget.id)
                     if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), None)):
@@ -301,14 +302,14 @@ class GuiManager:
         if self.buffered:
             self.bitmaps.clear()
         for widget in self.widgets:
-            if widget.visible:
+            if widget.get_visible():
                 # save the bitmap area under the window if buffered
                 if self.buffered:
                     self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.get_rect()), widget.get_rect()))
                 # draw the widget
                 widget.draw()
         for window in self.windows:
-            if window.visible:
+            if window.get_visible():
                 # save the bitmap area under the window if buffered
                 if self.buffered:
                     self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
@@ -319,7 +320,7 @@ class GuiManager:
                 window.draw_window()
                 for widget in window.widgets:
                     # draw the widget
-                    if widget.visible:
+                    if widget.get_visible():
                         widget.draw()
                 self.surface.blit(window.surface, (window.x, window.y))
         # if locked mode is active always use the locked mode mouse position
