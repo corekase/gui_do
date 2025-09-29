@@ -62,11 +62,13 @@ class BitmapFactory:
         if colour == None:
             colour = colours['highlight']
         text_bitmap = render_text(title, colour)
+        shadow_bitmap = render_text(title, colours['none'])
         title_surface = pygame.surface.Surface((width, size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
+        title_surface.blit(shadow_bitmap, (5, 3))
         title_surface.blit(text_bitmap, (4, 2))
         set_last_font()
         return title_surface
@@ -91,10 +93,12 @@ class BitmapFactory:
         _, _, w, h = rect
         saved = []
         text_bitmap = render_text(text)
+        shadow_bitmap = render_text(text, colours['none'])
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         idle_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(idle_surface, 'idle', Rect(0, 0, w, h), colours)
+        idle_surface.blit(shadow_bitmap, (text_x + 1, text_y + 1))
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
         text_bitmap = render_text(text)
@@ -102,6 +106,7 @@ class BitmapFactory:
         text_y = centre(h, text_bitmap.get_rect().height)
         hover_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(hover_surface, 'hover', Rect(0, 0, w, h), colours)
+        hover_surface.blit(shadow_bitmap, (text_x + 1, text_y + 1))
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text(text, colours['highlight'])
@@ -109,6 +114,7 @@ class BitmapFactory:
         text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = pygame.surface.Surface((w, h)).convert()
         self.draw_frame_state_bitmap(armed_surface, 'armed', Rect(0, 0, w, h), colours)
+        armed_surface.blit(shadow_bitmap, (text_x + 1, text_y + 1))
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
         return saved
@@ -121,11 +127,13 @@ class BitmapFactory:
 
     def draw_radio_pushbutton_bitmap(self, text, col1, col2):
         text_bitmap = render_text(text)
+        shadow_bitmap = render_text(text, colours['none'])
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
         button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
+        button_complete.blit(shadow_bitmap, (radio_bitmap.get_rect().width + 3, 1))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
 
