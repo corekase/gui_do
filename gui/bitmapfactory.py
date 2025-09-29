@@ -119,10 +119,8 @@ class BitmapFactory:
         armed_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
         return idle_bitmap, hover_bitmap, armed_bitmap
 
-    def draw_radio_pushbutton_bitmap(self, text, col1, col2, colour=None):
-        if colour == None:
-            colour == colours['highlight']
-        text_bitmap = render_text(text, colour)
+    def draw_radio_pushbutton_bitmap(self, text, col1, col2):
+        text_bitmap = render_text(text)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
