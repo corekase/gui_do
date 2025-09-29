@@ -37,8 +37,6 @@ class GuiManager:
         self.mouse_pos = pygame.mouse.get_pos()
         # whether the mouse is in a locked area state
         self.mouse_locked = False
-        # where the mouse pointer is when an area is locked
-        self.locked_pos = None
         # area rect to keep the mouse position within
         self.lock_area_rect = None
         # cursor image and hotspot
@@ -130,7 +128,6 @@ class GuiManager:
                 x += dx
                 y += dy
                 self.mouse_pos = (x, y)
-                self.locked_pos = (x, y)
             else:
                 self.mouse_pos = self.lock_area(event.pos)
         # check for alt-f4 or window quit button
@@ -258,14 +255,12 @@ class GuiManager:
             # switch to relative mouse mode
             self.locking_object = locking_object
             self.mouse_locked = True
-            self.locked_pos = self.mouse_pos
         else:
             if self.mouse_locked:
                 pygame.mouse.set_pos(self.mouse_pos)
             # switch to absolute mouse mode
             self.locking_object = None
             self.mouse_locked = False
-            self.locked_pos = None
         self.lock_area_rect = area
 
     def lock_area(self, position):
@@ -280,7 +275,6 @@ class GuiManager:
                 y = self.lock_area_rect.top
             elif y > self.lock_area_rect.bottom:
                 y = self.lock_area_rect.bottom
-            self.locked_pos = (x, y)
             return (x, y)
         else:
             return position
@@ -325,7 +319,7 @@ class GuiManager:
                 self.surface.blit(window.surface, (window.x, window.y))
         # if locked mode is active always use the locked mode mouse position
         if self.mouse_locked:
-            self.mouse_pos = self.locked_pos
+            self.mouse_pos = self.lock_area(self.mouse_pos)
         # draw mouse cursor
         cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
                            self.cursor_rect.width, self.cursor_rect.height)
