@@ -76,7 +76,7 @@ class Demo:
         window_x = centre(self.screen.get_rect().width, width)
         window_y = centre(self.screen.get_rect().height, height)
         self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
-        # add scrollbar widgets again, but this time the window is the active object
+        # add scrollbar widgets to the window
         x = y = 10
         add(Scrollbar(f'scrollbar_a', (100, 0, 30, 10), Rect(x, y, 300, 20), True, 0))
         y += 22
