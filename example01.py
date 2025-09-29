@@ -29,7 +29,7 @@ class Demo:
         load_font('gui_do', 'Ubuntu-Medium.ttf', 72)
         # screen label
         set_font('gui_do')
-        add(Label((50, 30), 'gui_do'))
+        add(Label((50, 30), 'gui_do', True))
         set_font('normal')
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1050, 70, 24), 'Exit'))
@@ -95,7 +95,7 @@ class Demo:
         add(Scrollbar(f'scrollbar_h', (100, 0, 30, 10), Rect(x, y, 20, 250), False, 3))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
-        add(Label((x + 40, y + 210), 'Scrollbars!'))
+        add(Label((x + 40, y + 210), 'Scrollbars!', True))
         set_font('normal')
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
