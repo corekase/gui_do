@@ -160,10 +160,8 @@ def set_last_font():
     font_object = last_font_object
 
 # render text function
-def render_text(text, highlight=False):
-    if highlight:
-        colour = colours['highlight']
-    else:
+def render_text(text, colour=None):
+    if colour == None:
         colour = colours['text']
     # return a bitmap of the chosen colour
     return font_object.render(text, True, colour, None)

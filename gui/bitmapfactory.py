@@ -52,14 +52,16 @@ class BitmapFactory:
 
     def draw_window_title_bar_bitmaps(self, title, width, size):
         saved = []
-        saved.append(self.draw_window_title_bar_bitmap(title, width, size, False))
-        saved.append(self.draw_window_title_bar_bitmap(title, width, size, True))
+        saved.append(self.draw_window_title_bar_bitmap(title, width, size, colours['full']))
+        saved.append(self.draw_window_title_bar_bitmap(title, width, size, colours['highlight']))
         return saved
 
-    def draw_window_title_bar_bitmap(self, title, width, size, highlight=False):
+    def draw_window_title_bar_bitmap(self, title, width, size, colour=None):
         from .widgets.frame import Frame, FrState
         set_font('titlebar')
-        text_bitmap = render_text(title, highlight)
+        if colour == None:
+            colour = colours['highlight']
+        text_bitmap = render_text(title, colour)
         title_surface = pygame.surface.Surface((width, size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed
@@ -102,7 +104,7 @@ class BitmapFactory:
         self.draw_frame_state_bitmap(hover_surface, 'hover', Rect(0, 0, w, h), colours)
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text(text, True)
+        text_bitmap = render_text(text, colours['highlight'])
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = pygame.surface.Surface((w, h)).convert()
@@ -117,8 +119,10 @@ class BitmapFactory:
         armed_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
         return idle_bitmap, hover_bitmap, armed_bitmap
 
-    def draw_radio_pushbutton_bitmap(self, text, col1, col2, highlight=False):
-        text_bitmap = render_text(text, highlight)
+    def draw_radio_pushbutton_bitmap(self, text, col1, col2, colour=None):
+        if colour == None:
+            colour == colours['highlight']
+        text_bitmap = render_text(text, colour)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
