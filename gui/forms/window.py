@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
-from ..command import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, colours
+from ..command import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, centre, colours
 from ..widgets.frame import Frame, FrState
 
 class WindowBase:
@@ -45,13 +45,13 @@ class WindowBase:
     def draw_title_bar_inactive(self):
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
         lower_widget = self.get_widget_rect()
-        lower_widget.y += 3
+        lower_widget.y += centre(self.titlebar_size, lower_widget.height) + 2
         self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
 
     def draw_title_bar_active(self):
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
         lower_widget = self.get_widget_rect()
-        lower_widget.y += 3
+        lower_widget.y += centre(self.titlebar_size, lower_widget.height) + 2
         self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
 
     def draw_window(self):
