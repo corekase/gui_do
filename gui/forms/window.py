@@ -31,7 +31,7 @@ class WindowBase:
         self.widgets = []
         # set the window to the position passed in
         self.set_pos(pos)
-        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.height)
+        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.titlebar_size)
         self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
         # whether or not the window is visible

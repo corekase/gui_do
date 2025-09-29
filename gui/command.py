@@ -13,7 +13,7 @@ def gui_init(surface):
     gui = GuiManager()
     gui.surface = surface
     # load system fonts
-    load_font('titlebar', 'Ubuntu-Medium.ttf', 16)
+    load_font('titlebar', 'Wiltype.ttf', 16)
     load_font('normal', 'Ubuntu-Medium.ttf', 15)
     return gui
 

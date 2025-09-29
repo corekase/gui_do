@@ -66,7 +66,9 @@ class BitmapFactory:
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
-        title_surface.blit(render_text_shadow(title, colour), (5, 3))
+        text = render_text_shadow(title, colour)
+        text_y = centre(size, text.get_rect().height)
+        title_surface.blit(text, (5, text_y + 1))
         set_last_font()
         return title_surface
 
