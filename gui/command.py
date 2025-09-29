@@ -166,6 +166,15 @@ def render_text(text, colour=None):
     # return a bitmap of the chosen colour
     return font_object.render(text, True, colour, None)
 
+def render_text_shadow(text, colour=None):
+    text_bitmap = render_text(text, colour)
+    shadow_bitmap = render_text(text, colours['none'])
+    text_rect = text_bitmap.get_rect()
+    bitmap = pygame.Surface((text_rect.width + 1, text_rect.height + 1), pygame.SRCALPHA)
+    bitmap.blit(shadow_bitmap, (1, 1))
+    bitmap.blit(text_bitmap, (0, 0))
+    return bitmap
+
 # layout helper
 def centre(bigger, smaller):
     # helper function that returns a centred position
