@@ -164,6 +164,7 @@ def render_text(text, colour=colours['text']):
     # return a bitmap of the text in the given colour
     return font_object.render(text, True, colour, None)
 
+# render text with a shadow
 def render_text_shadow(text, colour=colours['text'], shadow_colour=colours['none']):
     # return a bitmap of the text and a shadow of given colours
     text_bitmap = render_text(text, colour)
