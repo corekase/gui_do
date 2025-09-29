@@ -5,8 +5,8 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .command import copy_graphic_area, convert_to_window
 from .timers import Timers
 
-GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown', 'MouseButtonUp', 'MouseMotion',
-                       'Widget', 'Window'])
+GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
+                       'MouseButtonUp', 'MouseMotion', 'Widget'])
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
