@@ -14,9 +14,9 @@ def gui_init(surface, fonts):
     gui.surface = surface
     # default to non-buffered
     gui.buffered = False
-    # load fonts
+    # load fonts, list of "name", "filename", and "size"
     for font in fonts:
-        load_font(font, fonts[font][0], fonts[font][1])
+        load_font(font[0], font[1], font[2])
     return gui
 
 def set_buffered(buffered):
