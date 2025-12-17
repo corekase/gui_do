@@ -23,8 +23,6 @@ class Demo:
                  'scroll': ('Gimbot.ttf', 32),
                  'gui_do': ('Gimbot.ttf', 72)}
         self.gui = gui_init(self.screen, fonts)
-        # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
-        set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
         # screen label

@@ -12,6 +12,8 @@ def gui_init(surface, fonts):
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = surface
+    # default to non-buffered
+    gui.buffered = False
     # load fonts
     for font in fonts:
         load_font(font, fonts[font][0], fonts[font][1])
