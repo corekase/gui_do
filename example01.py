@@ -18,15 +18,15 @@ class Demo:
         # set window caption
         pygame.display.set_caption('Demo')
         # create a gui manager
-        self.gui = gui_init(self.screen, {'titlebar': ('Wiltype.ttf', 16), 'normal': ('Gimbot.ttf', 16)})
+        fonts = {'titlebar': ('Wiltype.ttf', 16),
+                 'normal': ('Gimbot.ttf', 16),
+                 'scroll': ('Gimbot.ttf', 32),
+                 'gui_do': ('Gimbot.ttf', 72)}
+        self.gui = gui_init(self.screen, fonts)
         # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
         set_buffered(False)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
-        # load large font
-        load_font('scroll', 'Gimbot.ttf', 32)
-        # load larger font
-        load_font('gui_do', 'Gimbot.ttf', 72)
         # screen label
         set_font('gui_do')
         add(Label((50, 30), 'gui_do', True))
