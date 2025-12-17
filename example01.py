@@ -18,7 +18,7 @@ class Demo:
         # set window caption
         pygame.display.set_caption('Demo')
         # create a gui manager
-        self.gui = gui_init(self.screen)
+        self.gui = gui_init(self.screen, {'titlebar': ('Wiltype.ttf', 16), 'normal': ('Gimbot.ttf', 16)})
         # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
         set_buffered(False)
         # blit a background image to the screen surface

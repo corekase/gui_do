@@ -4,7 +4,7 @@ from pygame import Rect
 from .widgets.widget import colours
 
 gui = None
-def gui_init(surface):
+def gui_init(surface, fonts):
     # hide system mouse pointer
     pygame.mouse.set_visible(False)
     # create a gui manager and set the drawing surface for it
@@ -12,9 +12,9 @@ def gui_init(surface):
     from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = surface
-    # load system fonts
-    load_font('titlebar', 'Wiltype.ttf', 16)
-    load_font('normal', 'Gimbot.ttf', 16)
+    # load fonts
+    for font in fonts:
+        load_font(font, fonts[font][0], fonts[font][1])
     return gui
 
 def set_buffered(buffered):
