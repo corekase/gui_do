@@ -13,7 +13,7 @@ def gui_init(surface, fonts):
     gui = GuiManager()
     gui.surface = surface
     # default to non-buffered
-    gui.buffered = False
+    set_buffered(False)
     # load fonts, list of "name", "filename", and "size"
     for name, filename, size in fonts:
         load_font(name, filename, size)
