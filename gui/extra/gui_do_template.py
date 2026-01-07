@@ -4,8 +4,7 @@
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, set_buffered, restore_pristine
+from gui import gui_init, add, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import GKind, Label, Button
 
 class Template:
@@ -17,19 +16,18 @@ class Template:
         # set window caption
         pygame.display.set_caption('Template')
         # create a gui manager
-        self.gui = gui_init(self.screen)
-        # don't save overdrawn bitmaps into a buffer automatically, and don't use undraw_gui()
-        set_buffered(False)
+        fonts = [['titlebar', 'Wiltype.ttf', 16],
+                 ['normal', 'Gimbot.ttf', 16],
+                 ['gui_do', 'Gimbot.ttf', 72]]
+        self.gui = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
-        # load font
-        load_font('gui_do', 'Ubuntu-Medium.ttf', 36)
         # main label
         set_font('gui_do')
         add(Label((50, 50),'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1050, 70, 20), 'Exit'))
+        add(Button('exit', Rect(10, 1040, 70, 30), 'Exit'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # set running flag
