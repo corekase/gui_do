@@ -88,60 +88,6 @@ class BitmapFactory:
         rect(surface, colours['none'], panel2, 1)
         return surface
 
-    def draw_box_bitmaps(self, text, rect):
-        _, _, w, h = rect
-        saved = []
-        text_bitmap = render_text_shadow(text)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
-        idle_surface = Surface((w, h)).convert()
-        self.draw_box_state(idle_surface, 'idle')
-        idle_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(idle_surface)
-        hover_surface = Surface((w, h)).convert()
-        self.draw_box_state(hover_surface, 'hover')
-        hover_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(hover_surface)
-        text_bitmap = render_text_shadow(text, colours['highlight'])
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
-        armed_surface = Surface((w, h)).convert()
-        self.draw_box_state(armed_surface, 'armed')
-        armed_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(armed_surface)
-        return saved
-
-    def draw_box_state(self, surface, state):
-        if state == 'idle':
-            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
-        elif state == 'hover':
-            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'])
-        elif state == 'armed':
-            self.draw_box_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
-
-    def draw_box_bitmap(self, surface, ul, lr, ul_d, lr_d, background):
-        # ul, lr = upper and left, lower and right lines
-        # ul_d, lr_d = upper-left dot, lower-right dot
-        # get positions and sizes
-        _, _, width, height = surface.get_rect()
-        x = y = 0
-        # lock surface for drawing
-        surface.lock()
-        # draw background
-        rect(surface, background, surface.get_rect(), 0)
-        # draw frame upper and left lines
-        line(surface, ul, (x, y), (x + width - 1, y))
-        line(surface, ul, (x, y), (x, y + height - 1))
-        # draw frame lower and right lines
-        line(surface, lr, (x, y + height - 1), (x + width - 1, y + height - 1))
-        line(surface, lr, (x + width - 1, y - 1), (x + width - 1, y + height - 1))
-        # plot upper left dot
-        surface.set_at((x + 1, y + 1), ul_d)
-        # plot lower right dot
-        surface.set_at((x + width - 2, y + height - 2), lr_d)
-        # unlock surface
-        surface.unlock()
-
     def draw_button_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
@@ -219,11 +165,67 @@ class BitmapFactory:
 
     def get_pushbutton_style_bitmaps(self, style, text, rect):
         if style == 0:
-            return self.draw_box_bitmaps(text, rect)
+            return self.draw_box_pushbutton_bitmaps(text, rect)
         elif style == 1:
             return self.draw_radio_pushbutton_bitmaps(text)
+        elif style == 2:
+            pass
         else:
             raise Exception(f'style index {style} not implemented')
+
+    def draw_box_pushbutton_bitmaps(self, text, rect):
+        _, _, w, h = rect
+        saved = []
+        text_bitmap = render_text_shadow(text)
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        idle_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(idle_surface, 'idle')
+        idle_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(idle_surface)
+        hover_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(hover_surface, 'hover')
+        hover_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(hover_surface)
+        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        armed_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(armed_surface, 'armed')
+        armed_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(armed_surface)
+        return saved
+
+    def draw_box_bitmaps(self, surface, state):
+        if state == 'idle':
+            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
+        elif state == 'hover':
+            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'])
+        elif state == 'armed':
+            self.draw_box_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
+
+    def draw_box_bitmap(self, surface, ul, lr, ul_d, lr_d, background):
+        # ul, lr = upper and left, lower and right lines
+        # ul_d, lr_d = upper-left dot, lower-right dot
+        # get positions and sizes
+        _, _, width, height = surface.get_rect()
+        x = y = 0
+        # lock surface for drawing
+        surface.lock()
+        # draw background
+        rect(surface, background, surface.get_rect(), 0)
+        # draw frame upper and left lines
+        line(surface, ul, (x, y), (x + width - 1, y))
+        line(surface, ul, (x, y), (x, y + height - 1))
+        # draw frame lower and right lines
+        line(surface, lr, (x, y + height - 1), (x + width - 1, y + height - 1))
+        line(surface, lr, (x + width - 1, y - 1), (x + width - 1, y + height - 1))
+        # plot upper left dot
+        surface.set_at((x + 1, y + 1), ul_d)
+        # plot lower right dot
+        surface.set_at((x + width - 2, y + height - 2), lr_d)
+        # unlock surface
+        surface.unlock()
 
     def draw_radio_pushbutton_bitmaps(self, text):
         idle_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['light'], colours['dark'])
@@ -282,12 +284,12 @@ class BitmapFactory:
         _, _, w, h = rect
         saved = []
         idle_surface = Surface((w, h)).convert()
-        self.draw_box_state(idle_surface, 'idle')
+        self.draw_box_bitmaps(idle_surface, 'idle')
         saved.append(idle_surface)
         hover_surface = Surface((w, h)).convert()
-        self.draw_box_state(hover_surface, 'hover')
+        self.draw_box_bitmaps(hover_surface, 'hover')
         saved.append(hover_surface)
         armed_surface = Surface((w, h)).convert()
-        self.draw_box_state(armed_surface, 'armed')
+        self.draw_box_bitmaps(armed_surface, 'armed')
         saved.append(armed_surface)
         return saved
