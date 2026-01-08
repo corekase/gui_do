@@ -242,7 +242,7 @@ class BitmapFactory:
         return button_complete
 
     def draw_radio_bitmap(self, diameter, col1, col2):
-        radio_bitmap = Surface((diameter, diameter), pygame.SRCALPHA)
+        radio_bitmap = Surface((diameter, diameter), pygame.SRCALPHA).convert_alpha()
         radius = diameter // 2
         circle(radio_bitmap, col2, (radius, radius), radius, 1)
         self.flood_fill(radio_bitmap, (radius, radius), col1)
