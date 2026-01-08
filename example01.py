@@ -109,8 +109,8 @@ class Demo:
         # make bitmaps for circles
         from gui.bitmapfactory import BitmapFactory
         factory = BitmapFactory()
-        circle_bitmap_a = factory.draw_radio_checked_bitmap(self.size, colours['light'], colours['none'])
-        circle_bitmap_b = factory.draw_radio_checked_bitmap(self.size, colours['full'], colours['none'])
+        circle_bitmap_a = factory.draw_radio_bitmap(self.size, colours['light'], colours['none'])
+        circle_bitmap_b = factory.draw_radio_bitmap(self.size, colours['full'], colours['none'])
         # make position list for circles
         for _ in range(circles):
             x = randrange(self.size, self.screen_rect.width - (self.size * 2))

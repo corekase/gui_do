@@ -234,26 +234,18 @@ class BitmapFactory:
     def draw_radio_pushbutton_bitmap(self, text, col1, col2):
         text_bitmap = render_text_shadow(text)
         text_height = text_bitmap.get_rect().height
-        radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
+        radio_bitmap = self.draw_radio_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
         button_complete = Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
 
-    def draw_radio_checked_bitmap(self, diameter, col1, col2):
-        # separate out from draw_radio_pushbutton_bitmap so the same bitmap can be used
-        # in a checkbox too
-        radio_bitmap = Surface((400, 400), pygame.SRCALPHA)
-        radius = 200
-        points = []
-        for point in range(0, 360, 5):
-            x1 = int(round(radius * cos(radians(point))))
-            y1 = int(round(radius * sin(radians(point))))
-            points.append((radius + x1, radius + y1))
-        polygon(radio_bitmap, col1, points, 0)
-        polygon(radio_bitmap, col2, points, 90)
-        radio_bitmap = smoothscale(radio_bitmap, (diameter, diameter))
+    def draw_radio_bitmap(self, diameter, col1, col2):
+        radio_bitmap = Surface((diameter, diameter), pygame.SRCALPHA)
+        radius = diameter // 2
+        circle(radio_bitmap, col2, (radius, radius), radius, 1)
+        self.flood_fill(radio_bitmap, (radius, radius), col1)
         return radio_bitmap
 
     def draw_arrow_state_bitmaps(self, rect, direction):
