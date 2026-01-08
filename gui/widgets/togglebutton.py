@@ -9,8 +9,8 @@ class ToggleButton(Widget):
         if raised_text == None:
             raised_text = pressed_text
         factory = BitmapFactory()
-        _, _, self.pressed_text_bitmap = factory.draw_box_button_bitmaps(pressed_text, rect)
-        self.raised_text_bitmap, _, _ = factory.draw_box_button_bitmaps(raised_text, rect)
+        _, _, self.pressed_text_bitmap = factory.draw_box_bitmaps(pressed_text, rect)
+        self.raised_text_bitmap, _, _ = factory.draw_box_bitmaps(raised_text, rect)
 
     def handle_event(self, event, window):
         if event.type == MOUSEBUTTONDOWN:

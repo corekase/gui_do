@@ -1,7 +1,10 @@
 import pygame
 from math import cos, sin, radians
-from pygame import Rect
-from pygame.draw import rect, line, circle
+from pygame.surface import Surface
+from pygame.surfarray import blit_array
+from pygame import Rect, PixelArray
+from pygame.draw import rect, line, polygon, circle
+from pygame.transform import rotate, smoothscale
 from .command import set_font, set_last_font, render_text_shadow, centre
 from .widgets.widget import colours
 
@@ -61,7 +64,7 @@ class BitmapFactory:
         set_font('titlebar')
         if colour == None:
             colour = colours['highlight']
-        title_surface = pygame.surface.Surface((width, size)).convert()
+        title_surface = Surface((width, size)).convert()
         frame = Frame('titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed
         frame.surface = title_surface
@@ -73,45 +76,45 @@ class BitmapFactory:
         return title_surface
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
-        surface = pygame.surface.Surface((size, size), pygame.SRCALPHA)
+        surface = Surface((size, size), pygame.SRCALPHA)
         rect(surface, col1, Rect(3, 3, 9, 9))
         rect(surface, colours['none'], Rect(3, 3, 9, 9), 1)
         rect(surface, col2, Rect(6, 6, 9, 9))
         rect(surface, colours['none'], Rect(6, 6, 9, 9), 1)
         return surface
 
-    def draw_box_button_bitmaps(self, text, rect):
+    def draw_box_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
         text_bitmap = render_text_shadow(text)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        idle_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(idle_surface, 'idle')
+        idle_surface = Surface((w, h)).convert()
+        self.draw_box_state(idle_surface, 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
-        hover_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(hover_surface, 'hover')
+        hover_surface = Surface((w, h)).convert()
+        self.draw_box_state(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text_shadow(text, colours['highlight'])
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        armed_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(armed_surface, 'armed')
+        armed_surface = Surface((w, h)).convert()
+        self.draw_box_state(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
         return saved
 
-    def draw_frame_state_bitmap(self, surface, state):
+    def draw_box_state(self, surface, state):
         if state == 'idle':
-            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
+            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
         elif state == 'hover':
-            self.draw_base_frame_definition_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'])
+            self.draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['light'])
         elif state == 'armed':
-            self.draw_base_frame_definition_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
+            self.draw_box_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
 
-    def draw_base_frame_definition_bitmap(self, surface, ul, lr, ul_d, lr_d, background):
+    def draw_box_bitmap(self, surface, ul, lr, ul_d, lr_d, background):
         # ul, lr = upper and left, lower and right lines
         # ul_d, lr_d = upper-left dot, lower-right dot
         # get positions and sizes
@@ -134,38 +137,38 @@ class BitmapFactory:
         # unlock surface
         surface.unlock()
 
-    def draw_rounded_button_bitmaps(self, text, rect):
+    def draw_button_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
         text_bitmap = render_text_shadow(text)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        idle_surface = pygame.surface.Surface((w, h), pygame.SRCALPHA).convert_alpha()
-        self.draw_round_frame_state_bitmap(idle_surface, 'idle')
+        idle_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        self.draw_button_state(idle_surface, 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
-        hover_surface = pygame.surface.Surface((w, h), pygame.SRCALPHA).convert_alpha()
-        self.draw_round_frame_state_bitmap(hover_surface, 'hover')
+        hover_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        self.draw_button_state(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text_shadow(text, colours['highlight'])
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        armed_surface = pygame.surface.Surface((w, h), pygame.SRCALPHA).convert_alpha()
-        self.draw_round_frame_state_bitmap(armed_surface, 'armed')
+        armed_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        self.draw_button_state(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
         return saved
 
-    def draw_round_frame_state_bitmap(self, surface, state):
+    def draw_button_state(self, surface, state):
         if state == 'idle':
-            self.draw_round_frame_definition_bitmap(surface, colours['light'], colours['medium'])
+            self.draw_round_frame_bitmap(surface, colours['light'], colours['medium'])
         elif state == 'hover':
-            self.draw_round_frame_definition_bitmap(surface, colours['light'], colours['light'])
+            self.draw_round_frame_bitmap(surface, colours['light'], colours['light'])
         elif state == 'armed':
-            self.draw_round_frame_definition_bitmap(surface, colours['none'], colours['dark'])
+            self.draw_round_frame_bitmap(surface, colours['none'], colours['dark'])
 
-    def draw_round_frame_definition_bitmap(self, surface, border, background):
+    def draw_round_frame_bitmap(self, surface, border, background):
         _, _, w, h = surface.get_rect()
         radius = h // 4
         circle(surface, border, (radius, radius), radius, 1, draw_top_left=True)
@@ -176,31 +179,31 @@ class BitmapFactory:
         line(surface, border, (radius, h - 1), (w - radius, h - 1), 1)
         line(surface, border, (0, radius), (0, h - radius), 1)
         line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
-        self.fill(surface, (w // 2, h // 2), background)
+        self.flood_fill(surface, (w // 2, h // 2), background)
 
-    def fill(self, surface, position, fill_color):
-        fill_color = surface.map_rgb(fill_color)  # Convert the color to mapped integer value.
-        surf_array = pygame.PixelArray(surface)  # Create an array from the surface.
-        current_color = surf_array[position]  # Get the mapped integer color value.
+    def flood_fill(self, surface, position, color):
+        color = surface.map_rgb(color)  # Convert the color to mapped integer value.
+        pixels = PixelArray(surface)  # Create an array from the surface.
+        current_color = pixels[position]  # Get the mapped integer color value.
         frontier = [position]
         while len(frontier) > 0:
             x, y = frontier.pop()
             try:  # Add a try-except block in case the position is outside the surface.
-                if surf_array[x, y] != current_color:
+                if pixels[x, y] != current_color:
                     continue
             except IndexError:
                 continue
-            surf_array[x, y] = fill_color
+            pixels[x, y] = color
             frontier.append((x + 1, y))  # Right.
             frontier.append((x - 1, y))  # Left.
             frontier.append((x, y + 1))  # Down.
             frontier.append((x, y - 1))  # Up.
-        pygame.surfarray.blit_array(surface, surf_array)
-        del surf_array # delete the array because it impicitly locks/unlocks the surface
+        blit_array(surface, pixels)
+        del pixels # delete the array because it impicitly locks/unlocks the surface
 
     def get_pushbutton_style_bitmaps(self, style, text, rect):
         if style == 0:
-            return self.draw_box_button_bitmaps(text, rect)
+            return self.draw_box_bitmaps(text, rect)
         elif style == 1:
             return self.draw_radio_pushbutton_bitmaps(text)
         else:
@@ -217,7 +220,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_checked_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = pygame.surface.Surface((x_size, text_height), pygame.SRCALPHA)
+        button_complete = Surface((x_size, text_height), pygame.SRCALPHA)
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
@@ -225,16 +228,16 @@ class BitmapFactory:
     def draw_radio_checked_bitmap(self, diameter, col1, col2):
         # separate out from draw_radio_pushbutton_bitmap so the same bitmap can be used
         # in a checkbox too
-        radio_bitmap = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
+        radio_bitmap = Surface((400, 400), pygame.SRCALPHA)
         radius = 200
         points = []
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
             y1 = int(round(radius * sin(radians(point))))
             points.append((radius + x1, radius + y1))
-        pygame.draw.polygon(radio_bitmap, col1, points, 0)
-        pygame.draw.polygon(radio_bitmap, col2, points, 90)
-        radio_bitmap = pygame.transform.smoothscale(radio_bitmap, (diameter, diameter))
+        polygon(radio_bitmap, col1, points, 0)
+        polygon(radio_bitmap, col2, points, 90)
+        radio_bitmap = smoothscale(radio_bitmap, (diameter, diameter))
         return radio_bitmap
 
     def draw_arrow_state_bitmaps(self, rect, direction):
@@ -248,15 +251,15 @@ class BitmapFactory:
             size = rect.height
         # create a polygon for the glyph then draw it in full colour filled
         # then draw the polygon again in none colour 1 pixel outline
-        glyph = pygame.surface.Surface((400, 400), pygame.SRCALPHA)
+        glyph = Surface((400, 400), pygame.SRCALPHA)
         # draw polygon
         points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
-        pygame.draw.polygon(glyph, colours['full'], points, 0)
-        pygame.draw.polygon(glyph, colours['none'], points, 20)
+        polygon(glyph, colours['full'], points, 0)
+        polygon(glyph, colours['none'], points, 20)
         # rotate polygon to direction
-        glyph = pygame.transform.rotate(glyph, direction)
+        glyph = rotate(glyph, direction)
         # scale polygon to bitmap size
-        glyph = pygame.transform.smoothscale(glyph, (size, size))
+        glyph = smoothscale(glyph, (size, size))
         # centre the glyph in the state bitmap area
         glyph_x = centre(rect.width, size)
         glyph_y = centre(rect.height, size)
@@ -270,13 +273,13 @@ class BitmapFactory:
     def draw_frame_bitmaps(self, rect):
         _, _, w, h = rect
         saved = []
-        idle_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(idle_surface, 'idle')
+        idle_surface = Surface((w, h)).convert()
+        self.draw_box_state(idle_surface, 'idle')
         saved.append(idle_surface)
-        hover_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(hover_surface, 'hover')
+        hover_surface = Surface((w, h)).convert()
+        self.draw_box_state(hover_surface, 'hover')
         saved.append(hover_surface)
-        armed_surface = pygame.surface.Surface((w, h)).convert()
-        self.draw_frame_state_bitmap(armed_surface, 'armed')
+        armed_surface = Surface((w, h)).convert()
+        self.draw_box_state(armed_surface, 'armed')
         saved.append(armed_surface)
         return saved
