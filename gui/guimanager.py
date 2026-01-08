@@ -162,6 +162,8 @@ class GuiManager:
         if (event.type == MOUSEBUTTONUP) and self.dragging:
             if event.button == 1:
                 self.dragging = False
+                self.dragging_window.set_pos((self.dragging_window.x, self.dragging_window.y))
+                self.mouse_pos = self.dragging_window.x - self.mouse_delta[0], self.dragging_window.y - self.mouse_delta[1]
                 self.dragging_window = None
                 self.mouse_delta = None
         elif (event.type == MOUSEMOTION) and self.dragging:
