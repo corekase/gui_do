@@ -182,24 +182,35 @@ class BitmapFactory:
         self.flood_fill(surface, (w // 2, h // 2), background)
 
     def flood_fill(self, surface, position, color):
-        color = surface.map_rgb(color)  # Convert the color to mapped integer value.
-        pixels = PixelArray(surface)  # Create an array from the surface.
-        current_color = pixels[position]  # Get the mapped integer color value.
-        frontier = [position]
-        while len(frontier) > 0:
-            x, y = frontier.pop()
-            try:  # Add a try-except block in case the position is outside the surface.
-                if pixels[x, y] != current_color:
+        # convert the surface to an array
+        pixels = PixelArray(surface)
+        # convert the fill color to integer representation
+        new_color = surface.map_rgb(color)
+        # read the color to replace from the starting position
+        old_color = pixels[position]
+        # begin a queue with the starting position
+        locations = [position]
+        while len(locations) > 0:
+            # pop a position from the queue
+            x, y = locations.pop()
+            try:
+                if pixels[x, y] != old_color:
+                    # if it isn't the old color then skip the position
                     continue
             except IndexError:
+                # outside of the pixel array
                 continue
-            pixels[x, y] = color
-            frontier.append((x + 1, y))  # Right.
-            frontier.append((x - 1, y))  # Left.
-            frontier.append((x, y + 1))  # Down.
-            frontier.append((x, y - 1))  # Up.
+            # it is the old color and within the array, replace color
+            pixels[x, y] = new_color
+            # add neighbors to the queue
+            locations.append((x + 1, y))
+            locations.append((x - 1, y))
+            locations.append((x, y + 1))
+            locations.append((x, y - 1))
+        # convert the array back into the surface
         blit_array(surface, pixels)
-        del pixels # delete the array because it impicitly locks/unlocks the surface
+        # delete the array because it implicitly affects locks/unlocks of the surface
+        del pixels
 
     def get_pushbutton_style_bitmaps(self, style, text, rect):
         if style == 0:
