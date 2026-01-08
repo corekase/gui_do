@@ -236,7 +236,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_bitmap(int(text_height / 1.8), col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size, text_height), pygame.SRCALPHA)
+        button_complete = Surface((x_size, text_height), pygame.SRCALPHA).convert_alpha()
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
@@ -259,7 +259,7 @@ class BitmapFactory:
             size = rect.height
         # create a polygon for the glyph then draw it in full colour filled
         # then draw the polygon again in none colour 1 pixel outline
-        glyph = Surface((400, 400), pygame.SRCALPHA)
+        glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
         # draw polygon
         points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
         polygon(glyph, colours['full'], points, 0)
