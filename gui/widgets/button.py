@@ -55,7 +55,7 @@ class Button(Widget):
                     if self.timer != None:
                         self.gui.timers.remove_timer(self.timer)
                         self.timer = None
-                    self.state = State.Idle
+                    self.state = State.Hover
                     if self.button_callback != None:
                         # if a callback exists, consume the event
                         return False
