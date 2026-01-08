@@ -77,10 +77,15 @@ class BitmapFactory:
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
         surface = Surface((size, size), pygame.SRCALPHA)
-        rect(surface, col1, Rect(3, 3, 9, 9))
-        rect(surface, colours['none'], Rect(3, 3, 9, 9), 1)
-        rect(surface, col2, Rect(6, 6, 9, 9))
-        rect(surface, colours['none'], Rect(6, 6, 9, 9), 1)
+        panel_size = (size - 4) // 2
+        offset = (size - 4) // 4
+        base = centre(size, (panel_size + offset)) - 2
+        panel1 = Rect(base, base, panel_size, panel_size)
+        panel2 = Rect(base + panel_size - offset, base + panel_size - offset, panel_size, panel_size)
+        rect(surface, col1, panel1)
+        rect(surface, colours['none'], panel1, 1)
+        rect(surface, col2, panel2)
+        rect(surface, colours['none'], panel2, 1)
         return surface
 
     def draw_box_bitmaps(self, text, rect):
