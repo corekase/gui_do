@@ -76,7 +76,7 @@ class BitmapFactory:
         return title_surface
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
-        surface = Surface((size, size), pygame.SRCALPHA)
+        surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
         panel_size = (size - 6) // 2
         offset = (size - 6) // 4
         base = centre(size, (panel_size + offset)) - 3
