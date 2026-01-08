@@ -36,7 +36,4 @@ class Timers:
             obj.timer += elapsed_time
             if obj.timer >= obj.duration:
                 obj.timer -= obj.duration
-                if obj.callback != None:
-                    obj.callback()
-                else:
-                    self.timers.remove(obj)
+                obj.callback()
