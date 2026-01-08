@@ -33,6 +33,7 @@ class GuiManager:
         # dragging window
         self.dragging = False
         self.dragging_window = None
+        self.mouse_delta = None
         # current mouse position
         self.mouse_pos = pygame.mouse.get_pos()
         # whether the mouse is in a locked area state
@@ -162,9 +163,12 @@ class GuiManager:
             if event.button == 1:
                 self.dragging = False
                 self.dragging_window = None
+                self.mouse_delta = None
         elif (event.type == MOUSEMOTION) and self.dragging:
-            xdif, ydif = event.rel
-            self.dragging_window.set_pos((self.dragging_window.x + xdif, self.dragging_window.y + ydif))
+            x = self.dragging_window.x + event.rel[0]
+            y = self.dragging_window.y + event.rel[1]
+            self.mouse_pos = x - self.mouse_delta[0], y - self.mouse_delta[1]
+            self.dragging_window.set_pos((x, y))
         elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
             if event.button == 1:
                 # if there is an active window test for dragging
@@ -179,6 +183,8 @@ class GuiManager:
                         # begin dragging
                         self.dragging = True
                         self.dragging_window = self.active_window
+                        self.mouse_delta = (self.dragging_window.x - self.mouse_pos[0],
+                                            self.dragging_window.y - self.mouse_pos[1])
         if self.active_window != None:
             # for each window handle their widgets
             window_consumed = False
