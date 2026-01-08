@@ -164,6 +164,7 @@ class GuiManager:
                 self.dragging = False
                 self.dragging_window.set_pos((self.dragging_window.x, self.dragging_window.y))
                 self.mouse_pos = self.dragging_window.x - self.mouse_delta[0], self.dragging_window.y - self.mouse_delta[1]
+                pygame.mouse.set_pos(self.mouse_pos)
                 self.dragging_window = None
                 self.mouse_delta = None
         elif (event.type == MOUSEMOTION) and self.dragging:
