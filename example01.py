@@ -2,10 +2,9 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_backdrop, load_font, set_font
-from gui import add, set_cursor, set_buffered, restore_pristine, Canvas, CKind
-from gui import GKind, Label, Button, Window, centre, ToggleButton, Scrollbar, Image
-from gui import colours, PushButtonGroup, set_grid_properties, gridded
+from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
+from gui import colours, centre, set_grid_properties, gridded
+from gui import GKind, Canvas, CKind, Label, Button, PushButtonGroup, ToggleButton, Scrollbar, Image
 
 class Demo:
     def __init__(self):
