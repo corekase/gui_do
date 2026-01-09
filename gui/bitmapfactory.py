@@ -267,7 +267,7 @@ class BitmapFactory:
         return button_complete
 
     def draw_check_bitmap(self, state, size):
-        shrink = size // 5
+        shrink = size // 2.8
         shrink_size = shrink // 2
         box_bitmap = Surface((size - shrink, size - shrink)).convert()
         check_bitmap = Surface((size, size), pygame.SRCALPHA).convert_alpha()
@@ -280,7 +280,7 @@ class BitmapFactory:
         check_bitmap.blit(box_bitmap, (shrink_size, shrink_size))        
         if state == 1 or state == 2:
             glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
-            points = ((40, 220), (80, 160), (160, 240), (240, 80), (320, 80), (160, 320), (40, 220))
+            points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
             polygon(glyph, colours['full'], points, 0)
             polygon(glyph, colours['none'], points, 20)
             glyph = smoothscale(glyph, (size, size))

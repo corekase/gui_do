@@ -69,10 +69,6 @@ class PushButtonGroup(Widget):
             self.state = State.Idle
 
     def draw(self):
-        if self.style == 1 or self.style == 2:
-            if self.pristine == None:
-                self.save_pristine()
-            self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
         if self.state == State.Idle:
             self.surface.blit(self.idle, (self.rect.x, self.rect.y))
         elif self.state == State.Hover:
