@@ -12,7 +12,7 @@ class PushButtonGroup(Widget):
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
-    def __init__(self, id, rect, text, group, style):
+    def __init__(self, id, rect, style, text, group):
         super().__init__(id, rect)
         self.state = State.Idle
         factory = BitmapFactory()
