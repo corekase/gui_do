@@ -53,9 +53,9 @@ class Demo:
         add(PushButtonGroup('pb4', gridded(1, 1), 'Radio', 'pb2', 1))
         add(PushButtonGroup('pb5', gridded(1, 2), 'Radio', 'pb2', 1))
         add(PushButtonGroup('pb6', gridded(1, 3), 'Radio', 'pb2', 1))
-        add(PushButtonGroup('pb4', gridded(2, 1), 'Check', 'pb3', 2))
-        add(PushButtonGroup('pb5', gridded(2, 2), 'Check', 'pb3', 2))
-        add(PushButtonGroup('pb6', gridded(2, 3), 'Check', 'pb3', 2))
+        add(PushButtonGroup('pb7', gridded(2, 1), 'Check', 'pb3', 2))
+        add(PushButtonGroup('pb8', gridded(2, 2), 'Check', 'pb3', 2))
+        add(PushButtonGroup('pb9', gridded(2, 3), 'Check', 'pb3', 2))
         # make the Conway's Game of Life window
         width, height = 500, 500
         self.life_win = Window('Conway\'s Game of Life', (50, 318), (width, height))
