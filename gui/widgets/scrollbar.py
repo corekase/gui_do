@@ -8,7 +8,7 @@ from .arrowbox import ArrowBox
 from .widget import colours
 
 class Scrollbar(Frame):
-    def __init__(self, id, params, overall_rect, horizontal, style):
+    def __init__(self, id, overall_rect, style, params, horizontal):
         # list of registered sub-widgets
         self.registered = []
         # parse the style
