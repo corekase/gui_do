@@ -1,6 +1,7 @@
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..bitmapfactory import BitmapFactory
+from ..command import centre
 from .widget import Widget
 from enum import Enum
 
@@ -18,7 +19,11 @@ class PushButtonGroup(Widget):
         self.group = group
         self.style = style
         self.idle, self.hover, self.armed = factory.get_pushbutton_style_bitmaps(style, text, rect)
-        self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, rect.height)
+        if style == 0:
+            self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, rect.height)
+        else:
+            self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.idle.get_rect().height),
+                             self.idle.get_rect().width, rect.height)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -64,7 +69,7 @@ class PushButtonGroup(Widget):
             self.state = State.Idle
 
     def draw(self):
-        if self.style == 1:
+        if self.style == 1 or self.style == 2:
             if self.pristine == None:
                 self.save_pristine()
             self.surface.blit(self.pristine, (self.rect.x, self.rect.y))
