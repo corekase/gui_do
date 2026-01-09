@@ -1,5 +1,4 @@
 import pygame
-from math import cos, sin, radians
 from pygame.surface import Surface
 from pygame.surfarray import blit_array
 from pygame import Rect, PixelArray
