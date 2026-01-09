@@ -36,30 +36,26 @@ class Demo:
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
-        self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), True, 'Pushboxes'))
-        # control whether the pushradios window is visible
-        self.push_radio_toggle = add(ToggleButton('push_radio', gridded(2, 0), True, 'Pushradios'))
+        self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), True, 'Pushbuttons'))
         # control whether the life window is visible
-        self.push_life_toggle = add(ToggleButton('push_life', gridded(3, 0), True, 'Life'))
+        self.push_life_toggle = add(ToggleButton('push_life', gridded(2, 0), True, 'Life'))
         # control whether the scrollbar window is visible
-        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(4, 0), True, 'Scrollbars'))
+        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), True, 'Scrollbars'))
         # make the pushboxes window
-        self.pb_win = Window('Pushboxes', (50, 150), (140, 150))
-        set_grid_properties((10, 10), 120, widget_height, 2)
+        self.pb_win = Window('Pushbuttons', (50, 150), (326, 110))
+        set_grid_properties((10, 10), 100, widget_height, 2)
         add(PushButtonGroup('pb1', gridded(0, 0), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb2', gridded(0, 1), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb3', gridded(0, 2), 'Pushbox', 'pb1', 0))
-        add(Button('b1', gridded(0, 3), 'Button'))
-        # make the pushradios window
-        self.pr_win = Window('Pushradios', (50, 330), (140, 150))
-        set_grid_properties((10, 10), 120, widget_height, 2)
-        add(PushButtonGroup('pb4', gridded(0, 0), 'Pushradio', 'pb2', 1))
-        add(PushButtonGroup('pb5', gridded(0, 1), 'Pushradio', 'pb2', 1))
-        add(PushButtonGroup('pb6', gridded(0, 2), 'Pushradio', 'pb2', 1))
-        add(Button('b2', gridded(0, 3), 'Button'))
+        add(PushButtonGroup('pb4', gridded(1, 0), 'Pushradio', 'pb2', 1))
+        add(PushButtonGroup('pb5', gridded(1, 1), 'Pushradio', 'pb2', 1))
+        add(PushButtonGroup('pb6', gridded(1, 2), 'Pushradio', 'pb2', 1))
+        add(PushButtonGroup('pb4', gridded(2, 0), 'Pushcheck', 'pb3', 2))
+        add(PushButtonGroup('pb5', gridded(2, 1), 'Pushcheck', 'pb3', 2))
+        add(PushButtonGroup('pb6', gridded(2, 2), 'Pushcheck', 'pb3', 2))
         # make the Conway's Game of Life window
         width, height = 500, 500
-        self.life_win = Window('Conway\'s Game of Life', (50, 510), (width, height))
+        self.life_win = Window('Conway\'s Game of Life', (50, 290), (width, height))
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
@@ -138,7 +134,6 @@ class Demo:
                 self.update_circles(self.size)
             # update the visible windows
             self.pb_win.set_visible(self.push_box_toggle.read())
-            self.pr_win.set_visible(self.push_radio_toggle.read())
             self.life_win.set_visible(self.push_life_toggle.read())
             self.sb_win.set_visible(self.push_scrollbars_toggle.read())
             # handle events

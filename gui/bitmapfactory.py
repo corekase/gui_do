@@ -169,7 +169,7 @@ class BitmapFactory:
         elif style == 1:
             return self.draw_radio_pushbutton_bitmaps(text)
         elif style == 2:
-            pass
+            return self.draw_check_pushbutton_bitmaps(text)
         else:
             raise Exception(f'style index {style} not implemented')
 
@@ -249,6 +249,43 @@ class BitmapFactory:
         circle(radio_bitmap, col2, (radius, radius), radius, 1)
         self.flood_fill(radio_bitmap, (radius, radius), col1)
         return radio_bitmap
+
+    def draw_check_pushbutton_bitmaps(self, text):
+        idle_bitmap = self.draw_check_pushbutton_bitmap(0, text)
+        hover_bitmap = self.draw_check_pushbutton_bitmap(1, text)
+        armed_bitmap = self.draw_check_pushbutton_bitmap(2, text)
+        return idle_bitmap, hover_bitmap, armed_bitmap
+
+    def draw_check_pushbutton_bitmap(self, state, text):
+        text_bitmap = render_text_shadow(text)
+        text_height = text_bitmap.get_rect().height
+        check_bitmap = self.draw_check_bitmap(state, text_height)
+        x_size = text_height + text_bitmap.get_rect().width
+        button_complete = Surface((x_size, text_height), pygame.SRCALPHA).convert_alpha()
+        button_complete.blit(check_bitmap, (0, centre(text_height, check_bitmap.get_rect().height)))
+        button_complete.blit(text_bitmap, (check_bitmap.get_rect().width + 2, 0))
+        return button_complete
+
+    def draw_check_bitmap(self, state, size):
+        shrink = size // 5
+        shrink_size = shrink // 2
+        box_bitmap = Surface((size - shrink, size - shrink)).convert()
+        check_bitmap = Surface((size, size), pygame.SRCALPHA).convert_alpha()
+        if state == 0:
+            self.draw_box_bitmaps(box_bitmap, 'idle')
+        elif state == 1:
+            self.draw_box_bitmaps(box_bitmap, 'hover')
+        elif state == 2:
+            self.draw_box_bitmaps(box_bitmap, 'armed')
+        check_bitmap.blit(box_bitmap, (shrink_size, shrink_size))        
+        if state == 1 or state == 2:
+            glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
+            points = ((40, 220), (80, 160), (160, 240), (240, 80), (320, 80), (160, 320), (40, 220))
+            polygon(glyph, colours['full'], points, 0)
+            polygon(glyph, colours['none'], points, 20)
+            glyph = smoothscale(glyph, (size, size))
+            check_bitmap.blit(glyph, (0, 0))
+        return check_bitmap
 
     def draw_arrow_state_bitmaps(self, rect, direction):
         # draw idle, hover, and armed bitmaps for the passed direction
