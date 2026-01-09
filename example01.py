@@ -34,13 +34,13 @@ class Demo:
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
-        self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
+        self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), 0, True, 'Circles'))
         # control whether the pushboxes window is visible
-        self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), True, 'Pushbuttons'))
+        self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), 0, True, 'Pushbuttons'))
         # control whether the life window is visible
-        self.push_life_toggle = add(ToggleButton('push_life', gridded(2, 0), True, 'Life'))
+        self.push_life_toggle = add(ToggleButton('push_life', gridded(2, 0), 0, True, 'Life'))
         # control whether the scrollbar window is visible
-        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), True, 'Scrollbars'))
+        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), 0, True, 'Scrollbars'))
         # make the pushboxes window
         self.pb_win = Window('Pushbuttons', (50, 150), (326, 138))
         set_grid_properties((10, 10), 100, widget_height, 2)
@@ -65,7 +65,7 @@ class Demo:
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(10, height - 38, 120, widget_height), False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', Rect(10, height - 38, 120, widget_height), 0, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # make the scrollbar window
