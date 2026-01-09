@@ -71,7 +71,7 @@ class BitmapFactory:
         frame.draw()
         text = render_text_shadow(title, colour)
         text_y = centre(size, text.get_rect().height)
-        title_surface.blit(text, (5, text_y + 1))
+        title_surface.blit(text, (5, text_y))
         set_last_font()
         return title_surface
 

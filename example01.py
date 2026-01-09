@@ -17,8 +17,8 @@ class Demo:
         # set window caption
         pygame.display.set_caption('Demo')
         # create a gui manager
-        fonts = [['titlebar', 'Wiltype.ttf', 16],
-                 ['normal', 'Ubuntu-M.ttf', 16],
+        fonts = [['titlebar', 'Ubuntu-B.ttf', 14],
+                 ['normal', 'Ubuntu-M.ttf', 14],
                  ['scroll', 'Gimbot.ttf', 32],
                  ['gui_do', 'Gimbot.ttf', 72]]
         self.gui = gui_init(self.screen, fonts)
@@ -47,15 +47,15 @@ class Demo:
         add(Label(gridded(0, 0), 'Boxes', True))
         add(Label(gridded(1, 0), 'Radios', True))
         add(Label(gridded(2, 0), 'Checks', True))
-        add(PushButtonGroup('pb1', gridded(0, 1), 'Box', 'pb1', 0))
-        add(PushButtonGroup('pb2', gridded(0, 2), 'Box', 'pb1', 0))
-        add(PushButtonGroup('pb3', gridded(0, 3), 'Box', 'pb1', 0))
-        add(PushButtonGroup('pb4', gridded(1, 1), 'Radio', 'pb2', 1))
-        add(PushButtonGroup('pb5', gridded(1, 2), 'Radio', 'pb2', 1))
-        add(PushButtonGroup('pb6', gridded(1, 3), 'Radio', 'pb2', 1))
-        add(PushButtonGroup('pb7', gridded(2, 1), 'Check', 'pb3', 2))
-        add(PushButtonGroup('pb8', gridded(2, 2), 'Check', 'pb3', 2))
-        add(PushButtonGroup('pb9', gridded(2, 3), 'Check', 'pb3', 2))
+        add(PushButtonGroup('pb1', gridded(0, 1), 'Box 1', 'pb1', 0))
+        add(PushButtonGroup('pb2', gridded(0, 2), 'Box 2', 'pb1', 0))
+        add(PushButtonGroup('pb3', gridded(0, 3), 'Box 3', 'pb1', 0))
+        add(PushButtonGroup('pb4', gridded(1, 1), 'Radio 1', 'pb2', 1))
+        add(PushButtonGroup('pb5', gridded(1, 2), 'Radio 2', 'pb2', 1))
+        add(PushButtonGroup('pb6', gridded(1, 3), 'Radio 3', 'pb2', 1))
+        add(PushButtonGroup('pb7', gridded(2, 1), 'Check 1', 'pb3', 2))
+        add(PushButtonGroup('pb8', gridded(2, 2), 'Check 2', 'pb3', 2))
+        add(PushButtonGroup('pb9', gridded(2, 3), 'Check 3', 'pb3', 2))
         # make the Conway's Game of Life window
         width, height = 500, 500
         self.life_win = Window('Conway\'s Game of Life', (50, 318), (width, height))
