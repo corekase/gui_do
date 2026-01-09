@@ -172,16 +172,6 @@ class BitmapFactory:
         else:
             raise Exception(f'style index {style} not implemented')
 
-    def get_togglebutton_style_bitmaps(self, style, text, rect):
-        if style == 0:
-            return self.draw_box_pushbutton_bitmaps(text, rect)
-        elif style == 1:
-            return self.draw_radio_pushbutton_bitmaps(text)
-        elif style == 2:
-            return self.draw_check_pushbutton_bitmaps(text)
-        else:
-            raise Exception(f'style index {style} not implemented')
-
     def draw_box_pushbutton_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []

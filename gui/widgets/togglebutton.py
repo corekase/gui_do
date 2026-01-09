@@ -11,8 +11,8 @@ class ToggleButton(Widget):
         if raised_text == None:
             raised_text = pressed_text
         factory = BitmapFactory()
-        _, _, self.pressed_text_bitmap = factory.get_togglebutton_style_bitmaps(style, pressed_text, rect)
-        self.raised_text_bitmap, _, _ = factory.get_togglebutton_style_bitmaps(style, raised_text, rect)
+        _, _, self.pressed_text_bitmap = factory.get_pushbutton_style_bitmaps(style, pressed_text, rect)
+        self.raised_text_bitmap, _, _ = factory.get_pushbutton_style_bitmaps(style, raised_text, rect)
         if style != 0:
             self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.raised_text_bitmap.get_rect().height),
                              self.raised_text_bitmap.get_rect().width, rect.height)
