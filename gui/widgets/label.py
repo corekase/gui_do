@@ -1,15 +1,18 @@
-from ..command import render_text, render_text_shadow
+from ..command import render_text, render_text_shadow, centre
 from .widget import Widget
 
 class Label(Widget):
-    def __init__(self, position, text, shadow=False, minimum_xsize=None, automatic_pristine=False):
+    def __init__(self, position, text, shadow=False, automatic_pristine=False):
         # initialize common widget values
         self.shadow = shadow
         self.render(text)
         self.rect = self.text_bitmap.get_rect()
-        self.rect.x, self.rect.y = position[0], position[1]
-        if minimum_xsize != None:
-            self.rect.width = minimum_xsize
+        if len(position) == 2:
+            self.rect.x, self.rect.y = position[0], position[1]
+        else:
+            x = position[0] + centre(position[2], self.rect.width)
+            y = position[1] + centre(position[3], self.rect.height)
+            self.rect.x, self.rect.y = x, y
         super().__init__('label', self.rect)
         self.auto_restore_pristine = automatic_pristine
 
