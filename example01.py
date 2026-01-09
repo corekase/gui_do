@@ -18,7 +18,7 @@ class Demo:
         pygame.display.set_caption('Demo')
         # create a gui manager
         fonts = [['titlebar', 'Wiltype.ttf', 16],
-                 ['normal', 'Gimbot.ttf', 16],
+                 ['normal', 'Ubuntu-M.ttf', 16],
                  ['scroll', 'Gimbot.ttf', 32],
                  ['gui_do', 'Gimbot.ttf', 72]]
         self.gui = gui_init(self.screen, fonts)
@@ -28,10 +28,11 @@ class Demo:
         set_font('gui_do')
         add(Label((50, 30), 'gui_do', True))
         set_font('normal')
+        widget_height = 28
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1040, 70, 30), 'Exit'))
+        add(Button('exit', Rect(10, 1040, 70, widget_height), 'Exit'))
         # setup for the togglebuttons
-        set_grid_properties((85, 1040), 120, 30, 4)
+        set_grid_properties((85, 1040), 120, widget_height, 4)
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
@@ -44,14 +45,14 @@ class Demo:
         self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(4, 0), True, 'Scrollbars'))
         # make the pushboxes window
         self.pb_win = Window('Pushboxes', (50, 150), (140, 150))
-        set_grid_properties((10, 10), 120, 30, 2)
+        set_grid_properties((10, 10), 120, widget_height, 2)
         add(PushButtonGroup('pb1', gridded(0, 0), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb2', gridded(0, 1), 'Pushbox', 'pb1', 0))
         add(PushButtonGroup('pb3', gridded(0, 2), 'Pushbox', 'pb1', 0))
         add(Button('b1', gridded(0, 3), 'Button'))
         # make the pushradios window
         self.pr_win = Window('Pushradios', (50, 330), (140, 150))
-        set_grid_properties((10, 10), 120, 30, 2)
+        set_grid_properties((10, 10), 120, widget_height, 2)
         add(PushButtonGroup('pb4', gridded(0, 0), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb5', gridded(0, 1), 'Pushradio', 'pb2', 1))
         add(PushButtonGroup('pb6', gridded(0, 2), 'Pushradio', 'pb2', 1))
@@ -65,9 +66,9 @@ class Demo:
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(10, height - 40, 120, 30), False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', Rect(10, height - 40, 120, widget_height), False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 40, 120, 30), 'Reset'), self.reset)
+        add(Button('reset', Rect(140, height - 40, 120, widget_height), 'Reset'), self.reset)
         # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
