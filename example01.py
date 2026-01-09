@@ -30,9 +30,9 @@ class Demo:
         set_font('normal')
         widget_height = 28
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1040, 70, widget_height), 'Exit'))
+        add(Button('exit', Rect(10, 1042, 70, widget_height), 'Exit'))
         # setup for the togglebuttons
-        set_grid_properties((85, 1040), 120, widget_height, 4)
+        set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
         self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), True, 'Circles'))
         # control whether the pushboxes window is visible
@@ -60,15 +60,15 @@ class Demo:
         # make the Conway's Game of Life window
         width, height = 500, 500
         self.life_win = Window('Conway\'s Game of Life', (50, 510), (width, height))
-        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 60), canvas_callback=self.handle_canvas, automatic_pristine=True))
+        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(10, height - 40, 120, widget_height), False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', Rect(10, height - 38, 120, widget_height), False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 40, 120, widget_height), 'Reset'), self.reset)
+        add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # make the scrollbar window
         width, height = 320, 362
         window_x = centre(self.screen.get_rect().width, width)
