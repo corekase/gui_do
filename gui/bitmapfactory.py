@@ -238,7 +238,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size, text_height), SRCALPHA).convert_alpha()
+        button_complete = Surface((x_size + 3, text_height), SRCALPHA).convert_alpha()
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
@@ -268,7 +268,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size, text_height), SRCALPHA).convert_alpha()
+        button_complete = Surface((x_size + 3, text_height), SRCALPHA).convert_alpha()
         button_complete.blit(check_bitmap, (0, centre(text_height, check_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (check_bitmap.get_rect().width + 2, 0))
         return button_complete
