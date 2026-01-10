@@ -253,7 +253,7 @@ class BitmapFactory:
             y1 = int(round(radius * sin(radians(point))))
             points.append((center_point + x1, center_point + y1))
         polygon(radio_bitmap, col1, points, 0)
-        polygon(radio_bitmap, col2, points, 30)
+        polygon(radio_bitmap, col2, points, 24)
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
     
