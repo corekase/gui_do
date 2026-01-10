@@ -163,7 +163,7 @@ class BitmapFactory:
         # delete the array because it implicitly affects locks/unlocks of the surface
         del pixels
 
-    def get_pushbutton_style_bitmaps(self, style, text, rect):
+    def get_styled_bitmaps(self, style, text, rect):
         if style == 0:
             return self.draw_box_pushbutton_bitmaps(text, rect)
         elif style == 1:

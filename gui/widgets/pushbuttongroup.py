@@ -17,7 +17,7 @@ class PushButtonGroup(Widget):
         self.state = State.Idle
         factory = BitmapFactory()
         self.group = group
-        self.idle, self.hover, self.armed = factory.get_pushbutton_style_bitmaps(style, text, rect)
+        self.idle, self.hover, self.armed = factory.get_styled_bitmaps(style, text, rect)
         if style == 0:
             self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, rect.height)
         else:
