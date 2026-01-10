@@ -42,12 +42,13 @@ class Demo:
         # control whether the scrollbar window is visible
         self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), 0, True, 'Scrollbars'))
         # make the pushboxes window
-        self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (470, 138))
+        self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (582, 138))
         set_grid_properties((10, 10), 110, widget_height, 2)
         add(Label(gridded(0, 0), 'Boxes', True))
         add(Label(gridded(1, 0), 'Radios', True))
         add(Label(gridded(2, 0), 'Checks', True))
-        add(Label(gridded(3, 0), 'Toggles', True))
+        add(Label(gridded(3, 0), 'Mixed', True))
+        add(Label(gridded(4, 0), 'Toggles', True))
         add(PushButtonGroup('pb1', gridded(0, 1), 0, 'Box 1', 'pb1'))
         add(PushButtonGroup('pb2', gridded(0, 2), 0, 'Box 2', 'pb1'))
         add(PushButtonGroup('pb3', gridded(0, 3), 0, 'Box 3', 'pb1'))
@@ -57,9 +58,12 @@ class Demo:
         add(PushButtonGroup('pb7', gridded(2, 1), 2, 'Check 1', 'pb3'))
         add(PushButtonGroup('pb8', gridded(2, 2), 2, 'Check 2', 'pb3'))
         add(PushButtonGroup('pb9', gridded(2, 3), 2, 'Check 3', 'pb3'))
-        add(ToggleButton('tb1', gridded(3, 1), 0, False, 'Pushed 1', 'Raised 1'))
-        add(ToggleButton('tb2', gridded(3, 2), 1, False, 'Pushed 2', 'Raised 2'))
-        add(ToggleButton('tb3', gridded(3, 3), 2, False, 'Pushed 3', 'Raised 3'))
+        add(PushButtonGroup('pb10', gridded(3, 1), 0, 'Mix 1', 'pb4'))
+        add(PushButtonGroup('pb11', gridded(3, 2), 1, 'Mix 2', 'pb4'))
+        add(PushButtonGroup('pb12', gridded(3, 3), 2, 'Mix 3', 'pb4'))
+        add(ToggleButton('tb1', gridded(4, 1), 0, False, 'Pushed 1', 'Raised 1'))
+        add(ToggleButton('tb2', gridded(4, 2), 1, False, 'Pushed 2', 'Raised 2'))
+        add(ToggleButton('tb3', gridded(4, 3), 2, False, 'Pushed 3', 'Raised 3'))
         # make the Conway's Game of Life window
         width, height = 500, 500
         self.life_win = Window('Conway\'s Game of Life', (50, 318), (width, height))
