@@ -42,8 +42,8 @@ class Demo:
         # control whether the scrollbar window is visible
         self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), 0, True, 'Scrollbars'))
         # make the pushboxes window
-        self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (431, 138))
-        set_grid_properties((10, 10), 100, widget_height, 2)
+        self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (470, 138))
+        set_grid_properties((10, 10), 110, widget_height, 2)
         add(Label(gridded(0, 0), 'Boxes', True))
         add(Label(gridded(1, 0), 'Radios', True))
         add(Label(gridded(2, 0), 'Checks', True))
