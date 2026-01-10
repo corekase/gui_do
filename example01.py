@@ -73,10 +73,7 @@ class Demo:
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # make the scrollbar window
-        width, height = 320, 362
-        window_x = centre(self.screen.get_rect().width, width)
-        window_y = centre(self.screen.get_rect().height, height)
-        self.sb_win = Window('Scrollbar Styles', (window_x, window_y), (width, height))
+        self.sb_win = Window('Scrollbar Styles', (555, 318), (320, 362))
         # add scrollbar widgets to the window
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
