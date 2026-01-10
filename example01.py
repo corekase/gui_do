@@ -29,7 +29,7 @@ class Demo:
         add(Label((50, 30), 'gui_do', True))
         set_font('normal')
         widget_height = 28
-        # exit button, uses a callback function
+        # exit button
         add(Button('exit', Rect(10, 1042, 70, widget_height), 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
@@ -41,7 +41,7 @@ class Demo:
         self.push_life_toggle = add(ToggleButton('push_life', gridded(2, 0), 0, True, 'Life'))
         # control whether the scrollbar window is visible
         self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), 0, True, 'Scrollbars'))
-        # make the pushboxes window
+        # make the pushboxes and togglebuttons window
         self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (582, 138))
         set_grid_properties((10, 10), 110, widget_height, 2)
         add(Label(gridded(0, 0), 'Boxes', True))
@@ -64,21 +64,8 @@ class Demo:
         add(ToggleButton('tb1', gridded(4, 1), 0, False, 'Pushed 1', 'Raised 1'))
         add(ToggleButton('tb2', gridded(4, 2), 1, False, 'Pushed 2', 'Raised 2'))
         add(ToggleButton('tb3', gridded(4, 3), 2, False, 'Pushed 3', 'Raised 3'))
-        # make the Conway's Game of Life window
-        width, height = 500, 500
-        self.life_win = Window('Conway\'s Game of Life', (50, 318), (width, height))
-        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
-        self.canvas_surface = self.canvas.get_canvas_surface()
-        self.canvas_rect = self.canvas.get_size()
-        # a set to hold cell coordinates as tuples of x and y
-        self.life = set()
-        # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(30, height - 38, 100, widget_height), 1, False, 'Stop', 'Start'))
-        # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # make the scrollbar window
-        self.sb_win = Window('Scrollbar Styles', (555, 318), (320, 362))
-        # add scrollbar widgets to the window
+        self.sb_win = Window('Scrollbar Styles', (50, 318), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
         y += 22
@@ -99,6 +86,18 @@ class Demo:
         set_font('scroll')
         add(Label((x + 30, y + 215), 'Scrollbars!', True))
         set_font('normal')
+        # make the Conway's Game of Life window
+        width, height = 500, 500
+        self.life_win = Window('Conway\'s Game of Life', (375, 318), (width, height))
+        self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
+        self.canvas_surface = self.canvas.get_canvas_surface()
+        self.canvas_rect = self.canvas.get_size()
+        # a set to hold cell coordinates as tuples of x and y
+        self.life = set()
+        # toggle whether or not the simulation is processing
+        self.toggle_life = add(ToggleButton('run', Rect(30, height - 38, 100, widget_height), 1, False, 'Stop', 'Start'))
+        # resets the simulation to a default state, uses a callback function
+        add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
