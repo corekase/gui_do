@@ -18,7 +18,7 @@ class Demo:
         pygame.display.set_caption('Demo')
         # create a gui manager
         fonts = [['titlebar', 'Ubuntu-B.ttf', 14],
-                 ['normal', 'Ubuntu-M.ttf', 14],
+                 ['normal', 'Gimbot.ttf', 16],
                  ['scroll', 'Gimbot.ttf', 32],
                  ['gui_do', 'Gimbot.ttf', 72]]
         self.gui = gui_init(self.screen, fonts)
