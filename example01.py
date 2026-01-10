@@ -37,10 +37,10 @@ class Demo:
         self.circles_toggle = add(ToggleButton('circles', gridded(0, 0), 0, True, 'Circles'))
         # control whether the pushboxes window is visible
         self.push_box_toggle = add(ToggleButton('push_window', gridded(1, 0), 0, True, 'Buttons'))
-        # control whether the life window is visible
-        self.push_life_toggle = add(ToggleButton('push_life', gridded(2, 0), 0, True, 'Life'))
         # control whether the scrollbar window is visible
-        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(3, 0), 0, True, 'Scrollbars'))
+        self.push_scrollbars_toggle = add(ToggleButton('push_scroll', gridded(2, 0), 0, True, 'Scrollbars'))
+        # control whether the life window is visible
+        self.push_life_toggle = add(ToggleButton('push_life', gridded(3, 0), 0, True, 'Life'))
         # make the pushboxes and togglebuttons window
         self.pb_win = Window('Pushbuttons and Togglebuttons', (50, 150), (582, 138))
         set_grid_properties((10, 10), 110, widget_height, 2)
