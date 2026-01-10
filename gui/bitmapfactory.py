@@ -132,48 +132,31 @@ class BitmapFactory:
         line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
         self.flood_fill(surface, (w // 2, h // 2), background)
 
-    def flood_fill(self, surface, position, color):
-        # convert the surface to an array
-        pixels = PixelArray(surface)
-        # convert the fill color to integer representation
-        new_color = surface.map_rgb(color)
-        # read the color to replace from the starting position
-        old_color = pixels[position]
-        # begin a queue with the starting position
-        locations = [position]
-        while len(locations) > 0:
-            # pop a position from the queue
-            x, y = locations.pop()
-            try:
-                if pixels[x, y] != old_color:
-                    # if it isn't the old color then skip the position
-                    continue
-            except IndexError:
-                # outside of the pixel array
-                continue
-            # it is the old color and within the array, replace color
-            pixels[x, y] = new_color
-            # add neighbors to the queue
-            locations.append((x + 1, y))
-            locations.append((x - 1, y))
-            locations.append((x, y + 1))
-            locations.append((x, y - 1))
-        # convert the array back into the surface
-        blit_array(surface, pixels)
-        # delete the array because it implicitly affects locks/unlocks of the surface
-        del pixels
+    def draw_frame_bitmaps(self, rect):
+        _, _, w, h = rect
+        saved = []
+        idle_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(idle_surface, 'idle')
+        saved.append(idle_surface)
+        hover_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(hover_surface, 'hover')
+        saved.append(hover_surface)
+        armed_surface = Surface((w, h)).convert()
+        self.draw_box_bitmaps(armed_surface, 'armed')
+        saved.append(armed_surface)
+        return saved
 
     def get_styled_bitmaps(self, style, text, rect):
         if style == 0:
-            return self.draw_box_pushbutton_bitmaps(text, rect)
+            return self.draw_box_style_bitmaps(text, rect)
         elif style == 1:
-            return self.draw_radio_pushbutton_bitmaps(text)
+            return self.draw_radio_style_bitmaps(text)
         elif style == 2:
-            return self.draw_check_pushbutton_bitmaps(text)
+            return self.draw_check_style_bitmaps(text)
         else:
             raise Exception(f'style index {style} not implemented')
 
-    def draw_box_pushbutton_bitmaps(self, text, rect):
+    def draw_box_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
         text_bitmap = render_text_shadow(text)
@@ -227,13 +210,13 @@ class BitmapFactory:
         # unlock surface
         surface.unlock()
 
-    def draw_radio_pushbutton_bitmaps(self, text):
-        idle_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['light'], colours['dark'])
-        hover_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
-        armed_bitmap = self.draw_radio_pushbutton_bitmap(text, colours['highlight'], colours['dark'])
+    def draw_radio_style_bitmaps(self, text):
+        idle_bitmap = self.draw_radio_style_bitmap(text, colours['light'], colours['dark'])
+        hover_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
+        armed_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
         return idle_bitmap, hover_bitmap, armed_bitmap
 
-    def draw_radio_pushbutton_bitmap(self, text, col1, col2):
+    def draw_radio_style_bitmap(self, text, col1, col2):
         text_bitmap = render_text_shadow(text)
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
@@ -257,13 +240,13 @@ class BitmapFactory:
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
     
-    def draw_check_pushbutton_bitmaps(self, text):
-        idle_bitmap = self.draw_check_pushbutton_bitmap(0, text)
-        hover_bitmap = self.draw_check_pushbutton_bitmap(1, text)
-        armed_bitmap = self.draw_check_pushbutton_bitmap(2, text)
+    def draw_check_style_bitmaps(self, text):
+        idle_bitmap = self.draw_check_style_bitmap(0, text)
+        hover_bitmap = self.draw_check_style_bitmap(1, text)
+        armed_bitmap = self.draw_check_style_bitmap(2, text)
         return idle_bitmap, hover_bitmap, armed_bitmap
 
-    def draw_check_pushbutton_bitmap(self, state, text):
+    def draw_check_style_bitmap(self, state, text):
         text_bitmap = render_text_shadow(text)
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
@@ -324,16 +307,33 @@ class BitmapFactory:
             glyph_set.append(state)
         return glyph_set
 
-    def draw_frame_bitmaps(self, rect):
-        _, _, w, h = rect
-        saved = []
-        idle_surface = Surface((w, h)).convert()
-        self.draw_box_bitmaps(idle_surface, 'idle')
-        saved.append(idle_surface)
-        hover_surface = Surface((w, h)).convert()
-        self.draw_box_bitmaps(hover_surface, 'hover')
-        saved.append(hover_surface)
-        armed_surface = Surface((w, h)).convert()
-        self.draw_box_bitmaps(armed_surface, 'armed')
-        saved.append(armed_surface)
-        return saved
+    def flood_fill(self, surface, position, color):
+        # convert the surface to an array
+        pixels = PixelArray(surface)
+        # convert the fill color to integer representation
+        new_color = surface.map_rgb(color)
+        # read the color to replace from the starting position
+        old_color = pixels[position]
+        # begin a queue with the starting position
+        locations = [position]
+        while len(locations) > 0:
+            # pop a position from the queue
+            x, y = locations.pop()
+            try:
+                if pixels[x, y] != old_color:
+                    # if it isn't the old color then skip the position
+                    continue
+            except IndexError:
+                # outside of the pixel array
+                continue
+            # it is the old color and within the array, replace color
+            pixels[x, y] = new_color
+            # add neighbors to the queue
+            locations.append((x + 1, y))
+            locations.append((x - 1, y))
+            locations.append((x, y + 1))
+            locations.append((x, y - 1))
+        # convert the array back into the surface
+        blit_array(surface, pixels)
+        # delete the array because it implicitly affects locks/unlocks of the surface
+        del pixels
