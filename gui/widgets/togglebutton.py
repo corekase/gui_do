@@ -15,7 +15,7 @@ class ToggleButton(Widget):
         self.raised_text_bitmap, _, _ = factory.get_pushbutton_style_bitmaps(style, raised_text, rect)
         if style != 0:
             self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.raised_text_bitmap.get_rect().height),
-                             self.raised_text_bitmap.get_rect().width, rect.height)
+                             rect.width, rect.height)
 
     def handle_event(self, event, window):
         if event.type == MOUSEBUTTONDOWN:
