@@ -246,14 +246,14 @@ class BitmapFactory:
     def draw_radio_bitmap(self, size, col1, col2):
         radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
         center_point = 200
-        radius = 130
+        radius = 135
         points = []
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
             y1 = int(round(radius * sin(radians(point))))
             points.append((center_point + x1, center_point + y1))
         polygon(radio_bitmap, col1, points, 0)
-        polygon(radio_bitmap, col2, points, 40)
+        polygon(radio_bitmap, col2, points, 30)
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
     
