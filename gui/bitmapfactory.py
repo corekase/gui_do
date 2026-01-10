@@ -1,7 +1,8 @@
 import pygame
+from math import cos, sin, radians
 from pygame.surface import Surface
 from pygame.surfarray import blit_array
-from pygame import Rect, PixelArray
+from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from .command import set_font, set_last_font, render_text_shadow, centre
@@ -75,7 +76,7 @@ class BitmapFactory:
         return title_surface
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
-        surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
+        surface = Surface((size, size), SRCALPHA).convert_alpha()
         panel_size = (size - 6) // 2
         offset = (size - 6) // 4
         base = centre(size, (panel_size + offset)) - 3
@@ -93,18 +94,18 @@ class BitmapFactory:
         text_bitmap = render_text_shadow(text)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        idle_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        idle_surface = Surface((w, h), SRCALPHA).convert_alpha()
         self.draw_button_state(idle_surface, 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
-        hover_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        hover_surface = Surface((w, h), SRCALPHA).convert_alpha()
         self.draw_button_state(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
         text_bitmap = render_text_shadow(text, colours['highlight'])
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
-        armed_surface = Surface((w, h), pygame.SRCALPHA).convert_alpha()
+        armed_surface = Surface((w, h), SRCALPHA).convert_alpha()
         self.draw_button_state(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
@@ -235,20 +236,27 @@ class BitmapFactory:
     def draw_radio_pushbutton_bitmap(self, text, col1, col2):
         text_bitmap = render_text_shadow(text)
         text_height = text_bitmap.get_rect().height
-        radio_bitmap = self.draw_radio_bitmap(int(text_height / 1.8), col1, col2)
+        radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size, text_height), pygame.SRCALPHA).convert_alpha()
+        button_complete = Surface((x_size, text_height), SRCALPHA).convert_alpha()
         button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
         return button_complete
 
-    def draw_radio_bitmap(self, diameter, col1, col2):
-        radio_bitmap = Surface((diameter, diameter), pygame.SRCALPHA).convert_alpha()
-        radius = diameter // 2
-        circle(radio_bitmap, col2, (radius, radius), radius, 1)
-        self.flood_fill(radio_bitmap, (radius, radius), col1)
+    def draw_radio_bitmap(self, size, col1, col2):
+        radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
+        center_point = 200
+        radius = 130
+        points = []
+        for point in range(0, 360, 5):
+            x1 = int(round(radius * cos(radians(point))))
+            y1 = int(round(radius * sin(radians(point))))
+            points.append((center_point + x1, center_point + y1))
+        polygon(radio_bitmap, col1, points, 0)
+        polygon(radio_bitmap, col2, points, 40)
+        radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
-
+    
     def draw_check_pushbutton_bitmaps(self, text):
         idle_bitmap = self.draw_check_pushbutton_bitmap(0, text)
         hover_bitmap = self.draw_check_pushbutton_bitmap(1, text)
@@ -260,7 +268,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
         x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size, text_height), pygame.SRCALPHA).convert_alpha()
+        button_complete = Surface((x_size, text_height), SRCALPHA).convert_alpha()
         button_complete.blit(check_bitmap, (0, centre(text_height, check_bitmap.get_rect().height)))
         button_complete.blit(text_bitmap, (check_bitmap.get_rect().width + 2, 0))
         return button_complete
@@ -269,7 +277,7 @@ class BitmapFactory:
         shrink = size // 2.8
         shrink_size = shrink // 2
         box_bitmap = Surface((size - shrink, size - shrink)).convert()
-        check_bitmap = Surface((size, size), pygame.SRCALPHA).convert_alpha()
+        check_bitmap = Surface((size, size), SRCALPHA).convert_alpha()
         if state == 0:
             self.draw_box_bitmaps(box_bitmap, 'idle')
         elif state == 1:
@@ -278,7 +286,7 @@ class BitmapFactory:
             self.draw_box_bitmaps(box_bitmap, 'armed')
         check_bitmap.blit(box_bitmap, (shrink_size, shrink_size))        
         if state == 1 or state == 2:
-            glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
+            glyph = Surface((400, 400), SRCALPHA).convert_alpha()
             points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
             polygon(glyph, colours['full'], points, 0)
             polygon(glyph, colours['none'], points, 20)
@@ -297,7 +305,7 @@ class BitmapFactory:
             size = rect.height
         # create a polygon for the glyph then draw it in full colour filled
         # then draw the polygon again in none colour 1 pixel outline
-        glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
+        glyph = Surface((400, 400), SRCALPHA).convert_alpha()
         # draw polygon
         points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
         polygon(glyph, colours['full'], points, 0)
