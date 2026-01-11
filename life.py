@@ -38,10 +38,11 @@ class Demo:
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
+        set_grid_properties((30, height- 38), 90, widget_height, 2)
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(ToggleButton('run', Rect(30, height - 38, 100, widget_height), 1, False, 'Stop', 'Start'))
+        self.toggle_life = add(ToggleButton('run', gridded(0, 0), 1, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
+        add(Button('reset', gridded(1, 0), 'Reset'), self.reset)
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
