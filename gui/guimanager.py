@@ -64,9 +64,10 @@ class GuiManager:
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
-    def set_mouse_pos(self, pos):
+    def set_mouse_pos(self, pos, update_physical_coords=True):
         self.mouse_pos = self.lock_area(pos)
-        pygame.mouse.set_pos(self.mouse_pos)
+        if update_physical_coords:
+            pygame.mouse.set_pos(self.mouse_pos)
 
     # if more items needed, item2=None and so on so they're always optional
     def event(self, event_type, item1=None):
@@ -167,15 +168,13 @@ class GuiManager:
             if event.button == 1:
                 self.dragging = False
                 self.dragging_window.set_pos((self.dragging_window.x, self.dragging_window.y))
-                # set the physical mouse position once at the end of the dragging state
                 self.set_mouse_pos((self.dragging_window.x - self.mouse_delta[0], self.dragging_window.y - self.mouse_delta[1]))
                 self.dragging_window = None
                 self.mouse_delta = None
         elif (event.type == MOUSEMOTION) and self.dragging:
             x = self.dragging_window.x + event.rel[0]
             y = self.dragging_window.y + event.rel[1]
-            # don't use self.set_mouse_pos() because calling it too often tanks Linux performance
-            self.mouse_pos = x - self.mouse_delta[0], y - self.mouse_delta[1]
+            self.set_mouse_pos((x - self.mouse_delta[0], y - self.mouse_delta[1]), False)
             self.dragging_window.set_pos((x, y))
         elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
             if event.button == 1:
