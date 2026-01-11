@@ -12,7 +12,7 @@ class Life:
         self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED)
         self.screen_rect = self.screen.get_rect()
         # set window caption
-        pygame.display.set_caption('Demo')
+        pygame.display.set_caption('Conway\'s Game of Life')
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16))
         self.gui = gui_init(self.screen, fonts)
         set_font('normal')
