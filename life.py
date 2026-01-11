@@ -26,7 +26,7 @@ class Life:
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
         self.life = set()
-        set_grid_properties((30, height- 38), 90, widget_height, 2)
+        set_grid_properties((30, height - 38), 90, widget_height, 2)
         self.toggle_life = add(ToggleButton('run', gridded(0, 0), 1, False, 'Stop', 'Start'))
         add(Button('reset', gridded(1, 0), 'Reset'), self.reset)
         set_cursor((1, 1), 'cursor.png')
