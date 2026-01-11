@@ -6,7 +6,7 @@ from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, resto
 from gui import colours, centre, set_grid_properties, gridded
 from gui import GKind, Canvas, CKind, Label, Button, PushButtonGroup, ToggleButton, Scrollbar, Image
 
-class Demo:
+class Life:
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -225,4 +225,4 @@ class Demo:
                         self.cell_size = 24
 
 if __name__ == '__main__':
-    Demo().run()
+    Life().run()
