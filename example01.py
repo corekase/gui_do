@@ -73,7 +73,7 @@ class Demo:
         add(ToggleButton('tb3', gridded(5, 3), 2, False, 'Pushed 3', 'Raised 3'))
         add(ToggleButton('tb4', gridded(5, 4), 3, False, 'Pushed 4', 'Raised 4'))
         # make the scrollbar window
-        self.sb_win = Window('Scrollbar Styles', (50, 346), (320, 362))
+        self.sb_win = Window('Scrollbars', (50, 346), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
         y += 22
