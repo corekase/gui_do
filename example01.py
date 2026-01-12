@@ -28,7 +28,7 @@ class Demo:
         set_font('normal')
         widget_height = 28
         # exit button
-        add(Button('exit', Rect(10, 1042, 70, widget_height), 'Exit'))
+        add(Button('exit', Rect(10, 1042, 70, widget_height), 1, 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
@@ -105,7 +105,7 @@ class Demo:
         # toggle whether or not the simulation is processing
         self.toggle_life = add(ToggleButton('run', Rect(30, height - 38, 100, widget_height), 2, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
+        add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
         # set cursor image
         set_cursor((1, 2), 'cursor.png')
         # reset the state of the simulation
