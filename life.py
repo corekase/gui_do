@@ -18,7 +18,7 @@ class Life:
         set_font('normal')
         set_backdrop('backdrop.jpg')
         widget_height = 28
-        add(Button('exit', Rect(10, 1042, 70, widget_height), 'Exit'))
+        add(Button('exit', Rect(10, 1042, 70, widget_height), 1, 'Exit'))
         width, height = 500, 500
         pos = (centre(self.screen_rect.width, width), centre(self.screen_rect.height, height))
         self.life_win = Window('Conway\'s Game of Life', pos, (width, height))
@@ -27,8 +27,8 @@ class Life:
         self.canvas_rect = self.canvas.get_size()
         self.life = set()
         set_grid_properties((30, height - 38), 90, widget_height, 2)
-        self.toggle_life = add(ToggleButton('run', gridded(0, 0), 1, False, 'Stop', 'Start'))
-        add(Button('reset', gridded(1, 0), 'Reset'), self.reset)
+        self.toggle_life = add(ToggleButton('run', gridded(0, 0), 2, False, 'Stop', 'Start'))
+        add(Button('reset', gridded(1, 0), 1, 'Reset'), self.reset)
         set_cursor((1, 2), 'cursor.png')
         self.reset()
         self.dragging = False
