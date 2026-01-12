@@ -16,9 +16,7 @@ class Template:
         # set window caption
         pygame.display.set_caption('Template')
         # create a gui manager
-        fonts = [['titlebar', 'Wiltype.ttf', 16],
-                 ['normal', 'Gimbot.ttf', 16],
-                 ['gui_do', 'Gimbot.ttf', 72]]
+        fonts = (('titlebar', 'Ubuntu-B.ttf', 16), ('normal', 'Gimbot.ttf', 16), ('gui_do', 'Gimbot.ttf', 72))
         self.gui = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
         set_backdrop('backdrop.jpg')
@@ -27,9 +25,9 @@ class Template:
         add(Label((50, 50),'gui_do'))
         set_font('normal')
         # exit button, uses a callback function
-        add(Button('exit', Rect(10, 1040, 70, 30), 'Exit'))
+        add(Button('exit', Rect(10, 1040, 70, 30), 1, 'Exit'))
         # set cursor image
-        set_cursor((1, 1), 'cursor.png')
+        set_cursor((1, 2), 'cursor.png')
         # set running flag
         self.running = True
 
