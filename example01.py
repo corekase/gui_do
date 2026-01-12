@@ -99,7 +99,7 @@ class Demo:
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 'Reset'), self.reset)
         # set cursor image
-        set_cursor((1, 1), 'cursor.png')
+        set_cursor((1, 2), 'cursor.png')
         # reset the state of the simulation
         self.reset()
         # whether or not dragging with the right-mouse button over the canvas is active
