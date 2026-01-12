@@ -16,7 +16,7 @@ class Button(Widget):
         self.timer = None
         if not skip_factory:
             factory = BitmapFactory()
-            self.idle, self.hover, self.armed = factory.draw_button_bitmaps(text, rect)
+            self.idle, self.hover, self.armed = factory.get_styled_bitmaps(1, text, rect)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.button_callback = button_callback

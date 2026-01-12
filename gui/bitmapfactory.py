@@ -88,50 +88,6 @@ class BitmapFactory:
         rect(surface, colours['none'], panel2, 1)
         return surface
 
-    def draw_button_bitmaps(self, text, rect):
-        _, _, w, h = rect
-        saved = []
-        text_bitmap = render_text_shadow(text)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
-        idle_surface = Surface((w, h), SRCALPHA).convert_alpha()
-        self.draw_button_state(idle_surface, 'idle')
-        idle_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(idle_surface)
-        hover_surface = Surface((w, h), SRCALPHA).convert_alpha()
-        self.draw_button_state(hover_surface, 'hover')
-        hover_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(hover_surface)
-        text_bitmap = render_text_shadow(text, colours['highlight'])
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
-        armed_surface = Surface((w, h), SRCALPHA).convert_alpha()
-        self.draw_button_state(armed_surface, 'armed')
-        armed_surface.blit(text_bitmap, (text_x, text_y))
-        saved.append(armed_surface)
-        return saved
-
-    def draw_button_state(self, surface, state):
-        if state == 'idle':
-            self.draw_round_frame_bitmap(surface, colours['light'], colours['medium'])
-        elif state == 'hover':
-            self.draw_round_frame_bitmap(surface, colours['light'], colours['light'])
-        elif state == 'armed':
-            self.draw_round_frame_bitmap(surface, colours['none'], colours['dark'])
-
-    def draw_round_frame_bitmap(self, surface, border, background):
-        _, _, w, h = surface.get_rect()
-        radius = h // 4
-        circle(surface, border, (radius, radius), radius, 1, draw_top_left=True)
-        circle(surface, border, (w - radius, radius), radius, 1, draw_top_right=True)
-        line(surface, border, (radius, 0), (w - radius, 0), 1)
-        circle(surface, border, (radius, h - radius), radius, 1, draw_bottom_left=True)
-        circle(surface, border, (w - radius, h - radius), radius, 1, draw_bottom_right=True)
-        line(surface, border, (radius, h - 1), (w - radius, h - 1), 1)
-        line(surface, border, (0, radius), (0, h - radius), 1)
-        line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
-        self.flood_fill(surface, (w // 2, h // 2), background)
-
     def draw_frame_bitmaps(self, rect):
         _, _, w, h = rect
         saved = []
@@ -150,8 +106,10 @@ class BitmapFactory:
         if style == 0:
             return self.draw_box_style_bitmaps(text, rect)
         elif style == 1:
-            return self.draw_radio_style_bitmaps(text)
+            return self.draw_rounded_style_bitmaps(text, rect)
         elif style == 2:
+            return self.draw_radio_style_bitmaps(text)
+        elif style == 3:
             return self.draw_check_style_bitmaps(text)
         else:
             raise Exception(f'style index {style} not implemented')
@@ -276,6 +234,50 @@ class BitmapFactory:
             glyph = smoothscale(glyph, (size, size))
             check_bitmap.blit(glyph, (0, 0))
         return check_bitmap
+
+    def draw_rounded_style_bitmaps(self, text, rect):
+        _, _, w, h = rect
+        saved = []
+        text_bitmap = render_text_shadow(text)
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        idle_surface = Surface((w, h), SRCALPHA).convert_alpha()
+        self.draw_rounded_state(idle_surface, 'idle')
+        idle_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(idle_surface)
+        hover_surface = Surface((w, h), SRCALPHA).convert_alpha()
+        self.draw_rounded_state(hover_surface, 'hover')
+        hover_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(hover_surface)
+        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        armed_surface = Surface((w, h), SRCALPHA).convert_alpha()
+        self.draw_rounded_state(armed_surface, 'armed')
+        armed_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(armed_surface)
+        return saved
+
+    def draw_rounded_state(self, surface, state):
+        if state == 'idle':
+            self.draw_round_style_bitmap(surface, colours['light'], colours['medium'])
+        elif state == 'hover':
+            self.draw_round_style_bitmap(surface, colours['light'], colours['light'])
+        elif state == 'armed':
+            self.draw_round_style_bitmap(surface, colours['none'], colours['dark'])
+
+    def draw_round_style_bitmap(self, surface, border, background):
+        _, _, w, h = surface.get_rect()
+        radius = h // 4
+        circle(surface, border, (radius, radius), radius, 1, draw_top_left=True)
+        circle(surface, border, (w - radius, radius), radius, 1, draw_top_right=True)
+        line(surface, border, (radius, 0), (w - radius, 0), 1)
+        circle(surface, border, (radius, h - radius), radius, 1, draw_bottom_left=True)
+        circle(surface, border, (w - radius, h - radius), radius, 1, draw_bottom_right=True)
+        line(surface, border, (radius, h - 1), (w - radius, h - 1), 1)
+        line(surface, border, (0, radius), (0, h - radius), 1)
+        line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
+        self.flood_fill(surface, (w // 2, h // 2), background)
 
     def draw_arrow_state_bitmaps(self, rect, direction):
         # draw idle, hover, and armed bitmaps for the passed direction
