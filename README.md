@@ -8,7 +8,7 @@ Both the library source code and the examples are well-commented, reading them s
 
 In the folder: /gui/extra is a file called "gui_do_template.py".  That file is boiler-plate, it's all the setup code needed to get going.  Whenever you begin a new program, copy that template and use it as a starting point.
 
-The only required dependency for gui_do is pygame.
+The only required dependencies for gui_do are pygame and numpy.
 
 As the holder of the copyright, with contributions from others and their understandings of this too, I and we grant an additional right.  If you fork or otherwise begin to maintain an independent copy of the gui_do source code then you may relicense your fork or independent copy on any later version of the LGPL license only.  You may upgrade the LGPL license in your own efforts if you should desire.
 
