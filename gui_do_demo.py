@@ -197,6 +197,8 @@ class Demo:
                 if event.widget_id == 'exit':
                     # exit button was clicked
                     self.running = False
+            elif event.type == GKind.Group:
+                print(event.group_name, event.group_item)
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     # escape key pressed

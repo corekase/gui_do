@@ -72,8 +72,8 @@ class GuiManager:
         if update_physical_coords:
             pygame.mouse.set_pos(self.mouse_pos)
 
-    # if more items needed, item2=None and so on so they're always optional
-    def event(self, event_type, item1=None):
+    # if more items needed, item3=None and so on so they're always optional
+    def event(self, event_type, item1=None, item2=None):
         class GuiEvent:
             # an event object to be returned which includes pygame event information and gui_do information
             def __init__(self):
@@ -86,6 +86,9 @@ class GuiManager:
                 self.button = None
                 # gui
                 self.widget_id = None
+                # button group
+                self.group_name = None
+                self.group_item = None
         # construct an event to be returned to the client
         gui_event = GuiEvent()
         # set the type of the event
@@ -95,6 +98,9 @@ class GuiManager:
             return gui_event
         elif event_type == GKind.Widget:
             gui_event.widget_id = item1
+        elif event_type == GKind.Group:
+            gui_event.group_name = item1
+            gui_event.group_item = item2
         elif event_type == GKind.KeyUp:
             gui_event.key = item1
         elif event_type == GKind.KeyDown:
@@ -209,6 +215,8 @@ class GuiManager:
                                 if widget.get_visible():
                                     collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
+                                        if widget.GType == GType.ButtonGroup:
+                                            return self.event(GKind.Group, widget.read_armed(), widget.read_group())
                                         return self.event(GKind.Widget, widget.id)
                                     if collision:
                                         widget_consumed = True
