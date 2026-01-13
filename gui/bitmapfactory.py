@@ -185,12 +185,12 @@ class BitmapFactory:
         y_offset = centre(rect.height, text_height)
         button_complete.blit(radio_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, y_offset))
-        return button_complete, Rect(rect.x, rect.y + y_offset, text_height + text_width + 2, text_height)
+        return button_complete, Rect(rect.x + 2, rect.y + y_offset, text_height + text_width + 4, text_height)
 
     def draw_radio_bitmap(self, size, col1, col2):
         radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
         centre_point = 200
-        radius = 135
+        radius = 128
         points = []
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
@@ -212,16 +212,16 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
         y_offset = centre(rect.height, text_height)
-        x_size = text_height + text_bitmap.get_rect().width + 2
+        x_size = text_height + text_bitmap.get_rect().width + 4
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
         button_complete.blit(check_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (text_height + 2, y_offset))
-        return button_complete, Rect(rect.x, rect.y + y_offset, x_size, text_height)
+        return button_complete, Rect(rect.x + 2, rect.y + y_offset, x_size, text_height)
 
     def draw_check_bitmap(self, state, size):
-        shrink = size / 3.0
-        shrink_size, shrink = int(shrink / 2), int(shrink)
-        box_bitmap = Surface((size - shrink, size - shrink)).convert()
+        shrink = size * 0.65
+        offset = int(centre(size, shrink))
+        box_bitmap = Surface((int(shrink), int(shrink))).convert()
         check_bitmap = Surface((size, size), SRCALPHA).convert_alpha()
         if state == 0:
             self.draw_box_bitmaps(box_bitmap, 'idle')
@@ -229,7 +229,7 @@ class BitmapFactory:
             self.draw_box_bitmaps(box_bitmap, 'hover')
         elif state == 2:
             self.draw_box_bitmaps(box_bitmap, 'armed')
-        check_bitmap.blit(box_bitmap, (shrink_size, shrink_size))        
+        check_bitmap.blit(box_bitmap, (offset, offset))        
         if state == 1 or state == 2:
             glyph = Surface((400, 400), SRCALPHA).convert_alpha()
             points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
