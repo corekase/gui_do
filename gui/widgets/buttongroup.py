@@ -54,9 +54,13 @@ class ButtonGroup(Widget):
         # make this object the currently armed one
         ButtonGroup.selections[self.group] = self
 
-    def read(self):
+    def read_armed(self):
         # return the id of the armed pushbutton
         return ButtonGroup.selections[self.group].id
+    
+    def read_group(self):
+        # return the group id
+        return self.group
 
     def leave(self):
         # if hover then idle when left
