@@ -108,8 +108,10 @@ class BitmapFactory:
         elif style == 1:
             return self.draw_rounded_style_bitmaps(text, rect)
         elif style == 2:
-            return self.draw_radio_style_bitmaps(text, rect)
+            return self.draw_angle_style_bitmaps(text, rect)
         elif style == 3:
+            return self.draw_radio_style_bitmaps(text, rect)
+        elif style == 4:
             return self.draw_check_style_bitmaps(text, rect)
         else:
             raise Exception(f'style index {style} not implemented')
@@ -280,6 +282,44 @@ class BitmapFactory:
         line(surface, border, (0, radius), (0, h - radius), 1)
         line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
         self.flood_fill(surface, (w // 2, h // 2), background)
+
+    def draw_angle_style_bitmaps(self, text, rect):
+        _, _, w, h = rect
+        saved = []
+        text_bitmap = render_text_shadow(text)
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        idle_surface = self.draw_angle_state((w, h), 'idle')
+        idle_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(idle_surface)
+        hover_surface = self.draw_angle_state((w, h), 'hover')
+        hover_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(hover_surface)
+        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_x = centre(w, text_bitmap.get_rect().width)
+        text_y = centre(h, text_bitmap.get_rect().height)
+        armed_surface = self.draw_angle_state((w, h), 'armed')
+        armed_surface.blit(text_bitmap, (text_x, text_y))
+        saved.append(armed_surface)
+        return saved, rect
+
+    def draw_angle_state(self, size, state):
+        if state == 'idle':
+            return self.draw_angle_style_bitmap(size, colours['light'], colours['medium'])
+        elif state == 'hover':
+            return self.draw_angle_style_bitmap(size, colours['light'], colours['light'])
+        elif state == 'armed':
+            return self.draw_angle_style_bitmap(size, colours['none'], colours['dark'])
+
+    def draw_angle_style_bitmap(self, size, border, background):
+        w_surface, h_surface = size
+        angle_bitmap = Surface((w_surface * 10, h_surface * 10), SRCALPHA).convert_alpha()        
+        _, _, w, h = angle_bitmap.get_rect()
+        dist = h // 3
+        points = ((dist, 0), (w - dist, 0), (w - 1, dist), (w - 1, h - dist - 1), (w - dist, h - 1), (dist, h - 1), (0, h - dist), (0, dist), (dist, 0))
+        polygon(angle_bitmap, background, points, 0)
+        polygon(angle_bitmap, border, points, dist // 4)
+        return smoothscale(angle_bitmap, (w_surface, h_surface))
 
     def draw_arrow_state_bitmaps(self, rect, direction):
         # draw idle, hover, and armed bitmaps for the passed direction
