@@ -178,14 +178,14 @@ class BitmapFactory:
 
     def draw_radio_style_bitmap(self, rect, text, col1, col2):
         text_bitmap = render_text_shadow(text)
-        text_width = text_bitmap.get_rect().width
-        text_height = text_bitmap.get_rect().height
+        _, _, text_width, text_height = text_bitmap.get_rect()
+        gutter = int(text_height * 0.1)
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
         y_offset = centre(rect.height, text_height)
         button_complete.blit(radio_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, y_offset))
-        return button_complete, Rect(rect.x + 2, rect.y + y_offset, text_height + text_width + 2, text_height)
+        return button_complete, Rect(rect.x + gutter, rect.y + y_offset, text_height + text_width + gutter, text_height)
 
     def draw_radio_bitmap(self, size, col1, col2):
         radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
@@ -209,14 +209,15 @@ class BitmapFactory:
 
     def draw_check_style_bitmap(self, rect, state, text):
         text_bitmap = render_text_shadow(text)
-        text_height = text_bitmap.get_rect().height
+        _, _, text_width, text_height = text_bitmap.get_rect()
         check_bitmap = self.draw_check_bitmap(state, text_height)
         y_offset = centre(rect.height, text_height)
-        x_size = text_height + text_bitmap.get_rect().width + 2
+        gutter = int(text_height * 0.1)
+        x_size = text_height + text_width
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
         button_complete.blit(check_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (text_height + 2, y_offset))
-        return button_complete, Rect(rect.x + 2, rect.y + y_offset, x_size, text_height)
+        return button_complete, Rect(rect.x + gutter, rect.y + y_offset, x_size + gutter, text_height)
 
     def draw_check_bitmap(self, state, size):
         shrink = size * 0.65
