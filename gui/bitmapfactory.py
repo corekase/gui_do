@@ -108,9 +108,9 @@ class BitmapFactory:
         elif style == 1:
             return self.draw_rounded_style_bitmaps(text, rect)
         elif style == 2:
-            return self.draw_radio_style_bitmaps(text)
+            return self.draw_radio_style_bitmaps(text, rect)
         elif style == 3:
-            return self.draw_check_style_bitmaps(text)
+            return self.draw_check_style_bitmaps(text, rect)
         else:
             raise Exception(f'style index {style} not implemented')
 
@@ -168,11 +168,11 @@ class BitmapFactory:
         # unlock surface
         surface.unlock()
 
-    def draw_radio_style_bitmaps(self, text):
+    def draw_radio_style_bitmaps(self, text, rect):
         idle_bitmap = self.draw_radio_style_bitmap(text, colours['light'], colours['dark'])
         hover_bitmap = self.draw_radio_style_bitmap(text, colours['full'], colours['none'])
         armed_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
-        return idle_bitmap, hover_bitmap, armed_bitmap
+        return (idle_bitmap, hover_bitmap, armed_bitmap)
 
     def draw_radio_style_bitmap(self, text, col1, col2):
         text_bitmap = render_text_shadow(text)
@@ -198,11 +198,11 @@ class BitmapFactory:
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
     
-    def draw_check_style_bitmaps(self, text):
+    def draw_check_style_bitmaps(self, text, rect):
         idle_bitmap = self.draw_check_style_bitmap(0, text)
         hover_bitmap = self.draw_check_style_bitmap(1, text)
         armed_bitmap = self.draw_check_style_bitmap(2, text)
-        return idle_bitmap, hover_bitmap, armed_bitmap
+        return (idle_bitmap, hover_bitmap, armed_bitmap)
 
     def draw_check_style_bitmap(self, state, text):
         text_bitmap = render_text_shadow(text)
