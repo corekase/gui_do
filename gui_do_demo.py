@@ -34,13 +34,13 @@ class Demo:
         # control whether the background circles are drawn
         self.circles_toggle = add(Toggle('circles', gridded(0, 0), 0, True, 'Circles'))
         # control whether the pushboxes window is visible
-        self.push_box_toggle = add(Toggle('push_window', gridded(1, 0), 0, True, 'Buttons'))
+        self.buttons_toggle = add(Toggle('buttons_window', gridded(1, 0), 0, True, 'Buttons'))
         # control whether the scrollbar window is visible
-        self.push_scrollbars_toggle = add(Toggle('push_scroll', gridded(2, 0), 0, True, 'Scrollbars'))
+        self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), 0, True, 'Scrollbars'))
         # control whether the life window is visible
-        self.push_life_toggle = add(Toggle('push_life', gridded(3, 0), 0, True, 'Life'))
+        self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, True, 'Life'))
         # make the pushboxes and togglebuttons window
-        self.pb_win = Window('Group Buttons, Buttons, and Toggles', (50, 150), (998, 200))
+        self.group_button_win = Window('Group Buttons, Buttons, and Toggles', (50, 150), (998, 200))
         set_grid_properties((10, 10), 120, widget_height, 2)
         add(Label(gridded(0, 0), 'G1 Boxed', True))
         add(Label(gridded(1, 0), 'G2 Rounded', True))
@@ -91,7 +91,7 @@ class Demo:
         add(Toggle('t4', gridded(7, 4), 3, False, 'Push 4', 'Raise 4'))
         add(Toggle('t5', gridded(7, 5), 4, False, 'Push 5', 'Raise 5'))
         # make the scrollbar window
-        self.sb_win = Window('Scrollbars', (50, 380), (320, 362))
+        self.scrollbar_win = Window('Scrollbars', (50, 380), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
         y += 22
@@ -166,9 +166,9 @@ class Demo:
             if self.circles_toggle.read():
                 self.update_circles(self.size)
             # update the visible windows
-            self.pb_win.set_visible(self.push_box_toggle.read())
-            self.life_win.set_visible(self.push_life_toggle.read())
-            self.sb_win.set_visible(self.push_scrollbars_toggle.read())
+            self.group_button_win.set_visible(self.buttons_toggle.read())
+            self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
+            self.life_win.set_visible(self.life_toggle.read())
             # handle events
             self.handle_events()
             # if the life window is visible then handle it
