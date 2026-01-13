@@ -13,7 +13,7 @@ class ToggleButton(Widget):
         factory = BitmapFactory()
         _, _, self.pressed_text_bitmap = factory.get_styled_bitmaps(style, pressed_text, rect)
         self.raised_text_bitmap, _, _ = factory.get_styled_bitmaps(style, raised_text, rect)
-        if style != 0:
+        if style == 2 or style == 3:
             self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.raised_text_bitmap.get_rect().height),
                              rect.width, rect.height)
 
