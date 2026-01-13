@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import colours, centre, set_grid_properties, gridded
-from gui import GKind, Canvas, CKind, Label, Button, PushButtonGroup, ToggleButton, Scrollbar, Image
+from gui import GKind, Canvas, CKind, Label, Button, GroupButton, Toggle, Scrollbar, Image
 
 class Life:
     def __init__(self):
@@ -27,7 +27,7 @@ class Life:
         self.canvas_rect = self.canvas.get_size()
         self.life = set()
         set_grid_properties((30, height - 38), 90, widget_height, 2)
-        self.toggle_life = add(ToggleButton('run', gridded(0, 0), 2, False, 'Stop', 'Start'))
+        self.toggle_life = add(Toggle('run', gridded(0, 0), 2, False, 'Stop', 'Start'))
         add(Button('reset', gridded(1, 0), 1, 'Reset'), self.reset)
         set_cursor((1, 1), 'cursor.png')
         self.reset()

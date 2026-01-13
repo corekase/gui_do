@@ -12,9 +12,9 @@ from .widgets.widget import colours
 from .widgets.frame import Frame, FrState
 from .widgets.label import Label
 from .widgets.button import Button
-from .widgets.pushbuttongroup import PushButtonGroup
+from .widgets.groupbutton import GroupButton
 from .widgets.image import Image
-from .widgets.togglebutton import ToggleButton
+from .widgets.toggle import Toggle
 from .widgets.canvas import Canvas, CKind
 from .widgets.scrollbar import Scrollbar
 # fix font graphical scaling issues with Windows

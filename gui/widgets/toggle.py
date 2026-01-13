@@ -7,7 +7,7 @@ from enum import Enum
 
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
 
-class ToggleButton(Widget):
+class Toggle(Widget):
     def __init__(self, id, rect, style, pushed, pressed_text, raised_text=None):
         super().__init__(id, rect)
         self.pushed = pushed
