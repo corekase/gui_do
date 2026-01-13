@@ -33,7 +33,7 @@ class WindowBase:
         self.set_pos(pos)
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.titlebar_size)
         self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
-        self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size, colours['full'], colours['medium'])
+        self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
         self.visible = True
 
@@ -44,15 +44,11 @@ class WindowBase:
 
     def draw_title_bar_inactive(self):
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
-        lower_widget = self.get_widget_rect()
-        lower_widget.y += centre(self.titlebar_size, lower_widget.height) + 2
-        self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
+        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_title_bar_active(self):
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
-        lower_widget = self.get_widget_rect()
-        lower_widget.y += centre(self.titlebar_size, lower_widget.height) + 2
-        self.gui.surface.blit(self.window_widget_lower_bitmap, lower_widget)
+        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_window(self):
         # called when the gui manager is entering a window to process its widgets
@@ -63,11 +59,11 @@ class WindowBase:
 
     def get_window_rect(self):
         # total rect of the window including titlebar and surface
-        return Rect(self.x, self.y - self.titlebar_size, self.width, self.height + self.titlebar_size)
+        return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
     def get_widget_rect(self):
         x, y, w, h = self.window_widget_lower_bitmap.get_rect()
-        return Rect(self.x + self.width - self.titlebar_size + 1, self.y - self.titlebar_size + 1, w, h)
+        return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
 
     def set_visible(self, visible):
         self.visible = visible

@@ -77,11 +77,14 @@ class BitmapFactory:
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
         surface = Surface((size, size), SRCALPHA).convert_alpha()
-        panel_size = (size - 6) // 2
-        offset = (size - 6) // 4
-        base = centre(size, (panel_size + offset)) - 3
-        panel1 = Rect(base + 3, base, panel_size, panel_size)
-        panel2 = Rect(base + panel_size - offset + 3, base + panel_size - offset, panel_size, panel_size)
+        self.draw_box_bitmaps(surface, 'idle')
+        gutter = int(size * 0.1) // 2
+        panel_size = int(size * 0.45)
+        offset = int(size * 0.2)
+        offsetb = offset // 2
+        base = centre(size, (panel_size + offset))
+        panel1 = Rect(base, base - gutter, panel_size + offsetb, panel_size + gutter + offsetb)
+        panel2 = Rect(base + offset, base + gutter + offsetb, panel_size + offsetb, panel_size + gutter + offsetb)
         rect(surface, col1, panel1)
         rect(surface, colours['none'], panel1, 1)
         rect(surface, col2, panel2)
