@@ -1,6 +1,7 @@
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
+from ..guimanager import GType
 from ..guimanager import GuiManager
 from ..command import convert_to_window, convert_to_screen, add
 from .frame import Frame, FrState
@@ -63,6 +64,7 @@ class Scrollbar(Frame):
             self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
         # initialize common widget values
         super().__init__(id, scroll_area_rect)
+        self.GType = GType.Scrollbar
         # get a reference to the gui
         self.gui = GuiManager()
         # maximum area that can be filled

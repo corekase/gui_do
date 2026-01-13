@@ -9,12 +9,14 @@
 # To-do: the arrowbox can have a repeating signal or callback by tracking time in it, and when the interval
 # is reached then signal the widget
 from ..bitmapfactory import BitmapFactory
+from ..guimanager import GType
 from .button import Button
 
 class ArrowBox(Button):
     def __init__(self, id, rect, direction, callback=None):
         # initialize common widget values, skipping the button factory with the True
         super().__init__(id, rect, 1, None, callback, True)
+        self.GType = GType.Arrowbox
         factory = BitmapFactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)
 

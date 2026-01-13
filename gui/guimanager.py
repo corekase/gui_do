@@ -6,7 +6,10 @@ from .command import copy_graphic_area, convert_to_window
 from .timers import Timers
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
-                       'MouseButtonUp', 'MouseMotion', 'Widget'])
+                       'MouseButtonUp', 'MouseMotion', 'Widget', 'Group'])
+
+GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
+                       'Label', 'Scrollbar', 'Slider', 'Toggle'])
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager

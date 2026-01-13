@@ -1,6 +1,7 @@
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from ..guimanager import GType
 from .widget import Widget
 from .frame import Frame, FrState
 from ..command import copy_graphic_area, convert_to_window, set_backdrop
@@ -11,6 +12,7 @@ CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseBut
 class Canvas(Widget):
     def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
         super().__init__(id, rect)
+        self.GType = GType.Canvas
         # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()
         # if there is no backdrop make a frame as one otherwise load the backdrop

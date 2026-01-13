@@ -1,5 +1,6 @@
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
+from ..guimanager import GType
 from ..bitmapfactory import BitmapFactory
 from ..command import centre
 from .widget import Widget
@@ -14,6 +15,7 @@ class ButtonGroup(Widget):
     selections = {}
     def __init__(self, id, rect, style, text, group):
         super().__init__(id, rect)
+        self.GType = GType.ButtonGroup
         self.state = State.Idle
         factory = BitmapFactory()
         self.group = group

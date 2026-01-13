@@ -1,3 +1,4 @@
+from ..guimanager import GType
 from ..command import render_text, render_text_shadow, centre
 from .widget import Widget
 
@@ -14,6 +15,7 @@ class Label(Widget):
             y = position[1] + centre(position[3], self.rect.height)
             self.rect.x, self.rect.y = x, y
         super().__init__('label', self.rect)
+        self.GType = GType.Label
         self.auto_restore_pristine = automatic_pristine
 
     def set_label(self, text):

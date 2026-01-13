@@ -1,5 +1,6 @@
 from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
+from ..guimanager import GType
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
 from ..command import centre
@@ -10,6 +11,7 @@ State = Enum('State', ['Idle', 'Hover', 'Armed'])
 class Toggle(Widget):
     def __init__(self, id, rect, style, pushed, pressed_text, raised_text=None):
         super().__init__(id, rect)
+        self.GType = GType.Toggle
         self.pushed = pushed
         self.state = State.Idle
         if raised_text == None:
