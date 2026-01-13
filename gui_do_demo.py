@@ -40,7 +40,8 @@ class Demo:
         # control whether the life window is visible
         self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, True, 'Life'))
         # make the pushboxes and togglebuttons window
-        self.button_group_win = Window('Button Groups, Buttons, and Toggles', (50, 150), (998, 200))
+        x_pos, y_pos = 50, 150
+        self.button_group_win = Window('Button Groups, Buttons, and Toggles', (x_pos, y_pos), (998, 200))
         set_grid_properties((10, 10), 120, widget_height, 2)
         add(Label(gridded(0, 0), 'G1 Boxed', True))
         add(Label(gridded(1, 0), 'G2 Rounded', True))
@@ -91,7 +92,8 @@ class Demo:
         add(Toggle('t4', gridded(7, 4), 3, False, 'Push 4', 'Raise 4'))
         add(Toggle('t5', gridded(7, 5), 4, False, 'Push 5', 'Raise 5'))
         # make the scrollbar window
-        self.scrollbar_win = Window('Scrollbars', (50, 380), (320, 362))
+        y_pos += 230
+        self.scrollbar_win = Window('Scrollbars', (x_pos, y_pos), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
         y += 22
@@ -113,8 +115,9 @@ class Demo:
         add(Label((x + 30, y + 215), 'Scrollbars!', True))
         set_font('normal')
         # make the Conway's Game of Life window
+        x_pos += 327
         width, height = 500, 500
-        self.life_win = Window('Conway\'s Game of Life', (375, 380), (width, height))
+        self.life_win = Window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
