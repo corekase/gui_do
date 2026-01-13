@@ -7,6 +7,8 @@ colours = {'full': (255, 255, 255), 'light': (0, 200, 200), 'medium': (0, 150, 1
 # widget is the base class all gui widgets inherit from
 class Widget:
     def __init__(self, id, rect):
+        # widget type
+        self.GType = None
         # gui for the widget
         self.gui = None
         # surface to draw the widget on
