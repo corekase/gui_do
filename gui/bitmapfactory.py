@@ -219,8 +219,8 @@ class BitmapFactory:
         return button_complete, Rect(rect.x, rect.y + y_offset, x_size, text_height)
 
     def draw_check_bitmap(self, state, size):
-        shrink = size // 2.8
-        shrink_size = shrink // 2
+        shrink = size / 3.0
+        shrink_size, shrink = int(shrink / 2), int(shrink)
         box_bitmap = Surface((size - shrink, size - shrink)).convert()
         check_bitmap = Surface((size, size), SRCALPHA).convert_alpha()
         if state == 0:
