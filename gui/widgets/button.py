@@ -19,9 +19,11 @@ class Button(Widget):
         if not skip_factory:
             factory = BitmapFactory()
             self.idle, self.hover, self.armed = factory.get_styled_bitmaps(style, text, rect)
-            if style != 0:
-                self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.idle.get_rect().height),
-                                rect.width, rect.height)
+            if style == 2 or style == 3:
+                containing_rect = self.idle.get_rect()
+                y_offset = centre(self.rect.height, containing_rect.height)
+                self.rect = Rect(self.rect.x, self.rect.y + y_offset,
+                                containing_rect.width, containing_rect.height)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.button_callback = button_callback
