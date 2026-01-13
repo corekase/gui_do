@@ -17,7 +17,7 @@ class Life:
         self.gui = gui_init(self.screen, fonts)
         set_font('normal')
         set_backdrop('backdrop.jpg')
-        widget_height = 28
+        widget_height = 30
         add(Button('exit', Rect(10, 1042, 70, widget_height), 1, 'Exit'))
         width, height = 500, 500
         pos = (centre(self.screen_rect.width, width), centre(self.screen_rect.height, height))
