@@ -27,7 +27,7 @@ class Template:
         # exit button, uses a callback function
         add(Button('exit', Rect(10, 1040, 70, 30), 1, 'Exit'))
         # set cursor image
-        set_cursor((1, 2), 'cursor.png')
+        set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
 
