@@ -170,7 +170,7 @@ class BitmapFactory:
 
     def draw_radio_style_bitmaps(self, text):
         idle_bitmap = self.draw_radio_style_bitmap(text, colours['light'], colours['dark'])
-        hover_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
+        hover_bitmap = self.draw_radio_style_bitmap(text, colours['full'], colours['none'])
         armed_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
         return idle_bitmap, hover_bitmap, armed_bitmap
 

@@ -1,7 +1,9 @@
+from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
 from ..timers import Timers
+from ..command import centre
 from .widget import Widget
 from enum import Enum
 
@@ -17,6 +19,9 @@ class Button(Widget):
         if not skip_factory:
             factory = BitmapFactory()
             self.idle, self.hover, self.armed = factory.get_styled_bitmaps(style, text, rect)
+            if style != 0:
+                self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.idle.get_rect().height),
+                                rect.width, rect.height)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.button_callback = button_callback
