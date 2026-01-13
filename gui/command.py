@@ -188,18 +188,22 @@ position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gr
 # setup variables for gridded
 def set_grid_properties(anchor, width, height, spacing):
     global position_gridded, x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded
+    global coords_xy
     position_gridded = anchor
     x_size_pixels_gridded = width
     y_size_pixels_gridded = height
     space_size_gridded = spacing
 
 # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
-def gridded(x, y):
+def gridded(x, y, coords_xy=False):
     base_x, base_y = position_gridded
     # (size per unit) + (space per unit) + (1 per unit, or another number)
     x_location = (x * x_size_pixels_gridded) + (x * space_size_gridded) + (x * 1)
     y_location = (y * y_size_pixels_gridded) + (y * space_size_gridded) + (y * 1)
-    return Rect(base_x + x_location, base_y + y_location, x_size_pixels_gridded, y_size_pixels_gridded)
+    if coords_xy:
+        return (base_x + (x * x_size_pixels_gridded), base_y + (y * y_size_pixels_gridded))
+    else:
+        return Rect(base_x + x_location, base_y + y_location, x_size_pixels_gridded, y_size_pixels_gridded)
 
 # copy graphic helper
 def copy_graphic_area(surface, rect, flags = 0):

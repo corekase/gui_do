@@ -41,7 +41,7 @@ class Demo:
         self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, False, 'Life'))
         # make the pushboxes and togglebuttons window
         x_pos, y_pos = 50, 150
-        self.button_group_win = Window('Button Groups, Buttons, and Toggles', (x_pos, y_pos), (998, 200))
+        self.button_group_win = Window('Button Groups, Buttons, and Toggles', (x_pos, y_pos), (998, 228))
         set_grid_properties((10, 10), 120, widget_height, 2)
         add(Label(gridded(0, 0), 'G1 Boxed', True))
         add(Label(gridded(1, 0), 'G2 Rounded', True))
@@ -51,32 +51,32 @@ class Demo:
         add(Label(gridded(5, 0), 'G6 Mixed', True))
         add(Label(gridded(6, 0), 'Buttons', True))
         add(Label(gridded(7, 0), 'Toggles', True))
-        add(ButtonGroup('bg1b01', gridded(0, 1), 0, 'Box 1', 'bg1'))
+        self.lbg1 = add(ButtonGroup('bg1b01', gridded(0, 1), 0, 'Box 1', 'bg1'))
         add(ButtonGroup('bg1b02', gridded(0, 2), 0, 'Box 2', 'bg1'))
         add(ButtonGroup('bg1b03', gridded(0, 3), 0, 'Box 3', 'bg1'))
         add(ButtonGroup('bg1b04', gridded(0, 4), 0, 'Box 4', 'bg1'))
         add(ButtonGroup('bg1b05', gridded(0, 5), 0, 'Box 5', 'bg1'))
-        add(ButtonGroup('bg2b01', gridded(1, 1), 1, 'Round 1', 'bg2'))
+        self.lbg2 = add(ButtonGroup('bg2b01', gridded(1, 1), 1, 'Round 1', 'bg2'))
         add(ButtonGroup('bg2b02', gridded(1, 2), 1, 'Round 2', 'bg2'))
         add(ButtonGroup('bg2b03', gridded(1, 3), 1, 'Round 3', 'bg2'))
         add(ButtonGroup('bg2b04', gridded(1, 4), 1, 'Round 4', 'bg2'))
         add(ButtonGroup('bg2b05', gridded(1, 5), 1, 'Round 5', 'bg2'))
-        add(ButtonGroup('bg3b01', gridded(2, 1), 2, 'Angle 1', 'bg3'))
+        self.lbg3 = add(ButtonGroup('bg3b01', gridded(2, 1), 2, 'Angle 1', 'bg3'))
         add(ButtonGroup('bg3b02', gridded(2, 2), 2, 'Angle 2', 'bg3'))
         add(ButtonGroup('bg3b03', gridded(2, 3), 2, 'Angle 3', 'bg3'))
         add(ButtonGroup('bg3b04', gridded(2, 4), 2, 'Angle 4', 'bg3'))
         add(ButtonGroup('bg3b05', gridded(2, 5), 2, 'Angle 5', 'bg3'))
-        add(ButtonGroup('bg4b01', gridded(3, 1), 3, 'Radio 1', 'bg4'))
+        self.lbg4= add(ButtonGroup('bg4b01', gridded(3, 1), 3, 'Radio 1', 'bg4'))
         add(ButtonGroup('bg4b02', gridded(3, 2), 3, 'Radio 2', 'bg4'))
         add(ButtonGroup('bg4b03', gridded(3, 3), 3, 'Radio 3', 'bg4'))
         add(ButtonGroup('bg4b04', gridded(3, 4), 3, 'Radio 4', 'bg4'))
         add(ButtonGroup('bg4b05', gridded(3, 5), 3, 'Radio 5', 'bg4'))
-        add(ButtonGroup('bg5b01', gridded(4, 1), 4, 'Check 1', 'bg5'))
+        self.lbg5 = add(ButtonGroup('bg5b01', gridded(4, 1), 4, 'Check 1', 'bg5'))
         add(ButtonGroup('bg5b02', gridded(4, 2), 4, 'Check 2', 'bg5'))
         add(ButtonGroup('bg5b03', gridded(4, 3), 4, 'Check 3', 'bg5'))
         add(ButtonGroup('bg5b04', gridded(4, 4), 4, 'Check 4', 'bg5'))
         add(ButtonGroup('bg5b05', gridded(4, 5), 4, 'Check 5', 'bg5'))
-        add(ButtonGroup('bg6b01', gridded(5, 1), 0, 'Mix 1', 'bg6'))
+        self.lbg6 = add(ButtonGroup('bg6b01', gridded(5, 1), 0, 'Mix 1', 'bg6'))
         add(ButtonGroup('bg6b02', gridded(5, 2), 1, 'Mix 2', 'bg6'))
         add(ButtonGroup('bg6b03', gridded(5, 3), 2, 'Mix 3', 'bg6'))
         add(ButtonGroup('bg6b04', gridded(5, 4), 3, 'Mix 4', 'bg6'))
@@ -91,8 +91,21 @@ class Demo:
         add(Toggle('t3', gridded(7, 3), 2, False, 'Push 3', 'Raise 3'))
         add(Toggle('t4', gridded(7, 4), 3, False, 'Push 4', 'Raise 4'))
         add(Toggle('t5', gridded(7, 5), 4, False, 'Push 5', 'Raise 5'))
+        set_grid_properties((10, 200), 122, widget_height, 0)
+        self.bg1 = add(Label(gridded(0, 0, True), '', True))
+        self.bg2 = add(Label(gridded(1, 0, True), '', True))
+        self.bg3 = add(Label(gridded(2, 0, True), '', True))
+        self.bg4 = add(Label(gridded(3, 0, True), '', True))
+        self.bg5 = add(Label(gridded(4, 0, True), '', True))
+        self.bg6 = add(Label(gridded(5, 0, True), '', True))
+        self.bg1.set_label(f'ID: {self.lbg1.read_armed()}')
+        self.bg2.set_label(f'ID: {self.lbg2.read_armed()}')
+        self.bg3.set_label(f'ID: {self.lbg3.read_armed()}')
+        self.bg4.set_label(f'ID: {self.lbg4.read_armed()}')
+        self.bg5.set_label(f'ID: {self.lbg5.read_armed()}')
+        self.bg6.set_label(f'ID: {self.lbg6.read_armed()}')
         # make the scrollbar window
-        y_pos += 230
+        y_pos += 258
         self.scrollbar_win = Window('Scrollbars', (x_pos, y_pos), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
@@ -198,7 +211,18 @@ class Demo:
                     # exit button was clicked
                     self.running = False
             elif event.type == GKind.Group:
-                print(event.group_name, event.group_item)
+                if event.group_name == 'bg1':
+                    self.bg1.set_label(f'ID: {self.lbg1.read_armed()}')
+                elif event.group_name == 'bg2':
+                    self.bg2.set_label(f'ID: {self.lbg2.read_armed()}')
+                elif event.group_name == 'bg3':
+                    self.bg3.set_label(f'ID: {self.lbg3.read_armed()}')
+                elif event.group_name == 'bg4':
+                    self.bg4.set_label(f'ID: {self.lbg4.read_armed()}')
+                elif event.group_name == 'bg5':
+                    self.bg5.set_label(f'ID: {self.lbg5.read_armed()}')
+                elif event.group_name == 'bg6':
+                    self.bg6.set_label(f'ID: {self.lbg6.read_armed()}')
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     # escape key pressed

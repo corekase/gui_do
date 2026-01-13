@@ -3,7 +3,7 @@ from ..command import render_text, render_text_shadow, centre
 from .widget import Widget
 
 class Label(Widget):
-    def __init__(self, position, text, shadow=False, automatic_pristine=False):
+    def __init__(self, position, text, shadow=False):
         # initialize common widget values
         self.shadow = shadow
         self.render(text)
@@ -16,7 +16,6 @@ class Label(Widget):
             self.rect.x, self.rect.y = x, y
         super().__init__('label', self.rect)
         self.GType = GType.Label
-        self.auto_restore_pristine = automatic_pristine
 
     def set_label(self, text):
         # text bitmap
@@ -32,5 +31,4 @@ class Label(Widget):
         return False
 
     def draw(self):
-        super().draw()
         self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))

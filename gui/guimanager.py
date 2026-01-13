@@ -216,7 +216,7 @@ class GuiManager:
                                     collision = widget.get_collide(window)
                                     if self.handle_widget(widget, event, window):
                                         if widget.GType == GType.ButtonGroup:
-                                            return self.event(GKind.Group, widget.read_armed(), widget.read_group())
+                                            return self.event(GKind.Group, widget.read_group(), widget.read_armed())
                                         return self.event(GKind.Widget, widget.id)
                                     if collision:
                                         widget_consumed = True
@@ -240,7 +240,7 @@ class GuiManager:
                 if widget.get_visible():
                     if self.handle_widget(widget, event):
                         if widget.GType == GType.ButtonGroup:
-                            return self.event(GKind.Group, widget.read_armed(), widget.read_group())
+                            return self.event(GKind.Group, widget.read_group(), widget.read_armed())
                         return self.event(GKind.Widget, widget.id)
                     if widget.hit_rect != None:
                         hit = widget.hit_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
