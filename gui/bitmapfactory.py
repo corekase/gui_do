@@ -185,7 +185,7 @@ class BitmapFactory:
         y_offset = centre(rect.height, text_height)
         button_complete.blit(radio_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, y_offset))
-        return button_complete, Rect(rect.x + 2, rect.y + y_offset, text_height + text_width + 4, text_height)
+        return button_complete, Rect(rect.x + 2, rect.y + y_offset, text_height + text_width + 2, text_height)
 
     def draw_radio_bitmap(self, size, col1, col2):
         radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
@@ -212,7 +212,7 @@ class BitmapFactory:
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
         y_offset = centre(rect.height, text_height)
-        x_size = text_height + text_bitmap.get_rect().width + 4
+        x_size = text_height + text_bitmap.get_rect().width + 2
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
         button_complete.blit(check_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (text_height + 2, y_offset))
