@@ -12,7 +12,7 @@ from .widgets.widget import colours
 from .widgets.frame import Frame, FrState
 from .widgets.label import Label
 from .widgets.button import Button
-from .widgets.groupbutton import GroupButton
+from .widgets.buttongroup import ButtonGroup
 from .widgets.image import Image
 from .widgets.toggle import Toggle
 from .widgets.canvas import Canvas, CKind

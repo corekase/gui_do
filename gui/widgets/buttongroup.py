@@ -7,7 +7,7 @@ from enum import Enum
 
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
 
-class GroupButton(Widget):
+class ButtonGroup(Widget):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
@@ -19,12 +19,12 @@ class GroupButton(Widget):
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             factory.get_styled_bitmaps(style, text, rect)
-        if group not in GroupButton.groups.keys():
+        if group not in ButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
-            GroupButton.groups[group] = []
-            GroupButton.selections[group] = self
+            ButtonGroup.groups[group] = []
+            ButtonGroup.selections[group] = self
             self.select()
-        GroupButton.groups[group].append(self)
+        ButtonGroup.groups[group].append(self)
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
@@ -48,15 +48,15 @@ class GroupButton(Widget):
 
     def select(self):
         # clear armed state for previous object
-        GroupButton.selections[self.group].state = State.Idle
+        ButtonGroup.selections[self.group].state = State.Idle
         # mark this object armed
         self.state = State.Armed
         # make this object the currently armed one
-        GroupButton.selections[self.group] = self
+        ButtonGroup.selections[self.group] = self
 
     def read(self):
         # return the id of the armed pushbutton
-        return GroupButton.selections[self.group].id
+        return ButtonGroup.selections[self.group].id
 
     def leave(self):
         # if hover then idle when left

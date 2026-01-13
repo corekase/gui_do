@@ -4,7 +4,7 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import colours, centre, set_grid_properties, gridded
-from gui import GKind, Canvas, CKind, Label, Button, GroupButton, Toggle, Scrollbar, Image
+from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image
 
 class Life:
     def __init__(self):
