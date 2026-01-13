@@ -16,8 +16,8 @@ class Frame(Widget):
 
     def draw(self):
         if self.state == FrState.Idle:
-            self.surface.blit(self.idle, (self.rect.x, self.rect.y))
+            self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == FrState.Hover:
-            self.surface.blit(self.hover, (self.rect.x, self.rect.y))
+            self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == FrState.Armed:
-            self.surface.blit(self.armed, (self.rect.x, self.rect.y))
+            self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))

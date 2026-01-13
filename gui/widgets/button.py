@@ -18,12 +18,8 @@ class Button(Widget):
         self.timer = None
         if not skip_factory:
             factory = BitmapFactory()
-            self.idle, self.hover, self.armed = factory.get_styled_bitmaps(style, text, rect)
-            if style == 2 or style == 3:
-                containing_rect = self.idle.get_rect()
-                y_offset = centre(self.rect.height, containing_rect.height)
-                self.rect = Rect(self.rect.x, self.rect.y + y_offset,
-                                containing_rect.width, containing_rect.height)
+            (self.idle, self.hover, self.armed), self.hit_rect = \
+                factory.get_styled_bitmaps(style, text, rect)
         self.state = State.Idle
         # button specific callback, this callback is separate from the add() callback
         self.button_callback = button_callback
@@ -79,8 +75,8 @@ class Button(Widget):
 
     def draw(self):
         if self.state == State.Idle:
-            self.surface.blit(self.idle, (self.rect.x, self.rect.y))
+            self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == State.Hover:
-            self.surface.blit(self.hover, (self.rect.x, self.rect.y))
+            self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == State.Armed:
-            self.surface.blit(self.armed, (self.rect.x, self.rect.y))
+            self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))

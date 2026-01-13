@@ -135,7 +135,7 @@ class BitmapFactory:
         self.draw_box_bitmaps(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
-        return saved
+        return saved, rect
 
     def draw_box_bitmaps(self, surface, state):
         if state == 'idle':
@@ -169,50 +169,52 @@ class BitmapFactory:
         surface.unlock()
 
     def draw_radio_style_bitmaps(self, text, rect):
-        idle_bitmap = self.draw_radio_style_bitmap(text, colours['light'], colours['dark'])
-        hover_bitmap = self.draw_radio_style_bitmap(text, colours['full'], colours['none'])
-        armed_bitmap = self.draw_radio_style_bitmap(text, colours['highlight'], colours['dark'])
-        return (idle_bitmap, hover_bitmap, armed_bitmap)
+        idle_bitmap, idle_rect = self.draw_radio_style_bitmap(rect, text, colours['light'], colours['dark'])
+        hover_bitmap, _ = self.draw_radio_style_bitmap(rect, text, colours['full'], colours['none'])
+        armed_bitmap, _ = self.draw_radio_style_bitmap(rect, text, colours['highlight'], colours['dark'])
+        return (idle_bitmap, hover_bitmap, armed_bitmap), idle_rect
 
-    def draw_radio_style_bitmap(self, text, col1, col2):
+    def draw_radio_style_bitmap(self, rect, text, col1, col2):
         text_bitmap = render_text_shadow(text)
+        text_width = text_bitmap.get_rect().width
         text_height = text_bitmap.get_rect().height
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
-        x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size + 3, text_height), SRCALPHA).convert_alpha()
-        button_complete.blit(radio_bitmap, (0, centre(text_height, radio_bitmap.get_rect().height)))
-        button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, 0))
-        return button_complete
+        button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
+        y_offset = centre(rect.height, text_height)
+        button_complete.blit(radio_bitmap, (0, y_offset))
+        button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, y_offset))
+        return button_complete, Rect(rect.x, rect.y + y_offset, text_height + text_width + 2, text_height)
 
     def draw_radio_bitmap(self, size, col1, col2):
         radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
-        center_point = 200
+        centre_point = 200
         radius = 135
         points = []
         for point in range(0, 360, 5):
             x1 = int(round(radius * cos(radians(point))))
             y1 = int(round(radius * sin(radians(point))))
-            points.append((center_point + x1, center_point + y1))
+            points.append((centre_point + x1, centre_point + y1))
         polygon(radio_bitmap, col1, points, 0)
         polygon(radio_bitmap, col2, points, 24)
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
     
     def draw_check_style_bitmaps(self, text, rect):
-        idle_bitmap = self.draw_check_style_bitmap(0, text)
-        hover_bitmap = self.draw_check_style_bitmap(1, text)
-        armed_bitmap = self.draw_check_style_bitmap(2, text)
-        return (idle_bitmap, hover_bitmap, armed_bitmap)
+        idle_bitmap, hit_rect = self.draw_check_style_bitmap(rect, 0, text)
+        hover_bitmap, _ = self.draw_check_style_bitmap(rect, 1, text)
+        armed_bitmap, _ = self.draw_check_style_bitmap(rect, 2, text)
+        return (idle_bitmap, hover_bitmap, armed_bitmap), hit_rect
 
-    def draw_check_style_bitmap(self, state, text):
+    def draw_check_style_bitmap(self, rect, state, text):
         text_bitmap = render_text_shadow(text)
         text_height = text_bitmap.get_rect().height
         check_bitmap = self.draw_check_bitmap(state, text_height)
-        x_size = text_height + text_bitmap.get_rect().width
-        button_complete = Surface((x_size + 3, text_height), SRCALPHA).convert_alpha()
-        button_complete.blit(check_bitmap, (0, centre(text_height, check_bitmap.get_rect().height)))
-        button_complete.blit(text_bitmap, (check_bitmap.get_rect().width + 2, 0))
-        return button_complete
+        y_offset = centre(rect.height, text_height)
+        x_size = text_height + text_bitmap.get_rect().width + 2
+        button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
+        button_complete.blit(check_bitmap, (0, y_offset))
+        button_complete.blit(text_bitmap, (text_height + 2, y_offset))
+        return button_complete, Rect(rect.x, rect.y + y_offset, x_size, text_height)
 
     def draw_check_bitmap(self, state, size):
         shrink = size // 2.8
@@ -256,7 +258,7 @@ class BitmapFactory:
         self.draw_rounded_state(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
-        return saved
+        return saved, rect
 
     def draw_rounded_state(self, surface, state):
         if state == 'idle':

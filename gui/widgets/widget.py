@@ -15,8 +15,10 @@ class Widget:
         self.window = None
         # identifier for widget, can be any kind like int or string
         self.id = id
-        # rect for widget position and size on the surface
-        self.rect = Rect(rect)
+        # rect for widget drawing position and size on the surface
+        self.draw_rect = Rect(rect)
+        # rect for mouse collision
+        self.hit_rect = None
         # callback function
         self.callback = None
         # before widget is first drawn, save what was there in this bitmap
@@ -33,7 +35,7 @@ class Widget:
     def save_pristine(self):
         # update the pristine bitmap
         from ..command import copy_graphic_area
-        self.pristine = copy_graphic_area(self.surface, self.rect).convert()
+        self.pristine = copy_graphic_area(self.surface, self.draw_rect).convert()
 
     def set_visible(self, visible):
         self.visible = visible
@@ -43,7 +45,10 @@ class Widget:
 
     def get_collide(self, window=None):
         from ..command import convert_to_window
-        collide = self.rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
+        if self.hit_rect == None:
+            collide = self.draw_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
+        else:
+            collide = self.hit_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
         if collide:
             if self.gui.last_widget != self.gui.current_widget:
                 if self.gui.last_widget != None:
@@ -59,19 +64,19 @@ class Widget:
 
     def get_rect(self):
         # rect that the guimanager uses for buffering
-        return Rect(self.rect)
+        return Rect(self.draw_rect)
 
     def get_size(self):
         # remove the x and y offset for where the widget is being drawn on a surface
         # and return just the rect dimensions
-        _, _, w, h = self.rect
+        _, _, w, h = self.draw_rect
         return Rect(0, 0, w, h)
 
     def draw(self):
         from ..command import restore_pristine
         # if auto restore flag then restore the pristine bitmap
         if self.auto_restore_pristine:
-            restore_pristine(self.rect, self.window)
+            restore_pristine(self.draw_rect, self.window)
 
     def leave(self):
         # what to do when a widget loses focus

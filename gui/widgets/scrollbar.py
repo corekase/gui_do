@@ -66,7 +66,7 @@ class Scrollbar(Frame):
         # get a reference to the gui
         self.gui = GuiManager()
         # maximum area that can be filled
-        self.graphic_rect = Rect(self.rect.left + 4, self.rect.top + 4, self.rect.width - 8, self.rect.height - 8)
+        self.graphic_rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         # setup the parameters of the scrollbar
         total, start, size, inc = params
         self.set(total, start, size, inc)

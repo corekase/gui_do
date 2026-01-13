@@ -17,4 +17,4 @@ class Image(Widget):
     def draw(self):
         super().draw()
         # draw the image bitmap
-        self.surface.blit(self.image, self.rect)
+        self.surface.blit(self.image, self.draw_rect)

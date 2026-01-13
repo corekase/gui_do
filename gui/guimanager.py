@@ -229,7 +229,11 @@ class GuiManager:
                 if widget.get_visible():
                     if self.handle_widget(widget, event):
                         return self.event(GKind.Widget, widget.id)
-                    if widget.rect.collidepoint(convert_to_window(self.get_mouse_pos(), None)):
+                    if widget.hit_rect != None:
+                        hit = widget.hit_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
+                    else:
+                        hit = widget.draw_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
+                    if hit:
                         consumed = True
                         widget_hit = widget
             if self.locking_object != None:

@@ -11,11 +11,15 @@ class ToggleButton(Widget):
         if raised_text == None:
             raised_text = pressed_text
         factory = BitmapFactory()
-        _, _, self.pressed_text_bitmap = factory.get_styled_bitmaps(style, pressed_text, rect)
-        self.raised_text_bitmap, _, _ = factory.get_styled_bitmaps(style, raised_text, rect)
-        if style == 2 or style == 3:
-            self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.raised_text_bitmap.get_rect().height),
-                             rect.width, rect.height)
+        (_, _, self.pressed_text_bitmap), rect1 = \
+            factory.get_styled_bitmaps(style, pressed_text, rect)
+        (self.raised_text_bitmap, _, _), rect2 = \
+            factory.get_styled_bitmaps(style, raised_text, rect)
+        # out of rect1 or rect2 choose the longer width
+        if rect1.width > rect2.width:
+            self.hit_rect = rect1
+        else:
+            self.hit_rect = rect2
 
     def handle_event(self, event, window):
         if event.type == MOUSEBUTTONDOWN:
@@ -29,9 +33,9 @@ class ToggleButton(Widget):
 
     def draw(self):
         if self.pushed:
-            self.surface.blit(self.pressed_text_bitmap, self.rect)
+            self.surface.blit(self.pressed_text_bitmap, self.draw_rect)
         else:
-            self.surface.blit(self.raised_text_bitmap, self.rect)
+            self.surface.blit(self.raised_text_bitmap, self.draw_rect)
 
     def set(self, pushed):
         # set the boolean of the togglebutton

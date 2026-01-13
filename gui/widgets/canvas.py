@@ -47,7 +47,7 @@ class Canvas(Widget):
 
     def focused(self):
         # return a boolean of whether or not the mouse is over the canvas
-        if self.rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), self.window)):
+        if self.draw_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), self.window)):
             return True
         else:
             return False
@@ -61,7 +61,7 @@ class Canvas(Widget):
                 # create a new event
                 self.CEvent = CanvasEvent()
                 # all events have the position field
-                self.CEvent.pos = (canvas_x - self.rect.x, canvas_y - self.rect.y)
+                self.CEvent.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
                 # and type specific fields
                 if event.type == MOUSEWHEEL:
                     self.CEvent.type = CKind.MouseWheel
@@ -96,7 +96,7 @@ class Canvas(Widget):
 
     def draw(self):
         # copy the canvas surface to the widget surface
-        self.surface.blit(self.canvas, self.rect)
+        self.surface.blit(self.canvas, self.draw_rect)
         # handle the pristine surface
         if self.auto_restore_pristine:
             self.restore_pristine()

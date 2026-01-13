@@ -17,12 +17,8 @@ class PushButtonGroup(Widget):
         self.state = State.Idle
         factory = BitmapFactory()
         self.group = group
-        self.idle, self.hover, self.armed = factory.get_styled_bitmaps(style, text, rect)
-        if style == 0 or style == 1:
-            self.rect = Rect(rect.x, rect.y, self.idle.get_rect().width, rect.height)
-        else:
-            self.rect = Rect(rect.x, rect.y + centre(self.rect.height, self.idle.get_rect().height),
-                             self.idle.get_rect().width, rect.height)
+        (self.idle, self.hover, self.armed), self.hit_rect = \
+            factory.get_styled_bitmaps(style, text, rect)
         if group not in PushButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             PushButtonGroup.groups[group] = []
@@ -69,8 +65,8 @@ class PushButtonGroup(Widget):
 
     def draw(self):
         if self.state == State.Idle:
-            self.surface.blit(self.idle, (self.rect.x, self.rect.y))
+            self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == State.Hover:
-            self.surface.blit(self.hover, (self.rect.x, self.rect.y))
+            self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == State.Armed:
-            self.surface.blit(self.armed, (self.rect.x, self.rect.y))
+            self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))
