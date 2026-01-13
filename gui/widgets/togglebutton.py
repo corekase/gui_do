@@ -1,19 +1,23 @@
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN
+from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
 from ..command import centre
+from enum import Enum
+
+State = Enum('State', ['Idle', 'Hover', 'Armed'])
 
 class ToggleButton(Widget):
     def __init__(self, id, rect, style, pushed, pressed_text, raised_text=None):
         super().__init__(id, rect)
         self.pushed = pushed
+        self.state = State.Idle
         if raised_text == None:
             raised_text = pressed_text
         factory = BitmapFactory()
         (_, _, self.pressed_text_bitmap), rect1 = \
             factory.get_styled_bitmaps(style, pressed_text, rect)
-        (self.raised_text_bitmap, _, _), rect2 = \
+        (self.raised_text_bitmap, self.hovered_bitmap, _), rect2 = \
             factory.get_styled_bitmaps(style, raised_text, rect)
         # out of rect1 or rect2 choose the longer width
         if rect1.width > rect2.width:
@@ -22,10 +26,18 @@ class ToggleButton(Widget):
             self.hit_rect = rect2
 
     def handle_event(self, event, window):
-        if event.type == MOUSEBUTTONDOWN:
-            if event.button == 1:
-                if self.get_collide(window):
-                    # button was clicked
+        if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
+            return False
+        collision = self.get_collide(window)
+        # manage the state of the push button
+        if (self.state == State.Idle) and collision:
+            self.state = State.Hover
+        if self.state == State.Hover:
+            if (event.type == MOUSEMOTION) and (not collision):
+                self.state = State.Idle
+            if (event.type == MOUSEBUTTONDOWN) and collision:
+                if event.button == 1:
+                    # push button was clicked
                     self.pushed = not self.pushed
                     return True
         # button not clicked
@@ -35,7 +47,10 @@ class ToggleButton(Widget):
         if self.pushed:
             self.surface.blit(self.pressed_text_bitmap, self.draw_rect)
         else:
-            self.surface.blit(self.raised_text_bitmap, self.draw_rect)
+            if self.state == State.Hover:
+                self.surface.blit(self.hovered_bitmap, self.draw_rect)
+            elif self.state == State.Idle:
+                self.surface.blit(self.raised_text_bitmap, self.draw_rect)
 
     def set(self, pushed):
         # set the boolean of the togglebutton
