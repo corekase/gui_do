@@ -225,6 +225,35 @@ class Demo:
                 # window close widget or alt-f4 keypress
                 self.running = False
 
+    # canvas callback function
+    def handle_canvas(self):
+        # read the event from the canvas widget
+        CEvent = self.canvas.read_event()
+        if CEvent != None:
+            # parse that event by kind and parameters
+            if CEvent.type == CKind.MouseButtonDown:
+                # right-mouse button pressed, enter dragging state
+                if CEvent.button == 3:
+                    self.dragging = True
+            elif CEvent.type == CKind.MouseButtonUp:
+                # right-mouse button released, exit dragging state
+                if CEvent.button == 3:
+                    self.dragging = False
+            elif CEvent.type == CKind.MouseMotion:
+                # if dragging then track relative position
+                if self.dragging:
+                    x, y = CEvent.rel[0], CEvent.rel[1]
+                    self.origin_x += x
+                    self.origin_y += y
+            elif CEvent.type == CKind.MouseWheel:
+                # handle the mouse wheel
+                if CEvent.y != None:
+                    self.cell_size += (CEvent.y * 2)
+                    if self.cell_size < 6:
+                        self.cell_size = 6
+                    elif self.cell_size > 24:
+                        self.cell_size = 24
+
     # update the position and draw a bitmap at the position
     def update_circles(self, size):
         new_positions = []
@@ -303,35 +332,6 @@ class Demo:
                     ypos = 0
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
         self.canvas_surface.set_clip(None)
-
-    # canvas callback function
-    def handle_canvas(self):
-        # read the event from the canvas widget
-        CEvent = self.canvas.read_event()
-        if CEvent != None:
-            # parse that event by kind and parameters
-            if CEvent.type == CKind.MouseButtonDown:
-                # right-mouse button pressed, enter dragging state
-                if CEvent.button == 3:
-                    self.dragging = True
-            elif CEvent.type == CKind.MouseButtonUp:
-                # right-mouse button released, exit dragging state
-                if CEvent.button == 3:
-                    self.dragging = False
-            elif CEvent.type == CKind.MouseMotion:
-                # if dragging then track relative position
-                if self.dragging:
-                    x, y = CEvent.rel[0], CEvent.rel[1]
-                    self.origin_x += x
-                    self.origin_y += y
-            elif CEvent.type == CKind.MouseWheel:
-                # handle the mouse wheel
-                if CEvent.y != None:
-                    self.cell_size += (CEvent.y * 2)
-                    if self.cell_size < 6:
-                        self.cell_size = 6
-                    elif self.cell_size > 24:
-                        self.cell_size = 24
 
 if __name__ == '__main__':
     Demo().run()
