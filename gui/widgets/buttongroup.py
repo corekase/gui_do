@@ -56,7 +56,7 @@ class ButtonGroup(Widget):
         # make this object the currently armed one
         ButtonGroup.selections[self.group] = self
 
-    def read_armed(self):
+    def read_id(self):
         # return the id of the armed pushbutton
         return ButtonGroup.selections[self.group].id
     
