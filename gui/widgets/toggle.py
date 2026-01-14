@@ -34,6 +34,8 @@ class Toggle(Widget):
         # manage the state of the push button
         if (self.state == State.Idle) and collision:
             self.state = State.Hover
+        elif not collision:
+            self.state = State.Idle
         if self.state == State.Hover:
             if (event.type == MOUSEMOTION) and (not collision):
                 self.state = State.Idle
@@ -53,6 +55,9 @@ class Toggle(Widget):
                 self.surface.blit(self.hovered_bitmap, self.draw_rect)
             elif self.state == State.Idle:
                 self.surface.blit(self.raised_text_bitmap, self.draw_rect)
+
+    def leave(self):
+        self.state = State.Idle
 
     def set(self, pushed):
         # set the boolean of the togglebutton
