@@ -183,17 +183,17 @@ def centre(bigger, smaller):
     return int((bigger / 2) - (smaller / 2))
 
 # gridded layout variables and functions
-position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = coords = None
+position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = use_rect = None
 
 # setup variables for gridded
-def set_grid_properties(anchor, width, height, spacing, coords_toggle=True):
+def set_grid_properties(anchor, width, height, spacing, use_rect_flag=True):
     global position_gridded, x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded
-    global coords
+    global use_rect
     position_gridded = anchor
     x_size_pixels_gridded = width
     y_size_pixels_gridded = height
     space_size_gridded = spacing
-    coords = coords_toggle
+    use_rect = use_rect_flag
 
 # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
 def gridded(x, y):
@@ -201,10 +201,10 @@ def gridded(x, y):
     # (size per unit) + (space per unit) + (1 per unit, or another number)
     x_location = (x * x_size_pixels_gridded) + (x * space_size_gridded) + (x * 1)
     y_location = (y * y_size_pixels_gridded) + (y * space_size_gridded) + (y * 1)
-    if not coords:
-        return (base_x + (x * x_size_pixels_gridded), base_y + (y * y_size_pixels_gridded))
-    else:
+    if use_rect:
         return Rect(base_x + x_location, base_y + y_location, x_size_pixels_gridded, y_size_pixels_gridded)
+    else:
+        return (base_x + (x * x_size_pixels_gridded), base_y + (y * y_size_pixels_gridded))
 
 # copy graphic helper
 def copy_graphic_area(surface, rect, flags = 0):
