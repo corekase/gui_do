@@ -206,17 +206,17 @@ class Demo:
                     self.running = False
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
-                    self.label1.set_label(f'ID: {event.id}')
+                    self.label1.set_label(f'ID: {event.widget_id}')
                 elif event.group == 'bg2':
-                    self.label2.set_label(f'ID: {event.id}')
+                    self.label2.set_label(f'ID: {event.widget_id}')
                 elif event.group == 'bg3':
-                    self.label3.set_label(f'ID: {event.id}')
+                    self.label3.set_label(f'ID: {event.widget_id}')
                 elif event.group == 'bg4':
-                    self.label4.set_label(f'ID: {event.id}')
+                    self.label4.set_label(f'ID: {event.widget_id}')
                 elif event.group == 'bg5':
-                    self.label5.set_label(f'ID: {event.id}')
+                    self.label5.set_label(f'ID: {event.widget_id}')
                 elif event.group == 'bg6':
-                    self.label6.set_label(f'ID: {event.id}')
+                    self.label6.set_label(f'ID: {event.widget_id}')
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     # escape key pressed

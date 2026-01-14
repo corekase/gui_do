@@ -88,7 +88,6 @@ class GuiManager:
                 self.widget_id = None
                 # button group
                 self.group = None
-                self.id = None
         # construct an event to be returned to the client
         gui_event = GuiEvent()
         # set the type of the event
@@ -100,7 +99,7 @@ class GuiManager:
             gui_event.widget_id = item1
         elif event_type == GKind.Group:
             gui_event.group = item1
-            gui_event.id = item2
+            gui_event.widget_id = item2
         elif event_type == GKind.KeyUp:
             gui_event.key = item1
         elif event_type == GKind.KeyDown:
