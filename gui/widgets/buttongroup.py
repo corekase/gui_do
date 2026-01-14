@@ -13,7 +13,7 @@ class ButtonGroup(Widget):
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
-    def __init__(self, id, rect, style, text, group):
+    def __init__(self, group, id, rect, style, text):
         super().__init__(id, rect)
         self.GType = GType.ButtonGroup
         self.state = State.Idle
