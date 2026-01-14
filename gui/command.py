@@ -198,13 +198,14 @@ def set_grid_properties(anchor, width, height, spacing, use_rect_flag=True):
 # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
 def gridded(x, y):
     base_x, base_y = position_gridded
-    # (size per unit) + (space per unit) + (1 per unit, or another number)
-    x_location = (x * x_size_pixels_gridded) + (x * space_size_gridded) + (x * 1)
-    y_location = (y * y_size_pixels_gridded) + (y * space_size_gridded) + (y * 1)
     if use_rect:
+        # (size per unit) + (space per unit) + (1 per unit, or another number)
+        x_location = (x * x_size_pixels_gridded) + (x * space_size_gridded) + (x * 1)
+        y_location = (y * y_size_pixels_gridded) + (y * space_size_gridded) + (y * 1)
         return Rect(base_x + x_location, base_y + y_location, x_size_pixels_gridded, y_size_pixels_gridded)
     else:
-        return (base_x + (x * x_size_pixels_gridded), base_y + (y * y_size_pixels_gridded))
+        return (base_x + (x * x_size_pixels_gridded) + (x * space_size_gridded),
+                base_y + (y * y_size_pixels_gridded) + (y * space_size_gridded))
 
 # copy graphic helper
 def copy_graphic_area(surface, rect, flags = 0):
