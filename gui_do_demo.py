@@ -3,7 +3,7 @@ from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
-from gui import colours, centre, set_grid_properties, gridded
+from gui import colours, set_grid_properties, gridded
 from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image
 
 class Demo:
@@ -33,13 +33,13 @@ class Demo:
         set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
         self.circles_toggle = add(Toggle('circles', gridded(0, 0), 0, False, 'Circles'))
-        # control whether the pushboxes window is visible
+        # control whether the buttons and toggles window is visible
         self.buttons_toggle = add(Toggle('buttons_window', gridded(1, 0), 0, False, 'Buttons'))
         # control whether the scrollbar window is visible
         self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), 0, False, 'Scrollbars'))
         # control whether the life window is visible
         self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, False, 'Life'))
-        # make the pushboxes and togglebuttons window
+        # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         self.button_group_win = Window('Button Groups, Buttons, and Toggles', (x_pos, y_pos), (998, 228))
         set_grid_properties((10, 10), 120, widget_height, 2)
