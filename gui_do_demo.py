@@ -205,18 +205,18 @@ class Demo:
                     # exit button was clicked
                     self.running = False
             elif event.type == GKind.Group:
-                if event.group_name == 'bg1':
-                    self.label1.set_label(f'ID: {event.group_item}')
-                elif event.group_name == 'bg2':
-                    self.label2.set_label(f'ID: {event.group_item}')
-                elif event.group_name == 'bg3':
-                    self.label3.set_label(f'ID: {event.group_item}')
-                elif event.group_name == 'bg4':
-                    self.label4.set_label(f'ID: {event.group_item}')
-                elif event.group_name == 'bg5':
-                    self.label5.set_label(f'ID: {event.group_item}')
-                elif event.group_name == 'bg6':
-                    self.label6.set_label(f'ID: {event.group_item}')
+                if event.group == 'bg1':
+                    self.label1.set_label(f'ID: {event.id}')
+                elif event.group == 'bg2':
+                    self.label2.set_label(f'ID: {event.id}')
+                elif event.group == 'bg3':
+                    self.label3.set_label(f'ID: {event.id}')
+                elif event.group == 'bg4':
+                    self.label4.set_label(f'ID: {event.id}')
+                elif event.group == 'bg5':
+                    self.label5.set_label(f'ID: {event.id}')
+                elif event.group == 'bg6':
+                    self.label6.set_label(f'ID: {event.id}')
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     # escape key pressed
