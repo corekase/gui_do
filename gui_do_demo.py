@@ -41,8 +41,9 @@ class Demo:
         self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, False, 'Life'))
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
-        self.button_group_win = Window('Button Groups, Buttons, and Toggles', (x_pos, y_pos), (998, 228))
         set_grid_properties((10, 10), 120, widget_height, 2)
+        self.button_group_win = Window('Button Groups, Buttons, and Toggles',
+                                       (x_pos, y_pos), (gridded(7, 0).right + 10, gridded(0, 6).bottom))
         add(Label(gridded(0, 0), 'G1 Boxed', True))
         add(Label(gridded(1, 0), 'G2 Rounded', True))
         add(Label(gridded(2, 0), 'G3 Angled', True))
@@ -91,7 +92,7 @@ class Demo:
         add(Toggle('t3', gridded(7, 3), 2, False, 'Push 3', 'Raise 3'))
         add(Toggle('t4', gridded(7, 4), 3, False, 'Push 4', 'Raise 4'))
         add(Toggle('t5', gridded(7, 5), 4, False, 'Push 5', 'Raise 5'))
-        set_grid_properties((10, 200), 122, widget_height, 0, False)
+        set_grid_properties((10, gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
         self.label1 = add(Label(gridded(0, 0), f'ID: {lbg1.read_id()}', True))
         self.label2 = add(Label(gridded(1, 0), f'ID: {lbg2.read_id()}', True))
         self.label3 = add(Label(gridded(2, 0), f'ID: {lbg3.read_id()}', True))
@@ -99,7 +100,7 @@ class Demo:
         self.label5 = add(Label(gridded(4, 0), f'ID: {lbg5.read_id()}', True))
         self.label6 = add(Label(gridded(5, 0), f'ID: {lbg6.read_id()}', True))
         # make the scrollbar window
-        y_pos += 258
+        y_pos += 248
         self.scrollbar_win = Window('Scrollbars', (x_pos, y_pos), (320, 362))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
