@@ -2,14 +2,14 @@ import os
 import pygame
 from pygame import Rect
 from .widgets.widget import colours
+from .guimanager import GuiManager
 
-gui = None
+gui:GuiManager = None
 def gui_init(surface, fonts):
     # hide system mouse pointer
     pygame.mouse.set_visible(False)
     # create a gui manager and set the drawing surface for it
     global gui
-    from .guimanager import GuiManager
     gui = GuiManager()
     gui.surface = surface
     # default to non-buffered

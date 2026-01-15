@@ -1,4 +1,5 @@
 from pygame import Rect
+from ..guimanager import GuiManager
 
 # named colour values, in one location to change everywhere
 colours = {'full': (255, 255, 255), 'light': (0, 200, 200), 'medium': (0, 150, 150), 'dark': (0, 100, 100), 'none': (0, 0, 0),
@@ -10,7 +11,7 @@ class Widget:
         # widget type
         self.GType = None
         # gui for the widget
-        self.gui = None
+        self.gui:GuiManager = None
         # surface to draw the widget on
         self.surface = None
         # window widget may be attached to

@@ -2,7 +2,6 @@ import pygame
 from enum import Enum
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .command import copy_graphic_area, convert_to_window
 from .timers import Timers
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
@@ -241,6 +240,7 @@ class GuiManager:
                         if widget.GType == GType.ButtonGroup:
                             return self.event(GKind.Group, widget.read_group(), widget.read_id())
                         return self.event(GKind.Widget, widget.id)
+                    from .command import convert_to_window
                     if widget.hit_rect != None:
                         hit = widget.hit_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
                     else:
@@ -334,6 +334,7 @@ class GuiManager:
         self.current_widget = widget
 
     def draw_gui(self):
+        from .command import copy_graphic_area
         # draw all widgets to their surfaces
         if self.buffered:
             self.bitmaps.clear()
