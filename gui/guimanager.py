@@ -320,6 +320,19 @@ class GuiManager:
         # move the window to the first item in the list which has the lowest priority
         self.windows.insert(0, self.windows.pop(self.windows.index(window)))
 
+    # reading and setting last_widget and current_widget are used in the widget base class
+    def read_last_widget(self):
+        return self.last_widget
+
+    def set_last_widget(self, widget):
+        self.last_widget = widget
+
+    def read_current_widget(self):
+        return self.current_widget
+
+    def set_current_widget(self, widget):
+        self.current_widget = widget
+
     def draw_gui(self):
         # draw all widgets to their surfaces
         if self.buffered:

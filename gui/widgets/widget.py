@@ -52,12 +52,13 @@ class Widget:
         else:
             collide = self.hit_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
         if collide:
-            if self.gui.last_widget != self.gui.current_widget:
-                if self.gui.last_widget != None:
-                    self.gui.last_widget.leave()
-                    self.gui.last_widget = None
-            self.gui.last_widget = self.gui.current_widget
-            self.gui.current_widget = self
+            last_widget = self.gui.read_last_widget()
+            current_widget = self.gui.read_current_widget()
+            if last_widget != current_widget:
+                if last_widget != None:
+                    last_widget.leave()
+            self.gui.set_last_widget(current_widget)
+            self.gui.set_current_widget(self)
         return collide
 
     def handle_event(self, _, _a):
