@@ -104,7 +104,7 @@ class Mandel:
             yield
         x, y, r, b, w, h = area.x, area.y, area.right, area.bottom, area.width, area.height
         top_left = self.pixel(x, y)
-        accuracy = 2
+        accuracy = 6
         hit = False
         for x_test in range(0, w, accuracy):
             if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, b) != top_left):
