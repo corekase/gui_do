@@ -80,7 +80,7 @@ class Mandel:
                     z = z**2 + c
                     if (z * z.conjugate()).real > 4.0:
                         break
-                if k == max_iter - 1:
+                if k == (max_iter - 1):
                     plot_col = Color(0, 0, 0)
                 else:
                     plot_col = col(k)
