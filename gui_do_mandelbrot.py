@@ -28,7 +28,7 @@ class Mandel:
         self.canvas_rect = self.canvas.get_size()
         set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         add(Button('clear', gridded(0, 0), 1, 'Clear'))
-        add(Button('scanlines', gridded(1, 0), 1, 'Scanlines'))
+        add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
@@ -71,7 +71,7 @@ class Mandel:
             if event.type == GKind.Widget:
                 if event.widget_id == 'clear':
                     self.canvas_surface.fill(colours['medium'])
-                elif event.widget_id == 'scanlines':
+                elif event.widget_id == 'iterative':
                     self.canvas_surface.fill(colours['medium'])
                     self.add_task(self.mandel_scanlines)
                 elif event.widget_id == 'recursive':
