@@ -19,14 +19,14 @@ class Mandel:
         set_backdrop('backdrop.jpg')
         widget_height = 30
         add(Button('exit', Rect(10, 1042, 70, widget_height), 1, 'Exit'))
-        width, height = 900, 900
+        width, height = 650, 650
         pos = (centre(self.screen_rect.width, width), centre(self.screen_rect.height, height))
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
-        self.canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas))
+        self.canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_surface.fill(colours['medium'])
         self.canvas_rect = self.canvas.get_size()
-        set_grid_properties((10, height - 38), 100, widget_height, 2)
+        set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         add(Button('clear', gridded(0, 0), 1, 'Clear'))
         add(Button('scanlines', gridded(1, 0), 1, 'Scanlines'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
