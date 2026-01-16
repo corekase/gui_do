@@ -53,7 +53,9 @@ class Mandel:
     def handle_events(self):
         for event in self.gui.events():
             if event.type == GKind.Widget:
-                if ('iterative' not in self.times.keys()) and ('recursive' not in self.times.keys()):
+                if event.widget_id == 'exit':
+                    self.running = False
+                elif ('iterative' not in self.times.keys()) and ('recursive' not in self.times.keys()):
                     if event.widget_id == 'clear':
                         self.canvas_surface.fill(colours['medium'])
                     elif event.widget_id == 'iterative':
@@ -62,8 +64,6 @@ class Mandel:
                     elif event.widget_id == 'recursive':
                         self.canvas_surface.fill(colours['medium'])
                         self.add_task('recursive', 0.017, self.mandel_recursive, self.canvas_rect)
-                elif event.widget_id == 'exit':
-                    self.running = False
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     self.running = False
