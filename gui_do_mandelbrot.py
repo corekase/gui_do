@@ -41,7 +41,6 @@ class Mandel:
         clock = pygame.time.Clock()
         self.mandel_setup()
         while self.running:
-            self.recurse_counter += 1
             restore_pristine()
             self.cooperative_scheduler()
             self.handle_events()
@@ -100,7 +99,7 @@ class Mandel:
                 yield
 
     def mandel_recursive(self, area):
-        self.recurse_counter = (self.recurse_counter + 1) % 512
+        self.recurse_counter = (self.recurse_counter + 1) % 256
         x, y, r, b, w, h = area.x, area.y, area.right, area.bottom, area.width, area.height
         top_left = self.pixel(x, y)
         hit = False
