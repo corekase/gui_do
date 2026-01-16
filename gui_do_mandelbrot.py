@@ -124,6 +124,7 @@ class Mandel:
             yield from self.mandel_recursive(Rect(x + half_x, y, half_x, half_y))
             yield from self.mandel_recursive(Rect(x + half_x, y + half_y, half_x, half_y))
             yield from self.mandel_recursive(Rect(x, y + half_y, half_x, half_y))
+            return
         else:
             top_right, bottom_left, bottom_right = self.pixel(r - 1, y), self.pixel(x, b - 1), self.pixel(r - 1, b - 1)
             self.canvas_surface.lock()
@@ -135,7 +136,7 @@ class Mandel:
             return
 
     def mandel_setup(self):
-        self.max_iter = 96
+        self.max_iter = 128
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
