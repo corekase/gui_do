@@ -65,26 +65,30 @@ class Mandel:
                 Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
                 Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
                 Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
-        def col(k):
-            return cols[k % 16]
+        def col(escape):
+            return cols[escape % 16]
         max_iter = 96
-        _, _, width, height = self.canvas_rect
-        center = -0.7 + 0.0j
+        _, _, self.mandel_width, self.mandel_height = self.canvas_rect
+        self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
-        scale = max((extent / width).real, (extent / height).imag)
-        for j in range(height):
-            for i in range(width):
-                c = center + (i - width // 2 + (j - height // 2) * 1j) * scale
-                z = 0
-                for k in range(max_iter):
-                    z = z**2 + c
-                    if (z * z.conjugate()).real > 4.0:
-                        break
-                if k == (max_iter - 1):
+        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
+        for y in range(self.mandel_height):
+            for x in range(self.mandel_width):
+                escape = self.pixel(x, y, max_iter)
+                if escape == (max_iter - 1):
                     plot_col = Color(0, 0, 0)
                 else:
-                    plot_col = col(k)
-                self.canvas_surface.set_at((i, j), plot_col)
+                    plot_col = col(escape)
+                self.canvas_surface.set_at((x, y), plot_col)
+
+    def pixel(self, x, y, iters):
+        c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
+        z = 0
+        for k in range(iters):
+            z = z ** 2 + c
+            if (z * z.conjugate()).real > 4.0:
+                break
+        return k
 
 if __name__ == '__main__':
     Mandel().run()
