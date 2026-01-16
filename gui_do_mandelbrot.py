@@ -102,13 +102,22 @@ class Mandel:
     def mandel_recursive(self, area):
         x, y, r, b = area.x, area.y, area.right, area.bottom
         cenx, ceny = area.centerx, area.centery
+        w, h = area.width, area.height
         self.recurse_counter = (self.recurse_counter + 1) % 300
         # fill if all same points
-        tl = self.pixel(x, y)
-        tr = self.pixel(r, y)
-        bl = self.pixel(x, b)
-        br = self.pixel(r, b)
-        if tl == tr and bl == br and bl == tl:
+        tl, tr, bl, br = self.pixel(x, y), self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
+        hit = False
+        for x_test in range(w):
+            if self.pixel(x + x_test, y) != tl or self.pixel(x + x_test, b) != tl:
+                hit = True
+                break
+                for y_test in range(h):
+                    if self.pixel(x, y + y_test) != tl or self.pixel(r, y + y_test) != tl:
+                        hit = True
+                        break
+                if hit:
+                    break
+        if not hit:
             self.canvas_surface.fill(self.col(tl), area)
             return
         if area.width > 2 or area.height > 2:
