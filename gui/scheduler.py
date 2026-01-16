@@ -41,7 +41,10 @@ class Scheduler:
 
     def add_task(self, id, interval, task, params=None):
         self.tasks[id] = self.Interval(interval)
-        self.tasks[id].task = task(id, params)
+        if params == None:
+            self.tasks[id].task = task(id)
+        else:
+            self.tasks[id].task = task(id, params)
 
     def remove_task(self, id):
         if id in self.tasks.keys():

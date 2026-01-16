@@ -71,7 +71,7 @@ class Mandel:
     def handle_canvas(self):
         _ = self.canvas.read_event()
 
-    def mandel_iterative(self, id, _):
+    def mandel_iterative(self, id):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
