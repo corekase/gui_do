@@ -19,7 +19,7 @@ class Mandel:
         set_backdrop('backdrop.jpg')
         widget_height = 30
         add(Button('exit', Rect(10, 1042, 70, widget_height), 1, 'Exit'))
-        width, height = 500, 500
+        width, height = 900, 900
         pos = (centre(self.screen_rect.width, width), centre(self.screen_rect.height, height))
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
         self.canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas))
@@ -134,7 +134,7 @@ class Mandel:
             self.canvas_surface.set_at((x + 1, y + 1), self.col(bottom_right))
 
     def mandel_setup(self):
-        self.max_iter = 128
+        self.max_iter = 96
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
