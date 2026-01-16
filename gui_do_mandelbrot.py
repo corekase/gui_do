@@ -75,11 +75,11 @@ class Mandel:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-            if self.schedules.poll_task_time(id):
+            if self.schedules.task_time(id):
                 yield
 
     def mandel_recursive(self, id, area):
-        if self.schedules.poll_task_time(id):
+        if self.schedules.task_time(id):
             yield
         x, y, w, h = area
         top_left = self.pixel(x, y)

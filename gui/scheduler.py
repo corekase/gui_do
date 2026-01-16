@@ -50,7 +50,7 @@ class Scheduler:
         if id in self.tasks.keys():
             del self.tasks[id]
 
-    def poll_task_time(self, id):
+    def task_time(self, id):
         if id in self.tasks.keys():
             now_time = time.time()
             elapsed = now_time - self.tasks[id].previous_time
