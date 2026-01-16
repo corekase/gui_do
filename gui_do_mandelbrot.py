@@ -65,12 +65,14 @@ class Mandel:
 
     def cooperative_scheduler(self):
         if len(self.tasks) > 0:
-            task = self.tasks.pop(0)
-            try:
-                next(task)
-                self.tasks.append(task)
-            except StopIteration:
-                pass
+            new_tasks = []     
+            for task in self.tasks:
+                try:
+                    next(task)
+                    new_tasks.append(task)
+                except StopIteration:
+                    pass
+            self.tasks = new_tasks
 
     def add_task(self, task):
         self.tasks += [task()]
