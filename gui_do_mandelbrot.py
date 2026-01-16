@@ -67,7 +67,7 @@ class Mandel:
                 Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
         def col(k):
             return cols[k % 16]
-        max_iter = 128
+        max_iter = 96
         _, _, width, height = self.canvas_rect
         center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
