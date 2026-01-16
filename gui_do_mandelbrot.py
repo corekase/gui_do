@@ -49,7 +49,7 @@ class Mandel:
             if event.type == GKind.Widget:
                 if event.widget_id == 'generate':
                     self.canvas_surface.fill(colours['medium'])
-                    self.add_task(self.mandel)
+                    self.add_task(self.mandel_scanlines)
                 elif event.widget_id == 'exit':
                     self.running = False
             elif event.type == GKind.KeyDown:
@@ -75,7 +75,7 @@ class Mandel:
     def add_task(self, task):
         self.tasks += [task()]
 
-    def mandel(self):
+    def mandel_scanlines(self):
         cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
                 Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
                 Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
@@ -94,7 +94,7 @@ class Mandel:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), col(self.pixel(x, y, max_iter)))
-            if (y % 7) == 0:
+            if (y % 14) == 0:
                 yield
 
     def pixel(self, x, y, iters):
