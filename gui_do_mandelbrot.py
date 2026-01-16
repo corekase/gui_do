@@ -134,7 +134,7 @@ class Mandel:
                 yield
 
     def mandel_setup(self):
-        self.max_iter = 96
+        self.max_iter = 512
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
