@@ -66,7 +66,7 @@ class Scheduler:
             time_slice.previous_time = now_time
             time_slice.timer += elapsed
             if time_slice.timer >= time_slice.duration:
-                time_slice.timer -= time_slice.duration
+                time_slice.timer %= time_slice.duration
                 return True
         return False
 
