@@ -26,10 +26,12 @@ class Mandel:
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_surface.fill(colours['medium'])
         self.canvas_rect = self.canvas.get_size()
-        set_grid_properties((10, height - 38), 90, widget_height, 2)
-        add(Button('generate', gridded(0, 0), 1, 'Generate'))
+        set_grid_properties((10, height - 38), 100, widget_height, 2)
+        add(Button('scanlines', gridded(0, 0), 1, 'Scanlines'))
+        add(Button('recursive1', gridded(1, 0), 1, 'Recurse 1'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
+        self.recurse = False
         self.tasks = []
 
     def run(self):
@@ -48,9 +50,12 @@ class Mandel:
     def handle_events(self):
         for event in self.gui.events():
             if event.type == GKind.Widget:
-                if event.widget_id == 'generate':
+                if event.widget_id == 'scanlines':
                     self.canvas_surface.fill(colours['medium'])
                     self.add_task(self.mandel_scanlines)
+                elif event.widget_id == 'recursive1':
+                    self.canvas_surface.fill(colours['medium'])
+                    self.mandel_recursive(self.canvas_rect)
                 elif event.widget_id == 'exit':
                     self.running = False
             elif event.type == GKind.KeyDown:
@@ -75,8 +80,37 @@ class Mandel:
                     pass
             self.tasks = new_tasks
 
-    def add_task(self, task):
-        self.tasks += [task()]
+    def add_task(self, task, params=None):
+        t1 = task()
+        self.tasks += [t1]
+        if params != None:
+            next(t1)
+            t1.send(params)
+
+    def mandel_recursive(self, area:Rect):
+        x, y, r, b = area.x, area.y, area.right, area.bottom
+        cenx, ceny = area.centerx, area.centery
+        # fill if all same points
+        tl = self.pixel(x, y)
+        tr = self.pixel(r, y)
+        bl = self.pixel(x, b)
+        br = self.pixel(r, b)
+        if tl == tr and bl == br and bl == tl:
+            self.canvas_surface.fill(self.col(tl), area)
+            return
+        if area.width > 2 or area.height > 2:
+            widx = cenx - x + 1
+            widy = ceny - y + 1
+            self.mandel_recursive(Rect(x, y, widx, widy))
+            self.mandel_recursive(Rect(cenx, y, widx, widy))
+            self.mandel_recursive(Rect(cenx, ceny, widx, widy))
+            self.mandel_recursive(Rect(x, ceny, widx, widy))
+        else:
+            self.canvas_surface.set_at((x, y), self.col(tl))
+            self.canvas_surface.set_at((x + 1, y), self.col(tr))
+            self.canvas_surface.set_at((x, y + 1), self.col(bl))
+            self.canvas_surface.set_at((x + 1, y + 1), self.col(br))
+            return
 
     def mandel_scanlines(self):
         for y in range(self.mandel_height):
