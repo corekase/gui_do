@@ -32,7 +32,6 @@ class Mandel:
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
-        self.recurse = False
         self.recurse_counter = 0
         self.tasks = []
 
@@ -48,6 +47,24 @@ class Mandel:
             pygame.display.flip()
             clock.tick(fps)
         pygame.quit()
+
+    def add_task(self, task, params=None):
+        if params == None:
+            t1 = task()
+        else:
+            t1 = task(params)
+        self.tasks += [t1]
+
+    def cooperative_scheduler(self):
+        if len(self.tasks) > 0:
+            new_tasks = []     
+            for task in self.tasks:
+                try:
+                    next(task)
+                    new_tasks.append(task)
+                except StopIteration:
+                    pass
+            self.tasks = new_tasks
 
     def handle_events(self):
         for event in self.gui.events():
@@ -69,27 +86,7 @@ class Mandel:
                 self.running = False
 
     def handle_canvas(self):
-        CEvent = self.canvas.read_event()
-        if CEvent != None:
-            pass
-
-    def cooperative_scheduler(self):
-        if len(self.tasks) > 0:
-            new_tasks = []     
-            for task in self.tasks:
-                try:
-                    next(task)
-                    new_tasks.append(task)
-                except StopIteration:
-                    pass
-            self.tasks = new_tasks
-
-    def add_task(self, task, params=None):
-        if params == None:
-            t1 = task()
-        else:
-            t1 = task(params)
-        self.tasks += [t1]
+        _ = self.canvas.read_event()
 
     def mandel_scanlines(self):
         for y in range(self.mandel_height):
@@ -153,16 +150,16 @@ class Mandel:
                 break
         return k
 
-    def col(self, escape):
+    def col(self, k):
         cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
                 Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
                 Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
                 Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
-        if escape == (self.max_iter - 1):
-            plot_col = Color(0, 0, 0)
+        if k == (self.max_iter - 1):
+            screen_colour = Color(0, 0, 0)
         else:
-            plot_col = cols[escape % 16]
-        return plot_col
+            screen_colour = cols[k % 16]
+        return screen_colour
 
 if __name__ == '__main__':
     Mandel().run()
