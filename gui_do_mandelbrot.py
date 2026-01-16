@@ -103,7 +103,7 @@ class Mandel:
         x, y, r, b = area.x, area.y, area.right, area.bottom
         cenx, ceny = area.centerx, area.centery
         w, h = area.width, area.height
-        self.recurse_counter = (self.recurse_counter + 1) % 300
+        self.recurse_counter = (self.recurse_counter + 1) % 650
         # fill if all same points
         tl, tr, bl, br = self.pixel(x, y), self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
         hit = False
@@ -137,7 +137,7 @@ class Mandel:
             return
 
     def mandel_setup(self):
-        self.max_iter = 512
+        self.max_iter = 128
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
