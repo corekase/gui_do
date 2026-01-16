@@ -99,34 +99,33 @@ class Mandel:
         self.recurse_counter = (self.recurse_counter + 1) % 256
         if self.recurse_counter == 0:
             yield
-        x, y, r, b, w, h = area.x, area.y, area.right, area.bottom, area.width, area.height
+        x, y, w, h = area
         top_left = self.pixel(x, y)
         accuracy = 2
         not_hit = True
         for x_test in range(0, w, accuracy):
-            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, b) != top_left):
+            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, y + h - 1) != top_left):
                 not_hit = False
                 break
         if not_hit:
             for y_test in range(0, h, accuracy):
-                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(r, y + y_test) != top_left):
+                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(x + w - 1, y + y_test) != top_left):
                     not_hit = False
                     break
         if not_hit:
             self.canvas_surface.fill(self.col(top_left), area)
             return
         if w > 2 or h > 2:
-            widx = w + (w % 2)
-            half_x = widx // 2
-            widy = h + (h % 2)
-            half_y = widy // 2
+            half_x = (w + (w % 2)) // 2
+            half_y = (h + (h % 2)) // 2
             yield from self.mandel_recursive(Rect(x, y, half_x, half_y))
             yield from self.mandel_recursive(Rect(x + half_x, y, half_x, half_y))
             yield from self.mandel_recursive(Rect(x + half_x, y + half_y, half_x, half_y))
             yield from self.mandel_recursive(Rect(x, y + half_y, half_x, half_y))
             return
         else:
-            top_right, bottom_left, bottom_right = self.pixel(r - 1, y), self.pixel(x, b - 1), self.pixel(r - 1, b - 1)
+            r, b = area.right - 1, area.bottom - 1
+            top_right, bottom_left, bottom_right = self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
             self.canvas_surface.lock()
             self.canvas_surface.set_at((x, y), self.col(top_left))
             self.canvas_surface.set_at((x + 1, y), self.col(top_right))
@@ -136,7 +135,7 @@ class Mandel:
             return
 
     def mandel_setup(self):
-        self.max_iter = 128
+        self.max_iter = 96
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
