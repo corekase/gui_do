@@ -90,11 +90,6 @@ class Mandel:
             t1 = task()
         else:
             t1 = task(params)
-            try:
-                next(t1)
-                t1.send(params)
-            except StopIteration:
-                pass
         self.tasks += [t1]
 
     def mandel_scanlines(self):
