@@ -73,7 +73,7 @@ class Mandel:
                     self.canvas_surface.fill(colours['medium'])
                 elif event.widget_id == 'iterative':
                     self.canvas_surface.fill(colours['medium'])
-                    self.add_task(self.mandel_scanlines)
+                    self.add_task(self.mandel_iterative)
                 elif event.widget_id == 'recursive':
                     self.canvas_surface.fill(colours['medium'])
                     self.add_task(self.mandel_recursive, self.canvas_rect)
@@ -88,7 +88,7 @@ class Mandel:
     def handle_canvas(self):
         _ = self.canvas.read_event()
 
-    def mandel_scanlines(self):
+    def mandel_iterative(self):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
