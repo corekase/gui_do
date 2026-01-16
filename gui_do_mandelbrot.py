@@ -27,11 +27,13 @@ class Mandel:
         self.canvas_surface.fill(colours['medium'])
         self.canvas_rect = self.canvas.get_size()
         set_grid_properties((10, height - 38), 100, widget_height, 2)
-        add(Button('scanlines', gridded(0, 0), 1, 'Scanlines'))
-        add(Button('recursive1', gridded(1, 0), 1, 'Recurse 1'))
+        add(Button('clear', gridded(0, 0), 1, 'Clear'))
+        add(Button('scanlines', gridded(1, 0), 1, 'Scanlines'))
+        add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
         self.recurse = False
+        self.counter = 0
         self.tasks = []
 
     def run(self):
@@ -39,6 +41,7 @@ class Mandel:
         clock = pygame.time.Clock()
         self.mandel_setup()
         while self.running:
+            self.counter += 1
             restore_pristine()
             self.cooperative_scheduler()
             self.handle_events()
@@ -50,11 +53,14 @@ class Mandel:
     def handle_events(self):
         for event in self.gui.events():
             if event.type == GKind.Widget:
-                if event.widget_id == 'scanlines':
+                if event.widget_id == 'clear':
+                    self.canvas_surface.fill(colours['medium'])
+                elif event.widget_id == 'scanlines':
                     self.canvas_surface.fill(colours['medium'])
                     self.add_task(self.mandel_scanlines)
-                elif event.widget_id == 'recursive1':
+                elif event.widget_id == 'recursive':
                     self.canvas_surface.fill(colours['medium'])
+                    self.add_task(self.mandel_recursive, self.canvas_rect)
                     self.mandel_recursive(self.canvas_rect)
                 elif event.widget_id == 'exit':
                     self.running = False
@@ -81,15 +87,22 @@ class Mandel:
             self.tasks = new_tasks
 
     def add_task(self, task, params=None):
-        t1 = task()
+        if params == None:
+            t1 = task()
+        else:
+            t1 = task(params)
+            try:
+                next(t1)
+                t1.send(params)
+            except StopIteration:
+                pass
         self.tasks += [t1]
-        if params != None:
-            next(t1)
-            t1.send(params)
 
     def mandel_recursive(self, area:Rect):
         x, y, r, b = area.x, area.y, area.right, area.bottom
         cenx, ceny = area.centerx, area.centery
+        self.counter += 1
+        self.counter %= 200
         # fill if all same points
         tl = self.pixel(x, y)
         tr = self.pixel(r, y)
@@ -97,19 +110,25 @@ class Mandel:
         br = self.pixel(r, b)
         if tl == tr and bl == br and bl == tl:
             self.canvas_surface.fill(self.col(tl), area)
+            if self.counter == 0:
+                yield
             return
         if area.width > 2 or area.height > 2:
             widx = cenx - x + 1
             widy = ceny - y + 1
-            self.mandel_recursive(Rect(x, y, widx, widy))
-            self.mandel_recursive(Rect(cenx, y, widx, widy))
-            self.mandel_recursive(Rect(cenx, ceny, widx, widy))
-            self.mandel_recursive(Rect(x, ceny, widx, widy))
+            if self.counter == 0:
+                yield
+            yield from self.mandel_recursive(Rect(x, y, widx, widy))
+            yield from self.mandel_recursive(Rect(cenx, y, widx, widy))
+            yield from self.mandel_recursive(Rect(cenx, ceny, widx, widy))
+            yield from self.mandel_recursive(Rect(x, ceny, widx, widy))
         else:
             self.canvas_surface.set_at((x, y), self.col(tl))
             self.canvas_surface.set_at((x + 1, y), self.col(tr))
             self.canvas_surface.set_at((x, y + 1), self.col(bl))
             self.canvas_surface.set_at((x + 1, y + 1), self.col(br))
+            if self.counter == 0:
+                yield
             return
 
     def mandel_scanlines(self):
