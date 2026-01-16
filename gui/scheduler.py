@@ -1,20 +1,8 @@
 import time
 
 class Scheduler:
-    class Timer:
-        def __init__(self, callback, duration):
-            self.timer = 0.0
-            self.previous_time = time.time()
-            self.callback = callback
-            self.duration = duration
-
-    class Task:
-        def __init__(self, duration):
-            self.timer = 0.0
-            self.previous_time = time.time()
-            self.duration = duration
-
     _instance_ = None
+
     def __new__(cls):
         if Scheduler._instance_ is None:
             Scheduler._instance_ = object.__new__(cls)
@@ -22,67 +10,67 @@ class Scheduler:
         return Scheduler._instance_
 
     def _populate_(self):
-        self.timers = []
-        self.task_timers = {}
-        self.tasks = []
+        self.timers = {}
+        self.tasks = {}
 
-    def add_timer(self, callback, duration):
-        timer = self.Timer(callback, duration)
-        self.timers.append(timer)
-        return timer
+    class Interval:
+        def __init__(self, duration):
+            self.timer = 0.0
+            self.previous_time = time.time()
+            self.duration = duration
+            self.callback = None
+            self.task = None
 
-    def remove_timer(self, timer):
-        if timer in self.timers:
-            self.timers.remove(timer)
+    def add_timer(self, id, duration, callback):
+        self.timers[id] = self.Interval(duration)
+        self.timers[id].callback = callback
 
-    def update_timer(self):
+    def remove_timer(self, id):
+        if id in self.timers.keys():
+            del self.timers[id]
+
+    def update_timers(self):
         now_time = time.time()
-        for obj in self.timers[:]:
-            elapsed_time = now_time - obj.previous_time
-            obj.previous_time = now_time
-            obj.timer += elapsed_time
-            if obj.timer >= obj.duration:
-                obj.timer -= obj.duration
-                obj.callback()
+        for id in self.timers.keys():
+            elapsed_time = now_time - self.timers[id].previous_time
+            self.timers[id].previous_time = now_time
+            self.timers[id].timer += elapsed_time
+            if self.timers[id].timer >= self.timers[id].duration:
+                self.timers[id].timer -= self.timers[id].duration
+                self.timers[id].callback()
 
     def add_task(self, id, interval, task, params=None):
-        t1 = task(id, params)
-        self.task_timers[id] = self.Task(interval)
-        self.tasks.append((id, t1))
+        self.tasks[id] = self.Interval(interval)
+        self.tasks[id].task = task(id, params)
 
     def remove_task(self, id):
-        if id in self.task_timers.keys():
-            del self.task_timers[id]
-            for task in self.tasks:
-                if task[0] == id:
-                    self.tasks.pop(self.tasks.index(task))
-                    break
+        if id in self.tasks.keys():
+            del self.tasks[id]
 
     def poll_task_time(self, id):
-        if id in self.task_timers.keys():
+        if id in self.tasks.keys():
             now_time = time.time()
-            time_slice = self.task_timers[id]
-            elapsed = now_time - time_slice.previous_time
-            time_slice.previous_time = now_time
-            time_slice.timer += elapsed
-            if time_slice.timer >= time_slice.duration:
-                time_slice.timer %= time_slice.duration
+            elapsed = now_time - self.tasks[id].previous_time
+            self.tasks[id].previous_time = now_time
+            self.tasks[id].timer += elapsed
+            if self.tasks[id].timer >= self.tasks[id].duration:
+                self.tasks[id].timer %= self.tasks[id].duration
                 return True
         return False
 
     def task_match(self, *tasks):
         for task in tasks:
-            if task in self.task_timers.keys():
+            if task in self.tasks.keys():
                 return True
         return False
 
     def task_scheduler(self):
         if len(self.tasks) > 0:
-            new_tasks = []     
-            for id, task in self.tasks:
+            new_tasks = {}     
+            for task in self.tasks.keys():
                 try:
-                    next(task)
-                    new_tasks.append((id, task))
+                    next(self.tasks[task].task)
+                    new_tasks[task] = self.tasks[task]
                 except StopIteration:
-                    self.remove_task(id)
+                    pass
             self.tasks = new_tasks

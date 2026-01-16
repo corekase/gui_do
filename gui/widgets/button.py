@@ -17,7 +17,7 @@ class Button(Widget):
         self.GType = GType.Button
         self.gui = GuiManager()
         # this object's timer
-        self.timer = None
+        self.timer_id = None
         if not skip_factory:
             factory = BitmapFactory()
             (self.idle, self.hover, self.armed), self.hit_rect = \
@@ -35,9 +35,9 @@ class Button(Widget):
         # is the mouse position within the button rect
         collision = self.get_collide(window)
         if not collision:
-            if self.timer != None:
-                self.gui.timers.remove_timer(self.timer)
-                self.timer = None
+            if self.timer_id != None:
+                self.gui.timers.remove_timer(self.timer_id)
+                self.timer_id = None
             self.state = State.Idle
             return False
         # manage the state of the button
@@ -49,17 +49,18 @@ class Button(Widget):
                     self.state = State.Armed
                     if self.button_callback != None:
                         self.button_callback()
-                        if self.timer == None:
-                            self.timer = self.gui.timers.add_timer(self.button_callback, 0.15)
+                        if self.timer_id == None:
+                            self.gui.timers.add_timer(f'{self.id}.timer', 0.15, self.button_callback)
+                            self.timer_id = f'{self.id}.timer'
                     # don't signal a widget change, consume the signal by returning False
                     return False
         if self.state == State.Armed:
             if event.type == MOUSEBUTTONUP:
                 if event.button == 1:
                     # button clicked
-                    if self.timer != None:
-                        self.gui.timers.remove_timer(self.timer)
-                        self.timer = None
+                    if self.timer_id != None:
+                        self.gui.timers.remove_timer(f'{self.id}.timer')
+                        self.timer_id = None
                     self.state = State.Hover
                     if self.button_callback != None:
                         # if a callback exists, consume the event
@@ -70,9 +71,9 @@ class Button(Widget):
         return False
 
     def leave(self):
-        if self.timer != None:
-            self.gui.timers.remove_timer(self.timer)
-            self.timer = None
+        if self.timer_id != None:
+            self.gui.timers.remove_timer(f'{self.id}.timer')
+            self.timer_id = None
         self.state = State.Idle
 
     def draw(self):
