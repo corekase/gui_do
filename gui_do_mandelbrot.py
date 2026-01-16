@@ -53,7 +53,7 @@ class Mandel:
             t1 = task()
         else:
             t1 = task(params)
-        self.tasks += [t1]
+        self.tasks.append(t1)
 
     def cooperative_scheduler(self):
         if len(self.tasks) > 0:
