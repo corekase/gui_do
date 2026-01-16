@@ -100,6 +100,8 @@ class Mandel:
 
     def mandel_recursive(self, area):
         self.recurse_counter = (self.recurse_counter + 1) % 256
+        if self.recurse_counter == 0:
+            yield
         x, y, r, b, w, h = area.x, area.y, area.right, area.bottom, area.width, area.height
         top_left = self.pixel(x, y)
         accuracy = 2
@@ -132,8 +134,6 @@ class Mandel:
             self.canvas_surface.set_at((x, y + 1), self.col(bottom_left))
             self.canvas_surface.set_at((x + 1, y + 1), self.col(bottom_right))
             self.canvas_surface.unlock()
-        if self.recurse_counter == 0:
-            yield
 
     def mandel_setup(self):
         self.max_iter = 96
