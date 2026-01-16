@@ -64,10 +64,9 @@ class Mandel:
         cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
                 Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
                 Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
-                Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(0, 0, 0))
+                Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
         def col(k):
             return cols[k % 16]
-        # must be a multiple of 16 to line up with black colour on the palette
         max_iter = 128
         _, _, width, height = self.canvas_rect
         center = -0.7 + 0.0j
@@ -81,7 +80,11 @@ class Mandel:
                     z = z**2 + c
                     if (z * z.conjugate()).real > 4.0:
                         break
-                self.canvas_surface.set_at((i, j), col(k))
+                if k == max_iter - 1:
+                    plot_col = Color(0, 0, 0)
+                else:
+                    plot_col = col(k)
+                self.canvas_surface.set_at((i, j), plot_col)
 
 if __name__ == '__main__':
     Mandel().run()
