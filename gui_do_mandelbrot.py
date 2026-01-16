@@ -4,7 +4,7 @@ from pygame import Rect, Color, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import centre, set_grid_properties, gridded
-from gui import GKind, Button, Canvas
+from gui import GKind, Button, Canvas, Timers
 from gui import colours
 
 class Mandel:
@@ -33,9 +33,7 @@ class Mandel:
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
-        self.recurse_counter = 0
-        self.times = {}
-        self.tasks = []
+        self.timers = Timers()
 
     def run(self):
         fps = 60
@@ -43,7 +41,6 @@ class Mandel:
         self.mandel_setup()
         while self.running:
             restore_pristine()
-            self.scheduler()
             self.handle_events()
             self.gui.draw_gui()
             pygame.display.flip()
@@ -55,15 +52,14 @@ class Mandel:
             if event.type == GKind.Widget:
                 if event.widget_id == 'exit':
                     self.running = False
-                elif ('iterative' not in self.times.keys()) and ('recursive' not in self.times.keys()):
-                    if event.widget_id == 'clear':
-                        self.canvas_surface.fill(colours['medium'])
-                    elif event.widget_id == 'iterative':
-                        self.canvas_surface.fill(colours['medium'])
-                        self.add_task('iterative', 0.017, self.mandel_iterative)
-                    elif event.widget_id == 'recursive':
-                        self.canvas_surface.fill(colours['medium'])
-                        self.add_task('recursive', 0.017, self.mandel_recursive, self.canvas_rect)
+                elif event.widget_id == 'clear':
+                    self.canvas_surface.fill(colours['medium'])
+                elif event.widget_id == 'iterative':
+                    self.canvas_surface.fill(colours['medium'])
+                    self.timers.add_task('iter', 0.017, self.mandel_iterative)
+                elif event.widget_id == 'recursive':
+                    self.canvas_surface.fill(colours['medium'])
+                    self.timers.add_task('recu', 0.017, self.mandel_recursive, self.canvas_rect)
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     self.running = False
@@ -73,55 +69,15 @@ class Mandel:
     def handle_canvas(self):
         _ = self.canvas.read_event()
 
-    def add_task(self, id, interval, task, params=None):
-        t1 = task(id, params)
-        self.register_time(id, interval)
-        self.tasks.append((id, t1))
-
-    def scheduler(self):
-        if len(self.tasks) > 0:
-            new_tasks = []     
-            for id, task in self.tasks:
-                try:
-                    next(task)
-                    new_tasks.append((id, task))
-                except StopIteration:
-                    self.unregister_time(id)
-            self.tasks = new_tasks
-
-    def register_time(self, owner, interval):
-        class TimeSlice:
-            def __init__(self, duration):
-                self.timer = 0.0
-                self.previous_time = time.time()
-                self.duration = duration
-        self.times[owner] = TimeSlice(interval)
-
-    def unregister_time(self, owner):
-        if owner in self.times.keys():
-            del self.times[owner]
-
-    def pulse(self, owner):
-        if owner in self.times.keys():
-            now_time = time.time()
-            time_slice = self.times[owner]
-            elapsed = now_time - time_slice.previous_time
-            time_slice.previous_time = now_time
-            time_slice.timer += elapsed
-            if time_slice.timer >= time_slice.duration:
-                time_slice.timer -= time_slice.duration
-                return True
-        return False
-
     def mandel_iterative(self, id, _):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-            if self.pulse(id):
+            if self.timers.poll_task_time(id):
                 yield
 
     def mandel_recursive(self, id, area):
-        if self.pulse(id):
+        if self.timers.poll_task_time(id):
             yield
         x, y, w, h = area
         top_left = self.pixel(x, y)
