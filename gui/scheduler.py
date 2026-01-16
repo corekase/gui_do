@@ -1,6 +1,6 @@
 import time
 
-class Timers:
+class Scheduler:
     class Timer:
         def __init__(self, callback, duration):
             self.timer = 0.0
@@ -16,10 +16,10 @@ class Timers:
 
     _instance_ = None
     def __new__(cls):
-        if Timers._instance_ is None:
-            Timers._instance_ = object.__new__(cls)
-            Timers._instance_._populate_()
-        return Timers._instance_
+        if Scheduler._instance_ is None:
+            Scheduler._instance_ = object.__new__(cls)
+            Scheduler._instance_._populate_()
+        return Scheduler._instance_
 
     def _populate_(self):
         self.timers = []

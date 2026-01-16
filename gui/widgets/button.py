@@ -3,7 +3,7 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..guimanager import GType
 from ..bitmapfactory import BitmapFactory
-from ..timers import Timers
+from ..scheduler import Scheduler
 from ..command import centre
 from .widget import Widget
 from enum import Enum

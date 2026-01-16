@@ -4,7 +4,7 @@ from pygame import Rect, Color, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import centre, set_grid_properties, gridded
-from gui import GKind, Button, Canvas, Timers
+from gui import GKind, Button, Canvas, Scheduler
 from gui import colours
 
 class Mandel:
@@ -33,7 +33,7 @@ class Mandel:
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
-        self.timers = Timers()
+        self.schedules = Scheduler()
 
     def run(self):
         fps = 60
@@ -56,10 +56,10 @@ class Mandel:
                     self.canvas_surface.fill(colours['medium'])
                 elif event.widget_id == 'iterative':
                     self.canvas_surface.fill(colours['medium'])
-                    self.timers.add_task('iter', 0.017, self.mandel_iterative)
+                    self.schedules.add_task('iter', 0.017, self.mandel_iterative)
                 elif event.widget_id == 'recursive':
                     self.canvas_surface.fill(colours['medium'])
-                    self.timers.add_task('recu', 0.017, self.mandel_recursive, self.canvas_rect)
+                    self.schedules.add_task('recu', 0.017, self.mandel_recursive, self.canvas_rect)
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     self.running = False
@@ -73,11 +73,11 @@ class Mandel:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-            if self.timers.poll_task_time(id):
+            if self.schedules.poll_task_time(id):
                 yield
 
     def mandel_recursive(self, id, area):
-        if self.timers.poll_task_time(id):
+        if self.schedules.poll_task_time(id):
             yield
         x, y, w, h = area
         top_left = self.pixel(x, y)
