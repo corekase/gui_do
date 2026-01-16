@@ -1,4 +1,3 @@
-import time
 import pygame
 from pygame import Rect, Color, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
