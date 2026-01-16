@@ -33,7 +33,7 @@ class Mandel:
         set_cursor((1, 1), 'cursor.png')
         self.running = True
         self.recurse = False
-        self.counter = 0
+        self.recurse_counter = 0
         self.tasks = []
 
     def run(self):
@@ -41,7 +41,7 @@ class Mandel:
         clock = pygame.time.Clock()
         self.mandel_setup()
         while self.running:
-            self.counter += 1
+            self.recurse_counter += 1
             restore_pristine()
             self.cooperative_scheduler()
             self.handle_events()
@@ -97,11 +97,17 @@ class Mandel:
                 pass
         self.tasks += [t1]
 
+    def mandel_scanlines(self):
+        for y in range(self.mandel_height):
+            for x in range(self.mandel_width):
+                self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
+            if (y % 4) == 0:
+                yield
+
     def mandel_recursive(self, area):
         x, y, r, b = area.x, area.y, area.right, area.bottom
         cenx, ceny = area.centerx, area.centery
-        self.counter += 1
-        self.counter %= 300
+        self.recurse_counter = (self.recurse_counter + 1) % 300
         # fill if all same points
         tl = self.pixel(x, y)
         tr = self.pixel(r, y)
@@ -113,7 +119,7 @@ class Mandel:
         if area.width > 2 or area.height > 2:
             widx = cenx - x + 1
             widy = ceny - y + 1
-            if self.counter == 0:
+            if self.recurse_counter == 0:
                 yield
             yield from self.mandel_recursive(Rect(x, y, widx, widy))
             yield from self.mandel_recursive(Rect(cenx, y, widx, widy))
@@ -125,13 +131,6 @@ class Mandel:
             self.canvas_surface.set_at((x, y + 1), self.col(bl))
             self.canvas_surface.set_at((x + 1, y + 1), self.col(br))
             return
-
-    def mandel_scanlines(self):
-        for y in range(self.mandel_height):
-            for x in range(self.mandel_width):
-                self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-            if (y % 4) == 0:
-                yield
 
     def mandel_setup(self):
         self.max_iter = 512
