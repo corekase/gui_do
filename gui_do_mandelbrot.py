@@ -53,13 +53,16 @@ class Mandel:
                 if event.widget_id == 'exit':
                     self.running = False
                 elif event.widget_id == 'clear':
+                    self.schedules.remove_task('iter')
+                    self.schedules.remove_task('recu')
                     self.canvas_surface.fill(colours['medium'])
-                elif event.widget_id == 'iterative':
-                    self.canvas_surface.fill(colours['medium'])
-                    self.schedules.add_task('iter', 0.017, self.mandel_iterative)
-                elif event.widget_id == 'recursive':
-                    self.canvas_surface.fill(colours['medium'])
-                    self.schedules.add_task('recu', 0.017, self.mandel_recursive, self.canvas_rect)
+                elif not self.schedules.task_match('iter', 'recu'):
+                    if event.widget_id == 'iterative':
+                        self.canvas_surface.fill(colours['medium'])
+                        self.schedules.add_task('iter', 0.017, self.mandel_iterative)
+                    elif event.widget_id == 'recursive':
+                        self.canvas_surface.fill(colours['medium'])
+                        self.schedules.add_task('recu', 0.017, self.mandel_recursive, self.canvas_rect)
             elif event.type == GKind.KeyDown:
                 if event.key == K_ESCAPE:
                     self.running = False

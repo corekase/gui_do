@@ -53,6 +53,10 @@ class Scheduler:
     def remove_task(self, id):
         if id in self.task_timers.keys():
             del self.task_timers[id]
+            for task in self.tasks:
+                if task[0] == id:
+                    self.tasks.pop(self.tasks.index(task))
+                    break
 
     def poll_task_time(self, id):
         if id in self.task_timers.keys():
@@ -63,6 +67,12 @@ class Scheduler:
             time_slice.timer += elapsed
             if time_slice.timer >= time_slice.duration:
                 time_slice.timer -= time_slice.duration
+                return True
+        return False
+
+    def task_match(self, *tasks):
+        for task in tasks:
+            if task in self.task_timers.keys():
                 return True
         return False
 
