@@ -30,12 +30,14 @@ class Mandel:
         add(Button('generate', gridded(0, 0), 1, 'Generate'))
         set_cursor((1, 1), 'cursor.png')
         self.running = True
+        self.tasks = []
 
     def run(self):
         fps = 60
         clock = pygame.time.Clock()
         while self.running:
             restore_pristine()
+            self.cooperative_scheduler()
             self.handle_events()
             self.gui.draw_gui()
             pygame.display.flip()
@@ -46,7 +48,8 @@ class Mandel:
         for event in self.gui.events():
             if event.type == GKind.Widget:
                 if event.widget_id == 'generate':
-                    self.mandel()
+                    self.canvas_surface.fill(colours['medium'])
+                    self.add_task(self.mandel)
                 elif event.widget_id == 'exit':
                     self.running = False
             elif event.type == GKind.KeyDown:
@@ -59,6 +62,18 @@ class Mandel:
         CEvent = self.canvas.read_event()
         if CEvent != None:
             pass
+
+    def cooperative_scheduler(self):
+        if len(self.tasks) > 0:
+            task = self.tasks.pop(0)
+            try:
+                next(task)
+                self.tasks.append(task)
+            except StopIteration:
+                pass
+
+    def add_task(self, task):
+        self.tasks += [task()]
 
     def mandel(self):
         cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
@@ -79,6 +94,8 @@ class Mandel:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.canvas_surface.set_at((x, y), col(self.pixel(x, y, max_iter)))
+            if (y % 7) == 0:
+                yield
 
     def pixel(self, x, y, iters):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
