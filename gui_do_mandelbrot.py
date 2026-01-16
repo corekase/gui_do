@@ -61,7 +61,6 @@ class Mandel:
                 elif event.widget_id == 'recursive':
                     self.canvas_surface.fill(colours['medium'])
                     self.add_task(self.mandel_recursive, self.canvas_rect)
-                    self.mandel_recursive(self.canvas_rect)
                 elif event.widget_id == 'exit':
                     self.running = False
             elif event.type == GKind.KeyDown:
@@ -98,11 +97,11 @@ class Mandel:
                 pass
         self.tasks += [t1]
 
-    def mandel_recursive(self, area:Rect):
+    def mandel_recursive(self, area):
         x, y, r, b = area.x, area.y, area.right, area.bottom
         cenx, ceny = area.centerx, area.centery
         self.counter += 1
-        self.counter %= 200
+        self.counter %= 300
         # fill if all same points
         tl = self.pixel(x, y)
         tr = self.pixel(r, y)
@@ -110,8 +109,6 @@ class Mandel:
         br = self.pixel(r, b)
         if tl == tr and bl == br and bl == tl:
             self.canvas_surface.fill(self.col(tl), area)
-            if self.counter == 0:
-                yield
             return
         if area.width > 2 or area.height > 2:
             widx = cenx - x + 1
@@ -127,8 +124,6 @@ class Mandel:
             self.canvas_surface.set_at((x + 1, y), self.col(tr))
             self.canvas_surface.set_at((x, y + 1), self.col(bl))
             self.canvas_surface.set_at((x + 1, y + 1), self.col(br))
-            if self.counter == 0:
-                yield
             return
 
     def mandel_scanlines(self):
