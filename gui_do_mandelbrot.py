@@ -35,6 +35,7 @@ class Mandel:
     def run(self):
         fps = 60
         clock = pygame.time.Clock()
+        self.mandel_setup()
         while self.running:
             restore_pristine()
             self.cooperative_scheduler()
@@ -78,35 +79,38 @@ class Mandel:
         self.tasks += [task()]
 
     def mandel_scanlines(self):
-        cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
-                Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
-                Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
-                Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
-        def col(escape):
-            if escape == (max_iter - 1):
-                plot_col = Color(0, 0, 0)
-            else:
-                plot_col = cols[escape % 16]
-            return plot_col
-        max_iter = 96
+        for y in range(self.mandel_height):
+            for x in range(self.mandel_width):
+                self.canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
+            if (y % 4) == 0:
+                yield
+
+    def mandel_setup(self):
+        self.max_iter = 96
         _, _, self.mandel_width, self.mandel_height = self.canvas_rect
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
-        for y in range(self.mandel_height):
-            for x in range(self.mandel_width):
-                self.canvas_surface.set_at((x, y), col(self.pixel(x, y, max_iter)))
-            if (y % 14) == 0:
-                yield
 
-    def pixel(self, x, y, iters):
+    def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
         z = 0
-        for k in range(iters):
+        for k in range(self.max_iter):
             z = z ** 2 + c
             if (z * z.conjugate()).real > 4.0:
                 break
         return k
+
+    def col(self, escape):
+        cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
+                Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
+                Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
+                Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
+        if escape == (self.max_iter - 1):
+            plot_col = Color(0, 0, 0)
+        else:
+            plot_col = cols[escape % 16]
+        return plot_col
 
 if __name__ == '__main__':
     Mandel().run()
