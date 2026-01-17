@@ -435,10 +435,9 @@ class Demo:
                 Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
                 Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
         if k == (self.max_iter - 1):
-            screen_colour = Color(0, 0, 0)
+            return Color(0, 0, 0)
         else:
-            screen_colour = cols[k % 16]
-        return screen_colour
+            return cols[k % 16]
 
 
 if __name__ == '__main__':
