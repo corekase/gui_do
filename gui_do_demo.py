@@ -441,6 +441,5 @@ class Demo:
         else:
             return self.cols[k % 16]
 
-
 if __name__ == '__main__':
     Demo().run()
