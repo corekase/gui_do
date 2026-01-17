@@ -57,7 +57,6 @@ class Scheduler:
             self.tasks[id].previous_time = now_time
             self.tasks[id].timer += elapsed
             if self.tasks[id].timer >= self.tasks[id].duration:
-                self.tasks[id].timer %= self.tasks[id].duration
                 return True
         return False
 
