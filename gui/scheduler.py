@@ -72,6 +72,8 @@ class Scheduler:
             new_tasks = {}     
             for task in self.tasks.keys():
                 try:
+                    self.tasks[task].timer = 0.0
+                    self.tasks[task].previous_time = time.time()
                     next(self.tasks[task].task)
                     new_tasks[task] = self.tasks[task]
                 except StopIteration:
