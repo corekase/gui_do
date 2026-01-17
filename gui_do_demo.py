@@ -305,16 +305,16 @@ class Demo:
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
+    # Coordinates around a cell, given as a delta table
+    neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
+                  ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
     # function to generate a cycle of life
     def generate(self):
-        # Coordinates around a cell, given as a delta table
-        neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
-                      ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
         def population(cell):
             count = 0
             # For the delta table entries generate tuples of (x, y) and
             # then test them for membership in the life set
-            for position in neighbours:
+            for position in self.neighbours:
                 position_x = cell[0] + position[0]
                 position_y = cell[1] + position[1]
                 if (position_x, position_y) in self.life:
@@ -329,7 +329,7 @@ class Demo:
                population(cell) == 2:
                    new_life.add(cell)
             # Check all the neighbours of this cell
-            for new_cell in neighbours:
+            for new_cell in self.neighbours:
                 test_cell = (cell[0] + new_cell[0],
                              cell[1] + new_cell[1])
                 if population(test_cell) == 3:
