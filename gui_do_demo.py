@@ -1,10 +1,10 @@
 import pygame
 from random import randrange, choice
-from pygame import Rect, FULLSCREEN, SCALED
+from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import colours, set_grid_properties, gridded
-from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image
+from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image, Scheduler
 
 class Demo:
     def __init__(self):
@@ -39,6 +39,8 @@ class Demo:
         self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), 0, False, 'Scrollbars'))
         # control whether the life window is visible
         self.life_toggle = add(Toggle('life_window', gridded(3, 0), 0, False, 'Life'))
+        # control whether the Mandelbrot window is visible
+        self.mandel_toggle = add(Toggle('mandel_window', gridded(4, 0), 0, False, 'Mandelbrot'))
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         set_grid_properties((10, 10), 120, widget_height, 2)
@@ -135,6 +137,17 @@ class Demo:
         self.toggle_life = add(Toggle('run', Rect(30, height - 38, 100, widget_height), 3, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
+        width, height = 650, 650
+        pos = x_pos + 510, y_pos 
+        self.mandel_win = Window('Mandelbrot', pos, (width, height))
+        self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas))
+        self.mandel_canvas_surface = self.mandel_canvas.get_canvas_surface()
+        self.mandel_canvas_surface.fill(colours['medium'])
+        self.mandel_canvas_rect = self.mandel_canvas.get_size()
+        set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        add(Button('clear', gridded(0, 0), 1, 'Clear'))
+        add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
+        add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
@@ -161,12 +174,14 @@ class Demo:
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
         # set running flag
         self.running = True
+        self.schedules = Scheduler()
 
     def run(self):
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
+        self.mandel_setup()
         while self.running:
             # restore the pristine area to the screen before drawing
             restore_pristine()
@@ -180,6 +195,7 @@ class Demo:
             self.button_group_win.set_visible(self.buttons_toggle.read())
             self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
             self.life_win.set_visible(self.life_toggle.read())
+            self.mandel_win.set_visible(self.mandel_toggle.read())
             # handle events
             self.handle_events()
             # if the life window is visible then handle it
@@ -205,6 +221,17 @@ class Demo:
                 if event.widget_id == 'exit':
                     # exit button was clicked
                     self.running = False
+                elif event.widget_id == 'clear':
+                    self.schedules.remove_task('iter')
+                    self.schedules.remove_task('recu')
+                    self.mandel_canvas_surface.fill(colours['medium'])
+                elif not self.schedules.task_match('iter', 'recu'):
+                    if event.widget_id == 'iterative':
+                        self.mandel_canvas_surface.fill(colours['medium'])
+                        self.schedules.add_task('iter', 0.017, self.mandel_iterative)
+                    elif event.widget_id == 'recursive':
+                        self.mandel_canvas_surface.fill(colours['medium'])
+                        self.schedules.add_task('recu', 0.017, self.mandel_recursive, self.mandel_canvas_rect)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
@@ -333,6 +360,79 @@ class Demo:
                     ypos = 0
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
         self.canvas_surface.set_clip(None)
+
+    def mandel_iterative(self, id):
+        for y in range(self.mandel_height):
+            for x in range(self.mandel_width):
+                self.mandel_canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
+            if self.schedules.task_time(id):
+                yield
+
+    def mandel_recursive(self, id, area):
+        if self.schedules.task_time(id):
+            yield
+        x, y, w, h = area
+        top_left = self.pixel(x, y)
+        accuracy = 2
+        not_hit = True
+        for x_test in range(0, w, accuracy):
+            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, y + h - 1) != top_left):
+                not_hit = False
+                break
+        if not_hit:
+            for y_test in range(0, h, accuracy):
+                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(x + w - 1, y + y_test) != top_left):
+                    not_hit = False
+                    break
+        if not_hit:
+            self.mandel_canvas_surface.fill(self.col(top_left), area)
+            return
+        if w > 2 or h > 2:
+            half_x = (w + (w % 2)) // 2
+            half_y = (h + (h % 2)) // 2
+            yield from self.mandel_recursive(id, Rect(x, y, half_x, half_y))
+            yield from self.mandel_recursive(id, Rect(x + half_x, y, half_x, half_y))
+            yield from self.mandel_recursive(id, Rect(x + half_x, y + half_y, half_x, half_y))
+            yield from self.mandel_recursive(id, Rect(x, y + half_y, half_x, half_y))
+            return
+        else:
+            r, b = area.right - 1, area.bottom - 1
+            top_right, bottom_left, bottom_right = self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
+            self.mandel_canvas_surface.lock()
+            self.mandel_canvas_surface.set_at((x, y), self.col(top_left))
+            self.mandel_canvas_surface.set_at((x + 1, y), self.col(top_right))
+            self.mandel_canvas_surface.set_at((x, y + 1), self.col(bottom_left))
+            self.mandel_canvas_surface.set_at((x + 1, y + 1), self.col(bottom_right))
+            self.mandel_canvas_surface.unlock()
+            return
+
+    def mandel_setup(self):
+        self.max_iter = 128
+        _, _, self.mandel_width, self.mandel_height = self.mandel_canvas_rect
+        self.center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
+
+    def pixel(self, x, y):
+        c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
+        z = 0
+        for k in range(self.max_iter):
+            z = z ** 2 + c
+            if (z * z.conjugate()).real > 4.0:
+                break
+        return k
+
+    def col(self, k):
+        cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
+                Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
+                Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
+                Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
+        if k == (self.max_iter - 1):
+            screen_colour = Color(0, 0, 0)
+        else:
+            screen_colour = cols[k % 16]
+        return screen_colour
+
 
 if __name__ == '__main__':
     Demo().run()
