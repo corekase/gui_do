@@ -126,7 +126,7 @@ class Demo:
         set_font('normal')
         # make the Conway's Game of Life window
         x_pos += 327
-        width, height = 500, 500
+        width, height = 600, 600
         self.life_win = Window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - 58), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
@@ -137,8 +137,8 @@ class Demo:
         self.toggle_life = add(Toggle('run', Rect(30, height - 38, 100, widget_height), 3, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
-        width, height = 650, 650
-        pos = x_pos + 510, y_pos 
+        width, height = 600, 600
+        pos = x_pos + 605, y_pos 
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
         self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas))
         self.mandel_canvas_surface = self.mandel_canvas.get_canvas_surface()

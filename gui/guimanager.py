@@ -60,7 +60,7 @@ class GuiManager:
         # whether or not drawing is buffered
         self.buffered = False
         # gui timers
-        self.timers = Scheduler()
+        self.schedules = Scheduler()
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
@@ -117,9 +117,9 @@ class GuiManager:
 
     def events(self):
         # update tasks
-        self.timers.task_scheduler()
+        self.schedules.task_scheduler()
         # update internal gui timers
-        self.timers.update_timers()
+        self.schedules.update_timers()
         # process event queue
         for raw_event in pygame.event.get():
             # process event
