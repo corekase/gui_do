@@ -366,8 +366,8 @@ class Demo:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.mandel_canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-            if self.schedules.task_time(id):
-                yield
+                if self.schedules.task_time(id):
+                    yield
 
     def mandel_recursive(self, id, area):
         if self.schedules.task_time(id):
@@ -392,8 +392,14 @@ class Demo:
             half_x = (w + (w % 2)) // 2
             half_y = (h + (h % 2)) // 2
             yield from self.mandel_recursive(id, Rect(x, y, half_x, half_y))
+            if self.schedules.task_time(id):
+                yield
             yield from self.mandel_recursive(id, Rect(x + half_x, y, half_x, half_y))
+            if self.schedules.task_time(id):
+                yield
             yield from self.mandel_recursive(id, Rect(x + half_x, y + half_y, half_x, half_y))
+            if self.schedules.task_time(id):
+                yield
             yield from self.mandel_recursive(id, Rect(x, y + half_y, half_x, half_y))
             return
         else:
