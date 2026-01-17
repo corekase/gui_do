@@ -29,7 +29,7 @@ class Scheduler:
         if id in self.timers.keys():
             del self.timers[id]
 
-    def update_timers(self):
+    def timer_updates(self):
         now_time = time.time()
         for id in self.timers.keys():
             elapsed_time = now_time - self.timers[id].previous_time
