@@ -52,11 +52,8 @@ class Scheduler:
 
     def task_time(self, id):
         if id in self.tasks.keys():
-            now_time = time.time()
-            elapsed = now_time - self.tasks[id].previous_time
-            self.tasks[id].previous_time = now_time
-            self.tasks[id].timer += elapsed
-            if self.tasks[id].timer >= self.tasks[id].duration:
+            elapsed = time.time() - self.tasks[id].previous_time
+            if elapsed >= self.tasks[id].duration:
                 return True
         return False
 
@@ -71,7 +68,6 @@ class Scheduler:
             new_tasks = {}     
             for task in self.tasks.keys():
                 try:
-                    self.tasks[task].timer = 0.0
                     self.tasks[task].previous_time = time.time()
                     next(self.tasks[task].task)
                     new_tasks[task] = self.tasks[task]
