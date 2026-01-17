@@ -436,7 +436,7 @@ class Demo:
             Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
 
     def col(self, k):
-        if k == (self.maximum_iters):
+        if k == self.maximum_iters:
             return Color(0, 0, 0)
         else:
             return self.cols[k % 16]
