@@ -52,8 +52,7 @@ class Scheduler:
 
     def task_time(self, id):
         if id in self.tasks.keys():
-            elapsed = time.time() - self.tasks[id].previous_time
-            if elapsed >= self.tasks[id].duration:
+            if (time.time() - self.tasks[id].previous_time) >= self.tasks[id].duration:
                 return True
         return False
 
