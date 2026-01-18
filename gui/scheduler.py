@@ -39,12 +39,12 @@ class Scheduler:
                 self.timers[id].timer -= self.timers[id].duration
                 self.timers[id].callback()
 
-    def add_task(self, id, interval, task, params=None):
+    def add_task(self, id, interval, task, parameters=None):
         self.tasks[id] = self.Interval(interval)
-        if params == None:
+        if parameters == None:
             self.tasks[id].task = task(id)
         else:
-            self.tasks[id].task = task(id, params)
+            self.tasks[id].task = task(id, parameters)
 
     def remove_task(self, id):
         if id in self.tasks.keys():
