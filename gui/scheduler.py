@@ -51,9 +51,8 @@ class Scheduler:
             del self.tasks[id]
 
     def task_time(self, id):
-        if id in self.tasks.keys():
-            if (time.time() - self.tasks[id].previous_time) >= self.tasks[id].duration:
-                return True
+        if (time.time() - self.tasks[id].previous_time) >= self.tasks[id].duration:
+            return True
         return False
 
     def task_match(self, *tasks):
