@@ -150,7 +150,7 @@ class Demo:
         add(Button('clear', gridded(0, 0), 1, 'Clear'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
-        add(Button('split', gridded(3, 0), 1, 'Split'))
+        add(Button('split', gridded(3, 0), 1, '4 Tasks'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
