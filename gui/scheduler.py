@@ -112,9 +112,8 @@ class Scheduler:
             # handle task logic
             if len(self.queued) > 0:
                 try:
-                    task = self.queued[0]
+                    task = self.queued.pop(0)
                     self.tasks[task].time_start = time.time()
-                    self.queued.pop(0)
                     next(self.tasks[task].task_logic)
                     self.finished.append(task)
                 except StopIteration:
