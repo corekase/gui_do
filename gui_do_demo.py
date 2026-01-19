@@ -1,3 +1,4 @@
+import sys
 import pygame
 from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
@@ -176,45 +177,35 @@ class Demo:
         # set running flag
         self.running = True
         self.schedules = Scheduler()
-        self.schedules.init_scheduler()
 
     def run(self):
-        # fps to maintain, if 0 then unlimited
-        fps = 60
-        # a pygame clock to control the fps
-        clock = pygame.time.Clock()
         self.mandel_setup()
-        while self.running:
-            # restore the pristine area to the screen before drawing
-            restore_pristine()
-            # if the mouse isn't over the canvas then end the dragging state
-            if not self.canvas.focused():
-                self.dragging = False
-            # draw the circles if their toggle is pushed
-            if self.circles_toggle.read():
-                self.update_circles(self.size)
-            # update the visible windows
-            self.button_group_win.set_visible(self.buttons_toggle.read())
-            self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
-            self.life_win.set_visible(self.life_toggle.read())
-            self.mandel_win.set_visible(self.mandel_toggle.read())
-            # handle events
-            self.handle_events()
-            # if the life window is visible then handle it
-            if self.life_win.get_visible():
-                # generate a new cycle if the togglebutton is pressed
-                if self.toggle_life.read():
-                    self.generate()
-                # draw life cells on the canvas
-                self.draw_life()
-            # draw gui
-            self.gui.draw_gui()
-            # buffer to the screen
-            pygame.display.flip()
-            # tick to desired frame-rate
-            clock.tick(fps)
-        # release resources
-        pygame.quit()
+        self.schedules.init_scheduler(self.handle_events, self.preamble, self.postamble)
+        self.schedules.run_scheduler()
+
+    def preamble(self):
+        # restore the pristine area to the screen before drawing
+        restore_pristine()
+        # if the mouse isn't over the canvas then end the dragging state
+        if not self.canvas.focused():
+            self.dragging = False
+        # draw the circles if their toggle is pushed
+        if self.circles_toggle.read():
+            self.update_circles(self.size)
+        # update the visible windows
+        self.button_group_win.set_visible(self.buttons_toggle.read())
+        self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
+        self.life_win.set_visible(self.life_toggle.read())
+        self.mandel_win.set_visible(self.mandel_toggle.read())
+
+    def postamble(self):
+        # if the life window is visible then handle it
+        if self.life_win.get_visible():
+            # generate a new cycle if the togglebutton is pressed
+            if self.toggle_life.read():
+                self.generate()
+            # draw life cells on the canvas
+            self.draw_life()
 
     def handle_events(self):
         # handle the gui event queue
@@ -254,6 +245,12 @@ class Demo:
             elif event.type == GKind.Quit:
                 # window close widget or alt-f4 keypress
                 self.running = False
+        if not self.running:
+            # release resources
+            pygame.quit()
+            sys.exit(0)
+
+
 
     # canvas callback function
     def handle_canvas(self):

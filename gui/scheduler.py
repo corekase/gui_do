@@ -1,4 +1,5 @@
 import time
+import pygame
 
 class Timers:
     timers = {}
@@ -38,9 +39,11 @@ class Scheduler:
         return Scheduler._instance_
 
     def _populate_(self):
+        from .guimanager import GuiManager
         self.tasks = {}
         self.preamble = None
         self.postamble = None
+        self.gui = GuiManager()
 
     class Task:
         def __init__(self, id, interval):
@@ -80,36 +83,48 @@ class Scheduler:
                 return True
         return False
 
-    def init_scheduler(self, preamble=None, postamble=None):
+    def init_scheduler(self, handler=None, preamble=None, postamble=None):
+        if handler == None:
+            handler = self.null
         if preamble == None:
             preamble = self.null
         if postamble == None:
             postamble = self.null
+        self.handler = handler
         self.preamble = preamble
         self.postamble = postamble
 
     def null(self):
         return
 
-    def task_scheduler(self):
-        if len(self.tasks) > 0:
-            new_tasks = {}
+    def run_scheduler(self):
+        # fps to maintain, if 0 then unlimited
+        fps = 60
+        # a pygame clock to control the fps
+        clock = pygame.time.Clock()
+        while True:
             # call preamble
             self.preamble()
-            for task in self.tasks.keys():
-                # handle gui events
-                pass
-                # handle task logic
-                try:
-                    self.tasks[task].time_start = time.time()
-                    next(self.tasks[task].task_logic)
-                    new_tasks[task] = self.tasks[task]
-                except StopIteration:
-                    # task exited, and exception happened before the assignment into new_tasks
-                    # so the task is dropped.
-                    pass
-            self.tasks = new_tasks
+            # handle gui events
+            self.handler()
+            if len(self.tasks) > 0:
+                new_tasks = {}
+                for task in self.tasks.keys():
+                    # handle task logic
+                    try:
+                        self.tasks[task].time_start = time.time()
+                        next(self.tasks[task].task_logic)
+                        new_tasks[task] = self.tasks[task]
+                    except StopIteration:
+                        # task exited, and exception happened before the assignment into new_tasks
+                        # so the task is dropped.
+                        pass
+                self.tasks = new_tasks
             # call postamble
             self.postamble()
             # draw gui
-            pass
+            self.gui.draw_gui()
+            # buffer to the screen
+            pygame.display.flip()
+            # tick to desired frame-rate
+            clock.tick(fps)

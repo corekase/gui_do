@@ -118,9 +118,6 @@ class GuiManager:
         return gui_event
 
     def events(self):
-        # update tasks
-        self.schedules.task_scheduler()
-        # update timers
         self.timers.timer_updates()
         # process event queue
         for raw_event in pygame.event.get():
