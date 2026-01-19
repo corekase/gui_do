@@ -114,13 +114,12 @@ class Scheduler:
                 try:
                     task = self.queued[0]
                     self.tasks[task].time_start = time.time()
-                    next(self.tasks[task].task_logic)
                     self.queued.pop(0)
+                    next(self.tasks[task].task_logic)
                     self.finished.append(task)
                 except StopIteration:
                     # task exited, and exception from next() happened before appending the id to the finished list
-                    # so the task is dropped, and here it is also removed from the queued list
-                    self.queued.pop(0)
+                    pass
             else:
                 self.queued = self.finished
                 self.finished.clear()
