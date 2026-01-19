@@ -109,9 +109,8 @@ class Scheduler:
             preamble()
             # handle gui events
             handler()
-            # handle tasks
+            # handle task logic
             if len(self.queued) > 0:
-                # handle task logic
                 try:
                     task = self.queued[0]
                     self.tasks[task].time_start = time.time()
@@ -119,8 +118,8 @@ class Scheduler:
                     self.queued.pop(0)
                     self.finished.append(task)
                 except StopIteration:
-                    # task exited, and exception happened before appending the id to the finished list
-                    # so the task is dropped.
+                    # task exited, and exception from next() happened before appending the id to the finished list
+                    # so the task is dropped, and here it is also removed from the queued list
                     self.queued.pop(0)
             else:
                 self.queued = self.finished
