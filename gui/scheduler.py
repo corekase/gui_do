@@ -52,8 +52,8 @@ class Scheduler:
             # gives coroutine operations while only being a generator
             self.datagram = None
 
-    def add_task(self, id, logic, interval, parameters=None, datagram = None):
-        task = self.Task(id, interval)
+    def add_task(self, id, logic, parameters=None, datagram = None):
+        task = self.Task(id, 0.01)
         if parameters == None:
             task.task_logic = logic(id)
         else:

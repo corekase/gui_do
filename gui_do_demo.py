@@ -230,10 +230,10 @@ class Demo:
                 elif not self.schedules.task_match('iter', 'recu'):
                     if event.widget_id == 'iterative':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('iter', self.mandel_iterative, 0.01)
+                        self.schedules.add_task('iter', self.mandel_iterative)
                     elif event.widget_id == 'recursive':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('recu', self.mandel_recursive, 0.01, self.mandel_canvas_rect)
+                        self.schedules.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
