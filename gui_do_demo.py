@@ -208,6 +208,10 @@ class Demo:
                 elif event.widget_id == 'clear':
                     self.scheduler.remove_task('iter')
                     self.scheduler.remove_task('recu')
+                    self.scheduler.remove_task('1')
+                    self.scheduler.remove_task('2')
+                    self.scheduler.remove_task('3')
+                    self.scheduler.remove_task('4')
                     self.mandel_canvas_surface.fill(colours['medium'])
                 elif not self.scheduler.task_match('iter', 'recu', '1', '2', '3', '4'):
                     if event.widget_id == 'iterative':
