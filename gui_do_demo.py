@@ -213,8 +213,8 @@ class Demo:
                     # exit button was clicked
                     self.running = False
                 elif event.widget_id == 'clear':
-                    self.schedules.remove_task('iter')
-                    self.schedules.remove_task('recu')
+                    self.scheduler.remove_task('iter')
+                    self.scheduler.remove_task('recu')
                     self.mandel_canvas_surface.fill(colours['medium'])
                 elif not self.scheduler.task_match('iter', 'recu'):
                     if event.widget_id == 'iterative':
