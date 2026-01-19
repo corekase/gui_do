@@ -59,7 +59,7 @@ class ButtonGroup(Widget):
     def read_id(self):
         # return the id of the armed pushbutton
         return ButtonGroup.selections[self.group].id
-    
+
     def read_group(self):
         # return the group id
         return self.group

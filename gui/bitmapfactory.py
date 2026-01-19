@@ -203,7 +203,7 @@ class BitmapFactory:
         polygon(radio_bitmap, col2, points, 24)
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
-    
+
     def draw_check_style_bitmaps(self, text, rect):
         idle_bitmap, hit_rect = self.draw_check_style_bitmap(rect, 0, text)
         hover_bitmap, _ = self.draw_check_style_bitmap(rect, 1, text)
@@ -233,7 +233,7 @@ class BitmapFactory:
             self.draw_box_bitmaps(box_bitmap, 'hover')
         elif state == 2:
             self.draw_box_bitmaps(box_bitmap, 'armed')
-        check_bitmap.blit(box_bitmap, (offset, offset))        
+        check_bitmap.blit(box_bitmap, (offset, offset))
         if state == 1 or state == 2:
             glyph = Surface((400, 400), SRCALPHA).convert_alpha()
             points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
@@ -317,7 +317,7 @@ class BitmapFactory:
 
     def draw_angle_style_bitmap(self, size, border, background):
         w_surface, h_surface = size
-        angle_bitmap = Surface((w_surface * 10, h_surface * 10), SRCALPHA).convert_alpha()        
+        angle_bitmap = Surface((w_surface * 10, h_surface * 10), SRCALPHA).convert_alpha()
         _, _, w, h = angle_bitmap.get_rect()
         dist = h // 3
         points = ((dist, 0), (w - dist, 0), (w - 1, dist), (w - 1, h - dist - 1), (w - dist, h - 1), (dist, h - 1), (0, h - dist), (0, dist), (dist, 0))
