@@ -64,15 +64,19 @@ class Scheduler:
             task.task_logic = logic(id)
         else:
             task.task_logic = logic(id, parameters)
-        if datagram != None:
-            task.datagram = datagram
+        task.datagram = datagram
         self.tasks[id] = task
+        self.queued.append(id)
 
     def send_datagram(self, id, parameters):
         self.tasks[id].datagram(parameters)
 
     def remove_task(self, id):
-        if id in self.tasks.keys():
+        if id in self.queued:
+            self.queued.pop(self.queued.index(id))
+            del self.tasks[id]
+        if id in self.finished:
+            self.finished.pop(self.finished.index(id))
             del self.tasks[id]
 
     def task_time(self, id):
@@ -82,7 +86,7 @@ class Scheduler:
 
     def task_match(self, *tasks):
         for task in tasks:
-            if task in self.tasks.keys():
+            if task in self.queued:
                 return True
         return False
 
@@ -105,26 +109,21 @@ class Scheduler:
             preamble()
             # handle gui events
             handler()
-
-
-            # items are taken from the queued list and processed and then
-            # moved to the finished list.  when the queued list is empty
-            # then the finished list items go back into it
-
-
-            if len(self.tasks) > 0:
-                new_tasks = {}
-                for task in self.tasks.keys():
-                    # handle task logic
-                    try:
-                        self.tasks[task].time_start = time.time()
-                        next(self.tasks[task].task_logic)
-                        new_tasks[task] = self.tasks[task]
-                    except StopIteration:
-                        # task exited, and exception happened before the assignment into new_tasks
-                        # so the task is dropped.
-                        pass
-                self.tasks = new_tasks
+            if len(self.queued) > 0:
+                # handle task logic
+                try:
+                    task = self.queued[0]
+                    self.tasks[task].time_start = time.time()
+                    next(self.tasks[task].task_logic)
+                    self.queued.pop(0)
+                    self.finished.append(task)
+                except StopIteration:
+                    # task exited, and exception happened before appending the id to the finished list
+                    # so the task is dropped.
+                    self.queued.pop(0)
+            else:
+                self.queued = self.finished
+                self.finished.clear()
             # call postamble
             postamble()
             # draw gui

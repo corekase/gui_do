@@ -142,7 +142,7 @@ class Demo:
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
-        self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas))
+        self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2))))
         self.mandel_canvas_surface = self.mandel_canvas.get_canvas_surface()
         self.mandel_canvas_surface.fill(colours['medium'])
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
