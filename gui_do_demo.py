@@ -181,7 +181,7 @@ class Demo:
     def run(self):
         _, _, w, h = self.mandel_canvas_rect
         self.mandel_setup(w, h)
-        self.scheduler.run_scheduler(self.preamble, self.postamble, self.handle_events)
+        self.scheduler.run_scheduler(self.preamble, self.handle_events, self.postamble)
 
     def preamble(self):
         # restore the pristine area to the screen before drawing
@@ -197,15 +197,6 @@ class Demo:
         self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
         self.life_win.set_visible(self.life_toggle.read())
         self.mandel_win.set_visible(self.mandel_toggle.read())
-
-    def postamble(self):
-        # if the life window is visible then handle it
-        if self.life_win.get_visible():
-            # generate a new cycle if the togglebutton is pressed
-            if self.toggle_life.read():
-                self.generate()
-            # draw life cells on the canvas
-            self.draw_life()
 
     def handle_events(self):
         # handle the gui event queue
@@ -260,6 +251,15 @@ class Demo:
             pygame.quit()
             # exit python
             sys.exit(0)
+
+    def postamble(self):
+        # if the life window is visible then handle it
+        if self.life_win.get_visible():
+            # generate a new cycle if the togglebutton is pressed
+            if self.toggle_life.read():
+                self.generate()
+            # draw life cells on the canvas
+            self.draw_life()
 
     # canvas callback function
     def handle_canvas(self):

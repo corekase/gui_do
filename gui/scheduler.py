@@ -93,7 +93,7 @@ class Scheduler:
     def null(self):
         return
 
-    def run_scheduler(self, preamble=None, postamble=None, handler=None):
+    def run_scheduler(self, preamble=None, handler=None, postamble=None):
         if handler == None:
             handler = self.null
         if preamble == None:
