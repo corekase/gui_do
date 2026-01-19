@@ -224,12 +224,10 @@ class Demo:
                         self.mandel_canvas_surface.fill(colours['medium'])
                         x, y, w, h = self.mandel_canvas_rect
                         hx, hy = w // 2, h // 2
-                        self.mandel_setup(w, h)
                         self.scheduler.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy))
                         self.scheduler.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy))
                         self.scheduler.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy))
                         self.scheduler.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy))
-                        self.mandel_setup(w, h)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
