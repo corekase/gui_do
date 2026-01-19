@@ -150,6 +150,7 @@ class Demo:
         add(Button('clear', gridded(0, 0), 1, 'Clear'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
+        add(Button('split', gridded(3, 0), 1, 'Split'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
@@ -178,7 +179,8 @@ class Demo:
         self.running = True
 
     def run(self):
-        self.mandel_setup()
+        _, _, w, h = self.mandel_canvas_rect
+        self.mandel_setup(w, h)
         self.scheduler.run_scheduler(self.preamble, self.postamble, self.handle_events)
 
     def preamble(self):
@@ -216,13 +218,23 @@ class Demo:
                     self.scheduler.remove_task('iter')
                     self.scheduler.remove_task('recu')
                     self.mandel_canvas_surface.fill(colours['medium'])
-                elif not self.scheduler.task_match('iter', 'recu'):
+                elif not self.scheduler.task_match('iter', 'recu', '1', '2', '3', '4'):
                     if event.widget_id == 'iterative':
                         self.mandel_canvas_surface.fill(colours['medium'])
                         self.scheduler.add_task('iter', self.mandel_iterative)
                     elif event.widget_id == 'recursive':
                         self.mandel_canvas_surface.fill(colours['medium'])
                         self.scheduler.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
+                    elif event.widget_id == 'split':
+                        self.mandel_canvas_surface.fill(colours['medium'])
+                        x, y, w, h = self.mandel_canvas_rect
+                        hx, hy = w // 2, h // 2
+                        self.mandel_setup(w, h)
+                        self.scheduler.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy))
+                        self.scheduler.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy))
+                        self.scheduler.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy))
+                        self.scheduler.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy))
+                        self.mandel_setup(w, h)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
@@ -408,10 +420,10 @@ class Demo:
             self.mandel_canvas_surface.unlock()
             return
 
-    def mandel_setup(self):
+    def mandel_setup(self, width, height):
         self.max_iter = 128
         self.maximum_iters = self.max_iter - 1
-        _, _, self.mandel_width, self.mandel_height = self.mandel_canvas_rect
+        self.mandel_width, self.mandel_height = width, height
         self.center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
