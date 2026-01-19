@@ -109,6 +109,7 @@ class Scheduler:
             preamble()
             # handle gui events
             handler()
+            # handle tasks
             if len(self.queued) > 0:
                 # handle task logic
                 try:
