@@ -44,6 +44,9 @@ class Scheduler:
         self.preamble = None
         self.postamble = None
         self.gui = GuiManager()
+        # queued and finished lists
+        self.queued = []
+        self.finished = []
 
     class Task:
         def __init__(self, id, interval):
@@ -83,30 +86,32 @@ class Scheduler:
                 return True
         return False
 
-    def init_scheduler(self, handler=None, preamble=None, postamble=None):
+    def null(self):
+        return
+
+    def run_scheduler(self, preamble=None, postamble=None, handler=None):
         if handler == None:
             handler = self.null
         if preamble == None:
             preamble = self.null
         if postamble == None:
             postamble = self.null
-        self.handler = handler
-        self.preamble = preamble
-        self.postamble = postamble
-
-    def null(self):
-        return
-
-    def run_scheduler(self):
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         while True:
             # call preamble
-            self.preamble()
+            preamble()
             # handle gui events
-            self.handler()
+            handler()
+
+
+            # items are taken from the queued list and processed and then
+            # moved to the finished list.  when the queued list is empty
+            # then the finished list items go back into it
+
+
             if len(self.tasks) > 0:
                 new_tasks = {}
                 for task in self.tasks.keys():
@@ -121,7 +126,7 @@ class Scheduler:
                         pass
                 self.tasks = new_tasks
             # call postamble
-            self.postamble()
+            postamble()
             # draw gui
             self.gui.draw_gui()
             # buffer to the screen

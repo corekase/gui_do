@@ -174,14 +174,12 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        # set running flag
+        self.scheduler = Scheduler()
         self.running = True
-        self.schedules = Scheduler()
 
     def run(self):
         self.mandel_setup()
-        self.schedules.init_scheduler(self.handle_events, self.preamble, self.postamble)
-        self.schedules.run_scheduler()
+        self.scheduler.run_scheduler(self.preamble, self.postamble, self.handle_events)
 
     def preamble(self):
         # restore the pristine area to the screen before drawing
@@ -218,13 +216,13 @@ class Demo:
                     self.schedules.remove_task('iter')
                     self.schedules.remove_task('recu')
                     self.mandel_canvas_surface.fill(colours['medium'])
-                elif not self.schedules.task_match('iter', 'recu'):
+                elif not self.scheduler.task_match('iter', 'recu'):
                     if event.widget_id == 'iterative':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('iter', self.mandel_iterative)
+                        self.scheduler.add_task('iter', self.mandel_iterative)
                     elif event.widget_id == 'recursive':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
+                        self.scheduler.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
@@ -248,9 +246,8 @@ class Demo:
         if not self.running:
             # release resources
             pygame.quit()
+            # exit python
             sys.exit(0)
-
-
 
     # canvas callback function
     def handle_canvas(self):
@@ -364,7 +361,7 @@ class Demo:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.mandel_canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
-                if self.schedules.task_time(id):
+                if self.scheduler.task_time(id):
                     yield
 
     def mandel_recursive(self, id, area):
@@ -387,16 +384,16 @@ class Demo:
         if w > 2 or h > 2:
             half_x = (w + (w % 2)) // 2
             half_y = (h + (h % 2)) // 2
-            if self.schedules.task_time(id):
+            if self.scheduler.task_time(id):
                 yield
             yield from self.mandel_recursive(id, Rect(x, y, half_x, half_y))
-            if self.schedules.task_time(id):
+            if self.scheduler.task_time(id):
                 yield
             yield from self.mandel_recursive(id, Rect(x + half_x, y, half_x, half_y))
-            if self.schedules.task_time(id):
+            if self.scheduler.task_time(id):
                 yield
             yield from self.mandel_recursive(id, Rect(x + half_x, y + half_y, half_x, half_y))
-            if self.schedules.task_time(id):
+            if self.scheduler.task_time(id):
                 yield
             yield from self.mandel_recursive(id, Rect(x, y + half_y, half_x, half_y))
             return
