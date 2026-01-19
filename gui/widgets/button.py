@@ -3,7 +3,6 @@ from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..guimanager import GType
 from ..bitmapfactory import BitmapFactory
-from ..scheduler import Scheduler
 from ..command import centre
 from .widget import Widget
 from enum import Enum
@@ -36,7 +35,7 @@ class Button(Widget):
         collision = self.get_collide(window)
         if not collision:
             if self.timer_id != None:
-                self.gui.schedules.remove_timer(self.timer_id)
+                self.gui.timers.remove_timer(self.timer_id)
                 self.timer_id = None
             self.state = State.Idle
             return False
@@ -50,7 +49,7 @@ class Button(Widget):
                     if self.button_callback != None:
                         self.button_callback()
                         if self.timer_id == None:
-                            self.gui.schedules.add_timer(f'{self.id}.timer', 0.15, self.button_callback)
+                            self.gui.timers.add_timer(f'{self.id}.timer', 0.15, self.button_callback)
                             self.timer_id = f'{self.id}.timer'
                     # don't signal a widget change, consume the signal by returning False
                     return False
@@ -59,7 +58,7 @@ class Button(Widget):
                 if event.button == 1:
                     # button clicked
                     if self.timer_id != None:
-                        self.gui.schedules.remove_timer(f'{self.id}.timer')
+                        self.gui.timers.remove_timer(f'{self.id}.timer')
                         self.timer_id = None
                     self.state = State.Hover
                     if self.button_callback != None:
@@ -72,7 +71,7 @@ class Button(Widget):
 
     def leave(self):
         if self.timer_id != None:
-            self.gui.schedules.remove_timer(f'{self.id}.timer')
+            self.gui.timers.remove_timer(f'{self.id}.timer')
             self.timer_id = None
         self.state = State.Idle
 

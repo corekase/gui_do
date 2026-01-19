@@ -139,7 +139,7 @@ class Demo:
         # resets the simulation to a default state, uses a callback function
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
         width, height = 600, 600
-        pos = x_pos + 607, y_pos 
+        pos = x_pos + 607, y_pos
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
         self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas))
         self.mandel_canvas_surface = self.mandel_canvas.get_canvas_surface()
@@ -176,6 +176,7 @@ class Demo:
         # set running flag
         self.running = True
         self.schedules = Scheduler()
+        self.schedules.init_scheduler()
 
     def run(self):
         # fps to maintain, if 0 then unlimited
@@ -229,10 +230,10 @@ class Demo:
                 elif not self.schedules.task_match('iter', 'recu'):
                     if event.widget_id == 'iterative':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('iter', 0.01, self.mandel_iterative)
+                        self.schedules.add_task('iter', self.mandel_iterative, 0.01)
                     elif event.widget_id == 'recursive':
                         self.mandel_canvas_surface.fill(colours['medium'])
-                        self.schedules.add_task('recu', 0.01, self.mandel_recursive, self.mandel_canvas_rect)
+                        self.schedules.add_task('recu', self.mandel_recursive, 0.01, self.mandel_canvas_rect)
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
