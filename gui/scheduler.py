@@ -170,6 +170,17 @@ class Scheduler:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
+        def task_process():
+            # separate out duplicate code so that no ready tasks and waiting processed tasks don't miss a cycle changing
+            # tasks
+            try:
+                task = self.tasks_ready.pop(0)
+                self.tasks[task].time_start = time.time()
+                next(self.tasks[task].task_logic)
+                self.tasks_processed.append(task)
+            except StopIteration:
+                # task exited, and exception from next() happened before appending the id to the processed list
+                tasks_finished.append(task)
         while True:
             # call preamble
             preamble()
@@ -179,18 +190,13 @@ class Scheduler:
             # handle task logic
             tasks_finished = []
             if len(self.tasks_ready) > 0:
-                try:
-                    task = self.tasks_ready.pop(0)
-                    self.tasks[task].time_start = time.time()
-                    next(self.tasks[task].task_logic)
-                    self.tasks_processed.append(task)
-                except StopIteration:
-                    # task exited, and exception from next() happened before appending the id to the processed list
-                    tasks_finished.append(task)
+                task_process()
             elif len(self.tasks_ready) == 0:
-                    self.tasks_ready = self.tasks_processed
-                    if len(self.tasks_processed) > 0:
-                        self.tasks_processed.clear()
+                self.tasks_ready = self.tasks_processed
+                if len(self.tasks_processed) > 0:
+                    self.tasks_processed.clear()
+                if len(self.tasks_ready) > 0:
+                    task_process()
             # send task events
             for task in tasks_finished:
                 event_handler(self.event(TKind.Finished, task))
