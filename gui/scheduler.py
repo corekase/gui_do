@@ -159,7 +159,6 @@ class Scheduler:
     def null(self):
         return
 
-
     def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
         def task_process():
             # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
