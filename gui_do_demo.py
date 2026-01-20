@@ -155,7 +155,7 @@ class Demo:
         self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        add(Button('clear', gridded(0, 0), 1, 'Clear'))
+        add(Button('clear', gridded(0, 0), 2, 'Clear'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         add(Button('1split', gridded(3, 0), 1, '1M 4 Tasks'))
