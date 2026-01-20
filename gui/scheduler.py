@@ -124,7 +124,8 @@ class Scheduler:
             # call preamble
             preamble()
             # handle gui events
-            handler()
+            for event in self.gui.events():
+                handler(event)
             # handle task logic
             if len(self.queued) > 0:
                 try:

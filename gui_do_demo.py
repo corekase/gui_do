@@ -144,7 +144,7 @@ class Demo:
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
         self.mandel_canvas = add(Canvas('mandel', mandel_overall))
-        self.hide(self.mandel_canvas)
+        self.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
         cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
@@ -152,7 +152,7 @@ class Demo:
         self.canvas2 = add(Canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10)))
         self.canvas3 = add(Canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
         self.canvas4 = add(Canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
-        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
         add(Button('clear', gridded(0, 0), 2, 'Reset'))
@@ -205,91 +205,82 @@ class Demo:
         self.life_win.set_visible(self.life_toggle.read())
         self.mandel_win.set_visible(self.mandel_toggle.read())
 
-    def handle_events(self):
-        # handle the gui event queue
-        for event in self.gui.events():
-            if event.type == GKind.Widget:
-                if event.widget_id == 'exit':
-                    # exit button was clicked
-                    self.running = False
-                elif event.widget_id == 'clear':
-                    self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
-                    self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.show(self.mandel_canvas)
-                    self.clear_mandel_surfaces()
-                elif not self.scheduler.active_tasks():
-                    if event.widget_id == 'iterative':
-                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                        self.show(self.mandel_canvas)
-                        self.clear_mandel_surfaces()
-                        x, y, w, h = self.mandel_canvas_rect
-                        self.mandel_setup(w, h)
-                        self.scheduler.add_task('iter', self.mandel_iterative)
-                    elif event.widget_id == 'recursive':
-                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                        self.show(self.mandel_canvas)
-                        self.clear_mandel_surfaces()
-                        x, y, w, h = self.mandel_canvas_rect
-                        self.mandel_setup(w, h)
-                        self.scheduler.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
-                    elif event.widget_id == '1split':
-                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                        self.show(self.mandel_canvas)
-                        self.clear_mandel_surfaces()
-                        x, y, w, h = self.mandel_canvas_rect
-                        self.mandel_setup(w, h)
-                        hx, hy = w // 2, h // 2
-                        self.scheduler.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
-                        self.scheduler.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
-                        self.scheduler.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
-                        self.scheduler.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
-                    elif event.widget_id == '4split':
-                        self.hide(self.mandel_canvas)
-                        self.show(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                        self.clear_mandel_surfaces()
-                        _, _, w1, h1 = self.mandel_canvas.get_size()
-                        w1 = w1 // 2
-                        h1 = h1 // 2
-                        self.mandel_setup(w1, h1)
-                        self.scheduler.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
-                        self.scheduler.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
-                        self.scheduler.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
-                        self.scheduler.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
-            elif event.type == GKind.Group:
-                if event.group == 'bg1':
-                    self.label1.set_label(f'ID: {event.widget_id}')
-                elif event.group == 'bg2':
-                    self.label2.set_label(f'ID: {event.widget_id}')
-                elif event.group == 'bg3':
-                    self.label3.set_label(f'ID: {event.widget_id}')
-                elif event.group == 'bg4':
-                    self.label4.set_label(f'ID: {event.widget_id}')
-                elif event.group == 'bg5':
-                    self.label5.set_label(f'ID: {event.widget_id}')
-                elif event.group == 'bg6':
-                    self.label6.set_label(f'ID: {event.widget_id}')
-            elif event.type == GKind.KeyDown:
-                if event.key == K_ESCAPE:
-                    # escape key pressed
-                    self.running = False
-            elif event.type == GKind.Quit:
-                # window close widget or alt-f4 keypress
+    def handle_events(self, event):
+        # handle events
+        if event.type == GKind.Widget:
+            if event.widget_id == 'exit':
+                # exit button was clicked
                 self.running = False
+            elif event.widget_id == 'clear':
+                self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+                self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                self.show_widgets(self.mandel_canvas)
+                self.clear_mandel_surfaces()
+            elif not self.scheduler.active_tasks():
+                if event.widget_id == 'iterative':
+                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.show_widgets(self.mandel_canvas)
+                    self.clear_mandel_surfaces()
+                    x, y, w, h = self.mandel_canvas_rect
+                    self.mandel_setup(w, h)
+                    self.scheduler.add_task('iter', self.mandel_iterative)
+                elif event.widget_id == 'recursive':
+                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.show_widgets(self.mandel_canvas)
+                    self.clear_mandel_surfaces()
+                    x, y, w, h = self.mandel_canvas_rect
+                    self.mandel_setup(w, h)
+                    self.scheduler.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
+                elif event.widget_id == '1split':
+                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.show_widgets(self.mandel_canvas)
+                    self.clear_mandel_surfaces()
+                    x, y, w, h = self.mandel_canvas_rect
+                    self.mandel_setup(w, h)
+                    hx, hy = w // 2, h // 2
+                    self.scheduler.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
+                elif event.widget_id == '4split':
+                    self.hide_widgets(self.mandel_canvas)
+                    self.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.clear_mandel_surfaces()
+                    _, _, w1, h1 = self.mandel_canvas.get_size()
+                    w1 = w1 // 2
+                    h1 = h1 // 2
+                    self.mandel_setup(w1, h1)
+                    self.scheduler.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
+                    self.scheduler.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
+                    self.scheduler.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
+                    self.scheduler.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
+        elif event.type == GKind.Group:
+            if event.group == 'bg1':
+                self.label1.set_label(f'ID: {event.widget_id}')
+            elif event.group == 'bg2':
+                self.label2.set_label(f'ID: {event.widget_id}')
+            elif event.group == 'bg3':
+                self.label3.set_label(f'ID: {event.widget_id}')
+            elif event.group == 'bg4':
+                self.label4.set_label(f'ID: {event.widget_id}')
+            elif event.group == 'bg5':
+                self.label5.set_label(f'ID: {event.widget_id}')
+            elif event.group == 'bg6':
+                self.label6.set_label(f'ID: {event.widget_id}')
+        elif event.type == GKind.KeyDown:
+            if event.key == K_ESCAPE:
+                # escape key pressed
+                self.running = False
+        elif event.type == GKind.Quit:
+            # window close widget or alt-f4 keypress
+            self.running = False
+
+    def postamble(self):
         if not self.running:
             # release resources
             pygame.quit()
             # exit python
             sys.exit(0)
-
-    def hide(self, *widgets):
-        for widget in widgets:
-            widget.set_visible(False)
-
-    def show(self, *widgets):
-        for widget in widgets:
-            widget.set_visible(True)
-
-    def postamble(self):
         # if the life window is visible then handle it
         if self.life_win.get_visible():
             # generate a new cycle if the togglebutton is pressed
@@ -297,6 +288,14 @@ class Demo:
                 self.generate()
             # draw life cells on the canvas
             self.draw_life()
+
+    def hide_widgets(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(False)
+
+    def show_widgets(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(True)
 
     # canvas callback function
     def handle_canvas(self):
