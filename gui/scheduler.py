@@ -159,7 +159,18 @@ class Scheduler:
     def null(self):
         return
 
+
     def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
+        def task_process():
+            # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
+            try:
+                task_id = self.tasks_ready.pop(0)
+                self.tasks[task_id].time_start = time.time()
+                next(self.tasks[task_id].task_logic)
+                self.tasks_processed.append(task_id)
+            except StopIteration:
+                # task exited, and exception from next() happened before appending the id to the processed list
+                self.tasks_finished.append(task_id)
         if event_handler == None:
             event_handler = self.null
         if preamble == None:
@@ -170,17 +181,6 @@ class Scheduler:
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
-        def task_process():
-            # separate out duplicate code so that no ready tasks and waiting processed tasks don't miss a cycle changing
-            # tasks
-            try:
-                task = self.tasks_ready.pop(0)
-                self.tasks[task].time_start = time.time()
-                next(self.tasks[task].task_logic)
-                self.tasks_processed.append(task)
-            except StopIteration:
-                # task exited, and exception from next() happened before appending the id to the processed list
-                tasks_finished.append(task)
         while True:
             # call preamble
             preamble()
@@ -188,7 +188,7 @@ class Scheduler:
             for event in self.gui.events():
                 event_handler(event)
             # handle task logic
-            tasks_finished = []
+            self.tasks_finished = []
             if len(self.tasks_ready) > 0:
                 task_process()
             elif len(self.tasks_ready) == 0:
@@ -196,10 +196,12 @@ class Scheduler:
                 if len(self.tasks_processed) > 0:
                     self.tasks_processed.clear()
                 if len(self.tasks_ready) > 0:
+                    # do process here again because ready list was empty
                     task_process()
             # send task events
-            for task in tasks_finished:
-                event_handler(self.event(TKind.Finished, task))
+            for id in self.tasks_finished:
+                event_handler(self.event(TKind.Finished, id))
+            self.tasks_finished.clear()
             # call postamble
             postamble()
             # draw gui
