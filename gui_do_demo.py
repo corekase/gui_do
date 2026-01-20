@@ -138,7 +138,7 @@ class Demo:
         # toggle whether or not the simulation is processing
         self.toggle_life = add(Toggle('run', gridded(1, 0), 3, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', gridded(0, 0), 2, 'Reset'), self.reset)
+        add(Button('life_reset', gridded(0, 0), 2, 'Reset'), self.life_reset)
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -155,7 +155,7 @@ class Demo:
         self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        add(Button('clear', gridded(0, 0), 2, 'Reset'))
+        add(Button('mandel_reset', gridded(0, 0), 2, 'Reset'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         add(Button('1split', gridded(3, 0), 1, '1M 4 Tasks'))
@@ -163,7 +163,7 @@ class Demo:
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
-        self.reset()
+        self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
         # number of circles
@@ -211,7 +211,7 @@ class Demo:
             if event.widget_id == 'exit':
                 # exit button was clicked
                 self.running = False
-            elif event.widget_id == 'clear':
+            elif event.widget_id == 'mandel_reset':
                 self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
                 self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                 self.show_widgets(self.mandel_canvas)
@@ -341,7 +341,7 @@ class Demo:
         self.positions = new_positions
 
     # reset the life simulation to a default state
-    def reset(self):
+    def life_reset(self):
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
         self.toggle_life.set(False)
