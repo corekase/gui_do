@@ -416,23 +416,23 @@ class Demo:
     def mandel_iterative(self, id):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
-                self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y, self.mandel_canvas_rect)))
+                self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y)))
                 if self.scheduler.task_time(id):
                     yield
 
     def mandel_recursive(self, id, item):
         x, y, w, h = item[0]
         canvas = item[1]
-        top_left = self.pixel(x, y, item[0])
+        top_left = self.pixel(x, y)
         accuracy = 2
         not_hit = True
         for x_test in range(0, w, accuracy):
-            if (self.pixel(x + x_test, y, item[0]) != top_left) or (self.pixel(x + x_test, y + h - 1, item[0]) != top_left):
+            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, y + h - 1) != top_left):
                 not_hit = False
                 break
         if not_hit:
             for y_test in range(0, h, accuracy):
-                if (self.pixel(x, y + y_test, item[0]) != top_left) or (self.pixel(x + w - 1, y + y_test, item[0]) != top_left):
+                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(x + w - 1, y + y_test) != top_left):
                     not_hit = False
                     break
         if not_hit:
@@ -456,7 +456,7 @@ class Demo:
             return
         else:
             r, b = item[0].right - 1, item[0].bottom - 1
-            top_right, bottom_left, bottom_right = self.pixel(r, y, item[0]), self.pixel(x, b, item[0]), self.pixel(r, b, item[0])
+            top_right, bottom_left, bottom_right = self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
             canvas.lock()
             canvas.set_at((x, y), self.col(top_left))
             canvas.set_at((x + 1, y), self.col(top_right))
@@ -473,7 +473,7 @@ class Demo:
         extent = 2.5 + 2.5j
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
-    def pixel(self, x, y, rect):
+    def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
         z = 0
         for k in range(self.max_iter):
