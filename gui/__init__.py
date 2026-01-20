@@ -17,7 +17,7 @@ from .widgets.image import Image
 from .widgets.toggle import Toggle
 from .widgets.canvas import Canvas, CKind
 from .widgets.scrollbar import Scrollbar
-from .scheduler import Scheduler
+from .scheduler import Scheduler, TKind
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
     # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080

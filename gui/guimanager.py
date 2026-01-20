@@ -5,7 +5,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .scheduler import Timers, Scheduler
 
 GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
-                       'MouseButtonUp', 'MouseMotion', 'Widget', 'Group'])
+                       'MouseButtonUp', 'MouseMotion', 'Widget', 'Group', 'Task'])
 
 GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
                        'Label', 'Scrollbar', 'Slider', 'Toggle'])

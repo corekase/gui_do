@@ -216,7 +216,7 @@ class Demo:
                 self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                 self.gui.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
-            elif not self.scheduler.active_tasks():
+            elif not self.scheduler.tasks_active():
                 if event.widget_id == 'iterative':
                     self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui.show_widgets(self.mandel_canvas)
