@@ -104,6 +104,12 @@ class Scheduler:
         # send either a single value or a collection like a tuple or list to the method id
         self.tasks[id].message_method(parameters)
 
+    def remove_all(self):
+        self.tasks_ready.clear()
+        self.tasks_processed.clear()
+        self.tasks_suspended.clear()
+        self.tasks = {}
+
     def remove_tasks(self, *tasks):
         for id in tasks:
             if id in self.tasks_ready:
@@ -114,7 +120,7 @@ class Scheduler:
                 del self.tasks[id]
 
     def suspend_all(self):
-        self.suspended_tasks = self.tasks_ready[:] + self.tasks_processed[:]
+        self.suspended_tasks += self.tasks_ready[:] + self.tasks_processed[:]
         self.tasks_ready.clear()
         self.tasks_processed.clear()
 
