@@ -412,6 +412,14 @@ class Demo:
         self.canvas3.canvas.fill(colours['medium'])
         self.canvas4.canvas.fill(colours['medium'])
 
+    def mandel_setup(self, width, height):
+        self.max_iter = 128
+        self.maximum_iters = self.max_iter - 1
+        self.mandel_width, self.mandel_height = width, height
+        self.center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
+
     def mandel_iterative(self, id):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
@@ -463,14 +471,6 @@ class Demo:
             canvas.set_at((x + 1, y + 1), self.col(bottom_right))
             canvas.unlock()
             return
-
-    def mandel_setup(self, width, height):
-        self.max_iter = 128
-        self.maximum_iters = self.max_iter - 1
-        self.mandel_width, self.mandel_height = width, height
-        self.center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
     def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
