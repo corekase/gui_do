@@ -113,6 +113,12 @@ class Scheduler:
                 self.tasks_processed.pop(self.tasks_processed.index(id))
                 del self.tasks[id]
 
+    def suspend_all(self):
+        self.suspend_tasks(self.tasks_active[:] + self.tasks_processed[:])
+
+    def resume_all(self):
+        self.resume_tasks(self.tasks_suspended[:])
+
     def suspend_tasks(self, *tasks):
         for id in tasks:
             # move id to suspended list from either the queued or finished lists
