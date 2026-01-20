@@ -1,11 +1,13 @@
 # this is a template file to use as a starting point for your own applications,
 # copy this template to your client folder and rename it to your application name
 #
+import sys
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, set_backdrop, set_font, set_cursor, restore_pristine
 from gui import GKind, Label, Button
+from gui import Scheduler
 
 class Template:
     def __init__(self):
@@ -30,25 +32,16 @@ class Template:
         set_cursor((1, 1), 'cursor.png')
         # set running flag
         self.running = True
+        # create a scheduler
+        self.scheduler = Scheduler()
 
     def run(self):
-        # fps to maintain, if 0 then unlimited
-        fps = 60
-        # a pygame clock to control the fps
-        clock = pygame.time.Clock()
-        while self.running:
-            # restore the pristine area to the screen before drawing
-            restore_pristine()
-            # handle events
-            self.handle_events()
-            # draw gui
-            self.gui.draw_gui()
-            # buffer to the screen
-            pygame.display.flip()
-            # tick to desired frame-rate
-            clock.tick(fps)
-        # release resources
-        pygame.quit()
+        # launch scheduler
+        self.scheduler.run_scheduler(self.preamble, self.handle_events, self.postamble)
+
+    def preamble(self):
+        # do pre-event handling code
+        restore_pristine()
 
     def handle_events(self):
         # handle the gui event queue
@@ -65,6 +58,15 @@ class Template:
             elif event.type == GKind.Quit:
                 # window close widget or alt-f4 keypress
                 self.running = False
+        if not self.running:
+            # release resources
+            pygame.quit()
+            # exit python
+            sys.exit(0)
+
+    def postamble(self):
+        # do post-event handling code
+        pass
 
 if __name__ == '__main__':
     Template().run()
