@@ -51,8 +51,6 @@ class Scheduler:
     def _populate_(self):
         from .guimanager import GuiManager
         self.tasks = {}
-        self.preamble = None
-        self.postamble = None
         self.gui = GuiManager()
         # queued and finished lists
         self.queued = []
