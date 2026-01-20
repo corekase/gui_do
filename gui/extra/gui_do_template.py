@@ -1,6 +1,3 @@
-# this is a template file to use as a starting point for your own applications,
-# copy this template to your client folder and rename it to your application name
-#
 import sys
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
@@ -43,21 +40,19 @@ class Template:
         # do pre-event handling code
         restore_pristine()
 
-    def handle_events(self):
-        # handle the gui event queue
-        for event in self.gui.events():
-            if event.type == GKind.Widget:
-                if event.widget_id == 'exit':
-                    # exit button clicked
-                     self.running = False
-            elif event.type == GKind.KeyDown:
-                # handle key presses
-                if event.key == K_ESCAPE:
-                    # escape key pressed
+    def handle_events(self, event):
+        if event.type == GKind.Widget:
+            if event.widget_id == 'exit':
+                # exit button clicked
                     self.running = False
-            elif event.type == GKind.Quit:
-                # window close widget or alt-f4 keypress
+        elif event.type == GKind.KeyDown:
+            # handle key presses
+            if event.key == K_ESCAPE:
+                # escape key pressed
                 self.running = False
+        elif event.type == GKind.Quit:
+            # window close widget or alt-f4 keypress
+            self.running = False
         if not self.running:
             # release resources
             pygame.quit()
