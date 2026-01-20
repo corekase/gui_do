@@ -53,15 +53,14 @@ class Editor:
         elif event.type == GKind.Quit:
             # window close widget or alt-f4 keypress
             self.running = False
+
+    def postamble(self):
+        # do post-tasks code
         if not self.running:
             # release resources
             pygame.quit()
             # exit python
             sys.exit(0)
-
-    def postamble(self):
-        # do post-tasks code
-        pass
 
 if __name__ == '__main__':
     Editor().run()
