@@ -144,7 +144,7 @@ class Demo:
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
         self.mandel_canvas = add(Canvas('mandel', mandel_overall))
-        self.hide_widgets(self.mandel_canvas)
+        self.gui.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
         cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
@@ -152,7 +152,7 @@ class Demo:
         self.canvas2 = add(Canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10)))
         self.canvas3 = add(Canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
         self.canvas4 = add(Canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
-        self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
         add(Button('mandel_reset', gridded(0, 0), 2, 'Reset'))
@@ -213,27 +213,27 @@ class Demo:
                 self.running = False
             elif event.widget_id == 'mandel_reset':
                 self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
-                self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                self.show_widgets(self.mandel_canvas)
+                self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                self.gui.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
             elif not self.scheduler.active_tasks():
                 if event.widget_id == 'iterative':
-                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.show_widgets(self.mandel_canvas)
+                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     self.scheduler.add_task('iter', self.mandel_iterative)
                 elif event.widget_id == 'recursive':
-                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.show_widgets(self.mandel_canvas)
+                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     self.scheduler.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
                 elif event.widget_id == '1split':
-                    self.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.show_widgets(self.mandel_canvas)
+                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
@@ -243,8 +243,8 @@ class Demo:
                     self.scheduler.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
                     self.scheduler.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
                 elif event.widget_id == '4split':
-                    self.hide_widgets(self.mandel_canvas)
-                    self.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui.hide_widgets(self.mandel_canvas)
+                    self.gui.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.clear_mandel_surfaces()
                     _, _, w1, h1 = self.mandel_canvas.get_size()
                     w1 = w1 // 2
@@ -288,14 +288,6 @@ class Demo:
                 self.generate()
             # draw life cells on the canvas
             self.draw_life()
-
-    def hide_widgets(self, *widgets):
-        for widget in widgets:
-            widget.set_visible(False)
-
-    def show_widgets(self, *widgets):
-        for widget in widgets:
-            widget.set_visible(True)
 
     # canvas callback function
     def handle_canvas(self):

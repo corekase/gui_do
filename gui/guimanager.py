@@ -334,6 +334,14 @@ class GuiManager:
     def set_current_widget(self, widget):
         self.current_widget = widget
 
+    def hide_widgets(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(False)
+
+    def show_widgets(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(True)
+
     def draw_gui(self):
         from .command import copy_graphic_area
         # draw all widgets to their surfaces
