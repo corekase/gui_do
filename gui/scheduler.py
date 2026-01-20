@@ -59,6 +59,7 @@ class Scheduler:
         self.tasks_ready = []
         self.tasks_processed = []
         self.tasks_suspended = []
+        self.tasks_finished = []
 
     class Task:
         def __init__(self, id, interval):
@@ -187,7 +188,7 @@ class Scheduler:
             for event in self.gui.events():
                 event_handler(event)
             # handle task logic
-            self.tasks_finished = []
+            self.tasks_finished.clear()
             if len(self.tasks_ready) > 0:
                 task_process()
             elif len(self.tasks_ready) == 0:
