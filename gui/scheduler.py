@@ -114,10 +114,13 @@ class Scheduler:
                 del self.tasks[id]
 
     def suspend_all(self):
-        self.suspend_tasks(self.tasks_ready[:] + self.tasks_processed[:])
+        self.suspended_tasks = self.tasks_ready[:] + self.tasks_processed[:]
+        self.tasks_ready.clear()
+        self.tasks_processed.clear()
 
     def resume_all(self):
-        self.resume_tasks(self.tasks_suspended[:])
+        self.tasks_ready += self.tasks_suspended
+        self.tasks_suspended.clear()
 
     def suspend_tasks(self, *tasks):
         for id in tasks:
