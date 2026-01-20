@@ -65,7 +65,7 @@ class Template:
             sys.exit(0)
 
     def postamble(self):
-        # do post-event handling code
+        # do post-tasks code
         pass
 
 if __name__ == '__main__':
