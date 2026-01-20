@@ -135,10 +135,10 @@ class Demo:
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        # resets the life simulation to a default state, uses a callback function
+        add(Button('life_reset', gridded(0, 0), 2, 'Reset'), self.life_reset)
         # toggle whether or not the simulation is processing
         self.toggle_life = add(Toggle('run', gridded(1, 0), 3, False, 'Stop', 'Start'))
-        # resets the simulation to a default state, uses a callback function
-        add(Button('life_reset', gridded(0, 0), 2, 'Reset'), self.life_reset)
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
