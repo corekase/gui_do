@@ -150,9 +150,9 @@ class Demo:
         cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
         self.canvas1 = add(Canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10)))
-        self.canvas2 = add(Canvas('can2', Rect(10 + chalfx + 5, 10, chalfx + 10, chalfy + 10)))
-        self.canvas3 = add(Canvas('can3', Rect(10, 10 + chalfy + 5, chalfx + 10, chalfy + 10)))
-        self.canvas4 = add(Canvas('can4', Rect(10 + chalfx + 5, 10 + chalfy + 5, chalfx + 10, chalfy + 10)))
+        self.canvas2 = add(Canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10)))
+        self.canvas3 = add(Canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
+        self.canvas4 = add(Canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
         self.canvas1.canvas.fill(colours['medium'])
         self.canvas2.canvas.fill(colours['medium'])
         self.canvas3.canvas.fill(colours['medium'])
