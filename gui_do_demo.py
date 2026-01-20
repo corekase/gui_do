@@ -175,12 +175,12 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
+        _, _, w, h = self.mandel_canvas_rect
+        self.mandel_setup(w, h)
         self.scheduler = Scheduler()
         self.running = True
 
     def run(self):
-        _, _, w, h = self.mandel_canvas_rect
-        self.mandel_setup(w, h)
         self.scheduler.run_scheduler(self.preamble, self.handle_events, self.postamble)
 
     def preamble(self):
