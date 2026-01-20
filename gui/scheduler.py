@@ -81,16 +81,22 @@ class Scheduler:
     def send_datagram(self, id, parameters):
         self.tasks[id].datagram(parameters)
 
-    def remove_task(self, id):
-        if id in self.queued:
-            self.queued.pop(self.queued.index(id))
-            del self.tasks[id]
-        if id in self.finished:
-            self.finished.pop(self.finished.index(id))
-            del self.tasks[id]
+    def remove_tasks(self, *tasks):
+        for id in tasks:
+            if id in self.queued:
+                self.queued.pop(self.queued.index(id))
+                del self.tasks[id]
+            if id in self.finished:
+                self.finished.pop(self.finished.index(id))
+                del self.tasks[id]
 
     def task_time(self, id):
         if (time.time() - self.tasks[id].time_start) >= self.tasks[id].time_duration:
+            return True
+        return False
+
+    def active_tasks(self):
+        if len(self.queued) >0 or len(self.finished) > 0:
             return True
         return False
 

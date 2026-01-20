@@ -141,16 +141,29 @@ class Demo:
         add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
         width, height = 600, 600
         pos = x_pos + 607, y_pos
+        mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = Window('Mandelbrot', pos, (width, height))
-        self.mandel_canvas = add(Canvas('mandel', Rect(10, 10, width - 20, height - (widget_height * 2))))
-        self.mandel_canvas_surface = self.mandel_canvas.get_canvas_surface()
-        self.mandel_canvas_surface.fill(colours['medium'])
+        self.mandel_canvas = add(Canvas('mandel', mandel_overall))
+        self.hide(self.mandel_canvas)
+        self.mandel_canvas.surface.fill(colours['medium'])
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
-        set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
+        chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
+        self.canvas1 = add(Canvas('can1', Rect(10, 10, chalfx, chalfy)))
+        self.canvas2 = add(Canvas('can2', Rect(10 + chalfx, 10, chalfx, chalfy)))
+        self.canvas3 = add(Canvas('can3', Rect(10, 10 + chalfy, chalfx, chalfy)))
+        self.canvas4 = add(Canvas('can4', Rect(10 + chalfx, 10 + chalfy, chalfx, chalfy)))
+        self.canvas1.canvas.fill(colours['medium'])
+        self.canvas2.canvas.fill(colours['medium'])
+        self.canvas3.canvas.fill(colours['medium'])
+        self.canvas4.canvas.fill(colours['medium'])
+        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
         add(Button('clear', gridded(0, 0), 1, 'Clear'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
-        add(Button('split', gridded(3, 0), 1, '4 Tasks'))
+        add(Button('1split', gridded(3, 0), 1, '1M 4 Tasks'))
+        add(Button('4split', gridded(4, 0), 1, '4M 4 Tasks'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
@@ -175,8 +188,6 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        _, _, w, h = self.mandel_canvas_rect
-        self.mandel_setup(w, h)
         self.scheduler = Scheduler()
         self.running = True
 
@@ -206,28 +217,55 @@ class Demo:
                     # exit button was clicked
                     self.running = False
                 elif event.widget_id == 'clear':
-                    self.scheduler.remove_task('iter')
-                    self.scheduler.remove_task('recu')
-                    self.scheduler.remove_task('1')
-                    self.scheduler.remove_task('2')
-                    self.scheduler.remove_task('3')
-                    self.scheduler.remove_task('4')
-                    self.mandel_canvas_surface.fill(colours['medium'])
-                elif not self.scheduler.task_match('iter', 'recu', '1', '2', '3', '4'):
+                    self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+                    self.mandel_canvas.canvas.fill(colours['medium'])
+                    self.canvas1.canvas.fill(colours['medium'])
+                    self.canvas2.canvas.fill(colours['medium'])
+                    self.canvas3.canvas.fill(colours['medium'])
+                    self.canvas4.canvas.fill(colours['medium'])
+                    self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.show(self.mandel_canvas)
+                elif not self.scheduler.active_tasks():
                     if event.widget_id == 'iterative':
-                        self.mandel_canvas_surface.fill(colours['medium'])
+                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                        self.show(self.mandel_canvas)
+                        x, y, w, h = self.mandel_canvas_rect
+                        self.mandel_setup(w, h)
+                        self.mandel_canvas.canvas.fill(colours['medium'])
                         self.scheduler.add_task('iter', self.mandel_iterative)
                     elif event.widget_id == 'recursive':
-                        self.mandel_canvas_surface.fill(colours['medium'])
-                        self.scheduler.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
-                    elif event.widget_id == 'split':
-                        self.mandel_canvas_surface.fill(colours['medium'])
+                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                        self.show(self.mandel_canvas)
+                        self.mandel_canvas.canvas.fill(colours['medium'])
                         x, y, w, h = self.mandel_canvas_rect
+                        self.mandel_setup(w, h)
+                        self.scheduler.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
+                    elif event.widget_id == '1split':
+                        self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                        self.show(self.mandel_canvas)
+                        self.mandel_canvas.canvas.fill(colours['medium'])
+                        x, y, w, h = self.mandel_canvas_rect
+                        self.mandel_setup(w, h)
                         hx, hy = w // 2, h // 2
-                        self.scheduler.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy))
-                        self.scheduler.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy))
-                        self.scheduler.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy))
-                        self.scheduler.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy))
+                        self.scheduler.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
+                        self.scheduler.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
+                        self.scheduler.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
+                        self.scheduler.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
+                    elif event.widget_id == '4split':
+                        self.hide(self.mandel_canvas)
+                        self.show(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                        self.canvas1.canvas.fill(colours['medium'])
+                        self.canvas2.canvas.fill(colours['medium'])
+                        self.canvas3.canvas.fill(colours['medium'])
+                        self.canvas4.canvas.fill(colours['medium'])
+                        _, _, w1, h1 = self.mandel_canvas.get_size()
+                        w1 = w1 // 2
+                        h1 = h1 // 2
+                        self.mandel_setup(w1, h1)
+                        self.scheduler.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
+                        self.scheduler.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
+                        self.scheduler.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
+                        self.scheduler.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
             elif event.type == GKind.Group:
                 if event.group == 'bg1':
                     self.label1.set_label(f'ID: {event.widget_id}')
@@ -253,6 +291,14 @@ class Demo:
             pygame.quit()
             # exit python
             sys.exit(0)
+
+    def hide(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(False)
+
+    def show(self, *widgets):
+        for widget in widgets:
+            widget.set_visible(True)
 
     def postamble(self):
         # if the life window is visible then handle it
@@ -374,52 +420,53 @@ class Demo:
     def mandel_iterative(self, id):
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
-                self.mandel_canvas_surface.set_at((x, y), self.col(self.pixel(x, y)))
+                self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y, self.mandel_canvas_rect)))
                 if self.scheduler.task_time(id):
                     yield
 
-    def mandel_recursive(self, id, area):
-        x, y, w, h = area
-        top_left = self.pixel(x, y)
+    def mandel_recursive(self, id, item):
+        x, y, w, h = item[0]
+        canvas = item[1]
+        top_left = self.pixel(x, y, item[0])
         accuracy = 2
         not_hit = True
         for x_test in range(0, w, accuracy):
-            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, y + h - 1) != top_left):
+            if (self.pixel(x + x_test, y, item[0]) != top_left) or (self.pixel(x + x_test, y + h - 1, item[0]) != top_left):
                 not_hit = False
                 break
         if not_hit:
             for y_test in range(0, h, accuracy):
-                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(x + w - 1, y + y_test) != top_left):
+                if (self.pixel(x, y + y_test, item[0]) != top_left) or (self.pixel(x + w - 1, y + y_test, item[0]) != top_left):
                     not_hit = False
                     break
         if not_hit:
-            self.mandel_canvas_surface.fill(self.col(top_left), area)
+            canvas.fill(self.col(top_left), Rect(x, y, w, h))
             return
         if w > 2 or h > 2:
             half_x = (w + (w % 2)) // 2
             half_y = (h + (h % 2)) // 2
             if self.scheduler.task_time(id):
                 yield
-            yield from self.mandel_recursive(id, Rect(x, y, half_x, half_y))
+            yield from self.mandel_recursive(id, (Rect(x, y, half_x, half_y), canvas))
             if self.scheduler.task_time(id):
                 yield
-            yield from self.mandel_recursive(id, Rect(x + half_x, y, half_x, half_y))
+            yield from self.mandel_recursive(id, (Rect(x + half_x, y, half_x, half_y), canvas))
             if self.scheduler.task_time(id):
                 yield
-            yield from self.mandel_recursive(id, Rect(x + half_x, y + half_y, half_x, half_y))
+            yield from self.mandel_recursive(id, (Rect(x + half_x, y + half_y, half_x, half_y), canvas))
             if self.scheduler.task_time(id):
                 yield
-            yield from self.mandel_recursive(id, Rect(x, y + half_y, half_x, half_y))
+            yield from self.mandel_recursive(id, (Rect(x, y + half_y, half_x, half_y), canvas))
             return
         else:
-            r, b = area.right - 1, area.bottom - 1
-            top_right, bottom_left, bottom_right = self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
-            self.mandel_canvas_surface.lock()
-            self.mandel_canvas_surface.set_at((x, y), self.col(top_left))
-            self.mandel_canvas_surface.set_at((x + 1, y), self.col(top_right))
-            self.mandel_canvas_surface.set_at((x, y + 1), self.col(bottom_left))
-            self.mandel_canvas_surface.set_at((x + 1, y + 1), self.col(bottom_right))
-            self.mandel_canvas_surface.unlock()
+            r, b = item[0].right - 1, item[0].bottom - 1
+            top_right, bottom_left, bottom_right = self.pixel(r, y, item[0]), self.pixel(x, b, item[0]), self.pixel(r, b, item[0])
+            canvas.lock()
+            canvas.set_at((x, y), self.col(top_left))
+            canvas.set_at((x + 1, y), self.col(top_right))
+            canvas.set_at((x, y + 1), self.col(bottom_left))
+            canvas.set_at((x + 1, y + 1), self.col(bottom_right))
+            canvas.unlock()
             return
 
     def mandel_setup(self, width, height):
@@ -430,7 +477,7 @@ class Demo:
         extent = 2.5 + 2.5j
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
-    def pixel(self, x, y):
+    def pixel(self, x, y, rect):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
         z = 0
         for k in range(self.max_iter):
