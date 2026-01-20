@@ -109,9 +109,9 @@ class Scheduler:
     def null(self):
         return
 
-    def run_scheduler(self, preamble=None, handler=None, postamble=None):
-        if handler == None:
-            handler = self.null
+    def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
+        if event_handler == None:
+            event_handler = self.null
         if preamble == None:
             preamble = self.null
         if postamble == None:
@@ -125,7 +125,7 @@ class Scheduler:
             preamble()
             # handle gui events
             for event in self.gui.events():
-                handler(event)
+                event_handler(event)
             # handle task logic
             if len(self.queued) > 0:
                 try:
