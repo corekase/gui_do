@@ -136,9 +136,9 @@ class Demo:
         self.life = set()
         set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(Toggle('run', Rect(30, height - 38, 100, widget_height), 3, False, 'Stop', 'Start'))
+        self.toggle_life = add(Toggle('run', gridded(1, 0), 3, False, 'Stop', 'Start'))
         # resets the simulation to a default state, uses a callback function
-        add(Button('reset', Rect(140, height - 38, 120, widget_height), 1, 'Reset'), self.reset)
+        add(Button('reset', gridded(0, 0), 2, 'Reset'), self.reset)
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -155,7 +155,7 @@ class Demo:
         self.hide(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        add(Button('clear', gridded(0, 0), 2, 'Clear'))
+        add(Button('clear', gridded(0, 0), 2, 'Reset'))
         add(Button('iterative', gridded(1, 0), 1, 'Iterative'))
         add(Button('recursive', gridded(2, 0), 1, 'Recursive'))
         add(Button('1split', gridded(3, 0), 1, '1M 4 Tasks'))
