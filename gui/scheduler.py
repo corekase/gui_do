@@ -83,9 +83,8 @@ class Scheduler:
                 # task id
                 self.id = None
         task_event = TaskEvent()
-        task_event.type = operation
+        task_event.operation = operation
         if operation == TKind.Finished:
-            task_event.operation = TKind.Finished
             task_event.id = item1
         # elif more operations
         return task_event
