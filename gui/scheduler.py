@@ -185,6 +185,7 @@ class Scheduler:
             except StopIteration:
                 # task exited, and exception from next() happened before appending the id to the processed list
                 self.tasks_finished.append(task_id)
+                del self.tasks[task_id]
         if event_handler == None:
             event_handler = self.null
         if preamble == None:
