@@ -1,3 +1,4 @@
+import re
 import pygame
 from math import cos, sin, radians
 from pygame.surface import Surface
@@ -52,6 +53,27 @@ class BitmapFactory:
         # -> try to construct from self.theme, if any element is not implemented in gtk2 bitmap
         #    loading and parsing functions then use the built_in generator instead
         self.theme = theme
+
+    def parse_gtk2_rc(filename):
+        rc_dict = {}
+        current_style = None
+        with open(filename, 'r') as f:
+            for line in f:
+                line = line.strip()
+                # Ignore comments and empty lines
+                if not line or line.startswith('#'):
+                    continue
+                # Match style blocks: style "name" { ... }
+                style_match = re.match(r'style\s+"([^"]+)"', line)
+                if style_match:
+                    current_style = style_match.group(1)
+                    rc_dict[current_style] = {}
+                    continue
+                # Match property = value within a style
+                if current_style and '=' in line:
+                    key, value = map(str.strip, line.split('=', 1))
+                    rc_dict[current_style][key] = value
+        return rc_dict
 
     def draw_window_title_bar_bitmaps(self, title, width, size):
         saved = []
