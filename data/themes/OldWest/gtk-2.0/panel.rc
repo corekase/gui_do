@@ -1,0 +1,83 @@
+style "panel"       
+{
+xthickness 			= 1
+ythickness 			= 1
+fg[NORMAL]			= "#D7C77D" #TEXT ON NORMAL PANEL BUTTON
+fg[PRELIGHT]		= "#788073" #TEXT ON MOUSEOVER PANEL BUTTON
+fg[ACTIVE]			= "#BF8F00" #TEXT ON ACTIVE PANEL BUTTON
+fg[SELECTED]		= "#BF8F00"
+fg[INSENSITIVE]		= "#737373"
+bg_pixmap[NORMAL] 	= "Panel/panel-bg.png"
+}
+
+style "panelbuttons"
+{
+xthickness            		= 1
+ythickness            		= 1
+engine "pixmap" 
+{    
+image
+{
+function        			= BOX
+recolorable     		= TRUE
+state				= NORMAL
+file            			= "Panel/panel-button-normal.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+}		
+image
+{
+function        			= BOX
+shadow				= OUT
+recolorable     		= TRUE
+state				= PRELIGHT
+file            			= "Panel/panel-button-prelight.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+}		
+image
+{
+function        			= BOX
+recolorable     		= TRUE
+shadow		        	= IN
+state				= PRELIGHT
+file            			= "Panel/panel-button-prelight.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+}
+image
+{
+function        			= BOX
+recolorable     		= TRUE
+state				= ACTIVE
+file            			= "Panel/panel-button-active.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+}  
+image
+{
+function        			= BOX
+recolorable     		= TRUE
+state				= INSENSITIVE
+file            			= "Panel/panel-bg.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+} 
+image
+{
+function        			= BOX
+recolorable     		= TRUE
+state				= SELECTED
+file            			= "Panel/panel-button-active.png"
+border          			= { 4, 4, 4, 4 }
+stretch         			= TRUE
+  } 
+ }
+}
+
+class "*Xfce*Panel*" 				style "panel"
+widget "*Xfce*Panel*"                		style "panel"
+widget_class "*XfceSystrayPlugin"   		style "panel"
+widget_class "*Xfce*Panel*GtkToggleButton*" 	style "panelbuttons"
+widget "*tasklist*" 				style "panelbuttons"
+widget_class "*Panel*GtkButton*" 		style "panelbuttons"

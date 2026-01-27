@@ -1,0 +1,2036 @@
+# OldWest
+#   - daman
+#   - and any inspired artist to follow (feel free to modify)
+#   - when completed,please... share your work
+
+# I have striped the panel conf. from the gtkrc and included
+# it separately, easier to disable by adding a # (comment) in front of
+# the following line.
+
+include "panel.rc"
+
+#Remove icon images from menu, buttons, toolbar
+gtk-menu-images 		= 1
+gtk-button-images 		= 0
+gtk-toolbar-style			= 0			
+gtk-auto-mnemonics 		= 1 # Disables lines under button text
+
+#Boundries within images { left ,right , top ,bottom} ex. buttons, menus
+# x,y : directs the size of images, fonts x=width , y=height 
+
+# Theme size of icon images: want smaller? set to size=16
+# panel-menu refers to menus in panels  
+# gtk-menu refers to menus in GTK-applications  
+# gtk-button refers to buttons in GTK-applications  
+# gtk-small-toolbar refers to smaller toolbars in GTK-applications  
+# gtk-large-toolbar refers to larger toolbars in GTK-applications  
+# gtk-dialog refers to dialog boxes in GTK-applications  
+# gtk-dnd refers to drag and drop in GTK-applications 
+
+# Theme sizes of icon images 
+gtk-icon-sizes = "panel-menu=24,24:panel=24,24:gtk-menu=24,24:gtk-large-toolbar=24,24:gtk-small-toolbar=16,16:gtk-button=16,16"
+
+#Theme color scheme
+gtk_color_scheme = "fg_color:#D7C77D\nbg_color:#3C321F\nbase_color:#534D3A\ntext_color:#BFB790\nselected_bg_color:#353123\nselected_fg_color:#BF8F00"
+
+#Setting some default options
+style "default"
+{
+	xthickness 									= 1
+	ythickness 									= 1
+	
+	GtkButton::child-displacement-x 				= 1
+	GtkButton::child-displacement-y 				= 1
+	GtkButton::default-border 					= { 0, 0, 0, 0 }
+
+	GtkCheckButton::indicator-size 				= 16
+
+# Range config
+
+	GtkRange::trough-border						= 2
+	GtkVScale::slider_length 						= 17
+  	GtkVScale::slider_width 						= 17
+  	GtkHScale::slider_length 						= 17
+  	GtkHScale::slider_width 						= 17
+
+# Scrollbar config
+
+	GtkRange::slider_width 						= 16
+	GtkRange::stepper_size 						= 16
+	GtkRange::trough-under_steppers 				= 1
+	GtkScrolledWindow::scrollbar_spacing			= 1
+	GtkScrolledWindow::scrollbars_within_bevel 	= 1
+	GtkScrollbar::trough_border          				= 2
+	GtkScrollbar::stepper_size	     					= 16
+	GtkScrollbar::has_secondary_backward_stepper	= 0
+	GtkScrollbar::has_secondary_forward_stepper 	= 0
+	GtkScrollbar::has-backward_stepper 			= 1
+	GtkScrollbar::has-forward_stepper 			= 1
+	GtkScrollbar::slider_width	     					= 16
+	GtkScrollbar::min-slider_length 				= 45
+
+# Tree config
+
+	GtkPaned::handle_size						= 4
+
+# 	sets the arrow size for tree and non tree apps ie. (gcolor2)
+
+	GtkExpander::expander-size 					= 16
+        GtkTreeView::odd-row-color					= "#4D4736"
+	GtkTreeView::even-row-color					= "#423E30"   #  treeview bg color for file mngrs
+
+# 	sets the vertical gap between items for tree
+
+GtkTreeView::vertical-separator 					= 0
+
+# 	sets the offset for horizontal tree
+
+GtkTreeView::horizontal-separator 				= 7
+
+# 	gives menu borders some separation from active menu item
+
+	GtkMenu::horizontal-padding 					= 1
+	GtkMenu::vertical-padding 					= 1
+
+
+	GtkStatusbar::shadow_type					= GTK_SHADOW_NONE
+	GtkSpinButton::shadow_type 					= GTK_SHADOW_NONE
+	
+	WnckTasklist::fade-overlay-rect				= 0
+
+	GtkEntry::state-hint            					= 1    # important if you want entry focus effects!
+	GtkEntry::honors-transparent-bg-hint 			= 1
+	GtkEntry::inner-border						= { 1, 1, 1, 1 }
+
+	fg[NORMAL]        								= @fg_color
+	fg[PRELIGHT]      								= @selected_fg_color
+	fg[SELECTED]      								= @selected_fg_color
+	fg[ACTIVE]        								= @text_color
+	fg[INSENSITIVE]   							= "#736A50"
+	
+	# uncomment-bg_pixmap (remove the #) for a textured window background #
+	# several bg available in the Shadows folder #
+	# just be sure to rename for a different look #
+
+	bg_pixmap[NORMAL] 							= "/Shadows/window-bg.png" 
+
+	bg[NORMAL]       								= @bg_color
+	bg[PRELIGHT]      							= "#353123"   # mouse-over/prelight ie. gcolor2
+	bg[SELECTED]	  							= @selected_bg_color
+	bg[ACTIVE]        								= shade (0.55, @bg_color)
+        bg[INSENSITIVE]   							= @bg_color
+
+	base[NORMAL]      							= @base_color
+	base[PRELIGHT]    							= @base_color
+        base[SELECTED]    							= @selected_bg_color
+	base[ACTIVE]      								= @selected_bg_color
+	base[INSENSITIVE] 							= @base_color
+
+	text[NORMAL]      							= @text_color
+	text[PRELIGHT]    							= @selected_fg_color
+        text[SELECTED]    							= @selected_fg_color
+	text[ACTIVE]      								= @selected_fg_color
+	text[INSENSITIVE] 							= "#788073"
+
+  engine "pixmap"
+    {
+    image
+    {
+      	function				= HANDLE
+      	file					= "Menu/handlebar-vert.png"
+     	 border				= { 1, 1, 1, 1 }
+      	stretch				= TRUE
+      	overlay_file			= "Menu/handle-vert.png"
+      	overlay_stretch		= FALSE
+      	orientation			= VERTICAL
+    }
+    image
+    {
+      	function				= HANDLE
+      	file					= "Menu/handlebar-horiz.png"
+      	border				= { 1, 1, 1, 1 }
+      	stretch				= TRUE
+      	overlay_file			= "Menu/handle-horiz.png"
+      	overlay_stretch		= FALSE
+      	orientation			= HORIZONTAL
+    }
+    image
+    {
+      	function				= RESIZE_GRIP
+      	recolorable			= TRUE
+      	detail				= "statusbar"
+     	overlay_file			= "Menu/statusgrip.png"
+      	overlay_border		= { 1, 1, 1, 1 }
+      	overlay_stretch		= FALSE
+    }
+    image
+    {
+      	function				= BOX
+      	state				= NORMAL
+      	recolorable			= TRUE
+      	file					= "Buttons/button-normal.png"		
+        border				= { 8, 8, 5, 9 }
+      	stretch				= TRUE	
+    }
+    image
+    {
+     	function				= BOX
+     	state				= PRELIGHT
+     	recolorable			= TRUE
+     	file					= "Buttons/button-prelight.png"
+        border				= { 8, 8, 5, 9 }
+       stretch				= TRUE
+    }
+    image
+   {
+      function				= BOX
+      state					= ACTIVE
+      recolorable			= TRUE
+      file					= "Buttons/button-pressed.png"
+      border				= { 8, 8, 5, 9 }
+      stretch				= TRUE
+   }	
+   image 
+   { 
+      function				= BOX
+      state					= INSENSITIVE
+      recolorable			= TRUE
+      file					= "Buttons/button-insensitive.png"
+      border				= { 8, 8, 5, 9 }
+      stretch				= TRUE
+    }	
+    image
+    {
+      function				= SHADOW
+      shadow				= IN
+      recolorable			= TRUE
+      file					= "Shadows/shadow-in.png"
+      border				= { 3, 3, 3, 3 }
+      stretch				= TRUE
+    }
+    image
+    {
+       function				= SHADOW
+       shadow				= OUT
+       recolorable			= TRUE
+       file					= "Shadows/shadow-out.png"
+      border				= { 3, 3, 3, 3 }
+       stretch				= TRUE
+    }
+    image
+    {
+       function				= SHADOW
+       shadow				= ETCHED_IN
+       recolorable			= TRUE
+       file					= "Shadows/shadow-etched-in.png"
+      border				= { 3, 3, 3, 3 }
+       stretch				= TRUE
+    }
+    image
+    {
+       function				= SHADOW
+       shadow				= ETCHED_OUT
+       recolorable			= TRUE
+       file					= "Shadows/shadow-etched-out.png"
+       border				= { 1, 1, 1, 1 }
+       stretch				= TRUE
+    }
+    image
+    {
+       function				= VLINE
+       recolorable			= TRUE
+       file					= "Lines/line-v.png"
+       border				= { 0, 0, 0, 0 }
+       stretch				= TRUE
+    }
+    image
+    {
+      function				= HLINE
+      recolorable			= TRUE
+      file					= "Lines/line-h.png"
+      border				= { 0, 0, 0, 0 }
+      stretch				= TRUE
+    }
+    image
+    {
+      function				= FOCUS
+      recolorable			= TRUE
+      file					= "Others/focus.png"
+      border				= { 0, 0, 0, 0 }
+      stretch				= TRUE
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= NORMAL
+	overlay_file			= "Arrows/arrow-up.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= UP
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= PRELIGHT
+	overlay_file			= "Arrows/arrow-up-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= UP
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= ACTIVE
+	overlay_file			= "Arrows/arrow-up-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= UP
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= SELECTED
+	overlay_file			= "Arrows/arrow-up-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= UP
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	overlay_file			= "Arrows/arrow-up-insensitive.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= UP
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= NORMAL
+	overlay_file		     	 = "Arrows/arrow-down.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= DOWN
+    }
+    image
+    {
+	function				=ARROW
+	recolorable			= TRUE
+	state				= PRELIGHT
+	overlay_file			= "Arrows/arrow-down-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= DOWN
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= ACTIVE
+	overlay_file			= "Arrows/arrow-down-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= DOWN
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= SELECTED
+	overlay_file			= "Arrows/arrow-down-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= DOWN
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	overlay_file			= "Arrows/arrow-down-insensitive.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= DOWN
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= NORMAL
+	overlay_file			= "Arrows/arrow-left.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= LEFT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= PRELIGHT
+	overlay_file			= "Arrows/arrow-left-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= LEFT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= ACTIVE
+	overlay_file			= "Arrows/arrow-left-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= LEFT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= SELECTED
+	overlay_file			= "Arrows/arrow-left-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= LEFT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	overlay_file			= "Arrows/arrow-left-insensitive.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= LEFT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= NORMAL
+	overlay_file			= "Arrows/arrow-right.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= RIGHT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state			     	 = PRELIGHT	
+	overlay_file			= "Arrows/arrow-right-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= RIGHT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= ACTIVE
+	overlay_file			= "Arrows/arrow-right-prelight.png"
+	overlay_border	     	 = { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= RIGHT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= SELECTED
+	overlay_file			= "Arrows/arrow-right-prelight.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch		= FALSE
+	arrow_direction		= RIGHT
+    }
+    image
+    {
+	function				= ARROW
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	overlay_file			= "Arrows/arrow-right-insensitive.png"
+	overlay_border		= { 2, 2, 2, 2 }
+	overlay_stretch	     	= FALSE
+	arrow_direction		= RIGHT
+    }
+#  This is the image used to draw a check box, placed in default to include in menus.
+     image 
+    {
+	function        			= CHECK
+	recolorable     		= TRUE
+	shadow          		= OUT
+	overlay_file    		= "Others/unchecked_box.png"
+	overlay_stretch		= FALSE
+     }
+     image 
+    {
+	function        			= CHECK
+	recolorable     		= TRUE
+      	shadow          		= IN
+	overlay_file    		= "Others/checked_box.png"
+	overlay_stretch 		= FALSE
+     }
+#This is the image used to draw a selected radio button, placed in default to include in menus.
+      image 
+     {
+	function        			= OPTION
+	recolorable     		= TRUE
+	shadow          		= OUT
+	overlay_file    		= "Others/option_out_2.png"
+	overlay_border		= { 0, 0, 0, 0 }
+	overlay_stretch 		= FALSE
+     }
+     image 
+    {
+	function        			= OPTION
+	recolorable     		= TRUE
+	shadow          		= IN
+	overlay_file    		= "Others/option_in_2.png"
+	overlay_border  		= { 0, 0, 0, 0 }
+	overlay_stretch 		= FALSE
+    }
+#This is the image used to draw a box, over the entire window and inactive (detailed) window lists.
+#Comment (#) the following six lines, to disable the look and boost the gtk2 performance ~0.30 seconds.
+#	mage 
+#	{
+#	function        			= FLAT_BOX
+#	recolorable   			= TRUE
+#	file            			= "Others/hi-light-focus.png"
+#	border          			= { 4, 4, 4, 4 }
+# }
+  }
+}
+
+###########################
+# Added "inactivestate" + engine mist, to counter pixmap ugly rendering of inactive 
+#      text in; menus,buttons, icons. The widgets that control this are located at
+#      the end of the file.
+###########################
+
+style "inactivestate"
+{
+  engine "mist"
+    {
+  }
+}
+
+style "tooltip" 	
+    {
+  xthickness 				= 9  ## give your tooltip text some room, set x,y big!##
+  ythickness 				= 9
+  fg[NORMAL] 			= "#000000"
+  engine "pixmap"
+    {
+    image
+    {
+      	function				= FLAT_BOX
+        detail				= "tooltip"
+        recolorable			= TRUE
+        file					= "Others/tooltip-bg.png"
+        border				= { 3, 3, 4, 4 }
+        stretch				= TRUE
+    }
+  }
+}
+
+style "button" 	
+{
+xthickness 		= 1
+ythickness 		= 1
+  engine "pixmap"
+    {
+    image
+    {
+        function			= BOX
+        detail				= "buttondefault"
+        recolorable			= TRUE
+        file				= "Buttons/button-default.png"
+        border			= { 8, 8, 5, 9 }
+        stretch			= TRUE
+    }
+    image
+    {
+        function			= BOX
+        state				= PRELIGHT
+        recolorable			= TRUE
+        file				= "Buttons/button-prelight.png"
+        border			= { 8, 8, 5, 9 }
+        stretch			= TRUE
+    }
+    image
+    {
+        function			= BOX
+        state				= ACTIVE
+        recolorable			= TRUE
+        file				= "Buttons/button-pressed.png"
+        border			= { 8, 8, 5, 9 }
+        stretch			= TRUE
+    }	
+    image 
+   {
+        function			= BOX
+        state				= INSENSITIVE
+        recolorable			= TRUE
+        file				= "Buttons/button-insensitive.png"
+        border			= { 8, 8, 5, 9 }
+        stretch			= TRUE
+    }
+    image 
+    {
+        function			= BOX
+        state				= NORMAL
+        recolorable			= TRUE
+        file				= "Buttons/button-normal.png"		
+        border			= { 8, 8, 5, 9 }
+        stretch			= TRUE	
+     }
+    image
+    {
+        function			= FOCUS
+        recolorable			= TRUE
+        file				= "Others/focus.png"
+        border			= { 0, 0, 0, 0 }
+        stretch			= TRUE
+     }		
+  }
+}
+
+style "entry" 
+{
+  xthickness 			= 1
+  ythickness 			= 1
+  GtkWidget::interior_focus 	= 1 
+engine "pixmap"
+{
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = NORMAL
+shadow			= IN
+file			= "Shadows/entry.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = INSENSITIVE
+shadow			= IN
+file			= "Shadows/entry.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = ACTIVE
+file			= "Shadows/entry-active.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = NORMAL
+file                    = "Shadows/entry-bg.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = ACTIVE
+file                    = "Shadows/entry-bg.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = INSENSITIVE
+file                    = "Shadows/entry-bg-inactive.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+    }
+  }
+}
+
+style "menubar" 
+{
+  xthickness 			= 2
+  ythickness 			= 2	
+  fg[NORMAL]        		= "#BFB790"
+  fg[PRELIGHT]      		= "#D7C77D"
+  fg[SELECTED]      		= "#D7C77D"
+  engine "pixmap"
+    {
+    image
+    {
+	function			= BOX
+      	state				= NORMAL
+      	recolorable			= TRUE
+      	file				= "Menu/menubar.png"
+      	border			= { 0,0,0,0 }
+      	stretch			= TRUE
+      	overlay_file			= "Menu/menubar1.png"
+      	overlay_border		= { 3,3,5,8 }
+      	overlay_stretch		= TRUE
+    }
+    image
+    {
+	function				= BOX
+	recolorable			= TRUE
+	state				= PRELIGHT
+	file					= "Menu/menuitem.png"
+	border				= { 6, 6, 6, 6 }
+	stretch				= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Menu/menubar.png"
+      	border			= { 0,0,0,0 }
+      	stretch			= TRUE
+      	overlay_file			= "Menu/menubar1.png"
+      	overlay_border		= { 3,3,5,8 }
+      	overlay_stretch		= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= SELECTED
+	file				= "Menu/menubar.png"
+      	border			= { 0,0,0,0 }
+      	stretch			= TRUE
+      	overlay_file			= "Menu/menubar1.png"
+      	overlay_border		= { 3,3,5,8 }
+      	overlay_stretch		= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	file				= "Menu/menubar.png"
+      	border			= { 0,0,0,0 }
+      	stretch			= TRUE
+      	overlay_file			= "Menu/menubar1.png"
+      	overlay_border		= { 3,3,5,8 }
+      	overlay_stretch		= TRUE
+    }
+  }
+}
+
+style "menu" 
+{
+  xthickness			= 10
+  ythickness			= 9
+  engine "pixmap"
+    {
+    image
+    {
+       function			= BOX
+       recolorable    		= TRUE
+       detail				= "menu"
+       file				= "Menu/menu.png"
+       border			= { 24, 24, 18, 18 }
+       stretch			= TRUE
+     }
+   }
+}
+
+style "menuitem"	
+{
+  
+  xthickness			= 1
+  ythickness			= 3  
+  engine "pixmap"
+    {
+    image
+    {
+      	function			= BOX
+      	recolorable			= TRUE
+      	file				= "Menu/menuitem.png"
+      	border			= { 16, 16, 8, 8 }
+      	stretch			= TRUE
+    }
+    image
+    {
+      	function			= ARROW
+      	recolorable			= TRUE
+      	state				= NORMAL
+      	overlay_file			= "Arrows/arrow-right.png"
+      	overlay_stretch		= FALSE
+      	arrow_direction		= RIGHT
+    }
+    image
+    {
+      	function			= ARROW
+      	recolorable			= TRUE
+      	state				= PRELIGHT
+      	overlay_file			= "Arrows/arrow-right-prelight.png"
+      	overlay_stretch		= FALSE
+      	arrow_direction		= RIGHT
+    }
+    image
+    {
+      	function			= ARROW
+      	recolorable			= TRUE
+      	state				= INSENSITIVE
+     	 overlay_file		= "Arrows/arrow-right-insensitive.png"
+      	overlay_stretch		= FALSE
+      	arrow_direction		= RIGHT
+    }
+    image
+    {
+       	function			= VLINE
+       	recolorable			= TRUE
+       	file				= "Lines/line-v.png"
+       	border			= { 1, 1, 0, 0 }
+       	stretch			= TRUE
+    }
+    image
+    {
+	function			= HLINE
+      	recolorable			= TRUE
+      	file				= "Lines/line-h.png"
+      	border			= { 0, 0, 1, 1 }
+      	stretch			= TRUE
+    }	
+  }
+}
+
+style "toolbar" 
+{
+  xthickness 			= 2
+  ythickness 			= 2
+  engine "pixmap"
+    {
+    image 
+    {
+	function			= BOX
+      	state				= NORMAL
+      	recolorable			= TRUE
+      	file				= "Menu/toolbar1.png"
+      	border			= { 0,0,0,0 }
+      	stretch			= FALSE
+      	overlay_file			= "Menu/toolbar.png"
+      	overlay_border		= { 6,6,6,6 }
+      	overlay_stretch		= TRUE
+    }
+  }
+}
+
+style "toolbutton" 
+{
+  xthickness            		= 1
+  ythickness            		= 1
+  GtkWidget::focus_padding 	= 2
+  engine "pixmap" 
+    {  
+    image
+    {
+	function        		= BOX
+	recolorable     		= TRUE
+	state				= NORMAL
+	file            		= "Buttons/button-normal.png"
+	border          		= { 8, 8, 5, 9 }
+	stretch         		= TRUE
+    }
+    image
+    {
+	function        		= BOX
+	recolorable     		= TRUE
+	state				= PRELIGHT
+	file            		= "Buttons/button-prelight.png"
+	border          		=  { 8, 8, 5, 9 }
+	stretch         		= TRUE
+    }
+    image
+    {
+	function        		= BOX
+	recolorable     		= TRUE
+	state				= ACTIVE
+	file            		= "Buttons/button-pressed.png"
+	border          		=  { 8, 8, 5, 9 }
+	stretch         		= TRUE
+    }  
+    image
+    {
+	function        		= BOX
+	recolorable     		= TRUE
+	state				= INSENSITIVE
+	file            		= "Buttons/button-insensitive.png"
+	border          		=  { 8, 8, 5, 9 }
+	stretch         		= TRUE
+    }
+  }
+}
+
+style "notebook"
+{
+   fg[NORMAL]        	 		  = @selected_fg_color  # active tab color
+  xthickness 					= 2
+  ythickness		 			= 2
+  GtkNotebook::tab-overlap 	= 2       # Adjust spacing between tabs
+  engine "pixmap" 
+    {
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Tabs/tab-bottom.png"
+	border			= { 4, 11, 4, 4 }
+	stretch			= TRUE
+	gap_side			= TOP
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Tabs/tab-top.png"
+	border			= { 4, 11, 4, 4 }
+	stretch			= TRUE
+	gap_side			= BOTTOM
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Tabs/tab-left.png"
+	border			= { 4, 4, 4, 4 }
+	stretch			= TRUE
+	gap_side			= RIGHT
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Tabs/tab-right.png"
+	border			= { 4, 4, 4, 4 }
+	stretch			= TRUE
+	gap_side			= LEFT
+    }	
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	file				= "Tabs/tab-top-active.png"
+	border			= { 4, 18, 4, 4 }
+	stretch			= TRUE
+	gap_side			= BOTTOM
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	file				= "Tabs/tab-bottom-active.png"
+	border			= { 4, 18, 4, 4 }
+	stretch			= TRUE
+	gap_side			= TOP
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	file				= "Tabs/tab-left-active.png"
+	border			= { 4, 4, 4, 18 }
+	stretch			= TRUE
+	gap_side			= RIGHT
+    }
+    image 
+    {
+        function			= EXTENSION
+	recolorable			= TRUE
+	file				= "Tabs/tab-right-active.png"
+	border			= { 4, 4, 4, 4 }
+	stretch			= TRUE
+	gap_side			= LEFT
+    }
+    image
+    {
+        function			= FOCUS
+      	recolorable			= TRUE
+      	file				= "Others/focus.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+    }		
+
+# How to draw boxes with a gap on one side (ie the page of a notebook)
+
+    image 
+    {
+        function			= BOX_GAP
+	recolorable			= TRUE
+	file				= "Tabs/notebook.png" 
+	border			= { 4, 5, 4, 5 }
+	gap_file			= "Tabs/gap-bottom.png"
+	gap_border			= { 7, 6, 0, 0 }
+	gap_start_file		= "Tabs/null.png"
+	gap_end_file		= "Tabs/null.png"
+	gap_side			= TOP
+    }
+    image 
+    {
+        function			= BOX_GAP
+	recolorable			= TRUE
+	file				= "Tabs/notebook.png"
+	border			= { 4, 5, 4, 5 }
+	gap_file			= "Tabs/gap-top.png"
+	gap_border			= { 0, 0, 7, 6 }
+	gap_start_file		= "Tabs/null.png"
+	gap_end_file		= "Tabs/null.png"
+	gap_side			= BOTTOM
+    }
+    image 
+    {
+        function			= BOX_GAP
+	recolorable			= TRUE
+	file				= "Tabs/notebook.png" 
+	border			= { 4, 5, 4, 5 }
+	gap_file			= "Tabs/gap-right.png"
+	gap_border			= { 7, 6, 0, 0 }
+	gap_start_file		= "Tabs/null.png"
+	gap_end_file		= "Tabs/null.png"
+	gap_side			= LEFT
+    }
+    image 
+    {
+        function			= BOX_GAP
+	recolorable			= TRUE
+	file				= "Tabs/notebook.png" 
+	border			= { 4, 5, 4, 5 }
+	stretch			= TRUE
+	gap_side			= RIGHT
+    }
+# How to draw the box of a notebook when it isnt attached to a tab
+
+    image 
+    {
+        function			= BOX
+	recolorable			= TRUE
+	file				= "Tabs/notebook.png"
+	border			= { 4, 5, 4, 5 }
+	stretch			= TRUE
+
+    }
+  }
+}
+
+style "listheader" 
+{
+  xthickness 			= 1
+  ythickness 			= 1
+  engine "pixmap"
+    {
+    image
+    {
+	function			= BOX
+	state				= NORMAL
+	recolorable			= TRUE
+	file				= "Buttons/button-default.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= PRELIGHT
+	recolorable			= TRUE
+	file				= "Buttons/button-prelight.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= ACTIVE
+	recolorable			= TRUE
+	file				= "Buttons/button-normal.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= INSENSITIVE
+	recolorable			= TRUE
+	file				= "Buttons/button-insensitive.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+  }
+}
+
+style "treeview-item" 
+{
+  xthickness 			= 1
+  ythickness 			= 1
+  engine "pixmap"
+    {
+    image
+    {
+	function			= FLAT_BOX
+	state				= SELECTED
+	file				= "Listheaders/treeitem.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= FLAT_BOX
+	state				= NORMAL
+	detail 			= "cell_odd"
+	file				= "Listheaders/odd.png"
+	border          		= {0, 0, 0, 0}
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= FLAT_BOX
+	state				= NORMAL
+	detail 			= "cell_even"
+	file				= "Listheaders/even.png"
+	border          		= {0, 0, 1, 1}
+	stretch			= TRUE
+    }
+    image
+    {
+      	function			= FOCUS
+      	recolorable			= TRUE
+      	file				= "Others/focus.png"
+      	border			= { 0, 0, 1, 1 }
+      	stretch			= TRUE
+      }		
+   }
+}
+
+style "scrollbar"
+{
+xthickness = 1
+ythickness = 1
+  engine "pixmap" 
+    {
+  # Horizontal slider background
+    image 
+    {
+	function        		= BOX
+        recolorable    	= TRUE
+        detail          		= "trough"
+        file            		= "Scrollbars/trough-scrollbar-horiz.png"
+        border          		= { 0, 0, 0, 0 }
+        stretch         		= TRUE
+        orientation   		= HORIZONTAL
+    }
+  # Vertical slider background
+    image 
+    {
+        function        		= BOX
+        recolorable     	= TRUE
+        detail          		= "trough"
+        file            		= "Scrollbars/trough-scrollbar-vert.png"
+        border          		= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+        orientation     	= VERTICAL
+     }
+  # Normal horizontal slider
+    image 
+    {
+	function        		= SLIDER
+	recolorable    	 = TRUE
+	state           		= NORMAL
+	file            		= "Scrollbars/slider-horiz.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation    	= HORIZONTAL
+	overlay_file		= "Scrollbars/grip-horiz.png"
+	overlay_stretch	= FALSE
+	orientation		= HORIZONTAL
+	}		
+  # Horizontal slider (active)
+    image 
+    {
+	function        		= SLIDER
+	recolorable     	= TRUE
+	state           		= ACTIVE
+	file            		= "Scrollbars/slider-horiz-prelight.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation    	= HORIZONTAL
+	overlay_file		= "Scrollbars/grip-horiz-prelight.png"
+	overlay_stretch	= FALSE
+	orientation		= HORIZONTAL
+    }
+  # Horizontal slider (mouse over)
+    image 
+    {
+	function        		= SLIDER 
+	recolorable     		= TRUE
+	state           		= PRELIGHT
+	file            		= "Scrollbars/slider-horiz-prelight.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation     	= HORIZONTAL
+	overlay_file		= "Scrollbars/grip-horiz-prelight.png"
+	overlay_stretch	= FALSE
+	orientation		= HORIZONTAL
+    }	    
+  # Horizontal slider (Insensitive)
+    image 
+    {
+	function        		= SLIDER 
+	recolorable     	= TRUE
+	state           		= INSENSITIVE
+	file            		= "Scrollbars/slider-horiz.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation     	= HORIZONTAL
+    }
+  # Normal vertical slider
+    image 
+    {
+	function        		= SLIDER
+	recolorable     	= TRUE
+	state           		= NORMAL
+	file            		= "Scrollbars/slider-vert.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation     	= VERTICAL
+	overlay_file		= "Scrollbars/grip-vert.png"
+	overlay_stretch	= FALSE
+	orientation		= VERTICAL
+    }
+  # Vertical slider (Active)
+    image 
+    {
+	function        		= SLIDER
+	recolorable     		= TRUE
+	state           		= ACTIVE
+	file            		= "Scrollbars/slider-vert-prelight.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation     	= VERTICAL
+	overlay_file		= "Scrollbars/grip-vert-prelight.png"
+	overlay_stretch	= FALSE
+    }
+  # Vertical slider (mouse over)
+    image 
+    {
+	function        		= SLIDER 
+	recolorable    	= TRUE
+	state           		= PRELIGHT
+	file            		= "Scrollbars/slider-vert-prelight.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation    	= VERTICAL
+	orientation     	= VERTICAL
+	overlay_file		= "Scrollbars/grip-vert-prelight.png"
+	overlay_stretch	= FALSE
+    }	    
+  # Vertical slider (Insensitive)
+    image 
+    {
+	function        		= SLIDER 
+	recolorable     		= TRUE
+	state           		= INSENSITIVE
+	file            		= "Scrollbars/slider-vert.png"
+	border          		= {3 ,3 ,3 ,3 }
+	stretch         		= TRUE
+	orientation     		= VERTICAL
+    }
+
+############################################################
+# SCROLLBAR STEPPERS
+############################################################
+
+  # Up
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= NORMAL
+      file				= "Arrows/arrow-up.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = UP
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= PRELIGHT
+      file				= "Arrows/arrow-up-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = UP
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= ACTIVE
+      file				= "Arrows/arrow-up-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = UP
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= INSENSITIVE
+      file				= "Arrows/arrow-up-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = UP
+    }
+
+ ######### DOWN ############
+
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= NORMAL
+      file				= "Arrows/arrow-down.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = DOWN
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= PRELIGHT
+      file				= "Arrows/arrow-down-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = DOWN
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= ACTIVE
+      file				= "Arrows/arrow-down-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = DOWN
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= INSENSITIVE
+      file				= "Arrows/arrow-down-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = DOWN
+    }
+
+############ RIGHT ################
+
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= NORMAL
+      file				= "Arrows/arrow-right.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = RIGHT
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= PRELIGHT
+      file				= "Arrows/arrow-right-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = RIGHT
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= ACTIVE
+      file				= "Arrows/arrow-right-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = RIGHT
+    }
+   image 
+   {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= INSENSITIVE
+      file				= "Arrows/arrow-right-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = RIGHT
+    }
+
+############### LEFT ###################
+
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= NORMAL
+      file				= "Arrows/arrow-left.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = LEFT
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= PRELIGHT
+      file				= "Arrows/arrow-left-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = LEFT
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= ACTIVE
+      file				= "Arrows/arrow-left-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = LEFT
+    }
+    image 
+    {
+      function			= STEPPER
+      recolorable			= TRUE
+      state				= INSENSITIVE
+      file				= "Arrows/arrow-left-prelight.png"
+      border          	= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      arrow_direction	        = LEFT
+    }
+  }
+}
+
+style "progressbar" 
+{
+  fg[NORMAL]       	 	= @fg_color
+  fg[PRELIGHT]      		= @selected_fg_color
+  xthickness            		= 1
+  ythickness            		= 2
+  engine "pixmap" 
+    {
+    image
+    {
+      function			= BOX
+      detail				= "trough"
+      file				= "ProgressBar/trough-progressbar-horiz.png"
+      border				= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      orientation                   = HORIZONTAL
+    }
+    image
+    {
+      function			= BOX
+      detail				= "trough"
+      file				= "ProgressBar/trough-progressbar-vert.png"
+      border				= { 2, 2, 2, 2 }
+      stretch				= TRUE
+      orientation                   = VERTICAL
+    }
+    image
+    {
+      function			= BOX
+      recolorable			= TRUE
+      detail				= "bar"
+      file				= "ProgressBar/progressbar-horiz.png"
+      border				= { 2, 2, 2, 2}
+      stretch				= TRUE
+      orientation     		= HORIZONTAL
+    } 
+    image
+    {
+      function			= BOX
+      detail				= "bar"
+      file				= "ProgressBar/progressbar-vert.png"
+      border				= { 2, 2, 2, 2}
+      stretch				= TRUE
+      orientation			= VERTICAL
+    }
+  }
+}
+
+style "spin"  = "entry"
+{
+  xthickness   			  = 2
+  ythickness   			  = 2
+  GtkWidget::interior_focus = 1
+engine "pixmap"
+{	
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = NORMAL
+shadow			= IN
+file			= "Shadows/entry.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = INSENSITIVE
+shadow			= IN
+file			= "Shadows/entry.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function		= SHADOW
+detail			= "entry"
+state                   = ACTIVE
+file			= "Shadows/entry-active.png"
+border			= { 3, 3, 3, 3 }
+stretch			= TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = NORMAL
+file                    = "Shadows/entry-bg.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = ACTIVE
+file                    = "Shadows/entry-bg.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+}
+image
+{
+function                = FLAT_BOX
+detail                  = "entry_bg"
+state                   = INSENSITIVE
+file                    = "Shadows/entry-bg-inactive.png"
+border                  = { 3, 3, 3, 3 }
+stretch                 = TRUE
+    }
+  }
+}
+
+style "spinbutton"
+{
+  xthickness    			= 2
+  ythickness  			= 2
+  engine "pixmap"
+    {
+    image
+    {
+	function			= ARROW
+    }
+    image
+    {
+	function			= BOX
+	state				= NORMAL
+	detail				= "spinbutton_up"
+	recolorable			= TRUE
+	file				= "Arrows/spin-up.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= PRELIGHT
+	detail				= "spinbutton_up"
+	recolorable			= TRUE
+	file				= "Arrows/spin-up1.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= ACTIVE
+	detail				= "spinbutton_up"
+	recolorable			= TRUE
+	file				= "Arrows/spin-up1.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= INSENSITIVE
+	detail				= "spinbutton_up"
+	recolorable			= TRUE
+	file				= "Arrows/spin-up.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= NORMAL
+	detail				= "spinbutton_down"
+	recolorable			= TRUE
+	file				= "Arrows/spin-down.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= PRELIGHT
+	detail				= "spinbutton_down"
+	recolorable			= TRUE
+	file				= "Arrows/spin-down1.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= ACTIVE
+	detail				= "spinbutton_down"
+	recolorable			= TRUE
+	file				= "Arrows/spin-down1.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	state				= INSENSITIVE
+	detail				= "spinbutton_down"
+	recolorable			= TRUE
+	file				= "Arrows/spin-down.png"
+	border			= { 1 , 1 , 2 , 2 }
+	stretch			= TRUE
+    }
+  }
+}
+
+style "checkbox" 
+{
+  engine "pixmap" 
+    {
+  #This is the image used to draw an unchecked box.
+    image 
+    {
+	function        		= CHECK
+        recolorable     		= TRUE
+        shadow          		= OUT
+        overlay_file    		= "Others/unchecked_box.png"
+        overlay_stretch		= FALSE
+    }
+  #This is the image used to draw a selected (checked) box.
+    image 
+    {
+        function        		= CHECK
+        recolorable     		= TRUE
+        shadow          		= IN
+        overlay_file    		= "Others/checked_box.png"
+        overlay_stretch 		= FALSE
+    }
+  #This image to draw the highlight when check box is moused over.
+    image
+    {
+        function        		= FLAT_BOX
+        recolorable     		= TRUE
+        file            		= "Others/menu_hi-light_2.png"
+        border          		= { 1, 1, 1, 1 }
+    }
+  }
+}
+
+style "radiobutton" 
+{
+  engine "pixmap" 
+    {
+    image 
+    {
+        function        		= OPTION
+        recolorable     		= TRUE
+        shadow          		= OUT
+        overlay_file    		= "Others/option_out_2.png"
+        overlay_border		= { 0, 0, 0, 0 }
+        overlay_stretch 		= FALSE
+    }
+    image 
+    {
+        function        		= OPTION
+        recolorable     		= TRUE
+        shadow          		= IN
+        overlay_file    		= "Others/option_in_2.png"
+        overlay_border  		= { 0, 0, 0, 0 }
+        overlay_stretch 		= FALSE
+    }
+
+  #This image to draw the highlight when a radio box is moused over.
+    image 
+    {
+        function        		= FLAT_BOX
+        recolorable     		= TRUE
+        file            		= "Others/menu_hi-light_2.png"
+        border          		= { 1, 1, 1, 1 }
+    }
+  }
+}
+
+style "flat" 		
+{
+  engine "pixmap"
+    {
+    image
+    {
+      	function			= SHADOW
+      	file				= "Shadows/shadow-in.png"
+        border			= { 3, 3, 3, 3 }
+      	stretch			= TRUE
+    }
+  }
+}
+
+style "combobox"	
+{
+  xthickness 			= 1
+  ythickness 			= 1
+  engine "pixmap"
+    {
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= NORMAL
+	file				= "Buttons/button-normal.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= PRELIGHT
+	file				= "Buttons/button-prelight.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= ACTIVE
+	file				= "Buttons/button-pressed.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= BOX
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	file				= "Buttons/button-insensitive.png"
+	border			= { 8, 8, 5, 9 }
+	stretch			= TRUE
+    }
+    image
+    {
+	function			= ARROW
+	recolorable			= TRUE
+	state				= NORMAL
+	overlay_file			= "Arrows/arrow-down.png"
+	overlay_stretch		= FALSE
+    }
+    image
+    {
+	function			= ARROW
+	recolorable			= TRUE
+	state				= PRELIGHT
+	overlay_file			= "Arrows/arrow-down-prelight.png"
+	overlay_stretch		= FALSE
+    }
+    image
+    {
+	function			= ARROW
+	recolorable			= TRUE
+	state				= ACTIVE
+	overlay_file			= "Arrows/arrow-down-prelight.png"
+	overlay_stretch		= FALSE
+    }
+    image
+    {
+	function			= ARROW
+	recolorable			= TRUE
+	state				= INSENSITIVE
+	overlay_file			= "Arrows/arrow-down.png"
+	overlay_border		= { 0, 0, 0, 0 }
+	overlay_stretch		= FALSE
+    }
+  }
+}
+
+style "comboboxentry" = "entry"
+{
+  xthickness 			= 2
+  ythickness 			= 2
+  GtkWidget::interior_focus = 1
+}
+
+style "range" 
+{
+  xthickness 			= 1
+  ythickness 			= 1	
+  engine "pixmap" 
+    {
+    image 
+    {
+      	function			= BOX
+      	recolorable			= TRUE
+      	detail				= "trough"
+      	file				= "Range/trough-horizontal.png"
+      	border			= { 3, 3, 5, 8 }
+      	stretch			= TRUE
+        orientation			= HORIZONTAL
+      }	
+    image 
+    {
+      	function			= BOX
+      	recolorable			= TRUE
+      	detail				= "trough"
+      	file				= "Range/trough-vertical.png"
+      	border			= { 5, 8, 3, 3 }
+      	stretch			= TRUE
+      	orientation			= VERTICAL
+    }
+    image
+    {
+      	function			= FOCUS
+      	recolorable			= TRUE
+      	file				= "Others/focus.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+     }		
+
+############### the sliders ###############
+
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+      	state           		= NORMAL
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-horiz.png"
+      	overlay_stretch		= FALSE
+      	orientation			= HORIZONTAL
+    }
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+     	state           		= PRELIGHT
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-horiz-prelight.png"
+      	overlay_stretch		= FALSE
+      	orientation			= HORIZONTAL
+    }
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+      	state           		= INSENSITIVE
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-horiz.png"
+      	overlay_stretch		= FALSE
+      	orientation			= HORIZONTAL
+    }
+
+######################### VERTICAL ###########################
+
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+      	state           		= NORMAL
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-vert.png"
+      	overlay_stretch		= FALSE
+      	orientation			= VERTICAL
+    }
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+     	state           		= PRELIGHT
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-vert-prelight.png"
+      	overlay_stretch		= FALSE
+     	 orientation		= VERTICAL
+    }
+    image 
+    {
+      	function			= SLIDER
+      	recolorable			= TRUE
+      	state           		= INSENSITIVE
+      	file				= "Range/null.png"
+      	border			= { 0, 0, 0, 0 }
+      	stretch			= TRUE
+      	overlay_file			= "Range/slider-vert.png"
+      	overlay_stretch		= FALSE
+      	orientation			= VERTICAL
+    }
+  }
+}
+
+style "xfnotifywindow"
+{
+XfceNotifyWindow::border-width-hover  	= 2
+XfceNotifyWindow::border-color  	= "#BF911D"
+XfceNotifyWindow::border-radius 	= 2.0
+bg[NORMAL] = "#CCB166"  
+}
+
+style "xfnotifytext" 
+{
+fg[NORMAL] 			= "#000000"
+fg[PRELIGHT] 			= "#000000"
+}
+
+style "nautilus-location"
+{
+bg[NORMAL] = mix(0.60, @bg_color, @selected_bg_color)
+}
+
+#Fix for (ruler) in Gimp,LibreOffice,etc allowing us to set Box NORMAL in default for nice Mines 
+style "ruler"
+{
+engine "mist"
+{
+ }
+}
+
+
+#########################################
+# Matches
+#########################################
+
+# default style is applied to every widget
+
+class "GtkWidget"				style "default"
+
+class "GtkButton"          			style "button"
+class "GtkEventBox"    				style "flat"
+class "GtkSpin*" 				style "spin"
+class "GtkSpinButton"  				style "spinbutton"
+class "GtkRadioButton"     			style "radiobutton"
+class "GtkCheckButton"     			style "checkbox"
+class "GtkScrollbar"       			style "scrollbar"
+class "GtkHScrollbar"       			style "scrollbar"
+class "GtkVScrollbar"       			style "scrollbar"
+class "GtkProgressBar"     			style "progressbar"
+class "GtkRange"     				style "range"
+class "GtkEntry"     				style "entry"
+class "GtkOldEditable" 				style "entry"
+class "GtkStatusbar" 				style "default"
+class "GtkMenu"        				style "menu"
+class "GtkMenuItem"    				style "menuitem"
+class "GtkOptionMenu"				style "combobox"
+class "GtkMenuBar" 		     		style "menubar"
+class "GtkNotebook" 				style "notebook"
+class "GtkHandleBox"    			style "default"
+class "GtkPaned"       				style "default"
+class "GtkToolBar"				style "toolbar"
+class "GtkTooltip"				style "tooltip"
+class "GtkNotif" 				style "tooltip"
+class "GtkCombo*"       			style "combobox"
+class "GtkOptionMenu"       			style "combobox"
+class "GtkImageMenuItem"    			style "menuitem"
+class "GtkTearoffMenuItem"			style "menuitem"
+class "GtkItem"    				style "menuitem"
+class "GtkTreeView"				style "treeview-item"
+class "*Ruler*"					style "ruler"
+class "XfceNotifyWindow" 			style "xfnotifywindow"
+
+###  "widget_class" is highest level (over-rides > class) ### 
+###  "widget" just pertains to widgets i.e. panel apps ###
+
+widget_class "*MenuBar.*"			style:highest "menubar"
+widget_class "*MenuItem*"        		style "menuitem"
+widget_class "*GtkOptionMenu*"    		style "combobox"
+widget_class "*Combo*"       			style "combobox"
+widget_class "*GtkCombo*"       		style "combobox"
+widget_class "*GtkComboBoxEntry*" 		style "entry"
+widget_class "*ToolBar"				style "toolbar"
+widget_class "*HandleBox"           	 	style "default"
+widget_class "*GtkToolbar*"  			style "toolbar"
+widget_class "*GtkToolButton*"      		style "toolbutton"
+widget_class "*GtkToggleToolButton*"    	style "toolbutton"
+widget_class "*GtkToolbar*OptionMenu*"	      	style "menu"
+widget_class "*GtkToolbar*Button"		style "toolbutton"
+widget_class "*Tool*GtkToggleButton" 		style "toolbutton"
+widget_class "*Tool*GtkButton" 			style "toolbutton"
+widget_class "*Scrollbar*" 			style "scrollbar"
+widget_class "*GtkTooltip*" 			style "tooltip"
+widget_class "*GtkNotif*" 			style "tooltip"
+widget "*gtk-tooltip*" 				style "tooltip"
+widget_class "*<GtkNotebook>.GtkLabel*" 	style "notebook"   # makes only tab label
+#widget_class "*GtkNotebook*GtkLabel*"		style "notebook"   # makes all fg labels
+widget_class "*XfceNotifyWindow*.<GtkLabel>" 	style "xfnotifytext"
+widget_class "XfceNotifyWindow.*<GtkButton>" 	style "button"	
+widget_class "*Nautilus*Toolbar*Entry*"		style "entry"
+
+widget_class "*.<GtkLabel>"			style "inactivestate"
+widget_class "*.<GtkCellLayout>"		style "inactivestate"
+widget_class "*.<Combo>"			style "inactivestate"
+widget_class "*.<GtkMenuItem>.*"		style "inactivestate"
+
+# list header
+widget_class "*List"				style "listheader"
+widget_class "*GtkCList"			style "listheader"
+widget_class "*GtkTree"				style "treeview-item"
+
+widget_class "*.GtkTreeView"			style "treeview-item"
+widget_class "*.<GtkTreeView>"			style "treeview-item"
+	
+### The End. ###
