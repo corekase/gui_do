@@ -27,37 +27,8 @@ def set_buffered(buffered):
     gui.set_buffered(buffered)
 
 def add(gui_object, callback=None):
-    if gui_object.ctype == CType.Window:
-        # add this window to the gui
-        gui.add_window(gui_object)
-        # make this object the destination for gui add commands
-        gui.set_active_object(gui_object)
-    elif gui_object.ctype == CType.Widget:
-        # give a reference to the gui
-        gui_object.gui = gui
-        # callback
-        gui_object.callback = callback
-        if gui.active_object != None:
-            # store a reference to the window the widget is in
-            gui_object.window = gui.active_object
-            # give the widget a reference to the window surface
-            gui_object.surface = gui.active_object.surface
-            # append the widget to the window's list
-            gui.active_object.widgets.append(gui_object)
-        else:
-            # give the widget a reference to the screen surface
-            gui_object.surface = gui.surface
-            # append the widget to the screen list
-            gui.widgets.append(gui_object)
+    gui.add(gui_object, callback)
     return gui_object
-
-bank = None
-def set_active_bank(dest_bank):
-    # active bank manipulator, sets destination bank for add widget and window commands.
-    # as items are added, their surfaces are still the screen or a window while they are being
-    # instantiated. then loading and unloading just determine which are active at any given time
-    global bank
-    pass
 
 # convert the point from a main surface one to a window point
 def convert_to_window(point, window):

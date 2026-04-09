@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
-from .constants import GKind, GType
+from .constants import GKind, GType, CType
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
@@ -65,6 +65,30 @@ class GuiManager:
     def set_active_object(self, object=None):
         # set which object is active
         self.active_object = object
+
+    def add(self, gui_object, callback=None):
+        if gui_object.ctype == CType.Window:
+            # add this window to the gui
+            self.add_window(gui_object)
+            # make this object the destination for gui add commands
+            self.set_active_object(gui_object)
+        elif gui_object.ctype == CType.Widget:
+            # give a reference to the gui
+            gui_object.gui = self
+            # callback
+            gui_object.callback = callback
+            if self.active_object != None:
+                # store a reference to the window the widget is in
+                gui_object.window = self.active_object
+                # give the widget a reference to the window surface
+                gui_object.surface = self.active_object.surface
+                # append the widget to the window's list
+                self.active_object.widgets.append(gui_object)
+            else:
+                # give the widget a reference to the screen surface
+                gui_object.surface = self.surface
+                # append the widget to the screen list
+                self.widgets.append(gui_object)
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
