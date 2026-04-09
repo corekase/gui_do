@@ -13,7 +13,7 @@ class GuiManager:
             GuiManager._instance_ = object.__new__(cls)
         return GuiManager._instance_
 
-    # instead of an __init__ we have populate
+    # instead of an __init__ we have initialize
     def initialize(self, surface):
         # screen surface
         self.surface = surface
