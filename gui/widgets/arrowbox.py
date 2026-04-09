@@ -9,7 +9,7 @@
 # To-do: the arrowbox can have a repeating signal or callback by tracking time in it, and when the interval
 # is reached then signal the widget
 from ..bitmapfactory import BitmapFactory
-from ..guimanager import GType
+from ..constants import GType
 from .button import Button
 
 class ArrowBox(Button):

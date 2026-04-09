@@ -1,8 +1,8 @@
 import os
 import pygame
 from pygame import Rect
-from .widgets.widget import colours
 from .guimanager import GuiManager
+from .constants import colours
 
 gui:GuiManager = None
 def gui_init(surface, fonts):

@@ -7,8 +7,8 @@ from .command import image_alpha, file_resource, copy_graphic_area
 from .command import set_active_object, set_cursor, add, set_backdrop, update_pristine, restore_pristine
 from .command import set_buffered
 # import GuiManager and widgets into this package's namespace
-from .guimanager import GuiManager, GKind
-from .widgets.widget import colours
+from .guimanager import GuiManager
+from .constants import colours, GKind, GType
 from .widgets.frame import Frame, FrState
 from .widgets.label import Label
 from .widgets.button import Button

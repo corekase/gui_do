@@ -1,5 +1,5 @@
 import pygame
-from ..guimanager import GType
+from ..constants import GType
 from .widget import Widget
 from ..command import file_resource
 

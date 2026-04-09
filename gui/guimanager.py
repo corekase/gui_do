@@ -1,14 +1,8 @@
 import pygame
-from enum import Enum
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
-
-GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
-                       'MouseButtonUp', 'MouseMotion', 'Widget', 'Group', 'Task'])
-
-GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
-                       'Label', 'Scrollbar', 'Slider', 'Toggle'])
+from .constants import GKind, GType
 
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager

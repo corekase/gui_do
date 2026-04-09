@@ -1,12 +1,12 @@
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from ..guimanager import GType
+from ..constants import GType
 from ..guimanager import GuiManager
 from ..command import convert_to_window, convert_to_screen, add
 from .frame import Frame, FrState
 from .arrowbox import ArrowBox
-from .widget import colours
+from ..constants import colours
 
 class Scrollbar(Frame):
     def __init__(self, id, overall_rect, style, params, horizontal):

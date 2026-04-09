@@ -1,4 +1,4 @@
-from ..guimanager import GType
+from ..constants import GType
 from ..command import render_text, render_text_shadow, centre
 from .widget import Widget
 

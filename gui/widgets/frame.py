@@ -1,5 +1,5 @@
 from enum import Enum
-from ..guimanager import GType
+from ..constants import GType
 from .widget import Widget
 from ..bitmapfactory import BitmapFactory
 

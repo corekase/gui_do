@@ -6,7 +6,7 @@ from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from .command import set_font, set_last_font, render_text_shadow, centre
-from .widgets.widget import colours
+from .constants import colours
 
 class BitmapFactory:
     # the following code makes the BitmapFactory a singleton.
