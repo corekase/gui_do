@@ -2,7 +2,7 @@ import os
 import pygame
 from pygame import Rect
 from .guimanager import GuiManager
-from .constants import colours
+from .constants import colours, FormType
 
 gui:GuiManager = None
 def gui_init(surface, fonts):
@@ -33,37 +33,29 @@ def set_active_object(object=None):
     gui.active_object = object
 
 def add(widget, callback=None):
-    # give a reference to the gui
-    widget.gui = gui
-    # callback
-    widget.callback = callback
-    if gui.active_object != None:
-        # store a reference to the window the widget is in
-        widget.window = gui.active_object
-        # give the widget a reference to the window surface
-        widget.surface = gui.active_object.surface
-        # append the widget to the window's list
-        gui.active_object.widgets.append(widget)
+    if widget.form_type == FormType.Window:
+        # add this window to the gui
+        gui.add_window(widget)
+        # make this object the destination for gui add commands
+        set_active_object(widget)
     else:
-        # give the widget a reference to the screen surface
-        widget.surface = gui.surface
-        # append the widget to the screen list
-        gui.widgets.append(widget)
+        # give a reference to the gui
+        widget.gui = gui
+        # callback
+        widget.callback = callback
+        if gui.active_object != None:
+            # store a reference to the window the widget is in
+            widget.window = gui.active_object
+            # give the widget a reference to the window surface
+            widget.surface = gui.active_object.surface
+            # append the widget to the window's list
+            gui.active_object.widgets.append(widget)
+        else:
+            # give the widget a reference to the screen surface
+            widget.surface = gui.surface
+            # append the widget to the screen list
+            gui.widgets.append(widget)
     return widget
-
-# active window bank
-window_bank = None
-def Window(title, pos, size, backdrop=None):
-    # window constructor
-    # extra information like the window bank is added here
-    global window_bank
-    from .forms.window import WindowBase
-    win = WindowBase(title, pos, size, backdrop)
-    # add this window to the gui
-    gui.add_window(win)
-    # make this object the destination for gui add commands
-    set_active_object(win)
-    return win
 
 bank = None
 def set_active_bank(dest_bank):

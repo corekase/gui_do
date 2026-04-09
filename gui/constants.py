@@ -9,3 +9,5 @@ GKind = Enum('GKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
 
 GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
                        'Label', 'Scrollbar', 'Slider', 'Toggle'])
+
+FormType = Enum('FormType', ['Window', 'Widget'])

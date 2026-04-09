@@ -45,8 +45,8 @@ class Demo:
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         set_grid_properties((10, 10), 120, widget_height, 2)
-        self.button_group_win = Window('Button Groups, Buttons, and Toggles',
-                                       (x_pos, y_pos), (gridded(7, 0).right + 10, gridded(0, 6).bottom))
+        self.button_group_win = add(Window('Button Groups, Buttons, and Toggles',
+                                       (x_pos, y_pos), (gridded(7, 0).right + 10, gridded(0, 6).bottom)))
         add(Label(gridded(0, 0), 'G1 Boxed', True))
         add(Label(gridded(1, 0), 'G2 Rounded', True))
         add(Label(gridded(2, 0), 'G3 Angled', True))
@@ -104,7 +104,7 @@ class Demo:
         self.label6 = add(Label(gridded(5, 0), f'ID: {lbg6.read_id()}', True))
         # make the scrollbar window
         y_pos += 248
-        self.scrollbar_win = Window('Scrollbars', (x_pos, y_pos), (320, 362))
+        self.scrollbar_win = add(Window('Scrollbars', (x_pos, y_pos), (320, 362)))
         x = y = 10
         add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
         y += 22
@@ -128,7 +128,7 @@ class Demo:
         # make the Conway's Game of Life window
         x_pos += 327
         width, height = 600, 600
-        self.life_win = Window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
+        self.life_win = add(Window('Conway\'s Game of Life', (x_pos, y_pos), (width, height)))
         self.canvas = add(Canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_canvas, automatic_pristine=True))
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
@@ -142,7 +142,7 @@ class Demo:
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
-        self.mandel_win = Window('Mandelbrot', pos, (width, height))
+        self.mandel_win = add(Window('Mandelbrot', pos, (width, height)))
         self.mandel_canvas = add(Canvas('mandel', mandel_overall))
         self.gui.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()

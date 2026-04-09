@@ -3,13 +3,14 @@ from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
 from ..command import copy_graphic_area, set_active_object, set_backdrop, restore_pristine, centre
-from ..constants import colours
+from ..constants import colours, FormType
 from ..widgets.frame import Frame, FrState
 
-class WindowBase:
+class Window:
     def __init__(self, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui:GuiManager = GuiManager()
+        self.form_type = FormType.Window
         factory = BitmapFactory()
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
