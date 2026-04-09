@@ -62,6 +62,10 @@ class GuiManager:
         # will be saved and the undraw will undo them
         self.buffered = buffered
 
+    def set_active_object(self, object=None):
+        # set which object is active
+        self.active_object = object
+
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)

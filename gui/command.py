@@ -26,17 +26,13 @@ def set_buffered(buffered):
     #   again when they need it
     gui.set_buffered(buffered)
 
-def set_active_object(object=None):
-    # set which object is active
-    gui.active_object = object
-
 def add(gui_object, callback=None):
     if gui_object.ctype == CType.Window:
         # add this window to the gui
         gui.add_window(gui_object)
         # make this object the destination for gui add commands
-        set_active_object(gui_object)
-    else:
+        gui.set_active_object(gui_object)
+    elif gui_object.ctype == CType.Widget:
         # give a reference to the gui
         gui_object.gui = gui
         # callback
