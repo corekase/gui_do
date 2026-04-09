@@ -11,13 +11,12 @@ class GuiManager:
     def __new__(cls):
         if GuiManager._instance_ is None:
             GuiManager._instance_ = object.__new__(cls)
-            GuiManager._instance_._populate_()
         return GuiManager._instance_
 
-    # instead of an __init__ we have _populate_ and it is executed exactly once
-    def _populate_(self):
+    # instead of an __init__ we have populate
+    def populate(self, surface):
         # screen surface
-        self.surface = None
+        self.surface = surface
         # list of widgets attached to the screen
         self.widgets = []
         # list of bitmaps overwritten by gui objects
