@@ -2,7 +2,7 @@ import os
 import pygame
 from pygame import Rect
 from .guimanager import GuiManager
-from .constants import colours, FormType
+from .constants import colours, CType
 
 gui = None
 def gui_init(surface, fonts):
@@ -30,30 +30,30 @@ def set_active_object(object=None):
     # set which object is active
     gui.active_object = object
 
-def add(widget, callback=None):
-    if widget.form_type == FormType.Window:
+def add(gui_object, callback=None):
+    if gui_object.ctype == CType.Window:
         # add this window to the gui
-        gui.add_window(widget)
+        gui.add_window(gui_object)
         # make this object the destination for gui add commands
-        set_active_object(widget)
+        set_active_object(gui_object)
     else:
         # give a reference to the gui
-        widget.gui = gui
+        gui_object.gui = gui
         # callback
-        widget.callback = callback
+        gui_object.callback = callback
         if gui.active_object != None:
             # store a reference to the window the widget is in
-            widget.window = gui.active_object
+            gui_object.window = gui.active_object
             # give the widget a reference to the window surface
-            widget.surface = gui.active_object.surface
+            gui_object.surface = gui.active_object.surface
             # append the widget to the window's list
-            gui.active_object.widgets.append(widget)
+            gui.active_object.widgets.append(gui_object)
         else:
             # give the widget a reference to the screen surface
-            widget.surface = gui.surface
+            gui_object.surface = gui.surface
             # append the widget to the screen list
-            gui.widgets.append(widget)
-    return widget
+            gui.widgets.append(gui_object)
+    return gui_object
 
 bank = None
 def set_active_bank(dest_bank):

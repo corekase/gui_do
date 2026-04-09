@@ -1,6 +1,6 @@
 from pygame import Rect
 from ..guimanager import GuiManager
-from ..constants import FormType
+from ..constants import CType
 
 # widget is the base class all gui widgets inherit from
 class Widget:
@@ -8,7 +8,7 @@ class Widget:
         # widget type
         self.GType = None
         # form type
-        self.form_type = FormType.Widget
+        self.ctype = CType.Widget
         # gui for the widget
         self.gui:GuiManager = None
         # surface to draw the widget on
