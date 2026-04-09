@@ -51,11 +51,16 @@ class GuiManager:
         # locking object
         self.locking_object = None
         # whether or not drawing is buffered
-        self.buffered = False
+        self.set_buffered(False)
         # scheduler
         self.schedules = Scheduler()
         # gui timers
         self.timers = Timers()
+
+    def set_buffered(self, buffered):
+        # if buffered is set to True then bitmaps under gui objects
+        # will be saved and the undraw will undo them
+        self.buffered = buffered
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

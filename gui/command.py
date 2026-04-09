@@ -24,7 +24,7 @@ def set_buffered(buffered):
     #   client doesn't call gui undraw, and instead they just
     #   clear their screen or other client logic and draw the gui
     #   again when they need it
-    gui.buffered = buffered
+    gui.set_buffered(buffered)
 
 def set_active_object(object=None):
     # set which object is active
