@@ -378,33 +378,3 @@ class GuiManager:
         # the client does not call this method at all
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
-
-    # -> To-do: object banks
-    #    for the list of screen widgets and the list of windows and their
-    #    lists of widgets: implement a "AMOS bank" system.  where you could define the gui
-    #    elements, and switch between different sets of them depending on the state of
-    #    your application
-    #
-    #    so, having one gui manager singleton might complicate a main-menu
-    #    where you pass a screen and a new run() instantiates everything from there and releases
-    #    the data when it returns. with a singleton gui that menu wouldn't work. but, switch out
-    #    banks at the root of the data structures then multiple applications sharing a screen work
-    #
-    #    object banks could also be divided into specific windows or forms, and you could bank in and
-    #    out different ones to a shared root data structure where they operate together.
-    #    code definitions for gui layouts can be put into any source file in a function or method that
-    #    has the gui manager singleton. as the code executes it creates all the data in the banks, and
-    #    then in the application load and mix the bank data as needed
-    #
-    #    code executing into the object bank will use manipulators like how set_font() is used, to control
-    #    which bank names and routes to the leaf lists are constructed
-
-    def load_bank(self):
-        # loads a bank entry into the root datastructure. entries are instantiated in the bank and by
-        # reference they are moved to the root and from the root. the root is a "working-memory" of
-        # whatever happens to be loaded into it
-        pass
-
-    def unload_bank(self):
-        # removes a bank from the root
-        pass
