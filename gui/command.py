@@ -11,7 +11,7 @@ def gui_init(surface, fonts):
     # create a gui manager and set the drawing surface for it
     global gui
     gui = GuiManager()
-    gui.populate(surface)
+    gui.initialize(surface)
     # load fonts, list of "name", "filename", and "size"
     for name, filename, size in fonts:
         load_font(name, filename, size)

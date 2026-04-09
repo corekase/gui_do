@@ -14,7 +14,7 @@ class GuiManager:
         return GuiManager._instance_
 
     # instead of an __init__ we have populate
-    def populate(self, surface):
+    def initialize(self, surface):
         # screen surface
         self.surface = surface
         # list of widgets attached to the screen
