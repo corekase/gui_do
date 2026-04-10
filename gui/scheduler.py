@@ -34,6 +34,8 @@ class Timers:
 
     def timer_updates(self):
         now_time = time.time()
+        # iterate over a list copy of the keys because timers may be removed
+        # during the loop
         for id in list(Timers.timers.keys()):
             if id not in Timers.timers:
                 # timer was removed during the loop, so skip it
