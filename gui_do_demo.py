@@ -21,7 +21,7 @@ class Demo:
         # create a gui manager
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
-        self.gui = gui_init(self.screen, fonts)
+        self.gui1 = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
         set_pristine('backdrop.jpg')
         # screen label
@@ -145,7 +145,7 @@ class Demo:
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = add(Window('Mandelbrot', pos, (width, height)))
         self.mandel_canvas = add(Canvas('mandel', mandel_overall))
-        self.gui.hide_widgets(self.mandel_canvas)
+        self.gui1.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
         cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
@@ -153,7 +153,7 @@ class Demo:
         self.canvas2 = add(Canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10)))
         self.canvas3 = add(Canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
         self.canvas4 = add(Canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10)))
-        self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
         add(Button('mandel_reset', gridded(0, 0), BStyle.Angle, 'Reset'))
@@ -185,14 +185,14 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.scheduler1 = self.gui.get_scheduler()
+        self.scheduler1 = self.gui1.get_scheduler()
         self.active_scheduler = 'main'
         self.running = True
 
     def run(self):
         while True:
             if self.active_scheduler == 'main':
-                self.scheduler1.init_scheduler(self.preamble, self.handle_events, self.postamble)
+                self.scheduler1.start_scheduler(self.preamble, self.handle_events, self.postamble)
 
     def preamble(self):
         # restore the pristine area to the screen before drawing
@@ -217,27 +217,27 @@ class Demo:
                 self.running = False
             elif event.widget_id == 'mandel_reset':
                 self.scheduler1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
-                self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                self.gui.show_widgets(self.mandel_canvas)
+                self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                self.gui1.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
             elif not self.scheduler1.tasks_active():
                 if event.widget_id == 'iterative':
-                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui.show_widgets(self.mandel_canvas)
+                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     self.scheduler1.add_task('iter', self.mandel_iterative)
                 elif event.widget_id == 'recursive':
-                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui.show_widgets(self.mandel_canvas)
+                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     self.scheduler1.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
                 elif event.widget_id == '1split':
-                    self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui.show_widgets(self.mandel_canvas)
+                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
@@ -247,8 +247,8 @@ class Demo:
                     self.scheduler1.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
                     self.scheduler1.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
                 elif event.widget_id == '4split':
-                    self.gui.hide_widgets(self.mandel_canvas)
-                    self.gui.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+                    self.gui1.hide_widgets(self.mandel_canvas)
+                    self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.clear_mandel_surfaces()
                     _, _, w1, h1 = self.mandel_canvas.get_size()
                     w1 = w1 // 2

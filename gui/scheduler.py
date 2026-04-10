@@ -177,7 +177,7 @@ class Scheduler:
             self.tasks_finished.append(task_id)
             del self.tasks[task_id]
 
-    def init_scheduler(self, preamble=None, event_handler=None, postamble=None):
+    def start_scheduler(self, preamble=None, event_handler=None, postamble=None):
         if event_handler == None:
             event_handler = self.null
         if preamble == None:
@@ -186,7 +186,7 @@ class Scheduler:
             postamble = self.null
         self.run_scheduler(preamble, event_handler, postamble)
 
-    def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
+    def run_scheduler(self, preamble, event_handler, postamble):
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
