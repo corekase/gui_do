@@ -34,11 +34,6 @@ class Widget:
         # continue drawing
         self.auto_restore_pristine = False
 
-    def save_pristine(self):
-        # update the pristine bitmap
-        from ..command import copy_graphic_area
-        self.pristine = copy_graphic_area(self.surface, self.draw_rect).convert()
-
     def set_visible(self, visible):
         self.visible = visible
 
