@@ -16,10 +16,10 @@ GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', '
 CType = Enum('CType', ['Window', 'Widget'])
 
 # horizontal or vertical
-HorV = Enum('HorVer', ['Horizontal', 'Vertical'])
+HorV = Enum('HorV', ['Horizontal', 'Vertical'])
 
 # whether scrollbar arrows skip, split, near, or far of the scrollable area
-SArrows = Enum('ScrBar', ['Skip', 'Split', 'Near', 'Far'])
+SArrows = Enum('SArrows', ['Skip', 'Split', 'Near', 'Far'])
 
 # button styles
-BStyle = Enum('BtnStyl', ['Box', 'Round', 'Angle', 'Radio', 'Check'])
+BStyle = Enum('BStyle', ['Box', 'Round', 'Angle', 'Radio', 'Check'])
