@@ -2,7 +2,7 @@ import os
 import pygame
 from pygame import Rect
 from .guimanager import GuiManager
-from .constants import colours, CType
+from .constants import colours
 
 gui = None
 def gui_init(surface, fonts):
