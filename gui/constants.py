@@ -14,3 +14,9 @@ GType = Enum('GType', ['Arrowbox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', '
 
 # container types
 CType = Enum('CType', ['Window', 'Widget'])
+
+# horizontal or vertical
+HVKind = Enum('HVKind', ['Horizontal', 'Vertical'])
+
+# whether scrollbar arrows are on the near or far side of the scrollable area
+ScrBarKind = Enum('ScrBarKind', ['Clear', 'Split', 'Near', 'Far'])

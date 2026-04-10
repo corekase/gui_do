@@ -5,7 +5,7 @@ from ..constants import GType
 from ..guimanager import GuiManager
 from .frame import Frame, FrState
 from .arrowbox import ArrowBox
-from ..constants import colours
+from ..constants import colours, HVKind, ScrBarKind
 
 class Scrollbar(Frame):
     def __init__(self, id, overall_rect, style, params, horizontal):
@@ -20,8 +20,8 @@ class Scrollbar(Frame):
         else:
             # define rects for scrollbar and arrowboxes
             x, y, width, height = overall_rect
-            if style == 1:
-                if horizontal:
+            if style == ScrBarKind.Split:
+                if horizontal == HVKind.Horizontal:
                     increment_rect = Rect(width - height, 0, height, height)
                     scrollbar_rect = Rect(height, 0, (width - height * 2), height)
                     decrement_rect = Rect(0, 0, height, height)
@@ -29,8 +29,8 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, height - width, width, width)
                     scrollbar_rect = Rect(0, width, width, height - width * 2)
                     decrement_rect = Rect(0, 0, width, width)
-            elif style == 2:
-                if horizontal:
+            elif style == ScrBarKind.Far:
+                if horizontal == HVKind.Horizontal:
                     scrollbar_rect = Rect(0, 0, (width - height * 2), height)
                     decrement_rect = Rect(width - (height * 2), 0, height, height)
                     increment_rect = Rect(width - height, 0, height, height)
@@ -38,8 +38,8 @@ class Scrollbar(Frame):
                     scrollbar_rect = Rect(0, 0, width, height - (width * 2))
                     decrement_rect = Rect(0, height - (width * 2), width, width)
                     increment_rect = Rect(0, height - width, width, width)
-            elif style == 3:
-                if horizontal:
+            elif style == ScrBarKind.Near:
+                if horizontal == HVKind.Horizontal:
                     decrement_rect = Rect(0, 0, height, height)
                     increment_rect = Rect(height, 0, height, height)
                     scrollbar_rect = Rect(height * 2, 0, width - (height * 2), height)
@@ -47,16 +47,16 @@ class Scrollbar(Frame):
                     decrement_rect = Rect(0, 0, width, width)
                     increment_rect = Rect(0, width, width, width)
                     scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
-            else:
+            elif style != ScrBarKind.Clear:
                 from ..guimanager import GuiError
                 raise GuiError(f'style {style} not implemented')
         # add arrowboxes
-        if style != 0:
+        if style is not ScrBarKind.Clear:
             x, y, width, height = overall_rect
             scroll_area_rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
             inc_rect = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
             dec_rect = Rect(x + decrement_rect.x, y + decrement_rect.y, decrement_rect.width, decrement_rect.height)
-            if horizontal:
+            if horizontal == HVKind.Horizontal:
                 inc_degree = 0
                 dec_degree = 180
             else:
@@ -64,6 +64,8 @@ class Scrollbar(Frame):
                 dec_degree = 90
             self.registered.append(self.gui.add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
             self.registered.append(self.gui.add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
+        else:
+            scroll_area_rect = overall_rect
         # initialize common widget values
         super().__init__(id, scroll_area_rect)
         self.GType = GType.Scrollbar
@@ -108,7 +110,7 @@ class Scrollbar(Frame):
             # normalize x and y to graphic drawing area
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging
-            if self.horizontal:
+            if self.horizontal == HVKind.Horizontal:
                 point = self.graphical_to_total(x)
             else:
                 point = self.graphical_to_total(y)
@@ -175,7 +177,7 @@ class Scrollbar(Frame):
         start_point = self.total_to_graphical(self.start_pos)
         graphical_size = self.total_to_graphical(self.bar_size)
         # define a rectangle for the filled area
-        if self.horizontal:
+        if self.horizontal == HVKind.Horizontal:
             return Rect(self.graphic_rect.x + start_point, self.graphic_rect.y, graphical_size, self.graphic_rect.height)
         else:
             return Rect(self.graphic_rect.x, self.graphic_rect.y + start_point, self.graphic_rect.width, graphical_size)
@@ -188,7 +190,7 @@ class Scrollbar(Frame):
 
     def graphical_range(self):
         # return the appropriate range depending on whether the scrollbar is horizontal or vertical
-        if self.horizontal:
+        if self.horizontal == HVKind.Horizontal:
             return self.graphic_rect.width
         else:
             return self.graphic_rect.height

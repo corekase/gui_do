@@ -6,6 +6,7 @@ from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_pristine, set_font, set_cursor, restore_pristine
 from gui import colours, set_grid_properties, gridded
 from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image, Scheduler
+from gui import HVKind, ScrBarKind
 
 class Demo:
     def __init__(self):
@@ -106,21 +107,21 @@ class Demo:
         y_pos += 248
         self.scrollbar_win = add(Window('Scrollbars', (x_pos, y_pos), (320, 362)))
         x = y = 10
-        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), 0, (100, 0, 30, 10), True))
+        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), ScrBarKind.Clear, (100, 0, 30, 10), HVKind.Horizontal))
         y += 22
-        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), 1, (100, 0, 30, 10), True))
+        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), ScrBarKind.Split, (100, 0, 30, 10), HVKind.Horizontal))
         y += 22
-        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), 2, (100, 0, 30, 10), True))
+        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), ScrBarKind.Near, (100, 0, 30, 10), HVKind.Horizontal))
         y += 22
-        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), 3, (100, 0, 30, 10), True))
+        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), ScrBarKind.Far, (100, 0, 30, 10), HVKind.Horizontal))
         y += 24
-        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), 0, (100, 0, 30, 10), False))
+        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), ScrBarKind.Clear, (100, 0, 30, 10), HVKind.Vertical))
         x += 22
-        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), 1, (100, 0, 30, 10), False))
+        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), ScrBarKind.Split, (100, 0, 30, 10), HVKind.Vertical))
         x += 22
-        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), 2, (100, 0, 30, 10), False))
+        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), ScrBarKind.Near, (100, 0, 30, 10), HVKind.Vertical))
         x += 22
-        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), 3, (100, 0, 30, 10), False))
+        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), ScrBarKind.Far, (100, 0, 30, 10), HVKind.Vertical))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
         add(Label((x + 30, y + 215), 'Scrollbars!', True))
