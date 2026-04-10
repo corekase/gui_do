@@ -5,6 +5,9 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .scheduler import Timers, Scheduler
 from .constants import GKind, GType, CType
 
+class GuiError(Exception):
+    pass
+
 class GuiManager:
     # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
     # No matter how many times it is instantiated the result is the one object and its state
@@ -89,7 +92,7 @@ class GuiManager:
                 # append the widget to the screen list
                 self.widgets.append(gui_object)
         else:
-            raise Exception('gui_object must be a window or widget')
+            raise GuiError('gui_object must be a window or widget')
         return gui_object
 
     # convert the point from a main surface one to a window point
@@ -123,7 +126,7 @@ class GuiManager:
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
             obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
         else:
-            raise Exception('set_pristine requires an image')
+            raise GuiError('set_pristine requires an image')
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
     # copy graphic helper

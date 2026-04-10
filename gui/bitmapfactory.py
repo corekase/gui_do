@@ -118,7 +118,8 @@ class BitmapFactory:
         elif style == 4:
             return self.draw_check_style_bitmaps(text, rect)
         else:
-            raise Exception(f'style index {style} not implemented')
+            from .guimanager import GuiError
+            raise GuiError(f'style index {style} not implemented')
 
     def draw_box_style_bitmaps(self, text, rect):
         _, _, w, h = rect

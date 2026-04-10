@@ -48,7 +48,8 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, width, width, width)
                     scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
             else:
-                raise Exception(f'style {style} not implemented')
+                from ..guimanager import GuiError
+                raise GuiError(f'style {style} not implemented')
         # add arrowboxes
         if style != 0:
             x, y, width, height = overall_rect
