@@ -355,32 +355,33 @@ class BitmapFactory:
             glyph_set.append(state)
         return glyph_set
 
-    def flood_fill(self, surface, position, color):
+
+
+    def flood_fill(self, surface, position, colour):
+        from collections import deque
         # convert the surface to an array
         pixels = PixelArray(surface)
         # convert the fill color to integer representation
-        new_color = surface.map_rgb(color)
+        new_colour = surface.map_rgb(colour)
         # read the color to replace from the starting position
-        old_color = pixels[position]
-        # begin a queue with the starting position
-        locations = [position]
-        while len(locations) > 0:
+        old_colour = pixels[position]
+        # fill start position is already the fill colour
+        if old_colour == new_colour:
+            del pixels
+            return
+        width, height = surface.get_size()
+        locations = deque([position])
+        while locations:
             # pop a position from the queue
-            x, y = locations.pop()
-            try:
-                if pixels[x, y] != old_color:
-                    # if it isn't the old color then skip the position
-                    continue
-            except IndexError:
-                # outside of the pixel array
-                continue
-            # it is the old color and within the array, replace color
-            pixels[x, y] = new_color
-            # add neighbors to the queue
-            locations.append((x + 1, y))
-            locations.append((x - 1, y))
-            locations.append((x, y + 1))
-            locations.append((x, y - 1))
+            x, y = locations.popleft()
+            # if the old color and within the array, replace color
+            if pixels[x, y] == old_colour:
+                pixels[x, y] = new_colour
+                # add neighbors to the queue
+                if x > 0: locations.append((x - 1, y))
+                if x < width - 1: locations.append((x + 1, y))
+                if y > 0: locations.append((x, y - 1))
+                if y < height - 1: locations.append((x, y + 1))
         # convert the array back into the surface
         blit_array(surface, pixels)
         # delete the array because it implicitly affects locks/unlocks of the surface
