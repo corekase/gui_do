@@ -51,7 +51,7 @@ class Scrollbar(Frame):
                 from ..guimanager import GuiError
                 raise GuiError(f'style {style} not implemented')
         # add arrowboxes
-        if style is not ScrBar.Skip:
+        if style != ScrBar.Skip:
             x, y, width, height = overall_rect
             scroll_area_rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
             inc_rect = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)
