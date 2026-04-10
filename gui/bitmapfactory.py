@@ -2,6 +2,7 @@ import pygame
 from math import cos, sin, radians
 from pygame.surface import Surface
 from pygame.surfarray import blit_array
+from collections import deque
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
@@ -358,7 +359,6 @@ class BitmapFactory:
 
 
     def flood_fill(self, surface, position, colour):
-        from collections import deque
         # convert the surface to an array
         pixels = PixelArray(surface)
         # convert the fill color to integer representation
