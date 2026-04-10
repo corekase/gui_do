@@ -89,6 +89,8 @@ class GuiManager:
                 gui_object.surface = self.surface
                 # append the widget to the screen list
                 self.widgets.append(gui_object)
+        else:
+            raise Exception('gui_object must be a window or widget')
 
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point, window):
