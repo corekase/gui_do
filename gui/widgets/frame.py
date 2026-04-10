@@ -17,6 +17,7 @@ class Frame(Widget):
         return False
 
     def draw(self):
+        super().draw()
         if self.state == FrState.Idle:
             self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
         elif self.state == FrState.Hover:
