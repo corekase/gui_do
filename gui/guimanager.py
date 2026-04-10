@@ -39,8 +39,6 @@ class GuiManager:
         self.cursor_image = None
         self.cursor_hotspot = None
         self.cursor_rect = None
-        # object_bank[name][bank][screen|windows]=lists
-        self.object_bank = {}
         # which window is active
         self.active_window = None
         # current and last widgets
@@ -62,16 +60,12 @@ class GuiManager:
         # will be saved and the undraw will undo them
         self.buffered = buffered
 
-    def set_active_object(self, object=None):
-        # set which object is active
-        self.active_object = object
-
     def add(self, gui_object, callback=None):
         if gui_object.ctype == CType.Window:
             # add this window to the gui
             self.add_window(gui_object)
             # make this object the destination for gui add commands
-            self.set_active_object(gui_object)
+            self.active_object = gui_object
         elif gui_object.ctype == CType.Widget:
             # give a reference to the gui
             gui_object.gui = self
