@@ -125,6 +125,5 @@ def copy_graphic_area(source, area, flags=0):
 
 def set_cursor(hotspot, *image):
     # set the cursor image and hotspot
-    gui.cursor_image = image_alpha('cursors', *image)
-    gui.cursor_rect = gui.cursor_image.get_rect()
-    gui.cursor_hotspot = hotspot
+    cursor_image = image_alpha('cursors', *image)
+    gui.set_cursor(hotspot, cursor_image)

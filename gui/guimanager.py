@@ -140,6 +140,12 @@ class GuiManager:
         x, y, _, _ = area
         obj.surface.blit(obj.pristine, (x, y), area)
 
+    def set_cursor(self, hotspot, image):
+        # set the cursor image and hotspot
+        self.cursor_image = image
+        self.cursor_rect = self.cursor_image.get_rect()
+        self.cursor_hotspot = hotspot
+
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
