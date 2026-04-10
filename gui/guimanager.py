@@ -86,6 +86,7 @@ class GuiManager:
                 self.widgets.append(gui_object)
         else:
             raise Exception('gui_object must be a window or widget')
+        return gui_object
 
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point, window):
@@ -323,11 +324,10 @@ class GuiManager:
                         if widget.GType == GType.ButtonGroup:
                             return self.event(GKind.Group, widget.read_group(), widget.read_id())
                         return self.event(GKind.Widget, widget.id)
-                    from .command import convert_to_window
                     if widget.hit_rect != None:
-                        hit = widget.hit_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
+                        hit = widget.hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
                     else:
-                        hit = widget.draw_rect.collidepoint(convert_to_window(self.get_mouse_pos(), None))
+                        hit = widget.draw_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
                     if hit:
                         consumed = True
                         widget_hit = widget

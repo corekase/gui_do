@@ -3,13 +3,14 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..constants import GType
 from ..guimanager import GuiManager
-from ..command import convert_to_window, convert_to_screen, add
 from .frame import Frame, FrState
 from .arrowbox import ArrowBox
 from ..constants import colours
 
 class Scrollbar(Frame):
     def __init__(self, id, overall_rect, style, params, horizontal):
+        # get a reference to the gui
+        self.gui = GuiManager()
         # list of registered sub-widgets
         self.registered = []
         # parse the style
@@ -60,13 +61,11 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
-            self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
+            self.registered.append(self.gui.add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
+            self.registered.append(self.gui.add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
         # initialize common widget values
         super().__init__(id, scroll_area_rect)
         self.GType = GType.Scrollbar
-        # get a reference to the gui
-        self.gui = GuiManager()
         # maximum area that can be filled
         self.graphic_rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         # setup the parameters of the scrollbar
@@ -91,11 +90,11 @@ class Scrollbar(Frame):
             return False
         # do last object logic
         # manage the state of the scrollbar
-        point = convert_to_window(self.gui.get_mouse_pos(), window)
+        point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self.handle_area().collidepoint(point):
             if event.button == 1:
                 # lock mouse movement to scrollbar area
-                x, y = convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
+                x, y = self.gui.convert_to_screen((self.graphic_rect[0], self.graphic_rect[1]), window)
                 lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
                 self.gui.set_lock_area(self, lock_rect)
                 # begin dragging the scrollbar
@@ -104,7 +103,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEMOTION) and self.dragging:
-            x, y = convert_to_window(self.gui.get_mouse_pos(), window)
+            x, y = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
             # normalize x and y to graphic drawing area
             x, y = (x - self.graphic_rect.x, y - self.graphic_rect.y)
             # test bounds for dragging

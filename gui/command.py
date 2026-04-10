@@ -18,25 +18,11 @@ def gui_init(surface, fonts):
     return gui
 
 def set_buffered(buffered):
-    # if buffered is set to True then bitmaps under gui objects
-    # will be saved and the undraw will undo them
-    # if buffered is set to False then no bitmaps are saved, the
-    #   client doesn't call gui undraw, and instead they just
-    #   clear their screen or other client logic and draw the gui
-    #   again when they need it
+    # if buffered is set to True then bitmaps under gui objects are saved
     gui.set_buffered(buffered)
 
 def add(gui_object, callback=None):
-    gui.add(gui_object, callback)
-    return gui_object
-
-# convert the point from a main surface one to a window point
-def convert_to_window(point, window):
-    return gui.convert_to_window(point, window)
-
-# convert the point from a window point to a main surface one
-def convert_to_screen(point, window):
-    return gui.convert_to_screen(point, window)
+    return gui.add(gui_object, callback)
 
 # filename helper
 def file_resource(*names):
@@ -48,15 +34,37 @@ def image_alpha(*names):
     # load, convert with an alpha channel, and return an image surface
     return pygame.image.load(file_resource(*names)).convert_alpha()
 
-def set_pristine(image, obj=None):
-    gui.set_pristine(image, obj)
+# layout helper
+def centre(bigger, smaller):
+    # helper function that returns a centred position
+    return int((bigger / 2) - (smaller / 2))
 
-def restore_pristine(area=None, obj=None):
-    gui.restore_pristine(area, obj)
+# gridded layout variables and functions
+position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = use_rect = None
+
+# setup variables for gridded
+def set_grid_properties(anchor, width, height, spacing, use_rect_flag=True):
+    global position_gridded, x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded, use_rect
+    position_gridded = anchor
+    x_size_pixels_gridded = width
+    y_size_pixels_gridded = height
+    space_size_gridded = spacing
+    use_rect = use_rect_flag
+
+# returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
+def gridded(x, y):
+    base_x, base_y = position_gridded
+    # (size per unit) + (space per unit)
+    x_pos = base_x + (x * x_size_pixels_gridded) + (x * space_size_gridded)
+    y_pos = base_y + (y * y_size_pixels_gridded) + (y * space_size_gridded)
+    if use_rect:
+        return Rect(x_pos, y_pos, x_size_pixels_gridded, y_size_pixels_gridded)
+    else:
+        return (x_pos, y_pos)
 
 # current font object
 font_object = None
-# key:value -> key, name of font. value, font object
+# key:value -> key, name of font and value, font object
 fonts = {}
 
 # load font
@@ -75,6 +83,22 @@ def set_last_font():
     global font_object
     font_object = last_font_object
 
+# set a pristine bitmap for an object
+def set_pristine(image, obj=None):
+    gui.set_pristine(image, obj)
+
+# restore the pristine bitmap for an object
+def restore_pristine(area=None, obj=None):
+    gui.restore_pristine(area, obj)
+
+def copy_graphic_area(source, area, flags=0):
+    return gui.copy_graphic_area(source, area, flags)
+
+def set_cursor(hotspot, *image):
+    # set the cursor image and hotspot
+    cursor_image = image_alpha('cursors', *image)
+    gui.set_cursor(hotspot, cursor_image)
+
 # render text function
 def render_text(text, colour=colours['text']):
     # return a bitmap of the text in the given colour
@@ -90,40 +114,3 @@ def render_text_shadow(text, colour=colours['text'], shadow_colour=colours['none
     bitmap.blit(shadow_bitmap, (1, 1))
     bitmap.blit(text_bitmap, (0, 0))
     return bitmap
-
-# layout helper
-def centre(bigger, smaller):
-    # helper function that returns a centred position
-    return int((bigger / 2) - (smaller / 2))
-
-# gridded layout variables and functions
-position_gridded = x_size_pixels_gridded = y_size_pixels_gridded = space_size_gridded = use_rect = None
-
-# setup variables for gridded
-def set_grid_properties(anchor, width, height, spacing, use_rect_flag=True):
-    global position_gridded, x_size_pixels_gridded, y_size_pixels_gridded, space_size_gridded
-    global use_rect
-    position_gridded = anchor
-    x_size_pixels_gridded = width
-    y_size_pixels_gridded = height
-    space_size_gridded = spacing
-    use_rect = use_rect_flag
-
-# returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
-def gridded(x, y):
-    base_x, base_y = position_gridded
-    # (size per unit) + (space per unit)
-    x_pos = base_x + (x * x_size_pixels_gridded) + (x * space_size_gridded)
-    y_pos = base_y + (y * y_size_pixels_gridded) + (y * space_size_gridded)
-    if use_rect:
-        return Rect(x_pos, y_pos, x_size_pixels_gridded, y_size_pixels_gridded)
-    else:
-        return (x_pos, y_pos)
-
-def copy_graphic_area(source, area, flags=0):
-    return gui.copy_graphic_area(source, area, flags)
-
-def set_cursor(hotspot, *image):
-    # set the cursor image and hotspot
-    cursor_image = image_alpha('cursors', *image)
-    gui.set_cursor(hotspot, cursor_image)

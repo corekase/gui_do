@@ -41,11 +41,10 @@ class Widget:
         return self.visible
 
     def get_collide(self, window=None):
-        from ..command import convert_to_window
         if self.hit_rect == None:
-            collide = self.draw_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
+            collide = self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         else:
-            collide = self.hit_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), window))
+            collide = self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         if collide:
             last_widget = self.gui.read_last_widget()
             current_widget = self.gui.read_current_widget()

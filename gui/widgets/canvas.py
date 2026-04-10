@@ -1,10 +1,10 @@
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from ..command import set_pristine, restore_pristine, copy_graphic_area
 from ..constants import GType
 from .widget import Widget
 from .frame import Frame, FrState
-from ..command import copy_graphic_area, convert_to_window, set_pristine
 from enum import Enum
 
 CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
@@ -49,7 +49,7 @@ class Canvas(Widget):
 
     def focused(self):
         # return a boolean of whether or not the mouse is over the canvas
-        if self.draw_rect.collidepoint(convert_to_window(self.gui.get_mouse_pos(), self.window)):
+        if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
             return True
         else:
             return False
@@ -59,7 +59,7 @@ class Canvas(Widget):
             if self.queued_event == False:
                 self.queued_event = True
                 # within the canvas so update information about that
-                canvas_x, canvas_y = convert_to_window(self.gui.get_mouse_pos(), self.window)
+                canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
                 # create a new event
                 self.CEvent = CanvasEvent()
                 # all events have the position field
