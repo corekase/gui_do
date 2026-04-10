@@ -71,10 +71,9 @@ class Widget:
         return Rect(0, 0, w, h)
 
     def draw(self):
-        from ..command import restore_pristine
         # if auto restore flag then restore the pristine bitmap
         if self.auto_restore_pristine:
-            restore_pristine(self.draw_rect, self.window)
+            self.gui.restore_pristine(self.draw_rect, self.window)
 
     def leave(self):
         # what to do when a widget loses focus
