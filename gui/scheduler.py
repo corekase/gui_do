@@ -224,7 +224,7 @@ class Scheduler:
             # buffer to the screen
             pygame.display.flip()
             # undo changes after flip if buffering
-            if self.gui.buffered:
+            if self.gui.get_buffered():
                 self.gui.undraw_gui()
             # tick to desired frame-rate
             clock.tick(fps)

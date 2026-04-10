@@ -61,6 +61,10 @@ class GuiManager:
         # will be saved and the undraw will undo them
         self.buffered = buffered
 
+    def get_buffered(self):
+        # return whether or not drawing is buffered
+        return self.buffered
+
     def add(self, gui_object, callback=None):
         if gui_object.ctype == CType.Window:
             # add this window to the gui
