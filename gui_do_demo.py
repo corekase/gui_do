@@ -21,6 +21,7 @@ class Demo:
         # create a gui manager
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
+        # begin gui1
         self.gui1, self.scheduler1 = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
         set_pristine('backdrop.jpg')
@@ -33,16 +34,18 @@ class Demo:
         add(Button('exit', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
+        # switch to gui2 button
+        self.gui2_button = add(Button('gui2', gridded(0, 0), BStyle.Round, 'GUI 2'))
         # control whether the background circles are drawn
-        self.circles_toggle = add(Toggle('circles', gridded(0, 0), BStyle.Round, False, 'Circles'))
+        self.circles_toggle = add(Toggle('circles', gridded(1, 0), BStyle.Round, False, 'Circles'))
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = add(Toggle('buttons_window', gridded(1, 0), BStyle.Round, False, 'Buttons'))
+        self.buttons_toggle = add(Toggle('buttons_window', gridded(2, 0), BStyle.Round, False, 'Buttons'))
         # control whether the scrollbar window is visible
-        self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), BStyle.Round, False, 'Scrollbars'))
+        self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(3, 0), BStyle.Round, False, 'Scrollbars'))
         # control whether the life window is visible
-        self.life_toggle = add(Toggle('life_window', gridded(3, 0), BStyle.Round, False, 'Life'))
+        self.life_toggle = add(Toggle('life_window', gridded(4, 0), BStyle.Round, False, 'Life'))
         # control whether the Mandelbrot window is visible
-        self.mandel_toggle = add(Toggle('mandel_window', gridded(4, 0), BStyle.Round, False, 'Mandelbrot'))
+        self.mandel_toggle = add(Toggle('mandel_window', gridded(5, 0), BStyle.Round, False, 'Mandelbrot'))
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         set_grid_properties((10, 10), 120, widget_height, 2)
@@ -163,6 +166,13 @@ class Demo:
         add(Button('4split', gridded(4, 0), BStyle.Round, '4M 4 Tasks'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
+        # begin gui2
+        self.gui2, self.scheduler2 = gui_init(self.screen, fonts)
+        set_pristine('backdrop.jpg')
+        add(Button('return', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Back'))
+        add(Window('GUI 2', (50, 150), (300, 300)))
+        # set cursor for gui2
+        set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
@@ -191,9 +201,11 @@ class Demo:
     def run(self):
         while True:
             if self.active_scheduler == 'main':
-                self.scheduler1.start_scheduler(self.preamble, self.handle_events, self.postamble)
+                self.scheduler1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
+            elif self.active_scheduler == 'gui2':
+                self.scheduler2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
 
-    def preamble(self):
+    def preamble1(self):
         # restore the pristine area to the screen before drawing
         restore_pristine()
         # if the mouse isn't over the canvas then end the dragging state
@@ -208,12 +220,16 @@ class Demo:
         self.life_win.set_visible(self.life_toggle.read())
         self.mandel_win.set_visible(self.mandel_toggle.read())
 
-    def handle_events(self, event):
+    def handle_events1(self, event):
         # handle events
         if event.type == GKind.Widget:
             if event.widget_id == 'exit':
                 # exit button was clicked
                 self.running = False
+            elif event.widget_id == 'gui2':
+                # switch to gui2
+                self.scheduler1.interrupt()
+                self.active_scheduler = 'gui2'
             elif event.widget_id == 'mandel_reset':
                 self.scheduler1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
                 self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -278,7 +294,7 @@ class Demo:
             # window close widget or alt-f4 keypress
             self.running = False
 
-    def postamble(self):
+    def postamble1(self):
         if not self.running:
             # release resources
             pygame.quit()
@@ -291,6 +307,32 @@ class Demo:
                 self.generate()
             # draw life cells on the canvas
             self.draw_life()
+
+    def preamble2(self):
+        # restore the pristine area to the screen before drawing
+        restore_pristine()
+
+    def handle_events2(self, event):
+        # handle events
+        if event.type == GKind.Widget:
+            if event.widget_id == 'return':
+                # return button was clicked
+                self.scheduler2.interrupt()
+                self.active_scheduler = 'main'
+        elif event.type == GKind.KeyDown:
+            if event.key == K_ESCAPE:
+                # escape key pressed
+                self.running = False
+        elif event.type == GKind.Quit:
+            # window close widget or alt-f4 keypress
+            self.running = False
+
+    def postamble2(self):
+        if not self.running:
+            # release resources
+            pygame.quit()
+            # exit python
+            sys.exit(0)
 
     # canvas callback function
     def handle_canvas(self):
