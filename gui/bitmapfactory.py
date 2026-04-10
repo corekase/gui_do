@@ -16,43 +16,7 @@ class BitmapFactory:
     def __new__(cls):
         if BitmapFactory._instance_ is None:
             BitmapFactory._instance_ = object.__new__(cls)
-            BitmapFactory._instance_._populate_()
         return BitmapFactory._instance_
-
-    # instead of an __init__ we have _populate_ and it is executed exactly once
-    def _populate_(self):
-        #
-        #
-        # in the bitmapfactory implement a 'theme bank' like how the gui will be
-        # implementing an object bank. the factory really just returns bitmaps so
-        # as gtk2 theme support develops this is where bitmaps for gui objects will
-        # be made and returned to the gui_do gui code.
-        #
-        #   theme_bank[theme]['bitmaps'] = {}
-        #   theme_bank[theme]['needed_list'] = []
-        #   ..and so on for more theme keys
-        #    -> theme_bank is a dict of themes which each contain a dict where 'bitmaps'
-        #       is a key which is a dict of needed items. the theme key can also contain
-        #       other needed items in addition to the 'bitmaps' key
-        #
-        # the bitmapfactory takes requests for bitmaps for specific kinds of widgets.
-        # then, when the request gets here, depending on self.theme, either the built-in
-        # theme is used, the only one so far, or the contents of theme_bank[theme]['bitmaps']
-        # are used to construct the bitmaps returned to gui_do. and gui_do is all bitmaps so it
-        # is theme-agnostic
-        #
-        #
-        self.theme = 'built_in'
-
-    def set_theme(self, theme):
-        # the current theme which controls which bitmaps are being rendered and returned to
-        # client widgets. when generating bitmaps the current theme is tried first, and if
-        # the definition to construct a bitmap isn't implemented yet - loading of gtk2 themes,
-        # then fall-back to the built-in theme.
-        #
-        # -> try to construct from self.theme, if any element is not implemented in gtk2 bitmap
-        #    loading and parsing functions then use the built_in generator instead
-        self.theme = theme
 
     def draw_window_title_bar_bitmaps(self, title, width, size):
         saved = []

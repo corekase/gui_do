@@ -1,9 +1,7 @@
-from pygame import Rect
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..guimanager import GuiManager
 from ..constants import GType
 from ..bitmapfactory import BitmapFactory
-from ..command import centre
 from .widget import Widget
 from enum import Enum
 

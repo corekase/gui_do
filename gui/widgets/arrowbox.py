@@ -1,13 +1,3 @@
-# a box that displays a triangle graphic pointing at an angle.  Up, Down, Left, and Right presets
-# are built in.  Or pass a degree between 0 and 360 during initialization
-#
-# this widget will be used for scrollbar buttons controlling the bar
-#
-# arrows are always in a square area, so if the rect isn't square then the drawn arrow area will be the
-# smaller dimension, either horizontal or vertical, squared, centered in the rect
-#
-# To-do: the arrowbox can have a repeating signal or callback by tracking time in it, and when the interval
-# is reached then signal the widget
 from ..bitmapfactory import BitmapFactory
 from ..constants import GType
 from .button import Button
