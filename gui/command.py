@@ -49,41 +49,13 @@ def image_alpha(*names):
     return pygame.image.load(file_resource(*names)).convert_alpha()
 
 def set_backdrop(image, obj=None):
-    # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
-    if obj == None:
-        obj = gui
-    if image != None:
-        data_path = os.path.join('data', 'images')
-        bitmap = pygame.image.load(os.path.join(data_path, image))
-        _, _, width, height = obj.surface.get_rect()
-        scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-        obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
-    else:
-        raise Exception('set_backdrop() requires an image')
-    obj.pristine = copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
+    gui.set_backdrop(image, obj)
 
 def update_pristine(area=None, obj=None):
-    # copy area from screen surface to the pristine surface
-    # if area is None then update entire surface
-    if obj == None:
-        obj = gui
-    if area == None:
-        area = obj.surface.get_rect()
-    x, y, _, _ = area
-    obj.pristine.blit(obj.surface, (x, y), area)
+    gui.update_pristine(area, obj)
 
 def restore_pristine(area=None, obj=None):
-    # if obj is ommited then restore_pristine is from the screen pristine.
-    # if obj is supplied the object must have a obj.surface and an obj.pristine
-    # to use here
-    # restores a graphic area from the screen's pristine bitmap to the
-    # screen surface. if area is None then restore entire surface
-    if obj == None:
-        obj = gui
-    if area == None:
-        area = obj.pristine.get_rect()
-    x, y, _, _ = area
-    obj.surface.blit(obj.pristine, (x, y), area)
+    gui.restore_pristine(area, obj)
 
 # current font object
 font_object = None
@@ -151,11 +123,8 @@ def gridded(x, y):
     else:
         return (x_pos, y_pos)
 
-# copy graphic helper
-def copy_graphic_area(surface, rect, flags = 0):
-    bitmap = pygame.Surface((rect.width, rect.height), flags)
-    bitmap.blit(surface, (0, 0), rect)
-    return bitmap
+def copy_graphic_area(source, area, flags=0):
+    return gui.copy_graphic_area(source, area, flags)
 
 def set_cursor(hotspot, *image):
     # set the cursor image and hotspot

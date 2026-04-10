@@ -1,4 +1,5 @@
 import pygame
+import os
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
@@ -105,6 +106,49 @@ class GuiManager:
             return self.lock_area((x + wx, y + wy))
         # conversion not necessary
         return self.lock_area(point)
+
+    def set_backdrop(self, image, obj=None):
+        # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
+        if obj == None:
+            obj = self
+        if image != None:
+            data_path = os.path.join('data', 'images')
+            bitmap = pygame.image.load(os.path.join(data_path, image))
+            _, _, width, height = obj.surface.get_rect()
+            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
+            obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
+        else:
+            raise Exception('set_backdrop() requires an image')
+        obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
+
+    # copy graphic helper
+    def copy_graphic_area(self, surface, rect, flags = 0):
+        bitmap = pygame.Surface((rect.width, rect.height), flags)
+        bitmap.blit(surface, (0, 0), rect)
+        return bitmap
+
+    def update_pristine(self, area=None, obj=None):
+        # copy area from screen surface to the pristine surface
+        # if area is None then update entire surface
+        if obj == None:
+            obj = self
+        if area == None:
+            area = obj.surface.get_rect()
+        x, y, _, _ = area
+        obj.pristine.blit(obj.surface, (x, y), area)
+
+    def restore_pristine(self, area=None, obj=None):
+        # if obj is ommited then restore_pristine is from the screen pristine.
+        # if obj is supplied the object must have a obj.surface and an obj.pristine
+        # to use here
+        # restores a graphic area from the screen's pristine bitmap to the
+        # screen surface. if area is None then restore entire surface
+        if obj == None:
+            obj = self
+        if area == None:
+            area = obj.pristine.get_rect()
+        x, y, _, _ = area
+        obj.surface.blit(obj.pristine, (x, y), area)
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
