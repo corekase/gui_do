@@ -20,3 +20,6 @@ HorVer = Enum('HorVer', ['Horizontal', 'Vertical'])
 
 # whether scrollbar arrows skip, split, near, or far of the scrollable area
 ScrBar = Enum('ScrBar', ['Skip', 'Split', 'Near', 'Far'])
+
+# button styles
+BtnStyl = Enum('BtnStyl', ['Boxed', 'Rounded', 'Angled', 'Radio', 'Check'])
