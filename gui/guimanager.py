@@ -421,7 +421,6 @@ class GuiManager:
             widget.set_visible(True)
 
     def draw_gui(self):
-        from .command import copy_graphic_area
         # draw all widgets to their surfaces
         if self.buffered:
             self.bitmaps.clear()
@@ -429,14 +428,14 @@ class GuiManager:
             if widget.get_visible():
                 # save the bitmap area under the widgets if buffered
                 if self.buffered:
-                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, widget.get_rect()), widget.get_rect()))
+                    self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, widget.get_rect()), widget.get_rect()))
                 # draw the widget
                 widget.draw()
         for window in self.windows:
             if window.get_visible():
                 # save the bitmap area under the window if buffered
                 if self.buffered:
-                    self.bitmaps.insert(0, (copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
+                    self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
                 if window is self.windows[-1]:
                     window.draw_title_bar_active()
                 else:
@@ -455,7 +454,7 @@ class GuiManager:
                            self.cursor_rect.width, self.cursor_rect.height)
         # save the bitmap area under the window if buffered
         if self.buffered:
-            self.bitmaps.insert(0, (copy_graphic_area(self.surface, cursor_rect), cursor_rect))
+            self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, cursor_rect), cursor_rect))
         self.surface.blit(self.cursor_image, cursor_rect)
 
     def undraw_gui(self):
