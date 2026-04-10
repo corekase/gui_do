@@ -41,6 +41,7 @@ class Scheduler:
     def __init__(self, gui):
         self.tasks = {}
         self.gui = gui
+        self.change_scheduler = False
         # queued and finished lists
         self.tasks_ready = []
         self.tasks_processed = []
@@ -160,29 +161,40 @@ class Scheduler:
     def null(self):
         return
 
-    def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
-        def task_process():
-            # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
-            try:
-                task_id = self.tasks_ready.pop(0)
-                self.tasks[task_id].time_start = time.time()
-                next(self.tasks[task_id].task_logic)
-                self.tasks_processed.append(task_id)
-            except StopIteration:
-                # task exited, and exception from next() happened before appending the id to the processed list
-                self.tasks_finished.append(task_id)
-                del self.tasks[task_id]
+    def interrupt_scheduler(self):
+        # set the scheduler to run with the given preamble, event handler, and postamble
+        self.change_scheduler = True
+
+    def task_process(self):
+        # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
+        try:
+            task_id = self.tasks_ready.pop(0)
+            self.tasks[task_id].time_start = time.time()
+            next(self.tasks[task_id].task_logic)
+            self.tasks_processed.append(task_id)
+        except StopIteration:
+            # task exited, and exception from next() happened before appending the id to the processed list
+            self.tasks_finished.append(task_id)
+            del self.tasks[task_id]
+
+    def init_scheduler(self, preamble=None, event_handler=None, postamble=None):
         if event_handler == None:
             event_handler = self.null
         if preamble == None:
             preamble = self.null
         if postamble == None:
             postamble = self.null
+        self.run_scheduler(preamble, event_handler, postamble)
+
+    def run_scheduler(self, preamble=None, event_handler=None, postamble=None):
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         while True:
+            if self.change_scheduler:
+                self.change_scheduler = False
+                break
             # call preamble
             preamble()
             # send gui events
@@ -191,14 +203,14 @@ class Scheduler:
             # handle task logic
             self.tasks_finished.clear()
             if len(self.tasks_ready) > 0:
-                task_process()
+                self.task_process()
             elif len(self.tasks_ready) == 0:
                 self.tasks_ready = self.tasks_processed
                 if len(self.tasks_processed) > 0:
                     self.tasks_processed.clear()
                 if len(self.tasks_ready) > 0:
                     # do process here again because ready list was empty
-                    task_process()
+                    self.task_process()
             # send task events
             for id in self.tasks_finished:
                 event_handler(self.event(TKind.Finished, id))

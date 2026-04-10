@@ -185,11 +185,14 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.scheduler = self.gui.get_scheduler()
+        self.scheduler1 = self.gui.get_scheduler()
+        self.active_scheduler = 'main'
         self.running = True
 
     def run(self):
-        self.scheduler.run_scheduler(self.preamble, self.handle_events, self.postamble)
+        while True:
+            if self.active_scheduler == 'main':
+                self.scheduler1.init_scheduler(self.preamble, self.handle_events, self.postamble)
 
     def preamble(self):
         # restore the pristine area to the screen before drawing
@@ -213,25 +216,25 @@ class Demo:
                 # exit button was clicked
                 self.running = False
             elif event.widget_id == 'mandel_reset':
-                self.scheduler.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+                self.scheduler1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
                 self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                 self.gui.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
-            elif not self.scheduler.tasks_active():
+            elif not self.scheduler1.tasks_active():
                 if event.widget_id == 'iterative':
                     self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.scheduler.add_task('iter', self.mandel_iterative)
+                    self.scheduler1.add_task('iter', self.mandel_iterative)
                 elif event.widget_id == 'recursive':
                     self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.scheduler.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
+                    self.scheduler1.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
                 elif event.widget_id == '1split':
                     self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui.show_widgets(self.mandel_canvas)
@@ -239,10 +242,10 @@ class Demo:
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     hx, hy = w // 2, h // 2
-                    self.scheduler.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler1.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler1.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler1.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.scheduler1.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
                 elif event.widget_id == '4split':
                     self.gui.hide_widgets(self.mandel_canvas)
                     self.gui.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -251,10 +254,10 @@ class Demo:
                     w1 = w1 // 2
                     h1 = h1 // 2
                     self.mandel_setup(w1, h1)
-                    self.scheduler.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
-                    self.scheduler.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
-                    self.scheduler.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
-                    self.scheduler.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
+                    self.scheduler1.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
+                    self.scheduler1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
+                    self.scheduler1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
+                    self.scheduler1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
         elif event.type == GKind.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
@@ -417,7 +420,7 @@ class Demo:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y)))
-                if self.scheduler.task_time(id):
+                if self.scheduler1.task_time(id):
                     yield
 
     def mandel_recursive(self, id, item):
@@ -441,16 +444,16 @@ class Demo:
         if w > 2 or h > 2:
             half_x = (w + (w % 2)) // 2
             half_y = (h + (h % 2)) // 2
-            if self.scheduler.task_time(id):
+            if self.scheduler1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x, y, half_x, half_y), canvas))
-            if self.scheduler.task_time(id):
+            if self.scheduler1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x + half_x, y, half_x, half_y), canvas))
-            if self.scheduler.task_time(id):
+            if self.scheduler1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x + half_x, y + half_y, half_x, half_y), canvas))
-            if self.scheduler.task_time(id):
+            if self.scheduler1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x, y + half_y, half_x, half_y), canvas))
             return
