@@ -48,8 +48,8 @@ def image_alpha(*names):
     # load, convert with an alpha channel, and return an image surface
     return pygame.image.load(file_resource(*names)).convert_alpha()
 
-def set_backdrop(image, obj=None):
-    gui.set_backdrop(image, obj)
+def set_pristine(image, obj=None):
+    gui.set_pristine(image, obj)
 
 def restore_pristine(area=None, obj=None):
     gui.restore_pristine(area, obj)

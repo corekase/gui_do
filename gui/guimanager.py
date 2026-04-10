@@ -107,7 +107,7 @@ class GuiManager:
         # conversion not necessary
         return self.lock_area(point)
 
-    def set_backdrop(self, image, obj=None):
+    def set_pristine(self, image, obj=None):
         # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
         if obj == None:
             obj = self

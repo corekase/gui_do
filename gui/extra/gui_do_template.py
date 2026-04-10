@@ -2,7 +2,7 @@ import sys
 import pygame
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, add, set_backdrop, set_font, set_cursor, restore_pristine
+from gui import gui_init, add, set_pristine, set_font, set_cursor, restore_pristine
 from gui import GKind, Label, Button
 from gui import Scheduler
 
@@ -18,7 +18,7 @@ class Template:
         fonts = (('titlebar', 'Ubuntu-B.ttf', 16), ('normal', 'Gimbot.ttf', 16), ('gui_do', 'Gimbot.ttf', 72))
         self.gui = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
-        set_backdrop('backdrop.jpg')
+        set_pristine('backdrop.jpg')
         # main label
         set_font('gui_do')
         add(Label((50, 50),'gui_do'))

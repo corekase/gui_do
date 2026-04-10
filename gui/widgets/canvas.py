@@ -4,7 +4,7 @@ from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONU
 from ..constants import GType
 from .widget import Widget
 from .frame import Frame, FrState
-from ..command import copy_graphic_area, convert_to_window, set_backdrop
+from ..command import copy_graphic_area, convert_to_window, set_pristine
 from enum import Enum
 
 CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
@@ -24,7 +24,7 @@ class Canvas(Widget):
             frame.draw()
             self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
-            set_backdrop(backdrop, self)
+            set_pristine(backdrop, self)
         self.canvas_callback = canvas_callback
         self.auto_restore_pristine = automatic_pristine
         self.queued_event = False
