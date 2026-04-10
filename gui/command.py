@@ -32,23 +32,11 @@ def add(gui_object, callback=None):
 
 # convert the point from a main surface one to a window point
 def convert_to_window(point, window):
-    # fall-through function, perform the conversion only if necessary
-    if window != None:
-        x, y = gui.lock_area(point)
-        wx, wy = window.x, window.y
-        return (x - wx, y - wy)
-    # conversion not necessary
-    return gui.lock_area(point)
+    return gui.convert_to_window(point, window)
 
 # convert the point from a window point to a main surface one
 def convert_to_screen(point, window):
-    # fall-through function, perform the conversion only if necessary
-    if window != None:
-        x, y = point
-        wx, wy = window.x, window.y
-        return gui.lock_area((x + wx, y + wy))
-    # conversion not necessary
-    return gui.lock_area(point)
+    return gui.convert_to_screen(point, window)
 
 # filename helper
 def file_resource(*names):

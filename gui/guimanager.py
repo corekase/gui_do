@@ -90,6 +90,26 @@ class GuiManager:
                 # append the widget to the screen list
                 self.widgets.append(gui_object)
 
+    # convert the point from a main surface one to a window point
+    def convert_to_window(self, point, window):
+        # fall-through function, perform the conversion only if necessary
+        if window != None:
+            x, y = self.lock_area(point)
+            wx, wy = window.x, window.y
+            return (x - wx, y - wy)
+        # conversion not necessary
+        return self.lock_area(point)
+
+    # convert the point from a window point to a main surface one
+    def convert_to_screen(self, point, window):
+        # fall-through function, perform the conversion only if necessary
+        if window != None:
+            x, y = point
+            wx, wy = window.x, window.y
+            return self.lock_area((x + wx, y + wy))
+        # conversion not necessary
+        return self.lock_area(point)
+
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
