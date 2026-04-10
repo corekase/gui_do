@@ -117,8 +117,8 @@ class GuiManager:
         if obj == None:
             obj = self
         if image != None:
-            data_path = os.path.join('data', 'images')
-            bitmap = pygame.image.load(os.path.join(data_path, image))
+            from .command import file_resource
+            bitmap = pygame.image.load(file_resource('images', image))
             _, _, width, height = obj.surface.get_rect()
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
             obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
