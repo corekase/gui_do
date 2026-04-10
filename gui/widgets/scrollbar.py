@@ -8,13 +8,13 @@ from .arrowbox import ArrowBox
 from ..constants import colours, HorVer, ScrBar
 
 class Scrollbar(Frame):
-    def __init__(self, id, overall_rect, style, params, horizontal):
+    def __init__(self, id, overall_rect, horizontal, style, params):
         # get a reference to the gui
         self.gui = GuiManager()
         # list of registered sub-widgets
         self.registered = []
         # parse the style
-        if style == 0:
+        if style == ScrBar.Skip:
             # pass through with no arrowboxes
             scroll_area_rect = overall_rect
         else:
@@ -47,9 +47,9 @@ class Scrollbar(Frame):
                     scrollbar_rect = Rect(0, 0, width, height - (width * 2))
                     decrement_rect = Rect(0, height - (width * 2), width, width)
                     increment_rect = Rect(0, height - width, width, width)
-            elif style != ScrBar.Skip:
+            else:
                 from ..guimanager import GuiError
-                raise GuiError(f'style {style} not implemented')
+                raise GuiError(f'style not implemented')
         # add arrowboxes
         if style != ScrBar.Skip:
             x, y, width, height = overall_rect

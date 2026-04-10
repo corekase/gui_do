@@ -107,21 +107,21 @@ class Demo:
         y_pos += 248
         self.scrollbar_win = add(Window('Scrollbars', (x_pos, y_pos), (320, 362)))
         x = y = 10
-        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), ScrBar.Skip, (100, 0, 30, 10), HorVer.Horizontal))
+        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Skip, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), ScrBar.Split, (100, 0, 30, 10), HorVer.Horizontal))
+        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Split, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), ScrBar.Near, (100, 0, 30, 10), HorVer.Horizontal))
+        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Near, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), ScrBar.Far, (100, 0, 30, 10), HorVer.Horizontal))
+        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Far, (100, 0, 30, 10)))
         y += 24
-        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), ScrBar.Skip, (100, 0, 30, 10), HorVer.Vertical))
+        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Skip, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), ScrBar.Split, (100, 0, 30, 10), HorVer.Vertical))
+        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Split, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), ScrBar.Near, (100, 0, 30, 10), HorVer.Vertical))
+        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Near, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), ScrBar.Far, (100, 0, 30, 10), HorVer.Vertical))
+        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Far, (100, 0, 30, 10)))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
         add(Label((x + 30, y + 215), 'Scrollbars!', True))
