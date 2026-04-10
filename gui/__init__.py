@@ -9,7 +9,7 @@ from .command import set_buffered
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager
 from .forms.window import Window
-from .constants import colours, GKind, GType, HorVer, ScrBar, BtnStyl
+from .constants import colours, GKind, GType, HorV, SArrows, BStyle
 from .widgets.frame import Frame, FrState
 from .widgets.label import Label
 from .widgets.button import Button

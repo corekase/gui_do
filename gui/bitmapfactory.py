@@ -7,7 +7,7 @@ from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from .command import set_font, set_last_font, render_text, centre
-from .constants import colours, BtnStyl
+from .constants import colours, BStyle
 
 class BitmapFactory:
     # the following code makes the BitmapFactory a singleton.
@@ -71,15 +71,15 @@ class BitmapFactory:
         return saved
 
     def get_styled_bitmaps(self, style, text, rect):
-        if style == BtnStyl.Boxed:
+        if style == BStyle.Box:
             return self.draw_box_style_bitmaps(text, rect)
-        elif style == BtnStyl.Rounded:
+        elif style == BStyle.Round:
             return self.draw_rounded_style_bitmaps(text, rect)
-        elif style == BtnStyl.Angled:
+        elif style == BStyle.Angle:
             return self.draw_angle_style_bitmaps(text, rect)
-        elif style == BtnStyl.Radio:
+        elif style == BStyle.Radio:
             return self.draw_radio_style_bitmaps(text, rect)
-        elif style == BtnStyl.Check:
+        elif style == BStyle.Check:
             return self.draw_check_style_bitmaps(text, rect)
         else:
             from .guimanager import GuiError

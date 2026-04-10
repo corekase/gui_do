@@ -6,7 +6,7 @@ from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_pristine, set_font, set_cursor, restore_pristine
 from gui import colours, set_grid_properties, gridded
 from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image, Scheduler
-from gui import HorVer, ScrBar, BtnStyl
+from gui import HorV, SArrows, BStyle
 
 class Demo:
     def __init__(self):
@@ -30,19 +30,19 @@ class Demo:
         set_font('normal')
         widget_height = 28
         # exit button
-        add(Button('exit', Rect(10, 1042, 70, widget_height), BtnStyl.Angled, 'Exit'))
+        add(Button('exit', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
-        self.circles_toggle = add(Toggle('circles', gridded(0, 0), BtnStyl.Rounded, False, 'Circles'))
+        self.circles_toggle = add(Toggle('circles', gridded(0, 0), BStyle.Round, False, 'Circles'))
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = add(Toggle('buttons_window', gridded(1, 0), BtnStyl.Rounded, False, 'Buttons'))
+        self.buttons_toggle = add(Toggle('buttons_window', gridded(1, 0), BStyle.Round, False, 'Buttons'))
         # control whether the scrollbar window is visible
-        self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), BtnStyl.Rounded, False, 'Scrollbars'))
+        self.scrollbars_toggle = add(Toggle('scrollbar_window', gridded(2, 0), BStyle.Round, False, 'Scrollbars'))
         # control whether the life window is visible
-        self.life_toggle = add(Toggle('life_window', gridded(3, 0), BtnStyl.Rounded, False, 'Life'))
+        self.life_toggle = add(Toggle('life_window', gridded(3, 0), BStyle.Round, False, 'Life'))
         # control whether the Mandelbrot window is visible
-        self.mandel_toggle = add(Toggle('mandel_window', gridded(4, 0), BtnStyl.Rounded, False, 'Mandelbrot'))
+        self.mandel_toggle = add(Toggle('mandel_window', gridded(4, 0), BStyle.Round, False, 'Mandelbrot'))
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         set_grid_properties((10, 10), 120, widget_height, 2)
@@ -56,46 +56,46 @@ class Demo:
         add(Label(gridded(5, 0), 'G6 Mixed', True))
         add(Label(gridded(6, 0), 'Buttons', True))
         add(Label(gridded(7, 0), 'Toggles', True))
-        lbg1 = add(ButtonGroup('bg1', 'bg1b01', gridded(0, 1), BtnStyl.Boxed, 'Box 1'))
-        add(ButtonGroup('bg1', 'bg1b02', gridded(0, 2), BtnStyl.Boxed, 'Box 2',))
-        add(ButtonGroup('bg1', 'bg1b03', gridded(0, 3), BtnStyl.Boxed, 'Box 3',))
-        add(ButtonGroup('bg1', 'bg1b04', gridded(0, 4), BtnStyl.Boxed, 'Box 4',))
-        add(ButtonGroup('bg1', 'bg1b05', gridded(0, 5), BtnStyl.Boxed, 'Box 5',))
-        lbg2 = add(ButtonGroup('bg2', 'bg2b01', gridded(1, 1), BtnStyl.Rounded, 'Round 1'))
-        add(ButtonGroup('bg2', 'bg2b02', gridded(1, 2), BtnStyl.Rounded, 'Round 2'))
-        add(ButtonGroup('bg2', 'bg2b03', gridded(1, 3), BtnStyl.Rounded, 'Round 3'))
-        add(ButtonGroup('bg2', 'bg2b04', gridded(1, 4), BtnStyl.Rounded, 'Round 4'))
-        add(ButtonGroup('bg2', 'bg2b05', gridded(1, 5), BtnStyl.Rounded, 'Round 5'))
-        lbg3 = add(ButtonGroup('bg3', 'bg3b01', gridded(2, 1), BtnStyl.Angled, 'Angle 1'))
-        add(ButtonGroup('bg3', 'bg3b02', gridded(2, 2), BtnStyl.Angled, 'Angle 2'))
-        add(ButtonGroup('bg3', 'bg3b03', gridded(2, 3), BtnStyl.Angled, 'Angle 3'))
-        add(ButtonGroup('bg3', 'bg3b04', gridded(2, 4), BtnStyl.Angled, 'Angle 4'))
-        add(ButtonGroup('bg3', 'bg3b05', gridded(2, 5), BtnStyl.Angled, 'Angle 5'))
-        lbg4= add(ButtonGroup('bg4', 'bg4b01', gridded(3, 1), BtnStyl.Radio, 'Radio 1'))
-        add(ButtonGroup('bg4', 'bg4b02', gridded(3, 2), BtnStyl.Radio, 'Radio 2'))
-        add(ButtonGroup('bg4', 'bg4b03', gridded(3, 3), BtnStyl.Radio, 'Radio 3'))
-        add(ButtonGroup('bg4', 'bg4b04', gridded(3, 4), BtnStyl.Radio, 'Radio 4'))
-        add(ButtonGroup('bg4', 'bg4b05', gridded(3, 5), BtnStyl.Radio, 'Radio 5'))
-        lbg5 = add(ButtonGroup('bg5', 'bg5b01', gridded(4, 1), BtnStyl.Check, 'Check 1'))
-        add(ButtonGroup('bg5', 'bg5b02', gridded(4, 2), BtnStyl.Check, 'Check 2'))
-        add(ButtonGroup('bg5', 'bg5b03', gridded(4, 3), BtnStyl.Check, 'Check 3'))
-        add(ButtonGroup('bg5', 'bg5b04', gridded(4, 4), BtnStyl.Check, 'Check 4'))
-        add(ButtonGroup('bg5', 'bg5b05', gridded(4, 5), BtnStyl.Check, 'Check 5'))
-        lbg6 = add(ButtonGroup('bg6', 'bg6b01', gridded(5, 1), BtnStyl.Boxed, 'Mix 1'))
-        add(ButtonGroup('bg6', 'bg6b02', gridded(5, 2), BtnStyl.Rounded, 'Mix 2'))
-        add(ButtonGroup('bg6', 'bg6b03', gridded(5, 3), BtnStyl.Angled, 'Mix 3'))
-        add(ButtonGroup('bg6', 'bg6b04', gridded(5, 4), BtnStyl.Radio, 'Mix 4'))
-        add(ButtonGroup('bg6', 'bg6b05', gridded(5, 5), BtnStyl.Check, 'Mix 5'))
-        add(Button('b1', gridded(6, 1), BtnStyl.Boxed, 'Button 1'))
-        add(Button('b2', gridded(6, 2), BtnStyl.Rounded, 'Button 2'))
-        add(Button('b3', gridded(6, 3), BtnStyl.Angled, 'Button 3'))
-        add(Button('b4', gridded(6, 4), BtnStyl.Radio, 'Button 4'))
-        add(Button('b5', gridded(6, 5), BtnStyl.Check, 'Button 5'))
-        add(Toggle('t1', gridded(7, 1), BtnStyl.Boxed, False, 'Push 1', 'Raise 1'))
-        add(Toggle('t2', gridded(7, 2), BtnStyl.Rounded, False, 'Push 2', 'Raise 2'))
-        add(Toggle('t3', gridded(7, 3), BtnStyl.Angled, False, 'Push 3', 'Raise 3'))
-        add(Toggle('t4', gridded(7, 4), BtnStyl.Radio, False, 'Push 4', 'Raise 4'))
-        add(Toggle('t5', gridded(7, 5), BtnStyl.Check, False, 'Push 5', 'Raise 5'))
+        lbg1 = add(ButtonGroup('bg1', 'bg1b01', gridded(0, 1), BStyle.Box, 'Box 1'))
+        add(ButtonGroup('bg1', 'bg1b02', gridded(0, 2), BStyle.Box, 'Box 2',))
+        add(ButtonGroup('bg1', 'bg1b03', gridded(0, 3), BStyle.Box, 'Box 3',))
+        add(ButtonGroup('bg1', 'bg1b04', gridded(0, 4), BStyle.Box, 'Box 4',))
+        add(ButtonGroup('bg1', 'bg1b05', gridded(0, 5), BStyle.Box, 'Box 5',))
+        lbg2 = add(ButtonGroup('bg2', 'bg2b01', gridded(1, 1), BStyle.Round, 'Round 1'))
+        add(ButtonGroup('bg2', 'bg2b02', gridded(1, 2), BStyle.Round, 'Round 2'))
+        add(ButtonGroup('bg2', 'bg2b03', gridded(1, 3), BStyle.Round, 'Round 3'))
+        add(ButtonGroup('bg2', 'bg2b04', gridded(1, 4), BStyle.Round, 'Round 4'))
+        add(ButtonGroup('bg2', 'bg2b05', gridded(1, 5), BStyle.Round, 'Round 5'))
+        lbg3 = add(ButtonGroup('bg3', 'bg3b01', gridded(2, 1), BStyle.Angle, 'Angle 1'))
+        add(ButtonGroup('bg3', 'bg3b02', gridded(2, 2), BStyle.Angle, 'Angle 2'))
+        add(ButtonGroup('bg3', 'bg3b03', gridded(2, 3), BStyle.Angle, 'Angle 3'))
+        add(ButtonGroup('bg3', 'bg3b04', gridded(2, 4), BStyle.Angle, 'Angle 4'))
+        add(ButtonGroup('bg3', 'bg3b05', gridded(2, 5), BStyle.Angle, 'Angle 5'))
+        lbg4= add(ButtonGroup('bg4', 'bg4b01', gridded(3, 1), BStyle.Radio, 'Radio 1'))
+        add(ButtonGroup('bg4', 'bg4b02', gridded(3, 2), BStyle.Radio, 'Radio 2'))
+        add(ButtonGroup('bg4', 'bg4b03', gridded(3, 3), BStyle.Radio, 'Radio 3'))
+        add(ButtonGroup('bg4', 'bg4b04', gridded(3, 4), BStyle.Radio, 'Radio 4'))
+        add(ButtonGroup('bg4', 'bg4b05', gridded(3, 5), BStyle.Radio, 'Radio 5'))
+        lbg5 = add(ButtonGroup('bg5', 'bg5b01', gridded(4, 1), BStyle.Check, 'Check 1'))
+        add(ButtonGroup('bg5', 'bg5b02', gridded(4, 2), BStyle.Check, 'Check 2'))
+        add(ButtonGroup('bg5', 'bg5b03', gridded(4, 3), BStyle.Check, 'Check 3'))
+        add(ButtonGroup('bg5', 'bg5b04', gridded(4, 4), BStyle.Check, 'Check 4'))
+        add(ButtonGroup('bg5', 'bg5b05', gridded(4, 5), BStyle.Check, 'Check 5'))
+        lbg6 = add(ButtonGroup('bg6', 'bg6b01', gridded(5, 1), BStyle.Box, 'Mix 1'))
+        add(ButtonGroup('bg6', 'bg6b02', gridded(5, 2), BStyle.Round, 'Mix 2'))
+        add(ButtonGroup('bg6', 'bg6b03', gridded(5, 3), BStyle.Angle, 'Mix 3'))
+        add(ButtonGroup('bg6', 'bg6b04', gridded(5, 4), BStyle.Radio, 'Mix 4'))
+        add(ButtonGroup('bg6', 'bg6b05', gridded(5, 5), BStyle.Check, 'Mix 5'))
+        add(Button('b1', gridded(6, 1), BStyle.Box, 'Button 1'))
+        add(Button('b2', gridded(6, 2), BStyle.Round, 'Button 2'))
+        add(Button('b3', gridded(6, 3), BStyle.Angle, 'Button 3'))
+        add(Button('b4', gridded(6, 4), BStyle.Radio, 'Button 4'))
+        add(Button('b5', gridded(6, 5), BStyle.Check, 'Button 5'))
+        add(Toggle('t1', gridded(7, 1), BStyle.Box, False, 'Push 1', 'Raise 1'))
+        add(Toggle('t2', gridded(7, 2), BStyle.Round, False, 'Push 2', 'Raise 2'))
+        add(Toggle('t3', gridded(7, 3), BStyle.Angle, False, 'Push 3', 'Raise 3'))
+        add(Toggle('t4', gridded(7, 4), BStyle.Radio, False, 'Push 4', 'Raise 4'))
+        add(Toggle('t5', gridded(7, 5), BStyle.Check, False, 'Push 5', 'Raise 5'))
         set_grid_properties((10, gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
         self.label1 = add(Label(gridded(0, 0), f'ID: {lbg1.read_id()}', True))
         self.label2 = add(Label(gridded(1, 0), f'ID: {lbg2.read_id()}', True))
@@ -107,21 +107,21 @@ class Demo:
         y_pos += 248
         self.scrollbar_win = add(Window('Scrollbars', (x_pos, y_pos), (320, 362)))
         x = y = 10
-        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Skip, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_a', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Skip, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Split, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_b', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Split, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Near, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_c', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Near, (100, 0, 30, 10)))
         y += 22
-        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), HorVer.Horizontal, ScrBar.Far, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_d', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Far, (100, 0, 30, 10)))
         y += 24
-        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Skip, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_e', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Skip, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Split, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_f', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Split, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Near, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_g', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Near, (100, 0, 30, 10)))
         x += 22
-        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), HorVer.Vertical, ScrBar.Far, (100, 0, 30, 10)))
+        add(Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Far, (100, 0, 30, 10)))
         add(Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False))
         set_font('scroll')
         add(Label((x + 30, y + 215), 'Scrollbars!', True))
@@ -137,9 +137,9 @@ class Demo:
         self.life = set()
         set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         # resets the life simulation to a default state, uses a callback function
-        add(Button('life_reset', gridded(0, 0), BtnStyl.Angled, 'Reset'), self.life_reset)
+        add(Button('life_reset', gridded(0, 0), BStyle.Angle, 'Reset'), self.life_reset)
         # toggle whether or not the simulation is processing
-        self.toggle_life = add(Toggle('run', gridded(1, 0), BtnStyl.Rounded, False, 'Stop', 'Start'))
+        self.toggle_life = add(Toggle('run', gridded(1, 0), BStyle.Round, False, 'Stop', 'Start'))
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -156,11 +156,11 @@ class Demo:
         self.gui.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        add(Button('mandel_reset', gridded(0, 0), BtnStyl.Angled, 'Reset'))
-        add(Button('iterative', gridded(1, 0), BtnStyl.Rounded, 'Iterative'))
-        add(Button('recursive', gridded(2, 0), BtnStyl.Rounded, 'Recursive'))
-        add(Button('1split', gridded(3, 0), BtnStyl.Rounded, '1M 4 Tasks'))
-        add(Button('4split', gridded(4, 0), BtnStyl.Rounded, '4M 4 Tasks'))
+        add(Button('mandel_reset', gridded(0, 0), BStyle.Angle, 'Reset'))
+        add(Button('iterative', gridded(1, 0), BStyle.Round, 'Iterative'))
+        add(Button('recursive', gridded(2, 0), BStyle.Round, 'Recursive'))
+        add(Button('1split', gridded(3, 0), BStyle.Round, '1M 4 Tasks'))
+        add(Button('4split', gridded(4, 0), BStyle.Round, '4M 4 Tasks'))
         # set cursor image
         set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
