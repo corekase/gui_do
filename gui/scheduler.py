@@ -34,7 +34,10 @@ class Timers:
 
     def timer_updates(self):
         now_time = time.time()
-        for id in Timers.timers.keys():
+        for id in list(Timers.timers.keys()):
+            if id not in Timers.timers:
+                # timer was removed during the loop, so skip it
+                continue
             elapsed_time = now_time - Timers.timers[id].previous_time
             Timers.timers[id].previous_time = now_time
             Timers.timers[id].timer += elapsed_time
