@@ -30,7 +30,7 @@ class Demo:
         set_font('normal')
         widget_height = 28
         # exit button
-        add(Button('exit', Rect(10, 1042, 70, widget_height), BtnStyl.Boxed, 'Exit'))
+        add(Button('exit', Rect(10, 1042, 70, widget_height), BtnStyl.Angled, 'Exit'))
         # setup for the togglebuttons
         set_grid_properties((85, 1042), 120, widget_height, 4)
         # control whether the background circles are drawn
