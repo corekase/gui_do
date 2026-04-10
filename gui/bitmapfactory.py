@@ -321,8 +321,6 @@ class BitmapFactory:
             glyph_set.append(state)
         return glyph_set
 
-
-
     def flood_fill(self, surface, position, colour):
         # convert the surface to an array
         pixels = PixelArray(surface)
