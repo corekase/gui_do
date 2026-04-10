@@ -1,5 +1,5 @@
-from ..constants import GType
-from ..command import render_text, render_text_shadow, centre
+from ..constants import colours, GType
+from ..command import render_text, render_text, centre
 from .widget import Widget
 
 class Label(Widget):
@@ -23,7 +23,7 @@ class Label(Widget):
 
     def render(self, text):
         if self.shadow:
-            self.text_bitmap = render_text_shadow(text)
+            self.text_bitmap = render_text(text, colours['text'], True)
         else:
             self.text_bitmap = render_text(text)
 

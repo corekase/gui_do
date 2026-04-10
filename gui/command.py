@@ -99,18 +99,18 @@ def set_cursor(hotspot, *image):
     cursor_image = image_alpha('cursors', *image)
     gui.set_cursor(hotspot, cursor_image)
 
-# render text function
-def render_text(text, colour=colours['text']):
-    # return a bitmap of the text in the given colour
-    return font_object.render(text, True, colour, None)
-
-# render text with a shadow
-def render_text_shadow(text, colour=colours['text'], shadow_colour=colours['none']):
+# render text with or without a shadow
+def render_text(text, colour=colours['text'], shadow=False, shadow_colour=colours['none']):
     # return a bitmap of the text and a shadow of given colours
-    text_bitmap = render_text(text, colour)
-    shadow_bitmap = render_text(text, shadow_colour)
+    text_bitmap = font_object.render(text, True, colour, None)
     text_rect = text_bitmap.get_rect()
-    bitmap = pygame.Surface((text_rect.width + 1, text_rect.height + 1), pygame.SRCALPHA)
-    bitmap.blit(shadow_bitmap, (1, 1))
+    w, h = text_rect.width, text_rect.height
+    if shadow:
+        w += 1
+        h += 1
+    bitmap = pygame.Surface((w, h), pygame.SRCALPHA)
+    if shadow:
+        shadow_bitmap = font_object.render(text, True, shadow_colour, None)
+        bitmap.blit(shadow_bitmap, (1, 1))
     bitmap.blit(text_bitmap, (0, 0))
     return bitmap

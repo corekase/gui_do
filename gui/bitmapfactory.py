@@ -5,7 +5,7 @@ from pygame.surfarray import blit_array
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
-from .command import set_font, set_last_font, render_text_shadow, centre
+from .command import set_font, set_last_font, render_text, centre
 from .constants import colours
 
 class BitmapFactory:
@@ -69,7 +69,7 @@ class BitmapFactory:
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
-        text = render_text_shadow(title, colour)
+        text = render_text(title, colour, True)
         text_y = centre(size, text.get_rect().height)
         title_surface.blit(text, (5, text_y))
         set_last_font()
@@ -122,7 +122,7 @@ class BitmapFactory:
     def draw_box_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text_shadow(text)
+        text_bitmap = render_text(text, colours['text'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         idle_surface = Surface((w, h)).convert()
@@ -133,7 +133,7 @@ class BitmapFactory:
         self.draw_box_bitmaps(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_bitmap = render_text(text, colours['highlight'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = Surface((w, h)).convert()
@@ -180,7 +180,7 @@ class BitmapFactory:
         return (idle_bitmap, hover_bitmap, armed_bitmap), idle_rect
 
     def draw_radio_style_bitmap(self, rect, text, col1, col2):
-        text_bitmap = render_text_shadow(text)
+        text_bitmap = render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         gutter = int(text_height * 0.1)
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
@@ -211,7 +211,7 @@ class BitmapFactory:
         return (idle_bitmap, hover_bitmap, armed_bitmap), hit_rect
 
     def draw_check_style_bitmap(self, rect, state, text):
-        text_bitmap = render_text_shadow(text)
+        text_bitmap = render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         check_bitmap = self.draw_check_bitmap(state, text_height)
         y_offset = centre(rect.height, text_height)
@@ -246,7 +246,7 @@ class BitmapFactory:
     def draw_rounded_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text_shadow(text)
+        text_bitmap = render_text(text, colours['text'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         idle_surface = Surface((w, h), SRCALPHA).convert_alpha()
@@ -257,7 +257,7 @@ class BitmapFactory:
         self.draw_rounded_state(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_bitmap = render_text(text, colours['highlight'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = Surface((w, h), SRCALPHA).convert_alpha()
@@ -290,7 +290,7 @@ class BitmapFactory:
     def draw_angle_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text_shadow(text)
+        text_bitmap = render_text(text, colours['text'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         idle_surface = self.draw_angle_state((w, h), 'idle')
@@ -299,7 +299,7 @@ class BitmapFactory:
         hover_surface = self.draw_angle_state((w, h), 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text_shadow(text, colours['highlight'])
+        text_bitmap = render_text(text, colours['highlight'], True)
         text_x = centre(w, text_bitmap.get_rect().width)
         text_y = centre(h, text_bitmap.get_rect().height)
         armed_surface = self.draw_angle_state((w, h), 'armed')
