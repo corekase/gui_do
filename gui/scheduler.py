@@ -18,15 +18,14 @@ class Timers:
         pass
 
     class Interval:
-        def __init__(self, duration):
+        def __init__(self, duration, callback):
             self.timer = 0.0
             self.previous_time = time.time()
             self.duration = duration
-            self.callback = None
+            self.callback = callback
 
     def add_timer(self, id, duration, callback):
-        Timers.timers[id] = self.Interval(duration)
-        Timers.timers[id].callback = callback
+        Timers.timers[id] = self.Interval(duration, callback)
 
     def remove_timer(self, id):
         if id in Timers.timers.keys():
