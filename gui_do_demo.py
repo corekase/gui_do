@@ -21,7 +21,7 @@ class Demo:
         # create a gui manager
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
-        self.gui1 = gui_init(self.screen, fonts)
+        self.gui1, self.scheduler1 = gui_init(self.screen, fonts)
         # blit a background image to the screen surface
         set_pristine('backdrop.jpg')
         # screen label
@@ -185,7 +185,6 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.scheduler1 = self.gui1.get_scheduler()
         self.active_scheduler = 'main'
         self.running = True
 

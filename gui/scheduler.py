@@ -161,8 +161,8 @@ class Scheduler:
     def null(self):
         return
 
-    def interrupt_scheduler(self):
-        # set the scheduler to run with the given preamble, event handler, and postamble
+    def interrupt(self):
+        # break out of the scheduler loop, and return to the caller of start_scheduler
         self.change_scheduler = True
 
     def task_process(self):
