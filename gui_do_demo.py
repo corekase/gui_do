@@ -195,14 +195,14 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.active_scheduler = 'main'
+        self.active_scheduler = self.scheduler1
         self.running = True
 
     def run(self):
         while True:
-            if self.active_scheduler == 'main':
+            if self.active_scheduler == self.scheduler1:
                 self.scheduler1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
-            elif self.active_scheduler == 'gui2':
+            elif self.active_scheduler == self.scheduler2:
                 self.scheduler2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
 
     def preamble1(self):
@@ -229,7 +229,7 @@ class Demo:
             elif event.widget_id == 'gui2':
                 # switch to gui2
                 self.scheduler1.interrupt()
-                self.active_scheduler = 'gui2'
+                self.active_scheduler = self.scheduler2
             elif event.widget_id == 'mandel_reset':
                 self.scheduler1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
                 self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -318,7 +318,7 @@ class Demo:
             if event.widget_id == 'return':
                 # return button was clicked
                 self.scheduler2.interrupt()
-                self.active_scheduler = 'main'
+                self.active_scheduler = self.scheduler1
         elif event.type == GKind.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
