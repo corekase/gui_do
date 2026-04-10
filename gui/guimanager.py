@@ -63,7 +63,7 @@ class GuiManager:
     def add(self, gui_object, callback=None):
         if gui_object.ctype == CType.Window:
             # add this window to the gui
-            self.add_window(gui_object)
+            self.windows.append(gui_object)
             # make this object the destination for gui add commands
             self.active_object = gui_object
         elif gui_object.ctype == CType.Widget:
@@ -350,10 +350,6 @@ class GuiManager:
             return (x, y)
         else:
             return position
-
-    def add_window(self, window):
-        # add the window object to the list of windows
-        self.windows.append(window)
 
     def raise_window(self, window):
         # move the window to the last item in the list which has the highest priority
