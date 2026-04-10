@@ -49,7 +49,7 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, height - width, width, width)
             else:
                 from ..guimanager import GuiError
-                raise GuiError(f'style not implemented')
+                raise GuiError('style not implemented')
         # add arrowboxes
         if style != ScrBar.Skip:
             x, y, width, height = overall_rect
