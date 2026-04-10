@@ -29,15 +29,6 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, height - width, width, width)
                     scrollbar_rect = Rect(0, width, width, height - width * 2)
                     decrement_rect = Rect(0, 0, width, width)
-            elif style == ScrBar.Far:
-                if horizontal == HorVer.Horizontal:
-                    scrollbar_rect = Rect(0, 0, (width - height * 2), height)
-                    decrement_rect = Rect(width - (height * 2), 0, height, height)
-                    increment_rect = Rect(width - height, 0, height, height)
-                else:
-                    scrollbar_rect = Rect(0, 0, width, height - (width * 2))
-                    decrement_rect = Rect(0, height - (width * 2), width, width)
-                    increment_rect = Rect(0, height - width, width, width)
             elif style == ScrBar.Near:
                 if horizontal == HorVer.Horizontal:
                     decrement_rect = Rect(0, 0, height, height)
@@ -47,6 +38,15 @@ class Scrollbar(Frame):
                     decrement_rect = Rect(0, 0, width, width)
                     increment_rect = Rect(0, width, width, width)
                     scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
+            elif style == ScrBar.Far:
+                if horizontal == HorVer.Horizontal:
+                    scrollbar_rect = Rect(0, 0, (width - height * 2), height)
+                    decrement_rect = Rect(width - (height * 2), 0, height, height)
+                    increment_rect = Rect(width - height, 0, height, height)
+                else:
+                    scrollbar_rect = Rect(0, 0, width, height - (width * 2))
+                    decrement_rect = Rect(0, height - (width * 2), width, width)
+                    increment_rect = Rect(0, height - width, width, width)
             elif style != ScrBar.Skip:
                 from ..guimanager import GuiError
                 raise GuiError(f'style {style} not implemented')
