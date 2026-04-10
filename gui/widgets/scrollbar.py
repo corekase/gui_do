@@ -2,15 +2,13 @@ from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..constants import GType
-from ..guimanager import GuiManager
 from .frame import Frame, FrState
 from .arrowbox import ArrowBox
 from ..constants import colours, HorV, SArrows
+from ..command import add
 
 class Scrollbar(Frame):
     def __init__(self, id, overall_rect, horizontal, style, params):
-        # get a reference to the gui
-        self.gui = GuiManager()
         # list of registered sub-widgets
         self.registered = []
         # parse the style
@@ -62,8 +60,8 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(self.gui.add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
-            self.registered.append(self.gui.add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
+            self.registered.append(add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
+            self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
         else:
             scroll_area_rect = overall_rect
         # initialize common widget values

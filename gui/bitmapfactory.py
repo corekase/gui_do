@@ -10,13 +10,8 @@ from .command import set_font, set_last_font, render_text, centre
 from .constants import colours, BStyle
 
 class BitmapFactory:
-    # the following code makes the BitmapFactory a singleton.
-    # No matter how many times it is instantiated the result is the one object and its state
-    _instance_ = None
-    def __new__(cls):
-        if BitmapFactory._instance_ is None:
-            BitmapFactory._instance_ = object.__new__(cls)
-        return BitmapFactory._instance_
+    def __init__(self):
+        pass
 
     def draw_window_title_bar_bitmaps(self, title, width, size):
         saved = []

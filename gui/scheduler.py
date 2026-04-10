@@ -5,13 +5,8 @@ from enum import Enum
 TKind = Enum('TKind', ['Finished'])
 
 class Timers:
-    _instance_ = None
-    timers = {}
-
-    def __new__(cls):
-        if Timers._instance_ is None:
-            Timers._instance_ = object.__new__(cls)
-        return Timers._instance_
+    def __init__(self):
+        self.timers = {}
 
     class Interval:
         def __init__(self, duration, callback):
@@ -21,40 +16,31 @@ class Timers:
             self.callback = callback
 
     def add_timer(self, id, duration, callback):
-        Timers.timers[id] = self.Interval(duration, callback)
+        self.timers[id] = self.Interval(duration, callback)
 
     def remove_timer(self, id):
-        if id in Timers.timers.keys():
-            del Timers.timers[id]
+        if id in self.timers.keys():
+            del self.timers[id]
 
     def timer_updates(self):
         now_time = time.time()
         # iterate over a list copy of the keys because timers may be removed
         # during the loop
-        for id in list(Timers.timers.keys()):
-            if id not in Timers.timers:
+        for id in list(self.timers.keys()):
+            if id not in self.timers:
                 # timer was removed during the loop, so skip it
                 continue
-            elapsed_time = now_time - Timers.timers[id].previous_time
-            Timers.timers[id].previous_time = now_time
-            Timers.timers[id].timer += elapsed_time
-            if Timers.timers[id].timer >= Timers.timers[id].duration:
-                Timers.timers[id].timer -= Timers.timers[id].duration
-                Timers.timers[id].callback()
+            elapsed_time = now_time - self.timers[id].previous_time
+            self.timers[id].previous_time = now_time
+            self.timers[id].timer += elapsed_time
+            if self.timers[id].timer >= self.timers[id].duration:
+                self.timers[id].timer -= self.timers[id].duration
+                self.timers[id].callback()
 
 class Scheduler:
-    _instance_ = None
-
-    def __new__(cls):
-        if Scheduler._instance_ is None:
-            Scheduler._instance_ = object.__new__(cls)
-            Scheduler._instance_._populate_()
-        return Scheduler._instance_
-
-    def _populate_(self):
-        from .guimanager import GuiManager
+    def __init__(self, gui):
         self.tasks = {}
-        self.gui = GuiManager()
+        self.gui = gui
         # queued and finished lists
         self.tasks_ready = []
         self.tasks_processed = []

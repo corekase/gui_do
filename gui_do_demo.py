@@ -185,7 +185,7 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.scheduler = Scheduler()
+        self.scheduler = self.gui.get_scheduler()
         self.running = True
 
     def run(self):

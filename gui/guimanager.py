@@ -9,16 +9,7 @@ class GuiError(Exception):
     pass
 
 class GuiManager:
-    # the following code makes the GuiManager a singleton. there is one screen so there is one gui manager
-    # No matter how many times it is instantiated the result is the one object and its state
-    _instance_ = None
-    def __new__(cls):
-        if GuiManager._instance_ is None:
-            GuiManager._instance_ = object.__new__(cls)
-        return GuiManager._instance_
-
-    # instead of an __init__ we have initialize
-    def initialize(self, surface):
+    def __init__(self, surface):
         # screen surface
         self.surface = surface
         # list of widgets attached to the screen
@@ -55,9 +46,12 @@ class GuiManager:
         # whether or not drawing is buffered
         self.set_buffered(False)
         # scheduler
-        self.schedules = Scheduler()
+        self.schedules = Scheduler(self)
         # gui timers
         self.timers = Timers()
+
+    def get_scheduler(self):
+        return self.schedules
 
     def set_buffered(self, buffered):
         # if buffered is set to True then bitmaps under gui objects
@@ -75,8 +69,6 @@ class GuiManager:
             # make this object the destination for gui add commands
             self.active_object = gui_object
         elif gui_object.ctype == CType.Widget:
-            # give a reference to the gui
-            gui_object.gui = self
             # callback
             gui_object.callback = callback
             if self.active_object != None:

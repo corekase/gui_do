@@ -1,5 +1,4 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..guimanager import GuiManager
 from ..constants import GType
 from ..bitmapfactory import BitmapFactory
 from .widget import Widget
@@ -12,7 +11,6 @@ class Button(Widget):
         # initialize common widget values
         super().__init__(id, rect)
         self.GType = GType.Button
-        self.gui = GuiManager()
         # this object's timer
         self.timer_id = None
         if not skip_factory:
