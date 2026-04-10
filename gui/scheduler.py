@@ -11,11 +11,7 @@ class Timers:
     def __new__(cls):
         if Timers._instance_ is None:
             Timers._instance_ = object.__new__(cls)
-            Timers._instance_._populate_()
         return Timers._instance_
-
-    def _populate_(self):
-        pass
 
     class Interval:
         def __init__(self, duration, callback):
