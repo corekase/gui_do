@@ -118,7 +118,7 @@ class GuiManager:
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
             obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
         else:
-            raise Exception('set_backdrop() requires an image')
+            raise Exception('set_pristine requires an image')
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
     # copy graphic helper
