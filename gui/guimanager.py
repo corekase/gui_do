@@ -127,16 +127,6 @@ class GuiManager:
         bitmap.blit(surface, (0, 0), rect)
         return bitmap
 
-    def update_pristine(self, area=None, obj=None):
-        # copy area from screen surface to the pristine surface
-        # if area is None then update entire surface
-        if obj == None:
-            obj = self
-        if area == None:
-            area = obj.surface.get_rect()
-        x, y, _, _ = area
-        obj.pristine.blit(obj.surface, (x, y), area)
-
     def restore_pristine(self, area=None, obj=None):
         # if obj is ommited then restore_pristine is from the screen pristine.
         # if obj is supplied the object must have a obj.surface and an obj.pristine

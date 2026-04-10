@@ -51,9 +51,6 @@ def image_alpha(*names):
 def set_backdrop(image, obj=None):
     gui.set_backdrop(image, obj)
 
-def update_pristine(area=None, obj=None):
-    gui.update_pristine(area, obj)
-
 def restore_pristine(area=None, obj=None):
     gui.restore_pristine(area, obj)
 
