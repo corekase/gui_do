@@ -41,7 +41,7 @@ class Scheduler:
     def __init__(self, gui):
         self.tasks = {}
         self.gui = gui
-        self.change_scheduler = False
+        self.stop_scheduler = False
         # queued and finished lists
         self.tasks_ready = []
         self.tasks_processed = []
@@ -163,7 +163,7 @@ class Scheduler:
 
     def interrupt(self):
         # break out of the scheduler loop, and return to the caller of start_scheduler
-        self.change_scheduler = True
+        self.stop_scheduler = True
 
     def task_process(self):
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
@@ -192,8 +192,8 @@ class Scheduler:
         # a pygame clock to control the fps
         clock = pygame.time.Clock()
         while True:
-            if self.change_scheduler:
-                self.change_scheduler = False
+            if self.stop_scheduler:
+                self.stop_scheduler = False
                 break
             # call preamble
             preamble()
