@@ -190,7 +190,6 @@ class Demo:
         # circle positions
         self.positions = []
         # make bitmaps for circles
-        from gui.bitmapfactory import BitmapFactory
         factory = g.get_bitmapfactory()
         circle_bitmap_a = factory.draw_radio_bitmap(self.size, colours['light'], colours['none'])
         circle_bitmap_b = factory.draw_radio_bitmap(self.size, colours['medium'], colours['none'])
@@ -201,14 +200,14 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.active_scheduler = self.scheduler1
+        self.running_scheduler = self.scheduler1
         self.running = True
 
     def run(self):
         while True:
-            if self.active_scheduler == self.scheduler1:
+            if self.running_scheduler == self.scheduler1:
                 self.scheduler1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
-            elif self.active_scheduler == self.scheduler2:
+            elif self.running_scheduler == self.scheduler2:
                 self.scheduler2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
 
     def preamble1(self):
@@ -234,8 +233,7 @@ class Demo:
                 self.running = False
             elif event.widget_id == 'gui2':
                 # switch to gui2
-                self.scheduler1.interrupt()
-                self.active_scheduler = self.scheduler2
+                self.running_scheduler = self.scheduler1.interrupt(self.scheduler2)
             elif event.widget_id == 'life_reset':
                 self.life_reset()
             elif event.widget_id == 'mandel_reset':
@@ -325,8 +323,7 @@ class Demo:
         if event.type == GKind.Widget:
             if event.widget_id == 'return':
                 # return button was clicked
-                self.scheduler2.interrupt()
-                self.active_scheduler = self.scheduler1
+                self.running_scheduler = self.scheduler2.interrupt(self.scheduler1)
         elif event.type == GKind.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed

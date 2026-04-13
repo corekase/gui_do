@@ -163,9 +163,11 @@ class Scheduler:
     def null(self):
         return
 
-    def interrupt(self):
+    def interrupt(self, new_scheduler):
         # break out of the scheduler loop, and return to the caller of start_scheduler
         self.stop_scheduler = True
+        new_scheduler.gui.set_mouse_pos(self.gui.get_mouse_pos(), True)
+        return new_scheduler
 
     def task_process(self):
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
