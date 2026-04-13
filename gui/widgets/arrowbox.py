@@ -1,4 +1,3 @@
-from ..bitmapfactory import BitmapFactory
 from ..constants import GType, BStyle
 from .button import Button
 from ..widgets.registry import register_widget

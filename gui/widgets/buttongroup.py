@@ -1,6 +1,5 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..constants import GType
-from ..bitmapfactory import BitmapFactory
 from .widget import Widget
 from enum import Enum
 

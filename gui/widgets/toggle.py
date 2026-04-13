@@ -1,7 +1,6 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..constants import GType
 from .widget import Widget
-from ..bitmapfactory import BitmapFactory
 from enum import Enum
 
 State = Enum('State', ['Idle', 'Hover', 'Armed'])

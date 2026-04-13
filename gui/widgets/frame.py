@@ -1,7 +1,6 @@
 from enum import Enum
 from ..constants import GType
 from .widget import Widget
-from ..bitmapfactory import BitmapFactory
 
 FrState = Enum('State', ['Idle', 'Hover', 'Armed'])
 from ..widgets.registry import register_widget
