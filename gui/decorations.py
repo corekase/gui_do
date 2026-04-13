@@ -1,5 +1,5 @@
 # all the widgets are imported so that their decorator is initialized
-def init_decorations():
+def _init_decorations():
     from .forms.window import Window
     from .widgets.button import Button
     from .widgets.arrowbox import ArrowBox

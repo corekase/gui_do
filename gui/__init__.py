@@ -2,8 +2,8 @@
 import os
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager
-from .decorations import init_decorations
-init_decorations()
+from .decorations import _init_decorations
+_init_decorations()
 # import constants into the package namespace
 from .constants import colours, GKind, GType, HorV, SArrows, BStyle
 from .widgets.canvas import CKind
