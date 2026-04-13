@@ -74,7 +74,7 @@ class Demo:
         g.ButtonGroup('bg3', 'bg3b03', gridded(2, 3), BStyle.Angle, 'Angle 3')
         g.ButtonGroup('bg3', 'bg3b04', gridded(2, 4), BStyle.Angle, 'Angle 4')
         g.ButtonGroup('bg3', 'bg3b05', gridded(2, 5), BStyle.Angle, 'Angle 5')
-        lbg4= g.ButtonGroup('bg4', 'bg4b01', gridded(3, 1), BStyle.Radio, 'Radio 1')
+        lbg4 = g.ButtonGroup('bg4', 'bg4b01', gridded(3, 1), BStyle.Radio, 'Radio 1')
         g.ButtonGroup('bg4', 'bg4b02', gridded(3, 2), BStyle.Radio, 'Radio 2')
         g.ButtonGroup('bg4', 'bg4b03', gridded(3, 3), BStyle.Radio, 'Radio 3')
         g.ButtonGroup('bg4', 'bg4b04', gridded(3, 4), BStyle.Radio, 'Radio 4')
