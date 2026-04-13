@@ -10,12 +10,3 @@ class ArrowBox(Button):
         self.GType = GType.Arrowbox
         factory = self.gui.get_bitmapfactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)
-
-    def handle_event(self, event, window):
-        super().handle_event(event, window)
-
-    def leave(self):
-        super().leave()
-
-    def draw(self):
-        super().draw()
