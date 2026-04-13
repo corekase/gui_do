@@ -4,7 +4,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .scheduler import Timers, Scheduler
 from .constants import GKind, GType, CType
 from .bitmapfactory import BitmapFactory
-from .widgets.registry import create_widget, register_widget
+from .widgets.registry import create_widget
 class GuiError(Exception):
     pass
 
