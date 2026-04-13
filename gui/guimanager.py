@@ -327,11 +327,10 @@ class GuiManager:
                                     collision = widget.get_collide(window)
                                     if collision:
                                         self.update_focus(widget)
-                                    if self.handle_widget(widget, event, window):
-                                        if widget.GType == GType.ButtonGroup:
-                                            return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                                        return self.event(GKind.Widget, widget.id)
-                                    if collision:
+                                        if self.handle_widget(widget, event, window):
+                                            if widget.GType == GType.ButtonGroup:
+                                                return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                            return self.event(GKind.Widget, widget.id)
                                         widget_consumed = True
                                         widget_hit = widget
                     title_hit = self.active_window.get_title_bar_rect().collidepoint(self.get_mouse_pos())
