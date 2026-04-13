@@ -1,5 +1,5 @@
 from pygame import Rect
-from ..values.constants import CType
+from ...values.constants import CType
 # widget is the base class all gui widgets inherit from
 
 class Widget:

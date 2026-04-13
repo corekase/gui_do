@@ -2,12 +2,12 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..values.constants import GType
-from .widget import Widget
+from .utility.widget import Widget
 from .frame import Frame, FrState
 from enum import Enum
+from .utility.registry import register_widget
 
 CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
-from ..widgets.registry import register_widget
 
 @register_widget("Canvas")
 class Canvas(Widget):

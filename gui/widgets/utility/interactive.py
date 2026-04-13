@@ -18,7 +18,7 @@ class BaseInteractive(Widget):
             if self.state != State.Armed:
                 self.state = State.Idle
             return False
-        
+
         if self.state == State.Idle:
             self.state = State.Hover
         return True

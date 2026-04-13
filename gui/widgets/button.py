@@ -1,7 +1,7 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..values.constants import GType
-from .interactive import BaseInteractive, State
-from ..widgets.registry import register_widget
+from .utility.interactive import BaseInteractive, State
+from .utility.registry import register_widget
 
 @register_widget("Button")
 class Button(BaseInteractive):
@@ -21,14 +21,14 @@ class Button(BaseInteractive):
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
-        
+
         # Call base interactive logic first
         if not super().handle_event(event, window):
             if self.timer_id != None:
                 self.gui.timers.remove_timer(self.timer_id)
                 self.timer_id = None
             return False
-        
+
         # manage the state of the button
         if self.state == State.Hover:
             if event.type == MOUSEBUTTONDOWN:

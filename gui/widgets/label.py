@@ -1,7 +1,7 @@
 from ..values.constants import colours, GType
-from .widget import Widget
+from .utility.widget import Widget
 from pygame import Rect
-from ..widgets.registry import register_widget
+from .utility.registry import register_widget
 
 @register_widget("Label")
 class Label(Widget):

@@ -3,7 +3,7 @@ from pygame import Rect
 from ..guimanager import GuiManager
 from ..values.constants import colours, CType
 from .frame import Frame, FrState
-from .registry import register_widget
+from .utility.registry import register_widget
 
 @register_widget("Window")
 class Window:

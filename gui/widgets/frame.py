@@ -1,9 +1,9 @@
 from enum import Enum
 from ..values.constants import GType
-from .widget import Widget
+from .utility.widget import Widget
+from .utility.registry import register_widget
 
 FrState = Enum('State', ['Idle', 'Hover', 'Armed'])
-from ..widgets.registry import register_widget
 
 @register_widget("Frame")
 class Frame(Widget):

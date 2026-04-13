@@ -1,7 +1,7 @@
 import pygame
 from ..values.constants import GType
-from .widget import Widget
-from ..widgets.registry import register_widget
+from .utility.widget import Widget
+from .utility.registry import register_widget
 
 @register_widget("Image")
 class Image(Widget):

@@ -4,7 +4,7 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..values.constants import GType
 from .frame import Frame, FrState
 from ..values.constants import colours, HorV, SArrows
-from ..widgets.registry import register_widget
+from .utility.registry import register_widget
 
 @register_widget("Scrollbar")
 class Scrollbar(Frame):

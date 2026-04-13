@@ -3,9 +3,9 @@ from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
 from .values.constants import GKind, GType, CType
-from .widgets.interactive import State
+from .widgets.utility.interactive import State
 from .bitmapfactory import BitmapFactory
-from .widgets.registry import create_widget
+from .widgets.utility.registry import create_widget
 
 class GuiError(Exception):
     pass

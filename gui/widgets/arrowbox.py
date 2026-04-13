@@ -1,6 +1,6 @@
 from ..values.constants import GType, BStyle
 from .button import Button
-from ..widgets.registry import register_widget
+from .utility.registry import register_widget
 
 @register_widget("ArrowBox")
 class ArrowBox(Button):
