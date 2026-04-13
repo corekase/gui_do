@@ -313,13 +313,13 @@ class GuiManager:
                         self.mouse_delta = (self.dragging_window.x - self.mouse_pos[0],
                                             self.dragging_window.y - self.mouse_pos[1])
         # Priority: handle locked object
-        if self.locking_object is not None:
+        if self.locking_object != None:
             # We must route the event to the locking object, but not return Early/Pass
             # just because it returns False (which happens on non-activating events like motion)
             if self.locking_object.GType == GType.Scrollbar:
                 if self.locking_object.dragging:
                     id = self.locking_object.id
-                    widget_handled = self.handle_widget(self.locking_object, event)
+                    widget_handled = self.handle_widget(self.locking_object, event, self.locking_object.window)
                     if widget_handled:
                         return self.event(GKind.Widget, id)
                 else:
