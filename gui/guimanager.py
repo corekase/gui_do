@@ -246,30 +246,23 @@ class GuiManager:
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
-
         # check for system events (QUIT, KEYUP, KEYDOWN)
         if event.type in (QUIT, KEYUP, KEYDOWN):
             return self._handle_system_event(event)
-
         # find active window context
         self._update_active_window()
-
         # Priority 1: Window dragging
         if self.dragging:
             return self._handle_window_dragging(event)
-
         # Priority 2: Standard interaction (check for start of drag)
         if event.type == MOUSEBUTTONDOWN and not self.dragging and event.button == 1:
             self._check_window_drag_start(event)
-
         # Priority 3: Locked object
         if self.locking_object:
             return self._handle_locked_object(event)
-
         # Priority 4: Window / Screen widgets
         if self.active_window:
             return self._process_window_widgets(event)
-
         return self._process_screen_widgets(event)
 
     def _handle_mouse_motion(self, event):
@@ -337,11 +330,13 @@ class GuiManager:
         # clicking on the window the mouse is over raises it
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             self.raise_window(self.active_window)
+        hit_any = False
         for window in self.windows.copy()[::-1]:
             if window.get_visible() and window.get_window_rect().collidepoint(self.get_mouse_pos()):
                 for widget in window.widgets.copy()[::-1]:
                     if widget.get_visible():
                         if widget.get_collide(window):
+                            hit_any = True
                             self.update_focus(widget)
                             if self.handle_widget(widget, event, window):
                                 if widget.GType == GType.ButtonGroup:
@@ -351,7 +346,7 @@ class GuiManager:
                             if self.handle_widget(widget, event, window):
                                 return self.event(GKind.Group, widget.read_group(), widget.read_id())
                 # If window is visible but mouse not in window rect (or no widget hit), clear focus
-                if not window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                if not hit_any:
                     self.update_focus(None)
                 return self.event(GKind.Pass)
         self.update_focus(None)

@@ -27,20 +27,18 @@ class ButtonGroup(BaseInteractive):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
 
-        # Call base logic to update state (Hover/Idle)
+        # Collision detection
         collision = self.get_collide(window)
-        if not collision:
-            if self.state != State.Armed:
-                self.state = State.Idle
-            return False
 
-        if self.state != State.Armed:
-            self.state = State.Hover
+        # Handle interaction
+        if collision:
+            if self.state == State.Idle:
+                self.state = State.Hover
 
-        if self.state == State.Hover:
-            if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                self.select()
-                return True
+            if self.state == State.Hover:
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    self.select()
+                    return True
         return False
 
     def select(self):
