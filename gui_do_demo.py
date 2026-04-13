@@ -5,7 +5,7 @@ from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import gui_init, add, Window, set_pristine, set_font, set_cursor, restore_pristine
 from gui import colours, set_grid_properties, gridded
-from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image, Scheduler
+from gui import GKind, Canvas, CKind, Label, Button, ButtonGroup, Toggle, Scrollbar, Image
 from gui import HorV, SArrows, BStyle
 
 class Demo:
