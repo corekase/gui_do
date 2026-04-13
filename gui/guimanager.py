@@ -83,18 +83,6 @@ class GuiManager:
     def register_widget(self, name, cls):
         self.registry[name] = cls
 
-    def get_scheduler(self):
-        return self.schedules
-
-    def set_buffered(self, buffered):
-        # if buffered is set to True then bitmaps under gui objects
-        # will be saved and the undraw will undo them
-        self.buffered = buffered
-
-    def get_buffered(self):
-        # return whether or not drawing is buffered
-        return self.buffered
-
     def create(self, widget_type, *args, **kwargs):
         if widget_type not in self.registry:
             raise ValueError(f"Widget {widget_type} not registered.")
@@ -184,6 +172,15 @@ class GuiManager:
         self.cursor_image = image
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
+
+    def get_buffered(self):
+        # return whether or not drawing is buffered
+        return self.buffered
+
+    def set_buffered(self, buffered):
+        # if buffered is set to True then bitmaps under gui objects
+        # will be saved and the undraw will undo them
+        self.buffered = buffered
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

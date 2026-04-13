@@ -19,7 +19,7 @@ def gui_init(surface, fonts):
     pygame.mouse.set_visible(False)
     # create a gui manager and set it as the active one
     gui_instance = GuiManager(surface)
-    gui_scheduler = gui_instance.get_scheduler()
+    gui_scheduler = gui_instance.schedules
     set_active_gui(gui_instance)
     # load fonts, list of "name", "filename", and "size"
     for name, filename, size in fonts:
