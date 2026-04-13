@@ -84,8 +84,6 @@ class GuiManager:
         self.registry[name] = cls
 
     def create(self, widget_type, *args, **kwargs):
-        if widget_type not in self.registry:
-            raise ValueError(f"Widget {widget_type} not registered.")
         cls = self.registry[widget_type]
         obj = cls(self, *args, **kwargs)
         return self.add(obj)
