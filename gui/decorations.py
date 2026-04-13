@@ -1,4 +1,4 @@
-# all the widgets are imported so that their decorator is initialized
+# all the widgets are imported so that their decorators are initialized
 def _init_decorations():
     from .forms.window import Window
     from .widgets.button import Button
