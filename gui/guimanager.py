@@ -328,8 +328,7 @@ class GuiManager:
             window_consumed = False
             widget_consumed = False
             hit_any = False
-            working_windows = self.windows.copy()[::-1]
-            for window in working_windows:
+            for window in self.windows.copy()[::-1]:
                 if window.get_visible():
                     if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                         window_consumed = True
