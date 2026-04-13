@@ -4,35 +4,13 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .scheduler import Timers, Scheduler
 from .constants import GKind, GType, CType
 from .bitmapfactory import BitmapFactory
+from .widgets.registry import create_widget, register_widget
 class GuiError(Exception):
     pass
 
 class GuiManager:
     def __init__(self, surface, fonts):
         self.bitmap_factory = BitmapFactory()
-        # registry for widget types and their classes
-        self.registry = {}
-        from .widgets.arrowbox import ArrowBox
-        from .widgets.button import Button
-        from .widgets.buttongroup import ButtonGroup
-        from .widgets.canvas import Canvas
-        from .widgets.frame import Frame
-        from .widgets.image import Image
-        from .widgets.label import Label
-        from .widgets.scrollbar import Scrollbar
-        from .widgets.toggle import Toggle
-        from .forms.window import Window
-        # register widget types
-        self.register_widget('ArrowBox', ArrowBox)
-        self.register_widget('Button', Button)
-        self.register_widget('ButtonGroup', ButtonGroup)
-        self.register_widget('Canvas', Canvas)
-        self.register_widget('Frame', Frame)
-        self.register_widget('Image', Image)
-        self.register_widget('Label', Label)
-        self.register_widget('Scrollbar', Scrollbar)
-        self.register_widget('Toggle', Toggle)
-        self.register_widget('Window', Window)
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
@@ -79,20 +57,8 @@ class GuiManager:
         # gui timers
         self.timers = Timers()
 
-    def __getattr__(self, name):
-        if name in self.registry:
-            def wrapper(*args, **kwargs):
-                return self.create(name, *args, **kwargs)
-            return wrapper
-        raise AttributeError(name)
-
-    def register_widget(self, name, cls):
-        self.registry[name] = cls
-
     def create(self, widget_type, *args, **kwargs):
-        cls = self.registry[widget_type]
-        obj = cls(self, *args, **kwargs)
-        return self.add(obj)
+        return self.add(create_widget(widget_type, self, *args, **kwargs))
 
     def add(self, gui_object):
         if gui_object.ctype == CType.Window:

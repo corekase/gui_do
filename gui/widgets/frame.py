@@ -4,7 +4,9 @@ from .widget import Widget
 from ..bitmapfactory import BitmapFactory
 
 FrState = Enum('State', ['Idle', 'Hover', 'Armed'])
+from ..widgets.registry import register_widget
 
+@register_widget("Frame")
 class Frame(Widget):
     def __init__(self, gui, id, rect):
         super().__init__(gui, id, rect)

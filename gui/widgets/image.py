@@ -1,7 +1,9 @@
 import pygame
 from ..constants import GType
 from .widget import Widget
+from ..widgets.registry import register_widget
 
+@register_widget("Image")
 class Image(Widget):
     def __init__(self, gui, id, rect, image, automatic_pristine=False, scale=True):
         # initialize id and rect

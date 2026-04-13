@@ -5,7 +5,9 @@ from ..bitmapfactory import BitmapFactory
 from enum import Enum
 
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
+from ..widgets.registry import register_widget
 
+@register_widget("Toggle")
 class Toggle(Widget):
     def __init__(self, gui, id, rect, style, pushed, pressed_text, raised_text=None):
         super().__init__(gui, id, rect)

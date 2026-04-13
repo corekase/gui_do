@@ -1,10 +1,11 @@
 import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
-from ..bitmapfactory import BitmapFactory
 from ..constants import colours, CType
 from ..widgets.frame import Frame, FrState
+from ..widgets.registry import register_widget
 
+@register_widget("Window")
 class Window:
     def __init__(self, gui, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named

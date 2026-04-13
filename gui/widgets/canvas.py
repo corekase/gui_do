@@ -7,7 +7,9 @@ from .frame import Frame, FrState
 from enum import Enum
 
 CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
+from ..widgets.registry import register_widget
 
+@register_widget("Canvas")
 class Canvas(Widget):
     def __init__(self, gui, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
         super().__init__(gui, id, rect)

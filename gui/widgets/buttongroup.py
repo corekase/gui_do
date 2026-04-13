@@ -5,7 +5,9 @@ from .widget import Widget
 from enum import Enum
 
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
+from ..widgets.registry import register_widget
 
+@register_widget("ButtonGroup")
 class ButtonGroup(Widget):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}

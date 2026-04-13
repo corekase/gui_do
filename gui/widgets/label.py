@@ -1,7 +1,9 @@
 from ..constants import colours, GType
 from .widget import Widget
 from pygame import Rect
+from ..widgets.registry import register_widget
 
+@register_widget("Label")
 class Label(Widget):
     def __init__(self, gui, position, text, shadow=False):
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))
