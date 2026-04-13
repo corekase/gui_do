@@ -14,7 +14,7 @@ class Button(Widget):
         # this object's timer
         self.timer_id = None
         if not skip_factory:
-            factory = BitmapFactory()
+            factory = self.gui.get_bitmapfactory()
             (self.idle, self.hover, self.armed), self.hit_rect = \
                 factory.get_styled_bitmaps(style, text, rect)
         self.state = State.Idle

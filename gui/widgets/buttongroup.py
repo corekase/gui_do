@@ -15,7 +15,7 @@ class ButtonGroup(Widget):
         super().__init__(gui, id, rect)
         self.GType = GType.ButtonGroup
         self.state = State.Idle
-        factory = BitmapFactory()
+        factory = self.gui.get_bitmapfactory()
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             factory.get_styled_bitmaps(style, text, rect)

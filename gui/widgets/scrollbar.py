@@ -3,7 +3,6 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..constants import GType
 from .frame import Frame, FrState
-from .arrowbox import ArrowBox
 from ..constants import colours, HorV, SArrows
 
 class Scrollbar(Frame):

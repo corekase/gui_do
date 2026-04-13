@@ -14,7 +14,7 @@ class Toggle(Widget):
         self.state = State.Idle
         if raised_text == None:
             raised_text = pressed_text
-        factory = BitmapFactory()
+        factory = self.gui.get_bitmapfactory()
         (_, _, self.pressed_text_bitmap), rect1 = \
             factory.get_styled_bitmaps(style, pressed_text, rect)
         (self.raised_text_bitmap, self.hovered_bitmap, _), rect2 = \

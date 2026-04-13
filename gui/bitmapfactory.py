@@ -1,3 +1,4 @@
+import os
 import pygame
 from math import cos, sin, radians
 from pygame.surface import Surface
@@ -6,33 +7,59 @@ from collections import deque
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
-from .command import set_font, set_last_font, render_text, centre
 from .constants import colours, BStyle
 
 class BitmapFactory:
     def __init__(self):
-        pass
+        # current font object
+        self.font = None
+        # last font object
+        self.last_font = None
+        # key:value -> key, name of font and value, font object
+        self.fonts = {}
 
-    def draw_window_title_bar_bitmaps(self, title, width, size):
+    # load font
+    def load_font(self, name, font, size):
+        self.fonts[name] = pygame.font.Font(self.file_resource('fonts', font), size)
+
+    # make a font active
+    def set_font(self, name):
+        self.last_font = self.font
+        self.font = self.fonts[name]
+
+    # restore the previous font
+    def set_last_font(self):
+        self.font = self.last_font
+    # filename helper
+    def file_resource(self, *names):
+        # return an os-independent filename inside data path
+        return os.path.join('data', *names)
+
+    # alpha image loading
+    def image_alpha(self, *names):
+        # load, convert with an alpha channel, and return an image surface
+        return pygame.image.load(self.file_resource(*names)).convert_alpha()
+
+    def draw_window_title_bar_bitmaps(self, gui, title, width, size):
         saved = []
-        saved.append(self.draw_window_title_bar_bitmap(title, width, size, colours['full']))
-        saved.append(self.draw_window_title_bar_bitmap(title, width, size, colours['highlight']))
+        saved.append(self.draw_window_title_bar_bitmap(gui, title, width, size, colours['full']))
+        saved.append(self.draw_window_title_bar_bitmap(gui, title, width, size, colours['highlight']))
         return saved
 
-    def draw_window_title_bar_bitmap(self, title, width, size, colour=None):
+    def draw_window_title_bar_bitmap(self, gui, title, width, size, colour=None):
         from .widgets.frame import Frame, FrState
-        set_font('titlebar')
+        self.set_font('titlebar')
         if colour == None:
             colour = colours['highlight']
         title_surface = Surface((width, size)).convert()
-        frame = Frame(None, 'titlebar_frame', Rect(0, 0, width, size))
+        frame = Frame(gui, 'titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
-        text = render_text(title, colour, True)
-        text_y = centre(size, text.get_rect().height)
+        text = self.render_text(title, colour, True)
+        text_y = self.centre(size, text.get_rect().height)
         title_surface.blit(text, (5, text_y))
-        set_last_font()
+        self.set_last_font()
         return title_surface
 
     def draw_window_lower_widget_bitmap(self, size, col1, col2):
@@ -42,7 +69,7 @@ class BitmapFactory:
         panel_size = int(size * 0.45)
         offset = int(size * 0.2)
         offsetb = offset // 2
-        base = centre(size, (panel_size + offset))
+        base = self.centre(size, (panel_size + offset))
         panel1 = Rect(base, base - gutter, panel_size + offsetb, panel_size + gutter + offsetb)
         panel2 = Rect(base + offset, base + gutter + offsetb, panel_size + offsetb, panel_size + gutter + offsetb)
         rect(surface, col1, panel1)
@@ -83,9 +110,9 @@ class BitmapFactory:
     def draw_box_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text(text, colours['text'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['text'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         idle_surface = Surface((w, h)).convert()
         self.draw_box_bitmaps(idle_surface, 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
@@ -94,9 +121,9 @@ class BitmapFactory:
         self.draw_box_bitmaps(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text(text, colours['highlight'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['highlight'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         armed_surface = Surface((w, h)).convert()
         self.draw_box_bitmaps(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
@@ -141,12 +168,12 @@ class BitmapFactory:
         return (idle_bitmap, hover_bitmap, armed_bitmap), idle_rect
 
     def draw_radio_style_bitmap(self, rect, text, col1, col2):
-        text_bitmap = render_text(text, colours['text'], True)
+        text_bitmap = self.render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         gutter = int(text_height * 0.1)
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
-        y_offset = centre(rect.height, text_height)
+        y_offset = self.centre(rect.height, text_height)
         button_complete.blit(radio_bitmap, (0, y_offset))
         button_complete.blit(text_bitmap, (radio_bitmap.get_rect().width + 2, y_offset))
         return button_complete, Rect(rect.x + gutter, rect.y + y_offset, text_height + text_width + gutter, text_height)
@@ -172,10 +199,10 @@ class BitmapFactory:
         return (idle_bitmap, hover_bitmap, armed_bitmap), hit_rect
 
     def draw_check_style_bitmap(self, rect, state, text):
-        text_bitmap = render_text(text, colours['text'], True)
+        text_bitmap = self.render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         check_bitmap = self.draw_check_bitmap(state, text_height)
-        y_offset = centre(rect.height, text_height)
+        y_offset = self.centre(rect.height, text_height)
         gutter = int(text_height * 0.1)
         x_size = text_height + text_width
         button_complete = Surface((rect.width, rect.height), SRCALPHA).convert_alpha()
@@ -185,7 +212,7 @@ class BitmapFactory:
 
     def draw_check_bitmap(self, state, size):
         shrink = size * 0.65
-        offset = int(centre(size, shrink))
+        offset = int(self.centre(size, shrink))
         box_bitmap = Surface((int(shrink), int(shrink))).convert()
         check_bitmap = Surface((size, size), SRCALPHA).convert_alpha()
         if state == 0:
@@ -207,9 +234,9 @@ class BitmapFactory:
     def draw_rounded_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text(text, colours['text'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['text'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         idle_surface = Surface((w, h), SRCALPHA).convert_alpha()
         self.draw_rounded_state(idle_surface, 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
@@ -218,9 +245,9 @@ class BitmapFactory:
         self.draw_rounded_state(hover_surface, 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text(text, colours['highlight'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['highlight'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         armed_surface = Surface((w, h), SRCALPHA).convert_alpha()
         self.draw_rounded_state(armed_surface, 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
@@ -251,18 +278,18 @@ class BitmapFactory:
     def draw_angle_style_bitmaps(self, text, rect):
         _, _, w, h = rect
         saved = []
-        text_bitmap = render_text(text, colours['text'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['text'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         idle_surface = self.draw_angle_state((w, h), 'idle')
         idle_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(idle_surface)
         hover_surface = self.draw_angle_state((w, h), 'hover')
         hover_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(hover_surface)
-        text_bitmap = render_text(text, colours['highlight'], True)
-        text_x = centre(w, text_bitmap.get_rect().width)
-        text_y = centre(h, text_bitmap.get_rect().height)
+        text_bitmap = self.render_text(text, colours['highlight'], True)
+        text_x = self.centre(w, text_bitmap.get_rect().width)
+        text_y = self.centre(h, text_bitmap.get_rect().height)
         armed_surface = self.draw_angle_state((w, h), 'armed')
         armed_surface.blit(text_bitmap, (text_x, text_y))
         saved.append(armed_surface)
@@ -307,8 +334,8 @@ class BitmapFactory:
         # scale polygon to bitmap size
         glyph = smoothscale(glyph, (size, size))
         # centre the glyph in the state bitmap area
-        glyph_x = centre(rect.width, size)
-        glyph_y = centre(rect.height, size)
+        glyph_x = self.centre(rect.width, size)
+        glyph_y = self.centre(rect.height, size)
         # draw each state with the glyph
         for state in states:
             # for each state of the frame bitmap add a glyph bitmap over it
@@ -344,3 +371,24 @@ class BitmapFactory:
         blit_array(surface, pixels)
         # delete the array because it implicitly affects locks/unlocks of the surface
         del pixels
+
+    # layout helper
+    def centre(self, bigger, smaller):
+        # helper function that returns a centred position
+        return int((bigger / 2) - (smaller / 2))
+
+    # render text with or without a shadow
+    def render_text(self, text, colour=colours['text'], shadow=False, shadow_colour=colours['none']):
+        # return a bitmap of the text and a shadow of given colours
+        text_bitmap = self.font.render(text, True, colour, None)
+        text_rect = text_bitmap.get_rect()
+        w, h = text_rect.width, text_rect.height
+        if shadow:
+            w += 1
+            h += 1
+        bitmap = pygame.Surface((w, h), pygame.SRCALPHA)
+        if shadow:
+            shadow_bitmap = self.font.render(text, True, shadow_colour, None)
+            bitmap.blit(shadow_bitmap, (1, 1))
+        bitmap.blit(text_bitmap, (0, 0))
+        return bitmap

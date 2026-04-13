@@ -1,15 +1,15 @@
 import pygame
-import os
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
 from .constants import GKind, GType, CType
-from .command import load_font, file_resource, image_alpha
+from .bitmapfactory import BitmapFactory
 class GuiError(Exception):
     pass
 
 class GuiManager:
     def __init__(self, surface, fonts):
+        self.bitmap_factory = BitmapFactory()
         # registry for widget types and their classes
         self.registry = {}
         from .widgets.arrowbox import ArrowBox
@@ -35,10 +35,10 @@ class GuiManager:
         self.register_widget('Window', Window)
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
-
         for name, filename, size in fonts:
-            load_font(name, filename, size)
-
+            self.get_bitmapfactory().load_font(name, filename, size)
+        # gridded layout variables and functions
+        self.position_gridded = self.x_size_pixels_gridded = self.y_size_pixels_gridded = self.space_size_gridded = self.use_rect = None
         # screen surface
         self.surface = surface
         # list of widgets attached to the screen
@@ -118,6 +118,25 @@ class GuiManager:
             raise GuiError('gui_object must be a window or widget')
         return gui_object
 
+    # setup variables for gridded
+    def set_grid_properties(self, anchor, width, height, spacing, use_rect_flag=True):
+        self.position_gridded = anchor
+        self.x_size_pixels_gridded = width
+        self.y_size_pixels_gridded = height
+        self.space_size_gridded = spacing
+        self.use_rect = use_rect_flag
+
+    # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
+    def gridded(self, x, y):
+        base_x, base_y = self.position_gridded
+        # (size per unit) + (space per unit)
+        x_pos = base_x + (x * self.x_size_pixels_gridded) + (x * self.space_size_gridded)
+        y_pos = base_y + (y * self.y_size_pixels_gridded) + (y * self.space_size_gridded)
+        if self.use_rect:
+            return Rect(x_pos, y_pos, self.x_size_pixels_gridded, self.y_size_pixels_gridded)
+        else:
+            return (x_pos, y_pos)
+
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point, window):
         # fall-through function, perform the conversion only if necessary
@@ -143,8 +162,7 @@ class GuiManager:
         if obj == None:
             obj = self
         if image != None:
-            from .command import file_resource
-            bitmap = pygame.image.load(file_resource('images', image))
+            bitmap = pygame.image.load(self.bitmap_factory.file_resource('images', image))
             _, _, width, height = obj.surface.get_rect()
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
             obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
@@ -173,7 +191,7 @@ class GuiManager:
 
     def set_cursor(self, hotspot, image):
         # set the cursor image and hotspot
-        self.cursor_image = image_alpha('cursors', image)
+        self.cursor_image = self.bitmap_factory.image_alpha('cursors', image)
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
@@ -188,6 +206,9 @@ class GuiManager:
 
     def get_scheduler(self):
         return self.scheduler
+
+    def get_bitmapfactory(self):
+        return self.bitmap_factory
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method

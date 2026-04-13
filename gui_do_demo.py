@@ -4,9 +4,9 @@ from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import GuiManager
-from gui import colours, set_font, set_grid_properties, gridded
 from gui import GKind, CKind
 from gui import HorV, SArrows, BStyle
+from gui import colours
 
 class Demo:
     def __init__(self):
@@ -23,90 +23,91 @@ class Demo:
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
         # begin gui1
         g = GuiManager(self.screen, fonts)
+        b = g.get_bitmapfactory()
         self.scheduler1 = g.get_scheduler()
         # blit a background image to the screen surface
         g.set_pristine('backdrop.jpg')
         # screen label
-        set_font('gui_do')
+        b.set_font('gui_do')
         g.Label((50, 30), 'gui_do', True)
-        set_font('normal')
+        b.set_font('normal')
         widget_height = 28
         # exit button
         g.Button('exit', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Exit')
         # setup for the togglebuttons
-        set_grid_properties((85, 1042), 120, widget_height, 4)
+        g.set_grid_properties((85, 1042), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_button = g.Button('gui2', gridded(0, 0), BStyle.Round, 'GUI 2')
+        self.gui2_button = g.Button('gui2', g.gridded(0, 0), BStyle.Round, 'GUI 2')
         # control whether the background circles are drawn
-        self.circles_toggle = g.Toggle('circles', gridded(1, 0), BStyle.Round, False, 'Circles')
+        self.circles_toggle = g.Toggle('circles', g.gridded(1, 0), BStyle.Round, False, 'Circles')
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = g.Toggle('buttons_window', gridded(2, 0), BStyle.Round, False, 'Buttons')
+        self.buttons_toggle = g.Toggle('buttons_window', g.gridded(2, 0), BStyle.Round, False, 'Buttons')
         # control whether the scrollbar window is visible
-        self.scrollbars_toggle = g.Toggle('scrollbar_window', gridded(3, 0), BStyle.Round, False, 'Scrollbars')
+        self.scrollbars_toggle = g.Toggle('scrollbar_window', g.gridded(3, 0), BStyle.Round, False, 'Scrollbars')
         # control whether the life window is visible
-        self.life_toggle = g.Toggle('life_window', gridded(4, 0), BStyle.Round, False, 'Life')
+        self.life_toggle = g.Toggle('life_window', g.gridded(4, 0), BStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
-        self.mandel_toggle = g.Toggle('mandel_window', gridded(5, 0), BStyle.Round, False, 'Mandelbrot')
+        self.mandel_toggle = g.Toggle('mandel_window', g.gridded(5, 0), BStyle.Round, False, 'Mandelbrot')
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
-        set_grid_properties((10, 10), 120, widget_height, 2)
+        g.set_grid_properties((10, 10), 120, widget_height, 2)
         self.button_group_win = g.Window('Button Groups, Buttons, and Toggles',
-                                       (x_pos, y_pos), (gridded(7, 0).right + 10, gridded(0, 6).bottom))
-        g.Label(gridded(0, 0), 'G1 Boxed', True)
-        g.Label(gridded(1, 0), 'G2 Rounded', True)
-        g.Label(gridded(2, 0), 'G3 Angled', True)
-        g.Label(gridded(3, 0), 'G4 Radioed', True)
-        g.Label(gridded(4, 0), 'G5 Checked', True)
-        g.Label(gridded(5, 0), 'G6 Mixed', True)
-        g.Label(gridded(6, 0), 'Buttons', True)
-        g.Label(gridded(7, 0), 'Toggles', True)
-        lbg1 = g.ButtonGroup('bg1', 'bg1b01', gridded(0, 1), BStyle.Box, 'Box 1')
-        g.ButtonGroup('bg1', 'bg1b02', gridded(0, 2), BStyle.Box, 'Box 2',)
-        g.ButtonGroup('bg1', 'bg1b03', gridded(0, 3), BStyle.Box, 'Box 3',)
-        g.ButtonGroup('bg1', 'bg1b04', gridded(0, 4), BStyle.Box, 'Box 4',)
-        g.ButtonGroup('bg1', 'bg1b05', gridded(0, 5), BStyle.Box, 'Box 5',)
-        lbg2 = g.ButtonGroup('bg2', 'bg2b01', gridded(1, 1), BStyle.Round, 'Round 1')
-        g.ButtonGroup('bg2', 'bg2b02', gridded(1, 2), BStyle.Round, 'Round 2')
-        g.ButtonGroup('bg2', 'bg2b03', gridded(1, 3), BStyle.Round, 'Round 3')
-        g.ButtonGroup('bg2', 'bg2b04', gridded(1, 4), BStyle.Round, 'Round 4')
-        g.ButtonGroup('bg2', 'bg2b05', gridded(1, 5), BStyle.Round, 'Round 5')
-        lbg3 = g.ButtonGroup('bg3', 'bg3b01', gridded(2, 1), BStyle.Angle, 'Angle 1')
-        g.ButtonGroup('bg3', 'bg3b02', gridded(2, 2), BStyle.Angle, 'Angle 2')
-        g.ButtonGroup('bg3', 'bg3b03', gridded(2, 3), BStyle.Angle, 'Angle 3')
-        g.ButtonGroup('bg3', 'bg3b04', gridded(2, 4), BStyle.Angle, 'Angle 4')
-        g.ButtonGroup('bg3', 'bg3b05', gridded(2, 5), BStyle.Angle, 'Angle 5')
-        lbg4 = g.ButtonGroup('bg4', 'bg4b01', gridded(3, 1), BStyle.Radio, 'Radio 1')
-        g.ButtonGroup('bg4', 'bg4b02', gridded(3, 2), BStyle.Radio, 'Radio 2')
-        g.ButtonGroup('bg4', 'bg4b03', gridded(3, 3), BStyle.Radio, 'Radio 3')
-        g.ButtonGroup('bg4', 'bg4b04', gridded(3, 4), BStyle.Radio, 'Radio 4')
-        g.ButtonGroup('bg4', 'bg4b05', gridded(3, 5), BStyle.Radio, 'Radio 5')
-        lbg5 = g.ButtonGroup('bg5', 'bg5b01', gridded(4, 1), BStyle.Check, 'Check 1')
-        g.ButtonGroup('bg5', 'bg5b02', gridded(4, 2), BStyle.Check, 'Check 2')
-        g.ButtonGroup('bg5', 'bg5b03', gridded(4, 3), BStyle.Check, 'Check 3')
-        g.ButtonGroup('bg5', 'bg5b04', gridded(4, 4), BStyle.Check, 'Check 4')
-        g.ButtonGroup('bg5', 'bg5b05', gridded(4, 5), BStyle.Check, 'Check 5')
-        lbg6 = g.ButtonGroup('bg6', 'bg6b01', gridded(5, 1), BStyle.Box, 'Mix 1')
-        g.ButtonGroup('bg6', 'bg6b02', gridded(5, 2), BStyle.Round, 'Mix 2')
-        g.ButtonGroup('bg6', 'bg6b03', gridded(5, 3), BStyle.Angle, 'Mix 3')
-        g.ButtonGroup('bg6', 'bg6b04', gridded(5, 4), BStyle.Radio, 'Mix 4')
-        g.ButtonGroup('bg6', 'bg6b05', gridded(5, 5), BStyle.Check, 'Mix 5')
-        g.Button('b1', gridded(6, 1), BStyle.Box, 'Button 1')
-        g.Button('b2', gridded(6, 2), BStyle.Round, 'Button 2')
-        g.Button('b3', gridded(6, 3), BStyle.Angle, 'Button 3')
-        g.Button('b4', gridded(6, 4), BStyle.Radio, 'Button 4')
-        g.Button('b5', gridded(6, 5), BStyle.Check, 'Button 5')
-        g.Toggle('t1', gridded(7, 1), BStyle.Box, False, 'Push 1', 'Raise 1')
-        g.Toggle('t2', gridded(7, 2), BStyle.Round, False, 'Push 2', 'Raise 2')
-        g.Toggle('t3', gridded(7, 3), BStyle.Angle, False, 'Push 3', 'Raise 3')
-        g.Toggle('t4', gridded(7, 4), BStyle.Radio, False, 'Push 4', 'Raise 4')
-        g.Toggle('t5', gridded(7, 5), BStyle.Check, False, 'Push 5', 'Raise 5')
-        set_grid_properties((10, gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
-        self.label1 = g.Label(gridded(0, 0), f'ID: {lbg1.read_id()}', True)
-        self.label2 = g.Label(gridded(1, 0), f'ID: {lbg2.read_id()}', True)
-        self.label3 = g.Label(gridded(2, 0), f'ID: {lbg3.read_id()}', True)
-        self.label4 = g.Label(gridded(3, 0), f'ID: {lbg4.read_id()}', True)
-        self.label5 = g.Label(gridded(4, 0), f'ID: {lbg5.read_id()}', True)
-        self.label6 = g.Label(gridded(5, 0), f'ID: {lbg6.read_id()}', True)
+                                       (x_pos, y_pos), (g.gridded(7, 0).right + 10, g.gridded(0, 6).bottom))
+        g.Label(g.gridded(0, 0), 'G1 Boxed', True)
+        g.Label(g.gridded(1, 0), 'G2 Rounded', True)
+        g.Label(g.gridded(2, 0), 'G3 Angled', True)
+        g.Label(g.gridded(3, 0), 'G4 Radioed', True)
+        g.Label(g.gridded(4, 0), 'G5 Checked', True)
+        g.Label(g.gridded(5, 0), 'G6 Mixed', True)
+        g.Label(g.gridded(6, 0), 'Buttons', True)
+        g.Label(g.gridded(7, 0), 'Toggles', True)
+        lbg1 = g.ButtonGroup('bg1', 'bg1b01', g.gridded(0, 1), BStyle.Box, 'Box 1')
+        g.ButtonGroup('bg1', 'bg1b02', g.gridded(0, 2), BStyle.Box, 'Box 2',)
+        g.ButtonGroup('bg1', 'bg1b03', g.gridded(0, 3), BStyle.Box, 'Box 3',)
+        g.ButtonGroup('bg1', 'bg1b04', g.gridded(0, 4), BStyle.Box, 'Box 4',)
+        g.ButtonGroup('bg1', 'bg1b05', g.gridded(0, 5), BStyle.Box, 'Box 5',)
+        lbg2 = g.ButtonGroup('bg2', 'bg2b01', g.gridded(1, 1), BStyle.Round, 'Round 1')
+        g.ButtonGroup('bg2', 'bg2b02', g.gridded(1, 2), BStyle.Round, 'Round 2')
+        g.ButtonGroup('bg2', 'bg2b03', g.gridded(1, 3), BStyle.Round, 'Round 3')
+        g.ButtonGroup('bg2', 'bg2b04', g.gridded(1, 4), BStyle.Round, 'Round 4')
+        g.ButtonGroup('bg2', 'bg2b05', g.gridded(1, 5), BStyle.Round, 'Round 5')
+        lbg3 = g.ButtonGroup('bg3', 'bg3b01', g.gridded(2, 1), BStyle.Angle, 'Angle 1')
+        g.ButtonGroup('bg3', 'bg3b02', g.gridded(2, 2), BStyle.Angle, 'Angle 2')
+        g.ButtonGroup('bg3', 'bg3b03', g.gridded(2, 3), BStyle.Angle, 'Angle 3')
+        g.ButtonGroup('bg3', 'bg3b04', g.gridded(2, 4), BStyle.Angle, 'Angle 4')
+        g.ButtonGroup('bg3', 'bg3b05', g.gridded(2, 5), BStyle.Angle, 'Angle 5')
+        lbg4 = g.ButtonGroup('bg4', 'bg4b01', g.gridded(3, 1), BStyle.Radio, 'Radio 1')
+        g.ButtonGroup('bg4', 'bg4b02', g.gridded(3, 2), BStyle.Radio, 'Radio 2')
+        g.ButtonGroup('bg4', 'bg4b03', g.gridded(3, 3), BStyle.Radio, 'Radio 3')
+        g.ButtonGroup('bg4', 'bg4b04', g.gridded(3, 4), BStyle.Radio, 'Radio 4')
+        g.ButtonGroup('bg4', 'bg4b05', g.gridded(3, 5), BStyle.Radio, 'Radio 5')
+        lbg5 = g.ButtonGroup('bg5', 'bg5b01', g.gridded(4, 1), BStyle.Check, 'Check 1')
+        g.ButtonGroup('bg5', 'bg5b02', g.gridded(4, 2), BStyle.Check, 'Check 2')
+        g.ButtonGroup('bg5', 'bg5b03', g.gridded(4, 3), BStyle.Check, 'Check 3')
+        g.ButtonGroup('bg5', 'bg5b04', g.gridded(4, 4), BStyle.Check, 'Check 4')
+        g.ButtonGroup('bg5', 'bg5b05', g.gridded(4, 5), BStyle.Check, 'Check 5')
+        lbg6 = g.ButtonGroup('bg6', 'bg6b01', g.gridded(5, 1), BStyle.Box, 'Mix 1')
+        g.ButtonGroup('bg6', 'bg6b02', g.gridded(5, 2), BStyle.Round, 'Mix 2')
+        g.ButtonGroup('bg6', 'bg6b03', g.gridded(5, 3), BStyle.Angle, 'Mix 3')
+        g.ButtonGroup('bg6', 'bg6b04', g.gridded(5, 4), BStyle.Radio, 'Mix 4')
+        g.ButtonGroup('bg6', 'bg6b05', g.gridded(5, 5), BStyle.Check, 'Mix 5')
+        g.Button('b1', g.gridded(6, 1), BStyle.Box, 'Button 1')
+        g.Button('b2', g.gridded(6, 2), BStyle.Round, 'Button 2')
+        g.Button('b3', g.gridded(6, 3), BStyle.Angle, 'Button 3')
+        g.Button('b4', g.gridded(6, 4), BStyle.Radio, 'Button 4')
+        g.Button('b5', g.gridded(6, 5), BStyle.Check, 'Button 5')
+        g.Toggle('t1', g.gridded(7, 1), BStyle.Box, False, 'Push 1', 'Raise 1')
+        g.Toggle('t2', g.gridded(7, 2), BStyle.Round, False, 'Push 2', 'Raise 2')
+        g.Toggle('t3', g.gridded(7, 3), BStyle.Angle, False, 'Push 3', 'Raise 3')
+        g.Toggle('t4', g.gridded(7, 4), BStyle.Radio, False, 'Push 4', 'Raise 4')
+        g.Toggle('t5', g.gridded(7, 5), BStyle.Check, False, 'Push 5', 'Raise 5')
+        g.set_grid_properties((10, g.gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
+        self.label1 = g.Label(g.gridded(0, 0), f'ID: {lbg1.read_id()}', True)
+        self.label2 = g.Label(g.gridded(1, 0), f'ID: {lbg2.read_id()}', True)
+        self.label3 = g.Label(g.gridded(2, 0), f'ID: {lbg3.read_id()}', True)
+        self.label4 = g.Label(g.gridded(3, 0), f'ID: {lbg4.read_id()}', True)
+        self.label5 = g.Label(g.gridded(4, 0), f'ID: {lbg5.read_id()}', True)
+        self.label6 = g.Label(g.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
         # make the scrollbar window
         y_pos += 248
         self.scrollbar_win = g.Window('Scrollbars', (x_pos, y_pos), (320, 362))
@@ -127,9 +128,9 @@ class Demo:
         x += 22
         g.Scrollbar(f'scrollbar_h', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Far, (100, 0, 30, 10))
         g.Image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False)
-        set_font('scroll')
+        b.set_font('scroll')
         g.Label((x + 30, y + 215), 'Scrollbars!', True)
-        set_font('normal')
+        b.set_font('normal')
         # make the Conway's Game of Life window
         x_pos += 327
         width, height = 600, 600
@@ -139,11 +140,11 @@ class Demo:
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
-        set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        g.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         # resets the life simulation to a default state, uses a callback function
-        g.Button('life_reset', gridded(0, 0), BStyle.Angle, 'Reset')
+        g.Button('life_reset', g.gridded(0, 0), BStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
-        self.toggle_life = g.Toggle('run', gridded(1, 0), BStyle.Round, False, 'Stop', 'Start')
+        self.toggle_life = g.Toggle('run', g.gridded(1, 0), BStyle.Round, False, 'Stop', 'Start')
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -159,12 +160,12 @@ class Demo:
         self.canvas4 = g.Canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
         g.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
-        set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        g.Button('mandel_reset', gridded(0, 0), BStyle.Angle, 'Reset')
-        g.Button('iterative', gridded(1, 0), BStyle.Round, 'Iterative')
-        g.Button('recursive', gridded(2, 0), BStyle.Round, 'Recursive')
-        g.Button('1split', gridded(3, 0), BStyle.Round, '1M 4 Tasks')
-        g.Button('4split', gridded(4, 0), BStyle.Round, '4M 4 Tasks')
+        g.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
+        g.Button('mandel_reset', g.gridded(0, 0), BStyle.Angle, 'Reset')
+        g.Button('iterative', g.gridded(1, 0), BStyle.Round, 'Iterative')
+        g.Button('recursive', g.gridded(2, 0), BStyle.Round, 'Recursive')
+        g.Button('1split', g.gridded(3, 0), BStyle.Round, '1M 4 Tasks')
+        g.Button('4split', g.gridded(4, 0), BStyle.Round, '4M 4 Tasks')
         # set cursor image
         g.set_cursor((1, 1), 'cursor.png')
         self.gui1 = g
@@ -172,6 +173,7 @@ class Demo:
         # begin gui2
         self.gui2 = GuiManager(self.screen, fonts)
         self.scheduler2 = self.gui2.get_scheduler()
+        self.gui2.get_bitmapfactory().set_font('normal')
         self.gui2.set_pristine('backdrop.jpg')
         self.gui2.Button('return', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Back')
         self.gui2.Window('GUI 2', (50, 150), (300, 300))
@@ -189,7 +191,7 @@ class Demo:
         self.positions = []
         # make bitmaps for circles
         from gui.bitmapfactory import BitmapFactory
-        factory = BitmapFactory()
+        factory = g.get_bitmapfactory()
         circle_bitmap_a = factory.draw_radio_bitmap(self.size, colours['light'], colours['none'])
         circle_bitmap_b = factory.draw_radio_bitmap(self.size, colours['medium'], colours['none'])
         # make position list for circles

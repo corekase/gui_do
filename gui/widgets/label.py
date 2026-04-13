@@ -1,9 +1,10 @@
 from ..constants import colours, GType
-from ..command import render_text, render_text, centre
 from .widget import Widget
+from pygame import Rect
 
 class Label(Widget):
     def __init__(self, gui, position, text, shadow=False):
+        super().__init__(gui, 'label', Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow = shadow
         self.render(text)
@@ -11,10 +12,9 @@ class Label(Widget):
         if len(position) == 2:
             self.rect.x, self.rect.y = position[0], position[1]
         else:
-            x = position[0] + centre(position[2], self.rect.width)
-            y = position[1] + centre(position[3], self.rect.height)
+            x = position[0] + self.gui.get_bitmapfactory().centre(position[2], self.rect.width)
+            y = position[1] + self.gui.get_bitmapfactory().centre(position[3], self.rect.height)
             self.rect.x, self.rect.y = x, y
-        super().__init__(gui, 'label', self.rect)
         self.GType = GType.Label
 
     def set_label(self, text):
@@ -23,9 +23,9 @@ class Label(Widget):
 
     def render(self, text):
         if self.shadow:
-            self.text_bitmap = render_text(text, colours['text'], True)
+            self.text_bitmap = self.gui.get_bitmapfactory().render_text(text, colours['text'], True)
         else:
-            self.text_bitmap = render_text(text)
+            self.text_bitmap = self.gui.get_bitmapfactory().render_text(text)
 
     def handle_event(self, _, _a):
         return False

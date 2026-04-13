@@ -7,7 +7,7 @@ class ArrowBox(Button):
         # initialize common widget values, skipping the button factory with the True
         super().__init__(gui, id, rect, BStyle.Box, None, callback, True)
         self.GType = GType.Arrowbox
-        factory = BitmapFactory()
+        factory = self.gui.get_bitmapfactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)
 
     def handle_event(self, event, window):

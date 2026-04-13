@@ -10,7 +10,7 @@ class Window:
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui:GuiManager = gui
         self.ctype = CType.Window
-        factory = BitmapFactory()
+        factory = gui.get_bitmapfactory()
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
         self.width, self.height = size
@@ -32,7 +32,7 @@ class Window:
         self.widgets = []
         # set the window to the position passed in
         self.set_pos(pos)
-        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(title, self.width, self.titlebar_size)
+        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
         self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
