@@ -317,15 +317,12 @@ class GuiManager:
             # We must route the event to the locking object, but not return Early/Pass
             # just because it returns False (which happens on non-activating events like motion)
             if self.locking_object.GType == GType.Scrollbar:
-                if self.locking_object.dragging:
-                    id = self.locking_object.id
-                    widget_handled = self.handle_widget(self.locking_object, event, self.locking_object.window)
-                    if widget_handled:
-                        return self.event(GKind.Widget, id)
-                else:
-                    self.locking_object = None
-            # For now, if locked, don't let others handle it
-            return self.event(GKind.Pass)
+                id = self.locking_object.id
+                widget_handled = self.handle_widget(self.locking_object, event, self.locking_object.window)
+                if widget_handled:
+                    return self.event(GKind.Widget, id)
+                # For now, if locked, don't let others handle it
+                return self.event(GKind.Pass)
 
         if self.active_window != None:
             # for each window handle their widgets
@@ -335,7 +332,6 @@ class GuiManager:
             for window in working_windows:
                 if window.get_visible():
                     if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                        self.update_focus(None)
                         window_consumed = True
                         for widget in window.widgets:
                                 if widget.get_visible():
@@ -345,6 +341,7 @@ class GuiManager:
                                         if self.handle_widget(widget, event, window):
                                             if widget.GType == GType.ButtonGroup:
                                                 return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                            self.update_focus(None)
                                             return self.event(GKind.Widget, widget.id)
                                         widget_consumed = True
                     if window_consumed or widget_consumed:
