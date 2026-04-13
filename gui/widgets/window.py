@@ -2,8 +2,8 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..constants import colours, CType
-from ..widgets.frame import Frame, FrState
-from ..widgets.registry import register_widget
+from .frame import Frame, FrState
+from .registry import register_widget
 
 @register_widget("Window")
 class Window:
