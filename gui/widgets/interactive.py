@@ -15,7 +15,8 @@ class BaseInteractive(Widget):
     def handle_event(self, event, window):
         collision = self.get_collide(window)
         if not collision:
-            self.state = State.Idle
+            if self.state != State.Armed:
+                self.state = State.Idle
             return False
         
         if self.state == State.Idle:
@@ -23,7 +24,8 @@ class BaseInteractive(Widget):
         return True
 
     def leave(self):
-        self.state = State.Idle
+        if self.state != State.Armed:
+            self.state = State.Idle
 
     def draw(self):
         super().draw()

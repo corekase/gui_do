@@ -1,13 +1,10 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..values.constants import GType
-from .widget import Widget
-from enum import Enum
-
-State = Enum('State', ['Idle', 'Hover', 'Armed'])
+from .interactive import BaseInteractive, State
 from ..widgets.registry import register_widget
 
 @register_widget("ButtonGroup")
-class ButtonGroup(Widget):
+class ButtonGroup(BaseInteractive):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups = {}
     # dictionary of key:value -> key, name of the group. value, armed object
@@ -15,7 +12,6 @@ class ButtonGroup(Widget):
     def __init__(self, gui, group, id, rect, style, text):
         super().__init__(gui, id, rect)
         self.GType = GType.ButtonGroup
-        self.state = State.Idle
         factory = self.gui.get_bitmapfactory()
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
@@ -29,22 +25,22 @@ class ButtonGroup(Widget):
 
     def handle_event(self, event, window):
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
-            # no matching events for push button logic
             return False
-        # is the mouse position within the push button rect
+        
+        # Call base logic to update state (Hover/Idle)
         collision = self.get_collide(window)
-        # manage the state of the push button
-        if (self.state == State.Idle) and collision:
-            self.state = State.Hover
-        if self.state == State.Hover:
-            if (event.type == MOUSEMOTION) and (not collision):
+        if not collision:
+            if self.state != State.Armed:
                 self.state = State.Idle
-            if (event.type == MOUSEBUTTONDOWN) and collision:
-                if event.button == 1:
-                    # push button was clicked
-                    self.select()
-                    return True
-        # push button not clicked
+            return False
+        
+        if self.state != State.Armed:
+            self.state = State.Hover
+            
+        if self.state == State.Hover:
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                self.select()
+                return True
         return False
 
     def select(self):
@@ -56,22 +52,7 @@ class ButtonGroup(Widget):
         ButtonGroup.selections[self.group] = self
 
     def read_id(self):
-        # return the id of the armed pushbutton
         return ButtonGroup.selections[self.group].id
 
     def read_group(self):
-        # return the group id
         return self.group
-
-    def leave(self):
-        # if hover then idle when left
-        if self.state == State.Hover:
-            self.state = State.Idle
-
-    def draw(self):
-        if self.state == State.Idle:
-            self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == State.Hover:
-            self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == State.Armed:
-            self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))

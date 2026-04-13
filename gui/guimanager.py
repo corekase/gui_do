@@ -3,6 +3,7 @@ from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
 from .values.constants import GKind, GType, CType
+from .widgets.interactive import State
 from .bitmapfactory import BitmapFactory
 from .widgets.registry import create_widget
 
@@ -342,6 +343,11 @@ class GuiManager:
                                         if widget.GType == GType.ButtonGroup:
                                             return self.event(GKind.Group, widget.read_group(), widget.read_id())
                                         return self.event(GKind.Widget, widget.id)
+                                elif widget.GType == GType.ButtonGroup and widget.state == State.Armed:
+                                    # If this widget was Armed, we must allow it to process the MouseButtonDown
+                                    # even if it's not the one we are currently hovering over
+                                    if self.handle_widget(widget, event, window):
+                                        return self.event(GKind.Group, widget.read_group(), widget.read_id())
                                     widget_consumed = True
                         if not hit_any:
                             self.update_focus(None)
