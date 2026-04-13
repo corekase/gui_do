@@ -28,6 +28,7 @@ class Demo:
         # blit a background image to the screen surface
         g.set_pristine('backdrop.jpg')
         # screen label
+        g.create('Scrollbar', 'scrollbar_1', Rect(10, 10, 300, 20), HorV.Horizontal, SArrows.Split, (100, 0, 30, 10))
         b.set_font('gui_do')
         g.create('Label', (50, 30), 'gui_do', True)
         b.set_font('normal')
