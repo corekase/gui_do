@@ -6,24 +6,17 @@ from .constants import colours
 
 gui = None
 
-def set_active_gui(gui_instance):
-    global gui
-    gui = gui_instance
-
-def get_active_gui():
-    global gui
-    return gui
-
 def gui_init(surface, fonts):
     # hide system mouse pointer
     pygame.mouse.set_visible(False)
     # create a gui manager and set it as the active one
     gui_instance = GuiManager(surface)
     gui_scheduler = gui_instance.schedules
-    set_active_gui(gui_instance)
     # load fonts, list of "name", "filename", and "size"
     for name, filename, size in fonts:
         load_font(name, filename, size)
+    global gui
+    gui = gui_instance
     return gui, gui_scheduler
 
 # filename helper
