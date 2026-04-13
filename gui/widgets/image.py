@@ -6,7 +6,7 @@ from ..command import file_resource
 class Image(Widget):
     def __init__(self, gui, id, rect, image, automatic_pristine=False, scale=True):
         # initialize id and rect
-        super().__init__(id, rect)
+        super().__init__(gui, id, rect)
         self.GType = GType.Image
         self.image = pygame.image.load(file_resource('images', image))
         if scale:

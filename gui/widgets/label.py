@@ -14,7 +14,7 @@ class Label(Widget):
             x = position[0] + centre(position[2], self.rect.width)
             y = position[1] + centre(position[3], self.rect.height)
             self.rect.x, self.rect.y = x, y
-        super().__init__('label', self.rect)
+        super().__init__(gui, 'label', self.rect)
         self.GType = GType.Label
 
     def set_label(self, text):

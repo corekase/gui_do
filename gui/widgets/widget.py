@@ -4,7 +4,9 @@ from ..command import get_active_gui
 
 # widget is the base class all gui widgets inherit from
 class Widget:
-    def __init__(self, id, rect):
+    def __init__(self, gui, id, rect):
+        # gui reference
+        self.gui = gui
         # widget type
         self.GType = None
         # form type

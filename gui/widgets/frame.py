@@ -7,7 +7,7 @@ FrState = Enum('State', ['Idle', 'Hover', 'Armed'])
 
 class Frame(Widget):
     def __init__(self, gui, id, rect):
-        super().__init__(id, rect)
+        super().__init__(gui, id, rect)
         self.GType = GType.Frame
         self.factory = BitmapFactory()
         self.idle, self.hover, self.armed = self.factory.draw_frame_bitmaps(rect)

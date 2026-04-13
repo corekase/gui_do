@@ -11,7 +11,7 @@ CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseBut
 
 class Canvas(Widget):
     def __init__(self, gui, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
-        super().__init__(id, rect)
+        super().__init__(gui, id, rect)
         self.GType = GType.Canvas
         # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()

@@ -12,7 +12,7 @@ class ButtonGroup(Widget):
     # dictionary of key:value -> key, name of the group. value, armed object
     selections = {}
     def __init__(self, gui, group, id, rect, style, text):
-        super().__init__(id, rect)
+        super().__init__(gui, id, rect)
         self.GType = GType.ButtonGroup
         self.state = State.Idle
         factory = BitmapFactory()
