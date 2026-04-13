@@ -13,8 +13,10 @@ class BitmapFactory:
     def __init__(self):
         # current font object
         self.font = None
+        self.current_font_name = None
         # last font object
         self.last_font = None
+        self.last_font_name = None
         # key:value -> key, name of font and value, font object
         self.fonts = {}
 
@@ -24,12 +26,19 @@ class BitmapFactory:
 
     # make a font active
     def set_font(self, name):
-        self.last_font = self.font
+        self.last_font_name = self.current_font_name
         self.font = self.fonts[name]
+        self.current_font_name = name
+
+    # get the current font object
+    def get_current_font_name(self):
+        return self.current_font_name
 
     # restore the previous font
     def set_last_font(self):
-        self.font = self.last_font
+        if self.last_font_name != None:
+            self.font = self.fonts[self.last_font_name]
+            self.current_font_name = self.last_font_name
 
     # filename helper
     def file_resource(self, *names):

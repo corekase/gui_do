@@ -9,6 +9,7 @@ class Label(Widget):
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow = shadow
+        self.font = self.gui.get_bitmapfactory().get_current_font_name()
         self.render(text)
         self.rect = self.text_bitmap.get_rect()
         if len(position) == 2:
@@ -21,7 +22,9 @@ class Label(Widget):
 
     def set_label(self, text):
         # text bitmap
+        self.gui.get_bitmapfactory().set_font(self.font)
         self.render(text)
+        self.gui.get_bitmapfactory().set_last_font()
 
     def render(self, text):
         if self.shadow:
