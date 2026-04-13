@@ -3,8 +3,8 @@ import pygame
 from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import gui_init, set_pristine, set_font, set_cursor, restore_pristine
-from gui import colours, set_grid_properties, gridded
+from gui import GuiManager
+from gui import colours, set_font, set_grid_properties, gridded
 from gui import GKind, CKind
 from gui import HorV, SArrows, BStyle
 
@@ -22,9 +22,10 @@ class Demo:
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
         # begin gui1
-        g, self.scheduler1 = gui_init(self.screen, fonts)
+        g = GuiManager(self.screen, fonts)
+        self.scheduler1 = g.get_scheduler()
         # blit a background image to the screen surface
-        set_pristine('backdrop.jpg')
+        g.set_pristine('backdrop.jpg')
         # screen label
         set_font('gui_do')
         g.Label((50, 30), 'gui_do', True)
@@ -165,16 +166,17 @@ class Demo:
         g.Button('1split', gridded(3, 0), BStyle.Round, '1M 4 Tasks')
         g.Button('4split', gridded(4, 0), BStyle.Round, '4M 4 Tasks')
         # set cursor image
-        set_cursor((1, 1), 'cursor.png')
+        g.set_cursor((1, 1), 'cursor.png')
         self.gui1 = g
         # -----------------------
         # begin gui2
-        self.gui2, self.scheduler2 = gui_init(self.screen, fonts)
-        set_pristine('backdrop.jpg')
+        self.gui2 = GuiManager(self.screen, fonts)
+        self.scheduler2 = self.gui2.get_scheduler()
+        self.gui2.set_pristine('backdrop.jpg')
         self.gui2.Button('return', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Back')
         self.gui2.Window('GUI 2', (50, 150), (300, 300))
         # set cursor for gui2
-        set_cursor((1, 1), 'cursor.png')
+        self.gui2.set_cursor((1, 1), 'cursor.png')
         # reset the state of the simulation
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
@@ -209,7 +211,7 @@ class Demo:
 
     def preamble1(self):
         # restore the pristine area to the screen before drawing
-        restore_pristine()
+        self.gui1.restore_pristine()
         # if the mouse isn't over the canvas then end the dragging state
         if not self.canvas.focused():
             self.dragging = False
@@ -314,7 +316,7 @@ class Demo:
 
     def preamble2(self):
         # restore the pristine area to the screen before drawing
-        restore_pristine()
+        self.gui2.restore_pristine()
 
     def handle_events2(self, event):
         # handle events

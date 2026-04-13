@@ -2,7 +2,6 @@ import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
 from ..bitmapfactory import BitmapFactory
-from ..command import copy_graphic_area, set_pristine, restore_pristine
 from ..constants import colours, CType
 from ..widgets.frame import Frame, FrState
 
@@ -27,7 +26,7 @@ class Window:
             frame.surface = self.surface
             frame.draw()
         else:
-            set_pristine(backdrop, self)
+            self.gui.set_pristine(backdrop, self)
         self.window_save_pristine()
         # widgets on that surface
         self.widgets = []
@@ -42,7 +41,7 @@ class Window:
     def window_save_pristine(self):
         # update the window pristine bitmap
         # the window pristine bitmap can be used to undo widget bitmap damage to the contents
-        self.pristine = copy_graphic_area(self.surface, self.surface.get_rect()).convert()
+        self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
     def draw_title_bar_inactive(self):
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
@@ -54,7 +53,7 @@ class Window:
 
     def draw_window(self):
         # called when the gui manager is entering a window to process its widgets
-        restore_pristine(self.surface.get_rect(), self)
+        self.gui.restore_pristine(self.surface.get_rect(), self)
 
     def get_title_bar_rect(self):
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)

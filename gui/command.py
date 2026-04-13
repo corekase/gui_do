@@ -1,23 +1,7 @@
 import os
 import pygame
 from pygame import Rect
-from .guimanager import GuiManager
 from .constants import colours
-
-gui = None
-
-def gui_init(surface, fonts):
-    # hide system mouse pointer
-    pygame.mouse.set_visible(False)
-    # create a gui manager and set it as the active one
-    gui_instance = GuiManager(surface)
-    gui_scheduler = gui_instance.schedules
-    # load fonts, list of "name", "filename", and "size"
-    for name, filename, size in fonts:
-        load_font(name, filename, size)
-    global gui
-    gui = gui_instance
-    return gui, gui_scheduler
 
 # filename helper
 def file_resource(*names):
@@ -77,22 +61,6 @@ def set_font(name):
 def set_last_font():
     global font_object
     font_object = last_font_object
-
-# set a pristine bitmap for an object
-def set_pristine(image, obj=None):
-    gui.set_pristine(image, obj)
-
-# restore the pristine bitmap for an object
-def restore_pristine(area=None, obj=None):
-    gui.restore_pristine(area, obj)
-
-def copy_graphic_area(source, area, flags=0):
-    return gui.copy_graphic_area(source, area, flags)
-
-def set_cursor(hotspot, *image):
-    # set the cursor image and hotspot
-    cursor_image = image_alpha('cursors', *image)
-    gui.set_cursor(hotspot, cursor_image)
 
 # render text with or without a shadow
 def render_text(text, colour=colours['text'], shadow=False, shadow_colour=colours['none']):

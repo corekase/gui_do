@@ -1,7 +1,6 @@
 import pygame
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..command import set_pristine, copy_graphic_area
 from ..constants import GType
 from .widget import Widget
 from .frame import Frame, FrState
@@ -22,9 +21,9 @@ class Canvas(Widget):
             frame.state = FrState.Idle
             frame.surface = self.canvas
             frame.draw()
-            self.pristine = copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
+            self.pristine = self.gui.copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
-            set_pristine(backdrop, self)
+            self.gui.set_pristine(backdrop, self)
         self.canvas_callback = canvas_callback
         self.auto_restore_pristine = automatic_pristine
         self.queued_event = False

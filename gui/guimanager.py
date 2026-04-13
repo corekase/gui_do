@@ -4,12 +4,12 @@ from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
 from .constants import GKind, GType, CType
-
+from .command import load_font, file_resource, image_alpha
 class GuiError(Exception):
     pass
 
 class GuiManager:
-    def __init__(self, surface):
+    def __init__(self, surface, fonts):
         # registry for widget types and their classes
         self.registry = {}
         from .widgets.arrowbox import ArrowBox
@@ -33,6 +33,12 @@ class GuiManager:
         self.register_widget('Scrollbar', Scrollbar)
         self.register_widget('Toggle', Toggle)
         self.register_widget('Window', Window)
+        # hide system mouse pointer
+        pygame.mouse.set_visible(False)
+
+        for name, filename, size in fonts:
+            load_font(name, filename, size)
+
         # screen surface
         self.surface = surface
         # list of widgets attached to the screen
@@ -69,7 +75,7 @@ class GuiManager:
         # whether or not drawing is buffered
         self.set_buffered(False)
         # scheduler
-        self.schedules = Scheduler(self)
+        self.scheduler = Scheduler(self)
         # gui timers
         self.timers = Timers()
 
@@ -167,7 +173,7 @@ class GuiManager:
 
     def set_cursor(self, hotspot, image):
         # set the cursor image and hotspot
-        self.cursor_image = image
+        self.cursor_image = image_alpha('cursors', image)
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
@@ -179,6 +185,9 @@ class GuiManager:
         # if buffered is set to True then bitmaps under gui objects
         # will be saved and the undraw will undo them
         self.buffered = buffered
+
+    def get_scheduler(self):
+        return self.scheduler
 
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
