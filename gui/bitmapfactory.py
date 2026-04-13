@@ -30,6 +30,7 @@ class BitmapFactory:
     # restore the previous font
     def set_last_font(self):
         self.font = self.last_font
+
     # filename helper
     def file_resource(self, *names):
         # return an os-independent filename inside data path
