@@ -197,10 +197,8 @@ class GuiManager:
                 self.button = kwargs.get('button')
                 self.widget_id = kwargs.get('widget_id')
                 self.group = kwargs.get('group')
-
         if event_type in (GKind.MouseButtonUp, GKind.MouseButtonDown, GKind.MouseMotion):
             kwargs.setdefault('pos', self.get_mouse_pos())
-
         return GuiEvent(event_type, **kwargs)
 
     def events(self):
