@@ -38,19 +38,10 @@ class Widget:
         return self.visible
 
     def get_collide(self, window=None):
+        # Purely read-only collision check
         if self.hit_rect == None:
-            collide = self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
-        else:
-            collide = self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
-        if collide:
-            last_widget = self.gui.read_last_widget()
-            current_widget = self.gui.read_current_widget()
-            if last_widget != current_widget:
-                if last_widget != None:
-                    last_widget.leave()
-            self.gui.set_last_widget(current_widget)
-            self.gui.set_current_widget(self)
-        return collide
+            return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
+        return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
 
     def handle_event(self, _, _a):
         # implement in subclasses

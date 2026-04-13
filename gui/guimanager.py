@@ -325,6 +325,8 @@ class GuiManager:
                         for widget in window.widgets:
                                 if widget.get_visible():
                                     collision = widget.get_collide(window)
+                                    if collision:
+                                        self.update_focus(widget)
                                     if self.handle_widget(widget, event, window):
                                         if widget.GType == GType.ButtonGroup:
                                             return self.event(GKind.Group, widget.read_group(), widget.read_id())
@@ -389,6 +391,15 @@ class GuiManager:
             else:
                 return True
         return False
+
+    def update_focus(self, new_hover):
+        # Centralized focus update logic
+        if new_hover != self.current_widget:
+            if self.current_widget != None:
+                self.current_widget.leave()
+                self.set_last_widget(self.current_widget)
+                self.set_current_widget(new_hover)
+            self.current_widget = new_hover
 
     def set_lock_area(self, locking_object, area=None):
         # lock area rect is in screen coordinates
