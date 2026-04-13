@@ -328,42 +328,54 @@ class GuiManager:
             # for each window handle their widgets
             window_consumed = False
             widget_consumed = False
+            hit_any = False
             working_windows = self.windows.copy()[::-1]
             for window in working_windows:
                 if window.get_visible():
                     if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                         window_consumed = True
                         for widget in window.widgets:
-                                if widget.get_visible():
-                                    collision = widget.get_collide(window)
-                                    if collision:
-                                        self.update_focus(widget)
-                                        if self.handle_widget(widget, event, window):
-                                            if widget.GType == GType.ButtonGroup:
-                                                return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                                            self.update_focus(None)
-                                            return self.event(GKind.Widget, widget.id)
-                                        widget_consumed = True
+                            if widget.get_visible():
+                                collision = widget.get_collide(window)
+                                if collision:
+                                    hit_any = True
+                                    self.update_focus(widget)
+                                    if self.handle_widget(widget, event, window):
+                                        if widget.GType == GType.ButtonGroup:
+                                            return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                        return self.event(GKind.Widget, widget.id)
+                                    widget_consumed = True
+                        if not hit_any:
+                            self.update_focus(None)
                     if window_consumed or widget_consumed:
                         return self.event(GKind.Pass)
+                # If window is visible but mouse not in window rect (or no widget hit), clear focus
+                if window.get_visible() and not window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                    self.update_focus(None)
         else:
             # handle screen widgets
-            consumed = False
+            hit_any = False
             for widget in self.widgets:
                 if widget.get_visible():
-                    # Check collision before event handling
+                    # Check collision
                     if widget.hit_rect != None:
                         hit = widget.hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
                     else:
                         hit = widget.draw_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
                     if hit:
+                        hit_any = True
                         self.update_focus(widget)
                         if self.handle_widget(widget, event):
                             if widget.GType == GType.ButtonGroup:
                                 return self.event(GKind.Group, widget.read_group(), widget.read_id())
                             return self.event(GKind.Widget, widget.id)
-                        consumed = True
-            if consumed:
+
+            if not hit_any:
+                self.update_focus(None)
+
+            # Note: consumed check removed from screen widget loop, as we now handle focus clearing separately
+            # If any widget was hit, we consider the mouse movement over the gui as "event consumed" contextually
+            if hit_any:
                 return self.event(GKind.Pass)
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
