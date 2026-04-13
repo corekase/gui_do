@@ -2,18 +2,8 @@
 import os
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager
-# all the widgets are imported into the package namespace so that their decorator
-# can register them in the widget registry
-from .forms.window import Window
-from .widgets.button import Button
-from .widgets.arrowbox import ArrowBox
-from .widgets.buttongroup import ButtonGroup
-from .widgets.canvas import Canvas
-from .widgets.frame import Frame
-from .widgets.image import Image
-from .widgets.label import Label
-from .widgets.scrollbar import Scrollbar
-from .widgets.toggle import Toggle
+from .decorations import init_decorations
+init_decorations()
 # import constants into the package namespace
 from .constants import colours, GKind, GType, HorV, SArrows, BStyle
 from .widgets.canvas import CKind
