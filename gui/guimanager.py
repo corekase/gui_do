@@ -304,7 +304,7 @@ class GuiManager:
                     if self.active_window.get_title_bar_rect().collidepoint(self.lock_area(event.pos)):
                         # if the lower widget
                         if self.active_window.get_widget_rect().collidepoint(self.lock_area(event.pos)):
-                            self.lower_window(window)
+                            self.lower_window(self.active_window)
                             self.active_window = self.windows[-1]
                             return self.event(GKind.Pass)
                         # begin dragging
@@ -491,3 +491,4 @@ class GuiManager:
         # the client does not call this method at all
         for bitmap, rect in self.bitmaps:
             self.surface.blit(bitmap, rect)
+        self.bitmaps.clear()

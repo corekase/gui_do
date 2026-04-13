@@ -21,8 +21,6 @@ class Widget:
         self.draw_rect = Rect(rect)
         # rect for mouse collision
         self.hit_rect = None
-        # callback function
-        self.callback = None
         # before widget is first drawn, save what was there in this bitmap
         self.pristine = None
         # whether or not the widget is visible
