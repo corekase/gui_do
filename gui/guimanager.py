@@ -333,7 +333,7 @@ class GuiManager:
                 if window.get_visible():
                     if window.get_window_rect().collidepoint(self.get_mouse_pos()):
                         window_consumed = True
-                        for widget in window.widgets:
+                        for widget in window.widgets.copy()[::-1]:
                             if widget.get_visible():
                                 collision = widget.get_collide(window)
                                 if collision:
@@ -354,7 +354,7 @@ class GuiManager:
         else:
             # handle screen widgets
             hit_any = False
-            for widget in self.widgets:
+            for widget in self.widgets.copy()[::-1]:
                 if widget.get_visible():
                     # Check collision
                     if widget.hit_rect != None:
