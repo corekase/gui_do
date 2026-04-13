@@ -100,10 +100,10 @@ class GuiManager:
             raise ValueError(f"Widget {widget_type} not registered.")
         cls = self.registry[widget_type]
         # The manager handles the "shared" variables
-        obj = cls(*args, **kwargs)
+        obj = cls(self, *args, **kwargs)
         return self.add(obj)
 
-    def add(self, gui_object, callback=None):
+    def add(self, gui_object):
         if gui_object.ctype == CType.Window:
             # add this window to the gui
             self.windows.append(gui_object)
@@ -111,7 +111,6 @@ class GuiManager:
             self.active_object = gui_object
         elif gui_object.ctype == CType.Widget:
             # callback
-            gui_object.callback = callback
             if self.active_object != None:
                 # store a reference to the window the widget is in
                 gui_object.window = self.active_object

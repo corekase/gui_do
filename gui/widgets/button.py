@@ -7,7 +7,7 @@ from enum import Enum
 State = Enum('State', ['Idle', 'Hover', 'Armed'])
 
 class Button(Widget):
-    def __init__(self, id, rect, style, text, button_callback=None, skip_factory=False):
+    def __init__(self, gui, id, rect, style, text, button_callback=None, skip_factory=False):
         # initialize common widget values
         super().__init__(id, rect)
         self.GType = GType.Button

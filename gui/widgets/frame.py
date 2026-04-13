@@ -6,7 +6,7 @@ from ..bitmapfactory import BitmapFactory
 FrState = Enum('State', ['Idle', 'Hover', 'Armed'])
 
 class Frame(Widget):
-    def __init__(self, id, rect):
+    def __init__(self, gui, id, rect):
         super().__init__(id, rect)
         self.GType = GType.Frame
         self.factory = BitmapFactory()

@@ -30,9 +30,6 @@ def set_buffered(buffered):
     # if buffered is set to True then bitmaps under gui objects are saved
     gui.set_buffered(buffered)
 
-def add(gui_object, callback=None):
-    return gui.add(gui_object, callback)
-
 # filename helper
 def file_resource(*names):
     # return an os-independent filename inside data path

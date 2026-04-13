@@ -5,10 +5,9 @@ from ..constants import GType
 from .frame import Frame, FrState
 from .arrowbox import ArrowBox
 from ..constants import colours, HorV, SArrows
-from ..command import add
 
 class Scrollbar(Frame):
-    def __init__(self, id, overall_rect, horizontal, style, params):
+    def __init__(self, gui, id, overall_rect, horizontal, style, params):
         # list of registered sub-widgets
         self.registered = []
         # parse the style
@@ -60,12 +59,12 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(add(ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment)))
-            self.registered.append(add(ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)))
+            self.registered.append(gui.ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment))
+            self.registered.append(gui.ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement))
         else:
             scroll_area_rect = overall_rect
         # initialize common widget values
-        super().__init__(id, scroll_area_rect)
+        super().__init__(gui, id, scroll_area_rect)
         self.GType = GType.Scrollbar
         # maximum area that can be filled
         self.graphic_rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)

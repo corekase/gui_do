@@ -3,7 +3,7 @@ from ..command import render_text, render_text, centre
 from .widget import Widget
 
 class Label(Widget):
-    def __init__(self, position, text, shadow=False):
+    def __init__(self, gui, position, text, shadow=False):
         # initialize common widget values
         self.shadow = shadow
         self.render(text)

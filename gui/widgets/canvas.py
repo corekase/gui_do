@@ -10,7 +10,7 @@ from enum import Enum
 CKind = Enum('CKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
 
 class Canvas(Widget):
-    def __init__(self, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
+    def __init__(self, gui, id, rect, backdrop=None, canvas_callback=None, automatic_pristine=False):
         super().__init__(id, rect)
         self.GType = GType.Canvas
         # create canvas surface
@@ -18,7 +18,7 @@ class Canvas(Widget):
         # if there is no backdrop make a frame as one otherwise load the backdrop
         if backdrop == None:
             # make a frame for the backdrop of the window surface
-            frame = Frame('canvas_frame', Rect(0, 0, rect.width, rect.height))
+            frame = Frame(gui, 'canvas_frame', Rect(0, 0, rect.width, rect.height))
             frame.state = FrState.Idle
             frame.surface = self.canvas
             frame.draw()

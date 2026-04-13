@@ -7,7 +7,7 @@ from ..constants import colours, CType
 from ..widgets.frame import Frame, FrState
 
 class Window:
-    def __init__(self, title, pos, size, backdrop=None):
+    def __init__(self, gui, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named
         from ..command import get_active_gui
         self.gui:GuiManager = get_active_gui()
@@ -23,7 +23,7 @@ class Window:
         self.pristine = None
         if backdrop == None:
             # make a frame for the backdrop of the window surface
-            frame = Frame('window_frame', Rect(0, 0, size[0], size[1]))
+            frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
             frame.state = FrState.Idle
             frame.surface = self.surface
             frame.draw()

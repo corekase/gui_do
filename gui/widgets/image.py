@@ -4,7 +4,7 @@ from .widget import Widget
 from ..command import file_resource
 
 class Image(Widget):
-    def __init__(self, id, rect, image, automatic_pristine=False, scale=True):
+    def __init__(self, gui, id, rect, image, automatic_pristine=False, scale=True):
         # initialize id and rect
         super().__init__(id, rect)
         self.GType = GType.Image

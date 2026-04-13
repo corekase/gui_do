@@ -25,7 +25,7 @@ class BitmapFactory:
         if colour == None:
             colour = colours['highlight']
         title_surface = Surface((width, size)).convert()
-        frame = Frame('titlebar_frame', Rect(0, 0, width, size))
+        frame = Frame(None, 'titlebar_frame', Rect(0, 0, width, size))
         frame.state = FrState.Armed
         frame.surface = title_surface
         frame.draw()
