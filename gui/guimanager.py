@@ -312,64 +312,56 @@ class GuiManager:
                         self.dragging_window = self.active_window
                         self.mouse_delta = (self.dragging_window.x - self.mouse_pos[0],
                                             self.dragging_window.y - self.mouse_pos[1])
-        if self.active_window != None:
-            # for each window handle their widgets
-            window_consumed = False
-            widget_consumed = False
-            widget_hit = None
-            working_windows = self.windows.copy()[::-1]
-            for window in working_windows:
-                if window.get_visible():
-                    if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                        window_consumed = True
-                        for widget in window.widgets:
-                                if widget.get_visible():
-                                    collision = widget.get_collide(window)
-                                    if collision:
-                                        self.update_focus(widget)
-                                        if self.handle_widget(widget, event, window):
-                                            if widget.GType == GType.ButtonGroup:
-                                                return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                                            return self.event(GKind.Widget, widget.id)
-                                        widget_consumed = True
-                                        widget_hit = widget
-                    title_hit = self.active_window.get_title_bar_rect().collidepoint(self.get_mouse_pos())
-                    if title_hit or (widget_hit != self.last_widget):
-                        if self.last_widget != None:
-                            self.last_widget.leave()
-                            self.last_widget = None
-                    if title_hit or (widget_hit != self.locking_object):
-                        if self.locking_object != None:
-                            self.locking_object.leave()
-                            self.set_lock_area(None)
-                    if window_consumed or widget_consumed:
-                        return self.event(GKind.Pass)
+
+        # Priority: handle locked object
+        if self.locking_object != None:
+            if self.handle_widget(self.locking_object, event, window):
+                if self.locking_object!= None:
+                    if self.locking_object.GType == GType.Scrollbar:
+                        return self.event(GKind.Widget, self.locking_object.id)
+            return self.event(GKind.Pass)
         else:
-            # handle screen widgets
-            consumed = False
-            widget_hit = None
-            for widget in self.widgets:
-                if widget.get_visible():
-                    if self.handle_widget(widget, event):
-                        if widget.GType == GType.ButtonGroup:
-                            return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                        return self.event(GKind.Widget, widget.id)
-                    if widget.hit_rect != None:
-                        hit = widget.hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
-                    else:
-                        hit = widget.draw_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
-                    if hit:
-                        consumed = True
-                        widget_hit = widget
-            if self.locking_object != None:
-                if widget_hit != self.locking_object:
-                    self.locking_object.leave()
-                    self.set_lock_area(None)
-            if consumed:
-                return self.event(GKind.Pass)
-        #
-        if self.last_widget != None:
-            self.last_widget.leave()
+            if self.active_window != None:
+                # for each window handle their widgets
+                window_consumed = False
+                widget_consumed = False
+                working_windows = self.windows.copy()[::-1]
+                for window in working_windows:
+                    if window.get_visible():
+                        if window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                            self.update_focus(None)
+                            window_consumed = True
+                            for widget in window.widgets:
+                                    if widget.get_visible():
+                                        collision = widget.get_collide(window)
+                                        if collision:
+                                            self.update_focus(widget)
+                                            if self.handle_widget(widget, event, window):
+                                                if widget.GType == GType.ButtonGroup:
+                                                    return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                                return self.event(GKind.Widget, widget.id)
+                                            widget_consumed = True
+                        if window_consumed or widget_consumed:
+                            return self.event(GKind.Pass)
+            else:
+                # handle screen widgets
+                consumed = False
+                for widget in self.widgets:
+                    if widget.get_visible():
+                        # Check collision before event handling
+                        if widget.hit_rect != None:
+                            hit = widget.hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
+                        else:
+                            hit = widget.draw_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
+                        if hit:
+                            self.update_focus(widget)
+                            if self.handle_widget(widget, event):
+                                if widget.GType == GType.ButtonGroup:
+                                    return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                return self.event(GKind.Widget, widget.id)
+                            consumed = True
+                if consumed:
+                    return self.event(GKind.Pass)
         # no widget or window consumed the event now do pygame base events
         if event.type == MOUSEBUTTONUP:
             return self.event(GKind.MouseButtonUp, event.button)
