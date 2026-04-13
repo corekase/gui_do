@@ -1,9 +1,9 @@
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from ..constants import GType
+from ..values.constants import GType
 from .frame import Frame, FrState
-from ..constants import colours, HorV, SArrows
+from ..values.constants import colours, HorV, SArrows
 from ..widgets.registry import register_widget
 
 @register_widget("Scrollbar")

@@ -1,5 +1,5 @@
 from enum import Enum
-from ..constants import GType
+from ..values.constants import GType
 from .widget import Widget
 
 FrState = Enum('State', ['Idle', 'Hover', 'Armed'])

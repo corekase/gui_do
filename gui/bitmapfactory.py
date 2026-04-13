@@ -7,7 +7,7 @@ from collections import deque
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
-from .constants import colours, BStyle
+from .values.constants import colours, BStyle
 
 class BitmapFactory:
     def __init__(self):

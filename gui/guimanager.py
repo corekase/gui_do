@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
-from .constants import GKind, GType, CType
+from .values.constants import GKind, GType, CType
 from .bitmapfactory import BitmapFactory
 from .widgets.registry import create_widget
 

@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
-from ..constants import colours, CType
+from ..values.constants import colours, CType
 from .frame import Frame, FrState
 from .registry import register_widget
 

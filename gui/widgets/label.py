@@ -1,4 +1,4 @@
-from ..constants import colours, GType
+from ..values.constants import colours, GType
 from .widget import Widget
 from pygame import Rect
 from ..widgets.registry import register_widget

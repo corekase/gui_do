@@ -1,4 +1,4 @@
-from ..constants import GType, BStyle
+from ..values.constants import GType, BStyle
 from .button import Button
 from ..widgets.registry import register_widget
 

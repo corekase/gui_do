@@ -1,5 +1,5 @@
 import pygame
-from ..constants import GType
+from ..values.constants import GType
 from .widget import Widget
 from ..widgets.registry import register_widget
 
