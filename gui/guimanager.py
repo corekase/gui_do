@@ -10,6 +10,29 @@ class GuiError(Exception):
 
 class GuiManager:
     def __init__(self, surface):
+        # registry for widget types and their classes
+        self.registry = {}
+        from .widgets.arrowbox import ArrowBox
+        from .widgets.button import Button
+        from .widgets.buttongroup import ButtonGroup
+        from .widgets.canvas import Canvas
+        from .widgets.frame import Frame
+        from .widgets.image import Image
+        from .widgets.label import Label
+        from .widgets.scrollbar import Scrollbar
+        from .widgets.toggle import Toggle
+        from .forms.window import Window
+        # register widget types
+        self.register_widget('ArrowBox', ArrowBox)
+        self.register_widget('Button', Button)
+        self.register_widget('ButtonGroup', ButtonGroup)
+        self.register_widget('Canvas', Canvas)
+        self.register_widget('Frame', Frame)
+        self.register_widget('Image', Image)
+        self.register_widget('Label', Label)
+        self.register_widget('Scrollbar', Scrollbar)
+        self.register_widget('Toggle', Toggle)
+        self.register_widget('Window', Window)
         # screen surface
         self.surface = surface
         # list of widgets attached to the screen
@@ -50,6 +73,16 @@ class GuiManager:
         # gui timers
         self.timers = Timers()
 
+    def __getattr__(self, name):
+        if name in self.registry:
+            def wrapper(*args, **kwargs):
+                return self.create(name, *args, **kwargs)
+            return wrapper
+        raise AttributeError(name)
+
+    def register_widget(self, name, cls):
+        self.registry[name] = cls
+
     def get_scheduler(self):
         return self.schedules
 
@@ -61,6 +94,14 @@ class GuiManager:
     def get_buffered(self):
         # return whether or not drawing is buffered
         return self.buffered
+
+    def create(self, widget_type, *args, **kwargs):
+        if widget_type not in self.registry:
+            raise ValueError(f"Widget {widget_type} not registered.")
+        cls = self.registry[widget_type]
+        # The manager handles the "shared" variables
+        obj = cls(*args, **kwargs)
+        return self.add(obj)
 
     def add(self, gui_object, callback=None):
         if gui_object.ctype == CType.Window:
