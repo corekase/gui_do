@@ -26,10 +26,6 @@ def gui_init(surface, fonts):
         load_font(name, filename, size)
     return gui, gui_scheduler
 
-def set_buffered(buffered):
-    # if buffered is set to True then bitmaps under gui objects are saved
-    gui.set_buffered(buffered)
-
 # filename helper
 def file_resource(*names):
     # return an os-independent filename inside data path
