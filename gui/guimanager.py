@@ -230,7 +230,6 @@ class GuiManager:
         return gui_event
 
     def events(self):
-        self.timers.timer_updates()
         # process event queue
         for raw_event in pygame.event.get():
             # process event

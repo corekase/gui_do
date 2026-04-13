@@ -47,7 +47,7 @@ class Button(Widget):
                     if self.button_callback != None:
                         self.button_callback()
                         if self.timer_id == None:
-                            self.gui.timers.add_timer(f'{self.id}.timer', 0.15, self.button_callback)
+                            self.gui.timers.add_timer(f'{self.id}.timer', 150, self.button_callback)
                             self.timer_id = f'{self.id}.timer'
                     # don't signal a widget change, consume the signal by returning False
                     return False

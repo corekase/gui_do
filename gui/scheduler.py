@@ -10,8 +10,8 @@ class Timers:
 
     class Interval:
         def __init__(self, duration, callback):
-            self.timer = 0.0
-            self.previous_time = time.time()
+            self.timer = 0
+            self.previous_time = None
             self.duration = duration
             self.callback = callback
 
@@ -22,20 +22,22 @@ class Timers:
         if id in self.timers.keys():
             del self.timers[id]
 
-    def timer_updates(self):
-        now_time = time.time()
+    def timer_updates(self, now_time):
         # iterate over a list copy of the keys because timers may be removed
         # during the loop
         for id in list(self.timers.keys()):
             if id not in self.timers:
                 # timer was removed during the loop, so skip it
                 continue
-            elapsed_time = now_time - self.timers[id].previous_time
-            self.timers[id].previous_time = now_time
-            self.timers[id].timer += elapsed_time
-            if self.timers[id].timer >= self.timers[id].duration:
-                self.timers[id].timer -= self.timers[id].duration
-                self.timers[id].callback()
+            if self.timers[id].previous_time == None:
+                self.timers[id].previous_time = now_time
+            else:
+                elapsed_time = now_time - self.timers[id].previous_time
+                self.timers[id].previous_time = now_time
+                self.timers[id].timer += elapsed_time
+                if self.timers[id].timer >= self.timers[id].duration:
+                    self.timers[id].timer -= self.timers[id].duration
+                    self.timers[id].callback()
 
 class Scheduler:
     def __init__(self, gui):
@@ -198,6 +200,7 @@ class Scheduler:
             # call preamble
             preamble()
             # send gui events
+            self.gui.timers.timer_updates(pygame.time.get_ticks())
             for event in self.gui.events():
                 event_handler(event)
             # handle task logic
