@@ -52,7 +52,7 @@ class Demo:
         x_pos, y_pos = 50, 150
         g.set_grid_properties((10, 10), 120, widget_height, 2)
         self.button_group_win = g.create('Window', 'Button Groups, Buttons, and Toggles',
-                                       (x_pos, y_pos), (g.gridded(7, 0).right + 10, g.gridded(0, 6).bottom))
+                                         (x_pos, y_pos), (g.gridded(7, 0).right + 10, g.gridded(0, 6).bottom))
         g.create('Label', g.gridded(0, 0), 'G1 Boxed', True)
         g.create('Label', g.gridded(1, 0), 'G2 Rounded', True)
         g.create('Label', g.gridded(2, 0), 'G3 Angled', True)
