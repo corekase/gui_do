@@ -245,148 +245,142 @@ class GuiManager:
     def handle_event(self, event):
         # update internal mouse position
         if event.type == MOUSEMOTION:
-            if self.mouse_locked:
-                # switching to relative mode is because the mouse set_pos() function is very
-                # expensive on Linux and tanks the framerate if called too much. Windows is
-                # unaffected by that, it's a Linux platform-specific bug and by being relative
-                # for the lock area set_pos is only called once, when the lock area is released
-                x, y = self.mouse_pos
-                dx, dy = event.rel
-                x += dx
-                y += dy
-                self.mouse_pos = (x, y)
-            else:
-                self.mouse_pos = self.lock_area(event.pos)
-        # check for alt-f4 or window quit button
+            self._handle_mouse_motion(event)
+
+        # check for system events (QUIT, KEYUP, KEYDOWN)
+        if event.type in (QUIT, KEYUP, KEYDOWN):
+            return self._handle_system_event(event)
+
+        # find active window context
+        self._update_active_window()
+
+        # Priority 1: Window dragging
+        if self.dragging:
+            return self._handle_window_dragging(event)
+
+        # Priority 2: Standard interaction (check for start of drag)
+        if event.type == MOUSEBUTTONDOWN and not self.dragging and event.button == 1:
+            self._check_window_drag_start(event)
+
+        # Priority 3: Locked object
+        if self.locking_object:
+            return self._handle_locked_object(event)
+
+        # Priority 4: Window / Screen widgets
+        if self.active_window:
+            return self._process_window_widgets(event)
+
+        return self._process_screen_widgets(event)
+
+    def _handle_mouse_motion(self, event):
+        if self.mouse_locked:
+            x, y = self.mouse_pos
+            dx, dy = event.rel
+            self.mouse_pos = (x + dx, y + dy)
+        else:
+            self.mouse_pos = self.lock_area(event.pos)
+
+    def _handle_system_event(self, event):
         if event.type == QUIT:
             return self.event(GKind.Quit)
-        # check for a keys
         if event.type == KEYUP:
             return self.event(GKind.KeyUp, event.key)
         elif event.type == KEYDOWN:
             return self.event(GKind.KeyDown, event.key)
-        # find highest window
+        return self.event(GKind.Pass)
+
+    def _update_active_window(self):
         top_window = None
         for window in self.windows[::-1]:
-            if window.get_visible():
-                if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                    top_window = window
-                    break
-        # if top_window is None then the mouse isn't over any window
-        if top_window != None:
-            # clicking on the window the mouse is over raises it
-            if event.type == MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    self.raise_window(top_window)
-            # if the highest window isn't active make it so
-            if self.active_window != top_window:
-                self.active_window = top_window
+            if window.get_visible() and window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                top_window = window
+                break
+        if top_window:
+            self.active_window = top_window
         else:
-            # no window is active, the mouse isn't over one
             self.active_window = None
-        # handle window dragging and lower widget
-        if (event.type == MOUSEBUTTONUP) and self.dragging:
-            if event.button == 1:
-                self.dragging = False
-                self.dragging_window.set_pos((self.dragging_window.x, self.dragging_window.y))
-                self.set_mouse_pos((self.dragging_window.x - self.mouse_delta[0], self.dragging_window.y - self.mouse_delta[1]))
-                self.dragging_window = None
-                self.mouse_delta = None
-        elif (event.type == MOUSEMOTION) and self.dragging:
+
+    def _handle_window_dragging(self, event):
+        if event.type == MOUSEBUTTONUP and event.button == 1:
+            self.dragging = False
+            self.dragging_window.set_pos((self.dragging_window.x, self.dragging_window.y))
+            self.set_mouse_pos((self.dragging_window.x - self.mouse_delta[0], self.dragging_window.y - self.mouse_delta[1]))
+            self.dragging_window = None
+            self.mouse_delta = None
+        elif event.type == MOUSEMOTION and self.dragging:
             x = self.dragging_window.x + event.rel[0]
             y = self.dragging_window.y + event.rel[1]
             self.set_mouse_pos((x - self.mouse_delta[0], y - self.mouse_delta[1]), False)
             self.dragging_window.set_pos((x, y))
-        elif (event.type == MOUSEBUTTONDOWN) and (not self.dragging):
-            if event.button == 1:
-                # if there is an active window test for dragging
-                if self.active_window != None:
-                    # if within the title bar
-                    if self.active_window.get_title_bar_rect().collidepoint(self.lock_area(event.pos)):
-                        # if the lower widget
-                        if self.active_window.get_widget_rect().collidepoint(self.lock_area(event.pos)):
-                            self.lower_window(self.active_window)
-                            self.active_window = self.windows[-1]
-                            return self.event(GKind.Pass)
-                        # begin dragging
-                        self.dragging = True
-                        self.dragging_window = self.active_window
-                        self.mouse_delta = (self.dragging_window.x - self.mouse_pos[0],
-                                            self.dragging_window.y - self.mouse_pos[1])
-        # Priority: handle locked object
-        if self.locking_object != None:
-            # We must route the event to the locking object, but not return Early/Pass
-            # just because it returns False (which happens on non-activating events like motion)
-            if self.locking_object.GType == GType.Scrollbar:
-                id = self.locking_object.id
-                widget_handled = self.handle_widget(self.locking_object, event, self.locking_object.window)
-                if widget_handled:
-                    return self.event(GKind.Widget, id)
-                # For now, if locked, don't let others handle it
-                return self.event(GKind.Pass)
-        if self.active_window != None:
-            # for each window handle their widgets
-            window_consumed = False
-            widget_consumed = False
-            hit_any = False
-            for window in self.windows.copy()[::-1]:
-                if window.get_visible():
-                    if window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                        window_consumed = True
-                        for widget in window.widgets.copy()[::-1]:
-                            if widget.get_visible():
-                                collision = widget.get_collide(window)
-                                if collision:
-                                    hit_any = True
-                                    self.update_focus(widget)
-                                    if self.handle_widget(widget, event, window):
-                                        if widget.GType == GType.ButtonGroup:
-                                            return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                                        return self.event(GKind.Widget, widget.id)
-                                elif widget.GType == GType.ButtonGroup and widget.state == State.Armed:
-                                    # If this widget was Armed, we must allow it to process the MouseButtonDown
-                                    # even if it's not the one we are currently hovering over
-                                    if self.handle_widget(widget, event, window):
-                                        return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                                    widget_consumed = True
-                        if not hit_any:
-                            self.update_focus(None)
-                    if window_consumed or widget_consumed:
-                        return self.event(GKind.Pass)
-                # If window is visible but mouse not in window rect (or no widget hit), clear focus
-                if window.get_visible() and not window.get_window_rect().collidepoint(self.get_mouse_pos()):
-                    self.update_focus(None)
-        else:
-            # handle screen widgets
-            hit_any = False
-            for widget in self.widgets.copy()[::-1]:
-                if widget.get_visible():
-                    # Check collision
-                    if widget.hit_rect != None:
-                        hit = widget.hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
-                    else:
-                        hit = widget.draw_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None))
-                    if hit:
-                        hit_any = True
-                        self.update_focus(widget)
-                        if self.handle_widget(widget, event):
-                            if widget.GType == GType.ButtonGroup:
+        return self.event(GKind.Pass)
+
+    def _check_window_drag_start(self, event):
+        if self.active_window and self.active_window.get_title_bar_rect().collidepoint(self.lock_area(event.pos)):
+            if self.active_window.get_widget_rect().collidepoint(self.lock_area(event.pos)):
+                self.lower_window(self.active_window)
+                self.active_window = self.windows[-1]
+            else:
+                self.dragging = True
+                self.dragging_window = self.active_window
+                self.mouse_delta = (self.dragging_window.x - self.mouse_pos[0],
+                                    self.dragging_window.y - self.mouse_pos[1])
+
+    def _handle_locked_object(self, event):
+        if self.locking_object.GType == GType.Scrollbar:
+            id = self.locking_object.id
+            if self.handle_widget(self.locking_object, event, self.locking_object.window):
+                return self.event(GKind.Widget, id)
+            return self.event(GKind.Pass)
+        return self.event(GKind.Pass)
+
+    def _process_window_widgets(self, event):
+        # clicking on the window the mouse is over raises it
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            self.raise_window(self.active_window)
+        for window in self.windows.copy()[::-1]:
+            if window.get_visible() and window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                for widget in window.widgets.copy()[::-1]:
+                    if widget.get_visible():
+                        if widget.get_collide(window):
+                            self.update_focus(widget)
+                            if self.handle_widget(widget, event, window):
+                                if widget.GType == GType.ButtonGroup:
+                                    return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                                return self.event(GKind.Widget, widget.id)
+                        elif widget.GType == GType.ButtonGroup and widget.state == State.Armed:
+                            if self.handle_widget(widget, event, window):
                                 return self.event(GKind.Group, widget.read_group(), widget.read_id())
-                            return self.event(GKind.Widget, widget.id)
-            if not hit_any:
-                self.update_focus(None)
-            # Note: consumed check removed from screen widget loop, as we now handle focus clearing separately
-            # If any widget was hit, we consider the mouse movement over the gui as "event consumed" contextually
-            if hit_any:
+                # If window is visible but mouse not in window rect (or no widget hit), clear focus
+                if not window.get_window_rect().collidepoint(self.get_mouse_pos()):
+                    self.update_focus(None)
                 return self.event(GKind.Pass)
-        # no widget or window consumed the event now do pygame base events
+        self.update_focus(None)
+        return self._handle_base_mouse_events(event)
+
+    def _process_screen_widgets(self, event):
+        hit_any = False
+        for widget in self.widgets.copy()[::-1]:
+            if widget.get_visible():
+                hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
+                if hit_rect.collidepoint(self.convert_to_window(self.get_mouse_pos(), None)):
+                    hit_any = True
+                    self.update_focus(widget)
+                    if self.handle_widget(widget, event):
+                        if widget.GType == GType.ButtonGroup:
+                            return self.event(GKind.Group, widget.read_group(), widget.read_id())
+                        return self.event(GKind.Widget, widget.id)
+        if not hit_any:
+            self.update_focus(None)
+            return self._handle_base_mouse_events(event)
+        return self.event(GKind.Pass)
+
+    def _handle_base_mouse_events(self, event):
         if event.type == MOUSEBUTTONUP:
             return self.event(GKind.MouseButtonUp, event.button)
         elif event.type == MOUSEBUTTONDOWN:
             return self.event(GKind.MouseButtonDown, event.button)
         if event.type == MOUSEMOTION:
             return self.event(GKind.MouseMotion, event.rel)
-        # event did not match anything
         return self.event(GKind.Pass)
 
     def handle_widget(self, widget, event, window=None):
