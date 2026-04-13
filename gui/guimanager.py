@@ -323,7 +323,6 @@ class GuiManager:
                     return self.event(GKind.Widget, id)
                 # For now, if locked, don't let others handle it
                 return self.event(GKind.Pass)
-
         if self.active_window != None:
             # for each window handle their widgets
             window_consumed = False
@@ -369,10 +368,8 @@ class GuiManager:
                             if widget.GType == GType.ButtonGroup:
                                 return self.event(GKind.Group, widget.read_group(), widget.read_id())
                             return self.event(GKind.Widget, widget.id)
-
             if not hit_any:
                 self.update_focus(None)
-
             # Note: consumed check removed from screen widget loop, as we now handle focus clearing separately
             # If any widget was hit, we consider the mouse movement over the gui as "event consumed" contextually
             if hit_any:
