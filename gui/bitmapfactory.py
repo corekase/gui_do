@@ -11,11 +11,10 @@ from .values.constants import colours, BStyle
 
 class BitmapFactory:
     def __init__(self):
-        # current font object
+        # current font object and name
         self.font = None
         self.current_font_name = None
-        # last font object
-        self.last_font = None
+        # last font name
         self.last_font_name = None
         # key:value -> key, name of font and value, font object
         self.fonts = {}
