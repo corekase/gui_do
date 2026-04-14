@@ -22,12 +22,6 @@ class GuiManager:
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
             self._bitmap_factory.load_font(name, filename, size)
-        # gridded layout variables and functions
-        self.position_gridded: Optional[Any] = None
-        self.x_size_pixels_gridded: Optional[Any] = None
-        self.y_size_pixels_gridded: Optional[Any] = None
-        self.space_size_gridded: Optional[Any] = None
-        self.use_rect: Optional[bool] = None
         # screen surface
         self.surface: Any = surface
         # list of widgets attached to the screen
