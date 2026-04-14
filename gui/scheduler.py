@@ -176,7 +176,7 @@ class Scheduler:
         new_scheduler.gui.set_mouse_pos(self.gui.get_mouse_pos(), True)
         return new_scheduler
 
-    def task_process(self):
+    def _process_next_task(self) -> None:
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
         try:
             task_id = self.tasks_ready.pop(0)
@@ -215,14 +215,14 @@ class Scheduler:
             # handle task logic
             self.tasks_finished.clear()
             if len(self.tasks_ready) > 0:
-                self.task_process()
+                self._process_next_task()
             elif len(self.tasks_ready) == 0:
                 self.tasks_ready = self.tasks_processed
                 if len(self.tasks_processed) > 0:
                     self.tasks_processed.clear()
                 if len(self.tasks_ready) > 0:
                     # do process here again because ready list was empty
-                    self.task_process()
+                    self._process_next_task()
             # send task events
             for id in self.tasks_finished:
                 event_handler(self.event(TaskKind.Finished, id))
