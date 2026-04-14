@@ -13,14 +13,14 @@ class GuiError(Exception):
 
 class GuiManager:
     def __init__(self, surface, fonts, bitmap_factory=None):
-        self.bitmap_factory = bitmap_factory or BitmapFactory()
+        self._bitmap_factory = bitmap_factory or BitmapFactory()
         self.event_dispatcher = EventDispatcher(self)
         self.layout_manager = LayoutManager()
         self.renderer = Renderer(self)
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
-            self.bitmap_factory.load_font(name, filename, size)
+            self._bitmap_factory.load_font(name, filename, size)
         # gridded layout variables and functions
         self.position_gridded = self.x_size_pixels_gridded = self.y_size_pixels_gridded = self.space_size_gridded = self.use_rect = None
         # screen surface
@@ -56,10 +56,8 @@ class GuiManager:
         # locking object
         self.locking_object = None
         # whether or not drawing is buffered
-        self.set_buffered(False)
-        # scheduler
-        self.scheduler = Scheduler(self)
-        # gui timers
+        self._buffered = False
+        self._scheduler = Scheduler(self)
         self.timers = Timers()
 
     def create(self, widget_type, *args, **kwargs):
@@ -153,14 +151,27 @@ class GuiManager:
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
-    def get_buffered(self):
-        # return whether or not drawing is buffered
-        return self.buffered
+    @property
+    def buffered(self):
+        return self._buffered
+
+    @buffered.setter
+    def buffered(self, value):
+        self._buffered = value
+
+    @property
+    def bitmap_factory(self):
+        return self._bitmap_factory
+
+    @property
+    def scheduler(self):
+        return self._scheduler
 
     def set_buffered(self, buffered):
-        # if buffered is set to True then bitmaps under gui objects
-        # will be saved and the undraw will undo them
         self.buffered = buffered
+
+    def get_buffered(self):
+        return self.buffered
 
     def get_scheduler(self):
         return self.scheduler
