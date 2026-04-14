@@ -56,6 +56,7 @@ class Widget:
         # class then this class will restore the pristine image, return, and subclasses
         # continue drawing
         self.auto_restore_pristine: bool = False
+
     @property
     def visible(self) -> bool:
         return self._visible

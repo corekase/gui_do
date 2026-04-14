@@ -47,7 +47,7 @@ class GuiManager:
         self.cursor_rect = None
         # which window is active
         self.active_window = None
-        # current widgets
+        # current widget
         self._current_widget = None
         # the pristine state of the screen bitmap
         self.pristine = None
