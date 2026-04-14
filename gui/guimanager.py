@@ -11,8 +11,8 @@ class GuiError(Exception):
     pass
 
 class GuiManager:
-    def __init__(self, surface, fonts):
-        self.bitmap_factory = BitmapFactory()
+    def __init__(self, surface, fonts, bitmap_factory=None):
+        self.bitmap_factory = bitmap_factory or BitmapFactory()
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
@@ -45,9 +45,8 @@ class GuiManager:
         self.cursor_rect = None
         # which window is active
         self.active_window = None
-        # current and last widgets
-        self.current_widget = None
-        self.last_widget = None
+        # current widgets
+        self._current_widget = None
         # the pristine state of the screen bitmap
         self.pristine = None
         # locking object
@@ -361,14 +360,20 @@ class GuiManager:
                 return True
         return False
 
+    @property
+    def current_widget(self):
+        return self._current_widget
+
+    @current_widget.setter
+    def current_widget(self, value):
+        if self._current_widget != value:
+            if self._current_widget is not None:
+                self._current_widget.leave()
+            self._current_widget = value
+
     def update_focus(self, new_hover):
-        # Centralized focus update logic
-        if new_hover != self.current_widget:
-            if self.current_widget is not None:
-                self.current_widget.leave()
-                self.set_last_widget(self.current_widget)
-                self.set_current_widget(new_hover)
-            self.current_widget = new_hover
+        # Delegate to the property setter
+        self.current_widget = new_hover
 
     def set_lock_area(self, locking_object, area=None):
         # lock area rect is in screen coordinates
@@ -409,19 +414,6 @@ class GuiManager:
         # move the window to the first item in the list which has the lowest priority
         self.windows.remove(window)
         self.windows.insert(0, window)
-
-    # reading and setting last_widget and current_widget are used in the widget base class
-    def read_last_widget(self):
-        return self.last_widget
-
-    def set_last_widget(self, widget):
-        self.last_widget = widget
-
-    def read_current_widget(self):
-        return self.current_widget
-
-    def set_current_widget(self, widget):
-        self.current_widget = widget
 
     def hide_widgets(self, *widgets):
         for widget in widgets:
