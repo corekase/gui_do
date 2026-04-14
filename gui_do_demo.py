@@ -3,9 +3,7 @@ import pygame
 from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import GuiManager
-from gui import EventKind, CanvasEventKind
-from gui import Orientation, ScrollbarArrowPosition, ButtonStyle
+from gui import GuiManager, EventKind, CanvasEventKind, Orientation, ScrollbarArrowPosition, ButtonStyle
 from gui import colours
 
 class Demo:
