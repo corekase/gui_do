@@ -7,7 +7,7 @@ from collections import deque
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
-from .values.constants import colours, BStyle
+from .values.constants import colours, ButtonStyle
 
 class BitmapFactory:
     def __init__(self):
@@ -102,15 +102,15 @@ class BitmapFactory:
         return saved
 
     def get_styled_bitmaps(self, style, text, rect):
-        if style == BStyle.Box:
+        if style == ButtonStyle.Box:
             return self.draw_box_style_bitmaps(text, rect)
-        elif style == BStyle.Round:
+        elif style == ButtonStyle.Round:
             return self.draw_rounded_style_bitmaps(text, rect)
-        elif style == BStyle.Angle:
+        elif style == ButtonStyle.Angle:
             return self.draw_angle_style_bitmaps(text, rect)
-        elif style == BStyle.Radio:
+        elif style == ButtonStyle.Radio:
             return self.draw_radio_style_bitmaps(text, rect)
-        elif style == BStyle.Check:
+        elif style == ButtonStyle.Check:
             return self.draw_check_style_bitmaps(text, rect)
         else:
             from .guimanager import GuiError

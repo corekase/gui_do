@@ -1,13 +1,13 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..values.constants import GType
-from .utility.interactive import BaseInteractive, State
+from ..values.constants import WidgetKind
+from .utility.interactive import BaseInteractive, InteractiveState
 from .utility.registry import register_widget
 
 @register_widget("Toggle")
 class Toggle(BaseInteractive):
     def __init__(self, gui, id, rect, style, pushed, pressed_text, raised_text=None):
         super().__init__(gui, id, rect)
-        self.GType = GType.Toggle
+        self.WidgetKind = WidgetKind.Toggle
         self.pushed = pushed
         if raised_text is None:
             raised_text = pressed_text
@@ -29,7 +29,7 @@ class Toggle(BaseInteractive):
         if not super().handle_event(event, window):
             return False
 
-        if self.state == State.Hover:
+        if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 self.pushed = not self.pushed
                 return True

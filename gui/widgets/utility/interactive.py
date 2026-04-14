@@ -1,37 +1,62 @@
-from enum import Enum
+"""
+Base class for interactive widgets.
+
+Provides state management (Idle, Hover, Armed) and common event handling
+for widgets that respond to mouse input.
+"""
+
 from .widget import Widget
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from typing import Optional
+from ...values.constants import InteractiveState
 
-State = Enum('State', ['Idle', 'Hover', 'Armed'])
+# Backward compatibility alias
+State = InteractiveState
+
 
 class BaseInteractive(Widget):
+    """
+    Base class for interactive widgets.
+
+    Manages three-state interaction: Idle → Hover → Armed.
+    Subclasses override handle_event and draw to customize behavior.
+    """
+
     def __init__(self, gui, id, rect):
         super().__init__(gui, id, rect)
-        self.state = State.Idle
-        self.idle = None
-        self.hover = None
-        self.armed = None
+        self.state: InteractiveState = InteractiveState.Idle
+        self.idle: Optional[any] = None      # Surface for idle state
+        self.hover: Optional[any] = None     # Surface for hover state
+        self.armed: Optional[any] = None     # Surface for armed state
 
-    def handle_event(self, event, window):
+    def handle_event(self, event, window) -> bool:
+        """
+        Handle mouse events and manage state transitions.
+
+        Returns:
+            bool: True if event was handled by widget, False otherwise
+        """
         collision = self.get_collide(window)
         if not collision:
-            if self.state != State.Armed:
-                self.state = State.Idle
+            if self.state != InteractiveState.Armed:
+                self.state = InteractiveState.Idle
             return False
 
-        if self.state == State.Idle:
-            self.state = State.Hover
+        if self.state == InteractiveState.Idle:
+            self.state = InteractiveState.Hover
         return True
 
-    def leave(self):
-        if self.state != State.Armed:
-            self.state = State.Idle
+    def leave(self) -> None:
+        """Called when widget loses focus. Reset state if not armed."""
+        if self.state != InteractiveState.Armed:
+            self.state = InteractiveState.Idle
 
-    def draw(self):
+    def draw(self) -> None:
+        """Draw widget state appropriate surface."""
         super().draw()
-        if self.state == State.Idle and self.idle:
+        if self.state == InteractiveState.Idle and self.idle:
             self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == State.Hover and self.hover:
+        elif self.state == InteractiveState.Hover and self.hover:
             self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == State.Armed and self.armed:
+        elif self.state == InteractiveState.Armed and self.armed:
             self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))

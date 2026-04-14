@@ -1,8 +1,8 @@
 import pygame
 from pygame import Rect
 from ..guimanager import GuiManager
-from ..values.constants import colours, CType
-from .frame import Frame, FrState
+from ..values.constants import colours, ContainerKind
+from .frame import Frame, FrameState
 from .utility.registry import register_widget
 
 @register_widget("Window")
@@ -10,7 +10,7 @@ class Window:
     def __init__(self, gui, title, pos, size, backdrop=None):
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui:GuiManager = gui
-        self.ctype = CType.Window
+        self.ContainerKind = ContainerKind.Window
         factory = gui.get_bitmapfactory()
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
@@ -23,7 +23,7 @@ class Window:
         if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
-            frame.state = FrState.Idle
+            frame.state = FrameState.Idle
             frame.surface = self.surface
             frame.draw()
         else:

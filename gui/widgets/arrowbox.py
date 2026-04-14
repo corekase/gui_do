@@ -1,4 +1,4 @@
-from ..values.constants import GType, BStyle
+from ..values.constants import WidgetKind, ButtonStyle
 from .button import Button
 from .utility.registry import register_widget
 
@@ -6,7 +6,7 @@ from .utility.registry import register_widget
 class ArrowBox(Button):
     def __init__(self, gui, id, rect, direction, callback=None):
         # initialize common widget values, skipping the button factory with the True
-        super().__init__(gui, id, rect, BStyle.Box, None, callback, True)
-        self.GType = GType.Arrowbox
+        super().__init__(gui, id, rect, ButtonStyle.Box, None, callback, True)
+        self.WidgetKind = WidgetKind.ArrowBox
         factory = self.gui.get_bitmapfactory()
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)

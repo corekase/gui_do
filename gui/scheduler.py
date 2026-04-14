@@ -1,8 +1,9 @@
 import time
 import pygame
 from enum import Enum
+from .values.constants import EventKind
 
-TKind = Enum('TKind', ['Finished'])
+TaskKind = Enum('TaskKind', ['Finished'])
 
 class Timers:
     def __init__(self):
@@ -61,19 +62,18 @@ class Scheduler:
             self.message_method = None
 
     def event(self, operation, item1=None):
-        from .guimanager import GKind
         class TaskEvent:
             # an event object to be returned which includes pygame event information and gui_do information
             def __init__(self):
                 # the event is a Task type
-                self.type = GKind.Task
+                self.type = EventKind.Task
                 # what the event represents
                 self.operation = None
                 # task id
                 self.id = None
         task_event = TaskEvent()
         task_event.operation = operation
-        if operation == TKind.Finished:
+        if operation == TaskKind.Finished:
             task_event.id = item1
         # elif more operations
         return task_event
@@ -225,7 +225,7 @@ class Scheduler:
                     self.task_process()
             # send task events
             for id in self.tasks_finished:
-                event_handler(self.event(TKind.Finished, id))
+                event_handler(self.event(TaskKind.Finished, id))
             self.tasks_finished.clear()
             # call postamble
             postamble()

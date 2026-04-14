@@ -1,6 +1,6 @@
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..values.constants import GType
-from .utility.interactive import BaseInteractive, State
+from ..values.constants import WidgetKind
+from .utility.interactive import BaseInteractive, InteractiveState
 from .utility.registry import register_widget
 
 @register_widget("ButtonGroup")
@@ -11,7 +11,7 @@ class ButtonGroup(BaseInteractive):
     selections = {}
     def __init__(self, gui, group, id, rect, style, text):
         super().__init__(gui, id, rect)
-        self.GType = GType.ButtonGroup
+        self.WidgetKind = WidgetKind.ButtonGroup
         factory = self.gui.get_bitmapfactory()
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
@@ -32,10 +32,10 @@ class ButtonGroup(BaseInteractive):
 
         # Handle interaction
         if collision:
-            if self.state == State.Idle:
-                self.state = State.Hover
+            if self.state == InteractiveState.Idle:
+                self.state = InteractiveState.Hover
 
-            if self.state == State.Hover:
+            if self.state == InteractiveState.Hover:
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
                     self.select()
                     return True
@@ -43,9 +43,9 @@ class ButtonGroup(BaseInteractive):
 
     def select(self):
         # clear armed state for previous object
-        ButtonGroup.selections[self.group].state = State.Idle
+        ButtonGroup.selections[self.group].state = InteractiveState.Idle
         # mark this object armed
-        self.state = State.Armed
+        self.state = InteractiveState.Armed
         # make this object the currently armed one
         ButtonGroup.selections[self.group] = self
 

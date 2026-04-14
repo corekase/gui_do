@@ -4,8 +4,8 @@ from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import GuiManager
-from gui import GKind, CKind
-from gui import HorV, SArrows, BStyle
+from gui import EventKind, CanvasEventKind
+from gui import Orientation, ScrollbarArrowPosition, ButtonStyle
 from gui import colours
 
 class Demo:
@@ -33,21 +33,21 @@ class Demo:
         b.set_font('normal')
         widget_height = 28
         # exit button
-        g.create('Button', 'exit', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Exit')
+        g.create('Button', 'exit', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
         g.set_grid_properties((85, 1042), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_button = g.create('Button', 'gui2', g.gridded(0, 0), BStyle.Round, 'GUI 2')
+        self.gui2_button = g.create('Button', 'gui2', g.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
         # control whether the background circles are drawn
-        self.circles_toggle = g.create('Toggle', 'circles', g.gridded(1, 0), BStyle.Round, False, 'Circles')
+        self.circles_toggle = g.create('Toggle', 'circles', g.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = g.create('Toggle', 'buttons_window', g.gridded(2, 0), BStyle.Round, False, 'Buttons')
+        self.buttons_toggle = g.create('Toggle', 'buttons_window', g.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
         # control whether the scrollbar window is visible
-        self.scrollbars_toggle = g.create('Toggle', 'scrollbar_window', g.gridded(3, 0), BStyle.Round, False, 'Scrollbars')
+        self.scrollbars_toggle = g.create('Toggle', 'scrollbar_window', g.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
         # control whether the life window is visible
-        self.life_toggle = g.create('Toggle', 'life_window', g.gridded(4, 0), BStyle.Round, False, 'Life')
+        self.life_toggle = g.create('Toggle', 'life_window', g.gridded(4, 0), ButtonStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
-        self.mandel_toggle = g.create('Toggle', 'mandel_window', g.gridded(5, 0), BStyle.Round, False, 'Mandelbrot')
+        self.mandel_toggle = g.create('Toggle', 'mandel_window', g.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         g.set_grid_properties((10, 10), 120, widget_height, 2)
@@ -61,46 +61,46 @@ class Demo:
         g.create('Label', g.gridded(5, 0), 'G6 Mixed', True)
         g.create('Label', g.gridded(6, 0), 'Buttons', True)
         g.create('Label', g.gridded(7, 0), 'Toggles', True)
-        lbg1 = g.create('ButtonGroup', 'bg1', 'bg1b01', g.gridded(0, 1), BStyle.Box, 'Box 1')
-        g.create('ButtonGroup', 'bg1', 'bg1b02', g.gridded(0, 2), BStyle.Box, 'Box 2',)
-        g.create('ButtonGroup', 'bg1', 'bg1b03', g.gridded(0, 3), BStyle.Box, 'Box 3',)
-        g.create('ButtonGroup', 'bg1', 'bg1b04', g.gridded(0, 4), BStyle.Box, 'Box 4',)
-        g.create('ButtonGroup', 'bg1', 'bg1b05', g.gridded(0, 5), BStyle.Box, 'Box 5',)
-        lbg2 = g.create('ButtonGroup', 'bg2', 'bg2b01', g.gridded(1, 1), BStyle.Round, 'Round 1')
-        g.create('ButtonGroup', 'bg2', 'bg2b02', g.gridded(1, 2), BStyle.Round, 'Round 2')
-        g.create('ButtonGroup', 'bg2', 'bg2b03', g.gridded(1, 3), BStyle.Round, 'Round 3')
-        g.create('ButtonGroup', 'bg2', 'bg2b04', g.gridded(1, 4), BStyle.Round, 'Round 4')
-        g.create('ButtonGroup', 'bg2', 'bg2b05', g.gridded(1, 5), BStyle.Round, 'Round 5')
-        lbg3 = g.create('ButtonGroup', 'bg3', 'bg3b01', g.gridded(2, 1), BStyle.Angle, 'Angle 1')
-        g.create('ButtonGroup', 'bg3', 'bg3b02', g.gridded(2, 2), BStyle.Angle, 'Angle 2')
-        g.create('ButtonGroup', 'bg3', 'bg3b03', g.gridded(2, 3), BStyle.Angle, 'Angle 3')
-        g.create('ButtonGroup', 'bg3', 'bg3b04', g.gridded(2, 4), BStyle.Angle, 'Angle 4')
-        g.create('ButtonGroup', 'bg3', 'bg3b05', g.gridded(2, 5), BStyle.Angle, 'Angle 5')
-        lbg4 = g.create('ButtonGroup', 'bg4', 'bg4b01', g.gridded(3, 1), BStyle.Radio, 'Radio 1')
-        g.create('ButtonGroup', 'bg4', 'bg4b02', g.gridded(3, 2), BStyle.Radio, 'Radio 2')
-        g.create('ButtonGroup', 'bg4', 'bg4b03', g.gridded(3, 3), BStyle.Radio, 'Radio 3')
-        g.create('ButtonGroup', 'bg4', 'bg4b04', g.gridded(3, 4), BStyle.Radio, 'Radio 4')
-        g.create('ButtonGroup', 'bg4', 'bg4b05', g.gridded(3, 5), BStyle.Radio, 'Radio 5')
-        lbg5 = g.create('ButtonGroup', 'bg5', 'bg5b01', g.gridded(4, 1), BStyle.Check, 'Check 1')
-        g.create('ButtonGroup', 'bg5', 'bg5b02', g.gridded(4, 2), BStyle.Check, 'Check 2')
-        g.create('ButtonGroup', 'bg5', 'bg5b03', g.gridded(4, 3), BStyle.Check, 'Check 3')
-        g.create('ButtonGroup', 'bg5', 'bg5b04', g.gridded(4, 4), BStyle.Check, 'Check 4')
-        g.create('ButtonGroup', 'bg5', 'bg5b05', g.gridded(4, 5), BStyle.Check, 'Check 5')
-        lbg6 = g.create('ButtonGroup', 'bg6', 'bg6b01', g.gridded(5, 1), BStyle.Box, 'Mix 1')
-        g.create('ButtonGroup', 'bg6', 'bg6b02', g.gridded(5, 2), BStyle.Round, 'Mix 2')
-        g.create('ButtonGroup', 'bg6', 'bg6b03', g.gridded(5, 3), BStyle.Angle, 'Mix 3')
-        g.create('ButtonGroup', 'bg6', 'bg6b04', g.gridded(5, 4), BStyle.Radio, 'Mix 4')
-        g.create('ButtonGroup', 'bg6', 'bg6b05', g.gridded(5, 5), BStyle.Check, 'Mix 5')
-        g.create('Button', 'b1', g.gridded(6, 1), BStyle.Box, 'Button 1')
-        g.create('Button', 'b2', g.gridded(6, 2), BStyle.Round, 'Button 2')
-        g.create('Button', 'b3', g.gridded(6, 3), BStyle.Angle, 'Button 3')
-        g.create('Button', 'b4', g.gridded(6, 4), BStyle.Radio, 'Button 4')
-        g.create('Button', 'b5', g.gridded(6, 5), BStyle.Check, 'Button 5')
-        g.create('Toggle', 't1', g.gridded(7, 1), BStyle.Box, False, 'Push 1', 'Raise 1')
-        g.create('Toggle', 't2', g.gridded(7, 2), BStyle.Round, False, 'Push 2', 'Raise 2')
-        g.create('Toggle', 't3', g.gridded(7, 3), BStyle.Angle, False, 'Push 3', 'Raise 3')
-        g.create('Toggle', 't4', g.gridded(7, 4), BStyle.Radio, False, 'Push 4', 'Raise 4')
-        g.create('Toggle', 't5', g.gridded(7, 5), BStyle.Check, False, 'Push 5', 'Raise 5')
+        lbg1 = g.create('ButtonGroup', 'bg1', 'bg1b01', g.gridded(0, 1), ButtonStyle.Box, 'Box 1')
+        g.create('ButtonGroup', 'bg1', 'bg1b02', g.gridded(0, 2), ButtonStyle.Box, 'Box 2',)
+        g.create('ButtonGroup', 'bg1', 'bg1b03', g.gridded(0, 3), ButtonStyle.Box, 'Box 3',)
+        g.create('ButtonGroup', 'bg1', 'bg1b04', g.gridded(0, 4), ButtonStyle.Box, 'Box 4',)
+        g.create('ButtonGroup', 'bg1', 'bg1b05', g.gridded(0, 5), ButtonStyle.Box, 'Box 5',)
+        lbg2 = g.create('ButtonGroup', 'bg2', 'bg2b01', g.gridded(1, 1), ButtonStyle.Round, 'Round 1')
+        g.create('ButtonGroup', 'bg2', 'bg2b02', g.gridded(1, 2), ButtonStyle.Round, 'Round 2')
+        g.create('ButtonGroup', 'bg2', 'bg2b03', g.gridded(1, 3), ButtonStyle.Round, 'Round 3')
+        g.create('ButtonGroup', 'bg2', 'bg2b04', g.gridded(1, 4), ButtonStyle.Round, 'Round 4')
+        g.create('ButtonGroup', 'bg2', 'bg2b05', g.gridded(1, 5), ButtonStyle.Round, 'Round 5')
+        lbg3 = g.create('ButtonGroup', 'bg3', 'bg3b01', g.gridded(2, 1), ButtonStyle.Angle, 'Angle 1')
+        g.create('ButtonGroup', 'bg3', 'bg3b02', g.gridded(2, 2), ButtonStyle.Angle, 'Angle 2')
+        g.create('ButtonGroup', 'bg3', 'bg3b03', g.gridded(2, 3), ButtonStyle.Angle, 'Angle 3')
+        g.create('ButtonGroup', 'bg3', 'bg3b04', g.gridded(2, 4), ButtonStyle.Angle, 'Angle 4')
+        g.create('ButtonGroup', 'bg3', 'bg3b05', g.gridded(2, 5), ButtonStyle.Angle, 'Angle 5')
+        lbg4 = g.create('ButtonGroup', 'bg4', 'bg4b01', g.gridded(3, 1), ButtonStyle.Radio, 'Radio 1')
+        g.create('ButtonGroup', 'bg4', 'bg4b02', g.gridded(3, 2), ButtonStyle.Radio, 'Radio 2')
+        g.create('ButtonGroup', 'bg4', 'bg4b03', g.gridded(3, 3), ButtonStyle.Radio, 'Radio 3')
+        g.create('ButtonGroup', 'bg4', 'bg4b04', g.gridded(3, 4), ButtonStyle.Radio, 'Radio 4')
+        g.create('ButtonGroup', 'bg4', 'bg4b05', g.gridded(3, 5), ButtonStyle.Radio, 'Radio 5')
+        lbg5 = g.create('ButtonGroup', 'bg5', 'bg5b01', g.gridded(4, 1), ButtonStyle.Check, 'Check 1')
+        g.create('ButtonGroup', 'bg5', 'bg5b02', g.gridded(4, 2), ButtonStyle.Check, 'Check 2')
+        g.create('ButtonGroup', 'bg5', 'bg5b03', g.gridded(4, 3), ButtonStyle.Check, 'Check 3')
+        g.create('ButtonGroup', 'bg5', 'bg5b04', g.gridded(4, 4), ButtonStyle.Check, 'Check 4')
+        g.create('ButtonGroup', 'bg5', 'bg5b05', g.gridded(4, 5), ButtonStyle.Check, 'Check 5')
+        lbg6 = g.create('ButtonGroup', 'bg6', 'bg6b01', g.gridded(5, 1), ButtonStyle.Box, 'Mix 1')
+        g.create('ButtonGroup', 'bg6', 'bg6b02', g.gridded(5, 2), ButtonStyle.Round, 'Mix 2')
+        g.create('ButtonGroup', 'bg6', 'bg6b03', g.gridded(5, 3), ButtonStyle.Angle, 'Mix 3')
+        g.create('ButtonGroup', 'bg6', 'bg6b04', g.gridded(5, 4), ButtonStyle.Radio, 'Mix 4')
+        g.create('ButtonGroup', 'bg6', 'bg6b05', g.gridded(5, 5), ButtonStyle.Check, 'Mix 5')
+        g.create('Button', 'b1', g.gridded(6, 1), ButtonStyle.Box, 'Button 1')
+        g.create('Button', 'b2', g.gridded(6, 2), ButtonStyle.Round, 'Button 2')
+        g.create('Button', 'b3', g.gridded(6, 3), ButtonStyle.Angle, 'Button 3')
+        g.create('Button', 'b4', g.gridded(6, 4), ButtonStyle.Radio, 'Button 4')
+        g.create('Button', 'b5', g.gridded(6, 5), ButtonStyle.Check, 'Button 5')
+        g.create('Toggle', 't1', g.gridded(7, 1), ButtonStyle.Box, False, 'Push 1', 'Raise 1')
+        g.create('Toggle', 't2', g.gridded(7, 2), ButtonStyle.Round, False, 'Push 2', 'Raise 2')
+        g.create('Toggle', 't3', g.gridded(7, 3), ButtonStyle.Angle, False, 'Push 3', 'Raise 3')
+        g.create('Toggle', 't4', g.gridded(7, 4), ButtonStyle.Radio, False, 'Push 4', 'Raise 4')
+        g.create('Toggle', 't5', g.gridded(7, 5), ButtonStyle.Check, False, 'Push 5', 'Raise 5')
         g.set_grid_properties((10, g.gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
         self.label1 = g.create('Label', g.gridded(0, 0), f'ID: {lbg1.read_id()}', True)
         self.label2 = g.create('Label', g.gridded(1, 0), f'ID: {lbg2.read_id()}', True)
@@ -112,21 +112,21 @@ class Demo:
         y_pos += 248
         self.scrollbar_win = g.create('Window', 'Scrollbars', (x_pos, y_pos), (320, 362))
         x = y = 10
-        g.create('Scrollbar', 'scrollbar_a', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Skip, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Skip, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_b', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Split, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_b', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Split, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_c', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Near, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_c', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Near, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_d', Rect(x, y, 300, 20), HorV.Horizontal, SArrows.Far, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_d', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Far, (100, 0, 30, 10))
         y += 24
-        g.create('Scrollbar', 'scrollbar_e', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Skip, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_e', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Skip, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_f', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Split, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_f', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Split, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_g', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Near, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_g', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Near, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_h', Rect(x, y, 20, 250), HorV.Vertical, SArrows.Far, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_h', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Far, (100, 0, 30, 10))
         g.create('Image', 'realize', Rect(x + 25, y, 210, 210), 'realize.png', False)
         b.set_font('scroll')
         g.create('Label', (x + 30, y + 215), 'Scrollbars!', True)
@@ -142,9 +142,9 @@ class Demo:
         self.life = set()
         g.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         # resets the life simulation to a default state, uses a callback function
-        g.create('Button', 'life_reset', g.gridded(0, 0), BStyle.Angle, 'Reset')
+        g.create('Button', 'life_reset', g.gridded(0, 0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
-        self.toggle_life = g.create('Toggle', 'run', g.gridded(1, 0), BStyle.Round, False, 'Stop', 'Start')
+        self.toggle_life = g.create('Toggle', 'run', g.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -161,11 +161,11 @@ class Demo:
         g.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
         g.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        g.create('Button', 'mandel_reset', g.gridded(0, 0), BStyle.Angle, 'Reset')
-        g.create('Button', 'iterative', g.gridded(1, 0), BStyle.Round, 'Iterative')
-        g.create('Button', 'recursive', g.gridded(2, 0), BStyle.Round, 'Recursive')
-        g.create('Button', '1split', g.gridded(3, 0), BStyle.Round, '1M 4 Tasks')
-        g.create('Button', '4split', g.gridded(4, 0), BStyle.Round, '4M 4 Tasks')
+        g.create('Button', 'mandel_reset', g.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        g.create('Button', 'iterative', g.gridded(1, 0), ButtonStyle.Round, 'Iterative')
+        g.create('Button', 'recursive', g.gridded(2, 0), ButtonStyle.Round, 'Recursive')
+        g.create('Button', '1split', g.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
+        g.create('Button', '4split', g.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
         # set cursor image
         g.set_cursor((1, 1), 'cursor.png')
         self.gui1 = g
@@ -175,7 +175,7 @@ class Demo:
         self.scheduler2 = self.gui2.get_scheduler()
         self.gui2.get_bitmapfactory().set_font('normal')
         self.gui2.set_pristine('backdrop.jpg')
-        self.gui2.create('Button', 'return', Rect(10, 1042, 70, widget_height), BStyle.Angle, 'Back')
+        self.gui2.create('Button', 'return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
         self.gui2.create('Window', 'GUI 2', (50, 150), (300, 300))
         # set cursor for gui2
         self.gui2.set_cursor((1, 1), 'cursor.png')
@@ -227,7 +227,7 @@ class Demo:
 
     def handle_events1(self, event):
         # handle events
-        if event.type == GKind.Widget:
+        if event.type == EventKind.Widget:
             if event.widget_id == 'exit':
                 # exit button was clicked
                 self.running = False
@@ -279,7 +279,7 @@ class Demo:
                     self.scheduler1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
                     self.scheduler1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
                     self.scheduler1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
-        elif event.type == GKind.Group:
+        elif event.type == EventKind.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
             elif event.group == 'bg2':
@@ -292,11 +292,11 @@ class Demo:
                 self.label5.set_label(f'ID: {event.widget_id}')
             elif event.group == 'bg6':
                 self.label6.set_label(f'ID: {event.widget_id}')
-        elif event.type == GKind.KeyDown:
+        elif event.type == EventKind.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
                 self.running = False
-        elif event.type == GKind.Quit:
+        elif event.type == EventKind.Quit:
             # window close widget or alt-f4 keypress
             self.running = False
 
@@ -320,15 +320,15 @@ class Demo:
 
     def handle_events2(self, event):
         # handle events
-        if event.type == GKind.Widget:
+        if event.type == EventKind.Widget:
             if event.widget_id == 'return':
                 # return button was clicked
                 self.running_scheduler = self.scheduler2.interrupt(self.scheduler1)
-        elif event.type == GKind.KeyDown:
+        elif event.type == EventKind.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
                 self.running = False
-        elif event.type == GKind.Quit:
+        elif event.type == EventKind.Quit:
             # window close widget or alt-f4 keypress
             self.running = False
 
@@ -345,21 +345,21 @@ class Demo:
         CEvent = self.canvas.read_event()
         if CEvent != None:
             # parse that event by kind and parameters
-            if CEvent.type == CKind.MouseButtonDown:
+            if CEvent.type == CanvasEventKind.MouseButtonDown:
                 # right-mouse button pressed, enter dragging state
                 if CEvent.button == 3:
                     self.dragging = True
-            elif CEvent.type == CKind.MouseButtonUp:
+            elif CEvent.type == CanvasEventKind.MouseButtonUp:
                 # right-mouse button released, exit dragging state
                 if CEvent.button == 3:
                     self.dragging = False
-            elif CEvent.type == CKind.MouseMotion:
+            elif CEvent.type == CanvasEventKind.MouseMotion:
                 # if dragging then track relative position
                 if self.dragging:
                     x, y = CEvent.rel[0], CEvent.rel[1]
                     self.origin_x += x
                     self.origin_y += y
-            elif CEvent.type == CKind.MouseWheel:
+            elif CEvent.type == CanvasEventKind.MouseWheel:
                 # handle the mouse wheel
                 if CEvent.y != None:
                     self.cell_size += (CEvent.y * 2)

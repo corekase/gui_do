@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .scheduler import Timers, Scheduler
-from .values.constants import GKind, GType, CType
+from .values.constants import EventKind, WidgetKind, ContainerKind
 from .widgets.utility.interactive import State
 from .bitmapfactory import BitmapFactory
 from .widgets.utility.registry import create_widget
@@ -63,12 +63,12 @@ class GuiManager:
         return self.add(create_widget(widget_type, self, *args, **kwargs))
 
     def add(self, gui_object):
-        if gui_object.ctype == CType.Window:
+        if gui_object.ContainerKind == ContainerKind.Window:
             # add this window to the gui
             self.windows.append(gui_object)
             # make this object the destination for gui add commands
             self.active_object = gui_object
-        elif gui_object.ctype == CType.Widget:
+        elif gui_object.ContainerKind == ContainerKind.Widget:
             # callback
             if self.active_object is not None:
                 # store a reference to the window the widget is in
@@ -197,7 +197,7 @@ class GuiManager:
                 self.button = kwargs.get('button')
                 self.widget_id = kwargs.get('widget_id')
                 self.group = kwargs.get('group')
-        if event_type in (GKind.MouseButtonUp, GKind.MouseButtonDown, GKind.MouseMotion):
+        if event_type in (EventKind.MouseButtonUp, EventKind.MouseButtonDown, EventKind.MouseMotion):
             kwargs.setdefault('pos', self.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
 
@@ -206,7 +206,7 @@ class GuiManager:
         for raw_event in pygame.event.get():
             # process event
             event = self.handle_event(raw_event)
-            if event.type == GKind.Pass:
+            if event.type == EventKind.Pass:
                 # no operation
                 continue
             # yield current event
@@ -245,12 +245,12 @@ class GuiManager:
 
     def _handle_system_event(self, event):
         if event.type == QUIT:
-            return self.event(GKind.Quit)
+            return self.event(EventKind.Quit)
         if event.type == KEYUP:
-            return self.event(GKind.KeyUp, key=event.key)
+            return self.event(EventKind.KeyUp, key=event.key)
         elif event.type == KEYDOWN:
-            return self.event(GKind.KeyDown, key=event.key)
-        return self.event(GKind.Pass)
+            return self.event(EventKind.KeyDown, key=event.key)
+        return self.event(EventKind.Pass)
 
     def _update_active_window(self):
         top_window = None
@@ -275,7 +275,7 @@ class GuiManager:
             y = self.dragging_window.y + event.rel[1]
             self.set_mouse_pos((x - self.mouse_delta[0], y - self.mouse_delta[1]), False)
             self.dragging_window.set_pos((x, y))
-        return self.event(GKind.Pass)
+        return self.event(EventKind.Pass)
 
     def _check_window_drag_start(self, event):
         if self.active_window and self.active_window.get_title_bar_rect().collidepoint(self.lock_area(event.pos)):
@@ -289,14 +289,14 @@ class GuiManager:
                                     self.dragging_window.y - self.mouse_pos[1])
 
     def _handle_locked_object(self, event):
-        if self.locking_object.GType == GType.Scrollbar:
+        if self.locking_object.WidgetKind == WidgetKind.Scrollbar:
             window = self.locking_object.window if hasattr(self.locking_object, 'window') else None
             if self.handle_widget(self.locking_object, event, window):
                 # Ensure widget_id is provided even if locking_object.id is None
                 widget_id = getattr(self.locking_object, 'id', None)
-                return self.event(GKind.Widget, widget_id=widget_id)
-            return self.event(GKind.Pass)
-        return self.event(GKind.Pass)
+                return self.event(EventKind.Widget, widget_id=widget_id)
+            return self.event(EventKind.Pass)
+        return self.event(EventKind.Pass)
 
     def _process_window_widgets(self, event):
         # clicking on the window the mouse is over raises it
@@ -311,16 +311,16 @@ class GuiManager:
                             hit_any = True
                             self.update_focus(widget)
                             if self.handle_widget(widget, event, window):
-                                if widget.GType == GType.ButtonGroup:
-                                    return self.event(GKind.Group, group=widget.read_group(), widget_id=widget.read_id())
-                                return self.event(GKind.Widget, widget_id=widget.id)
-                        elif widget.GType == GType.ButtonGroup and widget.state == State.Armed:
+                                if widget.WidgetKind == WidgetKind.ButtonGroup:
+                                    return self.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
+                                return self.event(EventKind.Widget, widget_id=widget.id)
+                        elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == State.Armed:
                             if self.handle_widget(widget, event, window):
-                                return self.event(GKind.Group, group=widget.read_group(), widget_id=widget.read_id())
+                                return self.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
                 # If window is visible but mouse not in window rect (or no widget hit), clear focus
                 if not hit_any:
                     self.update_focus(None)
-                return self.event(GKind.Pass)
+                return self.event(EventKind.Pass)
         self.update_focus(None)
         return self._handle_base_mouse_events(event)
 
@@ -333,22 +333,22 @@ class GuiManager:
                     hit_any = True
                     self.update_focus(widget)
                     if self.handle_widget(widget, event):
-                        if widget.GType == GType.ButtonGroup:
-                            return self.event(GKind.Group, group=widget.read_group(), widget_id=widget.read_id())
-                        return self.event(GKind.Widget, widget_id=widget.id)
+                        if widget.WidgetKind == WidgetKind.ButtonGroup:
+                            return self.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
+                        return self.event(EventKind.Widget, widget_id=widget.id)
         if not hit_any:
             self.update_focus(None)
             return self._handle_base_mouse_events(event)
-        return self.event(GKind.Pass)
+        return self.event(EventKind.Pass)
 
     def _handle_base_mouse_events(self, event):
         if event.type == MOUSEBUTTONUP:
-            return self.event(GKind.MouseButtonUp, button=event.button)
+            return self.event(EventKind.MouseButtonUp, button=event.button)
         elif event.type == MOUSEBUTTONDOWN:
-            return self.event(GKind.MouseButtonDown, button=event.button)
+            return self.event(EventKind.MouseButtonDown, button=event.button)
         if event.type == MOUSEMOTION:
-            return self.event(GKind.MouseMotion, rel=event.rel)
-        return self.event(GKind.Pass)
+            return self.event(EventKind.MouseMotion, rel=event.rel)
+        return self.event(EventKind.Pass)
 
     def handle_widget(self, widget, event, window=None):
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()

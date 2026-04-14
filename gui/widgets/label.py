@@ -1,4 +1,4 @@
-from ..values.constants import colours, GType
+from ..values.constants import colours, WidgetKind
 from .utility.widget import Widget
 from pygame import Rect
 from .utility.registry import register_widget
@@ -18,7 +18,7 @@ class Label(Widget):
             x = position[0] + self.gui.get_bitmapfactory().centre(position[2], self.rect.width)
             y = position[1] + self.gui.get_bitmapfactory().centre(position[3], self.rect.height)
             self.rect.x, self.rect.y = x, y
-        self.GType = GType.Label
+        self.WidgetKind = WidgetKind.Label
 
     def set_label(self, text):
         # text bitmap
