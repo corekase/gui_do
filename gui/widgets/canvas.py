@@ -2,10 +2,10 @@ import pygame
 from typing import Optional, Any
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..values.constants import WidgetKind, CanvasEventKind
-from .utility.widget import Widget
+from ..utility.values.constants import WidgetKind, CanvasEventKind
+from ..utility.widget import Widget
 from .frame import Frame, FrameState
-from .utility.registry import register_widget
+from ..utility.registry import register_widget
 
 @register_widget("Canvas")
 class Canvas(Widget):

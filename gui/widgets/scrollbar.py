@@ -2,10 +2,10 @@ from typing import Any, List, Optional, Tuple
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from ..values.constants import WidgetKind
+from ..utility.values.constants import WidgetKind
 from .frame import Frame, FrameState
-from ..values.constants import colours, Orientation, ScrollbarArrowPosition
-from .utility.registry import register_widget
+from ..utility.values.constants import colours, Orientation, ScrollbarArrowPosition
+from ..utility.registry import register_widget
 
 @register_widget("Scrollbar")
 class Scrollbar(Frame):

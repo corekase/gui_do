@@ -1,7 +1,7 @@
 from typing import Any, Optional, Callable
-from ..values.constants import WidgetKind, ButtonStyle
+from ..utility.values.constants import WidgetKind, ButtonStyle
 from .button import Button
-from .utility.registry import register_widget
+from ..utility.registry import register_widget
 
 @register_widget("ArrowBox")
 class ArrowBox(Button):

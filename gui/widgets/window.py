@@ -2,9 +2,9 @@ import pygame
 from pygame import Rect
 from typing import Optional, Tuple, Any
 from ..guimanager import GuiManager
-from ..values.constants import colours, ContainerKind
+from ..utility.values.constants import colours, ContainerKind
 from .frame import Frame, FrameState
-from .utility.registry import register_widget
+from ..utility.registry import register_widget
 
 @register_widget("Window")
 class Window:

@@ -4,9 +4,9 @@
 # can be either horizontal or vertical
 
 from typing import Any
-from ..values.constants import WidgetKind, Orientation
-from .utility.widget import Widget
-from .utility.registry import register_widget
+from ..utility.values.constants import WidgetKind, Orientation
+from ..utility.widget import Widget
+from ..utility.registry import register_widget
 
 @register_widget("Slider")
 class Slider(Widget):

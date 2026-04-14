@@ -2,7 +2,7 @@ import time
 import pygame
 from typing import Dict, List, Optional, Callable, Any, TYPE_CHECKING
 from enum import Enum
-from .values.constants import EventKind
+from .utility.values.constants import EventKind
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager

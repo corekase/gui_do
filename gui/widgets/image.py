@@ -1,8 +1,8 @@
 import pygame
 from typing import Any
-from ..values.constants import WidgetKind
-from .utility.widget import Widget
-from .utility.registry import register_widget
+from ..utility.values.constants import WidgetKind
+from ..utility.widget import Widget
+from ..utility.registry import register_widget
 
 @register_widget("Image")
 class Image(Widget):

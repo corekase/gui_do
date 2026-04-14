@@ -8,7 +8,7 @@ from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Tuple, Optional, Any
-from .values.constants import colours, ButtonStyle
+from .utility.values.constants import colours, ButtonStyle
 
 class BitmapFactory:
     def __init__(self) -> None:

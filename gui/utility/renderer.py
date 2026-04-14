@@ -2,7 +2,7 @@ from pygame import Rect
 from typing import List, Tuple, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ...guimanager import GuiManager
+    from ..guimanager import GuiManager
 
 class Renderer:
     def __init__(self, gui: "GuiManager") -> None:

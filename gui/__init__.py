@@ -2,10 +2,10 @@
 import os
 # import GuiManager and widgets into this package's namespace
 from .guimanager import GuiManager
-from .values.decorations import _init_decorations
+from .utility.values.decorations import _init_decorations
 _init_decorations()
 # import constants into the package namespace
-from .values.constants import colours, EventKind, WidgetKind, Orientation, ScrollbarArrowPosition, ButtonStyle
+from .utility.values.constants import colours, EventKind, WidgetKind, Orientation, ScrollbarArrowPosition, ButtonStyle
 from .widgets.canvas import CanvasEventKind
 # import scheduler
 from .scheduler import Scheduler, TaskKind

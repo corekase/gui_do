@@ -1,8 +1,8 @@
 from typing import Optional, Tuple, Union, Any
-from ..values.constants import colours, WidgetKind
-from .utility.widget import Widget
+from ..utility.values.constants import colours, WidgetKind
+from ..utility.widget import Widget
 from pygame import Rect
-from .utility.registry import register_widget
+from ..utility.registry import register_widget
 
 @register_widget("Label")
 class Label(Widget):

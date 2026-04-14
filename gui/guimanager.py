@@ -2,12 +2,12 @@ import pygame
 from pygame import Rect
 from typing import Optional, List, Tuple, Any, Callable, Iterable
 from .scheduler import Timers, Scheduler
-from .values.constants import EventKind, ContainerKind
+from .utility.values.constants import EventKind, ContainerKind
 from .bitmapfactory import BitmapFactory
-from .widgets.utility.registry import create_widget
-from .widgets.utility.event_dispatcher import EventDispatcher
-from .widgets.utility.layout_manager import LayoutManager
-from .widgets.utility.renderer import Renderer
+from .utility.registry import create_widget
+from .utility.event_dispatcher import EventDispatcher
+from .utility.layout_manager import LayoutManager
+from .utility.renderer import Renderer
 
 class GuiError(Exception):
     pass

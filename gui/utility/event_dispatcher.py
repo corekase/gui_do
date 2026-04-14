@@ -1,10 +1,10 @@
 from typing import Optional, TYPE_CHECKING, Any
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from ...values.constants import EventKind, WidgetKind
+from .values.constants import EventKind, WidgetKind
 from .interactive import State
 
 if TYPE_CHECKING:
-    from ...guimanager import GuiManager
+    from ..guimanager import GuiManager
 
 class EventDispatcher:
     def __init__(self, gui_manager: "GuiManager") -> None:

@@ -1,7 +1,7 @@
 from typing import Any
-from ..values.constants import WidgetKind, FrameState
-from .utility.widget import Widget
-from .utility.registry import register_widget
+from ..utility.values.constants import WidgetKind, FrameState
+from ..utility.widget import Widget
+from ..utility.registry import register_widget
 
 # Backward compatibility alias
 FrState = FrameState

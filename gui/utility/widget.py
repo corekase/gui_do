@@ -6,11 +6,11 @@ Provides common functionality for drawing, event handling, and state management.
 
 from pygame import Rect
 from typing import Optional, Callable, Any, TYPE_CHECKING
-from ...values.constants import ContainerKind
+from .values.constants import ContainerKind
 
 if TYPE_CHECKING:
-    from ...guimanager import GuiManager
-    from ..window import Window
+    from ..guimanager import GuiManager
+    from ..widgets.window import Window
 
 # Widget base class for all GUI widgets
 
