@@ -6,6 +6,7 @@ from .values.constants import EventKind, WidgetKind, ContainerKind
 from .widgets.utility.interactive import State
 from .bitmapfactory import BitmapFactory
 from .widgets.utility.registry import create_widget
+from .widgets.utility.event_dispatcher import EventDispatcher
 
 class GuiError(Exception):
     pass
@@ -13,6 +14,7 @@ class GuiError(Exception):
 class GuiManager:
     def __init__(self, surface, fonts, bitmap_factory=None):
         self.bitmap_factory = bitmap_factory or BitmapFactory()
+        self.event_dispatcher = EventDispatcher(self)
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
@@ -212,44 +214,7 @@ class GuiManager:
             yield event
 
     def handle_event(self, event):
-        # update internal mouse position
-        if event.type == MOUSEMOTION:
-            self._handle_mouse_motion(event)
-        # check for system events (QUIT, KEYUP, KEYDOWN)
-        if event.type in (QUIT, KEYUP, KEYDOWN):
-            return self._handle_system_event(event)
-        # find active window context
-        self._update_active_window()
-        # Priority 1: Window dragging
-        if self.dragging:
-            return self._handle_window_dragging(event)
-        # Priority 2: Standard interaction (check for start of drag)
-        if event.type == MOUSEBUTTONDOWN and not self.dragging and event.button == 1:
-            self._check_window_drag_start(event)
-        # Priority 3: Locked object
-        if self.locking_object:
-            return self._handle_locked_object(event)
-        # Priority 4: Window / Screen widgets
-        if self.active_window:
-            return self._process_window_widgets(event)
-        return self._process_screen_widgets(event)
-
-    def _handle_mouse_motion(self, event):
-        if self.mouse_locked:
-            x, y = self.mouse_pos
-            dx, dy = event.rel
-            self.mouse_pos = (x + dx, y + dy)
-        else:
-            self.mouse_pos = self.lock_area(event.pos)
-
-    def _handle_system_event(self, event):
-        if event.type == QUIT:
-            return self.event(EventKind.Quit)
-        if event.type == KEYUP:
-            return self.event(EventKind.KeyUp, key=event.key)
-        elif event.type == KEYDOWN:
-            return self.event(EventKind.KeyDown, key=event.key)
-        return self.event(EventKind.Pass)
+        return self.event_dispatcher.handle(event)
 
     def _update_active_window(self):
         top_window = None
