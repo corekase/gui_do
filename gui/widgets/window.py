@@ -1,5 +1,6 @@
 import pygame
 from pygame import Rect
+from typing import Optional, Tuple, Any
 from ..guimanager import GuiManager
 from ..values.constants import colours, ContainerKind
 from .frame import Frame, FrameState
@@ -7,18 +8,22 @@ from .utility.registry import register_widget
 
 @register_widget("Window")
 class Window:
-    def __init__(self, gui, title, pos, size, backdrop=None):
+    def __init__(self, gui: GuiManager, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
         # windows don't need names because eventually they are going to be in banks which will be named
-        self.gui:GuiManager = gui
+        self.gui: GuiManager = gui
         self.ContainerKind = ContainerKind.Window
         # window x and y position from the main surface coordinate, not the titlebar
+        self.x: int
+        self.y: int
         self.x, self.y = pos
+        self.width: int
+        self.height: int
         self.width, self.height = size
         # titlebar size
-        self.titlebar_size = 24
+        self.titlebar_size: int = 24
         # window surface
-        self.surface = pygame.surface.Surface(size).convert()
-        self.pristine = None
+        self.surface: pygame.Surface = pygame.surface.Surface(size).convert()
+        self.pristine: Optional[Any] = None
         if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
@@ -29,40 +34,42 @@ class Window:
             self.gui.set_pristine(backdrop, self)
         self.window_save_pristine()
         # widgets on that surface
-        self.widgets = []
+        self.widgets: list = []
         # set the window to the position passed in
         self.set_pos(pos)
+        self.title_bar_inactive_bitmap: Any
+        self.title_bar_active_bitmap: Any
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = self.gui.bitmap_factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
-        self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
-        self.window_widget_lower_bitmap = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
+        self.title_bar_rect: Rect = self.title_bar_active_bitmap.get_rect()
+        self.window_widget_lower_bitmap: Any = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
-        self._visible = True
+        self._visible: bool = True
 
-    def window_save_pristine(self):
+    def window_save_pristine(self) -> None:
         # update the window pristine bitmap
         # the window pristine bitmap can be used to undo widget bitmap damage to the contents
         self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
-    def draw_title_bar_inactive(self):
+    def draw_title_bar_inactive(self) -> None:
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
-    def draw_title_bar_active(self):
+    def draw_title_bar_active(self) -> None:
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
-    def draw_window(self):
+    def draw_window(self) -> None:
         # called when the gui manager is entering a window to process its widgets
         self.gui.restore_pristine(self.surface.get_rect(), self)
 
-    def get_title_bar_rect(self):
+    def get_title_bar_rect(self) -> Rect:
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
 
-    def get_window_rect(self):
+    def get_window_rect(self) -> Rect:
         # total rect of the window including titlebar and surface
         return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
-    def get_widget_rect(self):
+    def get_widget_rect(self) -> Rect:
         x, y, w, h = self.window_widget_lower_bitmap.get_rect()
         return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
 
@@ -74,5 +81,5 @@ class Window:
     def visible(self, value: bool) -> None:
         self._visible = value
 
-    def set_pos(self, pos):
+    def set_pos(self, pos: Tuple[int, int]) -> None:
         self.x, self.y = pos

@@ -1,12 +1,16 @@
+from typing import Optional, TYPE_CHECKING, Any
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from ...values.constants import EventKind, WidgetKind
 from .interactive import State
 
-class EventDispatcher:
-    def __init__(self, gui_manager):
-        self.gui = gui_manager
+if TYPE_CHECKING:
+    from ...guimanager import GuiManager
 
-    def handle(self, event):
+class EventDispatcher:
+    def __init__(self, gui_manager: "GuiManager") -> None:
+        self.gui: "GuiManager" = gui_manager
+
+    def handle(self, event: Any) -> "GuiManager.GuiEvent":
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
@@ -29,7 +33,7 @@ class EventDispatcher:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
 
-    def _handle_mouse_motion(self, event):
+    def _handle_mouse_motion(self, event: Any) -> None:
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = event.rel
@@ -37,7 +41,7 @@ class EventDispatcher:
         else:
             self.gui.mouse_pos = self.gui.lock_area(event.pos)
 
-    def _handle_system_event(self, event):
+    def _handle_system_event(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == QUIT:
             return self.gui.event(EventKind.Quit)
         if event.type == KEYUP:
@@ -46,7 +50,7 @@ class EventDispatcher:
             return self.gui.event(EventKind.KeyDown, key=event.key)
         return self.gui.event(EventKind.Pass)
 
-    def _update_active_window(self):
+    def _update_active_window(self) -> None:
         top_window = None
         for window in self.gui.windows[::-1]:
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
@@ -54,7 +58,7 @@ class EventDispatcher:
                 break
         self.gui.active_window = top_window
 
-    def _handle_window_dragging(self, event):
+    def _handle_window_dragging(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == MOUSEBUTTONUP and event.button == 1:
             self.gui.dragging = False
             self.gui.dragging_window.set_pos((self.gui.dragging_window.x, self.gui.dragging_window.y))
@@ -68,7 +72,7 @@ class EventDispatcher:
             self.gui.dragging_window.set_pos((x, y))
         return self.gui.event(EventKind.Pass)
 
-    def _check_window_drag_start(self, event):
+    def _check_window_drag_start(self, event: Any) -> None:
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event.pos)):
             if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event.pos)):
                 self.gui.lower_window(self.gui.active_window)
@@ -79,7 +83,7 @@ class EventDispatcher:
                 self.gui.mouse_delta = (self.gui.dragging_window.x - self.gui.mouse_pos[0],
                                     self.gui.dragging_window.y - self.gui.mouse_pos[1])
 
-    def _handle_locked_object(self, event):
+    def _handle_locked_object(self, event: Any) -> "GuiManager.GuiEvent":
         if self.gui.locking_object.WidgetKind == WidgetKind.Scrollbar:
             window = self.gui.locking_object.window if hasattr(self.gui.locking_object, 'window') else None
             if self.gui.handle_widget(self.gui.locking_object, event, window):
@@ -88,7 +92,7 @@ class EventDispatcher:
             return self.gui.event(EventKind.Pass)
         return self.gui.event(EventKind.Pass)
 
-    def _process_window_widgets(self, event):
+    def _process_window_widgets(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             self.gui.raise_window(self.gui.active_window)
         hit_any = False
@@ -112,7 +116,7 @@ class EventDispatcher:
         self.gui.update_focus(None)
         return self._handle_base_mouse_events(event)
 
-    def _process_screen_widgets(self, event):
+    def _process_screen_widgets(self, event: Any) -> "GuiManager.GuiEvent":
         hit_any = False
         for widget in self.gui.widgets.copy()[::-1]:
             if widget.visible:
@@ -129,7 +133,7 @@ class EventDispatcher:
             return self._handle_base_mouse_events(event)
         return self.gui.event(EventKind.Pass)
 
-    def _handle_base_mouse_events(self, event):
+    def _handle_base_mouse_events(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == MOUSEBUTTONUP:
             return self.gui.event(EventKind.MouseButtonUp, button=event.button)
         elif event.type == MOUSEBUTTONDOWN:

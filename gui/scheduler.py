@@ -1,29 +1,33 @@
 import time
 import pygame
+from typing import Dict, List, Optional, Callable, Any, TYPE_CHECKING
 from enum import Enum
 from .values.constants import EventKind
+
+if TYPE_CHECKING:
+    from .guimanager import GuiManager
 
 TaskKind = Enum('TaskKind', ['Finished'])
 
 class Timers:
-    def __init__(self):
-        self.timers = {}
+    def __init__(self) -> None:
+        self.timers: Dict[Any, "Timers.Interval"] = {}
 
     class Interval:
-        def __init__(self, duration, callback):
-            self.timer = 0
-            self.previous_time = None
-            self.duration = duration
-            self.callback = callback
+        def __init__(self, duration: float, callback: Callable) -> None:
+            self.timer: float = 0
+            self.previous_time: Optional[float] = None
+            self.duration: float = duration
+            self.callback: Callable = callback
 
-    def add_timer(self, id, duration, callback):
+    def add_timer(self, id: Any, duration: float, callback: Callable) -> None:
         self.timers[id] = self.Interval(duration, callback)
 
-    def remove_timer(self, id):
+    def remove_timer(self, id: Any) -> None:
         if id in self.timers.keys():
             del self.timers[id]
 
-    def timer_updates(self, now_time):
+    def timer_updates(self, now_time: int) -> None:
         # iterate over a list copy of the keys because timers may be removed
         # during the loop
         for id in list(self.timers.keys()):
@@ -41,36 +45,37 @@ class Timers:
                     self.timers[id].callback()
 
 class Scheduler:
-    def __init__(self, gui):
-        self.tasks = {}
-        self.gui = gui
-        self.stop_scheduler = False
+    def __init__(self, gui: "GuiManager") -> None:
+        self.tasks: Dict[Any, "Scheduler.Task"] = {}
+        self.gui: "GuiManager" = gui
+        self.stop_scheduler: bool = False
         # queued and finished lists
-        self.tasks_ready = []
-        self.tasks_processed = []
-        self.tasks_suspended = []
-        self.tasks_finished = []
+        self.tasks_ready: List[Any] = []
+        self.tasks_processed: List[Any] = []
+        self.tasks_suspended: List[Any] = []
+        self.tasks_finished: List[Any] = []
 
     class Task:
-        def __init__(self, id, interval):
-            self.id = id
+        def __init__(self, id: Any, interval: float) -> None:
+            self.id: Any = id
             # times for yielding cooperative control
-            self.time_start = 0.0
-            self.time_duration = interval
+            self.time_start: float = 0.0
+            self.time_duration: float = interval
             # pointer for a "receive information" method, takes one parameter (which can anything)
             # gives coroutine operations while only being a generator
-            self.message_method = None
+            self.message_method: Optional[Callable] = None
+            self.task_logic: Any = None
 
-    def event(self, operation, item1=None):
+    def event(self, operation: Any, item1: Optional[Any] = None) -> "Scheduler.TaskEvent":
         class TaskEvent:
             # an event object to be returned which includes pygame event information and gui_do information
-            def __init__(self):
+            def __init__(self) -> None:
                 # the event is a Task type
-                self.type = EventKind.Task
+                self.type: Any = EventKind.Task
                 # what the event represents
-                self.operation = None
+                self.operation: Any = None
                 # task id
-                self.id = None
+                self.id: Optional[Any] = None
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
@@ -78,7 +83,7 @@ class Scheduler:
         # elif more operations
         return task_event
 
-    def add_task(self, id, logic, parameters=None, message_method=None):
+    def add_task(self, id: Any, logic: Callable, parameters: Optional[Any] = None, message_method: Optional[Callable] = None) -> None:
         task = self.Task(id, 0.01)
         if parameters is None:
             task.task_logic = logic(id)
@@ -88,17 +93,17 @@ class Scheduler:
         self.tasks[id] = task
         self.tasks_ready.append(id)
 
-    def send_message(self, id, parameters):
+    def send_message(self, id: Any, parameters: Any) -> None:
         # send either a single value or a collection like a tuple or list to the method id
         self.tasks[id].message_method(parameters)
 
-    def remove_all(self):
+    def remove_all(self) -> None:
         self.tasks_ready.clear()
         self.tasks_processed.clear()
         self.tasks_suspended.clear()
         self.tasks = {}
 
-    def remove_tasks(self, *tasks):
+    def remove_tasks(self, *tasks: Any) -> None:
         for id in tasks:
             if id in self.tasks_ready:
                 self.tasks_ready.remove(id)
@@ -107,16 +112,16 @@ class Scheduler:
                 self.tasks_processed.remove(id)
                 del self.tasks[id]
 
-    def suspend_all(self):
+    def suspend_all(self) -> None:
         self.tasks_suspended += self.tasks_ready[:] + self.tasks_processed[:]
         self.tasks_ready.clear()
         self.tasks_processed.clear()
 
-    def resume_all(self):
+    def resume_all(self) -> None:
         self.tasks_ready += self.tasks_suspended
         self.tasks_suspended.clear()
 
-    def suspend_tasks(self, *tasks):
+    def suspend_tasks(self, *tasks: Any) -> None:
         for id in tasks:
             # move id to suspended list from either the queued or finished lists
             if id in self.tasks_ready:
@@ -126,32 +131,32 @@ class Scheduler:
                 self.tasks_processed.remove(id)
                 self.tasks_suspended.append(id)
 
-    def resume_tasks(self, *tasks):
+    def resume_tasks(self, *tasks: Any) -> None:
         for id in tasks:
             # move id from suspended list to end of queued list
             if id in self.tasks_suspended:
                 self.tasks_suspended.remove(id)
                 self.tasks_ready.append(id)
 
-    def read_suspended(self):
+    def read_suspended(self) -> List[Any]:
         # return a list of suspended task id's
         return self.tasks_suspended
 
-    def read_suspended_len(self):
+    def read_suspended_len(self) -> int:
         # return the number of suspended tasks
         return len(self.tasks_suspended)
 
-    def task_time(self, id):
+    def task_time(self, id: Any) -> bool:
         if (time.time() - self.tasks[id].time_start) >= self.tasks[id].time_duration:
             return True
         return False
 
-    def tasks_active(self):
+    def tasks_active(self) -> bool:
         if (len(self.tasks_ready) > 0) or (len(self.tasks_processed) > 0):
             return True
         return False
 
-    def tasks_active_match_any(self, *tasks):
+    def tasks_active_match_any(self, *tasks: Any) -> bool:
         # if a task is in either tasks_ready or tasks_processed then return True
         for task in tasks:
             if task in self.tasks_ready:
@@ -160,17 +165,17 @@ class Scheduler:
                 return True
         return False
 
-    def tasks_active_match_all(self, *tasks):
+    def tasks_active_match_all(self, *tasks: Any) -> bool:
         # return True only if all specified tasks are active
         for task in tasks:
             if task not in self.tasks_ready and task not in self.tasks_processed:
                 return False
         return True
 
-    def null(self, *args, **kwargs):
+    def null(self, *args: Any, **kwargs: Any) -> None:
         return
 
-    def interrupt(self, new_scheduler):
+    def interrupt(self, new_scheduler: "Scheduler") -> "Scheduler":
         # break out of the scheduler loop, and return to the caller of start_scheduler
         self.stop_scheduler = True
         new_scheduler.gui.set_mouse_pos(self.gui.get_mouse_pos(), True)
@@ -188,7 +193,7 @@ class Scheduler:
             self.tasks_finished.append(task_id)
             del self.tasks[task_id]
 
-    def start_scheduler(self, preamble=None, event_handler=None, postamble=None):
+    def start_scheduler(self, preamble: Optional[Callable] = None, event_handler: Optional[Callable] = None, postamble: Optional[Callable] = None) -> None:
         if event_handler is None:
             event_handler = self.null
         if preamble is None:
@@ -197,7 +202,7 @@ class Scheduler:
             postamble = self.null
         self.run_scheduler(preamble, event_handler, postamble)
 
-    def run_scheduler(self, preamble, event_handler, postamble):
+    def run_scheduler(self, preamble: Callable, event_handler: Callable, postamble: Callable) -> None:
         # fps to maintain, if 0 then unlimited
         fps = 60
         # a pygame clock to control the fps

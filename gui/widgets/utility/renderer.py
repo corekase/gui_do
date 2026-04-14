@@ -1,11 +1,15 @@
 from pygame import Rect
+from typing import List, Tuple, TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ...guimanager import GuiManager
 
 class Renderer:
-    def __init__(self, gui):
-        self.gui = gui
-        self.bitmaps = None
+    def __init__(self, gui: "GuiManager") -> None:
+        self.gui: "GuiManager" = gui
+        self.bitmaps: List[Tuple[Any, Rect]] = []
 
-    def draw(self):
+    def draw(self) -> None:
         # draw all widgets to their surfaces
         if self.gui.buffered:
             self.bitmaps.clear()
@@ -42,7 +46,7 @@ class Renderer:
             self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
         self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
-    def undraw(self):
+    def undraw(self) -> None:
         # reverse the bitmaps that were under each gui object drawn, if buffered is false then
         # the client does not call this method at all
         for bitmap, rect in self.bitmaps:

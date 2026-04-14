@@ -1,3 +1,4 @@
+from typing import Any, List, Optional, Tuple
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
@@ -8,9 +9,9 @@ from .utility.registry import register_widget
 
 @register_widget("Scrollbar")
 class Scrollbar(Frame):
-    def __init__(self, gui, id, overall_rect, horizontal, style, params):
+    def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ScrollbarArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
-        self.registered = []
+        self.registered: List[Any] = []
         # parse the style
         if style == ScrollbarArrowPosition.Skip:
             # pass through with no arrowboxes
@@ -64,24 +65,37 @@ class Scrollbar(Frame):
             self.registered.append(gui.create('ArrowBox', f'{id}.decrement', dec_rect, dec_degree, self.decrement))
         else:
             scroll_area_rect = overall_rect
+        # Scrollbar range parameters
+        self.total_range: int = 0
+        self.start_pos: int = 0
+        self.bar_size: int = 0
+        self.inc_size: int = 0
         # initialize common widget values
         super().__init__(gui, id, scroll_area_rect)
         self.WidgetKind = WidgetKind.Scrollbar
         # maximum area that can be filled
-        self.graphic_rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
+        self.graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         # setup the parameters of the scrollbar
         total, start, size, inc = params
         self.set(total, start, size, inc)
         # whether the scrollbar is horizontal or vertical
-        self.horizontal = horizontal
+        self.horizontal: Orientation = horizontal
         # state to track if the scrollbar is currently dragging
-        self.dragging = False
+        self.dragging: bool = False
         # previous mouse position the last time the event was handled
-        self.last_mouse_pos = None
+        self.last_mouse_pos: Optional[int] = None
         # whether or not the arrowboxes modified the start_pos
-        self.hit = False
+        self.hit: bool = False
 
-    def handle_event(self, event, window):
+    def increment(self) -> None:
+        """Increment the scrollbar position."""
+        self.hit = True
+
+    def decrement(self) -> None:
+        """Decrement the scrollbar position."""
+        self.hit = True
+
+    def handle_event(self, event: Any, window: Any) -> bool:
         if self.hit:
             # if the scrollbar state was modified by a callback then signal a change
             self.hit = False
@@ -150,10 +164,10 @@ class Scrollbar(Frame):
         # signal no changes
         return False
 
-    def leave(self):
+    def leave(self) -> None:
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         # unlock mouse movement
         self.gui.set_lock_area(None)
         # reset state to default values
@@ -162,15 +176,15 @@ class Scrollbar(Frame):
         self.dragging = False
         self.last_mouse_pos = None
 
-    def read(self):
+    def read(self) -> int:
         # return scrollbar start position
         return self.start_pos
 
-    def set(self, total_range, start_pos, bar_size, inc_size):
+    def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
         # set scrollbar data, all variables are in total units
         self.total_range, self.start_pos, self.bar_size, self.inc_size = total_range, start_pos, bar_size, inc_size
 
-    def handle_area(self):
+    def handle_area(self) -> Rect:
         # calculate where the start point is and what the size is in graphical units
         start_point = self.total_to_graphical(self.start_pos)
         graphical_size = self.total_to_graphical(self.bar_size)
@@ -180,26 +194,26 @@ class Scrollbar(Frame):
         else:
             return Rect(self.graphic_rect.x, self.graphic_rect.y + start_point, self.graphic_rect.width, graphical_size)
 
-    def graphical_to_total(self, point):
+    def graphical_to_total(self, point: int) -> int:
         return int((point * self.total_range) / self.graphical_range())
 
-    def total_to_graphical(self, point):
+    def total_to_graphical(self, point: int) -> int:
         return int((point * self.graphical_range()) / self.total_range)
 
-    def graphical_range(self):
+    def graphical_range(self) -> int:
         # return the appropriate range depending on whether the scrollbar is horizontal or vertical
         if self.horizontal == Orientation.Horizontal:
             return self.graphic_rect.width
         else:
             return self.graphic_rect.height
 
-    def draw(self):
+    def draw(self) -> None:
         # draw the frame
         super().draw()
         # fill graphical area to represent the start position and size
         rect(self.surface, colours['full'], self.handle_area(), 0)
 
-    def set_visible(self, visible):
+    def set_visible(self, visible: bool) -> None:
         # call the parent set_visible, up to widget
         super().set_visible(visible)
         # for each attached arrowbox also do their setting
@@ -207,13 +221,13 @@ class Scrollbar(Frame):
             widget.set_visible(visible)
 
     # callbacks
-    def increment(self):
+    def increment(self) -> None:
         self.hit = True
         self.start_pos += self.inc_size
         if self.start_pos + self.bar_size > self.total_range:
             self.start_pos = self.total_range - self.bar_size
 
-    def decrement(self):
+    def decrement(self) -> None:
         self.hit = True
         self.start_pos -= self.inc_size
         if self.start_pos < 0:

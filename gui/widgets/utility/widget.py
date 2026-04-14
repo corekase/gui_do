@@ -5,7 +5,7 @@ Provides common functionality for drawing, event handling, and state management.
 """
 
 from pygame import Rect
-from typing import Optional, Callable, TYPE_CHECKING
+from typing import Optional, Callable, Any, TYPE_CHECKING
 from ...values.constants import ContainerKind
 
 if TYPE_CHECKING:
@@ -29,25 +29,25 @@ class Widget:
         callback: Optional callback function when widget is activated
     """
 
-    def __init__(self, gui: "GuiManager", id: any, rect: Rect) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         # gui reference
         self.gui: "GuiManager" = gui
         # widget type
-        self.WidgetKind: Optional[any] = None
+        self.WidgetKind: Optional[Any] = None
         # container type (Widget or Window)
         self.ContainerKind: ContainerKind = ContainerKind.Widget
         # surface to draw the widget on
-        self.surface: Optional[any] = None
+        self.surface: Optional[Any] = None
         # window widget may be attached to
         self.window: Optional["Window"] = None
         # identifier for widget, can be any kind like int or string
-        self.id: any = id
+        self.id: Any = id
         # rect for widget drawing position and size on the surface
         self.draw_rect: Rect = Rect(rect)
         # rect for mouse collision
         self.hit_rect: Optional[Rect] = None
         # before widget is first drawn, save what was there in this bitmap
-        self.pristine: Optional[any] = None
+        self.pristine: Optional[Any] = None
         # whether or not the widget is visible
         self._visible: bool = True
         # callback of the widget

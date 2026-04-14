@@ -1,5 +1,5 @@
 # all the widgets are imported so that their decorators are initialized
-def _init_decorations():
+def _init_decorations() -> None:
     from ..widgets.window import Window
     from ..widgets.button import Button
     from ..widgets.arrowbox import ArrowBox

@@ -1,3 +1,4 @@
+from typing import Optional, Any, Callable
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..values.constants import WidgetKind
 from .utility.interactive import BaseInteractive, InteractiveState
@@ -5,19 +6,19 @@ from .utility.registry import register_widget
 
 @register_widget("Button")
 class Button(BaseInteractive):
-    def __init__(self, gui, id, rect, style, text, button_callback=None, skip_factory=False):
+    def __init__(self, gui: Any, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> None:
         # initialize common widget values
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Button
         # this object's timer
-        self.timer_id = None
+        self.timer_id: Optional[str] = None
         if not skip_factory:
             (self.idle, self.hover, self.armed), self.hit_rect = \
                 self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
         # button specific callback, this callback is separate from the add() callback
-        self.button_callback = button_callback
+        self.button_callback: Optional[Callable] = button_callback
 
-    def handle_event(self, event, window):
+    def handle_event(self, event: Any, window: Any) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
 
@@ -51,7 +52,7 @@ class Button(BaseInteractive):
                     return True
         return False
 
-    def leave(self):
+    def leave(self) -> None:
         if self.timer_id is not None:
             self.gui.timers.remove_timer(f'{self.id}.timer')
             self.timer_id = None
