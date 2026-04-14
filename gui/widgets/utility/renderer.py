@@ -1,26 +1,26 @@
-import pygame
 from pygame import Rect
 
 class Renderer:
     def __init__(self, gui):
         self.gui = gui
+        self.bitmaps = None
 
     def draw(self):
         # draw all widgets to their surfaces
         if self.gui.buffered:
-            self.gui.bitmaps.clear()
+            self.bitmaps.clear()
         for widget in self.gui.widgets:
             if widget.visible:
                 # save the bitmap area under the widgets if buffered
                 if self.gui.buffered:
-                    self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
+                    self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
                 # draw the widget
                 widget.draw()
         for window in self.gui.windows:
             if window.visible:
                 # save the bitmap area under the window if buffered
                 if self.gui.buffered:
-                    self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
+                    self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
                 if window is self.gui.windows[-1]:
                     window.draw_title_bar_active()
                 else:
@@ -39,12 +39,12 @@ class Renderer:
                            self.gui.cursor_rect.width, self.gui.cursor_rect.height)
         # save the bitmap area under the window if buffered
         if self.gui.buffered:
-            self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
+            self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
         self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
     def undraw(self):
         # reverse the bitmaps that were under each gui object drawn, if buffered is false then
         # the client does not call this method at all
-        for bitmap, rect in self.gui.bitmaps:
+        for bitmap, rect in self.bitmaps:
             self.gui.surface.blit(bitmap, rect)
-        self.gui.bitmaps.clear()
+        self.bitmaps.clear()
