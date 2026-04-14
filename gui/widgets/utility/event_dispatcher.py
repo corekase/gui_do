@@ -1,5 +1,5 @@
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from ...values.constants import EventKind, WidgetKind, ContainerKind
+from ...values.constants import EventKind, WidgetKind
 from .interactive import State
 
 class EventDispatcher:
