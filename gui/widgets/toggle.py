@@ -11,11 +11,10 @@ class Toggle(BaseInteractive):
         self.pushed = pushed
         if raised_text is None:
             raised_text = pressed_text
-        factory = self.gui.bitmap_factory
         (_, _, self.armed), rect1 = \
-            factory.get_styled_bitmaps(style, pressed_text, rect)
+            self.gui.bitmap_factory.get_styled_bitmaps(style, pressed_text, rect)
         (self.idle, self.hover, _), rect2 = \
-            factory.get_styled_bitmaps(style, raised_text, rect)
+            self.gui.bitmap_factory.get_styled_bitmaps(style, raised_text, rect)
         if rect1.width > rect2.width:
             self.hit_rect = rect1
         else:

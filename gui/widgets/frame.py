@@ -10,8 +10,7 @@ class Frame(Widget):
     def __init__(self, gui, id, rect):
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Frame
-        self.factory = gui.bitmap_factory
-        self.idle, self.hover, self.armed = self.factory.draw_frame_bitmaps(rect)
+        self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_frame_bitmaps(rect)
         self.state = FrameState.Idle
 
     def handle_event(self, _, _a):

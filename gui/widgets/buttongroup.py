@@ -12,10 +12,9 @@ class ButtonGroup(BaseInteractive):
     def __init__(self, gui, group, id, rect, style, text):
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.ButtonGroup
-        factory = self.gui.bitmap_factory
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
-            factory.get_styled_bitmaps(style, text, rect)
+            self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
         if group not in ButtonGroup.groups.keys():
             # the first item added to a group is automatically selected
             ButtonGroup.groups[group] = []
