@@ -12,7 +12,7 @@ class ButtonGroup(BaseInteractive):
     def __init__(self, gui, group, id, rect, style, text):
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.ButtonGroup
-        factory = self.gui.get_bitmapfactory()
+        factory = self.gui.bitmap_factory
         self.group = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             factory.get_styled_bitmaps(style, text, rect)

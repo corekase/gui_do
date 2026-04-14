@@ -49,7 +49,7 @@ class EventDispatcher:
     def _update_active_window(self):
         top_window = None
         for window in self.gui.windows[::-1]:
-            if window.get_visible() and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
+            if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
                 top_window = window
                 break
         self.gui.active_window = top_window
@@ -93,9 +93,9 @@ class EventDispatcher:
             self.gui.raise_window(self.gui.active_window)
         hit_any = False
         for window in self.gui.windows.copy()[::-1]:
-            if window.get_visible() and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
+            if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
                 for widget in window.widgets.copy()[::-1]:
-                    if widget.get_visible():
+                    if widget.visible:
                         if widget.get_collide(window):
                             hit_any = True
                             self.gui.update_focus(widget)
@@ -115,7 +115,7 @@ class EventDispatcher:
     def _process_screen_widgets(self, event):
         hit_any = False
         for widget in self.gui.widgets.copy()[::-1]:
-            if widget.get_visible():
+            if widget.visible:
                 hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
                 if hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), None)):
                     hit_any = True

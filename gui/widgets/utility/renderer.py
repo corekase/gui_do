@@ -7,19 +7,19 @@ class Renderer:
 
     def draw(self):
         # draw all widgets to their surfaces
-        if self.gui.get_buffered():
+        if self.gui.buffered:
             self.gui.bitmaps.clear()
         for widget in self.gui.widgets:
-            if widget.get_visible():
+            if widget.visible:
                 # save the bitmap area under the widgets if buffered
-                if self.gui.get_buffered():
+                if self.gui.buffered:
                     self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
                 # draw the widget
                 widget.draw()
         for window in self.gui.windows:
-            if window.get_visible():
+            if window.visible:
                 # save the bitmap area under the window if buffered
-                if self.gui.get_buffered():
+                if self.gui.buffered:
                     self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
                 if window is self.gui.windows[-1]:
                     window.draw_title_bar_active()
@@ -28,7 +28,7 @@ class Renderer:
                 window.draw_window()
                 for widget in window.widgets:
                     # draw the widget
-                    if widget.get_visible():
+                    if widget.visible:
                         widget.draw()
                 self.gui.surface.blit(window.surface, (window.x, window.y))
         # if locked mode is active always use the locked mode mouse position
@@ -38,7 +38,7 @@ class Renderer:
         cursor_rect = Rect(self.gui.mouse_pos[0] - self.gui.cursor_hotspot[0], self.gui.mouse_pos[1] - self.gui.cursor_hotspot[1],
                            self.gui.cursor_rect.width, self.gui.cursor_rect.height)
         # save the bitmap area under the window if buffered
-        if self.gui.get_buffered():
+        if self.gui.buffered:
             self.gui.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
         self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 

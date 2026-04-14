@@ -23,8 +23,8 @@ class Demo:
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
         # begin gui1
         g = GuiManager(self.screen, fonts)
-        b = g.get_bitmapfactory()
-        self.scheduler1 = g.get_scheduler()
+        b = g.bitmap_factory
+        self.scheduler1 = g.scheduler
         # blit a background image to the screen surface
         g.set_pristine('backdrop.jpg')
         # screen label
@@ -172,8 +172,8 @@ class Demo:
         # -----------------------
         # begin gui2
         self.gui2 = GuiManager(self.screen, fonts)
-        self.scheduler2 = self.gui2.get_scheduler()
-        self.gui2.get_bitmapfactory().set_font('normal')
+        self.scheduler2 = self.gui2.scheduler
+        self.gui2.bitmap_factory.set_font('normal')
         self.gui2.set_pristine('backdrop.jpg')
         self.gui2.create('Button', 'return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
         self.gui2.create('Window', 'GUI 2', (50, 150), (300, 300))
@@ -190,7 +190,7 @@ class Demo:
         # circle positions
         self.positions = []
         # make bitmaps for circles
-        factory = g.get_bitmapfactory()
+        factory = g.bitmap_factory
         circle_bitmap_a = factory.draw_radio_bitmap(self.size, colours['light'], colours['none'])
         circle_bitmap_b = factory.draw_radio_bitmap(self.size, colours['medium'], colours['none'])
         # make position list for circles
@@ -220,10 +220,10 @@ class Demo:
         if self.circles_toggle.read():
             self.update_circles(self.size)
         # update the visible windows
-        self.button_group_win.set_visible(self.buttons_toggle.read())
-        self.scrollbar_win.set_visible(self.scrollbars_toggle.read())
-        self.life_win.set_visible(self.life_toggle.read())
-        self.mandel_win.set_visible(self.mandel_toggle.read())
+        self.button_group_win.visible = self.buttons_toggle.read()
+        self.scrollbar_win.visible = self.scrollbars_toggle.read()
+        self.life_win.visible = self.life_toggle.read()
+        self.mandel_win.visible = self.mandel_toggle.read()
 
     def handle_events1(self, event):
         # handle events
@@ -307,7 +307,7 @@ class Demo:
             # exit python
             sys.exit(0)
         # if the life window is visible then handle it
-        if self.life_win.get_visible():
+        if self.life_win.visible:
             # generate a new cycle if the togglebutton is pressed
             if self.toggle_life.read():
                 self.generate()

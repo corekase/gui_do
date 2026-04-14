@@ -65,14 +65,6 @@ class Widget:
     def visible(self, value: bool) -> None:
         self._visible = value
 
-    def set_visible(self, visible: bool) -> None:
-        """Set widget visibility."""
-        self.visible = visible
-
-    def get_visible(self) -> bool:
-        """Get widget visibility state."""
-        return self.visible
-
     def get_collide(self, window: Optional["Window"] = None) -> bool:
         """Check if mouse is colliding with this widget."""
         if self.hit_rect is None:

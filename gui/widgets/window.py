@@ -11,7 +11,7 @@ class Window:
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui:GuiManager = gui
         self.ContainerKind = ContainerKind.Window
-        factory = gui.get_bitmapfactory()
+        factory = gui.bitmap_factory
         # window x and y position from the main surface coordinate, not the titlebar
         self.x, self.y = pos
         self.width, self.height = size
@@ -74,12 +74,6 @@ class Window:
     @visible.setter
     def visible(self, value: bool) -> None:
         self._visible = value
-
-    def set_visible(self, visible):
-        self.visible = visible
-
-    def get_visible(self):
-        return self.visible
 
     def set_pos(self, pos):
         self.x, self.y = pos

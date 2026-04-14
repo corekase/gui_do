@@ -8,5 +8,5 @@ class ArrowBox(Button):
         # initialize common widget values, skipping the button factory with the True
         super().__init__(gui, id, rect, ButtonStyle.Box, None, callback, True)
         self.WidgetKind = WidgetKind.ArrowBox
-        factory = self.gui.get_bitmapfactory()
+        factory = self.gui.bitmap_factory
         self.idle, self.hover, self.armed = factory.draw_arrow_state_bitmaps(rect, direction)

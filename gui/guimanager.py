@@ -167,18 +167,6 @@ class GuiManager:
     def scheduler(self):
         return self._scheduler
 
-    def set_buffered(self, buffered):
-        self.buffered = buffered
-
-    def get_buffered(self):
-        return self.buffered
-
-    def get_scheduler(self):
-        return self.scheduler
-
-    def get_bitmapfactory(self):
-        return self.bitmap_factory
-
     def get_mouse_pos(self):
         # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
@@ -284,11 +272,11 @@ class GuiManager:
 
     def hide_widgets(self, *widgets):
         for widget in widgets:
-            widget.set_visible(False)
+            widget.visible = False
 
     def show_widgets(self, *widgets):
         for widget in widgets:
-            widget.set_visible(True)
+            widget.visible = True
 
     def draw_gui(self):
         self.renderer.draw()

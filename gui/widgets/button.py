@@ -12,7 +12,7 @@ class Button(BaseInteractive):
         # this object's timer
         self.timer_id = None
         if not skip_factory:
-            factory = self.gui.get_bitmapfactory()
+            factory = self.gui.bitmap_factory
             (self.idle, self.hover, self.armed), self.hit_rect = \
                 factory.get_styled_bitmaps(style, text, rect)
         # button specific callback, this callback is separate from the add() callback

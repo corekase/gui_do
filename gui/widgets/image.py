@@ -9,7 +9,7 @@ class Image(Widget):
         # initialize id and rect
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Image
-        self.image = pygame.image.load(self.gui.get_bitmapfactory().file_resource('images', image))
+        self.image = pygame.image.load(self.gui.bitmap_factory.file_resource('images', image))
         if scale:
             self.image = pygame.transform.smoothscale(self.image, (rect.width, rect.height))
         self.auto_restore_pristine = automatic_pristine
