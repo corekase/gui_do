@@ -57,3 +57,4 @@ class Button(BaseInteractive):
             self.gui.timers.remove_timer(f'{self.id}.timer')
             self.timer_id = None
         super().leave()
+        self.state = InteractiveState.Idle
