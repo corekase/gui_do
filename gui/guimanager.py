@@ -16,7 +16,7 @@ class GuiManager:
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
-            self.get_bitmapfactory().load_font(name, filename, size)
+            self.bitmap_factory.load_font(name, filename, size)
         # gridded layout variables and functions
         self.position_gridded = self.x_size_pixels_gridded = self.y_size_pixels_gridded = self.space_size_gridded = self.use_rect = None
         # screen surface
