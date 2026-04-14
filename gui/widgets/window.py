@@ -37,7 +37,7 @@ class Window:
         self.title_bar_rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap = factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
-        self.visible = True
+        self._visible = True
 
     def window_save_pristine(self):
         # update the window pristine bitmap
@@ -66,6 +66,14 @@ class Window:
     def get_widget_rect(self):
         x, y, w, h = self.window_widget_lower_bitmap.get_rect()
         return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        self._visible = value
 
     def set_visible(self, visible):
         self.visible = visible

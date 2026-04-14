@@ -49,13 +49,20 @@ class Widget:
         # before widget is first drawn, save what was there in this bitmap
         self.pristine: Optional[any] = None
         # whether or not the widget is visible
-        self.visible: bool = True
+        self._visible: bool = True
         # callback of the widget
         self.callback: Optional[Callable] = None
         # if this is true then if the widget calls the superclass draw defined in this
         # class then this class will restore the pristine image, return, and subclasses
         # continue drawing
         self.auto_restore_pristine: bool = False
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        self._visible = value
 
     def set_visible(self, visible: bool) -> None:
         """Set widget visibility."""
