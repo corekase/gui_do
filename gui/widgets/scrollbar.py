@@ -120,7 +120,7 @@ class Scrollbar(Frame):
                 self.start_pos = self.total_range - self.bar_size
                 self.last_mouse_pos = self.total_range - self.bar_size
                 return True
-            if self.last_mouse_pos != None:
+            if self.last_mouse_pos is not None:
                 # convert mouse position to total range units
                 mouse_pos = point
                 # find the difference in mouse movement between handle calls

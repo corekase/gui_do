@@ -24,7 +24,7 @@ class Button(BaseInteractive):
 
         # Call base interactive logic first
         if not super().handle_event(event, window):
-            if self.timer_id != None:
+            if self.timer_id is not None:
                 self.gui.timers.remove_timer(self.timer_id)
                 self.timer_id = None
             return False
@@ -34,26 +34,26 @@ class Button(BaseInteractive):
             if event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.state = State.Armed
-                    if self.button_callback != None:
+                    if self.button_callback is not None:
                         self.button_callback()
-                        if self.timer_id == None:
+                        if self.timer_id is None:
                             self.gui.timers.add_timer(f'{self.id}.timer', 150, self.button_callback)
                             self.timer_id = f'{self.id}.timer'
                     return False
         if self.state == State.Armed:
             if event.type == MOUSEBUTTONUP:
                 if event.button == 1:
-                    if self.timer_id != None:
+                    if self.timer_id is not None:
                         self.gui.timers.remove_timer(f'{self.id}.timer')
                         self.timer_id = None
                     self.state = State.Hover
-                    if self.button_callback != None:
+                    if self.button_callback is not None:
                         return False
                     return True
         return False
 
     def leave(self):
-        if self.timer_id != None:
+        if self.timer_id is not None:
             self.gui.timers.remove_timer(f'{self.id}.timer')
             self.timer_id = None
         super().leave()

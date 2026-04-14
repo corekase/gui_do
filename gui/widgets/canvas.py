@@ -17,7 +17,7 @@ class Canvas(Widget):
         # create canvas surface
         self.canvas = pygame.surface.Surface((rect.width, rect.height)).convert()
         # if there is no backdrop make a frame as one otherwise load the backdrop
-        if backdrop == None:
+        if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'canvas_frame', Rect(0, 0, rect.width, rect.height))
             frame.state = FrState.Idle
@@ -36,7 +36,7 @@ class Canvas(Widget):
 
     def restore_pristine(self, area=None):
         # copy an area from the pristine bitmap to the canvas bitmap
-        if area == None:
+        if area is None:
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, area)
 
@@ -82,7 +82,7 @@ class Canvas(Widget):
                     # otherwise the catch-all event is MousePosition which is set above for all events
                     self.CEvent.type = CKind.MousePosition
                 # the mouse is over the canvas so either do the callback or signal activated
-                if self.canvas_callback != None:
+                if self.canvas_callback is not None:
                     # do the callback
                     self.canvas_callback()
                     # callback consumes the event

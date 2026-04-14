@@ -20,7 +20,7 @@ class Window:
         # window surface
         self.surface = pygame.surface.Surface(size).convert()
         self.pristine = None
-        if backdrop == None:
+        if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
             frame.state = FrState.Idle

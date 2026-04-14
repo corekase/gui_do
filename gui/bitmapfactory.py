@@ -58,7 +58,7 @@ class BitmapFactory:
     def draw_window_title_bar_bitmap(self, gui, title, width, size, colour=None):
         from .widgets.frame import Frame, FrState
         self.set_font('titlebar')
-        if colour == None:
+        if colour is None:
             colour = colours['highlight']
         title_surface = Surface((width, size)).convert()
         frame = Frame(gui, 'titlebar_frame', Rect(0, 0, width, size))

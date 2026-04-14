@@ -70,7 +70,7 @@ class GuiManager:
             self.active_object = gui_object
         elif gui_object.ctype == CType.Widget:
             # callback
-            if self.active_object != None:
+            if self.active_object is not None:
                 # store a reference to the window the widget is in
                 gui_object.window = self.active_object
                 # give the widget a reference to the window surface
@@ -108,7 +108,7 @@ class GuiManager:
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point, window):
         # fall-through function, perform the conversion only if necessary
-        if window != None:
+        if window is not None:
             x, y = self.lock_area(point)
             wx, wy = window.x, window.y
             return (x - wx, y - wy)
@@ -118,7 +118,7 @@ class GuiManager:
     # convert the point from a window point to a main surface one
     def convert_to_screen(self, point, window):
         # fall-through function, perform the conversion only if necessary
-        if window != None:
+        if window is not None:
             x, y = point
             wx, wy = window.x, window.y
             return self.lock_area((x + wx, y + wy))
@@ -127,9 +127,9 @@ class GuiManager:
 
     def set_pristine(self, image, obj=None):
         # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
-        if obj == None:
+        if obj is None:
             obj = self
-        if image != None:
+        if image is not None:
             bitmap = pygame.image.load(self.bitmap_factory.file_resource('images', image))
             _, _, width, height = obj.surface.get_rect()
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
@@ -150,9 +150,9 @@ class GuiManager:
         # to use here
         # restores a graphic area from the screen's pristine bitmap to the
         # screen surface. if area is None then restore entire surface
-        if obj == None:
+        if obj is None:
             obj = self
-        if area == None:
+        if area is None:
             area = obj.pristine.get_rect()
         x, y, _, _ = area
         obj.surface.blit(obj.pristine, (x, y), area)
@@ -354,7 +354,7 @@ class GuiManager:
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
         if widget.handle_event(event, window):
             # widget activated
-            if widget.callback != None:
+            if widget.callback is not None:
                 widget.callback()
                 return False
             else:
@@ -364,7 +364,7 @@ class GuiManager:
     def update_focus(self, new_hover):
         # Centralized focus update logic
         if new_hover != self.current_widget:
-            if self.current_widget != None:
+            if self.current_widget is not None:
                 self.current_widget.leave()
                 self.set_last_widget(self.current_widget)
                 self.set_current_widget(new_hover)
@@ -372,7 +372,7 @@ class GuiManager:
 
     def set_lock_area(self, locking_object, area=None):
         # lock area rect is in screen coordinates
-        if area != None:
+        if area is not None:
             # switch to relative mouse mode
             self.locking_object = locking_object
             self.mouse_locked = True
@@ -386,8 +386,8 @@ class GuiManager:
 
     def lock_area(self, position):
         # keep the position within the lock area rect
-        if self.lock_area_rect != None:
-            x, y = self.mouse_pos
+        if self.lock_area_rect is not None:
+            x, y = position
             if x < self.lock_area_rect.left:
                 x = self.lock_area_rect.left
             elif x > self.lock_area_rect.right:
@@ -402,11 +402,13 @@ class GuiManager:
 
     def raise_window(self, window):
         # move the window to the last item in the list which has the highest priority
-        self.windows.append(self.windows.pop(self.windows.index(window)))
+        self.windows.remove(window)
+        self.windows.append(window)
 
     def lower_window(self, window):
         # move the window to the first item in the list which has the lowest priority
-        self.windows.insert(0, self.windows.pop(self.windows.index(window)))
+        self.windows.remove(window)
+        self.windows.insert(0, window)
 
     # reading and setting last_widget and current_widget are used in the widget base class
     def read_last_widget(self):

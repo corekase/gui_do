@@ -39,7 +39,7 @@ class Widget:
 
     def get_collide(self, window=None):
         # Purely read-only collision check
-        if self.hit_rect == None:
+        if self.hit_rect is None:
             return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
 

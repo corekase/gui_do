@@ -29,7 +29,7 @@ class Timers:
             if id not in self.timers:
                 # timer was removed during the loop, so skip it
                 continue
-            if self.timers[id].previous_time == None:
+            if self.timers[id].previous_time is None:
                 self.timers[id].previous_time = now_time
             else:
                 elapsed_time = now_time - self.timers[id].previous_time
@@ -80,7 +80,7 @@ class Scheduler:
 
     def add_task(self, id, logic, parameters=None, message_method=None):
         task = self.Task(id, 0.01)
-        if parameters == None:
+        if parameters is None:
             task.task_logic = logic(id)
         else:
             task.task_logic = logic(id, parameters)
@@ -101,14 +101,14 @@ class Scheduler:
     def remove_tasks(self, *tasks):
         for id in tasks:
             if id in self.tasks_ready:
-                self.tasks_ready.pop(self.tasks_ready.index(id))
+                self.tasks_ready.remove(id)
                 del self.tasks[id]
             if id in self.tasks_processed:
-                self.tasks_processed.pop(self.tasks_processed.index(id))
+                self.tasks_processed.remove(id)
                 del self.tasks[id]
 
     def suspend_all(self):
-        self.suspended_tasks += self.tasks_ready[:] + self.tasks_processed[:]
+        self.tasks_suspended += self.tasks_ready[:] + self.tasks_processed[:]
         self.tasks_ready.clear()
         self.tasks_processed.clear()
 
@@ -120,15 +120,18 @@ class Scheduler:
         for id in tasks:
             # move id to suspended list from either the queued or finished lists
             if id in self.tasks_ready:
-                self.tasks_suspended.append(self.tasks_ready.pop(self.tasks_ready.index(id)))
+                self.tasks_ready.remove(id)
+                self.tasks_suspended.append(id)
             elif id in self.tasks_processed:
-                self.tasks_suspended.append(self.tasks_processed.pop(self.tasks_processed.index(id)))
+                self.tasks_processed.remove(id)
+                self.tasks_suspended.append(id)
 
     def resume_tasks(self, *tasks):
         for id in tasks:
             # move id from suspended list to end of queued list
             if id in self.tasks_suspended:
-                self.tasks_ready.append(self.tasks_suspended.pop(self.tasks_suspended.index(id)))
+                self.tasks_suspended.remove(id)
+                self.tasks_ready.append(id)
 
     def read_suspended(self):
         # return a list of suspended task id's
@@ -158,9 +161,13 @@ class Scheduler:
         return False
 
     def tasks_active_match_all(self, *tasks):
-        pass
+        # return True only if all specified tasks are active
+        for task in tasks:
+            if task not in self.tasks_ready and task not in self.tasks_processed:
+                return False
+        return True
 
-    def null(self):
+    def null(self, *args, **kwargs):
         return
 
     def interrupt(self, new_scheduler):
@@ -182,11 +189,11 @@ class Scheduler:
             del self.tasks[task_id]
 
     def start_scheduler(self, preamble=None, event_handler=None, postamble=None):
-        if event_handler == None:
+        if event_handler is None:
             event_handler = self.null
-        if preamble == None:
+        if preamble is None:
             preamble = self.null
-        if postamble == None:
+        if postamble is None:
             postamble = self.null
         self.run_scheduler(preamble, event_handler, postamble)
 

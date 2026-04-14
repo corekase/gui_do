@@ -9,7 +9,7 @@ class Toggle(BaseInteractive):
         super().__init__(gui, id, rect)
         self.GType = GType.Toggle
         self.pushed = pushed
-        if raised_text == None:
+        if raised_text is None:
             raised_text = pressed_text
         factory = self.gui.get_bitmapfactory()
         (_, _, self.armed), rect1 = \
