@@ -1,6 +1,6 @@
 import pygame
 from pygame import Rect
-from typing import Optional, List, Tuple, Any, Callable, Iterable
+from typing import Optional, List, Tuple, Any, Iterable
 from .scheduler import Timers, Scheduler
 from .utility.values.constants import EventKind, ContainerKind
 from .bitmapfactory import BitmapFactory

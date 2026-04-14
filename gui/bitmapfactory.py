@@ -57,13 +57,14 @@ class BitmapFactory:
         return tuple(saved)  # type: ignore
 
     def draw_window_title_bar_bitmap(self, gui: Any, title: str, width: int, size: int, colour: Optional[Tuple[int, int, int]] = None) -> Surface:
-        from .widgets.frame import Frame, FrState
+        from .widgets.frame import Frame
+        from .utility.values.constants import FrameState
         self.set_font('titlebar')
         if colour is None:
             colour = colours['highlight']
         title_surface = Surface((width, size)).convert()
         frame = Frame(gui, 'titlebar_frame', Rect(0, 0, width, size))
-        frame.state = FrState.Armed
+        frame.state = FrameState.Armed
         frame.surface = title_surface
         frame.draw()
         text = self.render_text(title, colour, True)

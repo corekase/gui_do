@@ -1,7 +1,6 @@
-from typing import Optional, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .values.constants import EventKind, WidgetKind
-from .interactive import State
+from .values.constants import EventKind, WidgetKind, InteractiveState
 
 if TYPE_CHECKING:
     from ..guimanager import GuiManager
@@ -107,7 +106,7 @@ class EventDispatcher:
                                 if widget.WidgetKind == WidgetKind.ButtonGroup:
                                     return self.gui.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
                                 return self.gui.event(EventKind.Widget, widget_id=widget.id)
-                        elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == State.Armed:
+                        elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == InteractiveState.Armed:
                             if self.gui.handle_widget(widget, event, window):
                                 return self.gui.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
                 if not hit_any:

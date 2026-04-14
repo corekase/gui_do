@@ -13,10 +13,6 @@ from .values.constants import InteractiveState
 if TYPE_CHECKING:
     from ..guimanager import GuiManager
 
-# Backward compatibility alias
-State = InteractiveState
-
-
 class BaseInteractive(Widget):
     """
     Base class for interactive widgets.

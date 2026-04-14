@@ -3,9 +3,6 @@ from ..utility.values.constants import WidgetKind, FrameState
 from ..utility.widget import Widget
 from ..utility.registry import register_widget
 
-# Backward compatibility alias
-FrState = FrameState
-
 @register_widget("Frame")
 class Frame(Widget):
     def __init__(self, gui: Any, id: Any, rect: Any) -> None:
