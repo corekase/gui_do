@@ -5,6 +5,8 @@ from .values.constants import EventKind, ContainerKind
 from .bitmapfactory import BitmapFactory
 from .widgets.utility.registry import create_widget
 from .widgets.utility.event_dispatcher import EventDispatcher
+from .widgets.utility.layout_manager import LayoutManager
+from .widgets.utility.renderer import Renderer
 
 class GuiError(Exception):
     pass
@@ -13,6 +15,8 @@ class GuiManager:
     def __init__(self, surface, fonts, bitmap_factory=None):
         self.bitmap_factory = bitmap_factory or BitmapFactory()
         self.event_dispatcher = EventDispatcher(self)
+        self.layout_manager = LayoutManager()
+        self.renderer = Renderer(self)
         # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
@@ -85,24 +89,11 @@ class GuiManager:
             raise GuiError('gui_object must be a window or widget')
         return gui_object
 
-    # setup variables for gridded
-    def set_grid_properties(self, anchor, width, height, spacing, use_rect_flag=True):
-        self.position_gridded = anchor
-        self.x_size_pixels_gridded = width
-        self.y_size_pixels_gridded = height
-        self.space_size_gridded = spacing
-        self.use_rect = use_rect_flag
+    def set_grid_properties(self, anchor, width, height, spacing, use_rect=True):
+        self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
 
-    # returns Rect() from width, height, and spacing for x and y grid coordinates from the anchor
     def gridded(self, x, y):
-        base_x, base_y = self.position_gridded
-        # (size per unit) + (space per unit)
-        x_pos = base_x + (x * self.x_size_pixels_gridded) + (x * self.space_size_gridded)
-        y_pos = base_y + (y * self.y_size_pixels_gridded) + (y * self.space_size_gridded)
-        if self.use_rect:
-            return Rect(x_pos, y_pos, self.x_size_pixels_gridded, self.y_size_pixels_gridded)
-        else:
-            return (x_pos, y_pos)
+        return self.layout_manager.get_cell(x, y)
 
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point, window):
@@ -289,45 +280,7 @@ class GuiManager:
             widget.set_visible(True)
 
     def draw_gui(self):
-        # draw all widgets to their surfaces
-        if self.buffered:
-            self.bitmaps.clear()
-        for widget in self.widgets:
-            if widget.get_visible():
-                # save the bitmap area under the widgets if buffered
-                if self.buffered:
-                    self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, widget.get_rect()), widget.get_rect()))
-                # draw the widget
-                widget.draw()
-        for window in self.windows:
-            if window.get_visible():
-                # save the bitmap area under the window if buffered
-                if self.buffered:
-                    self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, window.get_window_rect()), window.get_window_rect()))
-                if window is self.windows[-1]:
-                    window.draw_title_bar_active()
-                else:
-                    window.draw_title_bar_inactive()
-                window.draw_window()
-                for widget in window.widgets:
-                    # draw the widget
-                    if widget.get_visible():
-                        widget.draw()
-                self.surface.blit(window.surface, (window.x, window.y))
-        # if locked mode is active always use the locked mode mouse position
-        if self.mouse_locked:
-            self.mouse_pos = self.lock_area(self.mouse_pos)
-        # draw mouse cursor
-        cursor_rect = Rect(self.mouse_pos[0] - self.cursor_hotspot[0], self.mouse_pos[1] - self.cursor_hotspot[1],
-                           self.cursor_rect.width, self.cursor_rect.height)
-        # save the bitmap area under the window if buffered
-        if self.buffered:
-            self.bitmaps.insert(0, (self.copy_graphic_area(self.surface, cursor_rect), cursor_rect))
-        self.surface.blit(self.cursor_image, cursor_rect)
+        self.renderer.draw()
 
     def undraw_gui(self):
-        # reverse the bitmaps that were under each gui object drawn, if buffered is false then
-        # the client does not call this method at all
-        for bitmap, rect in self.bitmaps:
-            self.surface.blit(bitmap, rect)
-        self.bitmaps.clear()
+        self.renderer.undraw()
