@@ -10,6 +10,11 @@ class EventDispatcher:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _reset_window_drag_state(self) -> None:
+        self.gui.dragging = False
+        self.gui.dragging_window = None
+        self.gui.mouse_delta = None
+
     def _is_registered_widget(self, widget) -> bool:
         if widget in self.gui.widgets:
             return True
@@ -29,6 +34,9 @@ class EventDispatcher:
         self._update_active_window()
         # Priority 1: Window dragging
         if self.gui.dragging:
+            if self.gui.dragging_window is None or self.gui.mouse_delta is None:
+                self._reset_window_drag_state()
+                return self.gui.event(Event.Pass)
             return self._handle_window_dragging(event)
         # Priority 2: Standard interaction (check for start of drag)
         if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and event.button == 1:
@@ -67,6 +75,9 @@ class EventDispatcher:
         self.gui.active_window = top_window
 
     def _handle_window_dragging(self, event: PygameEvent) -> "GuiEvent":
+        if self.gui.dragging_window is None or self.gui.mouse_delta is None:
+            self._reset_window_drag_state()
+            return self.gui.event(Event.Pass)
         if event.type == MOUSEBUTTONUP and event.button == 1:
             self.gui.dragging = False
             self.gui.dragging_window.set_pos((self.gui.dragging_window.x, self.gui.dragging_window.y))
