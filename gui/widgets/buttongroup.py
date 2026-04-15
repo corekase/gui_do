@@ -72,14 +72,6 @@ class ButtonGroup(BaseInteractive):
         # make this object the currently armed one
         ButtonGroup.selections[self.group] = self
 
-    def read_id(self) -> Any:
-        """Get the ID of the currently selected button in this group.
-
-        Returns:
-            The ID of the selected button.
-        """
-        return ButtonGroup.selections[self.group].id
-
     def read_group(self) -> str:
         """Get the group name for this button.
 
@@ -87,3 +79,11 @@ class ButtonGroup(BaseInteractive):
             The group name string.
         """
         return self.group
+
+    def read_id(self) -> Any:
+        """Get the ID of the currently selected button in this group.
+
+        Returns:
+            The ID of the selected button.
+        """
+        return ButtonGroup.selections[self.group].id

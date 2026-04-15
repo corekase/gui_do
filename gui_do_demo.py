@@ -7,6 +7,15 @@ from gui import GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, Butt
 from gui import colours
 
 class Demo:
+    # Coordinates around a cell, given as a delta table
+    neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
+                  ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
+
+    cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
+            Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
+            Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
+            Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
+
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -426,9 +435,6 @@ class Demo:
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
-    # Coordinates around a cell, given as a delta table
-    neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
-                  ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
     # function to generate a cycle of life
     def generate(self):
         def population(cell):
@@ -558,11 +564,6 @@ class Demo:
             if (z * z.conjugate()).real > 4.0:
                 break
         return k
-
-    cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
-            Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
-            Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
-            Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
 
     def col(self, k):
         if k == self.maximum_iters:

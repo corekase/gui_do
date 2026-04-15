@@ -25,21 +25,21 @@ class Label(Widget):
             self.draw_rect.x, self.draw_rect.y = x, y
         self.WidgetKind = WidgetKind.Label
 
-    def set_label(self, text: str) -> None:
-        # text bitmap
-        self.gui.bitmap_factory.set_font(self.font)
-        self.render(text)
-        self.gui.bitmap_factory.set_last_font()
-
     def render(self, text: str) -> None:
         if self.shadow:
             self.text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
         else:
             self.text_bitmap = self.gui.bitmap_factory.render_text(text)
 
-    def handle_event(self, _, _a) -> bool:
-        return False
+    def set_label(self, text: str) -> None:
+        # text bitmap
+        self.gui.bitmap_factory.set_font(self.font)
+        self.render(text)
+        self.gui.bitmap_factory.set_last_font()
 
     def draw(self) -> None:
         """Draw the label text to the surface."""
         self.surface.blit(self.text_bitmap, (self.draw_rect.x, self.draw_rect.y))
+
+    def handle_event(self, _, _a) -> bool:
+        return False

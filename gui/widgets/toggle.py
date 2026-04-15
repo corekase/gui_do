@@ -59,12 +59,6 @@ class Toggle(BaseInteractive):
                 return True
         return False
 
-    def draw(self) -> None:
-        if self.pushed:
-            self.surface.blit(self.armed, self.draw_rect)
-        else:
-            super().draw()
-
     def set(self, pushed: bool) -> None:
         """Set the toggle state programmatically.
 
@@ -80,3 +74,9 @@ class Toggle(BaseInteractive):
             True if toggle is pressed, False if raised.
         """
         return self.pushed
+
+    def draw(self) -> None:
+        if self.pushed:
+            self.surface.blit(self.armed, self.draw_rect)
+        else:
+            super().draw()

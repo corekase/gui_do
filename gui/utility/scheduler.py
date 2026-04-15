@@ -183,21 +183,6 @@ class Scheduler:
                 return False
         return True
 
-    def null(self, *args: Any, **kwargs: Any) -> None:
-        return
-
-    def _process_next_task(self) -> None:
-        # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
-        try:
-            task_id = self.tasks_ready.pop(0)
-            self.tasks[task_id].time_start = time.time()
-            next(self.tasks[task_id].task_logic)
-            self.tasks_processed.append(task_id)
-        except StopIteration:
-            # task exited, and exception from next() happened before appending the id to the processed list
-            self.tasks_finished.append(task_id)
-            del self.tasks[task_id]
-
     def update(self) -> List[Any]:
         """
         Update scheduler state for one frame of execution.
@@ -222,6 +207,18 @@ class Scheduler:
         # Return finished tasks so caller can dispatch events
         return self.tasks_finished.copy()
 
+    def _process_next_task(self) -> None:
+        # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
+        try:
+            task_id = self.tasks_ready.pop(0)
+            self.tasks[task_id].time_start = time.time()
+            next(self.tasks[task_id].task_logic)
+            self.tasks_processed.append(task_id)
+        except StopIteration:
+            # task exited, and exception from next() happened before appending the id to the processed list
+            self.tasks_finished.append(task_id)
+            del self.tasks[task_id]
+
     def get_finished_tasks(self) -> List[Any]:
         """
         Get list of tasks that finished in the most recent update.
@@ -234,3 +231,6 @@ class Scheduler:
     def clear_finished_tasks(self) -> None:
         """Clear the finished tasks list."""
         self.tasks_finished.clear()
+
+    def null(self, *args: Any, **kwargs: Any) -> None:
+        return

@@ -91,14 +91,6 @@ class Scrollbar(Frame):
         # whether or not the arrowboxes modified the start_pos
         self.hit: bool = False
 
-    def increment(self) -> None:
-        """Increment the scrollbar position."""
-        self.hit = True
-
-    def decrement(self) -> None:
-        """Decrement the scrollbar position."""
-        self.hit = True
-
     def handle_event(self, event: Any, window: Any) -> bool:
         if self.hit:
             # if the scrollbar state was modified by a callback then signal a change
