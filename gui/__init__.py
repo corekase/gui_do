@@ -5,7 +5,7 @@ from .guimanager import GuiManager
 from .utility.values.decorations import _init_decorations
 _init_decorations()
 # import constants into the package namespace
-from .utility.values.constants import colours, EventKind, WidgetKind, Orientation, ScrollbarArrowPosition, ButtonStyle
+from .utility.values.constants import colours, EventKind, Orientation, ScrollbarArrowPosition, ButtonStyle
 from .widgets.canvas import CanvasEventKind
 # import scheduler
 from .scheduler import Scheduler, TaskKind
