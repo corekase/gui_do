@@ -169,6 +169,9 @@ class Scheduler:
         if task.message_method is None:
             from .guimanager import GuiError
             raise GuiError(f'task "{id}" has no message handler')
+        if not callable(task.message_method):
+            from .guimanager import GuiError
+            raise GuiError(f'task "{id}" message handler is not callable')
         task.message_method(parameters)
 
     def remove_all(self) -> None:
