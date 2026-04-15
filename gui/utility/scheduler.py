@@ -162,13 +162,14 @@ class Scheduler:
     def suspend_all(self) -> None:
         ready = list(self._tasks_ready)
         processed = list(self._tasks_processed)
-        self._tasks_suspended += ready + processed
+        for id in ready + processed:
+            if id not in self._tasks_suspended_set:
+                self._tasks_suspended.append(id)
+                self._tasks_suspended_set.add(id)
         self._tasks_ready.clear()
         self._tasks_processed.clear()
         self._tasks_ready_set.clear()
         self._tasks_processed_set.clear()
-        self._tasks_suspended_set.update(ready)
-        self._tasks_suspended_set.update(processed)
 
     def resume_all(self) -> None:
         for id in self._tasks_suspended:
