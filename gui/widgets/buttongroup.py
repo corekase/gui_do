@@ -4,12 +4,31 @@ from ..utility.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 class ButtonGroup(BaseInteractive):
+    """A radio-button style group widget.
+
+    Mutually exclusive buttons where only one button in a group can be selected
+    at a time. Automatically tracks the currently selected button per group.
+
+    Class Attributes:
+        groups: Dictionary mapping group names to lists of ButtonGroup instances.
+        selections: Dictionary mapping group names to currently selected button.
+    """
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups: Dict[str, List["ButtonGroup"]] = {}
     # dictionary of key:value -> key, name of the group. value, armed object
     selections: Dict[str, "ButtonGroup"] = {}
 
     def __init__(self, gui: Any, group: str, id: Any, rect: Any, style: Any, text: str) -> None:
+        """Initialize a button group member.
+
+        Args:
+            gui: Reference to GuiManager.
+            group: Name of the button group this button belongs to.
+            id: Unique identifier for this button.
+            rect: Rect defining button position and size.
+            style: ButtonStyle enum value for visual style.
+            text: Text to display on button.
+        """
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.ButtonGroup
         self.group: str = group
@@ -41,6 +60,11 @@ class ButtonGroup(BaseInteractive):
         return False
 
     def select(self) -> None:
+        """Select this button, deselecting the previously selected button in the group.
+
+        This is called automatically when the button is clicked, but can also be
+        called programmatically to change the selection.
+        """
         # clear armed state for previous object
         ButtonGroup.selections[self.group].state = InteractiveState.Idle
         # mark this object armed
@@ -49,7 +73,17 @@ class ButtonGroup(BaseInteractive):
         ButtonGroup.selections[self.group] = self
 
     def read_id(self) -> Any:
+        """Get the ID of the currently selected button in this group.
+
+        Returns:
+            The ID of the selected button.
+        """
         return ButtonGroup.selections[self.group].id
 
     def read_group(self) -> str:
+        """Get the group name for this button.
+
+        Returns:
+            The group name string.
+        """
         return self.group

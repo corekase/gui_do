@@ -4,7 +4,27 @@ from ..utility.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 class Button(BaseInteractive):
+    """An interactive button widget with state feedback.
+
+    Buttons transition through three states (Idle → Hover → Armed) and can execute
+    callbacks when activated. Includes automatic repeat functionality when held down.
+
+    Attributes:
+        button_callback: Optional callback invoked when button is activated.
+        timer_id: ID of the repeat timer, if any.
+    """
     def __init__(self, gui: Any, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> None:
+        """Initialize a button widget.
+
+        Args:
+            gui: Reference to GuiManager.
+            id: Unique identifier for this button.
+            rect: Rect defining button position and size.
+            style: ButtonStyle enum value for visual style.
+            text: Optional text to display on button.
+            button_callback: Optional callback when button is activated.
+            skip_factory: If True, skip bitmap factory initialization (for subclasses).
+        """
         # initialize common widget values
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Button
@@ -17,6 +37,18 @@ class Button(BaseInteractive):
         self.button_callback: Optional[Callable] = button_callback
 
     def handle_event(self, event: Any, window: Any) -> bool:
+        """Handle button events and manage state transitions.
+
+        Updates button state based on mouse position and input. Manages the Armed state
+        and invokes callbacks as appropriate.
+
+        Args:
+            event: The pygame event to handle.
+            window: The parent window, if any.
+
+        Returns:
+            True if the event resulted in button activation, False otherwise.
+        """
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
 
@@ -37,7 +69,7 @@ class Button(BaseInteractive):
                         if self.timer_id is None:
                             self.gui.timers.add_timer(f'{self.id}.timer', 150, self.button_callback)
                             self.timer_id = f'{self.id}.timer'
-                    return False
+                    return True
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
                 if event.button == 1:
@@ -46,7 +78,7 @@ class Button(BaseInteractive):
                         self.timer_id = None
                     self.state = InteractiveState.Hover
                     if self.button_callback is not None:
-                        return False
+                        return True
                     return True
         return False
 

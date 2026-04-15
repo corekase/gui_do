@@ -33,6 +33,31 @@ class GuiEvent:
 
 class GuiManager:
     def __init__(self, surface: Any, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
+        """Initialize the GUI manager.
+
+        Args:
+            surface: Pygame Surface to render GUI onto.
+            fonts: List of (name, filename, size) tuples to load.
+            bitmap_factory: Optional BitmapFactory instance. Creates new one if not provided.
+
+        Raises:
+            GuiError: If surface is invalid or fonts list is empty.
+        """
+        if surface is None:
+            raise GuiError('surface cannot be None')
+        if not fonts or len(fonts) == 0:
+            raise GuiError('fonts list cannot be empty')
+        for font_entry in fonts:
+            if not isinstance(font_entry, tuple) or len(font_entry) != 3:
+                raise GuiError('each font entry must be a tuple of (name, filename, size)')
+            name, filename, size = font_entry
+            if not isinstance(name, str) or not name:
+                raise GuiError(f'font name must be a non-empty string, got: {name}')
+            if not isinstance(filename, str) or not filename:
+                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
+            if not isinstance(size, int) or size <= 0:
+                raise GuiError(f'font size must be a positive integer, got: {size}')
+
         self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
@@ -45,8 +70,6 @@ class GuiManager:
         self.surface: Any = surface
         # list of widgets attached to the screen
         self.widgets: List[Any] = []
-        # list of bitmaps overwritten by gui objects
-        self.bitmaps: List[Tuple[Any, Rect]] = []
         # active object for add()
         self.active_object: Optional[Any] = None
         # list of windows
@@ -80,6 +103,21 @@ class GuiManager:
 
 
     def add(self, gui_object: Any) -> Any:
+        """Add a GUI object (widget or window) to the manager.
+
+        Args:
+            gui_object: Widget or Window to add.
+
+        Returns:
+            The gui_object that was added.
+
+        Raises:
+            GuiError: If gui_object is not a valid Widget or Window.
+        """
+        if gui_object is None:
+            raise GuiError('gui_object cannot be None')
+        if not hasattr(gui_object, 'ContainerKind'):
+            raise GuiError('gui_object must have a ContainerKind attribute')
         if gui_object.ContainerKind == ContainerKind.Window:
             # add this window to the gui
             self.windows.append(gui_object)
@@ -104,6 +142,26 @@ class GuiManager:
         return gui_object
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
+        """Configure grid layout properties.
+
+        Args:
+            anchor: (x, y) position of grid origin.
+            width: Width of each grid cell in pixels.
+            height: Height of each grid cell in pixels.
+            spacing: Space between grid cells in pixels.
+            use_rect: If True, cells are Rect objects; if False, tuples.
+
+        Raises:
+            GuiError: If dimensions are invalid.
+        """
+        if width <= 0:
+            raise GuiError(f'grid width must be positive, got: {width}')
+        if height <= 0:
+            raise GuiError(f'grid height must be positive, got: {height}')
+        if spacing < 0:
+            raise GuiError(f'grid spacing cannot be negative, got: {spacing}')
+        if not isinstance(anchor, tuple) or len(anchor) != 2:
+            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
         self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
 
     def gridded(self, x: int, y: int) -> Any:
@@ -196,7 +254,6 @@ class GuiManager:
 
     def frame(self, id: Any, rect: Any) -> Any:
         return self.add(Frame(self, id, rect))
-
 
     @property
     def buffered(self):

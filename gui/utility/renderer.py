@@ -5,12 +5,39 @@ if TYPE_CHECKING:
     from .guimanager import GuiManager
 
 class Renderer:
+    """Renders GUI widgets and manages display buffering.
+
+    The Renderer handles all drawing of widgets, windows, and the cursor to the
+    screen surface. When buffering is enabled, it saves the screen contents before
+    drawing each object, allowing for efficient restoration via undraw().
+
+    Attributes:
+        gui: Reference to the GuiManager.
+        bitmaps: List of (bitmap, rect) tuples saved for buffering. Used when
+                 gui.buffered is True to efficiently restore screen contents.
+    """
     def __init__(self, gui: "GuiManager") -> None:
+        """Initialize the renderer.
+
+        Args:
+            gui: Reference to GuiManager for access to widgets and render state.
+        """
         self.gui: "GuiManager" = gui
         self.bitmaps: List[Tuple[Any, Rect]] = []
 
     def draw(self) -> None:
-        # draw all widgets to their surfaces
+        """Render all GUI elements to the screen surface.
+
+        Drawing order (front to back):
+        1. Screen widgets (back)
+        2. Windows (in z-order)
+        3. Window widgets
+        4. Mouse cursor (front)
+
+        When buffering is enabled (gui.buffered=True), saves screen contents
+        under each drawable element for later restoration via undraw().
+        This allows for efficient animation and dynamic UI updates.
+        """
         if self.gui.buffered:
             self.bitmaps.clear()
         for widget in self.gui.widgets:
@@ -48,6 +75,14 @@ class Renderer:
             self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
     def undraw(self) -> None:
+        """Restore screen contents to undo the previous draw() operation.
+
+        This is only used when buffering is enabled (gui.buffered=True).
+        Restores saved bitmap contents from draw() in reverse order,
+        effectively clearing all drawn GUI elements from the screen.
+
+        Must be called after pygame.display.flip() if using buffering.
+        """
         # reverse the bitmaps that were under each gui object drawn, if buffered is false then
         # the client does not call this method at all
         for bitmap, rect in self.bitmaps:

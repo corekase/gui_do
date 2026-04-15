@@ -5,7 +5,18 @@ from .scheduler import Scheduler, TaskKind
 from .statemanager import StateManager
 
 class Engine:
+    """Main application event loop controller.
+
+    Orchestrates the complete application lifecycle including event processing,
+    timer updates, task scheduling, and rendering. Works with StateManager to
+    support multiple application contexts (screens/states).
+    """
     def __init__(self, state_manager: StateManager) -> None:
+        """Initialize the engine.
+
+        Args:
+            state_manager: StateManager to control application state transitions.
+        """
         self.state_manager: StateManager = state_manager
         self.clock: pygame.time.Clock = pygame.time.Clock()
         self.fps: int = 60

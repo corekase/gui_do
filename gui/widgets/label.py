@@ -4,21 +4,25 @@ from ..utility.widget import Widget
 from pygame import Rect
 
 class Label(Widget):
+    """A non-interactive text label widget.
+
+    Renders text to the GUI with optional shadow effect. Labels do not respond to
+    user input and cannot be activated.
+    """
     def __init__(self, gui: Any, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow: bool = shadow
         self.font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()
         self.text_bitmap: Any
-        self.rect: Rect
         self.render(text)
-        self.rect = self.text_bitmap.get_rect()
+        self.draw_rect = self.text_bitmap.get_rect()
         if len(position) == 2:
-            self.rect.x, self.rect.y = position[0], position[1]
+            self.draw_rect.x, self.draw_rect.y = position[0], position[1]
         else:
-            x = position[0] + self.gui.bitmap_factory.centre(position[2], self.rect.width)
-            y = position[1] + self.gui.bitmap_factory.centre(position[3], self.rect.height)
-            self.rect.x, self.rect.y = x, y
+            x = position[0] + self.gui.bitmap_factory.centre(position[2], self.draw_rect.width)
+            y = position[1] + self.gui.bitmap_factory.centre(position[3], self.draw_rect.height)
+            self.draw_rect.x, self.draw_rect.y = x, y
         self.WidgetKind = WidgetKind.Label
 
     def set_label(self, text: str) -> None:
@@ -37,4 +41,5 @@ class Label(Widget):
         return False
 
     def draw(self) -> None:
-        self.surface.blit(self.text_bitmap, (self.rect.x, self.rect.y))
+        """Draw the label text to the surface."""
+        self.surface.blit(self.text_bitmap, (self.draw_rect.x, self.draw_rect.y))

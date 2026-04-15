@@ -1,11 +1,23 @@
 import pygame
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.constants import WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
 from ..utility.constants import InteractiveState
+
+class CanvasEventPacket:
+    """Event packet for canvas-specific events.
+
+    Contains event type, mouse position relative to canvas, and type-specific data.
+    """
+    def __init__(self) -> None:
+        self.type: Optional[Any] = None
+        self.pos: Optional[Tuple[int, int]] = None
+        self.rel: Optional[Tuple[int, int]] = None
+        self.button: Optional[int] = None
+        self.y: Optional[int] = None
 
 class Canvas(Widget):
     def __init__(self, gui: Any, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> None:
@@ -38,10 +50,16 @@ class Canvas(Widget):
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, area)
 
-    def read_event(self) -> Optional["CanvasEventPacket"]:
-        # canvas events are blocking, no new events will be generated until the previous one
-        # is read. either as a signal or in a callback, the first thing is to read the event
-        if self.queued_event == True:
+    def read_event(self) -> Optional[CanvasEventPacket]:
+        """Read a queued canvas event.
+
+        Canvas events are blocking - no new events are generated until the previous
+        one is read. This must be called first to retrieve any queued event.
+
+        Returns:
+            CanvasEventPacket if an event is queued, None otherwise.
+        """
+        if self.queued_event:
             self.queued_event = False
             return self.CEvent
         return None
@@ -54,8 +72,20 @@ class Canvas(Widget):
             return False
 
     def handle_event(self, event: Any, window: Any) -> bool:
+        """Handle canvas events and queue them for processing.
+
+        Events are queued while the canvas has focus. If a queued event hasn't been
+        read yet, no new events are generated until it's retrieved via read_event().
+
+        Args:
+            event: The pygame event to handle.
+            window: The parent window, if any.
+
+        Returns:
+            bool: True if event was handled and should signal activation, False otherwise.
+        """
         if self.get_collide(window):
-            if self.queued_event == False:
+            if not self.queued_event:
                 self.queued_event = True
                 # within the canvas so update information about that
                 canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
@@ -101,11 +131,3 @@ class Canvas(Widget):
         # handle the pristine surface
         if self.auto_restore_pristine:
             self.restore_pristine()
-
-class CanvasEventPacket:
-    def __init__(self) -> None:
-        self.type: Optional[CanvasEvent] = None
-        self.pos: Optional[tuple] = None
-        self.y: Optional[int] = None
-        self.rel: Optional[tuple] = None
-        self.button: Optional[int] = None

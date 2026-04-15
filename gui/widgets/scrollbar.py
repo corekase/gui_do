@@ -58,8 +58,11 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(gui.arrowbox(f'{id}.increment', inc_rect, inc_degree, self.increment))
-            self.registered.append(gui.arrowbox(f'{id}.decrement', dec_rect, dec_degree, self.decrement))
+            inc_arrow = gui.arrowbox(f'{id}.increment', inc_rect, inc_degree, self.increment)
+            dec_arrow = gui.arrowbox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)
+            # Store arrows for later - window context will be set after super().__init__()
+            self.registered.append(inc_arrow)
+            self.registered.append(dec_arrow)
         else:
             scroll_area_rect = overall_rect
         # Scrollbar range parameters
@@ -70,6 +73,10 @@ class Scrollbar(Frame):
         # initialize common widget values
         super().__init__(gui, id, scroll_area_rect)
         self.WidgetKind = WidgetKind.Scrollbar
+        # Ensure arrows inherit window context from scrollbar when in a window
+        if self.window is not None:
+            for arrow in self.registered:
+                arrow.window = self.window
         # maximum area that can be filled
         self.graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         # setup the parameters of the scrollbar
