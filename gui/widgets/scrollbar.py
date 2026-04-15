@@ -3,8 +3,8 @@ from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..utility.values.constants import WidgetKind
-from .frame import Frame, FrameState
-from ..utility.values.constants import colours, Orientation, ScrollbarArrowPosition
+from .frame import Frame
+from ..utility.values.constants import colours, Orientation, ScrollbarArrowPosition, InteractiveState
 from ..utility.registry import register_widget
 
 @register_widget("Scrollbar")
@@ -113,7 +113,7 @@ class Scrollbar(Frame):
                 lock_rect = Rect(x, y, self.graphic_rect.width, self.graphic_rect.height)
                 self.gui.set_lock_area(self, lock_rect)
                 # begin dragging the scrollbar
-                self.state = FrameState.Hover
+                self.state = InteractiveState.Hover
                 self.dragging = True
                 # signal no change
                 return False
@@ -171,7 +171,7 @@ class Scrollbar(Frame):
         # unlock mouse movement
         self.gui.set_lock_area(None)
         # reset state to default values
-        self.state = FrameState.Idle
+        self.state = InteractiveState.Idle
         self.hit = False
         self.dragging = False
         self.last_mouse_pos = None

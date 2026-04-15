@@ -4,7 +4,8 @@ from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.values.constants import WidgetKind, CanvasEventKind
 from ..utility.widget import Widget
-from .frame import Frame, FrameState
+from .frame import Frame
+from ..utility.values.constants import InteractiveState
 from ..utility.registry import register_widget
 
 @register_widget("Canvas")
@@ -18,7 +19,7 @@ class Canvas(Widget):
         if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'canvas_frame', Rect(0, 0, rect.width, rect.height))
-            frame.state = FrameState.Idle
+            frame.state = InteractiveState.Idle
             frame.surface = self.canvas
             frame.draw()
             self.pristine = self.gui.copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()

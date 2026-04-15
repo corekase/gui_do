@@ -21,9 +21,6 @@ ContainerKind = Enum('ContainerKind', ['Window', 'Widget'])
 # InteractiveState: State for interactive widgets (button, toggle, etc.)
 InteractiveState = Enum('InteractiveState', ['Idle', 'Hover', 'Armed'])
 
-# FrameState: State for frame decorations
-FrameState = Enum('FrameState', ['Idle', 'Hover', 'Armed'])
-
 # CanvasEvent: Types of canvas-specific events
 CanvasEventKind = Enum('CanvasEventKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
 

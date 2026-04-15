@@ -1,5 +1,5 @@
 from typing import Any
-from ..utility.values.constants import WidgetKind, FrameState
+from ..utility.values.constants import WidgetKind, InteractiveState
 from ..utility.widget import Widget
 from ..utility.registry import register_widget
 
@@ -12,16 +12,16 @@ class Frame(Widget):
         self.hover: Any
         self.armed: Any
         self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_frame_bitmaps(rect)
-        self.state: FrameState = FrameState.Idle
+        self.state: InteractiveState = InteractiveState.Idle
 
     def handle_event(self, _, _a) -> bool:
         return False
 
     def draw(self) -> None:
         super().draw()
-        if self.state == FrameState.Idle:
+        if self.state == InteractiveState.Idle:
             self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == FrameState.Hover:
+        elif self.state == InteractiveState.Hover:
             self.surface.blit(self.hover, (self.draw_rect.x, self.draw_rect.y))
-        elif self.state == FrameState.Armed:
+        elif self.state == InteractiveState.Armed:
             self.surface.blit(self.armed, (self.draw_rect.x, self.draw_rect.y))

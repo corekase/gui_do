@@ -2,8 +2,8 @@ import pygame
 from pygame import Rect
 from typing import Optional, Tuple, Any
 from ..guimanager import GuiManager
-from ..utility.values.constants import colours, ContainerKind
-from .frame import Frame, FrameState
+from ..utility.values.constants import colours, ContainerKind, InteractiveState
+from .frame import Frame
 from ..utility.registry import register_widget
 
 @register_widget("Window")
@@ -27,7 +27,7 @@ class Window:
         if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
-            frame.state = FrameState.Idle
+            frame.state = InteractiveState.Idle
             frame.surface = self.surface
             frame.draw()
         else:
