@@ -103,6 +103,9 @@ class EventDispatcher:
                                     self.gui.dragging_window.y - self.gui.mouse_pos[1])
 
     def _handle_locked_object(self, event: PygameEvent) -> "GuiEvent":
+        if not self._is_registered_widget(self.gui.locking_object):
+            self.gui.set_lock_area(None)
+            return self.gui.event(Event.Pass)
         if self.gui.locking_object.WidgetKind == WidgetKind.Scrollbar:
             window = self.gui.locking_object.window if hasattr(self.gui.locking_object, 'window') else None
             if self.gui.handle_widget(self.gui.locking_object, event, window):
