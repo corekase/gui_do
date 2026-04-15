@@ -138,7 +138,7 @@ class GuiManager:
 
     def _describe_gui_object(self, gui_object: TGuiObject) -> str:
         if isinstance(gui_object, Widget):
-            return f'{type(gui_object).__name__} id={gui_object.id}'
+            return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
         if isinstance(gui_object, Window):
             return (
                 f'{type(gui_object).__name__} '
@@ -148,7 +148,7 @@ class GuiManager:
 
     def _describe_widget_container(self, widget: Widget) -> str:
         window = getattr(widget, 'window', None)
-        if window is None:
+        if window is None or not isinstance(window, Window):
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
@@ -180,16 +180,16 @@ class GuiManager:
         """
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
-        if not hasattr(gui_object, 'ContainerKind'):
-            raise GuiError('gui_object must have a ContainerKind attribute')
+        if not isinstance(gui_object, (Window, Widget)):
+            raise GuiError('gui_object must be a Window or Widget instance')
         if self._is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self._describe_gui_object(gui_object)}')
-        if gui_object.ContainerKind == ContainerKind.Window:
+        if isinstance(gui_object, Window):
             # add this window to the gui
             self.windows.append(gui_object)
             # make this object the destination for gui add commands
             self._active_object = gui_object
-        elif gui_object.ContainerKind == ContainerKind.Widget:
+        elif isinstance(gui_object, Widget):
             if not isinstance(gui_object.id, str) or gui_object.id == '':
                 raise GuiError('widget id must be a non-empty string')
             conflict = self._find_widget_id_conflict(gui_object.id, gui_object)
@@ -215,8 +215,6 @@ class GuiManager:
                 gui_object.surface = self.surface
                 # append the widget to the screen list
                 self.widgets.append(gui_object)
-        else:
-            raise GuiError('gui_object must be a window or widget')
         return gui_object
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
