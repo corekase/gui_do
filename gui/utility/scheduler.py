@@ -45,6 +45,17 @@ class Timers:
                     self.timers[id].timer -= self.timers[id].duration
                     self.timers[id].callback()
 
+class Task:
+    def __init__(self, id: Hashable, interval: float) -> None:
+        self.id: Hashable = id
+        # times for yielding cooperative control
+        self.time_start: float = 0.0
+        self.time_duration: float = interval
+        # pointer for a "receive information" method, takes one parameter (which can anything)
+        # gives coroutine operations while only being a generator
+        self.message_method: Optional[Callable[[object], None]] = None
+        self.task_logic: Optional[Generator[object, None, None]] = None
+
 class TaskEvent:
     # an event object to be returned which includes pygame event information and gui_do information
     def __init__(self) -> None:
@@ -59,7 +70,7 @@ class TaskEvent:
 
 class Scheduler:
     def __init__(self, gui: "GuiManager") -> None:
-        self.tasks: Dict[Hashable, "Scheduler.Task"] = {}
+        self.tasks: Dict[Hashable, Task] = {}
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
         # queued and finished lists
@@ -82,17 +93,6 @@ class Scheduler:
             self._tasks_processed.remove(id)
             self._tasks_processed_set.discard(id)
 
-    class Task:
-        def __init__(self, id: Hashable, interval: float) -> None:
-            self.id: Hashable = id
-            # times for yielding cooperative control
-            self.time_start: float = 0.0
-            self.time_duration: float = interval
-            # pointer for a "receive information" method, takes one parameter (which can anything)
-            # gives coroutine operations while only being a generator
-            self.message_method: Optional[Callable[[object], None]] = None
-            self.task_logic: Optional[Generator[object, None, None]] = None
-
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> "Scheduler.TaskEvent":
         task_event = TaskEvent()
         task_event.operation = operation
@@ -114,7 +114,7 @@ class Scheduler:
                 self._tasks_suspended = [task_id for task_id in self._tasks_suspended if task_id != id]
                 self._tasks_suspended_set.discard(id)
             self.tasks.pop(id, None)
-        task = self.Task(id, 0.01)
+        task = Task(id, 0.01)
         if parameters is None:
             task.task_logic = logic(id)
         else:
@@ -202,14 +202,18 @@ class Scheduler:
 
     def read_suspended(self) -> List[Hashable]:
         # return a list of suspended task id's
-        return self._tasks_suspended
+        return self._tasks_suspended.copy()
 
     def read_suspended_len(self) -> int:
         # return the number of suspended tasks
         return len(self._tasks_suspended)
 
     def task_time(self, id: Hashable) -> bool:
-        if (time.time() - self.tasks[id].time_start) >= self.tasks[id].time_duration:
+        task = self.tasks.get(id)
+        if task is None:
+            from .guimanager import GuiError
+            raise GuiError(f'unknown task id: {id}')
+        if (time.time() - task.time_start) >= task.time_duration:
             return True
         return False
 

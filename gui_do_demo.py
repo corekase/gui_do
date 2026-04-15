@@ -246,6 +246,8 @@ class Demo:
         """Run the application using the Engine with StateManager contexts."""
         try:
             self.engine.run()
+        except Exception as exc:
+            raise Exception(f'{type(exc).__name__}: {exc}')
         finally:
             pygame.quit()
             sys.exit(0)
