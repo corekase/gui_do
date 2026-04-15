@@ -265,30 +265,32 @@ class Scheduler:
 
     def _process_next_task(self) -> None:
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
-        task_id = self._tasks_ready.popleft()
-        self._tasks_ready_set.discard(task_id)
-        # Task may have been removed after it was queued.
-        task = self.tasks.get(task_id)
-        if task is None:
+        while self._tasks_ready:
+            task_id = self._tasks_ready.popleft()
+            self._tasks_ready_set.discard(task_id)
+            # Task may have been removed after it was queued.
+            task = self.tasks.get(task_id)
+            if task is None:
+                continue
+            # Ignore and remove malformed tasks with no generator logic.
+            if task.task_logic is None:
+                self.tasks.pop(task_id, None)
+                continue
+            task.time_start = time.time()
+            try:
+                next(cast(Generator[object, None, None], task.task_logic))
+            except StopIteration:
+                # task exited, and exception from next() happened before appending the id to the processed list
+                self._tasks_finished.append(task_id)
+                self.tasks.pop(task_id, None)
+                return
+            except Exception as exc:
+                self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
+                self.tasks.pop(task_id, None)
+                return
+            self._tasks_processed.append(task_id)
+            self._tasks_processed_set.add(task_id)
             return
-        # Ignore and remove malformed tasks with no generator logic.
-        if task.task_logic is None:
-            self.tasks.pop(task_id, None)
-            return
-        task.time_start = time.time()
-        try:
-            next(cast(Generator[object, None, None], task.task_logic))
-        except StopIteration:
-            # task exited, and exception from next() happened before appending the id to the processed list
-            self._tasks_finished.append(task_id)
-            self.tasks.pop(task_id, None)
-            return
-        except Exception as exc:
-            self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
-            self.tasks.pop(task_id, None)
-            return
-        self._tasks_processed.append(task_id)
-        self._tasks_processed_set.add(task_id)
 
     def get_finished_tasks(self) -> List[Hashable]:
         """
