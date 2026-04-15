@@ -43,15 +43,13 @@ class GuiEvent:
         self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
 
 class GuiManager:
-    def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None,
-                 strict_widget_ids: bool = True) -> None:
+    def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Initialize the GUI manager.
 
         Args:
             surface: Pygame Surface to render GUI onto.
             fonts: List of (name, filename, size) tuples to load.
             bitmap_factory: Optional BitmapFactory instance. Creates new one if not provided.
-            strict_widget_ids: If True, reject duplicate widget IDs across this GuiManager.
 
         Raises:
             GuiError: If surface is invalid or fonts list is empty.
@@ -113,7 +111,6 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
-        self.strict_widget_ids: bool = strict_widget_ids
         # per-GuiManager state for ButtonGroup selections
         self._button_groups: dict[str, list[ButtonGroup]] = {}
         self._button_selections: dict[str, ButtonGroup] = {}
@@ -127,7 +124,6 @@ class GuiManager:
                 if widget is not candidate and widget.id == widget_id:
                     return True
         return False
-
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
@@ -151,7 +147,7 @@ class GuiManager:
             # make this object the destination for gui add commands
             self._active_object = gui_object
         elif gui_object.ContainerKind == ContainerKind.Widget:
-            if self.strict_widget_ids and self._widget_id_exists(gui_object.id, gui_object):
+            if self._widget_id_exists(gui_object.id, gui_object):
                 raise GuiError(f'duplicate widget id: {gui_object.id}')
             # callback
             if self._active_object is not None:
