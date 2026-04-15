@@ -52,9 +52,12 @@ class Timers:
                 elapsed_time = now_time - interval.previous_time
                 interval.previous_time = now_time
                 interval.timer += elapsed_time
-                if interval.timer >= interval.duration:
+                while interval.timer >= interval.duration:
                     interval.timer -= interval.duration
                     interval.callback()
+                    interval = self.timers.get(id)
+                    if interval is None:
+                        break
 
 class Task:
     def __init__(self, id: Hashable, interval: float) -> None:

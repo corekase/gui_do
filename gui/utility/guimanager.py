@@ -211,6 +211,8 @@ class GuiManager:
                 # append the widget to the window's list
                 active_window.widgets.append(gui_object)
             else:
+                # clear stale window binding for screen-level widgets
+                gui_object.window = None
                 # give the widget a reference to the screen surface
                 gui_object.surface = self.surface
                 # append the widget to the screen list
@@ -478,8 +480,9 @@ class GuiManager:
 
     def _resolve_locking_state(self) -> Optional[Widget]:
         if self.locking_object is None:
-            if self.mouse_locked and self.lock_area_rect is None:
+            if self.mouse_locked or self.lock_area_rect is not None:
                 self.mouse_locked = False
+                self.lock_area_rect = None
             return None
         if not isinstance(self.locking_object, Widget):
             self.locking_object = None
