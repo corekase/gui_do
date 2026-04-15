@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .values.constants import Event, WidgetKind, InteractiveState
+from .constants import Event, WidgetKind, InteractiveState
 
 if TYPE_CHECKING:
     from ..guimanager import GuiManager

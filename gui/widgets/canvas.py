@@ -2,10 +2,10 @@ import pygame
 from typing import Optional, Any
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.values.constants import WidgetKind, CanvasEvent
+from ..utility.constants import WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
-from ..utility.values.constants import InteractiveState
+from ..utility.constants import InteractiveState
 
 class Canvas(Widget):
     def __init__(self, gui: Any, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> None:

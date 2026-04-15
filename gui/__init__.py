@@ -6,7 +6,7 @@ from .guimanager import GuiManager
 from .utility.engine import Engine
 from .utility.statemanager import StateManager
 # import constants into the package namespace
-from .utility.values.constants import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
+from .utility.constants import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
     # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080

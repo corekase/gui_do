@@ -1,5 +1,5 @@
 from typing import Optional, Tuple, Union, Any
-from ..utility.values.constants import colours, WidgetKind
+from ..utility.constants import colours, WidgetKind
 from ..utility.widget import Widget
 from pygame import Rect
 

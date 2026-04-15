@@ -1,5 +1,5 @@
 from typing import Any, Optional, Callable
-from ..utility.values.constants import WidgetKind, ButtonStyle
+from ..utility.constants import WidgetKind, ButtonStyle
 from .button import Button
 
 class ArrowBox(Button):

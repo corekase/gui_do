@@ -1,5 +1,5 @@
 from typing import Any
-from ..utility.values.constants import WidgetKind, InteractiveState
+from ..utility.constants import WidgetKind, InteractiveState
 from ..utility.widget import Widget
 
 class Frame(Widget):

@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.values.constants import WidgetKind
+from ..utility.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 class ButtonGroup(BaseInteractive):

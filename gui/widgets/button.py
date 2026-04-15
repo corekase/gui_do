@@ -1,6 +1,6 @@
 from typing import Optional, Any, Callable
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.values.constants import WidgetKind
+from ..utility.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 class Button(BaseInteractive):

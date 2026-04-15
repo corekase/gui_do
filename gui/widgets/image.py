@@ -1,6 +1,6 @@
 import pygame
 from typing import Any
-from ..utility.values.constants import WidgetKind
+from ..utility.constants import WidgetKind
 from ..utility.widget import Widget
 
 class Image(Widget):

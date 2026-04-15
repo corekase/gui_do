@@ -1,6 +1,6 @@
 from typing import Any, Optional
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.values.constants import WidgetKind, InteractiveState
+from ..utility.constants import WidgetKind, InteractiveState
 from ..utility.interactive import BaseInteractive
 
 class Toggle(BaseInteractive):

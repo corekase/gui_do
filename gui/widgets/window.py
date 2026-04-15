@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from typing import TYPE_CHECKING, Optional, Tuple, Any
-from ..utility.values.constants import colours, ContainerKind, InteractiveState
+from ..utility.constants import colours, ContainerKind, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:

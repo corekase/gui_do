@@ -3,7 +3,7 @@ from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .frame import Frame
-from ..utility.values.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
+from ..utility.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
 
 class Scrollbar(Frame):
     def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:

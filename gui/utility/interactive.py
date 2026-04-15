@@ -8,7 +8,7 @@ for widgets that respond to mouse input.
 from .widget import Widget
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from typing import Optional, Any, TYPE_CHECKING
-from .values.constants import InteractiveState
+from .constants import InteractiveState
 
 if TYPE_CHECKING:
     from ..guimanager import GuiManager
