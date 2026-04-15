@@ -118,10 +118,17 @@ class Scheduler:
             self._remove_from_processed(id)
             self.tasks.pop(id, None)
         task = Task(id, 0.01)
-        if parameters is None:
-            task.task_logic = logic(id)
-        else:
-            task.task_logic = logic(id, parameters)
+        try:
+            if parameters is None:
+                task.task_logic = logic(id)
+            else:
+                task.task_logic = logic(id, parameters)
+        except Exception as exc:
+            from .guimanager import GuiError
+            raise GuiError(f'failed to create task logic for "{id}": {type(exc).__name__}: {exc}') from exc
+        if task.task_logic is None or not hasattr(task.task_logic, '__next__'):
+            from .guimanager import GuiError
+            raise GuiError(f'task logic for "{id}" must be a generator')
         task.message_method = message_method
         self.tasks[id] = task
         self._tasks_ready.append(id)
