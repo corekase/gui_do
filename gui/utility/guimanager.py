@@ -115,15 +115,15 @@ class GuiManager:
         self._button_groups: dict[str, list[ButtonGroup]] = {}
         self._button_selections: dict[str, ButtonGroup] = {}
 
-    def _widget_id_exists(self, widget_id: str, candidate: Widget) -> bool:
+    def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
         for widget in self.widgets:
             if widget is not candidate and widget.id == widget_id:
-                return True
+                return widget
         for window in self.windows:
             for widget in window.widgets:
                 if widget is not candidate and widget.id == widget_id:
-                    return True
-        return False
+                    return widget
+        return None
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
@@ -149,8 +149,15 @@ class GuiManager:
         elif gui_object.ContainerKind == ContainerKind.Widget:
             if not isinstance(gui_object.id, str) or gui_object.id == '':
                 raise GuiError('widget id must be a non-empty string')
-            if self._widget_id_exists(gui_object.id, gui_object):
-                raise GuiError(f'duplicate widget id: {gui_object.id}')
+            conflict = self._find_widget_id_conflict(gui_object.id, gui_object)
+            if conflict is not None:
+                location = 'screen'
+                if getattr(conflict, 'window', None) is not None:
+                    location = 'window'
+                raise GuiError(
+                    f'duplicate widget id: {gui_object.id} (conflicts with '
+                    f'{type(conflict).__name__} on {location})'
+                )
             # callback
             if self._active_object is not None:
                 # store a reference to the window the widget is in
