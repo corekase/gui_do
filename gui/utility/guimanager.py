@@ -506,14 +506,20 @@ class GuiManager:
 
     def raise_window(self, window: Window) -> None:
         # move the window to the last item in the list which has the highest priority
+        self._resolve_active_object()
         if window not in self.windows:
+            if self._active_object is window:
+                self._active_object = None
             return
         self.windows.remove(window)
         self.windows.append(window)
 
     def lower_window(self, window: Window) -> None:
         # move the window to the first item in the list which has the lowest priority
+        self._resolve_active_object()
         if window not in self.windows:
+            if self._active_object is window:
+                self._active_object = None
             return
         self.windows.remove(window)
         self.windows.insert(0, window)
