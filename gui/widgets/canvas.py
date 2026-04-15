@@ -45,6 +45,8 @@ class Canvas(Widget):
         self.canvas_callback: Optional[Callable[[], None]] = canvas_callback
         self.auto_restore_pristine: bool = automatic_pristine
         self._events: deque[CanvasEventPacket] = deque(maxlen=32)
+        self.dropped_events: int = 0
+        self.last_overflow: bool = False
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
 
@@ -119,6 +121,10 @@ class Canvas(Widget):
             else:
                 # otherwise the catch-all event is MousePosition which is set above for all events
                 packet.type = CanvasEvent.MousePosition
+            was_full = len(self._events) == self._events.maxlen
+            self.last_overflow = was_full
+            if was_full:
+                self.dropped_events += 1
             self._events.append(packet)
             self.queued_event = True
             self.CEvent = self._events[0]

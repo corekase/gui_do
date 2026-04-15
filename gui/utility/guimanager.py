@@ -228,6 +228,8 @@ class GuiManager:
         # screen surface. if area is None then restore entire surface
         if obj is None:
             obj = self
+        if obj.pristine is None:
+            raise GuiError('restore_pristine called before pristine was initialized')
         if area is None:
             area = obj.pristine.get_rect()
         x, y, _, _ = area
