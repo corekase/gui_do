@@ -54,6 +54,13 @@ class Event(Enum):
     Task = 'Task'
 
 
+class BaseEvent:
+    """Base event type for all framework-dispatched events."""
+
+    def __init__(self, event_type: Event) -> None:
+        self.type: Event = event_type
+
+
 class CanvasEvent(Enum):
     # Types of canvas-specific events
     MouseWheel = 'MouseWheel'

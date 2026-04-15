@@ -15,11 +15,8 @@ class Label(Widget):
     Renders text to the GUI with optional shadow effect. Labels do not respond to
     user input and cannot be activated.
     """
-    _count: int = 0
-
-    def __init__(self, gui: "GuiManager", position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
-        Label._count += 1
-        super().__init__(gui, f'label_{Label._count}', Rect(0, 0, 0, 0))
+    def __init__(self, gui: "GuiManager", id: str, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
+        super().__init__(gui, id, Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow: bool = shadow
         self._font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()

@@ -1,6 +1,7 @@
 import pygame
-from typing import Callable, Hashable, List, Optional, Tuple, Union
-from .guimanager import GuiEvent, GuiManager
+from typing import Callable, Hashable, List, Optional, Tuple
+from .guimanager import GuiManager
+from .constants import BaseEvent
 from .scheduler import Scheduler, TaskEvent, TaskKind, Timers
 from .statemanager import StateManager
 
@@ -40,14 +41,14 @@ class Engine:
         """
         with self.state_manager:
             while self.state_manager.is_running:
-                active_context: Optional[Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[Union[GuiEvent, TaskEvent]], None], Callable[[], None]]] = self.state_manager.get_active_context()
+                active_context: Optional[Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[BaseEvent], None], Callable[[], None]]] = self.state_manager.get_active_context()
                 if not active_context:
                     break
                 gui: GuiManager
                 scheduler: Scheduler
                 timers: Timers
                 preamble: Callable[[], None]
-                event_handler: Callable[[Union[GuiEvent, TaskEvent]], None]
+                event_handler: Callable[[BaseEvent], None]
                 postamble: Callable[[], None]
                 gui, scheduler, timers, preamble, event_handler, postamble = active_context
                 # Phase 1: Preamble

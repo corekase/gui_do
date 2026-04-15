@@ -1,9 +1,10 @@
 from types import TracebackType
-from typing import Callable, Dict, Optional, Tuple, Type, Union
-from .guimanager import GuiEvent, GuiManager
-from .scheduler import Scheduler, TaskEvent, Timers
+from typing import Callable, Dict, Optional, Tuple, Type
+from .guimanager import GuiManager
+from .constants import BaseEvent
+from .scheduler import Scheduler, Timers
 
-ContextType = Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[Union[GuiEvent, TaskEvent]], None], Callable[[], None]]
+ContextType = Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[BaseEvent], None], Callable[[], None]]
 
 class StateManager:
     """Manages multiple GUI contexts for application state transitions.
@@ -18,7 +19,7 @@ class StateManager:
         self.is_running: bool = True
 
     def register_context(self, name: str, gui: GuiManager,
-                         preamble: Callable[[], None], event_handler: Callable[[Union[GuiEvent, TaskEvent]], None], postamble: Callable[[], None],
+                         preamble: Callable[[], None], event_handler: Callable[[BaseEvent], None], postamble: Callable[[], None],
                          replace: bool = False) -> None:
         """Register a new application context.
 

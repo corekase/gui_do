@@ -16,10 +16,10 @@ class Button(BaseInteractive):
     callbacks when activated. Includes automatic repeat functionality when held down.
 
     Attributes:
-        button_callback: Optional callback invoked when button is activated.
+        on_activate: Optional callback invoked when button is activated.
         timer_id: ID of the repeat timer, if any.
     """
-    def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
         """Initialize a button widget.
 
         Args:
@@ -28,7 +28,7 @@ class Button(BaseInteractive):
             rect: Rect defining button position and size.
             style: ButtonStyle enum value for visual style.
             text: Optional text to display on button.
-            button_callback: Optional callback when button is activated.
+            on_activate: Optional callback when button is activated.
             skip_factory: If True, skip bitmap factory initialization (for subclasses).
         """
         # initialize common widget values
@@ -39,8 +39,11 @@ class Button(BaseInteractive):
         if not skip_factory:
             (self.idle, self.hover, self.armed), self.hit_rect = \
                 self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
-        # button specific callback, this callback is separate from the add() callback
-        self.button_callback: Optional[Callable[[], None]] = button_callback
+        self.on_activate = on_activate
+
+    def _invoke_on_activate(self) -> None:
+        if self.on_activate is not None:
+            self.on_activate()
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle button events and manage state transitions.
@@ -70,11 +73,9 @@ class Button(BaseInteractive):
             if event.type == MOUSEBUTTONDOWN:
                 if getattr(event, 'button', None) == 1:
                     self.state = InteractiveState.Armed
-                    if self.button_callback is not None:
-                        self.button_callback()
-                        if self.timer_id is None:
-                            self.gui.timers.add_timer(f'{self.id}.timer', 150, self.button_callback)
-                            self.timer_id = f'{self.id}.timer'
+                    if self.on_activate is not None and self.timer_id is None:
+                        self.gui.timers.add_timer(f'{self.id}.timer', 150, self._invoke_on_activate)
+                        self.timer_id = f'{self.id}.timer'
                     return True
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
@@ -83,8 +84,8 @@ class Button(BaseInteractive):
                         self.gui.timers.remove_timer(f'{self.id}.timer')
                         self.timer_id = None
                     self.state = InteractiveState.Hover
-                    if self.button_callback is not None:
-                        return True
+                    if self.on_activate is not None:
+                        return False
                     return True
         return False
 

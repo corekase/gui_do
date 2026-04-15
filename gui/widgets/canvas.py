@@ -27,10 +27,10 @@ class CanvasEventPacket:
         self.y: Optional[int] = None
 
 class Canvas(Widget):
-    def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         from ..utility.guimanager import GuiError
-        if canvas_callback is not None and not callable(canvas_callback):
-            raise GuiError('canvas_callback must be callable when provided')
+        if on_activate is not None and not callable(on_activate):
+            raise GuiError('on_activate must be callable when provided')
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Canvas
         # create canvas surface
@@ -45,7 +45,7 @@ class Canvas(Widget):
             self.pristine = self.gui.copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
             self.gui.set_pristine(backdrop, self)
-        self.canvas_callback: Optional[Callable[[], None]] = canvas_callback
+        self.on_activate = on_activate
         self.auto_restore_pristine: bool = automatic_pristine
         self._events: deque[CanvasEventPacket] = deque(maxlen=32)
         self.dropped_events: int = 0
@@ -133,18 +133,8 @@ class Canvas(Widget):
             self._events.append(packet)
             self.queued_event = True
             self.CEvent = self._events[0]
-            # the mouse is over the canvas so either do the callback or signal activated
-            if self.canvas_callback is not None:
-                if not callable(self.canvas_callback):
-                    from ..utility.guimanager import GuiError
-                    raise GuiError(f'canvas callback is not callable for id: {self.id}')
-                # do the callback
-                self.canvas_callback()
-                # callback consumes the event
-                return False
-            else:
-                # no callback, so signal the event instead
-                return True
+            # signal activation; GuiManager dispatches on_activate if present
+            return True
         else:
             # the mouse is not over the canvas
             return False

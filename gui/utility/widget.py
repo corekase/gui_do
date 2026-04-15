@@ -28,7 +28,7 @@ class Widget:
         draw_rect: Rectangle defining widget position and size
         hit_rect: Rectangle for collision detection (if different from draw_rect)
         visible: Whether the widget is currently visible
-        callback: Optional callback function when widget is activated
+        on_activate: Optional callback function when widget is activated
     """
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
@@ -52,8 +52,8 @@ class Widget:
         self.pristine: Optional[Surface] = None
         # whether or not the widget is visible
         self._visible: bool = True
-        # callback of the widget
-        self.callback: Optional[Callable[[], None]] = None
+        # activation command executed by GuiManager when this widget activates
+        self.on_activate: Optional[Callable[[], None]] = None
         # if this is true then if the widget calls the superclass draw defined in this
         # class then this class will restore the pristine image, return, and subclasses
         # continue drawing

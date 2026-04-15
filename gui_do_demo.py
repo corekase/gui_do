@@ -146,7 +146,7 @@ class Demo:
         x_pos += 327
         width, height = 600, 600
         self.life_win = g1.window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
-        self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), canvas_callback=self.handle_Canvas, automatic_pristine=True)
+        self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y

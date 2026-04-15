@@ -4,8 +4,9 @@ from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
-from .constants import ArrowPosition, ButtonStyle, ContainerKind, Event, Orientation, InteractiveState
+from .constants import ArrowPosition, BaseEvent, ButtonStyle, ContainerKind, Event, Orientation
 from .bitmapfactory import BitmapFactory
+from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
 from .layout_manager import LayoutManager
 from .renderer import Renderer
@@ -32,9 +33,9 @@ class _PristineContainer(Protocol):
 
 TGuiObject = TypeVar("TGuiObject", Window, Widget)
 
-class GuiEvent:
+class GuiEvent(BaseEvent):
     def __init__(self, event_type: Event, **kwargs: object) -> None:
-        self.type: Event = event_type
+        super().__init__(event_type)
         self.key: Optional[int] = cast(Optional[int], kwargs.get('key'))
         self.pos: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('pos'))
         self.rel: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('rel'))
@@ -111,9 +112,8 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
-        # per-GuiManager state for ButtonGroup selections
-        self._button_groups: dict[str, list[ButtonGroup]] = {}
-        self._button_selections: dict[str, ButtonGroup] = {}
+        self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self._is_registered_button_group)
+        self._label_sequence: int = 0
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
         for widget in self.widgets:
@@ -320,15 +320,18 @@ class GuiManager:
     def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> Window:
         return self.add(Window(self, title, pos, size, backdrop))
 
-    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
         safe_text = '' if text is None else text
-        return self.add(Button(self, id, rect, style, safe_text, button_callback, skip_factory))
+        return self.add(Button(self, id, rect, style, safe_text, on_activate, skip_factory))
 
-    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> Label:
-        return self.add(Label(self, position, text, shadow))
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
+        if id is None:
+            self._label_sequence += 1
+            id = f'label_{self._label_sequence}'
+        return self.add(Label(self, id, position, text, shadow))
 
-    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        return self.add(Canvas(self, id, rect, backdrop, canvas_callback, automatic_pristine))
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
+        return self.add(Canvas(self, id, rect, backdrop, on_activate, automatic_pristine))
 
     def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
         return self.add(Image(self, id, rect, image, automatic_pristine, scale))
@@ -339,8 +342,8 @@ class GuiManager:
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
 
-    def arrowbox(self, id: str, rect: Rect, direction: float, callback: Optional[Callable[[], None]] = None) -> ArrowBox:
-        return self.add(ArrowBox(self, id, rect, direction, callback))
+    def arrowbox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
+        return self.add(ArrowBox(self, id, rect, direction, on_activate))
 
     def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
@@ -357,71 +360,8 @@ class GuiManager:
                 return True
         return False
 
-    def _prune_button_group(self, group: str) -> None:
-        buttons = self._button_groups.get(group)
-        if buttons is None:
-            return
-        deduped: list[ButtonGroup] = []
-        for button in buttons:
-            if button in deduped:
-                continue
-            if self._is_registered_button_group(button):
-                deduped.append(button)
-        self._button_groups[group] = deduped
-        buttons = self._button_groups.get(group)
-        if buttons is None or len(buttons) == 0:
-            self._button_groups.pop(group, None)
-            self._button_selections.pop(group, None)
-            return
-        selected = self._button_selections.get(group)
-        if selected not in buttons:
-            selected = buttons[0]
-            self._button_selections[group] = selected
-        for button in buttons:
-            if button is selected:
-                button.state = InteractiveState.Armed
-            elif button.state == InteractiveState.Armed:
-                button.state = InteractiveState.Idle
-
-    def register_button_group(self, group: str, button: ButtonGroup) -> None:
-        if not isinstance(group, str) or group == '':
-            raise GuiError('button group name must be a non-empty string')
-        if not isinstance(button, ButtonGroup):
-            raise GuiError('button group member must be a ButtonGroup')
-        if button.read_group() != group:
-            raise GuiError(f'button group mismatch: expected "{group}", got "{button.read_group()}"')
-        self._prune_button_group(group)
-        if group not in self._button_groups:
-            self._button_groups[group] = []
-            self._button_selections[group] = button
-        if button in self._button_groups[group]:
-            return
-        self._button_groups[group].append(button)
-
-    def select_button_group(self, group: str, button: ButtonGroup) -> None:
-        if not isinstance(group, str) or group == '':
-            raise GuiError('button group name must be a non-empty string')
-        if not isinstance(button, ButtonGroup):
-            raise GuiError('button group member must be a ButtonGroup')
-        if button.read_group() != group:
-            raise GuiError(f'button group mismatch: expected "{group}", got "{button.read_group()}"')
-        self._prune_button_group(group)
-        if not self._is_registered_button_group(button):
-            return
-        previous = self._button_selections.get(group)
-        if previous is not None and previous is not button:
-            previous.state = InteractiveState.Idle
-        self._button_selections[group] = button
-
-    def get_button_group_selection(self, group: str) -> Optional[ButtonGroup]:
-        if not isinstance(group, str) or group == '':
-            raise GuiError('button group name must be a non-empty string')
-        self._prune_button_group(group)
-        return self._button_selections.get(group)
-
     def clear_button_groups(self) -> None:
-        self._button_groups.clear()
-        self._button_selections.clear()
+        self.button_group_mediator.clear()
 
     def frame(self, id: str, rect: Rect) -> Frame:
         return self.add(Frame(self, id, rect))
@@ -478,10 +418,10 @@ class GuiManager:
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
         if widget.handle_event(event, window):
             # widget activated
-            if widget.callback is not None:
-                if not callable(widget.callback):
+            if widget.on_activate is not None:
+                if not callable(widget.on_activate):
                     raise GuiError(f'widget callback is not callable for id: {widget.id}')
-                widget.callback()
+                widget.on_activate()
                 return False
             else:
                 return True

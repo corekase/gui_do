@@ -36,8 +36,8 @@ class ButtonGroup(BaseInteractive):
         self.group: str = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
-        self.gui.register_button_group(group, self)
-        if self.gui.get_button_group_selection(group) is self:
+        self.gui.button_group_mediator.register(group, self)
+        if self.gui.button_group_mediator.get_selection(group) is self:
             # the first item added to a group is automatically selected
             self.select()
 
@@ -66,13 +66,13 @@ class ButtonGroup(BaseInteractive):
         called programmatically to change the selection.
         """
         # clear armed state for previous object
-        previous = self.gui.get_button_group_selection(self.group)
+        previous = self.gui.button_group_mediator.get_selection(self.group)
         if previous is not None and previous is not self:
             previous.state = InteractiveState.Idle
         # mark this object armed
         self.state = InteractiveState.Armed
         # make this object the currently armed one
-        self.gui.select_button_group(self.group, self)
+        self.gui.button_group_mediator.select(self.group, self)
 
     def read_group(self) -> str:
         """Get the group name for this button.
@@ -88,7 +88,7 @@ class ButtonGroup(BaseInteractive):
         Returns:
             The ID of the selected button.
         """
-        selection = self.gui.get_button_group_selection(self.group)
+        selection = self.gui.button_group_mediator.get_selection(self.group)
         if selection is None:
             return self.id
         if getattr(selection, 'group', None) != self.group:

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, Any
 
-from .constants import Event
+from .constants import BaseEvent, Event
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -79,17 +79,14 @@ class Task:
     future: Optional[Future[object]] = None
 
 
-class TaskEvent:
-    # an event object to be returned which includes pygame event information and gui_do information
-    def __init__(self) -> None:
-        # the event is a Task type
-        self.type: Event = Event.Task
-        # what the event represents
-        self.operation: Optional[TaskKind] = None
-        # task id
-        self.id: Optional[Hashable] = None
-        # optional error details for failed tasks
-        self.error: Optional[str] = None
+class TaskEvent(BaseEvent):
+    """Task scheduler event for finished/failed task notifications."""
+
+    def __init__(self, operation: TaskKind, task_id: Optional[Hashable] = None, error: Optional[str] = None) -> None:
+        super().__init__(Event.Task)
+        self.operation: TaskKind = operation
+        self.id: Optional[Hashable] = task_id
+        self.error: Optional[str] = error
 
 
 class Scheduler:
@@ -169,14 +166,9 @@ class Scheduler:
             raise GuiError(f'unknown task event operation: {operation}')
         if item1 is not None:
             self._validate_task_id(item1)
-        task_event = TaskEvent()
-        task_event.operation = operation
         if operation == TaskKind.Finished:
-            task_event.id = item1
-        elif operation == TaskKind.Failed:
-            task_event.id = item1
-            task_event.error = '' if item2 is None else str(item2)
-        return task_event
+            return TaskEvent(TaskKind.Finished, item1)
+        return TaskEvent(TaskKind.Failed, item1, '' if item2 is None else str(item2))
 
     def add_task(
         self,
