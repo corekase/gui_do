@@ -1,7 +1,7 @@
 import pygame
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Hashable, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.constants import WidgetKind, CanvasEvent
@@ -26,7 +26,7 @@ class CanvasEventPacket:
         self.y: Optional[int] = None
 
 class Canvas(Widget):
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Canvas
         # create canvas surface

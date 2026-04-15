@@ -1,6 +1,6 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from typing import Hashable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.constants import ButtonStyle, WidgetKind, InteractiveState
 from ..utility.interactive import BaseInteractive
@@ -18,7 +18,7 @@ class Toggle(BaseInteractive):
     Attributes:
         pushed: Whether the toggle is currently in the pressed state.
     """
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
         """Initialize a toggle widget.
 
         Args:

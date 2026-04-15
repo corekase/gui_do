@@ -1,5 +1,5 @@
 from pygame.event import Event as PygameEvent
-from typing import Hashable, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Scrollbar(Frame):
-    def __init__(self, gui: "GuiManager", id: Hashable, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
+    def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
         self._registered: List[ArrowBox] = []
         # parse the style

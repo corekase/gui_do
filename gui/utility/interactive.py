@@ -10,7 +10,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from typing import Hashable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from .constants import InteractiveState
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ class BaseInteractive(Widget):
     Subclasses override handle_event and draw to customize behavior.
     """
 
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.state: InteractiveState = InteractiveState.Idle
         self.idle: Optional[Surface] = None      # Surface for idle state

@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from typing import Hashable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from ..utility.constants import WidgetKind
 from ..utility.widget import Widget
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Image(Widget):
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
         # initialize id and rect
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Image

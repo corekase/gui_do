@@ -1,7 +1,7 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Hashable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from ..utility.constants import WidgetKind, InteractiveState
 from ..utility.widget import Widget
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Frame(Widget):
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Frame
         self._idle: Surface

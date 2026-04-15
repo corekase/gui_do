@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import Callable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
 from .constants import ArrowPosition, ButtonStyle, ContainerKind, Event, Orientation
 from .bitmapfactory import BitmapFactory
@@ -39,7 +39,7 @@ class GuiEvent:
         self.pos: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('pos'))
         self.rel: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('rel'))
         self.button: Optional[int] = cast(Optional[int], kwargs.get('button'))
-        self.widget_id: Optional[Hashable] = cast(Optional[Hashable], kwargs.get('widget_id'))
+        self.widget_id: Optional[str] = cast(Optional[str], kwargs.get('widget_id'))
         self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
 
 class GuiManager:
@@ -239,31 +239,31 @@ class GuiManager:
     def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> Window:
         return self.add(Window(self, title, pos, size, backdrop))
 
-    def button(self, id: Hashable, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
         return self.add(Button(self, id, rect, style, text, button_callback, skip_factory))
 
     def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> Label:
         return self.add(Label(self, position, text, shadow))
 
-    def canvas(self, id: Hashable, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
         return self.add(Canvas(self, id, rect, backdrop, canvas_callback, automatic_pristine))
 
-    def image(self, id: Hashable, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
+    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
         return self.add(Image(self, id, rect, image, automatic_pristine, scale))
 
-    def scrollbar(self, id: Hashable, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
+    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
         return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
 
-    def toggle(self, id: Hashable, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
+    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
 
-    def arrowbox(self, id: Hashable, rect: Rect, direction: float, callback: Optional[Callable[[], None]] = None) -> ArrowBox:
+    def arrowbox(self, id: str, rect: Rect, direction: float, callback: Optional[Callable[[], None]] = None) -> ArrowBox:
         return self.add(ArrowBox(self, id, rect, direction, callback))
 
-    def buttongroup(self, group: str, id: Hashable, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
+    def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
-    def frame(self, id: Hashable, rect: Rect) -> Frame:
+    def frame(self, id: str, rect: Rect) -> Frame:
         return self.add(Frame(self, id, rect))
 
     @property

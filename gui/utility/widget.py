@@ -7,7 +7,7 @@ Provides common functionality for drawing, event handling, and state management.
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Hashable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 from .constants import ContainerKind, WidgetKind
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ class Widget:
         callback: Optional callback function when widget is activated
     """
 
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         # gui reference
         self.gui: "GuiManager" = gui
         # widget type
@@ -42,8 +42,8 @@ class Widget:
         self.surface: Optional[Surface] = None
         # window widget may be attached to
         self.window: Optional["Window"] = None
-        # identifier for widget, can be any kind like int or string
-        self.id: Hashable = id
+        # identifier for widget
+        self.id: str = id
         # rect for widget drawing position and size on the surface
         self.draw_rect: Rect = Rect(rect)
         # rect for mouse collision

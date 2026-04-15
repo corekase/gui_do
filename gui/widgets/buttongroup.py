@@ -1,6 +1,6 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from typing import Dict, Hashable, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
@@ -24,7 +24,7 @@ class ButtonGroup(BaseInteractive):
     # dictionary of key:value -> key, name of the group. value, armed object
     selections: Dict[str, "ButtonGroup"] = {}
 
-    def __init__(self, gui: "GuiManager", group: str, id: Hashable, rect: Rect, style: ButtonStyle, text: str) -> None:
+    def __init__(self, gui: "GuiManager", group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> None:
         """Initialize a button group member.
 
         Args:
@@ -86,7 +86,7 @@ class ButtonGroup(BaseInteractive):
         """
         return self.group
 
-    def read_id(self) -> Hashable:
+    def read_id(self) -> str:
         """Get the ID of the currently selected button in this group.
 
         Returns:

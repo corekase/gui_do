@@ -21,7 +21,7 @@ class Timers:
         self.timers: Dict[Hashable, "Interval"] = {}
 
     def add_timer(self, id: Hashable, duration: float, callback: Callable[[], None]) -> None:
-        self.timers[id] = self.Interval(duration, callback)
+        self.timers[id] = Interval(duration, callback)
 
     def remove_timer(self, id: Hashable) -> None:
         if id in self.timers.keys():

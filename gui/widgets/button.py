@@ -1,6 +1,6 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from typing import Callable, Hashable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
@@ -19,7 +19,7 @@ class Button(BaseInteractive):
         button_callback: Optional callback invoked when button is activated.
         timer_id: ID of the repeat timer, if any.
     """
-    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
         """Initialize a button widget.
 
         Args:
