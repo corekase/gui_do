@@ -28,6 +28,9 @@ class CanvasEventPacket:
 
 class Canvas(Widget):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
+        from ..utility.guimanager import GuiError
+        if canvas_callback is not None and not callable(canvas_callback):
+            raise GuiError('canvas_callback must be callable when provided')
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Canvas
         # create canvas surface
@@ -56,6 +59,9 @@ class Canvas(Widget):
 
     def restore_pristine(self, area: Optional[Rect] = None) -> None:
         # copy an area from the pristine bitmap to the canvas bitmap
+        if self.pristine is None:
+            from ..utility.guimanager import GuiError
+            raise GuiError('canvas pristine image is not initialized')
         if area is None:
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, (area.x, area.y), area)
@@ -108,16 +114,16 @@ class Canvas(Widget):
             # and type specific fields
             if event.type == MOUSEWHEEL:
                 packet.type = CanvasEvent.MouseWheel
-                packet.y = event.y
+                packet.y = getattr(event, 'y', None)
             elif event.type == MOUSEMOTION:
                 packet.type = CanvasEvent.MouseMotion
-                packet.rel = event.rel
+                packet.rel = getattr(event, 'rel', None)
             elif event.type == MOUSEBUTTONDOWN:
                 packet.type = CanvasEvent.MouseButtonDown
-                packet.button = event.button
+                packet.button = getattr(event, 'button', None)
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
-                packet.button = event.button
+                packet.button = getattr(event, 'button', None)
             else:
                 # otherwise the catch-all event is MousePosition which is set above for all events
                 packet.type = CanvasEvent.MousePosition
@@ -130,6 +136,9 @@ class Canvas(Widget):
             self.CEvent = self._events[0]
             # the mouse is over the canvas so either do the callback or signal activated
             if self.canvas_callback is not None:
+                if not callable(self.canvas_callback):
+                    from ..utility.guimanager import GuiError
+                    raise GuiError(f'canvas callback is not callable for id: {self.id}')
                 # do the callback
                 self.canvas_callback()
                 # callback consumes the event

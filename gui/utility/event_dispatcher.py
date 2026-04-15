@@ -66,9 +66,9 @@ class EventDispatcher:
         if event.type == QUIT:
             return self.gui.event(Event.Quit)
         if event.type == KEYUP:
-            return self.gui.event(Event.KeyUp, key=event.key)
+            return self.gui.event(Event.KeyUp, key=getattr(event, 'key', None))
         elif event.type == KEYDOWN:
-            return self.gui.event(Event.KeyDown, key=event.key)
+            return self.gui.event(Event.KeyDown, key=getattr(event, 'key', None))
         return self.gui.event(Event.Pass)
 
     def _update_active_window(self) -> None:

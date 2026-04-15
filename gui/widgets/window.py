@@ -11,6 +11,15 @@ if TYPE_CHECKING:
 
 class Window:
     def __init__(self, gui: "GuiManager", title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
+        from ..utility.guimanager import GuiError
+        if not isinstance(title, str) or title == '':
+            raise GuiError('window title must be a non-empty string')
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
+        if not isinstance(size, tuple) or len(size) != 2:
+            raise GuiError(f'window size must be a tuple of (w, h), got: {size}')
+        if size[0] <= 0 or size[1] <= 0:
+            raise GuiError(f'window size must be positive, got: {size}')
         # windows don't need names because eventually they are going to be in banks which will be named
         self.gui: "GuiManager" = gui
         self.ContainerKind = ContainerKind.Window
@@ -53,9 +62,15 @@ class Window:
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        from ..utility.guimanager import GuiError
+        if not isinstance(value, bool):
+            raise GuiError('window visible must be a bool')
         self._visible = value
 
     def set_pos(self, pos: Tuple[int, int]) -> None:
+        from ..utility.guimanager import GuiError
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
         self.x, self.y = pos
 
     def _window_save_pristine(self) -> None:

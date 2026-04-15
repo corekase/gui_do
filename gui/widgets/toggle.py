@@ -60,7 +60,7 @@ class Toggle(BaseInteractive):
         if not super().handle_event(event, window):
             return False
         if self.state == InteractiveState.Hover:
-            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
                 self.pushed = not self.pushed
                 return True
         return False

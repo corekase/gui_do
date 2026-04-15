@@ -54,7 +54,7 @@ class ButtonGroup(BaseInteractive):
                 self.state = InteractiveState.Hover
 
             if self.state == InteractiveState.Hover:
-                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
                     self.select()
                     return True
         return False

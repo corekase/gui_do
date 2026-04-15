@@ -68,7 +68,7 @@ class Button(BaseInteractive):
         # manage the state of the button
         if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN:
-                if event.button == 1:
+                if getattr(event, 'button', None) == 1:
                     self.state = InteractiveState.Armed
                     if self.button_callback is not None:
                         self.button_callback()
@@ -78,7 +78,7 @@ class Button(BaseInteractive):
                     return True
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
-                if event.button == 1:
+                if getattr(event, 'button', None) == 1:
                     if self.timer_id is not None:
                         self.gui.timers.remove_timer(f'{self.id}.timer')
                         self.timer_id = None

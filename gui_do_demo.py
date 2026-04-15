@@ -398,7 +398,7 @@ class Demo:
     def handle_Canvas(self):
         # read the event from the canvas widget
         CEvent = self.canvas.read_event()
-        if CEvent != None:
+        if CEvent is not None:
             # parse that event by kind and parameters
             if CEvent.type == CanvasEvent.MouseButtonDown:
                 # right-mouse button pressed, enter dragging state
@@ -410,13 +410,13 @@ class Demo:
                     self.dragging = False
             elif CEvent.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position
-                if self.dragging:
+                if self.dragging and CEvent.rel is not None:
                     x, y = CEvent.rel[0], CEvent.rel[1]
                     self.origin_x += x
                     self.origin_y += y
             elif CEvent.type == CanvasEvent.MouseWheel:
                 # handle the mouse wheel
-                if CEvent.y != None:
+                if CEvent.y is not None:
                     self.cell_size += (CEvent.y * 2)
                     if self.cell_size < 6:
                         self.cell_size = 6

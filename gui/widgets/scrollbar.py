@@ -109,7 +109,7 @@ class Scrollbar(Frame):
         # manage the state of the scrollbar
         point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self._handle_area().collidepoint(point):
-            if event.button == 1:
+            if getattr(event, 'button', None) == 1:
                 # lock mouse movement to scrollbar area
                 x, y = self.gui.convert_to_screen((self._graphic_rect[0], self._graphic_rect[1]), window)
                 lock_rect = Rect(x, y, self._graphic_rect.width, self._graphic_rect.height)
@@ -160,7 +160,7 @@ class Scrollbar(Frame):
                 # signal no change
                 return False
         if (event.type == MOUSEBUTTONUP) and self._dragging:
-            if event.button == 1:
+            if getattr(event, 'button', None) == 1:
                 self._reset()
                 # signal there was a change
                 return True
