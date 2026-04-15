@@ -94,6 +94,15 @@ class Scheduler:
         self._tasks_processed_set: Set[Hashable] = set()
         self._tasks_suspended_set: Set[Hashable] = set()
 
+    def _prune_stale_task_ids(self) -> None:
+        valid_ids = set(self.tasks.keys())
+        self._tasks_ready = deque(id for id in self._tasks_ready if id in valid_ids)
+        self._tasks_processed = deque(id for id in self._tasks_processed if id in valid_ids)
+        self._tasks_suspended = [id for id in self._tasks_suspended if id in valid_ids]
+        self._tasks_ready_set = set(self._tasks_ready)
+        self._tasks_processed_set = set(self._tasks_processed)
+        self._tasks_suspended_set = set(self._tasks_suspended)
+
     def _validate_task_id(self, id: Hashable) -> None:
         try:
             hash(id)
@@ -206,6 +215,7 @@ class Scheduler:
             self.tasks.pop(id, None)
 
     def suspend_all(self) -> None:
+        self._prune_stale_task_ids()
         ready = list(self._tasks_ready)
         processed = list(self._tasks_processed)
         for id in ready + processed:
@@ -218,6 +228,7 @@ class Scheduler:
         self._tasks_processed_set.clear()
 
     def resume_all(self) -> None:
+        self._prune_stale_task_ids()
         for id in self._tasks_suspended:
             if id not in self.tasks:
                 continue
@@ -228,6 +239,7 @@ class Scheduler:
         self._tasks_suspended_set.clear()
 
     def suspend_tasks(self, *tasks: Hashable) -> None:
+        self._prune_stale_task_ids()
         for id in tasks:
             self._validate_task_id(id)
             # move id to suspended list from either the ready or processed lists
@@ -243,6 +255,7 @@ class Scheduler:
                     self._tasks_suspended_set.add(id)
 
     def resume_tasks(self, *tasks: Hashable) -> None:
+        self._prune_stale_task_ids()
         for id in tasks:
             self._validate_task_id(id)
             # move id from suspended list to end of queued list
@@ -257,10 +270,12 @@ class Scheduler:
 
     def read_suspended(self) -> List[Hashable]:
         # return a list of suspended task id's
+        self._prune_stale_task_ids()
         return self._tasks_suspended.copy()
 
     def read_suspended_len(self) -> int:
         # return the number of suspended tasks
+        self._prune_stale_task_ids()
         return len(self._tasks_suspended)
 
     def task_time(self, id: Hashable) -> bool:
@@ -274,6 +289,7 @@ class Scheduler:
         return False
 
     def tasks_active(self) -> bool:
+        self._prune_stale_task_ids()
         for task_id in self._tasks_ready_set:
             if task_id in self.tasks:
                 return True
@@ -283,6 +299,7 @@ class Scheduler:
         return False
 
     def tasks_active_match_any(self, *tasks: Hashable) -> bool:
+        self._prune_stale_task_ids()
         # if a task is in either tasks_ready or tasks_processed then return True
         for task in tasks:
             self._validate_task_id(task)
@@ -293,6 +310,7 @@ class Scheduler:
         return False
 
     def tasks_active_match_all(self, *tasks: Hashable) -> bool:
+        self._prune_stale_task_ids()
         # return True only if all specified tasks are active
         for task in tasks:
             self._validate_task_id(task)
@@ -313,6 +331,7 @@ class Scheduler:
         """
         self._tasks_finished.clear()
         self._tasks_failed.clear()
+        self._prune_stale_task_ids()
         if len(self._tasks_ready) > 0:
             self._process_next_task()
         elif len(self._tasks_ready) == 0:
