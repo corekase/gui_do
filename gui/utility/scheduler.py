@@ -107,7 +107,6 @@ class Scheduler:
                 self._tasks_suspended = [task_id for task_id in self._tasks_suspended if task_id != id]
                 self._tasks_suspended_set.discard(id)
             self.tasks.pop(id, None)
-
         task = self.Task(id, 0.01)
         if parameters is None:
             task.task_logic = logic(id)
@@ -234,7 +233,6 @@ class Scheduler:
             List of task IDs that finished during this update
         """
         self._tasks_finished.clear()
-
         if len(self._tasks_ready) > 0:
             self._process_next_task()
         elif len(self._tasks_ready) == 0:
@@ -246,23 +244,31 @@ class Scheduler:
             if len(self._tasks_ready) > 0:
                 # do process here again because ready list was empty
                 self._process_next_task()
-
         # Return finished tasks so caller can dispatch events
         return self._tasks_finished.copy()
 
     def _process_next_task(self) -> None:
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
+        task_id = self._tasks_ready.popleft()
+        self._tasks_ready_set.discard(task_id)
+        # Task may have been removed after it was queued.
+        task = self.tasks.get(task_id)
+        if task is None:
+            return
+        # Ignore and remove malformed tasks with no generator logic.
+        if task.task_logic is None:
+            self.tasks.pop(task_id, None)
+            return
+        task.time_start = time.time()
         try:
-            task_id = self._tasks_ready.popleft()
-            self._tasks_ready_set.discard(task_id)
-            self.tasks[task_id].time_start = time.time()
-            next(cast(Generator[object, None, None], self.tasks[task_id].task_logic))
-            self._tasks_processed.append(task_id)
-            self._tasks_processed_set.add(task_id)
+            next(cast(Generator[object, None, None], task.task_logic))
         except StopIteration:
             # task exited, and exception from next() happened before appending the id to the processed list
             self._tasks_finished.append(task_id)
             del self.tasks[task_id]
+            return
+        self._tasks_processed.append(task_id)
+        self._tasks_processed_set.add(task_id)
 
     def get_finished_tasks(self) -> List[Hashable]:
         """
