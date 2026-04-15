@@ -13,7 +13,7 @@ EventKind = Enum('EventKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonD
 
 # WidgetKind: Types of widgets in the GUI framework
 WidgetKind = Enum('WidgetKind', ['ArrowBox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
-                                  'Label', 'Scrollbar', 'Slider', 'Toggle'])
+                                 'Label', 'Scrollbar', 'Slider', 'Toggle'])
 
 # ContainerKind: Types of containers (windows vs widgets on screen/in windows)
 ContainerKind = Enum('ContainerKind', ['Window', 'Widget'])
