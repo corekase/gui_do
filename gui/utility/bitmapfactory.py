@@ -8,7 +8,7 @@ from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Tuple, Optional, Any
-from .utility.values.constants import colours, ButtonStyle
+from .values.constants import colours, ButtonStyle
 
 class BitmapFactory:
     def __init__(self) -> None:
@@ -57,8 +57,8 @@ class BitmapFactory:
         return tuple(saved)  # type: ignore
 
     def draw_window_title_bar_bitmap(self, gui: Any, title: str, width: int, size: int, colour: Optional[Tuple[int, int, int]] = None) -> Surface:
-        from .widgets.frame import Frame
-        from .utility.values.constants import InteractiveState
+        from ..widgets.frame import Frame
+        from .values.constants import InteractiveState
         self.set_font('titlebar')
         if colour is None:
             colour = colours['highlight']
@@ -115,7 +115,7 @@ class BitmapFactory:
         elif style == ButtonStyle.Check:
             return self.draw_check_style_bitmaps(text, rect)
         else:
-            from .guimanager import GuiError
+            from ..guimanager import GuiError
             raise GuiError('style not implemented')
 
     def draw_box_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:

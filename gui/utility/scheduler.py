@@ -2,10 +2,10 @@ import time
 import pygame
 from typing import Dict, List, Optional, Callable, Any, TYPE_CHECKING
 from enum import Enum
-from .utility.values.constants import Event
+from .values.constants import Event
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from ..guimanager import GuiManager
 
 TaskKind = Enum('TaskKind', ['Finished'])
 

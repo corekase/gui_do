@@ -1,9 +1,9 @@
 import pygame
 from pygame import Rect
 from typing import Optional, List, Tuple, Any, Iterable
-from .scheduler import Timers, Scheduler
+from .utility.scheduler import Timers, Scheduler
 from .utility.values.constants import Event, ContainerKind
-from .bitmapfactory import BitmapFactory
+from .utility.bitmapfactory import BitmapFactory
 from .utility.event_dispatcher import EventDispatcher
 from .utility.layout_manager import LayoutManager
 from .utility.renderer import Renderer
