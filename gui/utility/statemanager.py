@@ -1,6 +1,5 @@
 from typing import Dict, Any, Tuple, Optional, Callable
 from ..guimanager import GuiManager
-from .scheduler import Scheduler
 
 class StateManager:
     def __init__(self) -> None:
@@ -16,9 +15,7 @@ class StateManager:
         if name in self.contexts:
             old_gui = self.get_active_gui()
             mouse_pos = old_gui.get_mouse_pos() if old_gui else (0, 0)
-
             self.active_context_name = name
-
             new_gui = self.get_active_gui()
             if new_gui:
                 new_gui.set_mouse_pos(mouse_pos, True)
