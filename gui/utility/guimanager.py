@@ -269,19 +269,50 @@ class GuiManager:
     def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
+    def _is_registered_button_group(self, button: ButtonGroup) -> bool:
+        # During construction, ButtonGroup widgets are registered in group state
+        # before GuiManager.add() assigns their surface/window references.
+        if button.surface is None:
+            return True
+        if button in self.widgets:
+            return True
+        for window in self.windows:
+            if button in window.widgets:
+                return True
+        return False
+
+    def _prune_button_group(self, group: str) -> None:
+        buttons = self._button_groups.get(group)
+        if buttons is None:
+            return
+        self._button_groups[group] = [button for button in buttons if self._is_registered_button_group(button)]
+        buttons = self._button_groups.get(group)
+        if buttons is None or len(buttons) == 0:
+            self._button_groups.pop(group, None)
+            self._button_selections.pop(group, None)
+            return
+        selected = self._button_selections.get(group)
+        if selected not in buttons:
+            self._button_selections[group] = buttons[0]
+
     def register_button_group(self, group: str, button: ButtonGroup) -> None:
+        self._prune_button_group(group)
         if group not in self._button_groups:
             self._button_groups[group] = []
             self._button_selections[group] = button
         self._button_groups[group].append(button)
 
     def select_button_group(self, group: str, button: ButtonGroup) -> None:
+        self._prune_button_group(group)
+        if not self._is_registered_button_group(button):
+            return
         previous = self._button_selections.get(group)
         if previous is not None and previous is not button:
             previous.state = InteractiveState.Idle
         self._button_selections[group] = button
 
     def get_button_group_selection(self, group: str) -> Optional[ButtonGroup]:
+        self._prune_button_group(group)
         return self._button_selections.get(group)
 
     def clear_button_groups(self) -> None:
