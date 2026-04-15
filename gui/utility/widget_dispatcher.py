@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ..widgets.buttongroup import ButtonGroup
     from ..widgets.frame import Frame
 
+# having just the widget constructors in a class is for IDE intellisense.  only what is here will be in autocomplete.
 class Widget_Collection:
     def __init__(self, gui):
         self._gui = gui
