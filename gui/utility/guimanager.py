@@ -319,7 +319,13 @@ class GuiManager:
             return
         selected = self._button_selections.get(group)
         if selected not in buttons:
-            self._button_selections[group] = buttons[0]
+            selected = buttons[0]
+            self._button_selections[group] = selected
+        for button in buttons:
+            if button is selected:
+                button.state = InteractiveState.Armed
+            elif button.state == InteractiveState.Armed:
+                button.state = InteractiveState.Idle
 
     def register_button_group(self, group: str, button: ButtonGroup) -> None:
         self._prune_button_group(group)
