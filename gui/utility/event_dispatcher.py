@@ -10,6 +10,14 @@ class EventDispatcher:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _is_registered_widget(self, widget) -> bool:
+        if widget in self.gui.widgets:
+            return True
+        for window in self.gui.windows:
+            if widget in window.widgets:
+                return True
+        return False
+
     def handle(self, event: PygameEvent) -> "GuiEvent":
         # update internal mouse position
         if event.type == MOUSEMOTION:
@@ -96,21 +104,32 @@ class EventDispatcher:
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             self.gui.raise_window(self.gui.active_window)
         hit_any = False
-        for window in self.gui.windows.copy()[::-1]:
+        focus_target = None
+        for window in tuple(self.gui.windows)[::-1]:
+            if window not in self.gui.windows:
+                continue
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
-                for widget in window.widgets.copy()[::-1]:
+                for widget in tuple(window.widgets)[::-1]:
+                    if widget not in window.widgets:
+                        continue
                     if widget.visible:
                         if widget.get_collide(window):
                             hit_any = True
-                            self.gui.update_focus(widget)
+                            focus_target = widget
                             if self.gui.handle_widget(widget, event, window):
+                                if focus_target is not None and self._is_registered_widget(focus_target):
+                                    self.gui.update_focus(focus_target)
                                 if widget.WidgetKind == WidgetKind.ButtonGroup:
                                     return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
                                 return self.gui.event(Event.Widget, widget_id=widget.id)
                         elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == InteractiveState.Armed:
                             if self.gui.handle_widget(widget, event, window):
+                                if focus_target is not None and self._is_registered_widget(focus_target):
+                                    self.gui.update_focus(focus_target)
                                 return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
-                if not hit_any:
+                if hit_any and focus_target is not None and self._is_registered_widget(focus_target):
+                    self.gui.update_focus(focus_target)
+                else:
                     self.gui.update_focus(None)
                 return self.gui.event(Event.Pass)
         self.gui.update_focus(None)
@@ -118,19 +137,26 @@ class EventDispatcher:
 
     def _process_screen_widgets(self, event: PygameEvent) -> "GuiEvent":
         hit_any = False
-        for widget in self.gui.widgets.copy()[::-1]:
+        focus_target = None
+        for widget in tuple(self.gui.widgets)[::-1]:
+            if widget not in self.gui.widgets:
+                continue
             if widget.visible:
                 hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
                 if hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), None)):
                     hit_any = True
-                    self.gui.update_focus(widget)
+                    focus_target = widget
                     if self.gui.handle_widget(widget, event):
+                        if focus_target is not None and self._is_registered_widget(focus_target):
+                            self.gui.update_focus(focus_target)
                         if widget.WidgetKind == WidgetKind.ButtonGroup:
                             return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
                         return self.gui.event(Event.Widget, widget_id=widget.id)
         if not hit_any:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)
+        if focus_target is not None and self._is_registered_widget(focus_target):
+            self.gui.update_focus(focus_target)
         return self.gui.event(Event.Pass)
 
     def _handle_base_mouse_events(self, event: PygameEvent) -> "GuiEvent":

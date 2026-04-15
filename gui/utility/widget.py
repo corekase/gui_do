@@ -80,8 +80,7 @@ class Widget:
         Returns:
             bool: True if event was handled, False otherwise
         """
-        # implement in subclasses
-        pass
+        return False
 
     def get_rect(self) -> Rect:
         """Get rect that the guimanager uses for buffering."""

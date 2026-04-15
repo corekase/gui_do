@@ -29,6 +29,9 @@ class BitmapFactory:
 
     # make a font active
     def set_font(self, name: str) -> None:
+        if name not in self._fonts:
+            from .guimanager import GuiError
+            raise GuiError(f'unknown font "{name}"')
         self._last_font_name = self._current_font_name
         self._font = self._fonts[name]
         self._current_font_name = name
@@ -39,7 +42,10 @@ class BitmapFactory:
 
     # restore the previous font
     def set_last_font(self) -> None:
-        if self._last_font_name != None:
+        if self._last_font_name is not None:
+            if self._last_font_name not in self._fonts:
+                from .guimanager import GuiError
+                raise GuiError(f'unknown previous font "{self._last_font_name}"')
             self._font = self._fonts[self._last_font_name]
             self._current_font_name = self._last_font_name
 
@@ -395,6 +401,9 @@ class BitmapFactory:
     # render text with or without a shadow
     def render_text(self, text: str, colour: Tuple[int, int, int] = colours['text'], shadow: bool = False, shadow_colour: Tuple[int, int, int] = colours['none']) -> Surface:
         # return a bitmap of the text and a shadow of given colours
+        if self._font is None:
+            from .guimanager import GuiError
+            raise GuiError('no active font set; call set_font() before render_text()')
         text_bitmap = self._font.render(text, True, colour, None)
         text_rect = text_bitmap.get_rect()
         w, h = text_rect.width, text_rect.height

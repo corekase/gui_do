@@ -10,6 +10,14 @@ class LayoutManager:
         self._use_rect: bool = True
 
     def set_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
+        if width <= 0:
+            raise ValueError(f'grid width must be positive, got {width}')
+        if height <= 0:
+            raise ValueError(f'grid height must be positive, got {height}')
+        if spacing < 0:
+            raise ValueError(f'grid spacing cannot be negative, got {spacing}')
+        if not isinstance(anchor, tuple) or len(anchor) != 2:
+            raise ValueError(f'anchor must be a tuple of (x, y), got {anchor}')
         self._anchor = anchor
         self._cell_width = width
         self._cell_height = height

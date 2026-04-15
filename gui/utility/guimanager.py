@@ -4,7 +4,7 @@ from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
-from .constants import ArrowPosition, ButtonStyle, ContainerKind, Event, Orientation
+from .constants import ArrowPosition, ButtonStyle, ContainerKind, Event, Orientation, InteractiveState
 from .bitmapfactory import BitmapFactory
 from .event_dispatcher import EventDispatcher
 from .layout_manager import LayoutManager
@@ -111,6 +111,9 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
+        # per-GuiManager state for ButtonGroup selections
+        self._button_groups: dict[str, list[ButtonGroup]] = {}
+        self._button_selections: dict[str, ButtonGroup] = {}
 
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
@@ -263,6 +266,25 @@ class GuiManager:
     def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
+    def register_button_group(self, group: str, button: ButtonGroup) -> None:
+        if group not in self._button_groups:
+            self._button_groups[group] = []
+            self._button_selections[group] = button
+        self._button_groups[group].append(button)
+
+    def select_button_group(self, group: str, button: ButtonGroup) -> None:
+        previous = self._button_selections.get(group)
+        if previous is not None and previous is not button:
+            previous.state = InteractiveState.Idle
+        self._button_selections[group] = button
+
+    def get_button_group_selection(self, group: str) -> Optional[ButtonGroup]:
+        return self._button_selections.get(group)
+
+    def clear_button_groups(self) -> None:
+        self._button_groups.clear()
+        self._button_selections.clear()
+
     def frame(self, id: str, rect: Rect) -> Frame:
         return self.add(Frame(self, id, rect))
 
@@ -339,6 +361,8 @@ class GuiManager:
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         # lock area rect is in screen coordinates
         if area is not None:
+            if area.width <= 0 or area.height <= 0:
+                raise GuiError('lock area dimensions must be positive')
             # switch to relative mouse mode
             self.locking_object = locking_object
             self.mouse_locked = True

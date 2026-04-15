@@ -1,6 +1,6 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
@@ -15,15 +15,8 @@ class ButtonGroup(BaseInteractive):
     Mutually exclusive buttons where only one button in a group can be selected
     at a time. Automatically tracks the currently selected button per group.
 
-    Class Attributes:
-        groups: Dictionary mapping group names to lists of ButtonGroup instances.
-        selections: Dictionary mapping group names to currently selected button.
+    Selection state is managed per GuiManager instance.
     """
-    # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
-    groups: Dict[str, List["ButtonGroup"]] = {}
-    # dictionary of key:value -> key, name of the group. value, armed object
-    selections: Dict[str, "ButtonGroup"] = {}
-
     def __init__(self, gui: "GuiManager", group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> None:
         """Initialize a button group member.
 
@@ -40,12 +33,10 @@ class ButtonGroup(BaseInteractive):
         self.group: str = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
-        if group not in ButtonGroup.groups.keys():
+        self.gui.register_button_group(group, self)
+        if self.gui.get_button_group_selection(group) is self:
             # the first item added to a group is automatically selected
-            ButtonGroup.groups[group] = []
-            ButtonGroup.selections[group] = self
             self.select()
-        ButtonGroup.groups[group].append(self)
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
@@ -72,11 +63,13 @@ class ButtonGroup(BaseInteractive):
         called programmatically to change the selection.
         """
         # clear armed state for previous object
-        ButtonGroup.selections[self.group].state = InteractiveState.Idle
+        previous = self.gui.get_button_group_selection(self.group)
+        if previous is not None and previous is not self:
+            previous.state = InteractiveState.Idle
         # mark this object armed
         self.state = InteractiveState.Armed
         # make this object the currently armed one
-        ButtonGroup.selections[self.group] = self
+        self.gui.select_button_group(self.group, self)
 
     def read_group(self) -> str:
         """Get the group name for this button.
@@ -92,4 +85,7 @@ class ButtonGroup(BaseInteractive):
         Returns:
             The ID of the selected button.
         """
-        return ButtonGroup.selections[self.group].id
+        selection = self.gui.get_button_group_selection(self.group)
+        if selection is None:
+            return self.id
+        return selection.id
