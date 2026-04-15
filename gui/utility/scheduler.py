@@ -114,13 +114,16 @@ class Scheduler:
             self._tasks_processed_set.discard(id)
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
+        if operation not in (TaskKind.Finished, TaskKind.Failed):
+            from .guimanager import GuiError
+            raise GuiError(f'unknown task event operation: {operation}')
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
             task_event.id = item1
         elif operation == TaskKind.Failed:
             task_event.id = item1
-            task_event.error = item2
+            task_event.error = '' if item2 is None else item2
         # elif more operations
         return task_event
 
