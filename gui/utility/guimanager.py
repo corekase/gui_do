@@ -152,10 +152,18 @@ class GuiManager:
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
+    def _resolve_active_object(self) -> Optional[Window]:
+        if self._active_object is None:
+            return None
+        if self._active_object not in self.windows:
+            self._active_object = None
+            return None
+        return self._active_object
+
     def _describe_incoming_widget_container(self) -> str:
-        if self._active_object is None or self._active_object not in self.windows:
+        window = self._resolve_active_object()
+        if window is None:
             return 'screen'
-        window = self._active_object
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
@@ -193,16 +201,15 @@ class GuiManager:
                     f'conflict={self._describe_gui_object(conflict)} '
                     f'on {self._describe_widget_container(conflict)}'
                 )
-            if self._active_object is not None and self._active_object not in self.windows:
-                self._active_object = None
+            active_window = self._resolve_active_object()
             # callback
-            if self._active_object is not None:
+            if active_window is not None:
                 # store a reference to the window the widget is in
-                gui_object.window = self._active_object
+                gui_object.window = active_window
                 # give the widget a reference to the window surface
-                gui_object.surface = self._active_object.surface
+                gui_object.surface = active_window.surface
                 # append the widget to the window's list
-                self._active_object.widgets.append(gui_object)
+                active_window.widgets.append(gui_object)
             else:
                 # give the widget a reference to the screen surface
                 gui_object.surface = self.surface
