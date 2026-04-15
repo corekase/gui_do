@@ -125,6 +125,17 @@ class GuiManager:
                     return widget
         return None
 
+    def _is_registered_object(self, gui_object: TGuiObject) -> bool:
+        if isinstance(gui_object, Window):
+            return gui_object in self.windows
+        if isinstance(gui_object, Widget):
+            if gui_object in self.widgets:
+                return True
+            for window in self.windows:
+                if gui_object in window.widgets:
+                    return True
+        return False
+
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
 
@@ -141,6 +152,8 @@ class GuiManager:
             raise GuiError('gui_object cannot be None')
         if not hasattr(gui_object, 'ContainerKind'):
             raise GuiError('gui_object must have a ContainerKind attribute')
+        if self._is_registered_object(gui_object):
+            raise GuiError('gui_object is already registered')
         if gui_object.ContainerKind == ContainerKind.Window:
             # add this window to the gui
             self.windows.append(gui_object)
