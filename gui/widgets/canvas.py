@@ -48,7 +48,7 @@ class Canvas(Widget):
         # copy an area from the pristine bitmap to the canvas bitmap
         if area is None:
             area = self.canvas.get_rect()
-        self.canvas.blit(self.pristine, area)
+        self.canvas.blit(self.pristine, (area.x, area.y), area)
 
     def read_event(self) -> Optional[CanvasEventPacket]:
         """Read a queued canvas event.

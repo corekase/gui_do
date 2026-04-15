@@ -199,9 +199,14 @@ class Scrollbar(Frame):
             return Rect(self.graphic_rect.x, self.graphic_rect.y + start_point, self.graphic_rect.width, graphical_size)
 
     def graphical_to_total(self, point: int) -> int:
-        return int((point * self.total_range) / self.graphical_range())
+        graphical = self.graphical_range()
+        if graphical <= 0:
+            return 0
+        return int((point * self.total_range) / graphical)
 
     def total_to_graphical(self, point: int) -> int:
+        if self.total_range <= 0:
+            return 0
         return int((point * self.graphical_range()) / self.total_range)
 
     def graphical_range(self) -> int:
@@ -218,11 +223,11 @@ class Scrollbar(Frame):
         rect(self.surface, colours['full'], self.handle_area(), 0)
 
     def set_visible(self, visible: bool) -> None:
-        # call the parent set_visible, up to widget
-        super().set_visible(visible)
+        # Scrollbar and its arrow widgets share visibility state.
+        self.visible = visible
         # for each attached arrowbox also do their setting
         for widget in self.registered:
-            widget.set_visible(visible)
+            widget.visible = visible
 
     # callbacks
     def increment(self) -> None:

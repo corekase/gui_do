@@ -343,14 +343,16 @@ class GuiManager:
         # keep the position within the lock area rect
         if self.lock_area_rect is not None:
             x, y = position
+            max_x = self.lock_area_rect.right - 1
+            max_y = self.lock_area_rect.bottom - 1
             if x < self.lock_area_rect.left:
                 x = self.lock_area_rect.left
-            elif x > self.lock_area_rect.right:
-                x = self.lock_area_rect.right
+            elif x > max_x:
+                x = max_x
             if y < self.lock_area_rect.top:
                 y = self.lock_area_rect.top
-            elif y > self.lock_area_rect.bottom:
-                y = self.lock_area_rect.bottom
+            elif y > max_y:
+                y = max_y
             return (x, y)
         else:
             return position

@@ -84,6 +84,16 @@ class Scheduler:
         return task_event
 
     def add_task(self, id: Any, logic: Callable, parameters: Optional[Any] = None, message_method: Optional[Callable] = None) -> None:
+        # Replace existing task with same id to avoid duplicate queue entries.
+        if id in self.tasks:
+            if id in self.tasks_ready:
+                self.tasks_ready = [task_id for task_id in self.tasks_ready if task_id != id]
+            if id in self.tasks_processed:
+                self.tasks_processed = [task_id for task_id in self.tasks_processed if task_id != id]
+            if id in self.tasks_suspended:
+                self.tasks_suspended = [task_id for task_id in self.tasks_suspended if task_id != id]
+            self.tasks.pop(id, None)
+
         task = self.Task(id, 0.01)
         if parameters is None:
             task.task_logic = logic(id)
@@ -107,10 +117,11 @@ class Scheduler:
         for id in tasks:
             if id in self.tasks_ready:
                 self.tasks_ready.remove(id)
-                del self.tasks[id]
             if id in self.tasks_processed:
                 self.tasks_processed.remove(id)
-                del self.tasks[id]
+            if id in self.tasks_suspended:
+                self.tasks_suspended.remove(id)
+            self.tasks.pop(id, None)
 
     def suspend_all(self) -> None:
         self.tasks_suspended += self.tasks_ready[:] + self.tasks_processed[:]
