@@ -2,9 +2,7 @@ from typing import Optional, Any, Callable
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.values.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
-from ..utility.registry import register_widget
 
-@register_widget("Button")
 class Button(BaseInteractive):
     def __init__(self, gui: Any, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> None:
         # initialize common widget values

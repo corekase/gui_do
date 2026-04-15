@@ -1,9 +1,7 @@
 from typing import Any, Optional, Callable
 from ..utility.values.constants import WidgetKind, ButtonStyle
 from .button import Button
-from ..utility.registry import register_widget
 
-@register_widget("ArrowBox")
 class ArrowBox(Button):
     def __init__(self, gui: Any, id: Any, rect: Any, direction: float, callback: Optional[Callable] = None) -> None:
         # initialize common widget values, skipping the button factory with the True

@@ -2,9 +2,7 @@ from typing import Any, Optional
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.values.constants import WidgetKind, InteractiveState
 from ..utility.interactive import BaseInteractive
-from ..utility.registry import register_widget
 
-@register_widget("Toggle")
 class Toggle(BaseInteractive):
     def __init__(self, gui: Any, id: Any, rect: Any, style: Any, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
         super().__init__(gui, id, rect)

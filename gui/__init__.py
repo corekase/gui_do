@@ -1,9 +1,7 @@
 # gui is a package
 import os
-# import GuiManager and widgets into this package's namespace
+# import GuiManager
 from .guimanager import GuiManager
-from .utility.values.decorations import _init_decorations
-_init_decorations()
 # import constants into the package namespace
 from .utility.values.constants import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 # fix font graphical scaling issues with Windows

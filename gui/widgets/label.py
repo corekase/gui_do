@@ -2,9 +2,7 @@ from typing import Optional, Tuple, Union, Any
 from ..utility.values.constants import colours, WidgetKind
 from ..utility.widget import Widget
 from pygame import Rect
-from ..utility.registry import register_widget
 
-@register_widget("Label")
 class Label(Widget):
     def __init__(self, gui: Any, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))

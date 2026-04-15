@@ -4,9 +4,7 @@ from typing import Optional, Tuple, Any
 from ..guimanager import GuiManager
 from ..utility.values.constants import colours, ContainerKind, InteractiveState
 from .frame import Frame
-from ..utility.registry import register_widget
 
-@register_widget("Window")
 class Window:
     def __init__(self, gui: GuiManager, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
         # windows don't need names because eventually they are going to be in banks which will be named

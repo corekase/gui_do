@@ -1,9 +1,7 @@
 from typing import Any
 from ..utility.values.constants import WidgetKind, InteractiveState
 from ..utility.widget import Widget
-from ..utility.registry import register_widget
 
-@register_widget("Frame")
 class Frame(Widget):
     def __init__(self, gui: Any, id: Any, rect: Any) -> None:
         super().__init__(gui, id, rect)

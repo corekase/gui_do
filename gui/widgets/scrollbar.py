@@ -2,12 +2,9 @@ from typing import Any, List, Optional, Tuple
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
-from ..utility.values.constants import WidgetKind
 from .frame import Frame
-from ..utility.values.constants import colours, Orientation, ArrowPosition, InteractiveState
-from ..utility.registry import register_widget
+from ..utility.values.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
 
-@register_widget("Scrollbar")
 class Scrollbar(Frame):
     def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
@@ -61,8 +58,8 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(gui.create('ArrowBox', f'{id}.increment', inc_rect, inc_degree, self.increment))
-            self.registered.append(gui.create('ArrowBox', f'{id}.decrement', dec_rect, dec_degree, self.decrement))
+            self.registered.append(gui.ArrowBox(f'{id}.increment', inc_rect, inc_degree, self.increment))
+            self.registered.append(gui.ArrowBox(f'{id}.decrement', dec_rect, dec_degree, self.decrement))
         else:
             scroll_area_rect = overall_rect
         # Scrollbar range parameters

@@ -2,9 +2,7 @@ import pygame
 from typing import Any
 from ..utility.values.constants import WidgetKind
 from ..utility.widget import Widget
-from ..utility.registry import register_widget
 
-@register_widget("Image")
 class Image(Widget):
     def __init__(self, gui: Any, id: Any, rect: Any, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
         # initialize id and rect

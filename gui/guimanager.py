@@ -1,13 +1,24 @@
 import pygame
 from pygame import Rect
-from typing import Optional, List, Tuple, Any, Iterable
+from typing import Optional, List, Tuple, Any, Iterable, TYPE_CHECKING, Callable, Union
 from .scheduler import Timers, Scheduler
 from .utility.values.constants import Event, ContainerKind
 from .bitmapfactory import BitmapFactory
-from .utility.registry import create_widget
 from .utility.event_dispatcher import EventDispatcher
 from .utility.layout_manager import LayoutManager
 from .utility.renderer import Renderer
+
+if TYPE_CHECKING:
+    from .widgets.window import Window
+    from .widgets.button import Button
+    from .widgets.label import Label
+    from .widgets.canvas import Canvas
+    from .widgets.image import Image
+    from .widgets.scrollbar import Scrollbar
+    from .widgets.toggle import Toggle
+    from .widgets.arrowbox import ArrowBox
+    from .widgets.buttongroup import ButtonGroup
+    from .widgets.frame import Frame
 
 class GuiError(Exception):
     pass
@@ -59,9 +70,6 @@ class GuiManager:
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
 
-    def create(self, widget_type: str, *args: Any, **kwargs: Any) -> Any:
-        return self.add(create_widget(widget_type, self, *args, **kwargs))
-
     def add(self, gui_object: Any) -> Any:
         if gui_object.ContainerKind == ContainerKind.Window:
             # add this window to the gui
@@ -85,6 +93,46 @@ class GuiManager:
         else:
             raise GuiError('gui_object must be a window or widget')
         return gui_object
+
+    def Window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> "Window":
+        from .widgets.window import Window
+        return self.add(Window(self, title, pos, size, backdrop))
+
+    def Button(self, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> "Button":
+        from .widgets.button import Button
+        return self.add(Button(self, id, rect, style, text, button_callback, skip_factory))
+
+    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> "Label":
+        from .widgets.label import Label
+        return self.add(Label(self, position, text, shadow))
+
+    def Canvas(self, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> "Canvas":
+        from .widgets.canvas import Canvas
+        return self.add(Canvas(self, id, rect, backdrop, canvas_callback, automatic_pristine))
+
+    def Image(self, id: Any, rect: Any, image: str, automatic_pristine: bool = False, scale: bool = True) -> "Image":
+        from .widgets.image import Image
+        return self.add(Image(self, id, rect, image, automatic_pristine, scale))
+
+    def Scrollbar(self, id: Any, overall_rect: Rect, horizontal: Any, style: Any, params: Tuple[int, int, int, int]) -> "Scrollbar":
+        from .widgets.scrollbar import Scrollbar
+        return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
+
+    def Toggle(self, id: Any, rect: Any, style: Any, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> "Toggle":
+        from .widgets.toggle import Toggle
+        return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
+
+    def ArrowBox(self, id: Any, rect: Any, direction: float, callback: Optional[Callable] = None) -> "ArrowBox":
+        from .widgets.arrowbox import ArrowBox
+        return self.add(ArrowBox(self, id, rect, direction, callback))
+
+    def ButtonGroup(self, group: str, id: Any, rect: Any, style: Any, text: str) -> "ButtonGroup":
+        from .widgets.buttongroup import ButtonGroup
+        return self.add(ButtonGroup(self, group, id, rect, style, text))
+
+    def Frame(self, id: Any, rect: Any) -> "Frame":
+        from .widgets.frame import Frame
+        return self.add(Frame(self, id, rect))
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
         self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)

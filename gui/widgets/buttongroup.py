@@ -2,9 +2,7 @@ from typing import Any, Dict, List
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.values.constants import WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
-from ..utility.registry import register_widget
 
-@register_widget("ButtonGroup")
 class ButtonGroup(BaseInteractive):
     # dictionary of key:value -> key, name of the group. value, list of PushButtonGroup objects
     groups: Dict[str, List["ButtonGroup"]] = {}

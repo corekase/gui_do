@@ -6,9 +6,7 @@ from ..utility.values.constants import WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
 from ..utility.values.constants import InteractiveState
-from ..utility.registry import register_widget
 
-@register_widget("Canvas")
 class Canvas(Widget):
     def __init__(self, gui: Any, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> None:
         super().__init__(gui, id, rect)
