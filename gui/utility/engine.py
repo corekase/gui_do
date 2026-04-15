@@ -1,14 +1,14 @@
 import pygame
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Tuple, List
 from ..guimanager import GuiManager
 from .scheduler import Scheduler, TaskKind
 from .statemanager import StateManager
 
 class Engine:
-    def __init__(self, state_manager: 'StateManager') -> None:
-        self.state_manager = state_manager
-        self.clock = pygame.time.Clock()
-        self.fps = 60
+    def __init__(self, state_manager: StateManager) -> None:
+        self.state_manager: StateManager = state_manager
+        self.clock: pygame.time.Clock = pygame.time.Clock()
+        self.fps: int = 60
 
     def run(self) -> None:
         """
@@ -25,10 +25,16 @@ class Engine:
         """
         with self.state_manager:
             while self.state_manager.is_running:
-                active_context = self.state_manager.get_active_context()
+                active_context: Optional[Tuple[GuiManager, Scheduler, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = self.state_manager.get_active_context()
                 if not active_context:
                     break
 
+                gui: GuiManager
+                scheduler: Scheduler
+                timers: Any
+                preamble: Callable[[], None]
+                event_handler: Callable[[Any], None]
+                postamble: Callable[[], None]
                 gui, scheduler, timers, preamble, event_handler, postamble = active_context
 
                 # Phase 1: Preamble
@@ -43,11 +49,11 @@ class Engine:
                     event_handler(event)
 
                 # Phase 4: Update scheduler (tasks) and get finished tasks
-                finished_task_ids = scheduler.update()
+                finished_task_ids: List[Any] = scheduler.update()
 
                 # Phase 5: Dispatch task-finished events
                 for task_id in finished_task_ids:
-                    task_event = scheduler.event(TaskKind.Finished, task_id)
+                    task_event: Any = scheduler.event(TaskKind.Finished, task_id)
                     event_handler(task_event)
 
                 # Phase 6: Postamble
