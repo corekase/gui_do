@@ -1,7 +1,7 @@
 import time
 import pygame
 from collections import deque
-from typing import Callable, Deque, Dict, Generator, Hashable, List, Optional, Set, TYPE_CHECKING, cast
+from typing import Callable, Deque, Dict, Generator, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, cast
 from enum import Enum
 from .constants import Event
 
@@ -106,6 +106,7 @@ class Scheduler:
 
     def add_task(self, id: Hashable, logic: Callable[..., Generator[object, None, None]], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None:
         # Replace existing task with same id to avoid duplicate queue entries.
+        self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
         if id in self.tasks:
             self._remove_from_ready(id)
             self._remove_from_processed(id)
@@ -138,6 +139,8 @@ class Scheduler:
         self._tasks_ready.clear()
         self._tasks_processed.clear()
         self._tasks_suspended.clear()
+        self._tasks_finished.clear()
+        self._tasks_failed.clear()
         self._tasks_ready_set.clear()
         self._tasks_processed_set.clear()
         self._tasks_suspended_set.clear()
@@ -151,6 +154,8 @@ class Scheduler:
         self._tasks_processed_set = set(self._tasks_processed)
         self._tasks_suspended = [id for id in self._tasks_suspended if id not in remove_set]
         self._tasks_suspended_set = set(self._tasks_suspended)
+        self._tasks_finished = [id for id in self._tasks_finished if id not in remove_set]
+        self._tasks_failed = [item for item in self._tasks_failed if item[0] not in remove_set]
         for id in tasks:
             self.tasks.pop(id, None)
 
