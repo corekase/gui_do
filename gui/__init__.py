@@ -5,10 +5,10 @@ from .guimanager import GuiManager
 from .utility.values.decorations import _init_decorations
 _init_decorations()
 # import constants into the package namespace
-from .utility.values.constants import colours, EventKind, Orientation, ScrollbarArrowPosition, ButtonStyle
-from .widgets.canvas import CanvasEventKind
+from .utility.values.constants import colours, Event, Orientation, ArrowPosition, ButtonStyle
+from .widgets.canvas import CanvasEvent
 # import scheduler
-from .scheduler import Scheduler, TaskKind
+from .scheduler import Scheduler
 # fix font graphical scaling issues with Windows
 if os.name == 'nt':
     # to reproduce issue: run on a 4k display with the screen resolution being 1920x1080

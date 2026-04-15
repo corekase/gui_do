@@ -4,22 +4,22 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from ..utility.values.constants import WidgetKind
 from .frame import Frame
-from ..utility.values.constants import colours, Orientation, ScrollbarArrowPosition, InteractiveState
+from ..utility.values.constants import colours, Orientation, ArrowPosition, InteractiveState
 from ..utility.registry import register_widget
 
 @register_widget("Scrollbar")
 class Scrollbar(Frame):
-    def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ScrollbarArrowPosition, params: Tuple[int, int, int, int]) -> None:
+    def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
         self.registered: List[Any] = []
         # parse the style
-        if style == ScrollbarArrowPosition.Skip:
+        if style == ArrowPosition.Skip:
             # pass through with no arrowboxes
             scroll_area_rect = overall_rect
         else:
             # define rects for scrollbar and arrowboxes
             x, y, width, height = overall_rect
-            if style == ScrollbarArrowPosition.Split:
+            if style == ArrowPosition.Split:
                 if horizontal == Orientation.Horizontal:
                     increment_rect = Rect(width - height, 0, height, height)
                     scrollbar_rect = Rect(height, 0, (width - height * 2), height)
@@ -28,7 +28,7 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, height - width, width, width)
                     scrollbar_rect = Rect(0, width, width, height - width * 2)
                     decrement_rect = Rect(0, 0, width, width)
-            elif style == ScrollbarArrowPosition.Near:
+            elif style == ArrowPosition.Near:
                 if horizontal == Orientation.Horizontal:
                     decrement_rect = Rect(0, 0, height, height)
                     increment_rect = Rect(height, 0, height, height)
@@ -37,7 +37,7 @@ class Scrollbar(Frame):
                     decrement_rect = Rect(0, 0, width, width)
                     increment_rect = Rect(0, width, width, width)
                     scrollbar_rect = Rect(0, width * 2, width, height - (width * 2))
-            elif style == ScrollbarArrowPosition.Far:
+            elif style == ArrowPosition.Far:
                 if horizontal == Orientation.Horizontal:
                     scrollbar_rect = Rect(0, 0, (width - height * 2), height)
                     decrement_rect = Rect(width - (height * 2), 0, height, height)
@@ -50,7 +50,7 @@ class Scrollbar(Frame):
                 from ..guimanager import GuiError
                 raise GuiError('style not implemented')
         # add arrowboxes
-        if style != ScrollbarArrowPosition.Skip:
+        if style != ArrowPosition.Skip:
             x, y, width, height = overall_rect
             scroll_area_rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
             inc_rect = Rect(x + increment_rect.x, y + increment_rect.y, increment_rect.width, increment_rect.height)

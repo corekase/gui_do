@@ -3,7 +3,7 @@ import pygame
 from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import GuiManager, EventKind, CanvasEventKind, Orientation, ScrollbarArrowPosition, ButtonStyle
+from gui import GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 from gui import colours
 
 class Demo:
@@ -110,21 +110,21 @@ class Demo:
         y_pos += 248
         self.scrollbar_win = g.create('Window', 'Scrollbars', (x_pos, y_pos), (320, 362))
         x = y = 10
-        g.create('Scrollbar', 'scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Skip, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Skip, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_b', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Split, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_b', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Split, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_c', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Near, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_c', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Near, (100, 0, 30, 10))
         y += 22
-        g.create('Scrollbar', 'scrollbar_d', Rect(x, y, 300, 20), Orientation.Horizontal, ScrollbarArrowPosition.Far, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_d', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Far, (100, 0, 30, 10))
         y += 24
-        g.create('Scrollbar', 'scrollbar_e', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Skip, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_e', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Skip, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_f', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Split, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_f', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Split, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_g', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Near, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_g', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Near, (100, 0, 30, 10))
         x += 22
-        g.create('Scrollbar', 'scrollbar_h', Rect(x, y, 20, 250), Orientation.Vertical, ScrollbarArrowPosition.Far, (100, 0, 30, 10))
+        g.create('Scrollbar', 'scrollbar_h', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Far, (100, 0, 30, 10))
         g.create('Image', 'realize', Rect(x + 25, y, 210, 210), 'realize.png', False)
         b.set_font('scroll')
         g.create('Label', (x + 30, y + 215), 'Scrollbars!', True)
@@ -225,7 +225,7 @@ class Demo:
 
     def handle_events1(self, event):
         # handle events
-        if event.type == EventKind.Widget:
+        if event.type == Event.Widget:
             if event.widget_id == 'exit':
                 # exit button was clicked
                 self.running = False
@@ -277,7 +277,7 @@ class Demo:
                     self.scheduler1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
                     self.scheduler1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
                     self.scheduler1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
-        elif event.type == EventKind.Group:
+        elif event.type == Event.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
             elif event.group == 'bg2':
@@ -290,11 +290,11 @@ class Demo:
                 self.label5.set_label(f'ID: {event.widget_id}')
             elif event.group == 'bg6':
                 self.label6.set_label(f'ID: {event.widget_id}')
-        elif event.type == EventKind.KeyDown:
+        elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
                 self.running = False
-        elif event.type == EventKind.Quit:
+        elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
             self.running = False
 
@@ -318,15 +318,15 @@ class Demo:
 
     def handle_events2(self, event):
         # handle events
-        if event.type == EventKind.Widget:
+        if event.type == Event.Widget:
             if event.widget_id == 'return':
                 # return button was clicked
                 self.running_scheduler = self.scheduler2.interrupt(self.scheduler1)
-        elif event.type == EventKind.KeyDown:
+        elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
                 self.running = False
-        elif event.type == EventKind.Quit:
+        elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
             self.running = False
 
@@ -343,21 +343,21 @@ class Demo:
         CEvent = self.canvas.read_event()
         if CEvent != None:
             # parse that event by kind and parameters
-            if CEvent.type == CanvasEventKind.MouseButtonDown:
+            if CEvent.type == CanvasEvent.MouseButtonDown:
                 # right-mouse button pressed, enter dragging state
                 if CEvent.button == 3:
                     self.dragging = True
-            elif CEvent.type == CanvasEventKind.MouseButtonUp:
+            elif CEvent.type == CanvasEvent.MouseButtonUp:
                 # right-mouse button released, exit dragging state
                 if CEvent.button == 3:
                     self.dragging = False
-            elif CEvent.type == CanvasEventKind.MouseMotion:
+            elif CEvent.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position
                 if self.dragging:
                     x, y = CEvent.rel[0], CEvent.rel[1]
                     self.origin_x += x
                     self.origin_y += y
-            elif CEvent.type == CanvasEventKind.MouseWheel:
+            elif CEvent.type == CanvasEvent.MouseWheel:
                 # handle the mouse wheel
                 if CEvent.y != None:
                     self.cell_size += (CEvent.y * 2)

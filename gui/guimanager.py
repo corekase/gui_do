@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from typing import Optional, List, Tuple, Any, Iterable
 from .scheduler import Timers, Scheduler
-from .utility.values.constants import EventKind, ContainerKind
+from .utility.values.constants import Event, ContainerKind
 from .bitmapfactory import BitmapFactory
 from .utility.registry import create_widget
 from .utility.event_dispatcher import EventDispatcher
@@ -185,7 +185,7 @@ class GuiManager:
                 self.button: Optional[int] = kwargs.get('button')
                 self.widget_id: Optional[Any] = kwargs.get('widget_id')
                 self.group: Optional[str] = kwargs.get('group')
-        if event_type in (EventKind.MouseButtonUp, EventKind.MouseButtonDown, EventKind.MouseMotion):
+        if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
 
@@ -194,7 +194,7 @@ class GuiManager:
         for raw_event in pygame.event.get():
             # process event
             event = self.handle_event(raw_event)
-            if event.type == EventKind.Pass:
+            if event.type == Event.Pass:
                 # no operation
                 continue
             # yield current event

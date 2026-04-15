@@ -8,8 +8,8 @@ colours = {'full': (255, 255, 255), 'light': (0, 200, 200), 'medium': (0, 150, 1
 # Enumerations - Standardized Naming Conventions
 # ============================================================================
 # EventKind: GUI event types (system and widget events)
-EventKind = Enum('EventKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
-                               'MouseButtonUp', 'MouseMotion', 'Widget', 'Group', 'Task'])
+Event = Enum('EventKind', ['Pass', 'Quit', 'KeyDown', 'KeyUp', 'MouseButtonDown',
+                           'MouseButtonUp', 'MouseMotion', 'Widget', 'Group', 'Task'])
 
 # WidgetKind: Types of widgets in the GUI framework
 WidgetKind = Enum('WidgetKind', ['ArrowBox', 'Button', 'ButtonGroup', 'Canvas', 'Frame', 'Image',
@@ -22,13 +22,13 @@ ContainerKind = Enum('ContainerKind', ['Window', 'Widget'])
 InteractiveState = Enum('InteractiveState', ['Idle', 'Hover', 'Armed'])
 
 # CanvasEvent: Types of canvas-specific events
-CanvasEventKind = Enum('CanvasEventKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
+CanvasEvent = Enum('CanvasEventKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
 
 # Orientation: Horizontal or vertical
 Orientation = Enum('Orientation', ['Horizontal', 'Vertical'])
 
 # ScrollbarArrowPosition: Whether scrollbar arrows skip, split, near, or far of the scrollable area
-ScrollbarArrowPosition = Enum('ScrollbarArrowPosition', ['Skip', 'Split', 'Near', 'Far'])
+ArrowPosition = Enum('ScrollbarArrowPosition', ['Skip', 'Split', 'Near', 'Far'])
 
 # ButtonStyle: Visual style for buttons (box, rounded, angled, radio, checkbox)
 ButtonStyle = Enum('ButtonStyle', ['Box', 'Round', 'Angle', 'Radio', 'Check'])

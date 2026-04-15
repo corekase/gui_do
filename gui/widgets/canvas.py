@@ -2,7 +2,7 @@ import pygame
 from typing import Optional, Any
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.values.constants import WidgetKind, CanvasEventKind
+from ..utility.values.constants import WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
 from ..utility.values.constants import InteractiveState
@@ -28,7 +28,7 @@ class Canvas(Widget):
         self.canvas_callback: Optional[Any] = canvas_callback
         self.auto_restore_pristine: bool = automatic_pristine
         self.queued_event: bool = False
-        self.CEvent: Optional["CanvasEvent"] = None
+        self.CEvent: Optional["CanvasEventPacket"] = None
 
     def get_canvas_surface(self) -> pygame.Surface:
         # return a reference to the canvas surface
@@ -40,7 +40,7 @@ class Canvas(Widget):
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, area)
 
-    def read_event(self) -> Optional["CanvasEvent"]:
+    def read_event(self) -> Optional["CanvasEventPacket"]:
         # canvas events are blocking, no new events will be generated until the previous one
         # is read. either as a signal or in a callback, the first thing is to read the event
         if self.queued_event == True:
@@ -62,25 +62,25 @@ class Canvas(Widget):
                 # within the canvas so update information about that
                 canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
                 # create a new event
-                self.CEvent = CanvasEvent()
+                self.CEvent = CanvasEventPacket()
                 # all events have the position field
                 self.CEvent.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
                 # and type specific fields
                 if event.type == MOUSEWHEEL:
-                    self.CEvent.type = CanvasEventKind.MouseWheel
+                    self.CEvent.type = CanvasEvent.MouseWheel
                     self.CEvent.y = event.y
                 elif event.type == MOUSEMOTION:
-                    self.CEvent.type = CanvasEventKind.MouseMotion
+                    self.CEvent.type = CanvasEvent.MouseMotion
                     self.CEvent.rel = event.rel
                 elif event.type == MOUSEBUTTONDOWN:
-                    self.CEvent.type = CanvasEventKind.MouseButtonDown
+                    self.CEvent.type = CanvasEvent.MouseButtonDown
                     self.CEvent.button = event.button
                 elif event.type == MOUSEBUTTONUP:
-                    self.CEvent.type = CanvasEventKind.MouseButtonUp
+                    self.CEvent.type = CanvasEvent.MouseButtonUp
                     self.CEvent.button = event.button
                 else:
                     # otherwise the catch-all event is MousePosition which is set above for all events
-                    self.CEvent.type = CanvasEventKind.MousePosition
+                    self.CEvent.type = CanvasEvent.MousePosition
                 # the mouse is over the canvas so either do the callback or signal activated
                 if self.canvas_callback is not None:
                     # do the callback
@@ -104,9 +104,9 @@ class Canvas(Widget):
         if self.auto_restore_pristine:
             self.restore_pristine()
 
-class CanvasEvent:
+class CanvasEventPacket:
     def __init__(self) -> None:
-        self.type: Optional[CanvasEventKind] = None
+        self.type: Optional[CanvasEvent] = None
         self.pos: Optional[tuple] = None
         self.y: Optional[int] = None
         self.rel: Optional[tuple] = None

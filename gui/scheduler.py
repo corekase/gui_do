@@ -2,7 +2,7 @@ import time
 import pygame
 from typing import Dict, List, Optional, Callable, Any, TYPE_CHECKING
 from enum import Enum
-from .utility.values.constants import EventKind
+from .utility.values.constants import Event
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -71,7 +71,7 @@ class Scheduler:
             # an event object to be returned which includes pygame event information and gui_do information
             def __init__(self) -> None:
                 # the event is a Task type
-                self.type: Any = EventKind.Task
+                self.type: Any = Event.Task
                 # what the event represents
                 self.operation: Any = None
                 # task id

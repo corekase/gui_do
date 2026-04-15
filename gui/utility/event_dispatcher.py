@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
-from .values.constants import EventKind, WidgetKind, InteractiveState
+from .values.constants import Event, WidgetKind, InteractiveState
 
 if TYPE_CHECKING:
     from ..guimanager import GuiManager
@@ -42,12 +42,12 @@ class EventDispatcher:
 
     def _handle_system_event(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == QUIT:
-            return self.gui.event(EventKind.Quit)
+            return self.gui.event(Event.Quit)
         if event.type == KEYUP:
-            return self.gui.event(EventKind.KeyUp, key=event.key)
+            return self.gui.event(Event.KeyUp, key=event.key)
         elif event.type == KEYDOWN:
-            return self.gui.event(EventKind.KeyDown, key=event.key)
-        return self.gui.event(EventKind.Pass)
+            return self.gui.event(Event.KeyDown, key=event.key)
+        return self.gui.event(Event.Pass)
 
     def _update_active_window(self) -> None:
         top_window = None
@@ -69,7 +69,7 @@ class EventDispatcher:
             y = self.gui.dragging_window.y + event.rel[1]
             self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
             self.gui.dragging_window.set_pos((x, y))
-        return self.gui.event(EventKind.Pass)
+        return self.gui.event(Event.Pass)
 
     def _check_window_drag_start(self, event: Any) -> None:
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event.pos)):
@@ -87,9 +87,9 @@ class EventDispatcher:
             window = self.gui.locking_object.window if hasattr(self.gui.locking_object, 'window') else None
             if self.gui.handle_widget(self.gui.locking_object, event, window):
                 widget_id = getattr(self.gui.locking_object, 'id', None)
-                return self.gui.event(EventKind.Widget, widget_id=widget_id)
-            return self.gui.event(EventKind.Pass)
-        return self.gui.event(EventKind.Pass)
+                return self.gui.event(Event.Widget, widget_id=widget_id)
+            return self.gui.event(Event.Pass)
+        return self.gui.event(Event.Pass)
 
     def _process_window_widgets(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
@@ -104,14 +104,14 @@ class EventDispatcher:
                             self.gui.update_focus(widget)
                             if self.gui.handle_widget(widget, event, window):
                                 if widget.WidgetKind == WidgetKind.ButtonGroup:
-                                    return self.gui.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
-                                return self.gui.event(EventKind.Widget, widget_id=widget.id)
+                                    return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
+                                return self.gui.event(Event.Widget, widget_id=widget.id)
                         elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == InteractiveState.Armed:
                             if self.gui.handle_widget(widget, event, window):
-                                return self.gui.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
+                                return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
                 if not hit_any:
                     self.gui.update_focus(None)
-                return self.gui.event(EventKind.Pass)
+                return self.gui.event(Event.Pass)
         self.gui.update_focus(None)
         return self._handle_base_mouse_events(event)
 
@@ -125,18 +125,18 @@ class EventDispatcher:
                     self.gui.update_focus(widget)
                     if self.gui.handle_widget(widget, event):
                         if widget.WidgetKind == WidgetKind.ButtonGroup:
-                            return self.gui.event(EventKind.Group, group=widget.read_group(), widget_id=widget.read_id())
-                        return self.gui.event(EventKind.Widget, widget_id=widget.id)
+                            return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
+                        return self.gui.event(Event.Widget, widget_id=widget.id)
         if not hit_any:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)
-        return self.gui.event(EventKind.Pass)
+        return self.gui.event(Event.Pass)
 
     def _handle_base_mouse_events(self, event: Any) -> "GuiManager.GuiEvent":
         if event.type == MOUSEBUTTONUP:
-            return self.gui.event(EventKind.MouseButtonUp, button=event.button)
+            return self.gui.event(Event.MouseButtonUp, button=event.button)
         elif event.type == MOUSEBUTTONDOWN:
-            return self.gui.event(EventKind.MouseButtonDown, button=event.button)
+            return self.gui.event(Event.MouseButtonDown, button=event.button)
         if event.type == MOUSEMOTION:
-            return self.gui.event(EventKind.MouseMotion, rel=event.rel)
-        return self.gui.event(EventKind.Pass)
+            return self.gui.event(Event.MouseMotion, rel=event.rel)
+        return self.gui.event(Event.Pass)
