@@ -118,12 +118,12 @@ class Scheduler:
         # Replace existing task with same id to avoid duplicate queue entries.
         self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
         self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
+        self._remove_from_ready(id)
+        self._remove_from_processed(id)
         if id in self._tasks_suspended_set:
             self._tasks_suspended = [task_id for task_id in self._tasks_suspended if task_id != id]
             self._tasks_suspended_set.discard(id)
         if id in self.tasks:
-            self._remove_from_ready(id)
-            self._remove_from_processed(id)
             self.tasks.pop(id, None)
         task = Task(id, 0.01)
         try:
