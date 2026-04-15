@@ -93,7 +93,7 @@ class Scheduler:
             self._tasks_processed.remove(id)
             self._tasks_processed_set.discard(id)
 
-    def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> "Scheduler.TaskEvent":
+    def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
