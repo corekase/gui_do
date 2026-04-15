@@ -58,8 +58,8 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            self.registered.append(gui.widget_dispatcher.arrowbox(f'{id}.increment', inc_rect, inc_degree, self.increment))
-            self.registered.append(gui.widget_dispatcher.arrowbox(f'{id}.decrement', dec_rect, dec_degree, self.decrement))
+            self.registered.append(gui.arrowbox(f'{id}.increment', inc_rect, inc_degree, self.increment))
+            self.registered.append(gui.arrowbox(f'{id}.decrement', dec_rect, dec_degree, self.decrement))
         else:
             scroll_area_rect = overall_rect
         # Scrollbar range parameters
