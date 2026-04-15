@@ -39,12 +39,13 @@ class Renderer:
         if self.gui.mouse_locked:
             self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
         # draw mouse cursor
-        cursor_rect = Rect(self.gui.mouse_pos[0] - self.gui.cursor_hotspot[0], self.gui.mouse_pos[1] - self.gui.cursor_hotspot[1],
-                           self.gui.cursor_rect.width, self.gui.cursor_rect.height)
-        # save the bitmap area under the window if buffered
-        if self.gui.buffered:
-            self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
-        self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
+        if self.gui.cursor_image and self.gui.cursor_hotspot:
+            cursor_rect = Rect(self.gui.mouse_pos[0] - self.gui.cursor_hotspot[0], self.gui.mouse_pos[1] - self.gui.cursor_hotspot[1],
+                            self.gui.cursor_rect.width, self.gui.cursor_rect.height)
+            # save the bitmap area under the window if buffered
+            if self.gui.buffered:
+                self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
+            self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
     def undraw(self) -> None:
         # reverse the bitmaps that were under each gui object drawn, if buffered is false then

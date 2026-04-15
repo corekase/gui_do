@@ -12,6 +12,16 @@ from .widget_dispatcher import Widget_Collection
 class GuiError(Exception):
     pass
 
+class GuiEvent:
+    def __init__(self, event_type: Any, **kwargs: Any) -> None:
+        self.type: Any = event_type
+        self.key: Optional[Any] = kwargs.get('key')
+        self.pos: Optional[Tuple[int, int]] = kwargs.get('pos')
+        self.rel: Optional[Tuple[int, int]] = kwargs.get('rel')
+        self.button: Optional[int] = kwargs.get('button')
+        self.widget_id: Optional[Any] = kwargs.get('widget_id')
+        self.group: Optional[str] = kwargs.get('group')
+
 class GuiManager:
     def __init__(self, surface: Any, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
@@ -58,7 +68,7 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
-        self._wiget_dispatcher = Widget_Collection(self)
+        self._widget_dispatcher = Widget_Collection(self)
 
 
     def add(self, gui_object: Any) -> Any:
@@ -151,7 +161,7 @@ class GuiManager:
 
     @property
     def widget_dispatcher(self):
-        return self._wiget_dispatcher
+        return self._widget_dispatcher
 
     @property
     def buffered(self):
@@ -179,15 +189,6 @@ class GuiManager:
             pygame.mouse.set_pos(self.mouse_pos)
 
     def event(self, event_type: Any, **kwargs: Any) -> "GuiManager.GuiEvent":
-        class GuiEvent:
-            def __init__(self, event_type: Any, **kwargs: Any) -> None:
-                self.type: Any = event_type
-                self.key: Optional[Any] = kwargs.get('key')
-                self.pos: Optional[Tuple[int, int]] = kwargs.get('pos')
-                self.rel: Optional[Tuple[int, int]] = kwargs.get('rel')
-                self.button: Optional[int] = kwargs.get('button')
-                self.widget_id: Optional[Any] = kwargs.get('widget_id')
-                self.group: Optional[str] = kwargs.get('group')
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
