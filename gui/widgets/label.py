@@ -13,10 +13,10 @@ class Label(Widget):
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow: bool = shadow
-        self.font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()
-        self.text_bitmap: Any
-        self.render(text)
-        self.draw_rect = self.text_bitmap.get_rect()
+        self._font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()
+        self._text_bitmap: Any
+        self._render(text)
+        self.draw_rect = self._text_bitmap.get_rect()
         if len(position) == 2:
             self.draw_rect.x, self.draw_rect.y = position[0], position[1]
         else:
@@ -25,21 +25,21 @@ class Label(Widget):
             self.draw_rect.x, self.draw_rect.y = x, y
         self.WidgetKind = WidgetKind.Label
 
-    def render(self, text: str) -> None:
+    def _render(self, text: str) -> None:
         if self.shadow:
-            self.text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
+            self._text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
         else:
-            self.text_bitmap = self.gui.bitmap_factory.render_text(text)
+            self._text_bitmap = self.gui.bitmap_factory.render_text(text)
 
     def set_label(self, text: str) -> None:
         # text bitmap
-        self.gui.bitmap_factory.set_font(self.font)
-        self.render(text)
+        self.gui.bitmap_factory.set_font(self._font)
+        self._render(text)
         self.gui.bitmap_factory.set_last_font()
 
     def draw(self) -> None:
         """Draw the label text to the surface."""
-        self.surface.blit(self.text_bitmap, (self.draw_rect.x, self.draw_rect.y))
+        self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def handle_event(self, _, _a) -> bool:
         return False

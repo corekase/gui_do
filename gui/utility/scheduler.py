@@ -50,10 +50,10 @@ class Scheduler:
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
         # queued and finished lists
-        self.tasks_ready: List[Any] = []
-        self.tasks_processed: List[Any] = []
-        self.tasks_suspended: List[Any] = []
-        self.tasks_finished: List[Any] = []
+        self._tasks_ready: List[Any] = []
+        self._tasks_processed: List[Any] = []
+        self._tasks_suspended: List[Any] = []
+        self._tasks_finished: List[Any] = []
 
     class Task:
         def __init__(self, id: Any, interval: float) -> None:
@@ -86,12 +86,12 @@ class Scheduler:
     def add_task(self, id: Any, logic: Callable, parameters: Optional[Any] = None, message_method: Optional[Callable] = None) -> None:
         # Replace existing task with same id to avoid duplicate queue entries.
         if id in self.tasks:
-            if id in self.tasks_ready:
-                self.tasks_ready = [task_id for task_id in self.tasks_ready if task_id != id]
-            if id in self.tasks_processed:
-                self.tasks_processed = [task_id for task_id in self.tasks_processed if task_id != id]
-            if id in self.tasks_suspended:
-                self.tasks_suspended = [task_id for task_id in self.tasks_suspended if task_id != id]
+            if id in self._tasks_ready:
+                self._tasks_ready = [task_id for task_id in self._tasks_ready if task_id != id]
+            if id in self._tasks_processed:
+                self._tasks_processed = [task_id for task_id in self._tasks_processed if task_id != id]
+            if id in self._tasks_suspended:
+                self._tasks_suspended = [task_id for task_id in self._tasks_suspended if task_id != id]
             self.tasks.pop(id, None)
 
         task = self.Task(id, 0.01)
@@ -101,61 +101,61 @@ class Scheduler:
             task.task_logic = logic(id, parameters)
         task.message_method = message_method
         self.tasks[id] = task
-        self.tasks_ready.append(id)
+        self._tasks_ready.append(id)
 
     def send_message(self, id: Any, parameters: Any) -> None:
         # send either a single value or a collection like a tuple or list to the method id
         self.tasks[id].message_method(parameters)
 
     def remove_all(self) -> None:
-        self.tasks_ready.clear()
-        self.tasks_processed.clear()
-        self.tasks_suspended.clear()
+        self._tasks_ready.clear()
+        self._tasks_processed.clear()
+        self._tasks_suspended.clear()
         self.tasks = {}
 
     def remove_tasks(self, *tasks: Any) -> None:
         for id in tasks:
-            if id in self.tasks_ready:
-                self.tasks_ready.remove(id)
-            if id in self.tasks_processed:
-                self.tasks_processed.remove(id)
-            if id in self.tasks_suspended:
-                self.tasks_suspended.remove(id)
+            if id in self._tasks_ready:
+                self._tasks_ready.remove(id)
+            if id in self._tasks_processed:
+                self._tasks_processed.remove(id)
+            if id in self._tasks_suspended:
+                self._tasks_suspended.remove(id)
             self.tasks.pop(id, None)
 
     def suspend_all(self) -> None:
-        self.tasks_suspended += self.tasks_ready[:] + self.tasks_processed[:]
-        self.tasks_ready.clear()
-        self.tasks_processed.clear()
+        self._tasks_suspended += self._tasks_ready[:] + self._tasks_processed[:]
+        self._tasks_ready.clear()
+        self._tasks_processed.clear()
 
     def resume_all(self) -> None:
-        self.tasks_ready += self.tasks_suspended
-        self.tasks_suspended.clear()
+        self._tasks_ready += self._tasks_suspended
+        self._tasks_suspended.clear()
 
     def suspend_tasks(self, *tasks: Any) -> None:
         for id in tasks:
             # move id to suspended list from either the queued or finished lists
-            if id in self.tasks_ready:
-                self.tasks_ready.remove(id)
-                self.tasks_suspended.append(id)
-            elif id in self.tasks_processed:
-                self.tasks_processed.remove(id)
-                self.tasks_suspended.append(id)
+            if id in self._tasks_ready:
+                self._tasks_ready.remove(id)
+                self._tasks_suspended.append(id)
+            elif id in self._tasks_processed:
+                self._tasks_processed.remove(id)
+                self._tasks_suspended.append(id)
 
     def resume_tasks(self, *tasks: Any) -> None:
         for id in tasks:
             # move id from suspended list to end of queued list
-            if id in self.tasks_suspended:
-                self.tasks_suspended.remove(id)
-                self.tasks_ready.append(id)
+            if id in self._tasks_suspended:
+                self._tasks_suspended.remove(id)
+                self._tasks_ready.append(id)
 
     def read_suspended(self) -> List[Any]:
         # return a list of suspended task id's
-        return self.tasks_suspended
+        return self._tasks_suspended
 
     def read_suspended_len(self) -> int:
         # return the number of suspended tasks
-        return len(self.tasks_suspended)
+        return len(self._tasks_suspended)
 
     def task_time(self, id: Any) -> bool:
         if (time.time() - self.tasks[id].time_start) >= self.tasks[id].time_duration:
@@ -163,23 +163,23 @@ class Scheduler:
         return False
 
     def tasks_active(self) -> bool:
-        if (len(self.tasks_ready) > 0) or (len(self.tasks_processed) > 0):
+        if (len(self._tasks_ready) > 0) or (len(self._tasks_processed) > 0):
             return True
         return False
 
     def tasks_active_match_any(self, *tasks: Any) -> bool:
         # if a task is in either tasks_ready or tasks_processed then return True
         for task in tasks:
-            if task in self.tasks_ready:
+            if task in self._tasks_ready:
                 return True
-            elif task in self.tasks_processed:
+            elif task in self._tasks_processed:
                 return True
         return False
 
     def tasks_active_match_all(self, *tasks: Any) -> bool:
         # return True only if all specified tasks are active
         for task in tasks:
-            if task not in self.tasks_ready and task not in self.tasks_processed:
+            if task not in self._tasks_ready and task not in self._tasks_processed:
                 return False
         return True
 
@@ -192,31 +192,31 @@ class Scheduler:
         Returns:
             List of task IDs that finished during this update
         """
-        self.tasks_finished.clear()
+        self._tasks_finished.clear()
 
-        if len(self.tasks_ready) > 0:
+        if len(self._tasks_ready) > 0:
             self._process_next_task()
-        elif len(self.tasks_ready) == 0:
-            self.tasks_ready = self.tasks_processed
-            if len(self.tasks_processed) > 0:
-                self.tasks_processed.clear()
-            if len(self.tasks_ready) > 0:
+        elif len(self._tasks_ready) == 0:
+            self._tasks_ready = self._tasks_processed
+            if len(self._tasks_processed) > 0:
+                self._tasks_processed.clear()
+            if len(self._tasks_ready) > 0:
                 # do process here again because ready list was empty
                 self._process_next_task()
 
         # Return finished tasks so caller can dispatch events
-        return self.tasks_finished.copy()
+        return self._tasks_finished.copy()
 
     def _process_next_task(self) -> None:
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
         try:
-            task_id = self.tasks_ready.pop(0)
+            task_id = self._tasks_ready.pop(0)
             self.tasks[task_id].time_start = time.time()
             next(self.tasks[task_id].task_logic)
-            self.tasks_processed.append(task_id)
+            self._tasks_processed.append(task_id)
         except StopIteration:
             # task exited, and exception from next() happened before appending the id to the processed list
-            self.tasks_finished.append(task_id)
+            self._tasks_finished.append(task_id)
             del self.tasks[task_id]
 
     def get_finished_tasks(self) -> List[Any]:
@@ -226,11 +226,11 @@ class Scheduler:
         Returns:
             List of task IDs that finished
         """
-        return self.tasks_finished.copy()
+        return self._tasks_finished.copy()
 
     def clear_finished_tasks(self) -> None:
         """Clear the finished tasks list."""
-        self.tasks_finished.clear()
+        self._tasks_finished.clear()
 
     def null(self, *args: Any, **kwargs: Any) -> None:
         return

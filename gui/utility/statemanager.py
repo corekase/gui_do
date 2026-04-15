@@ -9,8 +9,8 @@ class StateManager:
     when switching between contexts.
     """
     def __init__(self) -> None:
-        self.contexts: Dict[str, Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = {}
-        self.active_context_name: Optional[str] = None
+        self._contexts: Dict[str, Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = {}
+        self._active_context_name: Optional[str] = None
         self.is_running: bool = True
 
     def register_context(self, name: str, gui: GuiManager,
@@ -24,7 +24,7 @@ class StateManager:
             event_handler: Callback to handle events for this context.
             postamble: Callback invoked after event processing each frame.
         """
-        self.contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
+        self._contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
 
     def switch_context(self, name: str) -> None:
         """Switch to a different application context.
@@ -35,14 +35,14 @@ class StateManager:
         Args:
             name: Name of the context to switch to.
         """
-        if name in self.contexts:
+        if name in self._contexts:
             old_gui: Optional[GuiManager] = self.get_active_gui()
             # Preserve mouse position from old context if switching from an existing one
             if old_gui is not None:
                 mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
             else:
                 mouse_pos = (0, 0)
-            self.active_context_name = name
+            self._active_context_name = name
             new_gui: Optional[GuiManager] = self.get_active_gui()
             if new_gui:
                 new_gui.set_mouse_pos(mouse_pos, True)
@@ -53,8 +53,8 @@ class StateManager:
         Returns:
             Tuple of (gui, scheduler, timers, preamble, event_handler, postamble) or None.
         """
-        if self.active_context_name in self.contexts:
-            return self.contexts[self.active_context_name]
+        if self._active_context_name in self._contexts:
+            return self._contexts[self._active_context_name]
         return None
 
     def get_active_gui(self) -> Optional[GuiManager]:

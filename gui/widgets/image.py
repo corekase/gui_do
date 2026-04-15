@@ -8,9 +8,9 @@ class Image(Widget):
         # initialize id and rect
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Image
-        self.image: pygame.Surface = pygame.image.load(self.gui.bitmap_factory.file_resource('images', image))
+        self._image: pygame.Surface = pygame.image.load(self.gui.bitmap_factory.file_resource('images', image))
         if scale:
-            self.image = pygame.transform.smoothscale(self.image, (rect.width, rect.height))
+            self._image = pygame.transform.smoothscale(self._image, (rect.width, rect.height))
         self.auto_restore_pristine = automatic_pristine
 
     def handle_event(self, _, _a) -> bool:
@@ -19,4 +19,4 @@ class Image(Widget):
     def draw(self) -> None:
         super().draw()
         # draw the image bitmap
-        self.surface.blit(self.image, self.draw_rect)
+        self.surface.blit(self._image, self.draw_rect)

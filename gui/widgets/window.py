@@ -32,7 +32,7 @@ class Window:
             frame.draw()
         else:
             self.gui.set_pristine(backdrop, self)
-        self.window_save_pristine()
+        self._window_save_pristine()
         # widgets on that surface
         self.widgets: list = []
         # set the window to the position passed in
@@ -56,7 +56,7 @@ class Window:
     def set_pos(self, pos: Tuple[int, int]) -> None:
         self.x, self.y = pos
 
-    def window_save_pristine(self) -> None:
+    def _window_save_pristine(self) -> None:
         # update the window pristine bitmap
         # the window pristine bitmap can be used to undo widget bitmap damage to the contents
         self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()

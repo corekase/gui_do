@@ -71,7 +71,7 @@ class GuiManager:
         # list of widgets attached to the screen
         self.widgets: List[Any] = []
         # active object for add()
-        self.active_object: Optional[Any] = None
+        self._active_object: Optional[Any] = None
         # list of windows
         self.windows: List[Any] = []
         # dragging window
@@ -122,16 +122,16 @@ class GuiManager:
             # add this window to the gui
             self.windows.append(gui_object)
             # make this object the destination for gui add commands
-            self.active_object = gui_object
+            self._active_object = gui_object
         elif gui_object.ContainerKind == ContainerKind.Widget:
             # callback
-            if self.active_object is not None:
+            if self._active_object is not None:
                 # store a reference to the window the widget is in
-                gui_object.window = self.active_object
+                gui_object.window = self._active_object
                 # give the widget a reference to the window surface
-                gui_object.surface = self.active_object.surface
+                gui_object.surface = self._active_object.surface
                 # append the widget to the window's list
-                self.active_object.widgets.append(gui_object)
+                self._active_object.widgets.append(gui_object)
             else:
                 # give the widget a reference to the screen surface
                 gui_object.surface = self.surface

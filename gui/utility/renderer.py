@@ -23,7 +23,7 @@ class Renderer:
             gui: Reference to GuiManager for access to widgets and render state.
         """
         self.gui: "GuiManager" = gui
-        self.bitmaps: List[Tuple[Any, Rect]] = []
+        self._bitmaps: List[Tuple[Any, Rect]] = []
 
     def draw(self) -> None:
         """Render all GUI elements to the screen surface.
@@ -39,19 +39,19 @@ class Renderer:
         This allows for efficient animation and dynamic UI updates.
         """
         if self.gui.buffered:
-            self.bitmaps.clear()
+            self._bitmaps.clear()
         for widget in self.gui.widgets:
             if widget.visible:
                 # save the bitmap area under the widgets if buffered
                 if self.gui.buffered:
-                    self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
+                    self._bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
                 # draw the widget
                 widget.draw()
         for window in self.gui.windows:
             if window.visible:
                 # save the bitmap area under the window if buffered
                 if self.gui.buffered:
-                    self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
+                    self._bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
                 if window is self.gui.windows[-1]:
                     window.draw_title_bar_active()
                 else:
@@ -71,7 +71,7 @@ class Renderer:
                             self.gui.cursor_rect.width, self.gui.cursor_rect.height)
             # save the bitmap area under the window if buffered
             if self.gui.buffered:
-                self.bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
+                self._bitmaps.insert(0, (self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
             self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
     def undraw(self) -> None:
@@ -85,6 +85,6 @@ class Renderer:
         """
         # reverse the bitmaps that were under each gui object drawn, if buffered is false then
         # the client does not call this method at all
-        for bitmap, rect in self.bitmaps:
+        for bitmap, rect in self._bitmaps:
             self.gui.surface.blit(bitmap, rect)
-        self.bitmaps.clear()
+        self._bitmaps.clear()
