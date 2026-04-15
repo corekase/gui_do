@@ -305,7 +305,13 @@ class GuiManager:
         buttons = self._button_groups.get(group)
         if buttons is None:
             return
-        self._button_groups[group] = [button for button in buttons if self._is_registered_button_group(button)]
+        deduped: list[ButtonGroup] = []
+        for button in buttons:
+            if button in deduped:
+                continue
+            if self._is_registered_button_group(button):
+                deduped.append(button)
+        self._button_groups[group] = deduped
         buttons = self._button_groups.get(group)
         if buttons is None or len(buttons) == 0:
             self._button_groups.pop(group, None)
