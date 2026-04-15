@@ -28,7 +28,6 @@ class Engine:
                 active_context: Optional[Tuple[GuiManager, Scheduler, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = self.state_manager.get_active_context()
                 if not active_context:
                     break
-
                 gui: GuiManager
                 scheduler: Scheduler
                 timers: Any
@@ -36,36 +35,27 @@ class Engine:
                 event_handler: Callable[[Any], None]
                 postamble: Callable[[], None]
                 gui, scheduler, timers, preamble, event_handler, postamble = active_context
-
                 # Phase 1: Preamble
                 preamble()
-
                 # Phase 2: Update timers
                 if timers:
                     timers.timer_updates(pygame.time.get_ticks())
-
                 # Phase 3: Process events
                 for event in gui.events():
                     event_handler(event)
-
                 # Phase 4: Update scheduler (tasks) and get finished tasks
                 finished_task_ids: List[Any] = scheduler.update()
-
                 # Phase 5: Dispatch task-finished events
                 for task_id in finished_task_ids:
                     task_event: Any = scheduler.event(TaskKind.Finished, task_id)
                     event_handler(task_event)
-
                 # Phase 6: Postamble
                 postamble()
-
                 # Phase 7: Render
                 gui.draw_gui()
                 pygame.display.flip()
-
                 # Undo changes if using buffering
                 if gui.buffered:
                     gui.undraw_gui()
-
                 # Control frame rate
                 self.clock.tick(self.fps)
