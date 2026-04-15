@@ -88,4 +88,9 @@ class ButtonGroup(BaseInteractive):
         selection = self.gui.get_button_group_selection(self.group)
         if selection is None:
             return self.id
-        return selection.id
+        if getattr(selection, 'group', None) != self.group:
+            return self.id
+        selected_id = getattr(selection, 'id', None)
+        if not isinstance(selected_id, str) or selected_id == '':
+            return self.id
+        return selected_id
