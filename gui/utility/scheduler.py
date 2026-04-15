@@ -21,6 +21,9 @@ class Timers:
         self.timers: Dict[Hashable, "Interval"] = {}
 
     def add_timer(self, id: Hashable, duration: float, callback: Callable[[], None]) -> None:
+        if duration <= 0:
+            from .guimanager import GuiError
+            raise GuiError(f'timer duration must be > 0, got: {duration}')
         self.timers[id] = Interval(duration, callback)
 
     def remove_timer(self, id: Hashable) -> None:
