@@ -187,6 +187,8 @@ class GuiManager:
                     f'conflict={self._describe_gui_object(conflict)} '
                     f'on {self._describe_widget_container(conflict)}'
                 )
+            if self._active_object is not None and self._active_object not in self.windows:
+                self._active_object = None
             # callback
             if self._active_object is not None:
                 # store a reference to the window the widget is in
