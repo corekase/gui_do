@@ -277,10 +277,10 @@ class Scheduler:
         except StopIteration:
             # task exited, and exception from next() happened before appending the id to the processed list
             self._tasks_finished.append(task_id)
-            del self.tasks[task_id]
+            self.tasks.pop(task_id, None)
             return
         except Exception as exc:
-            self._tasks_failed.append((task_id, str(exc)))
+            self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
             self.tasks.pop(task_id, None)
             return
         self._tasks_processed.append(task_id)
