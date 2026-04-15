@@ -126,6 +126,12 @@ class Scheduler:
 
     def add_task(self, id: Hashable, logic: Callable[..., Generator[object, None, None]], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None:
         self._validate_task_id(id)
+        if not callable(logic):
+            from .guimanager import GuiError
+            raise GuiError('task logic must be callable')
+        if message_method is not None and not callable(message_method):
+            from .guimanager import GuiError
+            raise GuiError('task message_method must be callable when provided')
         # Replace existing task with same id to avoid duplicate queue entries.
         self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
         self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
