@@ -18,7 +18,8 @@ class StateManager:
         self.is_running: bool = True
 
     def register_context(self, name: str, gui: GuiManager,
-                         preamble: Callable[[], None], event_handler: Callable[[Union[GuiEvent, TaskEvent]], None], postamble: Callable[[], None]) -> None:
+                         preamble: Callable[[], None], event_handler: Callable[[Union[GuiEvent, TaskEvent]], None], postamble: Callable[[], None],
+                         replace: bool = False) -> None:
         """Register a new application context.
 
         Args:
@@ -27,7 +28,11 @@ class StateManager:
             preamble: Callback invoked before event processing each frame.
             event_handler: Callback to handle events for this context.
             postamble: Callback invoked after event processing each frame.
+            replace: If True, overwrite an existing context with the same name.
+                     If False, raise KeyError when name already exists.
         """
+        if not replace and name in self._contexts:
+            raise KeyError(f'duplicate context: {name}')
         self._contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
 
     def switch_context(self, name: str) -> None:
