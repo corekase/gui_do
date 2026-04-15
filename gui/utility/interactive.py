@@ -11,7 +11,7 @@ from typing import Optional, Any, TYPE_CHECKING
 from .constants import InteractiveState
 
 if TYPE_CHECKING:
-    from ..guimanager import GuiManager
+    from .guimanager import GuiManager
 
 class BaseInteractive(Widget):
     """

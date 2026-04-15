@@ -9,7 +9,7 @@ from typing import Optional, Callable, Any, TYPE_CHECKING
 from .constants import ContainerKind
 
 if TYPE_CHECKING:
-    from ..guimanager import GuiManager
+    from .guimanager import GuiManager
     from ..widgets.window import Window
 
 # Widget base class for all GUI widgets

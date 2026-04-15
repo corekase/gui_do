@@ -1,7 +1,7 @@
 # gui is a package
 import os
 # import GuiManager
-from .guimanager import GuiManager
+from .utility.guimanager import GuiManager
 # import Engine and StateManager
 from .utility.engine import Engine
 from .utility.statemanager import StateManager

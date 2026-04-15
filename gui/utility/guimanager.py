@@ -1,13 +1,13 @@
 import pygame
 from pygame import Rect
 from typing import Optional, List, Tuple, Any, Iterable
-from .utility.scheduler import Timers, Scheduler
-from .utility.constants import Event, ContainerKind
-from .utility.bitmapfactory import BitmapFactory
-from .utility.event_dispatcher import EventDispatcher
-from .utility.layout_manager import LayoutManager
-from .utility.renderer import Renderer
-from .utility.widget_dispatcher import Widget_Collection
+from .scheduler import Timers, Scheduler
+from .constants import Event, ContainerKind
+from .bitmapfactory import BitmapFactory
+from .event_dispatcher import EventDispatcher
+from .layout_manager import LayoutManager
+from .renderer import Renderer
+from .widget_dispatcher import Widget_Collection
 
 class GuiError(Exception):
     pass

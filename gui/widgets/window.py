@@ -5,7 +5,7 @@ from ..utility.constants import colours, ContainerKind, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:
-    from ..guimanager import GuiManager
+    from ..utility.guimanager import GuiManager
 
 class Window:
     def __init__(self, gui: GuiManager, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:

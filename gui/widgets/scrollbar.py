@@ -44,7 +44,7 @@ class Scrollbar(Frame):
                     decrement_rect = Rect(0, height - (width * 2), width, width)
                     increment_rect = Rect(0, height - width, width, width)
             else:
-                from ..guimanager import GuiError
+                from ..utility.guimanager import GuiError
                 raise GuiError('style not implemented')
         # add arrowboxes
         if style != ArrowPosition.Skip:

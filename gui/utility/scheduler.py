@@ -5,7 +5,7 @@ from enum import Enum
 from .constants import Event
 
 if TYPE_CHECKING:
-    from ..guimanager import GuiManager
+    from .guimanager import GuiManager
 
 TaskKind = Enum('TaskKind', ['Finished'])
 

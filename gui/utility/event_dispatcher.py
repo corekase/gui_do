@@ -3,7 +3,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from .constants import Event, WidgetKind, InteractiveState
 
 if TYPE_CHECKING:
-    from ..guimanager import GuiManager
+    from .guimanager import GuiManager
 
 class EventDispatcher:
     def __init__(self, gui_manager: "GuiManager") -> None:

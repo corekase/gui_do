@@ -115,7 +115,7 @@ class BitmapFactory:
         elif style == ButtonStyle.Check:
             return self.draw_check_style_bitmaps(text, rect)
         else:
-            from ..guimanager import GuiError
+            from .guimanager import GuiError
             raise GuiError('style not implemented')
 
     def draw_box_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:

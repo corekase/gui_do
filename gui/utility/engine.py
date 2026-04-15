@@ -1,6 +1,6 @@
 import pygame
 from typing import Optional, Callable, Any, Tuple, List
-from ..guimanager import GuiManager
+from .guimanager import GuiManager
 from .scheduler import Scheduler, TaskKind
 from .statemanager import StateManager
 

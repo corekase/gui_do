@@ -1,5 +1,5 @@
 from typing import Dict, Any, Tuple, Optional, Callable
-from ..guimanager import GuiManager
+from .guimanager import GuiManager
 
 class StateManager:
     def __init__(self) -> None:
