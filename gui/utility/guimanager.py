@@ -146,6 +146,12 @@ class GuiManager:
             )
         return type(gui_object).__name__
 
+    def _describe_widget_container(self, widget: Widget) -> str:
+        window = getattr(widget, 'window', None)
+        if window is None:
+            return 'screen'
+        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
 
@@ -174,12 +180,12 @@ class GuiManager:
                 raise GuiError('widget id must be a non-empty string')
             conflict = self._find_widget_id_conflict(gui_object.id, gui_object)
             if conflict is not None:
-                location = 'screen'
-                if getattr(conflict, 'window', None) is not None:
-                    location = 'window'
                 raise GuiError(
-                    f'duplicate widget id: {gui_object.id} (conflicts with '
-                    f'{type(conflict).__name__} on {location})'
+                    f'duplicate widget id: {gui_object.id}; '
+                    f'incoming={self._describe_gui_object(gui_object)} '
+                    f'on {self._describe_widget_container(gui_object)}; '
+                    f'conflict={self._describe_gui_object(conflict)} '
+                    f'on {self._describe_widget_container(conflict)}'
                 )
             # callback
             if self._active_object is not None:
