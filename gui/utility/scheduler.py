@@ -1,5 +1,4 @@
 import time
-import pygame
 from collections import deque
 from typing import Callable, Deque, Dict, Generator, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, cast
 from enum import Enum
@@ -25,25 +24,26 @@ class Timers:
         self.timers[id] = Interval(duration, callback)
 
     def remove_timer(self, id: Hashable) -> None:
-        if id in self.timers.keys():
+        if id in self.timers:
             del self.timers[id]
 
     def timer_updates(self, now_time: int) -> None:
         # iterate over a list copy of the keys because timers may be removed
         # during the loop
         for id in list(self.timers.keys()):
-            if id not in self.timers:
+            interval = self.timers.get(id)
+            if interval is None:
                 # timer was removed during the loop, so skip it
                 continue
-            if self.timers[id].previous_time is None:
-                self.timers[id].previous_time = now_time
+            if interval.previous_time is None:
+                interval.previous_time = now_time
             else:
-                elapsed_time = now_time - self.timers[id].previous_time
-                self.timers[id].previous_time = now_time
-                self.timers[id].timer += elapsed_time
-                if self.timers[id].timer >= self.timers[id].duration:
-                    self.timers[id].timer -= self.timers[id].duration
-                    self.timers[id].callback()
+                elapsed_time = now_time - interval.previous_time
+                interval.previous_time = now_time
+                interval.timer += elapsed_time
+                if interval.timer >= interval.duration:
+                    interval.timer -= interval.duration
+                    interval.callback()
 
 class Task:
     def __init__(self, id: Hashable, interval: float) -> None:
