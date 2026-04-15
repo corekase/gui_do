@@ -8,7 +8,7 @@ from .constants import Event
 if TYPE_CHECKING:
     from .guimanager import GuiManager
 
-TaskKind = Enum('TaskKind', ['Finished'])
+TaskKind = Enum('TaskKind', ['Finished', 'Failed'])
 
 class Interval:
     def __init__(self, duration: float, callback: Callable[[], None]) -> None:
@@ -54,6 +54,8 @@ class TaskEvent:
         self.operation: Optional[TaskKind] = None
         # task id
         self.id: Optional[Hashable] = None
+        # optional error details for failed tasks
+        self.error: Optional[str] = None
 
 class Scheduler:
     def __init__(self, gui: "GuiManager") -> None:
@@ -65,6 +67,7 @@ class Scheduler:
         self._tasks_processed: Deque[Hashable] = deque()
         self._tasks_suspended: List[Hashable] = []
         self._tasks_finished: List[Hashable] = []
+        self._tasks_failed: List[Tuple[Hashable, str]] = []
         self._tasks_ready_set: Set[Hashable] = set()
         self._tasks_processed_set: Set[Hashable] = set()
         self._tasks_suspended_set: Set[Hashable] = set()
@@ -90,11 +93,14 @@ class Scheduler:
             self.message_method: Optional[Callable[[object], None]] = None
             self.task_logic: Optional[Generator[object, None, None]] = None
 
-    def event(self, operation: TaskKind, item1: Optional[Hashable] = None) -> "Scheduler.TaskEvent":
+    def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> "Scheduler.TaskEvent":
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
             task_event.id = item1
+        elif operation == TaskKind.Failed:
+            task_event.id = item1
+            task_event.error = item2
         # elif more operations
         return task_event
 
@@ -233,6 +239,7 @@ class Scheduler:
             List of task IDs that finished during this update
         """
         self._tasks_finished.clear()
+        self._tasks_failed.clear()
         if len(self._tasks_ready) > 0:
             self._process_next_task()
         elif len(self._tasks_ready) == 0:
@@ -267,6 +274,10 @@ class Scheduler:
             self._tasks_finished.append(task_id)
             del self.tasks[task_id]
             return
+        except Exception as exc:
+            self._tasks_failed.append((task_id, str(exc)))
+            self.tasks.pop(task_id, None)
+            return
         self._tasks_processed.append(task_id)
         self._tasks_processed_set.add(task_id)
 
@@ -282,3 +293,15 @@ class Scheduler:
     def clear_finished_tasks(self) -> None:
         """Clear the finished tasks list."""
         self._tasks_finished.clear()
+
+    def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
+        """Get list of failed tasks in the most recent update.
+
+        Returns:
+            List of tuples: (task_id, error_message)
+        """
+        return self._tasks_failed.copy()
+
+    def clear_failed_tasks(self) -> None:
+        """Clear the failed tasks list."""
+        self._tasks_failed.clear()

@@ -60,6 +60,10 @@ class Engine:
                 for task_id in finished_task_ids:
                     task_event: TaskEvent = scheduler.event(TaskKind.Finished, task_id)
                     event_handler(task_event)
+                # Dispatch task-failed events
+                for task_id, error_message in scheduler.get_failed_tasks():
+                    task_event = scheduler.event(TaskKind.Failed, task_id, error_message)
+                    event_handler(task_event)
                 # Phase 6: Postamble
                 postamble()
                 # Phase 7: Render
