@@ -24,9 +24,6 @@ InteractiveState = Enum('InteractiveState', ['Idle', 'Hover', 'Armed'])
 # CanvasEvent: Types of canvas-specific events
 CanvasEventKind = Enum('CanvasEventKind', ['MouseWheel', 'MouseMotion', 'MouseButtonDown', 'MouseButtonUp', 'MousePosition'])
 
-# LayoutKind: Supported layout algorithms
-LayoutKind = Enum('LayoutKind', ['Grid'])
-
 # Orientation: Horizontal or vertical
 Orientation = Enum('Orientation', ['Horizontal', 'Vertical'])
 
