@@ -3,7 +3,7 @@ import pygame
 from random import randrange, choice
 from pygame import Color, Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
+from gui import GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager
 from gui import colours
 
 class Demo:
@@ -187,6 +187,36 @@ class Demo:
         g2.set_cursor((1, 1), 'cursor.png')
         self.gui2 = g2
         # -----------------------
+        # Setup Engine and StateManager
+        # -----------------------
+        self.state_manager = StateManager()
+
+        # Register contexts with StateManager
+        self.state_manager.register_context(
+            'gui1',
+            self.gui1,
+            self.s1,
+            self.gui1.timers,
+            self.preamble1,
+            self.handle_events1,
+            self.postamble1
+        )
+        self.state_manager.register_context(
+            'gui2',
+            self.gui2,
+            self.s2,
+            self.gui2.timers,
+            self.preamble2,
+            self.handle_events2,
+            self.postamble2
+        )
+
+        # Set initial context to gui1
+        self.state_manager.switch_context('gui1')
+
+        # Create the engine
+        self.engine = Engine(self.state_manager)
+        # -----------------------
         # end gui setup
         # -----------------------
         # reset the state of the simulation
@@ -210,15 +240,14 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.running_scheduler = self.s1
-        self.running = True
 
     def run(self):
-        while True:
-            if self.running_scheduler == self.s1:
-                self.s1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
-            elif self.running_scheduler == self.s2:
-                self.s2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
+        """Run the application using the Engine with StateManager contexts."""
+        try:
+            self.engine.run()
+        finally:
+            pygame.quit()
+            sys.exit(0)
 
     def preamble1(self):
         # restore the pristine area to the screen before drawing
@@ -240,10 +269,10 @@ class Demo:
         if event.type == Event.Widget:
             if event.widget_id == 'exit':
                 # exit button was clicked
-                self.running = False
+                self.state_manager.set_running(False)
             elif event.widget_id == 'gui2':
                 # switch to gui2
-                self.running_scheduler = self.s1.interrupt(self.s2)
+                self.state_manager.switch_context('gui2')
             elif event.widget_id == 'life_reset':
                 self.life_reset()
             elif event.widget_id == 'mandel_reset':
@@ -305,17 +334,25 @@ class Demo:
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
-                self.running = False
+                self.state_manager.set_running(False)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
-            self.running = False
+            self.state_manager.set_running(False)
 
     def postamble1(self):
-        if not self.running:
-            # release resources
-            pygame.quit()
-            # exit python
-            sys.exit(0)
+        # restore the pristine area to the screen before drawing
+        self.gui1.restore_pristine()
+        # if the mouse isn't over the canvas then end the dragging state
+        if not self.canvas.focused():
+            self.dragging = False
+        # draw the circles if their toggle is pushed
+        if self.circles_Toggle.read():
+            self.update_circles(self.size)
+        # update the visible windows
+        self.Button_group_win.visible = self.Buttons_Toggle.read()
+        self.Scrollbar_win.visible = self.Scrollbars_Toggle.read()
+        self.life_win.visible = self.life_Toggle.read()
+        self.mandel_win.visible = self.mandel_Toggle.read()
         # if the life window is visible then handle it
         if self.life_win.visible:
             # generate a new cycle if the togglebutton is pressed
@@ -333,21 +370,18 @@ class Demo:
         if event.type == Event.Widget:
             if event.widget_id == 'return':
                 # return button was clicked
-                self.running_scheduler = self.s2.interrupt(self.s1)
+                self.state_manager.switch_context('gui1')
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
-                self.running = False
+                self.state_manager.set_running(False)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
-            self.running = False
+            self.state_manager.set_running(False)
 
     def postamble2(self):
-        if not self.running:
-            # release resources
-            pygame.quit()
-            # exit python
-            sys.exit(0)
+        # restore the pristine area to the screen before drawing
+        self.gui2.restore_pristine()
 
     # Canvas callback function
     def handle_Canvas(self):

@@ -2,6 +2,9 @@
 import os
 # import GuiManager
 from .guimanager import GuiManager
+# import Engine and StateManager
+from .engine import Engine
+from .statemanager import StateManager
 # import constants into the package namespace
 from .utility.values.constants import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 # fix font graphical scaling issues with Windows

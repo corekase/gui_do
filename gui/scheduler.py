@@ -175,12 +175,6 @@ class Scheduler:
     def null(self, *args: Any, **kwargs: Any) -> None:
         return
 
-    def interrupt(self, new_scheduler: "Scheduler") -> "Scheduler":
-        # break out of the scheduler loop, and return to the caller of start_scheduler
-        self.stop_scheduler = True
-        new_scheduler.gui.set_mouse_pos(self.gui.get_mouse_pos(), True)
-        return new_scheduler
-
     def _process_next_task(self) -> None:
         # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
         try:
@@ -193,53 +187,39 @@ class Scheduler:
             self.tasks_finished.append(task_id)
             del self.tasks[task_id]
 
-    def start_scheduler(self, preamble: Optional[Callable] = None, event_handler: Optional[Callable] = None, postamble: Optional[Callable] = None) -> None:
-        if event_handler is None:
-            event_handler = self.null
-        if preamble is None:
-            preamble = self.null
-        if postamble is None:
-            postamble = self.null
-        self.run_scheduler(preamble, event_handler, postamble)
+    def update(self) -> List[Any]:
+        """
+        Update scheduler state for one frame of execution.
 
-    def run_scheduler(self, preamble: Callable, event_handler: Callable, postamble: Callable) -> None:
-        # fps to maintain, if 0 then unlimited
-        fps = 60
-        # a pygame clock to control the fps
-        clock = pygame.time.Clock()
-        while True:
-            if self.stop_scheduler:
-                self.stop_scheduler = False
-                break
-            # call preamble
-            preamble()
-            # send gui events
-            self.gui.timers.timer_updates(pygame.time.get_ticks())
-            for event in self.gui.events():
-                event_handler(event)
-            # handle task logic
-            self.tasks_finished.clear()
+        Processes a single task cycle and returns a list of task IDs that finished.
+
+        Returns:
+            List of task IDs that finished during this update
+        """
+        self.tasks_finished.clear()
+
+        if len(self.tasks_ready) > 0:
+            self._process_next_task()
+        elif len(self.tasks_ready) == 0:
+            self.tasks_ready = self.tasks_processed
+            if len(self.tasks_processed) > 0:
+                self.tasks_processed.clear()
             if len(self.tasks_ready) > 0:
+                # do process here again because ready list was empty
                 self._process_next_task()
-            elif len(self.tasks_ready) == 0:
-                self.tasks_ready = self.tasks_processed
-                if len(self.tasks_processed) > 0:
-                    self.tasks_processed.clear()
-                if len(self.tasks_ready) > 0:
-                    # do process here again because ready list was empty
-                    self._process_next_task()
-            # send task events
-            for id in self.tasks_finished:
-                event_handler(self.event(TaskKind.Finished, id))
-            self.tasks_finished.clear()
-            # call postamble
-            postamble()
-            # draw gui
-            self.gui.draw_gui()
-            # buffer to the screen
-            pygame.display.flip()
-            # undo changes after flip if buffering
-            if self.gui.buffered:
-                self.gui.undraw_gui()
-            # tick to desired frame-rate
-            clock.tick(fps)
+
+        # Return finished tasks so caller can dispatch events
+        return self.tasks_finished.copy()
+
+    def get_finished_tasks(self) -> List[Any]:
+        """
+        Get list of tasks that finished in the most recent update.
+
+        Returns:
+            List of task IDs that finished
+        """
+        return self.tasks_finished.copy()
+
+    def clear_finished_tasks(self) -> None:
+        """Clear the finished tasks list."""
+        self.tasks_finished.clear()
