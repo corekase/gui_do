@@ -457,13 +457,22 @@ class GuiManager:
 
     @property
     def current_widget(self):
+        return self._resolve_current_widget()
+
+    def _resolve_current_widget(self) -> Optional[Widget]:
+        if self._current_widget is None:
+            return None
+        if not self._is_registered_object(self._current_widget):
+            self._current_widget = None
+            return None
         return self._current_widget
 
     @current_widget.setter
     def current_widget(self, value):
-        if self._current_widget != value:
-            if self._current_widget is not None:
-                self._current_widget.leave()
+        current = self._resolve_current_widget()
+        if current != value:
+            if current is not None:
+                current.leave()
             self._current_widget = value
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
