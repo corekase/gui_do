@@ -94,43 +94,43 @@ class GuiManager:
             raise GuiError('gui_object must be a window or widget')
         return gui_object
 
-    def Window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> "Window":
+    def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> "Window":
         from .widgets.window import Window
         return self.add(Window(self, title, pos, size, backdrop))
 
-    def Button(self, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> "Button":
+    def button(self, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> "Button":
         from .widgets.button import Button
         return self.add(Button(self, id, rect, style, text, button_callback, skip_factory))
 
-    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> "Label":
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> "Label":
         from .widgets.label import Label
         return self.add(Label(self, position, text, shadow))
 
-    def Canvas(self, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> "Canvas":
+    def canvas(self, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> "Canvas":
         from .widgets.canvas import Canvas
         return self.add(Canvas(self, id, rect, backdrop, canvas_callback, automatic_pristine))
 
-    def Image(self, id: Any, rect: Any, image: str, automatic_pristine: bool = False, scale: bool = True) -> "Image":
+    def image(self, id: Any, rect: Any, image: str, automatic_pristine: bool = False, scale: bool = True) -> "Image":
         from .widgets.image import Image
         return self.add(Image(self, id, rect, image, automatic_pristine, scale))
 
-    def Scrollbar(self, id: Any, overall_rect: Rect, horizontal: Any, style: Any, params: Tuple[int, int, int, int]) -> "Scrollbar":
+    def scrollbar(self, id: Any, overall_rect: Rect, horizontal: Any, style: Any, params: Tuple[int, int, int, int]) -> "Scrollbar":
         from .widgets.scrollbar import Scrollbar
         return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
 
-    def Toggle(self, id: Any, rect: Any, style: Any, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> "Toggle":
+    def toggle(self, id: Any, rect: Any, style: Any, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> "Toggle":
         from .widgets.toggle import Toggle
         return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
 
-    def ArrowBox(self, id: Any, rect: Any, direction: float, callback: Optional[Callable] = None) -> "ArrowBox":
+    def arrowbox(self, id: Any, rect: Any, direction: float, callback: Optional[Callable] = None) -> "ArrowBox":
         from .widgets.arrowbox import ArrowBox
         return self.add(ArrowBox(self, id, rect, direction, callback))
 
-    def ButtonGroup(self, group: str, id: Any, rect: Any, style: Any, text: str) -> "ButtonGroup":
+    def buttongroup(self, group: str, id: Any, rect: Any, style: Any, text: str) -> "ButtonGroup":
         from .widgets.buttongroup import ButtonGroup
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
-    def Frame(self, id: Any, rect: Any) -> "Frame":
+    def frame(self, id: Any, rect: Any) -> "Frame":
         from .widgets.frame import Frame
         return self.add(Frame(self, id, rect))
 
