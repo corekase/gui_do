@@ -35,6 +35,11 @@ class Timers:
         self.timers[id] = Interval(duration, callback)
 
     def remove_timer(self, id: Hashable) -> None:
+        try:
+            hash(id)
+        except TypeError as exc:
+            from .guimanager import GuiError
+            raise GuiError(f'timer id must be hashable: {id!r}') from exc
         if id in self.timers:
             del self.timers[id]
 
@@ -137,7 +142,7 @@ class Scheduler:
             task_event.id = item1
         elif operation == TaskKind.Failed:
             task_event.id = item1
-            task_event.error = '' if item2 is None else item2
+            task_event.error = '' if item2 is None else str(item2)
         # elif more operations
         return task_event
 

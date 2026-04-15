@@ -120,7 +120,8 @@ class EventDispatcher:
 
     def _process_window_widgets(self, event: PygameEvent) -> "GuiEvent":
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
-            self.gui.raise_window(self.gui.active_window)
+            if self.gui.active_window is not None and self.gui.active_window in self.gui.windows:
+                self.gui.raise_window(self.gui.active_window)
         hit_any = False
         focus_target = None
         for window in tuple(self.gui.windows)[::-1]:
