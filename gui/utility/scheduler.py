@@ -280,6 +280,7 @@ class Scheduler:
     def tasks_active_match_any(self, *tasks: Hashable) -> bool:
         # if a task is in either tasks_ready or tasks_processed then return True
         for task in tasks:
+            self._validate_task_id(task)
             if task in self.tasks and task in self._tasks_ready_set:
                 return True
             elif task in self.tasks and task in self._tasks_processed_set:
@@ -289,6 +290,7 @@ class Scheduler:
     def tasks_active_match_all(self, *tasks: Hashable) -> bool:
         # return True only if all specified tasks are active
         for task in tasks:
+            self._validate_task_id(task)
             if task not in self.tasks:
                 return False
             if task not in self._tasks_ready_set and task not in self._tasks_processed_set:
