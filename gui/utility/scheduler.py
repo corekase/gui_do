@@ -117,6 +117,8 @@ class Scheduler:
         if operation not in (TaskKind.Finished, TaskKind.Failed):
             from .guimanager import GuiError
             raise GuiError(f'unknown task event operation: {operation}')
+        if item1 is not None:
+            self._validate_task_id(item1)
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
