@@ -26,7 +26,6 @@ class Demo:
         # -----------------------
         # create a gui manager
         g1 = GuiManager(self.screen, fonts)
-        self.s1 = g1.scheduler
         b1 = g1.bitmap_factory
         w1 = g1.widget_dispatcher
         # blit a background image to the screen surface
@@ -177,7 +176,6 @@ class Demo:
         # begin gui2
         # -----------------------
         g2 = GuiManager(self.screen, fonts)
-        self.s2 = g2.scheduler
         g2.bitmap_factory.set_font('normal')
         w2 = g2.widget_dispatcher
         g2.set_pristine('backdrop.jpg')
@@ -190,13 +188,10 @@ class Demo:
         # Setup Engine and StateManager
         # -----------------------
         self.state_manager = StateManager()
-
         # Register contexts with StateManager
         self.state_manager.register_context(
             'gui1',
             self.gui1,
-            self.s1,
-            self.gui1.timers,
             self.preamble1,
             self.handle_events1,
             self.postamble1
@@ -204,16 +199,15 @@ class Demo:
         self.state_manager.register_context(
             'gui2',
             self.gui2,
-            self.s2,
-            self.gui2.timers,
             self.preamble2,
             self.handle_events2,
             self.postamble2
         )
-
+        # references to the schedulers
+        self.s1 = self.gui1.scheduler
+        self.s2 = self.gui2.scheduler
         # Set initial context to gui1
         self.state_manager.switch_context('gui1')
-
         # Create the engine
         self.engine = Engine(self.state_manager)
         # -----------------------

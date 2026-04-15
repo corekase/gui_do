@@ -8,9 +8,9 @@ class StateManager:
         self.active_context_name: Optional[str] = None
         self.is_running: bool = True
 
-    def register_context(self, name: str, gui: GuiManager, scheduler: Scheduler, timers: Any,
+    def register_context(self, name: str, gui: GuiManager,
                          preamble: Callable, event_handler: Callable, postamble: Callable):
-        self.contexts[name] = (gui, scheduler, timers, preamble, event_handler, postamble)
+        self.contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
 
     def switch_context(self, name: str):
         if name in self.contexts:
