@@ -252,8 +252,8 @@ class Scheduler:
         if len(self._tasks_ready) > 0:
             self._process_next_task()
         elif len(self._tasks_ready) == 0:
-            self._tasks_ready = self._tasks_processed
-            self._tasks_ready_set = self._tasks_processed_set
+            self._tasks_ready = deque(self._tasks_processed)
+            self._tasks_ready_set = set(self._tasks_processed_set)
             if len(self._tasks_processed) > 0:
                 self._tasks_processed = deque()
                 self._tasks_processed_set = set()
