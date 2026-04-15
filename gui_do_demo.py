@@ -20,93 +20,93 @@ class Demo:
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
         # begin gui1
-        g = GuiManager(self.screen, fonts)
-        b = g.bitmap_factory
-        self.scheduler1 = g.scheduler
-        w1 = g.widget_dispatcher
+        g1 = GuiManager(self.screen, fonts)
+        b1 = g1.bitmap_factory
+        self.s1 = g1.scheduler
+        w1 = g1.widget_dispatcher
         # blit a background image to the screen surface
-        g.set_pristine('backdrop.jpg')
+        g1.set_pristine('backdrop.jpg')
         # screen label
-        b.set_font('gui_do')
+        b1.set_font('gui_do')
         w1.label((50, 30), 'gui_do', True)
-        b.set_font('normal')
+        b1.set_font('normal')
         widget_height = 28
         # exit button
         w1.button('exit', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
-        g.set_grid_properties((85, 1042), 120, widget_height, 4)
+        g1.set_grid_properties((85, 1042), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_Button = w1.button('gui2', g.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
+        self.gui2_Button = w1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
         # control whether the background circles are drawn
-        self.circles_Toggle = w1.toggle('circles', g.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
+        self.circles_Toggle = w1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
         # control whether the buttons and toggles window is visible
-        self.Buttons_Toggle = w1.toggle('Buttons_Window', g.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
+        self.Buttons_Toggle = w1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
         # control whether the scrollbar window is visible
-        self.Scrollbars_Toggle = w1.toggle('Scrollbar_Window', g.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
+        self.Scrollbars_Toggle = w1.toggle('Scrollbar_Window', g1.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
         # control whether the life window is visible
-        self.life_Toggle = w1.toggle('life_Window', g.gridded(4, 0), ButtonStyle.Round, False, 'Life')
+        self.life_Toggle = w1.toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
-        self.mandel_Toggle = w1.toggle('mandel_Window', g.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        self.mandel_Toggle = w1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
-        g.set_grid_properties((10, 10), 120, widget_height, 2)
+        g1.set_grid_properties((10, 10), 120, widget_height, 2)
         self.Button_group_win = w1.window('Button Groups, Buttons, and Toggles',
-                                         (x_pos, y_pos), (g.gridded(7, 0).right + 10, g.gridded(0, 6).bottom))
-        w1.label(g.gridded(0, 0), 'G1 Boxed', True)
-        w1.label(g.gridded(1, 0), 'G2 Rounded', True)
-        w1.label(g.gridded(2, 0), 'G3 Angled', True)
-        w1.label(g.gridded(3, 0), 'G4 Radioed', True)
-        w1.label(g.gridded(4, 0), 'G5 Checked', True)
-        w1.label(g.gridded(5, 0), 'G6 Mixed', True)
-        w1.label(g.gridded(6, 0), 'Buttons', True)
-        w1.label(g.gridded(7, 0), 'Toggles', True)
-        lbg1 = w1.buttongroup('bg1', 'bg1b01', g.gridded(0, 1), ButtonStyle.Box, 'Box 1')
-        w1.buttongroup('bg1', 'bg1b02', g.gridded(0, 2), ButtonStyle.Box, 'Box 2',)
-        w1.buttongroup('bg1', 'bg1b03', g.gridded(0, 3), ButtonStyle.Box, 'Box 3',)
-        w1.buttongroup('bg1', 'bg1b04', g.gridded(0, 4), ButtonStyle.Box, 'Box 4',)
-        w1.buttongroup('bg1', 'bg1b05', g.gridded(0, 5), ButtonStyle.Box, 'Box 5',)
-        lbg2 = w1.buttongroup('bg2', 'bg2b01', g.gridded(1, 1), ButtonStyle.Round, 'Round 1')
-        w1.buttongroup('bg2', 'bg2b02', g.gridded(1, 2), ButtonStyle.Round, 'Round 2')
-        w1.buttongroup('bg2', 'bg2b03', g.gridded(1, 3), ButtonStyle.Round, 'Round 3')
-        w1.buttongroup('bg2', 'bg2b04', g.gridded(1, 4), ButtonStyle.Round, 'Round 4')
-        w1.buttongroup('bg2', 'bg2b05', g.gridded(1, 5), ButtonStyle.Round, 'Round 5')
-        lbg3 = w1.buttongroup('bg3', 'bg3b01', g.gridded(2, 1), ButtonStyle.Angle, 'Angle 1')
-        w1.buttongroup('bg3', 'bg3b02', g.gridded(2, 2), ButtonStyle.Angle, 'Angle 2')
-        w1.buttongroup('bg3', 'bg3b03', g.gridded(2, 3), ButtonStyle.Angle, 'Angle 3')
-        w1.buttongroup('bg3', 'bg3b04', g.gridded(2, 4), ButtonStyle.Angle, 'Angle 4')
-        w1.buttongroup('bg3', 'bg3b05', g.gridded(2, 5), ButtonStyle.Angle, 'Angle 5')
-        lbg4 = w1.buttongroup('bg4', 'bg4b01', g.gridded(3, 1), ButtonStyle.Radio, 'Radio 1')
-        w1.buttongroup('bg4', 'bg4b02', g.gridded(3, 2), ButtonStyle.Radio, 'Radio 2')
-        w1.buttongroup('bg4', 'bg4b03', g.gridded(3, 3), ButtonStyle.Radio, 'Radio 3')
-        w1.buttongroup('bg4', 'bg4b04', g.gridded(3, 4), ButtonStyle.Radio, 'Radio 4')
-        w1.buttongroup('bg4', 'bg4b05', g.gridded(3, 5), ButtonStyle.Radio, 'Radio 5')
-        lbg5 = w1.buttongroup('bg5', 'bg5b01', g.gridded(4, 1), ButtonStyle.Check, 'Check 1')
-        w1.buttongroup('bg5', 'bg5b02', g.gridded(4, 2), ButtonStyle.Check, 'Check 2')
-        w1.buttongroup('bg5', 'bg5b03', g.gridded(4, 3), ButtonStyle.Check, 'Check 3')
-        w1.buttongroup('bg5', 'bg5b04', g.gridded(4, 4), ButtonStyle.Check, 'Check 4')
-        w1.buttongroup('bg5', 'bg5b05', g.gridded(4, 5), ButtonStyle.Check, 'Check 5')
-        lbg6 = w1.buttongroup('bg6', 'bg6b01', g.gridded(5, 1), ButtonStyle.Box, 'Mix 1')
-        w1.buttongroup('bg6', 'bg6b02', g.gridded(5, 2), ButtonStyle.Round, 'Mix 2')
-        w1.buttongroup('bg6', 'bg6b03', g.gridded(5, 3), ButtonStyle.Angle, 'Mix 3')
-        w1.buttongroup('bg6', 'bg6b04', g.gridded(5, 4), ButtonStyle.Radio, 'Mix 4')
-        w1.buttongroup('bg6', 'bg6b05', g.gridded(5, 5), ButtonStyle.Check, 'Mix 5')
-        w1.button('b1', g.gridded(6, 1), ButtonStyle.Box, 'Button 1')
-        w1.button('b2', g.gridded(6, 2), ButtonStyle.Round, 'Button 2')
-        w1.button('b3', g.gridded(6, 3), ButtonStyle.Angle, 'Button 3')
-        w1.button('b4', g.gridded(6, 4), ButtonStyle.Radio, 'Button 4')
-        w1.button('b5', g.gridded(6, 5), ButtonStyle.Check, 'Button 5')
-        w1.toggle('t1', g.gridded(7, 1), ButtonStyle.Box, False, 'Push 1', 'Raise 1')
-        w1.toggle('t2', g.gridded(7, 2), ButtonStyle.Round, False, 'Push 2', 'Raise 2')
-        w1.toggle('t3', g.gridded(7, 3), ButtonStyle.Angle, False, 'Push 3', 'Raise 3')
-        w1.toggle('t4', g.gridded(7, 4), ButtonStyle.Radio, False, 'Push 4', 'Raise 4')
-        w1.toggle('t5', g.gridded(7, 5), ButtonStyle.Check, False, 'Push 5', 'Raise 5')
-        g.set_grid_properties((10, g.gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
-        self.label1 = w1.label(g.gridded(0, 0), f'ID: {lbg1.read_id()}', True)
-        self.label2 = w1.label(g.gridded(1, 0), f'ID: {lbg2.read_id()}', True)
-        self.label3 = w1.label(g.gridded(2, 0), f'ID: {lbg3.read_id()}', True)
-        self.label4 = w1.label(g.gridded(3, 0), f'ID: {lbg4.read_id()}', True)
-        self.label5 = w1.label(g.gridded(4, 0), f'ID: {lbg5.read_id()}', True)
-        self.label6 = w1.label(g.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
+                                         (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom))
+        w1.label(g1.gridded(0, 0), 'G1 Boxed', True)
+        w1.label(g1.gridded(1, 0), 'G2 Rounded', True)
+        w1.label(g1.gridded(2, 0), 'G3 Angled', True)
+        w1.label(g1.gridded(3, 0), 'G4 Radioed', True)
+        w1.label(g1.gridded(4, 0), 'G5 Checked', True)
+        w1.label(g1.gridded(5, 0), 'G6 Mixed', True)
+        w1.label(g1.gridded(6, 0), 'Buttons', True)
+        w1.label(g1.gridded(7, 0), 'Toggles', True)
+        lbg1 = w1.buttongroup('bg1', 'bg1b01', g1.gridded(0, 1), ButtonStyle.Box, 'Box 1')
+        w1.buttongroup('bg1', 'bg1b02', g1.gridded(0, 2), ButtonStyle.Box, 'Box 2',)
+        w1.buttongroup('bg1', 'bg1b03', g1.gridded(0, 3), ButtonStyle.Box, 'Box 3',)
+        w1.buttongroup('bg1', 'bg1b04', g1.gridded(0, 4), ButtonStyle.Box, 'Box 4',)
+        w1.buttongroup('bg1', 'bg1b05', g1.gridded(0, 5), ButtonStyle.Box, 'Box 5',)
+        lbg2 = w1.buttongroup('bg2', 'bg2b01', g1.gridded(1, 1), ButtonStyle.Round, 'Round 1')
+        w1.buttongroup('bg2', 'bg2b02', g1.gridded(1, 2), ButtonStyle.Round, 'Round 2')
+        w1.buttongroup('bg2', 'bg2b03', g1.gridded(1, 3), ButtonStyle.Round, 'Round 3')
+        w1.buttongroup('bg2', 'bg2b04', g1.gridded(1, 4), ButtonStyle.Round, 'Round 4')
+        w1.buttongroup('bg2', 'bg2b05', g1.gridded(1, 5), ButtonStyle.Round, 'Round 5')
+        lbg3 = w1.buttongroup('bg3', 'bg3b01', g1.gridded(2, 1), ButtonStyle.Angle, 'Angle 1')
+        w1.buttongroup('bg3', 'bg3b02', g1.gridded(2, 2), ButtonStyle.Angle, 'Angle 2')
+        w1.buttongroup('bg3', 'bg3b03', g1.gridded(2, 3), ButtonStyle.Angle, 'Angle 3')
+        w1.buttongroup('bg3', 'bg3b04', g1.gridded(2, 4), ButtonStyle.Angle, 'Angle 4')
+        w1.buttongroup('bg3', 'bg3b05', g1.gridded(2, 5), ButtonStyle.Angle, 'Angle 5')
+        lbg4 = w1.buttongroup('bg4', 'bg4b01', g1.gridded(3, 1), ButtonStyle.Radio, 'Radio 1')
+        w1.buttongroup('bg4', 'bg4b02', g1.gridded(3, 2), ButtonStyle.Radio, 'Radio 2')
+        w1.buttongroup('bg4', 'bg4b03', g1.gridded(3, 3), ButtonStyle.Radio, 'Radio 3')
+        w1.buttongroup('bg4', 'bg4b04', g1.gridded(3, 4), ButtonStyle.Radio, 'Radio 4')
+        w1.buttongroup('bg4', 'bg4b05', g1.gridded(3, 5), ButtonStyle.Radio, 'Radio 5')
+        lbg5 = w1.buttongroup('bg5', 'bg5b01', g1.gridded(4, 1), ButtonStyle.Check, 'Check 1')
+        w1.buttongroup('bg5', 'bg5b02', g1.gridded(4, 2), ButtonStyle.Check, 'Check 2')
+        w1.buttongroup('bg5', 'bg5b03', g1.gridded(4, 3), ButtonStyle.Check, 'Check 3')
+        w1.buttongroup('bg5', 'bg5b04', g1.gridded(4, 4), ButtonStyle.Check, 'Check 4')
+        w1.buttongroup('bg5', 'bg5b05', g1.gridded(4, 5), ButtonStyle.Check, 'Check 5')
+        lbg6 = w1.buttongroup('bg6', 'bg6b01', g1.gridded(5, 1), ButtonStyle.Box, 'Mix 1')
+        w1.buttongroup('bg6', 'bg6b02', g1.gridded(5, 2), ButtonStyle.Round, 'Mix 2')
+        w1.buttongroup('bg6', 'bg6b03', g1.gridded(5, 3), ButtonStyle.Angle, 'Mix 3')
+        w1.buttongroup('bg6', 'bg6b04', g1.gridded(5, 4), ButtonStyle.Radio, 'Mix 4')
+        w1.buttongroup('bg6', 'bg6b05', g1.gridded(5, 5), ButtonStyle.Check, 'Mix 5')
+        w1.button('b1', g1.gridded(6, 1), ButtonStyle.Box, 'Button 1')
+        w1.button('b2', g1.gridded(6, 2), ButtonStyle.Round, 'Button 2')
+        w1.button('b3', g1.gridded(6, 3), ButtonStyle.Angle, 'Button 3')
+        w1.button('b4', g1.gridded(6, 4), ButtonStyle.Radio, 'Button 4')
+        w1.button('b5', g1.gridded(6, 5), ButtonStyle.Check, 'Button 5')
+        w1.toggle('t1', g1.gridded(7, 1), ButtonStyle.Box, False, 'Push 1', 'Raise 1')
+        w1.toggle('t2', g1.gridded(7, 2), ButtonStyle.Round, False, 'Push 2', 'Raise 2')
+        w1.toggle('t3', g1.gridded(7, 3), ButtonStyle.Angle, False, 'Push 3', 'Raise 3')
+        w1.toggle('t4', g1.gridded(7, 4), ButtonStyle.Radio, False, 'Push 4', 'Raise 4')
+        w1.toggle('t5', g1.gridded(7, 5), ButtonStyle.Check, False, 'Push 5', 'Raise 5')
+        g1.set_grid_properties((10, g1.gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
+        self.label1 = w1.label(g1.gridded(0, 0), f'ID: {lbg1.read_id()}', True)
+        self.label2 = w1.label(g1.gridded(1, 0), f'ID: {lbg2.read_id()}', True)
+        self.label3 = w1.label(g1.gridded(2, 0), f'ID: {lbg3.read_id()}', True)
+        self.label4 = w1.label(g1.gridded(3, 0), f'ID: {lbg4.read_id()}', True)
+        self.label5 = w1.label(g1.gridded(4, 0), f'ID: {lbg5.read_id()}', True)
+        self.label6 = w1.label(g1.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
         # make the scrollbar window
         y_pos += 248
         self.Scrollbar_win = w1.window('Scrollbars', (x_pos, y_pos), (320, 362))
@@ -127,9 +127,9 @@ class Demo:
         x += 22
         w1.scrollbar('Scrollbar_h', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Far, (100, 0, 30, 10))
         w1.image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False)
-        b.set_font('scroll')
+        b1.set_font('scroll')
         w1.label((x + 30, y + 215), 'Scrollbars!', True)
-        b.set_font('normal')
+        b1.set_font('normal')
         # make the Conway's Game of Life window
         x_pos += 327
         width, height = 600, 600
@@ -139,17 +139,17 @@ class Demo:
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
-        g.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        g1.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
         # resets the life simulation to a default state, uses a callback function
-        w1.button('life_reset', g.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        w1.button('life_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
-        self.Toggle_life = w1.toggle('run', g.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        self.Toggle_life = w1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = w1.window('Mandelbrot', pos, (width, height))
         self.mandel_canvas = w1.canvas('mandel', mandel_overall)
-        g.hide_widgets(self.mandel_canvas)
+        g1.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
         cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
@@ -157,28 +157,29 @@ class Demo:
         self.canvas2 = w1.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
         self.canvas3 = w1.canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
         self.canvas4 = w1.canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
-        g.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        g1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
-        g.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        w1.button('mandel_reset', g.gridded(0, 0), ButtonStyle.Angle, 'Reset')
-        w1.button('iterative', g.gridded(1, 0), ButtonStyle.Round, 'Iterative')
-        w1.button('recursive', g.gridded(2, 0), ButtonStyle.Round, 'Recursive')
-        w1.button('1split', g.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
-        w1.button('4split', g.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        g1.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
+        w1.button('mandel_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        w1.button('iterative', g1.gridded(1, 0), ButtonStyle.Round, 'Iterative')
+        w1.button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
+        w1.button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
+        w1.button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
         # set cursor image
-        g.set_cursor((1, 1), 'cursor.png')
-        self.gui1 = g
+        g1.set_cursor((1, 1), 'cursor.png')
+        self.gui1 = g1
         # -----------------------
         # begin gui2
-        self.gui2 = GuiManager(self.screen, fonts)
-        self.scheduler2 = self.gui2.scheduler
-        w2 = self.gui2.widget_dispatcher
-        self.gui2.bitmap_factory.set_font('normal')
-        self.gui2.set_pristine('backdrop.jpg')
+        g2 = GuiManager(self.screen, fonts)
+        self.s2 = g2.scheduler
+        w2 = g2.widget_dispatcher
+        g2.bitmap_factory.set_font('normal')
+        g2.set_pristine('backdrop.jpg')
         w2.button('return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
         w2.window('GUI 2', (50, 150), (300, 300))
         # set cursor for gui2
-        self.gui2.set_cursor((1, 1), 'cursor.png')
+        g2.set_cursor((1, 1), 'cursor.png')
+        self.gui2 = g2
         # reset the state of the simulation
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
@@ -190,7 +191,7 @@ class Demo:
         # circle positions
         self.positions = []
         # make bitmaps for circles
-        factory = g.bitmap_factory
+        factory = g1.bitmap_factory
         circle_bitmap_a = factory.draw_radio_bitmap(self.size, colours['light'], colours['none'])
         circle_bitmap_b = factory.draw_radio_bitmap(self.size, colours['medium'], colours['none'])
         # make position list for circles
@@ -200,15 +201,15 @@ class Demo:
             dx = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
-        self.running_scheduler = self.scheduler1
+        self.running_scheduler = self.s1
         self.running = True
 
     def run(self):
         while True:
-            if self.running_scheduler == self.scheduler1:
-                self.scheduler1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
-            elif self.running_scheduler == self.scheduler2:
-                self.scheduler2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
+            if self.running_scheduler == self.s1:
+                self.s1.start_scheduler(self.preamble1, self.handle_events1, self.postamble1)
+            elif self.running_scheduler == self.s2:
+                self.s2.start_scheduler(self.preamble2, self.handle_events2, self.postamble2)
 
     def preamble1(self):
         # restore the pristine area to the screen before drawing
@@ -233,29 +234,29 @@ class Demo:
                 self.running = False
             elif event.widget_id == 'gui2':
                 # switch to gui2
-                self.running_scheduler = self.scheduler1.interrupt(self.scheduler2)
+                self.running_scheduler = self.s1.interrupt(self.s2)
             elif event.widget_id == 'life_reset':
                 self.life_reset()
             elif event.widget_id == 'mandel_reset':
-                self.scheduler1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+                self.s1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
                 self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                 self.gui1.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
-            elif not self.scheduler1.tasks_active():
+            elif not self.s1.tasks_active():
                 if event.widget_id == 'iterative':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.scheduler1.add_task('iter', self.mandel_iterative)
+                    self.s1.add_task('iter', self.mandel_iterative)
                 elif event.widget_id == 'recursive':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.scheduler1.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
+                    self.s1.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
                 elif event.widget_id == '1split':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
@@ -263,10 +264,10 @@ class Demo:
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     hx, hy = w // 2, h // 2
-                    self.scheduler1.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler1.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler1.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
-                    self.scheduler1.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.s1.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
+                    self.s1.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
+                    self.s1.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.s1.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
                 elif event.widget_id == '4split':
                     self.gui1.hide_widgets(self.mandel_canvas)
                     self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -275,10 +276,10 @@ class Demo:
                     w1 = w1 // 2
                     h1 = h1 // 2
                     self.mandel_setup(w1, h1)
-                    self.scheduler1.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
-                    self.scheduler1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
-                    self.scheduler1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
-                    self.scheduler1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
+                    self.s1.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
+                    self.s1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
+                    self.s1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
+                    self.s1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
         elif event.type == Event.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
@@ -323,7 +324,7 @@ class Demo:
         if event.type == Event.Widget:
             if event.widget_id == 'return':
                 # return button was clicked
-                self.running_scheduler = self.scheduler2.interrupt(self.scheduler1)
+                self.running_scheduler = self.s2.interrupt(self.s1)
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed
@@ -466,7 +467,7 @@ class Demo:
         for y in range(self.mandel_height):
             for x in range(self.mandel_width):
                 self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y)))
-                if self.scheduler1.task_time(id):
+                if self.s1.task_time(id):
                     yield
 
     def mandel_recursive(self, id, item):
@@ -490,16 +491,16 @@ class Demo:
         if w > 2 or h > 2:
             half_x = (w + (w % 2)) // 2
             half_y = (h + (h % 2)) // 2
-            if self.scheduler1.task_time(id):
+            if self.s1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x, y, half_x, half_y), canvas))
-            if self.scheduler1.task_time(id):
+            if self.s1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x + half_x, y, half_x, half_y), canvas))
-            if self.scheduler1.task_time(id):
+            if self.s1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x + half_x, y + half_y, half_x, half_y), canvas))
-            if self.scheduler1.task_time(id):
+            if self.s1.task_time(id):
                 yield
             yield from self.mandel_recursive(id, (Rect(x, y + half_y, half_x, half_y), canvas))
             return
