@@ -120,7 +120,14 @@ class Scheduler:
 
     def send_message(self, id: Hashable, parameters: object) -> None:
         # send either a single value or a collection like a tuple or list to the method id
-        cast(Callable[[object], None], self.tasks[id].message_method)(parameters)
+        task = self.tasks.get(id)
+        if task is None:
+            from .guimanager import GuiError
+            raise GuiError(f'unknown task id: {id}')
+        if task.message_method is None:
+            from .guimanager import GuiError
+            raise GuiError(f'task "{id}" has no message handler')
+        task.message_method(parameters)
 
     def remove_all(self) -> None:
         self._tasks_ready.clear()

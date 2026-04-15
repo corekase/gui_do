@@ -184,6 +184,15 @@ class Scrollbar(Frame):
 
     def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
         # set scrollbar data, all variables are in total units
+        from ..utility.guimanager import GuiError
+        if total_range <= 0:
+            raise GuiError(f'total_range must be > 0, got {total_range}')
+        if bar_size <= 0 or bar_size > total_range:
+            raise GuiError(f'bar_size must be in 1..{total_range}, got {bar_size}')
+        if start_pos < 0 or start_pos > (total_range - bar_size):
+            raise GuiError(f'start_pos must be in 0..{total_range - bar_size}, got {start_pos}')
+        if inc_size <= 0:
+            raise GuiError(f'inc_size must be > 0, got {inc_size}')
         self._total_range, self._start_pos, self._bar_size, self._inc_size = total_range, start_pos, bar_size, inc_size
 
     def _handle_area(self) -> Rect:

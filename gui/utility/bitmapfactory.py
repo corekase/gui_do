@@ -127,7 +127,8 @@ class BitmapFactory:
             from .guimanager import GuiError
             raise GuiError('style not implemented')
 
-    def _draw_box_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+    def _draw_box_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        text = '' if text is None else text
         _, _, w, h = rect
         saved: List[Surface] = []
         text_bitmap = self.render_text(text, colours['text'], True)
@@ -181,13 +182,15 @@ class BitmapFactory:
         # unlock surface
         surface.unlock()
 
-    def _draw_radio_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+    def _draw_radio_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        text = '' if text is None else text
         idle_bitmap, idle_rect = self._draw_radio_style_bitmap(rect, text, colours['light'], colours['dark'])
         hover_bitmap, _ = self._draw_radio_style_bitmap(rect, text, colours['full'], colours['none'])
         armed_bitmap, _ = self._draw_radio_style_bitmap(rect, text, colours['highlight'], colours['dark'])
         return (idle_bitmap, hover_bitmap, armed_bitmap), idle_rect
 
-    def _draw_radio_style_bitmap(self, rect: Rect, text: str, col1: Tuple[int, int, int], col2: Tuple[int, int, int]) -> Tuple[Surface, Rect]:
+    def _draw_radio_style_bitmap(self, rect: Rect, text: Optional[str], col1: Tuple[int, int, int], col2: Tuple[int, int, int]) -> Tuple[Surface, Rect]:
+        text = '' if text is None else text
         text_bitmap = self.render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         gutter = int(text_height * 0.1)
@@ -212,13 +215,15 @@ class BitmapFactory:
         radio_bitmap = smoothscale(radio_bitmap, (size, size))
         return radio_bitmap
 
-    def _draw_check_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+    def _draw_check_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        text = '' if text is None else text
         idle_bitmap, hit_rect = self._draw_check_style_bitmap(rect, 0, text)
         hover_bitmap, _ = self._draw_check_style_bitmap(rect, 1, text)
         armed_bitmap, _ = self._draw_check_style_bitmap(rect, 2, text)
         return (idle_bitmap, hover_bitmap, armed_bitmap), hit_rect
 
-    def _draw_check_style_bitmap(self, rect: Rect, state: int, text: str) -> Tuple[Surface, Rect]:
+    def _draw_check_style_bitmap(self, rect: Rect, state: int, text: Optional[str]) -> Tuple[Surface, Rect]:
+        text = '' if text is None else text
         text_bitmap = self.render_text(text, colours['text'], True)
         _, _, text_width, text_height = text_bitmap.get_rect()
         check_bitmap = self._draw_check_bitmap(state, text_height)
@@ -251,7 +256,8 @@ class BitmapFactory:
             check_bitmap.blit(glyph, (0, 0))
         return check_bitmap
 
-    def _draw_rounded_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+    def _draw_rounded_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        text = '' if text is None else text
         _, _, w, h = rect
         saved: List[Surface] = []
         text_bitmap = self.render_text(text, colours['text'], True)
@@ -295,7 +301,8 @@ class BitmapFactory:
         line(surface, border, (w - 1, radius), (w - 1, h - radius), 1)
         self._flood_fill(surface, (w // 2, h // 2), background)
 
-    def _draw_angle_style_bitmaps(self, text: str, rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+    def _draw_angle_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        text = '' if text is None else text
         _, _, w, h = rect
         saved: List[Surface] = []
         text_bitmap = self.render_text(text, colours['text'], True)

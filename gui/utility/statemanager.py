@@ -39,17 +39,19 @@ class StateManager:
         Args:
             name: Name of the context to switch to.
         """
-        if name in self._contexts:
-            old_gui: Optional[GuiManager] = self.get_active_gui()
-            # Preserve mouse position from old context if switching from an existing one
-            if old_gui is not None:
-                mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
-            else:
-                mouse_pos = (0, 0)
-            self._active_context_name = name
-            new_gui: Optional[GuiManager] = self.get_active_gui()
-            if new_gui:
-                new_gui.set_mouse_pos(mouse_pos, True)
+        if name not in self._contexts:
+            raise KeyError(f'unknown context: {name}')
+
+        old_gui: Optional[GuiManager] = self.get_active_gui()
+        # Preserve mouse position from old context if switching from an existing one
+        if old_gui is not None:
+            mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
+        else:
+            mouse_pos = (0, 0)
+        self._active_context_name = name
+        new_gui: Optional[GuiManager] = self.get_active_gui()
+        if new_gui:
+            new_gui.set_mouse_pos(mouse_pos, True)
 
     def get_active_context(self) -> Optional[ContextType]:
         """Get the currently active context tuple.

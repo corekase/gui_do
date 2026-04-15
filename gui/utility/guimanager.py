@@ -243,7 +243,8 @@ class GuiManager:
         return self.add(Window(self, title, pos, size, backdrop))
 
     def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
-        return self.add(Button(self, id, rect, style, text, button_callback, skip_factory))
+        safe_text = '' if text is None else text
+        return self.add(Button(self, id, rect, style, safe_text, button_callback, skip_factory))
 
     def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> Label:
         return self.add(Label(self, position, text, shadow))
