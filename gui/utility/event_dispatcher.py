@@ -24,6 +24,7 @@ class EventDispatcher:
         return False
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
+        self.gui._resolve_locking_state()
         # update internal mouse position
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)

@@ -469,11 +469,35 @@ class GuiManager:
 
     @current_widget.setter
     def current_widget(self, value):
+        if value is not None:
+            if not isinstance(value, Widget) or not self._is_registered_object(value):
+                value = None
         current = self._resolve_current_widget()
         if current != value:
             if current is not None:
                 current.leave()
             self._current_widget = value
+
+    def _resolve_locking_state(self) -> Optional[Widget]:
+        if self.locking_object is None:
+            if self.mouse_locked and self.lock_area_rect is None:
+                self.mouse_locked = False
+            return None
+        if not isinstance(self.locking_object, Widget):
+            self.locking_object = None
+            self.mouse_locked = False
+            self.lock_area_rect = None
+            return None
+        if not self._is_registered_object(self.locking_object):
+            self.locking_object = None
+            self.mouse_locked = False
+            self.lock_area_rect = None
+            return None
+        if self.lock_area_rect is None:
+            self.locking_object = None
+            self.mouse_locked = False
+            return None
+        return self.locking_object
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         # Delegate to the property setter
@@ -482,6 +506,8 @@ class GuiManager:
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         # lock area rect is in screen coordinates
         if area is not None:
+            if not isinstance(area, Rect):
+                raise GuiError('lock area must be a Rect')
             if locking_object is None:
                 raise GuiError('locking_object is required when setting a lock area')
             if not isinstance(locking_object, Widget):
@@ -503,6 +529,7 @@ class GuiManager:
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         # keep the position within the lock area rect
+        self._resolve_locking_state()
         if self.lock_area_rect is not None:
             x, y = position
             max_x = self.lock_area_rect.right - 1
