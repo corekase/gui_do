@@ -147,6 +147,8 @@ class GuiManager:
             # make this object the destination for gui add commands
             self._active_object = gui_object
         elif gui_object.ContainerKind == ContainerKind.Widget:
+            if not isinstance(gui_object.id, str) or gui_object.id == '':
+                raise GuiError('widget id must be a non-empty string')
             if self._widget_id_exists(gui_object.id, gui_object):
                 raise GuiError(f'duplicate widget id: {gui_object.id}')
             # callback
