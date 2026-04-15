@@ -173,6 +173,8 @@ class Scheduler:
 
     def resume_all(self) -> None:
         for id in self._tasks_suspended:
+            if id not in self.tasks:
+                continue
             self._tasks_ready.append(id)
             self._tasks_ready_set.add(id)
         self._tasks_suspended.clear()
@@ -196,10 +198,12 @@ class Scheduler:
         for id in tasks:
             # move id from suspended list to end of queued list
             if id in self._tasks_suspended_set:
-                self._tasks_suspended.remove(id)
+                if id in self._tasks_suspended:
+                    self._tasks_suspended.remove(id)
                 self._tasks_suspended_set.discard(id)
-                self._tasks_ready.append(id)
-                self._tasks_ready_set.add(id)
+                if id in self.tasks:
+                    self._tasks_ready.append(id)
+                    self._tasks_ready_set.add(id)
 
     def read_suspended(self) -> List[Hashable]:
         # return a list of suspended task id's
