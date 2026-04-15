@@ -152,6 +152,12 @@ class GuiManager:
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
+    def _describe_incoming_widget_container(self) -> str:
+        if self._active_object is None or self._active_object not in self.windows:
+            return 'screen'
+        window = self._active_object
+        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
 
@@ -183,7 +189,7 @@ class GuiManager:
                 raise GuiError(
                     f'duplicate widget id: {gui_object.id}; '
                     f'incoming={self._describe_gui_object(gui_object)} '
-                    f'on {self._describe_widget_container(gui_object)}; '
+                    f'on {self._describe_incoming_widget_container()}; '
                     f'conflict={self._describe_gui_object(conflict)} '
                     f'on {self._describe_widget_container(conflict)}'
                 )
