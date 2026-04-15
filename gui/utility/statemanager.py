@@ -2,10 +2,6 @@ from typing import Dict, Any, Tuple, Optional, Callable
 from ..guimanager import GuiManager
 
 class StateManager:
-    contexts: Dict[str, Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]]
-    active_context_name: Optional[str]
-    is_running: bool
-
     def __init__(self) -> None:
         self.contexts: Dict[str, Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = {}
         self.active_context_name: Optional[str] = None
