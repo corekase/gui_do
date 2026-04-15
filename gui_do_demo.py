@@ -299,7 +299,7 @@ class Demo:
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.s1.add_task('recu', self.mandel_recursive, (self.mandel_canvas_rect, self.mandel_canvas.canvas))
+                    self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
                 elif event.widget_id == '1split':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
@@ -307,10 +307,10 @@ class Demo:
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     hx, hy = w // 2, h // 2
-                    self.s1.add_task('1', self.mandel_recursive, (Rect(0, 0, hx, hy), self.mandel_canvas.canvas))
-                    self.s1.add_task('2', self.mandel_recursive, (Rect(hx, y, hx, hy), self.mandel_canvas.canvas))
-                    self.s1.add_task('3', self.mandel_recursive, (Rect(x, hy, hx, hy), self.mandel_canvas.canvas))
-                    self.s1.add_task('4', self.mandel_recursive, (Rect(hx, hy, hx, hy), self.mandel_canvas.canvas))
+                    self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy))
+                    self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy))
+                    self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy))
+                    self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy))
                 elif event.widget_id == '4split':
                     self.gui1.hide_widgets(self.mandel_canvas)
                     self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -319,10 +319,10 @@ class Demo:
                     w1 = w1 // 2
                     h1 = h1 // 2
                     self.mandel_setup(w1, h1)
-                    self.s1.add_task('can1', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas1.canvas))
-                    self.s1.add_task('can2', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas2.canvas))
-                    self.s1.add_task('can3', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas3.canvas))
-                    self.s1.add_task('can4', self.mandel_recursive, (Rect(0, 0, w1, h1), self.canvas4.canvas))
+                    self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1))
+                    self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1))
+                    self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1))
+                    self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1))
         elif event.type == Event.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
@@ -341,8 +341,16 @@ class Demo:
                 # escape key pressed
                 self.state_manager.set_running(False)
         elif event.type == Event.Task:
+            task_id = getattr(event, 'id', None)
+            if task_id is None:
+                return
             if getattr(event, 'error', None):
-                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
+                print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
+                return
+            if task_id in {'iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4'}:
+                result = self.s1.pop_result(task_id)
+                if result is not None:
+                    self.apply_mandel_result(task_id, result)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
             self.state_manager.set_running(False)
@@ -515,56 +523,101 @@ class Demo:
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
     def mandel_iterative(self, id):
-        for y in range(self.mandel_height):
-            for x in range(self.mandel_width):
-                self.mandel_canvas.canvas.set_at((x, y), self.col(self.pixel(x, y)))
-                if self.s1.task_time(id):
-                    yield
+        rect = Rect(0, 0, self.mandel_width, self.mandel_height)
+        return self._compute_iterative_region(rect)
 
     def mandel_recursive(self, id, item):
-        x, y, w, h = item[0]
-        canvas = item[1]
-        top_left = self.pixel(x, y)
-        accuracy = 2
-        not_hit = True
-        for x_test in range(0, w, accuracy):
-            if (self.pixel(x + x_test, y) != top_left) or (self.pixel(x + x_test, y + h - 1) != top_left):
-                not_hit = False
-                break
-        if not_hit:
-            for y_test in range(0, h, accuracy):
-                if (self.pixel(x, y + y_test) != top_left) or (self.pixel(x + w - 1, y + y_test) != top_left):
+        x, y, w, h = item
+        values = [0] * (w * h)
+
+        def fill_region(x_pos, y_pos, width, height, value):
+            for y_off in range(height):
+                row_start = ((y_pos - y) + y_off) * w + (x_pos - x)
+                values[row_start:row_start + width] = [value] * width
+
+        def set_pixel(x_pos, y_pos, value):
+            values[(y_pos - y) * w + (x_pos - x)] = value
+
+        def recursive_region(x_pos, y_pos, width, height):
+            if width <= 0 or height <= 0:
+                return
+
+            top_left = self.pixel(x_pos, y_pos)
+            accuracy = 2
+            not_hit = True
+            for x_test in range(0, width, accuracy):
+                if (self.pixel(x_pos + x_test, y_pos) != top_left) or (self.pixel(x_pos + x_test, y_pos + height - 1) != top_left):
                     not_hit = False
                     break
-        if not_hit:
-            canvas.fill(self.col(top_left), Rect(x, y, w, h))
-            return
-        if w > 2 or h > 2:
-            half_x = (w + (w % 2)) // 2
-            half_y = (h + (h % 2)) // 2
-            if self.s1.task_time(id):
-                yield
-            yield from self.mandel_recursive(id, (Rect(x, y, half_x, half_y), canvas))
-            if self.s1.task_time(id):
-                yield
-            yield from self.mandel_recursive(id, (Rect(x + half_x, y, half_x, half_y), canvas))
-            if self.s1.task_time(id):
-                yield
-            yield from self.mandel_recursive(id, (Rect(x + half_x, y + half_y, half_x, half_y), canvas))
-            if self.s1.task_time(id):
-                yield
-            yield from self.mandel_recursive(id, (Rect(x, y + half_y, half_x, half_y), canvas))
-            return
+            if not_hit:
+                for y_test in range(0, height, accuracy):
+                    if (self.pixel(x_pos, y_pos + y_test) != top_left) or (self.pixel(x_pos + width - 1, y_pos + y_test) != top_left):
+                        not_hit = False
+                        break
+
+            if not_hit:
+                fill_region(x_pos, y_pos, width, height, top_left)
+                return
+
+            if width > 2 or height > 2:
+                half_x = (width + (width % 2)) // 2
+                half_y = (height + (height % 2)) // 2
+                recursive_region(x_pos, y_pos, half_x, half_y)
+                recursive_region(x_pos + half_x, y_pos, width - half_x, half_y)
+                recursive_region(x_pos + half_x, y_pos + half_y, width - half_x, height - half_y)
+                recursive_region(x_pos, y_pos + half_y, half_x, height - half_y)
+                return
+
+            right = x_pos + width - 1
+            bottom = y_pos + height - 1
+            top_right = self.pixel(right, y_pos)
+            bottom_left = self.pixel(x_pos, bottom)
+            bottom_right = self.pixel(right, bottom)
+            set_pixel(x_pos, y_pos, top_left)
+            if width > 1:
+                set_pixel(x_pos + 1, y_pos, top_right)
+            if height > 1:
+                set_pixel(x_pos, y_pos + 1, bottom_left)
+            if width > 1 and height > 1:
+                set_pixel(x_pos + 1, y_pos + 1, bottom_right)
+
+        recursive_region(x, y, w, h)
+        return (x, y, w, h, values)
+
+    def _compute_iterative_region(self, rect):
+        x, y, w, h = rect
+        values = [0] * (w * h)
+        idx = 0
+        for y_pos in range(y, y + h):
+            for x_pos in range(x, x + w):
+                values[idx] = self.pixel(x_pos, y_pos)
+                idx += 1
+        return (x, y, w, h, values)
+
+    def apply_mandel_result(self, task_id, result):
+        x, y, w, h, values = result
+        if task_id in {'iter', 'recu', '1', '2', '3', '4'}:
+            canvas = self.mandel_canvas.canvas
+        elif task_id == 'can1':
+            canvas = self.canvas1.canvas
+        elif task_id == 'can2':
+            canvas = self.canvas2.canvas
+        elif task_id == 'can3':
+            canvas = self.canvas3.canvas
+        elif task_id == 'can4':
+            canvas = self.canvas4.canvas
         else:
-            r, b = item[0].right - 1, item[0].bottom - 1
-            top_right, bottom_left, bottom_right = self.pixel(r, y), self.pixel(x, b), self.pixel(r, b)
-            canvas.lock()
-            canvas.set_at((x, y), self.col(top_left))
-            canvas.set_at((x + 1, y), self.col(top_right))
-            canvas.set_at((x, y + 1), self.col(bottom_left))
-            canvas.set_at((x + 1, y + 1), self.col(bottom_right))
-            canvas.unlock()
             return
+
+        idx = 0
+        canvas.lock()
+        try:
+            for y_pos in range(y, y + h):
+                for x_pos in range(x, x + w):
+                    canvas.set_at((x_pos, y_pos), self.col(values[idx]))
+                    idx += 1
+        finally:
+            canvas.unlock()
 
     def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale

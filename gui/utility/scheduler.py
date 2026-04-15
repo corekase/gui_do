@@ -1,7 +1,13 @@
-import time
+import asyncio
 from collections import deque
-from typing import Callable, Deque, Dict, Generator, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, cast
+from concurrent.futures import Future, ThreadPoolExecutor
+import inspect
+import os
+import threading
+from dataclasses import dataclass
 from enum import Enum
+from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, Any
+
 from .constants import Event
 
 if TYPE_CHECKING:
@@ -9,12 +15,14 @@ if TYPE_CHECKING:
 
 TaskKind = Enum('TaskKind', ['Finished', 'Failed'])
 
+
 class Interval:
     def __init__(self, duration: float, callback: Callable[[], None]) -> None:
         self.timer: float = 0
         self.previous_time: Optional[float] = None
         self.duration: float = duration
         self.callback: Callable[[], None] = callback
+
 
 class Timers:
     def __init__(self) -> None:
@@ -44,12 +52,10 @@ class Timers:
             del self.timers[id]
 
     def timer_updates(self, now_time: int) -> None:
-        # iterate over a list copy of the keys because timers may be removed
-        # during the loop
+        # Iterate over a key copy because callbacks may remove timers.
         for id in list(self.timers.keys()):
             interval = self.timers.get(id)
             if interval is None:
-                # timer was removed during the loop, so skip it
                 continue
             if interval.previous_time is None:
                 interval.previous_time = now_time
@@ -64,16 +70,14 @@ class Timers:
                     if interval is None:
                         break
 
+
+@dataclass
 class Task:
-    def __init__(self, id: Hashable, interval: float) -> None:
-        self.id: Hashable = id
-        # times for yielding cooperative control
-        self.time_start: float = 0.0
-        self.time_duration: float = interval
-        # pointer for a "receive information" method, takes one parameter (which can anything)
-        # gives coroutine operations while only being a generator
-        self.message_method: Optional[Callable[[object], None]] = None
-        self.task_logic: Optional[Generator[object, None, None]] = None
+    id: Hashable
+    run_callable: Callable[[], object]
+    message_method: Optional[Callable[[object], None]] = None
+    future: Optional[Future[object]] = None
+
 
 class TaskEvent:
     # an event object to be returned which includes pygame event information and gui_do information
@@ -87,29 +91,35 @@ class TaskEvent:
         # optional error details for failed tasks
         self.error: Optional[str] = None
 
+
 class Scheduler:
+    """Concurrent task scheduler.
+
+    This scheduler runs tasks using worker threads and supports callables,
+    coroutine functions, and callables that return coroutine objects.
+
+    Cooperative generator scheduling has been removed.
+    """
+
     def __init__(self, gui: "GuiManager") -> None:
-        self.tasks: Dict[Hashable, Task] = {}
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
-        # queued and finished lists
-        self._tasks_ready: Deque[Hashable] = deque()
-        self._tasks_processed: Deque[Hashable] = deque()
-        self._tasks_suspended: List[Hashable] = []
+
+        self.tasks: Dict[Hashable, Task] = {}
+
+        self._pending: Deque[Hashable] = deque()
+        self._pending_set: Set[Hashable] = set()
+        self._suspended: List[Hashable] = []
+        self._suspended_set: Set[Hashable] = set()
+        self._running: Set[Hashable] = set()
+
         self._tasks_finished: List[Hashable] = []
         self._tasks_failed: List[Tuple[Hashable, str]] = []
-        self._tasks_ready_set: Set[Hashable] = set()
-        self._tasks_processed_set: Set[Hashable] = set()
-        self._tasks_suspended_set: Set[Hashable] = set()
+        self._task_results: Dict[Hashable, object] = {}
 
-    def _prune_stale_task_ids(self) -> None:
-        valid_ids = set(self.tasks.keys())
-        self._tasks_ready = deque(id for id in self._tasks_ready if id in valid_ids)
-        self._tasks_processed = deque(id for id in self._tasks_processed if id in valid_ids)
-        self._tasks_suspended = [id for id in self._tasks_suspended if id in valid_ids]
-        self._tasks_ready_set = set(self._tasks_ready)
-        self._tasks_processed_set = set(self._tasks_processed)
-        self._tasks_suspended_set = set(self._tasks_suspended)
+        self._lock = threading.RLock()
+        self._max_workers: int = max(1, os.cpu_count() or 4)
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=self._max_workers)
 
     def _validate_task_id(self, id: Hashable) -> None:
         try:
@@ -118,17 +128,40 @@ class Scheduler:
             from .guimanager import GuiError
             raise GuiError(f'task id must be hashable: {id!r}') from exc
 
-    def _remove_from_ready(self, id: Hashable) -> None:
-        if id in self._tasks_ready_set:
-            if id in self._tasks_ready:
-                self._tasks_ready.remove(id)
-            self._tasks_ready_set.discard(id)
+    def _build_task_callable(self, id: Hashable, logic: Callable[..., object], parameters: Optional[object]) -> Callable[[], object]:
+        def run() -> object:
+            if parameters is None:
+                outcome = logic(id)
+            else:
+                outcome = logic(id, parameters)
 
-    def _remove_from_processed(self, id: Hashable) -> None:
-        if id in self._tasks_processed_set:
-            if id in self._tasks_processed:
-                self._tasks_processed.remove(id)
-            self._tasks_processed_set.discard(id)
+            if inspect.isawaitable(outcome):
+                return asyncio.run(outcome)
+            return outcome
+
+        return run
+
+    def _remove_from_pending(self, id: Hashable) -> None:
+        if id in self._pending_set:
+            if id in self._pending:
+                self._pending.remove(id)
+            self._pending_set.discard(id)
+
+    def _remove_from_suspended(self, id: Hashable) -> None:
+        if id in self._suspended_set:
+            if id in self._suspended:
+                self._suspended.remove(id)
+            self._suspended_set.discard(id)
+
+    def _remove_task_internal(self, id: Hashable) -> None:
+        self._remove_from_pending(id)
+        self._remove_from_suspended(id)
+        task = self.tasks.pop(id, None)
+        self._task_results.pop(id, None)
+        if id in self._running:
+            self._running.discard(id)
+            if task is not None and task.future is not None:
+                task.future.cancel()
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
         if operation not in (TaskKind.Finished, TaskKind.Failed):
@@ -143,10 +176,15 @@ class Scheduler:
         elif operation == TaskKind.Failed:
             task_event.id = item1
             task_event.error = '' if item2 is None else str(item2)
-        # elif more operations
         return task_event
 
-    def add_task(self, id: Hashable, logic: Callable[..., Generator[object, None, None]], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None:
+    def add_task(
+        self,
+        id: Hashable,
+        logic: Callable[..., object],
+        parameters: Optional[object] = None,
+        message_method: Optional[Callable[[object], None]] = None,
+    ) -> None:
         self._validate_task_id(id)
         if not callable(logic):
             from .guimanager import GuiError
@@ -154,36 +192,20 @@ class Scheduler:
         if message_method is not None and not callable(message_method):
             from .guimanager import GuiError
             raise GuiError('task message_method must be callable when provided')
-        # Replace existing task with same id to avoid duplicate queue entries.
-        self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
-        self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
-        self._remove_from_ready(id)
-        self._remove_from_processed(id)
-        if id in self._tasks_suspended_set:
-            self._tasks_suspended = [task_id for task_id in self._tasks_suspended if task_id != id]
-            self._tasks_suspended_set.discard(id)
-        if id in self.tasks:
-            self.tasks.pop(id, None)
-        task = Task(id, 0.01)
-        try:
-            if parameters is None:
-                task.task_logic = logic(id)
-            else:
-                task.task_logic = logic(id, parameters)
-        except Exception as exc:
-            from .guimanager import GuiError
-            raise GuiError(f'failed to create task logic for "{id}": {type(exc).__name__}: {exc}') from exc
-        if task.task_logic is None or not hasattr(task.task_logic, '__next__'):
-            from .guimanager import GuiError
-            raise GuiError(f'task logic for "{id}" must be a generator')
-        task.message_method = message_method
-        self.tasks[id] = task
-        self._tasks_ready.append(id)
-        self._tasks_ready_set.add(id)
+
+        with self._lock:
+            self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
+            self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
+            if id in self.tasks or id in self._running or id in self._pending_set or id in self._suspended_set:
+                self._remove_task_internal(id)
+
+            task_callable = self._build_task_callable(id, logic, parameters)
+            self.tasks[id] = Task(id=id, run_callable=task_callable, message_method=message_method)
+            self._pending.append(id)
+            self._pending_set.add(id)
 
     def send_message(self, id: Hashable, parameters: object) -> None:
         self._validate_task_id(id)
-        # send either a single value or a collection like a tuple or list to the method id
         task = self.tasks.get(id)
         if task is None:
             from .guimanager import GuiError
@@ -197,213 +219,175 @@ class Scheduler:
         task.message_method(parameters)
 
     def remove_all(self) -> None:
-        self._tasks_ready.clear()
-        self._tasks_processed.clear()
-        self._tasks_suspended.clear()
-        self._tasks_finished.clear()
-        self._tasks_failed.clear()
-        self._tasks_ready_set.clear()
-        self._tasks_processed_set.clear()
-        self._tasks_suspended_set.clear()
-        self.tasks = {}
+        with self._lock:
+            ids = list(self.tasks.keys())
+            for id in ids:
+                self._remove_task_internal(id)
+            self._pending.clear()
+            self._pending_set.clear()
+            self._suspended.clear()
+            self._suspended_set.clear()
+            self._running.clear()
+            self._tasks_finished.clear()
+            self._tasks_failed.clear()
+            self._task_results.clear()
 
     def remove_tasks(self, *tasks: Hashable) -> None:
-        for id in tasks:
-            self._validate_task_id(id)
-        remove_set = set(tasks)
-        self._tasks_ready = deque(id for id in self._tasks_ready if id not in remove_set)
-        self._tasks_processed = deque(id for id in self._tasks_processed if id not in remove_set)
-        self._tasks_ready_set = set(self._tasks_ready)
-        self._tasks_processed_set = set(self._tasks_processed)
-        self._tasks_suspended = [id for id in self._tasks_suspended if id not in remove_set]
-        self._tasks_suspended_set = set(self._tasks_suspended)
-        self._tasks_finished = [id for id in self._tasks_finished if id not in remove_set]
-        self._tasks_failed = [item for item in self._tasks_failed if item[0] not in remove_set]
-        for id in tasks:
-            self.tasks.pop(id, None)
+        with self._lock:
+            for id in tasks:
+                self._validate_task_id(id)
+                self._remove_task_internal(id)
+            removed = set(tasks)
+            self._tasks_finished = [id for id in self._tasks_finished if id not in removed]
+            self._tasks_failed = [item for item in self._tasks_failed if item[0] not in removed]
 
     def suspend_all(self) -> None:
-        self._prune_stale_task_ids()
-        ready = list(self._tasks_ready)
-        processed = list(self._tasks_processed)
-        for id in ready + processed:
-            if id not in self._tasks_suspended_set:
-                self._tasks_suspended.append(id)
-                self._tasks_suspended_set.add(id)
-        self._tasks_ready.clear()
-        self._tasks_processed.clear()
-        self._tasks_ready_set.clear()
-        self._tasks_processed_set.clear()
+        with self._lock:
+            for id in list(self._pending):
+                if id not in self._suspended_set:
+                    self._suspended.append(id)
+                    self._suspended_set.add(id)
+            self._pending.clear()
+            self._pending_set.clear()
 
     def resume_all(self) -> None:
-        self._prune_stale_task_ids()
-        for id in self._tasks_suspended:
-            if id not in self.tasks:
-                continue
-            if id not in self._tasks_ready_set:
-                self._tasks_ready.append(id)
-                self._tasks_ready_set.add(id)
-        self._tasks_suspended.clear()
-        self._tasks_suspended_set.clear()
+        with self._lock:
+            for id in list(self._suspended):
+                if id in self.tasks and id not in self._pending_set:
+                    self._pending.append(id)
+                    self._pending_set.add(id)
+            self._suspended.clear()
+            self._suspended_set.clear()
 
     def suspend_tasks(self, *tasks: Hashable) -> None:
-        self._prune_stale_task_ids()
-        for id in tasks:
-            self._validate_task_id(id)
-            # move id to suspended list from either the ready or processed lists
-            if id in self._tasks_ready_set:
-                self._remove_from_ready(id)
-                if id not in self._tasks_suspended_set:
-                    self._tasks_suspended.append(id)
-                    self._tasks_suspended_set.add(id)
-            elif id in self._tasks_processed_set:
-                self._remove_from_processed(id)
-                if id not in self._tasks_suspended_set:
-                    self._tasks_suspended.append(id)
-                    self._tasks_suspended_set.add(id)
+        with self._lock:
+            for id in tasks:
+                self._validate_task_id(id)
+                if id in self._pending_set:
+                    self._remove_from_pending(id)
+                    if id not in self._suspended_set:
+                        self._suspended.append(id)
+                        self._suspended_set.add(id)
 
     def resume_tasks(self, *tasks: Hashable) -> None:
-        self._prune_stale_task_ids()
-        for id in tasks:
-            self._validate_task_id(id)
-            # move id from suspended list to end of queued list
-            if id in self._tasks_suspended_set:
-                if id in self._tasks_suspended:
-                    self._tasks_suspended.remove(id)
-                self._tasks_suspended_set.discard(id)
-                if id in self.tasks:
-                    if id not in self._tasks_ready_set:
-                        self._tasks_ready.append(id)
-                        self._tasks_ready_set.add(id)
+        with self._lock:
+            for id in tasks:
+                self._validate_task_id(id)
+                if id in self._suspended_set:
+                    self._remove_from_suspended(id)
+                    if id in self.tasks and id not in self._pending_set:
+                        self._pending.append(id)
+                        self._pending_set.add(id)
 
     def read_suspended(self) -> List[Hashable]:
-        # return a list of suspended task id's
-        self._prune_stale_task_ids()
-        return self._tasks_suspended.copy()
+        with self._lock:
+            return self._suspended.copy()
 
     def read_suspended_len(self) -> int:
-        # return the number of suspended tasks
-        self._prune_stale_task_ids()
-        return len(self._tasks_suspended)
+        with self._lock:
+            return len(self._suspended)
 
     def task_time(self, id: Hashable) -> bool:
         self._validate_task_id(id)
-        task = self.tasks.get(id)
-        if task is None:
-            from .guimanager import GuiError
-            raise GuiError(f'unknown task id: {id}')
-        if (time.time() - task.time_start) >= task.time_duration:
-            return True
-        return False
+        from .guimanager import GuiError
+        raise GuiError('task_time is no longer supported because cooperative scheduling was removed')
 
     def tasks_active(self) -> bool:
-        self._prune_stale_task_ids()
-        for task_id in self._tasks_ready_set:
-            if task_id in self.tasks:
-                return True
-        for task_id in self._tasks_processed_set:
-            if task_id in self.tasks:
-                return True
-        return False
+        with self._lock:
+            return bool(self._pending_set or self._running)
 
     def tasks_active_match_any(self, *tasks: Hashable) -> bool:
-        self._prune_stale_task_ids()
-        # if a task is in either tasks_ready or tasks_processed then return True
-        for task in tasks:
-            self._validate_task_id(task)
-            if task in self.tasks and task in self._tasks_ready_set:
-                return True
-            elif task in self.tasks and task in self._tasks_processed_set:
-                return True
-        return False
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task in self._pending_set or task in self._running:
+                    return True
+            return False
 
     def tasks_active_match_all(self, *tasks: Hashable) -> bool:
-        self._prune_stale_task_ids()
-        # return True only if all specified tasks are active
-        for task in tasks:
-            self._validate_task_id(task)
-            if task not in self.tasks:
-                return False
-            if task not in self._tasks_ready_set and task not in self._tasks_processed_set:
-                return False
-        return True
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task not in self._pending_set and task not in self._running:
+                    return False
+            return True
 
-    def update(self) -> List[Hashable]:
-        """
-        Update scheduler state for one frame of execution.
-
-        Processes a single task cycle and returns a list of task IDs that finished.
-
-        Returns:
-            List of task IDs that finished during this update
-        """
-        self._tasks_finished.clear()
-        self._tasks_failed.clear()
-        self._prune_stale_task_ids()
-        if len(self._tasks_ready) > 0:
-            self._process_next_task()
-        elif len(self._tasks_ready) == 0:
-            self._tasks_ready = deque(self._tasks_processed)
-            self._tasks_ready_set = set(self._tasks_processed_set)
-            if len(self._tasks_processed) > 0:
-                self._tasks_processed = deque()
-                self._tasks_processed_set = set()
-            if len(self._tasks_ready) > 0:
-                # do process here again because ready list was empty
-                self._process_next_task()
-        # Return finished tasks so caller can dispatch events
-        return self._tasks_finished.copy()
-
-    def _process_next_task(self) -> None:
-        # separate out duplicate code so that waiting processed list id's don't miss a cycle when the ready list is empty
-        while self._tasks_ready:
-            task_id = self._tasks_ready.popleft()
-            self._tasks_ready_set.discard(task_id)
-            # Task may have been removed after it was queued.
+    def _submit_ready_tasks(self) -> None:
+        while self._pending and len(self._running) < self._max_workers:
+            task_id = self._pending.popleft()
+            self._pending_set.discard(task_id)
             task = self.tasks.get(task_id)
             if task is None:
                 continue
-            # Ignore and remove malformed tasks with no generator logic.
-            if task.task_logic is None:
-                self.tasks.pop(task_id, None)
+            task.future = self._executor.submit(task.run_callable)
+            self._running.add(task_id)
+
+    def _collect_finished_tasks(self) -> None:
+        for task_id in list(self._running):
+            task = self.tasks.get(task_id)
+            if task is None or task.future is None:
+                self._running.discard(task_id)
                 continue
-            task.time_start = time.time()
+            if not task.future.done():
+                continue
+
+            self._running.discard(task_id)
             try:
-                next(cast(Generator[object, None, None], task.task_logic))
-            except StopIteration:
-                # task exited, and exception from next() happened before appending the id to the processed list
+                result = task.future.result()
+                self._task_results[task_id] = result
                 self._tasks_finished.append(task_id)
-                self.tasks.pop(task_id, None)
-                return
             except Exception as exc:
                 self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
+            finally:
                 self.tasks.pop(task_id, None)
-                return
-            self._tasks_processed.append(task_id)
-            self._tasks_processed_set.add(task_id)
-            return
 
-    def get_finished_tasks(self) -> List[Hashable]:
-        """
-        Get list of tasks that finished in the most recent update.
+    def update(self) -> List[Hashable]:
+        """Update scheduler state for one frame.
 
         Returns:
-            List of task IDs that finished
+            List of task IDs that finished during this update.
         """
-        return self._tasks_finished.copy()
+        with self._lock:
+            self._tasks_finished.clear()
+            self._tasks_failed.clear()
+            self._submit_ready_tasks()
+            self._collect_finished_tasks()
+            return self._tasks_finished.copy()
+
+    def get_finished_tasks(self) -> List[Hashable]:
+        """Get list of tasks that finished in the most recent update."""
+        with self._lock:
+            return self._tasks_finished.copy()
 
     def clear_finished_tasks(self) -> None:
         """Clear the finished tasks list."""
-        self._tasks_finished.clear()
+        with self._lock:
+            self._tasks_finished.clear()
 
     def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
-        """Get list of failed tasks in the most recent update.
-
-        Returns:
-            List of tuples: (task_id, error_message)
-        """
-        return self._tasks_failed.copy()
+        """Get list of failed tasks in the most recent update."""
+        with self._lock:
+            return self._tasks_failed.copy()
 
     def clear_failed_tasks(self) -> None:
         """Clear the failed tasks list."""
-        self._tasks_failed.clear()
+        with self._lock:
+            self._tasks_failed.clear()
+
+    def pop_result(self, id: Hashable, default: Optional[object] = None) -> Optional[object]:
+        """Get and remove a completed task's result."""
+        self._validate_task_id(id)
+        with self._lock:
+            return self._task_results.pop(id, default)
+
+    def shutdown(self) -> None:
+        """Release thread resources used by this scheduler."""
+        with self._lock:
+            self.remove_all()
+            self._executor.shutdown(wait=False, cancel_futures=True)
+
+    def __del__(self) -> None:
+        try:
+            self.shutdown()
+        except Exception:
+            pass

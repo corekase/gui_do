@@ -104,4 +104,11 @@ class StateManager:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
         """Exit context manager: cleanup and shutdown."""
+        for context in self._contexts.values():
+            scheduler = context[1]
+            try:
+                scheduler.shutdown()
+            except Exception:
+                # Shutdown should be best-effort and not mask the original error.
+                pass
         self.is_running = False
