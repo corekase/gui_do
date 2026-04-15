@@ -114,12 +114,10 @@ class EventDispatcher:
         if not self._is_registered_widget(lock_obj):
             self.gui.set_lock_area(None)
             return self.gui.event(Event.Pass)
-        if lock_obj.WidgetKind == WidgetKind.Scrollbar:
-            window = lock_obj.window if hasattr(lock_obj, 'window') else None
-            if self.gui.handle_widget(lock_obj, event, window):
-                widget_id = getattr(lock_obj, 'id', None)
-                return self.gui.event(Event.Widget, widget_id=widget_id)
-            return self.gui.event(Event.Pass)
+        window = lock_obj.window if hasattr(lock_obj, 'window') else None
+        if self.gui.handle_widget(lock_obj, event, window):
+            widget_id = getattr(lock_obj, 'id', None)
+            return self.gui.event(Event.Widget, widget_id=widget_id)
         return self.gui.event(Event.Pass)
 
     def _process_window_widgets(self, event: PygameEvent) -> "GuiEvent":

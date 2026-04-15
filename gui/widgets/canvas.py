@@ -104,6 +104,8 @@ class Canvas(Widget):
         Returns:
             bool: True if event was handled and should signal activation, False otherwise.
         """
+        if event.type not in (MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            return False
         if self.get_collide(window):
             # within the canvas so update information about that
             canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
@@ -124,9 +126,6 @@ class Canvas(Widget):
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
                 packet.button = getattr(event, 'button', None)
-            else:
-                # otherwise the catch-all event is MousePosition which is set above for all events
-                packet.type = CanvasEvent.MousePosition
             was_full = len(self._events) == self._events.maxlen
             self.last_overflow = was_full
             if was_full:

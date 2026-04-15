@@ -230,12 +230,18 @@ class Scrollbar(Frame):
         # fill graphical area to represent the start position and size
         rect(self.surface, colours['full'], self._handle_area(), 0)
 
-    def set_visible(self, visible: bool) -> None:
-        # Scrollbar and its arrow widgets share visibility state.
-        self.visible = visible
-        # for each attached arrowbox also do their setting
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        from ..utility.guimanager import GuiError
+        if not isinstance(value, bool):
+            raise GuiError('widget visible must be a bool')
+        self._visible = value
         for widget in self._registered:
-            widget.visible = visible
+            widget.visible = value
 
     # callbacks
     def increment(self) -> None:
