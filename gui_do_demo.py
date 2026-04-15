@@ -247,9 +247,9 @@ class Demo:
         exit_code = 0
         try:
             self.engine.run()
-        except Exception as exc:
+        except Exception:
             exit_code = 1
-            raise Exception(f'{type(exc).__name__}: {exc}')
+            raise
         finally:
             pygame.quit()
         sys.exit(exit_code)
