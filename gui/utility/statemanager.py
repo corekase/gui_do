@@ -31,6 +31,16 @@ class StateManager:
             replace: If True, overwrite an existing context with the same name.
                      If False, raise KeyError when name already exists.
         """
+        if not isinstance(name, str) or name == '':
+            raise ValueError('context name must be a non-empty string')
+        if not isinstance(gui, GuiManager):
+            raise TypeError('gui must be a GuiManager instance')
+        if not callable(preamble):
+            raise TypeError('preamble must be callable')
+        if not callable(event_handler):
+            raise TypeError('event_handler must be callable')
+        if not callable(postamble):
+            raise TypeError('postamble must be callable')
         if not replace and name in self._contexts:
             raise KeyError(f'duplicate context: {name}')
         self._contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
@@ -44,8 +54,12 @@ class StateManager:
         Args:
             name: Name of the context to switch to.
         """
+        if not isinstance(name, str) or name == '':
+            raise ValueError('context name must be a non-empty string')
         if name not in self._contexts:
             raise KeyError(f'unknown context: {name}')
+        if self._active_context_name == name:
+            return
 
         old_gui: Optional[GuiManager] = self.get_active_gui()
         # Preserve mouse position from old context if switching from an existing one

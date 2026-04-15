@@ -17,9 +17,13 @@ class Engine:
         Args:
             state_manager: StateManager to control application state transitions.
         """
+        if not isinstance(state_manager, StateManager):
+            raise TypeError('state_manager must be a StateManager instance')
         self.state_manager: StateManager = state_manager
         self.clock: pygame.time.Clock = pygame.time.Clock()
         self.fps: int = 60
+        if self.fps <= 0:
+            raise ValueError('fps must be > 0')
 
     def run(self) -> None:
         """
