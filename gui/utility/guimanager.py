@@ -484,6 +484,8 @@ class GuiManager:
         if area is not None:
             if locking_object is None:
                 raise GuiError('locking_object is required when setting a lock area')
+            if not isinstance(locking_object, Widget):
+                raise GuiError('locking_object must be a widget')
             if not self._is_registered_object(locking_object):
                 raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
