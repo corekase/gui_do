@@ -188,13 +188,15 @@ class Scheduler:
             if id in self._tasks_ready_set:
                 self._tasks_ready.remove(id)
                 self._tasks_ready_set.discard(id)
-                self._tasks_suspended.append(id)
-                self._tasks_suspended_set.add(id)
+                if id not in self._tasks_suspended_set:
+                    self._tasks_suspended.append(id)
+                    self._tasks_suspended_set.add(id)
             elif id in self._tasks_processed_set:
                 self._tasks_processed.remove(id)
                 self._tasks_processed_set.discard(id)
-                self._tasks_suspended.append(id)
-                self._tasks_suspended_set.add(id)
+                if id not in self._tasks_suspended_set:
+                    self._tasks_suspended.append(id)
+                    self._tasks_suspended_set.add(id)
 
     def resume_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
