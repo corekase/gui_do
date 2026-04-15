@@ -83,6 +83,13 @@ class Scheduler:
         self._tasks_processed_set: Set[Hashable] = set()
         self._tasks_suspended_set: Set[Hashable] = set()
 
+    def _validate_task_id(self, id: Hashable) -> None:
+        try:
+            hash(id)
+        except TypeError as exc:
+            from .guimanager import GuiError
+            raise GuiError(f'task id must be hashable: {id!r}') from exc
+
     def _remove_from_ready(self, id: Hashable) -> None:
         if id in self._tasks_ready_set:
             if id in self._tasks_ready:
@@ -107,6 +114,7 @@ class Scheduler:
         return task_event
 
     def add_task(self, id: Hashable, logic: Callable[..., Generator[object, None, None]], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None:
+        self._validate_task_id(id)
         # Replace existing task with same id to avoid duplicate queue entries.
         self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
         self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
@@ -135,6 +143,7 @@ class Scheduler:
         self._tasks_ready_set.add(id)
 
     def send_message(self, id: Hashable, parameters: object) -> None:
+        self._validate_task_id(id)
         # send either a single value or a collection like a tuple or list to the method id
         task = self.tasks.get(id)
         if task is None:
@@ -157,6 +166,8 @@ class Scheduler:
         self.tasks = {}
 
     def remove_tasks(self, *tasks: Hashable) -> None:
+        for id in tasks:
+            self._validate_task_id(id)
         remove_set = set(tasks)
         self._tasks_ready = deque(id for id in self._tasks_ready if id not in remove_set)
         self._tasks_processed = deque(id for id in self._tasks_processed if id not in remove_set)
@@ -193,6 +204,7 @@ class Scheduler:
 
     def suspend_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
+            self._validate_task_id(id)
             # move id to suspended list from either the ready or processed lists
             if id in self._tasks_ready_set:
                 self._remove_from_ready(id)
@@ -207,6 +219,7 @@ class Scheduler:
 
     def resume_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
+            self._validate_task_id(id)
             # move id from suspended list to end of queued list
             if id in self._tasks_suspended_set:
                 if id in self._tasks_suspended:
@@ -226,6 +239,7 @@ class Scheduler:
         return len(self._tasks_suspended)
 
     def task_time(self, id: Hashable) -> bool:
+        self._validate_task_id(id)
         task = self.tasks.get(id)
         if task is None:
             from .guimanager import GuiError
