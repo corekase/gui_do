@@ -244,13 +244,15 @@ class Demo:
 
     def run(self):
         """Run the application using the Engine with StateManager contexts."""
+        exit_code = 0
         try:
             self.engine.run()
         except Exception as exc:
+            exit_code = 1
             raise Exception(f'{type(exc).__name__}: {exc}')
         finally:
             pygame.quit()
-            sys.exit(0)
+        sys.exit(exit_code)
 
     def preamble1(self):
         # restore the pristine area to the screen before drawing
