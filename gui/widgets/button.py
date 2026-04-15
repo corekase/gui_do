@@ -1,7 +1,13 @@
-from typing import Optional, Any, Callable
+from pygame import Rect
+from pygame.event import Event as PygameEvent
+from typing import Callable, Hashable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.constants import WidgetKind
+from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
+
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
 
 class Button(BaseInteractive):
     """An interactive button widget with state feedback.
@@ -13,7 +19,7 @@ class Button(BaseInteractive):
         button_callback: Optional callback invoked when button is activated.
         timer_id: ID of the repeat timer, if any.
     """
-    def __init__(self, gui: Any, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
         """Initialize a button widget.
 
         Args:
@@ -34,9 +40,9 @@ class Button(BaseInteractive):
             (self.idle, self.hover, self.armed), self.hit_rect = \
                 self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
         # button specific callback, this callback is separate from the add() callback
-        self.button_callback: Optional[Callable] = button_callback
+        self.button_callback: Optional[Callable[[], None]] = button_callback
 
-    def handle_event(self, event: Any, window: Any) -> bool:
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle button events and manage state transitions.
 
         Updates button state based on mouse position and input. Manages the Armed state

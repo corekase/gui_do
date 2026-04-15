@@ -1,12 +1,15 @@
 import pygame
 from pygame import Rect
-from typing import Optional, List, Tuple, Any, Iterable, Callable, Union
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
+from typing import Callable, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
-from .constants import Event, ContainerKind
+from .constants import ArrowPosition, ButtonStyle, ContainerKind, Event, Orientation
 from .bitmapfactory import BitmapFactory
 from .event_dispatcher import EventDispatcher
 from .layout_manager import LayoutManager
 from .renderer import Renderer
+from .widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
 from ..widgets.label import Label
@@ -21,18 +24,26 @@ from ..widgets.frame import Frame
 class GuiError(Exception):
     pass
 
+
+class _PristineContainer(Protocol):
+    surface: Surface
+    pristine: Optional[Surface]
+
+
+TGuiObject = TypeVar("TGuiObject", Window, Widget)
+
 class GuiEvent:
-    def __init__(self, event_type: Any, **kwargs: Any) -> None:
-        self.type: Any = event_type
-        self.key: Optional[Any] = kwargs.get('key')
-        self.pos: Optional[Tuple[int, int]] = kwargs.get('pos')
-        self.rel: Optional[Tuple[int, int]] = kwargs.get('rel')
-        self.button: Optional[int] = kwargs.get('button')
-        self.widget_id: Optional[Any] = kwargs.get('widget_id')
-        self.group: Optional[str] = kwargs.get('group')
+    def __init__(self, event_type: Event, **kwargs: object) -> None:
+        self.type: Event = event_type
+        self.key: Optional[int] = cast(Optional[int], kwargs.get('key'))
+        self.pos: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('pos'))
+        self.rel: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('rel'))
+        self.button: Optional[int] = cast(Optional[int], kwargs.get('button'))
+        self.widget_id: Optional[Hashable] = cast(Optional[Hashable], kwargs.get('widget_id'))
+        self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
 
 class GuiManager:
-    def __init__(self, surface: Any, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
+    def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Initialize the GUI manager.
 
         Args:
@@ -67,16 +78,16 @@ class GuiManager:
         for name, filename, size in fonts:
             self._bitmap_factory.load_font(name, filename, size)
         # screen surface
-        self.surface: Any = surface
+        self.surface: Surface = surface
         # list of widgets attached to the screen
-        self.widgets: List[Any] = []
+        self.widgets: List[Widget] = []
         # active object for add()
-        self._active_object: Optional[Any] = None
+        self._active_object: Optional[Window] = None
         # list of windows
-        self.windows: List[Any] = []
+        self.windows: List[Window] = []
         # dragging window
         self.dragging: bool = False
-        self.dragging_window: Optional[Any] = None
+        self.dragging_window: Optional[Window] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
         # current mouse position
         self.mouse_pos: Tuple[int, int] = pygame.mouse.get_pos()
@@ -85,24 +96,24 @@ class GuiManager:
         # area rect to keep the mouse position within
         self.lock_area_rect: Optional[Rect] = None
         # cursor image and hotspot
-        self.cursor_image: Optional[Any] = None
+        self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
         # which window is active
-        self.active_window: Optional[Any] = None
+        self.active_window: Optional[Window] = None
         # current widget
-        self._current_widget: Optional[Any] = None
+        self._current_widget: Optional[Widget] = None
         # the pristine state of the screen bitmap
-        self.pristine: Optional[Any] = None
+        self.pristine: Optional[Surface] = None
         # locking object
-        self.locking_object: Optional[Any] = None
+        self.locking_object: Optional[Widget] = None
         # whether or not drawing is buffered
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
 
 
-    def add(self, gui_object: Any) -> Any:
+    def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Add a GUI object (widget or window) to the manager.
 
         Args:
@@ -164,11 +175,11 @@ class GuiManager:
             raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
         self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
 
-    def gridded(self, x: int, y: int) -> Any:
+    def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         return self.layout_manager.get_cell(x, y)
 
     # convert the point from a main surface one to a window point
-    def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
+    def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
         # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = self.lock_area(point)
@@ -178,7 +189,7 @@ class GuiManager:
         return self.lock_area(point)
 
     # convert the point from a window point to a main surface one
-    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
+    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
         # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = point
@@ -187,7 +198,7 @@ class GuiManager:
         # conversion not necessary
         return self.lock_area(point)
 
-    def set_pristine(self, image: str, obj: Optional[Any] = None) -> None:
+    def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
         # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
         if obj is None:
             obj = self
@@ -201,12 +212,12 @@ class GuiManager:
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
     # copy graphic helper
-    def copy_graphic_area(self, surface: Any, rect: Rect, flags: int = 0) -> Any:
+    def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         bitmap = pygame.Surface((rect.width, rect.height), flags)
         bitmap.blit(surface, (0, 0), rect)
         return bitmap
 
-    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[Any] = None) -> None:
+    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
         # if obj is ommited then restore_pristine is from the screen pristine.
         # if obj is supplied the object must have a obj.surface and an obj.pristine
         # to use here
@@ -225,34 +236,34 @@ class GuiManager:
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
-    def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> Any:
+    def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> Window:
         return self.add(Window(self, title, pos, size, backdrop))
 
-    def button(self, id: Any, rect: Any, style: Any, text: Optional[str], button_callback: Optional[Callable] = None, skip_factory: bool = False) -> Any:
+    def button(self, id: Hashable, rect: Rect, style: ButtonStyle, text: Optional[str], button_callback: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
         return self.add(Button(self, id, rect, style, text, button_callback, skip_factory))
 
-    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> Any:
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> Label:
         return self.add(Label(self, position, text, shadow))
 
-    def canvas(self, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> Any:
+    def canvas(self, id: Hashable, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
         return self.add(Canvas(self, id, rect, backdrop, canvas_callback, automatic_pristine))
 
-    def image(self, id: Any, rect: Any, image: str, automatic_pristine: bool = False, scale: bool = True) -> Any:
+    def image(self, id: Hashable, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
         return self.add(Image(self, id, rect, image, automatic_pristine, scale))
 
-    def scrollbar(self, id: Any, overall_rect: Rect, horizontal: Any, style: Any, params: Tuple[int, int, int, int]) -> Any:
+    def scrollbar(self, id: Hashable, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
         return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
 
-    def toggle(self, id: Any, rect: Any, style: Any, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Any:
+    def toggle(self, id: Hashable, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
 
-    def arrowbox(self, id: Any, rect: Any, direction: float, callback: Optional[Callable] = None) -> Any:
+    def arrowbox(self, id: Hashable, rect: Rect, direction: float, callback: Optional[Callable[[], None]] = None) -> ArrowBox:
         return self.add(ArrowBox(self, id, rect, direction, callback))
 
-    def buttongroup(self, group: str, id: Any, rect: Any, style: Any, text: str) -> Any:
+    def buttongroup(self, group: str, id: Hashable, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
-    def frame(self, id: Any, rect: Any) -> Any:
+    def frame(self, id: Hashable, rect: Rect) -> Frame:
         return self.add(Frame(self, id, rect))
 
     @property
@@ -280,12 +291,12 @@ class GuiManager:
         if update_physical_coords:
             pygame.mouse.set_pos(self.mouse_pos)
 
-    def event(self, event_type: Any, **kwargs: Any) -> "GuiManager.GuiEvent":
+    def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
 
-    def events(self) -> Iterable["GuiManager.GuiEvent"]:
+    def events(self) -> Iterable[GuiEvent]:
         # process event queue
         for raw_event in pygame.event.get():
             # process event
@@ -296,10 +307,10 @@ class GuiManager:
             # yield current event
             yield event
 
-    def handle_event(self, event: Any) -> "GuiManager.GuiEvent":
+    def handle_event(self, event: PygameEvent) -> GuiEvent:
         return self.event_dispatcher.handle(event)
 
-    def handle_widget(self, widget: Any, event: Any, window: Optional[Any] = None) -> bool:
+    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
         # if a widget has an activation use the callback or signal that its id be returned from handle_event()
         if widget.handle_event(event, window):
             # widget activated
@@ -321,11 +332,11 @@ class GuiManager:
                 self._current_widget.leave()
             self._current_widget = value
 
-    def update_focus(self, new_hover: Optional[Any]) -> None:
+    def update_focus(self, new_hover: Optional[Widget]) -> None:
         # Delegate to the property setter
         self.current_widget = new_hover
 
-    def set_lock_area(self, locking_object: Optional[Any], area: Optional[Rect] = None) -> None:
+    def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         # lock area rect is in screen coordinates
         if area is not None:
             # switch to relative mouse mode
@@ -357,21 +368,21 @@ class GuiManager:
         else:
             return position
 
-    def raise_window(self, window: Any) -> None:
+    def raise_window(self, window: Window) -> None:
         # move the window to the last item in the list which has the highest priority
         self.windows.remove(window)
         self.windows.append(window)
 
-    def lower_window(self, window: Any) -> None:
+    def lower_window(self, window: Window) -> None:
         # move the window to the first item in the list which has the lowest priority
         self.windows.remove(window)
         self.windows.insert(0, window)
 
-    def hide_widgets(self, *widgets: Any) -> None:
+    def hide_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:
             widget.visible = False
 
-    def show_widgets(self, *widgets: Any) -> None:
+    def show_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:
             widget.visible = True
 

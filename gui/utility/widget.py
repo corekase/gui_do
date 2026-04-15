@@ -5,8 +5,10 @@ Provides common functionality for drawing, event handling, and state management.
 """
 
 from pygame import Rect
-from typing import Optional, Callable, Any, TYPE_CHECKING
-from .constants import ContainerKind
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
+from typing import Callable, Hashable, Optional, TYPE_CHECKING
+from .constants import ContainerKind, WidgetKind
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -29,29 +31,29 @@ class Widget:
         callback: Optional callback function when widget is activated
     """
 
-    def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
         # gui reference
         self.gui: "GuiManager" = gui
         # widget type
-        self.WidgetKind: Optional[Any] = None
+        self.WidgetKind: Optional[WidgetKind] = None
         # container type (Widget or Window)
         self.ContainerKind: ContainerKind = ContainerKind.Widget
         # surface to draw the widget on
-        self.surface: Optional[Any] = None
+        self.surface: Optional[Surface] = None
         # window widget may be attached to
         self.window: Optional["Window"] = None
         # identifier for widget, can be any kind like int or string
-        self.id: Any = id
+        self.id: Hashable = id
         # rect for widget drawing position and size on the surface
         self.draw_rect: Rect = Rect(rect)
         # rect for mouse collision
         self.hit_rect: Optional[Rect] = None
         # before widget is first drawn, save what was there in this bitmap
-        self.pristine: Optional[Any] = None
+        self.pristine: Optional[Surface] = None
         # whether or not the widget is visible
         self._visible: bool = True
         # callback of the widget
-        self.callback: Optional[Callable] = None
+        self.callback: Optional[Callable[[], None]] = None
         # if this is true then if the widget calls the superclass draw defined in this
         # class then this class will restore the pristine image, return, and subclasses
         # continue drawing
@@ -71,7 +73,7 @@ class Widget:
             return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
 
-    def handle_event(self, _, _a) -> bool:
+    def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """
         Handle pygame event. Override in subclasses.
 

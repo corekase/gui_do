@@ -1,16 +1,18 @@
 import pygame
 from pygame import Rect
-from typing import TYPE_CHECKING, Optional, Tuple, Any
+from pygame.surface import Surface
+from typing import TYPE_CHECKING, List, Optional, Tuple
 from ..utility.constants import colours, ContainerKind, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
+    from ..utility.widget import Widget
 
 class Window:
-    def __init__(self, gui: GuiManager, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
+    def __init__(self, gui: "GuiManager", title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
         # windows don't need names because eventually they are going to be in banks which will be named
-        self.gui: GuiManager = gui
+        self.gui: "GuiManager" = gui
         self.ContainerKind = ContainerKind.Window
         # window x and y position from the main surface coordinate, not the titlebar
         self.x: int
@@ -23,7 +25,7 @@ class Window:
         self.titlebar_size: int = 24
         # window surface
         self.surface: pygame.Surface = pygame.surface.Surface(size).convert()
-        self.pristine: Optional[Any] = None
+        self.pristine: Optional[Surface] = None
         if backdrop is None:
             # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
@@ -34,14 +36,14 @@ class Window:
             self.gui.set_pristine(backdrop, self)
         self._window_save_pristine()
         # widgets on that surface
-        self.widgets: list = []
+        self.widgets: List["Widget"] = []
         # set the window to the position passed in
         self.set_pos(pos)
-        self.title_bar_inactive_bitmap: Any
-        self.title_bar_active_bitmap: Any
+        self.title_bar_inactive_bitmap: Surface
+        self.title_bar_active_bitmap: Surface
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = self.gui.bitmap_factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
         self.title_bar_rect: Rect = self.title_bar_active_bitmap.get_rect()
-        self.window_widget_lower_bitmap: Any = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
+        self.window_widget_lower_bitmap: Surface = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
         self._visible: bool = True
 

@@ -6,12 +6,16 @@ for widgets that respond to mouse input.
 """
 
 from .widget import Widget
+from pygame import Rect
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from typing import Optional, Any, TYPE_CHECKING
+from typing import Hashable, Optional, TYPE_CHECKING
 from .constants import InteractiveState
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
+    from ..widgets.window import Window
 
 class BaseInteractive(Widget):
     """
@@ -21,14 +25,14 @@ class BaseInteractive(Widget):
     Subclasses override handle_event and draw to customize behavior.
     """
 
-    def __init__(self, gui: "GuiManager", id: Any, rect) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.state: InteractiveState = InteractiveState.Idle
-        self.idle: Optional[Any] = None      # Surface for idle state
-        self.hover: Optional[Any] = None     # Surface for hover state
-        self.armed: Optional[Any] = None     # Surface for armed state
+        self.idle: Optional[Surface] = None      # Surface for idle state
+        self.hover: Optional[Surface] = None     # Surface for hover state
+        self.armed: Optional[Surface] = None     # Surface for armed state
 
-    def handle_event(self, event: Any, window: Any) -> bool:
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """
         Handle mouse events and manage state transitions.
 

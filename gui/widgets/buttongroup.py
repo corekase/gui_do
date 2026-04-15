@@ -1,7 +1,13 @@
-from typing import Any, Dict, List
+from pygame import Rect
+from pygame.event import Event as PygameEvent
+from typing import Dict, Hashable, List, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.constants import WidgetKind
+from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
+
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
 
 class ButtonGroup(BaseInteractive):
     """A radio-button style group widget.
@@ -18,7 +24,7 @@ class ButtonGroup(BaseInteractive):
     # dictionary of key:value -> key, name of the group. value, armed object
     selections: Dict[str, "ButtonGroup"] = {}
 
-    def __init__(self, gui: Any, group: str, id: Any, rect: Any, style: Any, text: str) -> None:
+    def __init__(self, gui: "GuiManager", group: str, id: Hashable, rect: Rect, style: ButtonStyle, text: str) -> None:
         """Initialize a button group member.
 
         Args:
@@ -41,7 +47,7 @@ class ButtonGroup(BaseInteractive):
             self.select()
         ButtonGroup.groups[group].append(self)
 
-    def handle_event(self, event: Any, window: Any) -> bool:
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
 
@@ -80,7 +86,7 @@ class ButtonGroup(BaseInteractive):
         """
         return self.group
 
-    def read_id(self) -> Any:
+    def read_id(self) -> Hashable:
         """Get the ID of the currently selected button in this group.
 
         Returns:

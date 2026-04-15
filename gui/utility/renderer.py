@@ -1,5 +1,6 @@
 from pygame import Rect
-from typing import List, Tuple, TYPE_CHECKING, Any
+from pygame.surface import Surface
+from typing import List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -23,7 +24,7 @@ class Renderer:
             gui: Reference to GuiManager for access to widgets and render state.
         """
         self.gui: "GuiManager" = gui
-        self._bitmaps: List[Tuple[Any, Rect]] = []
+        self._bitmaps: List[Tuple[Surface, Rect]] = []
 
     def draw(self) -> None:
         """Render all GUI elements to the screen surface.

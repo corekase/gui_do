@@ -7,8 +7,11 @@ from collections import deque
 from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from .constants import colours, ButtonStyle
+
+if TYPE_CHECKING:
+    from .guimanager import GuiManager
 
 class BitmapFactory:
     def __init__(self) -> None:
@@ -50,13 +53,13 @@ class BitmapFactory:
         # load, convert with an alpha channel, and return an image surface
         return pygame.image.load(self.file_resource(*names)).convert_alpha()
 
-    def draw_window_title_bar_bitmaps(self, gui: Any, title: str, width: int, size: int) -> Tuple[Surface, Surface]:
+    def draw_window_title_bar_bitmaps(self, gui: "GuiManager", title: str, width: int, size: int) -> Tuple[Surface, Surface]:
         saved: List[Surface] = []
         saved.append(self._draw_window_title_bar_bitmap(gui, title, width, size, colours['full']))
         saved.append(self._draw_window_title_bar_bitmap(gui, title, width, size, colours['highlight']))
         return tuple(saved)  # type: ignore
 
-    def _draw_window_title_bar_bitmap(self, gui: Any, title: str, width: int, size: int, colour: Optional[Tuple[int, int, int]] = None) -> Surface:
+    def _draw_window_title_bar_bitmap(self, gui: "GuiManager", title: str, width: int, size: int, colour: Optional[Tuple[int, int, int]] = None) -> Surface:
         from ..widgets.frame import Frame
         from .constants import InteractiveState
         self.set_font('titlebar')

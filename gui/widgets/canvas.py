@@ -1,5 +1,7 @@
 import pygame
-from typing import Optional, Any, Tuple
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
+from typing import Callable, Hashable, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.constants import WidgetKind, CanvasEvent
@@ -7,24 +9,28 @@ from ..utility.widget import Widget
 from .frame import Frame
 from ..utility.constants import InteractiveState
 
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
+
 class CanvasEventPacket:
     """Event packet for canvas-specific events.
 
     Contains event type, mouse position relative to canvas, and type-specific data.
     """
     def __init__(self) -> None:
-        self.type: Optional[Any] = None
+        self.type: Optional[CanvasEvent] = None
         self.pos: Optional[Tuple[int, int]] = None
         self.rel: Optional[Tuple[int, int]] = None
         self.button: Optional[int] = None
         self.y: Optional[int] = None
 
 class Canvas(Widget):
-    def __init__(self, gui: Any, id: Any, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Any] = None, automatic_pristine: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect, backdrop: Optional[str] = None, canvas_callback: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Canvas
         # create canvas surface
-        self.canvas: pygame.Surface = pygame.surface.Surface((rect.width, rect.height)).convert()
+        self.canvas: Surface = pygame.surface.Surface((rect.width, rect.height)).convert()
         # if there is no backdrop make a frame as one otherwise load the backdrop
         if backdrop is None:
             # make a frame for the backdrop of the window surface
@@ -35,12 +41,12 @@ class Canvas(Widget):
             self.pristine = self.gui.copy_graphic_area(self.canvas, self.canvas.get_rect()).convert()
         else:
             self.gui.set_pristine(backdrop, self)
-        self.canvas_callback: Optional[Any] = canvas_callback
+        self.canvas_callback: Optional[Callable[[], None]] = canvas_callback
         self.auto_restore_pristine: bool = automatic_pristine
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
 
-    def get_canvas_surface(self) -> pygame.Surface:
+    def get_canvas_surface(self) -> Surface:
         # return a reference to the canvas surface
         return self.canvas
 
@@ -71,7 +77,7 @@ class Canvas(Widget):
         else:
             return False
 
-    def handle_event(self, event: Any, window: Any) -> bool:
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle canvas events and queue them for processing.
 
         Events are queued while the canvas has focus. If a queued event hasn't been

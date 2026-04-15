@@ -1,5 +1,9 @@
-from typing import Dict, Any, Tuple, Optional, Callable
-from .guimanager import GuiManager
+from types import TracebackType
+from typing import Callable, Dict, Optional, Tuple, Type, Union
+from .guimanager import GuiEvent, GuiManager
+from .scheduler import Scheduler, TaskEvent, Timers
+
+ContextType = Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[Union[GuiEvent, TaskEvent]], None], Callable[[], None]]
 
 class StateManager:
     """Manages multiple GUI contexts for application state transitions.
@@ -9,12 +13,12 @@ class StateManager:
     when switching between contexts.
     """
     def __init__(self) -> None:
-        self._contexts: Dict[str, Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = {}
+        self._contexts: Dict[str, ContextType] = {}
         self._active_context_name: Optional[str] = None
         self.is_running: bool = True
 
     def register_context(self, name: str, gui: GuiManager,
-                         preamble: Callable[[], None], event_handler: Callable[[Any], None], postamble: Callable[[], None]) -> None:
+                         preamble: Callable[[], None], event_handler: Callable[[Union[GuiEvent, TaskEvent]], None], postamble: Callable[[], None]) -> None:
         """Register a new application context.
 
         Args:
@@ -47,7 +51,7 @@ class StateManager:
             if new_gui:
                 new_gui.set_mouse_pos(mouse_pos, True)
 
-    def get_active_context(self) -> Optional[Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]]:
+    def get_active_context(self) -> Optional[ContextType]:
         """Get the currently active context tuple.
 
         Returns:
@@ -63,7 +67,7 @@ class StateManager:
         Returns:
             GuiManager instance or None if no context is active.
         """
-        context: Optional[Tuple[GuiManager, Any, Any, Callable[[], None], Callable[[Any], None], Callable[[], None]]] = self.get_active_context()
+        context: Optional[ContextType] = self.get_active_context()
         return context[0] if context else None
 
     def set_running(self, running: bool) -> None:
@@ -75,6 +79,6 @@ class StateManager:
         self.is_running = True
         return self
 
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
         """Exit context manager: cleanup and shutdown."""
         self.is_running = False

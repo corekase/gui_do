@@ -1,18 +1,25 @@
-from typing import Any
+from pygame import Rect
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
+from typing import Hashable, Optional, TYPE_CHECKING
 from ..utility.constants import WidgetKind, InteractiveState
 from ..utility.widget import Widget
 
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
+
 class Frame(Widget):
-    def __init__(self, gui: Any, id: Any, rect: Any) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Frame
-        self._idle: Any
-        self._hover: Any
-        self._armed: Any
+        self._idle: Surface
+        self._hover: Surface
+        self._armed: Surface
         self._idle, self._hover, self._armed = self.gui.bitmap_factory.draw_frame_bitmaps(rect)
         self.state: InteractiveState = InteractiveState.Idle
 
-    def handle_event(self, _, _a) -> bool:
+    def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
 
     def draw(self) -> None:

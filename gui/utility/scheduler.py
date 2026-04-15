@@ -1,6 +1,6 @@
 import time
 import pygame
-from typing import Dict, List, Optional, Callable, Any, TYPE_CHECKING
+from typing import Callable, Dict, Generator, Hashable, List, Optional, TYPE_CHECKING, cast
 from enum import Enum
 from .constants import Event
 
@@ -9,21 +9,21 @@ if TYPE_CHECKING:
 
 TaskKind = Enum('TaskKind', ['Finished'])
 
+class Interval:
+    def __init__(self, duration: float, callback: Callable[[], None]) -> None:
+        self.timer: float = 0
+        self.previous_time: Optional[float] = None
+        self.duration: float = duration
+        self.callback: Callable[[], None] = callback
+
 class Timers:
     def __init__(self) -> None:
-        self.timers: Dict[Any, "Timers.Interval"] = {}
+        self.timers: Dict[Hashable, "Interval"] = {}
 
-    class Interval:
-        def __init__(self, duration: float, callback: Callable) -> None:
-            self.timer: float = 0
-            self.previous_time: Optional[float] = None
-            self.duration: float = duration
-            self.callback: Callable = callback
-
-    def add_timer(self, id: Any, duration: float, callback: Callable) -> None:
+    def add_timer(self, id: Hashable, duration: float, callback: Callable[[], None]) -> None:
         self.timers[id] = self.Interval(duration, callback)
 
-    def remove_timer(self, id: Any) -> None:
+    def remove_timer(self, id: Hashable) -> None:
         if id in self.timers.keys():
             del self.timers[id]
 
@@ -48,35 +48,35 @@ class TaskEvent:
     # an event object to be returned which includes pygame event information and gui_do information
     def __init__(self) -> None:
         # the event is a Task type
-        self.type: Any = Event.Task
+        self.type: Event = Event.Task
         # what the event represents
-        self.operation: Any = None
+        self.operation: Optional[TaskKind] = None
         # task id
-        self.id: Optional[Any] = None
+        self.id: Optional[Hashable] = None
 
 class Scheduler:
     def __init__(self, gui: "GuiManager") -> None:
-        self.tasks: Dict[Any, "Scheduler.Task"] = {}
+        self.tasks: Dict[Hashable, "Scheduler.Task"] = {}
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
         # queued and finished lists
-        self._tasks_ready: List[Any] = []
-        self._tasks_processed: List[Any] = []
-        self._tasks_suspended: List[Any] = []
-        self._tasks_finished: List[Any] = []
+        self._tasks_ready: List[Hashable] = []
+        self._tasks_processed: List[Hashable] = []
+        self._tasks_suspended: List[Hashable] = []
+        self._tasks_finished: List[Hashable] = []
 
     class Task:
-        def __init__(self, id: Any, interval: float) -> None:
-            self.id: Any = id
+        def __init__(self, id: Hashable, interval: float) -> None:
+            self.id: Hashable = id
             # times for yielding cooperative control
             self.time_start: float = 0.0
             self.time_duration: float = interval
             # pointer for a "receive information" method, takes one parameter (which can anything)
             # gives coroutine operations while only being a generator
-            self.message_method: Optional[Callable] = None
-            self.task_logic: Any = None
+            self.message_method: Optional[Callable[[object], None]] = None
+            self.task_logic: Optional[Generator[object, None, None]] = None
 
-    def event(self, operation: Any, item1: Optional[Any] = None) -> "Scheduler.TaskEvent":
+    def event(self, operation: TaskKind, item1: Optional[Hashable] = None) -> "Scheduler.TaskEvent":
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
@@ -84,7 +84,7 @@ class Scheduler:
         # elif more operations
         return task_event
 
-    def add_task(self, id: Any, logic: Callable, parameters: Optional[Any] = None, message_method: Optional[Callable] = None) -> None:
+    def add_task(self, id: Hashable, logic: Callable[..., Generator[object, None, None]], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None:
         # Replace existing task with same id to avoid duplicate queue entries.
         if id in self.tasks:
             if id in self._tasks_ready:
@@ -104,9 +104,9 @@ class Scheduler:
         self.tasks[id] = task
         self._tasks_ready.append(id)
 
-    def send_message(self, id: Any, parameters: Any) -> None:
+    def send_message(self, id: Hashable, parameters: object) -> None:
         # send either a single value or a collection like a tuple or list to the method id
-        self.tasks[id].message_method(parameters)
+        cast(Callable[[object], None], self.tasks[id].message_method)(parameters)
 
     def remove_all(self) -> None:
         self._tasks_ready.clear()
@@ -114,7 +114,7 @@ class Scheduler:
         self._tasks_suspended.clear()
         self.tasks = {}
 
-    def remove_tasks(self, *tasks: Any) -> None:
+    def remove_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
             if id in self._tasks_ready:
                 self._tasks_ready.remove(id)
@@ -133,7 +133,7 @@ class Scheduler:
         self._tasks_ready += self._tasks_suspended
         self._tasks_suspended.clear()
 
-    def suspend_tasks(self, *tasks: Any) -> None:
+    def suspend_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
             # move id to suspended list from either the queued or finished lists
             if id in self._tasks_ready:
@@ -143,14 +143,14 @@ class Scheduler:
                 self._tasks_processed.remove(id)
                 self._tasks_suspended.append(id)
 
-    def resume_tasks(self, *tasks: Any) -> None:
+    def resume_tasks(self, *tasks: Hashable) -> None:
         for id in tasks:
             # move id from suspended list to end of queued list
             if id in self._tasks_suspended:
                 self._tasks_suspended.remove(id)
                 self._tasks_ready.append(id)
 
-    def read_suspended(self) -> List[Any]:
+    def read_suspended(self) -> List[Hashable]:
         # return a list of suspended task id's
         return self._tasks_suspended
 
@@ -158,7 +158,7 @@ class Scheduler:
         # return the number of suspended tasks
         return len(self._tasks_suspended)
 
-    def task_time(self, id: Any) -> bool:
+    def task_time(self, id: Hashable) -> bool:
         if (time.time() - self.tasks[id].time_start) >= self.tasks[id].time_duration:
             return True
         return False
@@ -168,7 +168,7 @@ class Scheduler:
             return True
         return False
 
-    def tasks_active_match_any(self, *tasks: Any) -> bool:
+    def tasks_active_match_any(self, *tasks: Hashable) -> bool:
         # if a task is in either tasks_ready or tasks_processed then return True
         for task in tasks:
             if task in self._tasks_ready:
@@ -177,14 +177,14 @@ class Scheduler:
                 return True
         return False
 
-    def tasks_active_match_all(self, *tasks: Any) -> bool:
+    def tasks_active_match_all(self, *tasks: Hashable) -> bool:
         # return True only if all specified tasks are active
         for task in tasks:
             if task not in self._tasks_ready and task not in self._tasks_processed:
                 return False
         return True
 
-    def update(self) -> List[Any]:
+    def update(self) -> List[Hashable]:
         """
         Update scheduler state for one frame of execution.
 
@@ -213,14 +213,14 @@ class Scheduler:
         try:
             task_id = self._tasks_ready.pop(0)
             self.tasks[task_id].time_start = time.time()
-            next(self.tasks[task_id].task_logic)
+            next(cast(Generator[object, None, None], self.tasks[task_id].task_logic))
             self._tasks_processed.append(task_id)
         except StopIteration:
             # task exited, and exception from next() happened before appending the id to the processed list
             self._tasks_finished.append(task_id)
             del self.tasks[task_id]
 
-    def get_finished_tasks(self) -> List[Any]:
+    def get_finished_tasks(self) -> List[Hashable]:
         """
         Get list of tasks that finished in the most recent update.
 

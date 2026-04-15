@@ -1,14 +1,20 @@
-from typing import Any, List, Optional, Tuple
+from pygame.event import Event as PygameEvent
+from typing import Hashable, List, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
+from .arrowbox import ArrowBox
 from .frame import Frame
 from ..utility.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
 
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
+
 class Scrollbar(Frame):
-    def __init__(self, gui: Any, id: Any, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
+    def __init__(self, gui: "GuiManager", id: Hashable, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
-        self._registered: List[Any] = []
+        self._registered: List[ArrowBox] = []
         # parse the style
         if style == ArrowPosition.Skip:
             # pass through with no arrowboxes
@@ -91,7 +97,7 @@ class Scrollbar(Frame):
         # whether or not the arrowboxes modified the start_pos
         self._hit: bool = False
 
-    def handle_event(self, event: Any, window: Any) -> bool:
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if self._hit:
             # if the scrollbar state was modified by a callback then signal a change
             self._hit = False

@@ -1,7 +1,13 @@
-from typing import Optional, Tuple, Union, Any
+from pygame import Rect
+from pygame.event import Event as PygameEvent
+from pygame.surface import Surface
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 from ..utility.constants import colours, WidgetKind
 from ..utility.widget import Widget
-from pygame import Rect
+
+if TYPE_CHECKING:
+    from ..utility.guimanager import GuiManager
+    from .window import Window
 
 class Label(Widget):
     """A non-interactive text label widget.
@@ -9,12 +15,12 @@ class Label(Widget):
     Renders text to the GUI with optional shadow effect. Labels do not respond to
     user input and cannot be activated.
     """
-    def __init__(self, gui: Any, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
+    def __init__(self, gui: "GuiManager", position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
         super().__init__(gui, 'label', Rect(0, 0, 0, 0))
         # initialize common widget values
         self.shadow: bool = shadow
         self._font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()
-        self._text_bitmap: Any
+        self._text_bitmap: Surface
         self._render(text)
         self.draw_rect = self._text_bitmap.get_rect()
         if len(position) == 2:
@@ -41,5 +47,5 @@ class Label(Widget):
         """Draw the label text to the surface."""
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
-    def handle_event(self, _, _a) -> bool:
+    def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
