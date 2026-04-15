@@ -340,6 +340,9 @@ class Demo:
             if event.key == K_ESCAPE:
                 # escape key pressed
                 self.state_manager.set_running(False)
+        elif event.type == Event.Task:
+            if getattr(event, 'error', None):
+                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
             self.state_manager.set_running(False)
@@ -376,6 +379,9 @@ class Demo:
             if event.widget_id == 'return':
                 # return button was clicked
                 self.state_manager.switch_context('gui1')
+        elif event.type == Event.Task:
+            if getattr(event, 'error', None):
+                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 # escape key pressed

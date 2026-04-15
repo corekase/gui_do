@@ -28,6 +28,9 @@ class ButtonGroup(BaseInteractive):
             style: ButtonStyle enum value for visual style.
             text: Text to display on button.
         """
+        if not isinstance(group, str) or group == '':
+            from ..utility.guimanager import GuiError
+            raise GuiError('button group name must be a non-empty string')
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.ButtonGroup
         self.group: str = group

@@ -42,7 +42,7 @@ class EventDispatcher:
                 return self.gui.event(Event.Pass)
             return self._handle_window_dragging(event)
         # Priority 2: Standard interaction (check for start of drag)
-        if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and event.button == 1:
+        if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
             self._check_window_drag_start(event)
         # Priority 3: Locked object
         if self.gui.locking_object:
@@ -53,12 +53,14 @@ class EventDispatcher:
         return self._process_screen_widgets(event)
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
+        rel = getattr(event, 'rel', (0, 0))
+        pos = getattr(event, 'pos', self.gui.get_mouse_pos())
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
-            dx, dy = event.rel
+            dx, dy = rel
             self.gui.mouse_pos = self.gui.lock_area((x + dx, y + dy))
         else:
-            self.gui.mouse_pos = self.gui.lock_area(event.pos)
+            self.gui.mouse_pos = self.gui.lock_area(pos)
 
     def _handle_system_event(self, event: PygameEvent) -> "GuiEvent":
         if event.type == QUIT:
@@ -81,22 +83,24 @@ class EventDispatcher:
         if self.gui.dragging_window is None or self.gui.mouse_delta is None:
             self._reset_window_drag_state()
             return self.gui.event(Event.Pass)
-        if event.type == MOUSEBUTTONUP and event.button == 1:
+        if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self.gui.dragging = False
             self.gui.dragging_window.set_pos((self.gui.dragging_window.x, self.gui.dragging_window.y))
             self.gui.set_mouse_pos((self.gui.dragging_window.x - self.gui.mouse_delta[0], self.gui.dragging_window.y - self.gui.mouse_delta[1]))
             self.gui.dragging_window = None
             self.gui.mouse_delta = None
         elif event.type == MOUSEMOTION and self.gui.dragging:
-            x = self.gui.dragging_window.x + event.rel[0]
-            y = self.gui.dragging_window.y + event.rel[1]
+            rel = getattr(event, 'rel', (0, 0))
+            x = self.gui.dragging_window.x + rel[0]
+            y = self.gui.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
             self.gui.dragging_window.set_pos((x, y))
         return self.gui.event(Event.Pass)
 
     def _check_window_drag_start(self, event: PygameEvent) -> None:
-        if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event.pos)):
-            if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event.pos)):
+        event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
+        if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
+            if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
                 self.gui.lower_window(self.gui.active_window)
                 self.gui.active_window = self.gui.windows[-1]
             else:
@@ -119,7 +123,7 @@ class EventDispatcher:
         return self.gui.event(Event.Pass)
 
     def _process_window_widgets(self, event: PygameEvent) -> "GuiEvent":
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
             if self.gui.active_window is not None and self.gui.active_window in self.gui.windows:
                 self.gui.raise_window(self.gui.active_window)
         hit_any = False
@@ -180,9 +184,9 @@ class EventDispatcher:
 
     def _handle_base_mouse_events(self, event: PygameEvent) -> "GuiEvent":
         if event.type == MOUSEBUTTONUP:
-            return self.gui.event(Event.MouseButtonUp, button=event.button)
+            return self.gui.event(Event.MouseButtonUp, button=getattr(event, 'button', None))
         elif event.type == MOUSEBUTTONDOWN:
-            return self.gui.event(Event.MouseButtonDown, button=event.button)
+            return self.gui.event(Event.MouseButtonDown, button=getattr(event, 'button', None))
         if event.type == MOUSEMOTION:
-            return self.gui.event(Event.MouseMotion, rel=event.rel)
+            return self.gui.event(Event.MouseMotion, rel=getattr(event, 'rel', (0, 0)))
         return self.gui.event(Event.Pass)

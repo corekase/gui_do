@@ -130,6 +130,7 @@ class Scrollbar(Frame):
                 point = self._graphical_to_total(y)
             if point < 0:
                 point = 0
+                self._start_pos = 0
                 self._last_mouse_pos = 0
                 return True
             elif point > self._total_range:

@@ -247,6 +247,10 @@ class GuiManager:
 
     # convert the point from a main surface one to a window point
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
+        if window is not None and window not in self.windows:
+            window = None
         # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = self.lock_area(point)
@@ -257,6 +261,10 @@ class GuiManager:
 
     # convert the point from a window point to a main surface one
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
+        if window is not None and window not in self.windows:
+            window = None
         # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = point
@@ -301,6 +309,10 @@ class GuiManager:
 
     def set_cursor(self, hotspot: Tuple[int, int], image: str) -> None:
         # set the cursor image and hotspot
+        if not isinstance(hotspot, tuple) or len(hotspot) != 2:
+            raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
+        if not isinstance(image, str) or image == '':
+            raise GuiError('cursor image must be a non-empty string')
         self.cursor_image = self.bitmap_factory.image_alpha('cursors', image)
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
@@ -372,6 +384,12 @@ class GuiManager:
                 button.state = InteractiveState.Idle
 
     def register_button_group(self, group: str, button: ButtonGroup) -> None:
+        if not isinstance(group, str) or group == '':
+            raise GuiError('button group name must be a non-empty string')
+        if not isinstance(button, ButtonGroup):
+            raise GuiError('button group member must be a ButtonGroup')
+        if button.read_group() != group:
+            raise GuiError(f'button group mismatch: expected "{group}", got "{button.read_group()}"')
         self._prune_button_group(group)
         if group not in self._button_groups:
             self._button_groups[group] = []
@@ -381,6 +399,12 @@ class GuiManager:
         self._button_groups[group].append(button)
 
     def select_button_group(self, group: str, button: ButtonGroup) -> None:
+        if not isinstance(group, str) or group == '':
+            raise GuiError('button group name must be a non-empty string')
+        if not isinstance(button, ButtonGroup):
+            raise GuiError('button group member must be a ButtonGroup')
+        if button.read_group() != group:
+            raise GuiError(f'button group mismatch: expected "{group}", got "{button.read_group()}"')
         self._prune_button_group(group)
         if not self._is_registered_button_group(button):
             return
@@ -390,6 +414,8 @@ class GuiManager:
         self._button_selections[group] = button
 
     def get_button_group_selection(self, group: str) -> Optional[ButtonGroup]:
+        if not isinstance(group, str) or group == '':
+            raise GuiError('button group name must be a non-empty string')
         self._prune_button_group(group)
         return self._button_selections.get(group)
 
@@ -406,6 +432,8 @@ class GuiManager:
 
     @buffered.setter
     def buffered(self, value):
+        if not isinstance(value, bool):
+            raise GuiError('buffered must be a bool')
         self._buffered = value
 
     @property
@@ -421,6 +449,8 @@ class GuiManager:
         return self.lock_area(self.mouse_pos)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
         self.mouse_pos = self.lock_area(pos)
         if update_physical_coords:
             pygame.mouse.set_pos(self.mouse_pos)
@@ -449,6 +479,8 @@ class GuiManager:
         if widget.handle_event(event, window):
             # widget activated
             if widget.callback is not None:
+                if not callable(widget.callback):
+                    raise GuiError(f'widget callback is not callable for id: {widget.id}')
                 widget.callback()
                 return False
             else:
@@ -530,6 +562,8 @@ class GuiManager:
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         # keep the position within the lock area rect
+        if not isinstance(position, tuple) or len(position) != 2:
+            raise GuiError(f'position must be a tuple of (x, y), got: {position}')
         self._resolve_locking_state()
         if self.lock_area_rect is not None:
             x, y = position
@@ -569,10 +603,14 @@ class GuiManager:
 
     def hide_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = False
 
     def show_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = True
 
     def draw_gui(self) -> None:

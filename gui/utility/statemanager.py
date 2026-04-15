@@ -93,6 +93,8 @@ class StateManager:
 
     def set_running(self, running: bool) -> None:
         """Set the running state of the application."""
+        if not isinstance(running, bool):
+            raise TypeError('running must be a bool')
         self.is_running = running
 
     def __enter__(self) -> 'StateManager':
