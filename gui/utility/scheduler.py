@@ -44,6 +44,16 @@ class Timers:
                     self.timers[id].timer -= self.timers[id].duration
                     self.timers[id].callback()
 
+class TaskEvent:
+    # an event object to be returned which includes pygame event information and gui_do information
+    def __init__(self) -> None:
+        # the event is a Task type
+        self.type: Any = Event.Task
+        # what the event represents
+        self.operation: Any = None
+        # task id
+        self.id: Optional[Any] = None
+
 class Scheduler:
     def __init__(self, gui: "GuiManager") -> None:
         self.tasks: Dict[Any, "Scheduler.Task"] = {}
@@ -67,15 +77,6 @@ class Scheduler:
             self.task_logic: Any = None
 
     def event(self, operation: Any, item1: Optional[Any] = None) -> "Scheduler.TaskEvent":
-        class TaskEvent:
-            # an event object to be returned which includes pygame event information and gui_do information
-            def __init__(self) -> None:
-                # the event is a Task type
-                self.type: Any = Event.Task
-                # what the event represents
-                self.operation: Any = None
-                # task id
-                self.id: Optional[Any] = None
         task_event = TaskEvent()
         task_event.operation = operation
         if operation == TaskKind.Finished:
@@ -231,6 +232,3 @@ class Scheduler:
     def clear_finished_tasks(self) -> None:
         """Clear the finished tasks list."""
         self._tasks_finished.clear()
-
-    def null(self, *args: Any, **kwargs: Any) -> None:
-        return
