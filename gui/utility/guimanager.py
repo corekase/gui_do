@@ -300,6 +300,8 @@ class GuiManager:
         if group not in self._button_groups:
             self._button_groups[group] = []
             self._button_selections[group] = button
+        if button in self._button_groups[group]:
+            return
         self._button_groups[group].append(button)
 
     def select_button_group(self, group: str, button: ButtonGroup) -> None:
