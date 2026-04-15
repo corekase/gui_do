@@ -16,13 +16,18 @@ class Demo:
         self.screen_rect = self.screen.get_rect()
         # set window caption
         pygame.display.set_caption('Demo')
-        # create a gui manager
+        # -----------------------
+        # begin gui setup
+        # -----------------------
         fonts = (('titlebar', 'Ubuntu-B.ttf', 14), ('normal', 'Gimbot.ttf', 16),
                  ('scroll', 'Gimbot.ttf', 32), ('gui_do', 'Gimbot.ttf', 72))
+        # -----------------------
         # begin gui1
+        # -----------------------
+        # create a gui manager
         g1 = GuiManager(self.screen, fonts)
-        b1 = g1.bitmap_factory
         self.s1 = g1.scheduler
+        b1 = g1.bitmap_factory
         w1 = g1.widget_dispatcher
         # blit a background image to the screen surface
         g1.set_pristine('backdrop.jpg')
@@ -170,16 +175,20 @@ class Demo:
         self.gui1 = g1
         # -----------------------
         # begin gui2
+        # -----------------------
         g2 = GuiManager(self.screen, fonts)
         self.s2 = g2.scheduler
-        w2 = g2.widget_dispatcher
         g2.bitmap_factory.set_font('normal')
+        w2 = g2.widget_dispatcher
         g2.set_pristine('backdrop.jpg')
         w2.button('return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
         w2.window('GUI 2', (50, 150), (300, 300))
         # set cursor for gui2
         g2.set_cursor((1, 1), 'cursor.png')
         self.gui2 = g2
+        # -----------------------
+        # end gui setup
+        # -----------------------
         # reset the state of the simulation
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
