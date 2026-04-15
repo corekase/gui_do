@@ -482,6 +482,10 @@ class GuiManager:
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         # lock area rect is in screen coordinates
         if area is not None:
+            if locking_object is None:
+                raise GuiError('locking_object is required when setting a lock area')
+            if not self._is_registered_object(locking_object):
+                raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
                 raise GuiError('lock area dimensions must be positive')
             # switch to relative mouse mode
