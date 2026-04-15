@@ -85,12 +85,14 @@ class Scheduler:
 
     def _remove_from_ready(self, id: Hashable) -> None:
         if id in self._tasks_ready_set:
-            self._tasks_ready.remove(id)
+            if id in self._tasks_ready:
+                self._tasks_ready.remove(id)
             self._tasks_ready_set.discard(id)
 
     def _remove_from_processed(self, id: Hashable) -> None:
         if id in self._tasks_processed_set:
-            self._tasks_processed.remove(id)
+            if id in self._tasks_processed:
+                self._tasks_processed.remove(id)
             self._tasks_processed_set.discard(id)
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
