@@ -113,6 +113,22 @@ class Scrollbar(Frame):
                         window.widgets.remove(arrow)
             raise
 
+    def set_pos(self, pos: Tuple[int, int]) -> None:
+        old_x, old_y = self.draw_rect.x, self.draw_rect.y
+        super().set_pos(pos)
+        delta_x = self.draw_rect.x - old_x
+        delta_y = self.draw_rect.y - old_y
+        if delta_x == 0 and delta_y == 0:
+            return
+        self._overall_rect.move_ip(delta_x, delta_y)
+        self._graphic_rect.move_ip(delta_x, delta_y)
+        if self._increment_rect is not None:
+            self._increment_rect.move_ip(delta_x, delta_y)
+        if self._decrement_rect is not None:
+            self._decrement_rect.move_ip(delta_x, delta_y)
+        for arrow in self._registered:
+            arrow.set_pos((arrow.draw_rect.x + delta_x, arrow.draw_rect.y + delta_y))
+
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if self._hit:
             self._hit = False
