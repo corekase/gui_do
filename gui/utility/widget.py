@@ -2,7 +2,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
-from .constants import ContainerKind, WidgetKind, GuiError
+from .constants import WidgetKind, GuiError
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -14,7 +14,6 @@ class Widget:
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         self.gui: "GuiManager" = gui
         self.WidgetKind: Optional[WidgetKind] = None
-        self.ContainerKind: ContainerKind = ContainerKind.Widget
         self.surface: Optional[Surface] = None
         self.window: Optional["Window"] = None
         self.id: str = id

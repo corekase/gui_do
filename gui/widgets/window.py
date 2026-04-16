@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.surface import Surface
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
-from ..utility.constants import colours, GuiError, ContainerKind, InteractiveState
+from ..utility.constants import colours, GuiError, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:
@@ -39,7 +39,6 @@ class Window:
         if size[0] <= 0 or size[1] <= 0:
             raise GuiError(f'window size must be positive, got: {size}')
         self.gui: "GuiManager" = gui
-        self.ContainerKind = ContainerKind.Window
         self.x: int
         self.y: int
         self.x, self.y = pos

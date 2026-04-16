@@ -20,10 +20,6 @@ class InteractiveState(Enum):
     Hover = 'Hover'
     Armed = 'Armed'
 
-class ContainerKind(Enum):
-    Window = 'Window'
-    Widget = 'Widget'
-
 class WidgetKind(Enum):
     ArrowBox = 'ArrowBox'
     Button = 'Button'
