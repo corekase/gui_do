@@ -490,11 +490,18 @@ class Demo:
             elif CEvent.type == CanvasEvent.MouseWheel:
                 # handle the mouse wheel
                 if CEvent.y is not None:
-                    self.cell_size += (CEvent.y * 2)
-                    if self.cell_size < 6:
-                        self.cell_size = 6
-                    elif self.cell_size > 24:
-                        self.cell_size = 24
+                    old_size = self.cell_size
+                    new_size = old_size + (CEvent.y * 2)
+                    if new_size < 6:
+                        new_size = 6
+                    elif new_size > 24:
+                        new_size = 24
+                    if new_size != old_size:
+                        mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
+                        # Keep the world position under the mouse fixed while scaling.
+                        self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
+                        self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
+                        self.cell_size = new_size
 
     # update the position and draw a bitmap at the position
     def update_circles(self, size):
