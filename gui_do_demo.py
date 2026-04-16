@@ -1,7 +1,7 @@
 import sys
 import pygame
 from random import randrange, choice
-from pygame import Color, Rect, FULLSCREEN, SCALED
+from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager
 from gui import colours
@@ -13,10 +13,10 @@ class Demo:
 
     mandel_task_ids = ('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
 
-    cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
-            Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
-            Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
-            Color(255, 170, 0), Color(204, 128, 0), Color(153, 87, 0), Color(106, 52, 3))
+    cols = ((66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
+            (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
+            (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
+            (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3))
 
     def __init__(self):
         # initialize pygame
@@ -687,7 +687,7 @@ class Demo:
 
     def col(self, k):
         if k == self.maximum_iters:
-            return Color(0, 0, 0)
+            return (0, 0, 0)
         else:
             return Demo.cols[k % 16]
 
