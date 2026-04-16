@@ -22,12 +22,10 @@ class InteractiveState(Enum):
     Hover = 'Hover'
     Armed = 'Armed'
 
-
 class ContainerKind(Enum):
     # Types of containers (windows vs widgets on screen/in windows)
     Window = 'Window'
     Widget = 'Widget'
-
 
 class WidgetKind(Enum):
     # Types of widgets in the GUI framework
@@ -40,7 +38,6 @@ class WidgetKind(Enum):
     Label = 'Label'
     Scrollbar = 'Scrollbar'
     Toggle = 'Toggle'
-
 
 class Event(Enum):
     # GUI event types (system and widget events)
@@ -55,13 +52,10 @@ class Event(Enum):
     Group = 'Group'
     Task = 'Task'
 
-
 class BaseEvent:
     """Base event type for all framework-dispatched events."""
-
     def __init__(self, event_type: Event) -> None:
         self.type: Event = event_type
-
 
 class CanvasEvent(Enum):
     # Types of canvas-specific events
@@ -71,14 +65,12 @@ class CanvasEvent(Enum):
     MouseButtonUp = 'MouseButtonUp'
     MousePosition = 'MousePosition'
 
-
 class ArrowPosition(Enum):
     # Whether scrollbar arrows skip, split, near, or far of the scrollable area
     Skip = 'Skip'
     Split = 'Split'
     Near = 'Near'
     Far = 'Far'
-
 
 class ButtonStyle(Enum):
     # Visual style for buttons (box, rounded, angled, radio, checkbox)
@@ -87,7 +79,6 @@ class ButtonStyle(Enum):
     Angle = 'Angle'
     Radio = 'Radio'
     Check = 'Check'
-
 
 class Orientation(Enum):
     # Horizontal or vertical
