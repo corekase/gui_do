@@ -237,7 +237,7 @@ Set `gui.buffered = True` to have the renderer save pixels underneath gui object
 
 - Use this when your graphical background doesn't change and instead of redrawing the entire background the graphical areas underneath gui objects are restored between gui loops.
 - This setting is not useful if your background graphics are significantly changing, it is meant for mostly static backgrounds.
-- You are responsible for undoing your own changes to the background between gui loops.
+- You are responsible for undoing or otherwise managing your own changes to the background between gui loops.
 
 ## Coordinates
 
