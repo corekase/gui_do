@@ -281,16 +281,16 @@ class Demo:
         self.engine.run()
 
     def _update_gui1_window_visibility(self):
-        self.button_group_win.visible = self.buttons_toggle.read()
-        self.scrollbar_win.visible = self.scrollbars_toggle.read()
-        self.life_win.visible = self.life_toggle.read()
-        self.mandel_win.visible = self.mandel_toggle.read()
+        self.button_group_win.visible = self.buttons_toggle.pushed
+        self.scrollbar_win.visible = self.scrollbars_toggle.pushed
+        self.life_win.visible = self.life_toggle.pushed
+        self.mandel_win.visible = self.mandel_toggle.pushed
 
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
         if not self.canvas.focused():
             self.dragging = False
-        if self.circles_toggle.read():
+        if self.circles_toggle.pushed:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
 
@@ -368,7 +368,7 @@ class Demo:
             self.life_reset()
 
     def life_window_postamble(self):
-        if self.toggle_life.read():
+        if self.toggle_life.pushed:
             self.generate()
         self.draw_life()
 
@@ -521,7 +521,7 @@ class Demo:
     def life_reset(self):
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
-        self.toggle_life.set(False)
+        self.toggle_life.pushed = False
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 

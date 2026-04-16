@@ -15,7 +15,7 @@ class Toggle(BaseInteractive):
         """Create a toggle with separate bitmaps for raised and pushed states."""
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Toggle
-        self.pushed: bool = pushed
+        self._pushed: bool = pushed
         if raised_text is None:
             raised_text = pressed_text
         (_, _, self.armed), rect1 = \
@@ -39,13 +39,15 @@ class Toggle(BaseInteractive):
                 return True
         return False
 
-    def set(self, pushed: bool) -> None:
-        """Set pushed state."""
-        self.pushed = pushed
-
-    def read(self) -> bool:
+    @property
+    def pushed(self) -> bool:
         """Return pushed state."""
-        return self.pushed
+        return self._pushed
+
+    @pushed.setter
+    def pushed(self, value: bool) -> None:
+        """Set pushed state."""
+        self._pushed = value
 
     def draw(self) -> None:
         if self.pushed:
