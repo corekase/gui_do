@@ -337,39 +337,32 @@ class Demo:
             dt = 0.0
         elif dt > 0.05:
             dt = 0.05
-
         distance = self.gui_do_speed * dt
         self.gui_do_pos_x += math.cos(self.gui_do_angle) * distance
         self.gui_do_pos_y += math.sin(self.gui_do_angle) * distance
-
         x = self.gui_do_pos_x
         y = self.gui_do_pos_y
         max_x = self.screen_rect.width - self.gui_do_label.draw_rect.width
         max_y = self.screen_rect.height - self.gui_do_label.draw_rect.height
-
         hit_vertical = False
         hit_horizontal = False
-
         if x < 0:
             x = 0
             hit_vertical = True
         elif x > max_x:
             x = max_x
             hit_vertical = True
-
         if y < 0:
             y = 0
             hit_horizontal = True
         elif y > max_y:
             y = max_y
             hit_horizontal = True
-
         if hit_vertical:
             self.gui_do_angle = math.pi - self.gui_do_angle
         if hit_horizontal:
             self.gui_do_angle = -self.gui_do_angle
         self.gui_do_angle %= (2.0 * math.pi)
-
         self.gui_do_pos_x = x
         self.gui_do_pos_y = y
         self.gui_do_label.set_pos((int(round(x)), int(round(y))))
