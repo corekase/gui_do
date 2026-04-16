@@ -216,8 +216,8 @@ class Demo:
         self.s1 = self.gui1.scheduler
         self.s2 = self.gui2.scheduler
         # Limit per-frame task progress callback work to keep frame pacing smoother.
-        self.s1.set_message_dispatch_limit(120)
-        self.s2.set_message_dispatch_limit(120)
+        self.s1.set_message_dispatch_limit(200)
+        self.s2.set_message_dispatch_limit(200)
         # Set initial context to gui1
         self.state_manager.switch_context('gui1')
         # Create the engine
