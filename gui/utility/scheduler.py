@@ -118,6 +118,7 @@ class Scheduler:
         self._tasks_failed: List[Tuple[Hashable, str]] = []
         self._task_results: Dict[Hashable, object] = {}
         self._task_messages: Deque[TaskMessage] = deque()
+        self._message_dispatch_limit: Optional[int] = None
 
         self._lock = threading.RLock()
         self._max_workers: int = max(1, os.cpu_count() or 4)
@@ -242,13 +243,41 @@ class Scheduler:
             self._tasks_failed = [item for item in self._tasks_failed if item[0] not in removed]
             self._task_messages = deque(message for message in self._task_messages if message.id not in removed)
 
+    def set_message_dispatch_limit(self, max_messages_per_update: Optional[int]) -> None:
+        """Set max task messages dispatched to callbacks per update frame.
+
+        Args:
+            max_messages_per_update: Positive integer limit, or None for no limit.
+        """
+        if max_messages_per_update is not None:
+            if not isinstance(max_messages_per_update, int):
+                from .guimanager import GuiError
+                raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
+            if max_messages_per_update <= 0:
+                from .guimanager import GuiError
+                raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
+        with self._lock:
+            self._message_dispatch_limit = max_messages_per_update
+
+    def get_message_dispatch_limit(self) -> Optional[int]:
+        """Get max task messages dispatched to callbacks per update frame."""
+        with self._lock:
+            return self._message_dispatch_limit
+
     def _dispatch_task_messages(self) -> None:
-        pending_messages: List[TaskMessage]
+        pending_messages: List[TaskMessage] = []
         with self._lock:
             if not self._task_messages:
                 return
-            pending_messages = list(self._task_messages)
-            self._task_messages.clear()
+
+            if self._message_dispatch_limit is None:
+                pending_messages = list(self._task_messages)
+                self._task_messages.clear()
+            else:
+                for _ in range(self._message_dispatch_limit):
+                    if not self._task_messages:
+                        break
+                    pending_messages.append(self._task_messages.popleft())
 
         for message in pending_messages:
             try:
@@ -306,6 +335,23 @@ class Scheduler:
     def tasks_active(self) -> bool:
         with self._lock:
             return bool(self._pending_set or self._running)
+
+    def tasks_busy(self) -> bool:
+        """Return True when tasks are active or progress messages are queued."""
+        with self._lock:
+            return bool(self._pending_set or self._running or self._task_messages)
+
+    def tasks_busy_match_any(self, *tasks: Hashable) -> bool:
+        """Return True if any task id is active or has queued progress messages."""
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task in self._pending_set or task in self._running:
+                    return True
+                for message in self._task_messages:
+                    if message.id == task:
+                        return True
+            return False
 
     def tasks_active_match_any(self, *tasks: Hashable) -> bool:
         with self._lock:

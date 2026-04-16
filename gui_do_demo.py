@@ -11,6 +11,8 @@ class Demo:
     neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
                   ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
 
+    mandel_task_ids = ('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+
     cols = (Color(66, 30, 15), Color(25, 7, 26), Color(9, 1, 47), Color(4, 4, 73),
             Color(0, 7, 100), Color(12, 44, 138), Color(24, 82, 177), Color(57, 125, 209),
             Color(134, 181, 229), Color(211, 236, 248), Color(241, 233, 191), Color(248, 201, 95),
@@ -213,6 +215,9 @@ class Demo:
         # references to the schedulers
         self.s1 = self.gui1.scheduler
         self.s2 = self.gui2.scheduler
+        # Limit per-frame task progress callback work to keep frame pacing smoother.
+        self.s1.set_message_dispatch_limit(120)
+        self.s2.set_message_dispatch_limit(120)
         # Set initial context to gui1
         self.state_manager.switch_context('gui1')
         # Create the engine
@@ -281,11 +286,11 @@ class Demo:
             elif event.widget_id == 'life_reset':
                 self.life_reset()
             elif event.widget_id == 'mandel_reset':
-                self.s1.remove_tasks('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
+                self.s1.remove_tasks(*Demo.mandel_task_ids)
                 self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                 self.gui1.show_widgets(self.mandel_canvas)
                 self.clear_mandel_surfaces()
-            elif not self.s1.tasks_active():
+            elif not self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
                 if event.widget_id == 'iterative':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
@@ -356,7 +361,7 @@ class Demo:
             if getattr(event, 'error', None):
                 print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
                 return
-            if task_id in {'iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4'}:
+            if task_id in Demo.mandel_task_ids:
                 self.s1.pop_result(task_id)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
@@ -586,7 +591,7 @@ class Demo:
 
     def _compute_iterative_region(self, task_id, rect):
         x, y, w, h = rect
-        chunk_rows = 8
+        chunk_rows = 4
         row_values = []
         chunk_start_y = y
         for y_pos in range(y, y + h):
