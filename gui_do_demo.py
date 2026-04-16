@@ -63,21 +63,21 @@ class Demo:
         # setup for the togglebuttons
         g1.set_grid_properties((85, 1042), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_Button = g1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
+        self.gui2_button = g1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
         # control whether the background circles are drawn
-        self.circles_Toggle = g1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
+        self.circles_toggle = g1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
         # control whether the buttons and toggles window is visible
-        self.Buttons_Toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
+        self.Buttons_toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
         # control whether the scrollbar window is visible
-        self.Scrollbars_Toggle = g1.toggle('Scrollbar_Window', g1.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
+        self.scrollbars_toggle = g1.toggle('Scrollbar_Window', g1.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
         # control whether the life window is visible
-        self.life_Toggle = g1.toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
+        self.life_toggle = g1.toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
-        self.mandel_Toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        self.mandel_toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
         # make the button groups, buttons, and toggles window
         x_pos, y_pos = 50, 150
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
-        self.Button_group_win = g1.window('Button Groups, Buttons, and Toggles',
+        self.button_group_win = g1.window('Button Groups, Buttons, and Toggles',
                                           (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom),
                                           event_handler=self.buttons_window_event_handler,
                                           )
@@ -138,7 +138,7 @@ class Demo:
         self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
         # make the scrollbar window
         y_pos += 248
-        self.Scrollbar_win = g1.window(
+        self.scrollbar_win = g1.window(
             'Scrollbars',
             (x_pos, y_pos),
             (320, 362)
@@ -183,7 +183,7 @@ class Demo:
         # resets the life simulation to a default state, uses a callback function
         g1.button('life_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
-        self.Toggle_life = g1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        self.toggle_life = g1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -282,16 +282,16 @@ class Demo:
         self.engine.run()
 
     def _update_gui1_window_visibility(self):
-        self.Button_group_win.visible = self.Buttons_Toggle.read()
-        self.Scrollbar_win.visible = self.Scrollbars_Toggle.read()
-        self.life_win.visible = self.life_Toggle.read()
-        self.mandel_win.visible = self.mandel_Toggle.read()
+        self.button_group_win.visible = self.Buttons_toggle.read()
+        self.scrollbar_win.visible = self.scrollbars_toggle.read()
+        self.life_win.visible = self.life_toggle.read()
+        self.mandel_win.visible = self.mandel_toggle.read()
 
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
         if not self.canvas.focused():
             self.dragging = False
-        if self.circles_Toggle.read():
+        if self.circles_toggle.read():
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
 
@@ -369,7 +369,7 @@ class Demo:
             self.life_reset()
 
     def life_window_postamble(self):
-        if self.Toggle_life.read():
+        if self.toggle_life.read():
             self.generate()
         self.draw_life()
 
@@ -521,7 +521,7 @@ class Demo:
     def life_reset(self):
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
-        self.Toggle_life.set(False)
+        self.toggle_life.set(False)
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
