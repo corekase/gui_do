@@ -4,7 +4,6 @@ from .constants import InteractiveState
 if TYPE_CHECKING:
     from ..widgets.buttongroup import ButtonGroup
 
-
 class ButtonGroupMediator:
     """Mediator coordinating mutually exclusive selection per button group."""
 

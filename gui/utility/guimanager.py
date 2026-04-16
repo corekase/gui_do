@@ -23,10 +23,8 @@ from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
 from .constants import GuiError
 
-
 def _noop() -> None:
     pass
-
 
 def _noop_event(_: BaseEvent) -> None:
     pass

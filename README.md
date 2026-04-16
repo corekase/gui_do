@@ -15,7 +15,7 @@ This README is an implementation-focused tutorial for what exists now, not full 
 
 ## Quick Start
 
-## 1. Install dependency
+## 1. Install dependencies
 
 ```bash
 pip install pygame numpy

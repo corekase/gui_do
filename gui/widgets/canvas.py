@@ -6,11 +6,9 @@ from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.constants import WidgetKind, CanvasEvent
+from ..utility.constants import GuiError, InteractiveState, WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
-from ..utility.constants import InteractiveState
-from ..utility.constants import GuiError
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager

@@ -5,8 +5,7 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
-from ..utility.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
-from ..utility.constants import GuiError
+from ..utility.constants import colours, GuiError, WidgetKind, Orientation, ArrowPosition, InteractiveState
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager

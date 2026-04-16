@@ -2,8 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.surface import Surface
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
-from ..utility.constants import colours, ContainerKind, InteractiveState
-from ..utility.constants import GuiError
+from ..utility.constants import colours, GuiError, ContainerKind, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:

@@ -8,10 +8,8 @@ from queue import Empty, SimpleQueue
 import threading
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, Any
-from .constants import GuiError
-
-from .constants import BaseEvent, Event
+from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING
+from .constants import GuiError, BaseEvent, Event
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -20,14 +18,12 @@ _logger = logging.getLogger(__name__)
 
 TaskKind = Enum('TaskKind', ['Finished', 'Failed'])
 
-
 class Interval:
     def __init__(self, duration: float, callback: Callable[[], None]) -> None:
         self.timer: float = 0
         self.previous_time: Optional[float] = None
         self.duration: float = duration
         self.callback: Callable[[], None] = callback
-
 
 class Timers:
     def __init__(self) -> None:
@@ -84,7 +80,6 @@ class TaskMessage:
     callback: Callable[[object], None]
     payload: object
     generation: int
-
 
 class TaskEvent(BaseEvent):
     """Event emitted for task completion or failure."""
