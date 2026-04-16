@@ -149,6 +149,7 @@ class Demo:
         width, height = 600, 600
         self.life_win = g1.window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
         self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
+        self.canvas.set_event_queue_limit(256)
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.get_size()
         # a set to hold cell coordinates as tuples of x and y
@@ -230,6 +231,7 @@ class Demo:
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
         self._life_canvas_last_drop_count = 0
+        self.canvas.set_overflow_handler(self._handle_life_canvas_overflow)
         # number of circles
         circles = 64
         # size of circles
@@ -416,6 +418,13 @@ class Demo:
         self.gui2.restore_pristine()
 
     # Canvas callback function
+    def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
+        # Throttle logging so sustained pressure does not flood stderr.
+        if total_dropped == 1 or (total_dropped - self._life_canvas_last_drop_count) >= 16:
+            delta = total_dropped - self._life_canvas_last_drop_count
+            self._life_canvas_last_drop_count = total_dropped
+            print(f'Canvas event overflow: dropped {delta} events (total={total_dropped})', file=sys.stderr)
+
     def handle_Canvas(self):
         # read the event from the canvas widget
         CEvent = self.canvas.read_event()
@@ -443,10 +452,6 @@ class Demo:
                         self.cell_size = 6
                     elif self.cell_size > 24:
                         self.cell_size = 24
-        if self.canvas.dropped_events > self._life_canvas_last_drop_count:
-            dropped = self.canvas.dropped_events - self._life_canvas_last_drop_count
-            self._life_canvas_last_drop_count = self.canvas.dropped_events
-            print(f'Canvas event overflow: dropped {dropped} events (total={self.canvas.dropped_events})', file=sys.stderr)
 
     # update the position and draw a bitmap at the position
     def update_circles(self, size):

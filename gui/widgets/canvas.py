@@ -1,5 +1,6 @@
 import pygame
 from collections import deque
+import logging
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
@@ -14,6 +15,8 @@ from ..utility.constants import GuiError
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
     from .window import Window
+
+_logger = logging.getLogger(__name__)
 
 class CanvasEventPacket:
     """Event packet for canvas-specific events.
@@ -50,8 +53,29 @@ class Canvas(Widget):
         self._events: deque[CanvasEventPacket] = deque(maxlen=128)
         self.dropped_events: int = 0
         self.last_overflow: bool = False
+        self.on_overflow: Optional[Callable[[int, int], None]] = None
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
+
+    def set_event_queue_limit(self, max_events: int) -> None:
+        if not isinstance(max_events, int):
+            raise GuiError(f'max_events must be an int, got: {type(max_events).__name__}')
+        if max_events <= 0:
+            raise GuiError(f'max_events must be > 0, got: {max_events}')
+        if self._events.maxlen == max_events:
+            return
+        self._events = deque(self._events, maxlen=max_events)
+        self.queued_event = len(self._events) > 0
+        self.CEvent = self._events[0] if self._events else None
+
+    def get_event_queue_limit(self) -> int:
+        maxlen = self._events.maxlen
+        return 0 if maxlen is None else maxlen
+
+    def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]]) -> None:
+        if callback is not None and not callable(callback):
+            raise GuiError('overflow callback must be callable when provided')
+        self.on_overflow = callback
 
     def get_canvas_surface(self) -> Surface:
         # return a reference to the canvas surface
@@ -129,6 +153,11 @@ class Canvas(Widget):
             self.last_overflow = was_full
             if was_full:
                 self.dropped_events += 1
+                if self.on_overflow is not None:
+                    try:
+                        self.on_overflow(1, self.dropped_events)
+                    except Exception as exc:
+                        _logger.warning('Canvas overflow callback failed: %s: %s', type(exc).__name__, exc)
             self._events.append(packet)
             self.queued_event = True
             self.CEvent = self._events[0]
