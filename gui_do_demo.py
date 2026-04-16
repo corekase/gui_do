@@ -545,7 +545,6 @@ class Demo:
         def recursive_region(x_pos, y_pos, width, height):
             if width <= 0 or height <= 0:
                 return
-
             top_left = self.pixel(x_pos, y_pos)
             accuracy = 2
             not_hit = True
@@ -558,11 +557,9 @@ class Demo:
                     if (self.pixel(x_pos, y_pos + y_test) != top_left) or (self.pixel(x_pos + width - 1, y_pos + y_test) != top_left):
                         not_hit = False
                         break
-
             if not_hit:
                 fill_region(x_pos, y_pos, width, height, top_left)
                 return
-
             if width > 2 or height > 2:
                 half_x = (width + (width % 2)) // 2
                 half_y = (height + (height % 2)) // 2
@@ -571,7 +568,6 @@ class Demo:
                 recursive_region(x_pos + half_x, y_pos + half_y, width - half_x, height - half_y)
                 recursive_region(x_pos, y_pos + half_y, half_x, height - half_y)
                 return
-
             right = x_pos + width - 1
             bottom = y_pos + height - 1
             top_right = self.pixel(right, y_pos)
@@ -585,7 +581,6 @@ class Demo:
             if width > 1 and height > 1:
                 block_values.append(bottom_right)
             publish_pixel_block(x_pos, y_pos, width, height, block_values)
-
         recursive_region(x, y, w, h)
         return None
 
@@ -602,7 +597,6 @@ class Demo:
                 self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
                 chunk_start_y = y_pos + 1
                 row_values = []
-
         if row_values:
             rows_in_chunk = y + h - chunk_start_y
             self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
@@ -610,7 +604,6 @@ class Demo:
     def make_mandel_progress_handler(self, task_id):
         def handler(result):
             self.apply_mandel_result(task_id, result)
-
         return handler
 
     def apply_mandel_result(self, task_id, result):
@@ -627,7 +620,6 @@ class Demo:
             canvas = self.canvas4.canvas
         else:
             return
-
         idx = 0
         canvas.lock()
         try:
