@@ -47,7 +47,7 @@ class Canvas(Widget):
             self.gui.set_pristine(backdrop, self)
         self.on_activate = on_activate
         self.auto_restore_pristine: bool = automatic_pristine
-        self._events: deque[CanvasEventPacket] = deque(maxlen=32)
+        self._events: deque[CanvasEventPacket] = deque(maxlen=128)
         self.dropped_events: int = 0
         self.last_overflow: bool = False
         self.queued_event: bool = False

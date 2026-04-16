@@ -80,7 +80,11 @@ class EventDispatcher:
         self.gui.active_window = top_window
 
     def _handle_window_dragging(self, event: PygameEvent) -> "GuiEvent":
-        if self.gui.dragging_window is None or self.gui.mouse_delta is None:
+        if (
+            self.gui.dragging_window is None
+            or self.gui.dragging_window not in self.gui.windows
+            or self.gui.mouse_delta is None
+        ):
             self._reset_window_drag_state()
             return self.gui.event(Event.Pass)
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:

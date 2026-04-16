@@ -229,6 +229,7 @@ class Demo:
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
+        self._life_canvas_last_drop_count = 0
         # number of circles
         circles = 64
         # size of circles
@@ -442,6 +443,10 @@ class Demo:
                         self.cell_size = 6
                     elif self.cell_size > 24:
                         self.cell_size = 24
+        if self.canvas.dropped_events > self._life_canvas_last_drop_count:
+            dropped = self.canvas.dropped_events - self._life_canvas_last_drop_count
+            self._life_canvas_last_drop_count = self.canvas.dropped_events
+            print(f'Canvas event overflow: dropped {dropped} events (total={self.canvas.dropped_events})', file=sys.stderr)
 
     # update the position and draw a bitmap at the position
     def update_circles(self, size):

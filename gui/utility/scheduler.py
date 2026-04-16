@@ -3,6 +3,7 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 import inspect
 import os
+import sys
 from queue import Empty, SimpleQueue
 import threading
 from dataclasses import dataclass
@@ -549,5 +550,6 @@ class Scheduler:
     def __del__(self) -> None:
         try:
             self.shutdown()
-        except Exception:
-            pass
+        except Exception as exc:
+            # __del__ cannot safely raise; surface cleanup failures for diagnosis.
+            print(f'Warning: Scheduler cleanup failed: {type(exc).__name__}: {exc}', file=sys.stderr)

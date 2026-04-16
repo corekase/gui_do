@@ -1,3 +1,4 @@
+import sys
 from types import TracebackType
 from typing import Callable, Dict, Optional, Tuple, Type
 from .guimanager import GuiManager
@@ -105,11 +106,15 @@ class StateManager:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
         """Exit context manager: cleanup and shutdown."""
-        for context in self._contexts.values():
+        for name, context in self._contexts.items():
             scheduler = context[1]
             try:
                 scheduler.shutdown()
-            except Exception:
-                # Shutdown should be best-effort and not mask the original error.
-                pass
+            except Exception as exc:
+                # Shutdown is best-effort; report failures without masking prior exceptions.
+                print(
+                    f'Warning: failed to shutdown scheduler for context "{name}": '
+                    f'{type(exc).__name__}: {exc}',
+                    file=sys.stderr,
+                )
         self.is_running = False
