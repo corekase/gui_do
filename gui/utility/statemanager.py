@@ -1,11 +1,7 @@
 import logging
 from types import TracebackType
-from typing import Callable, Dict, Optional, Tuple, Type
+from typing import Dict, Optional, Tuple, Type
 from .guimanager import GuiManager
-from .constants import BaseEvent
-from .scheduler import Scheduler, Timers
-
-ContextType = Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[BaseEvent], None], Callable[[], None]]
 
 _logger = logging.getLogger(__name__)
 
@@ -13,25 +9,19 @@ class StateManager:
     """Manages multiple GUI contexts for application state transitions.
 
     Allows switching between different GUI states (screens), each with its own
-    GuiManager, event handlers, and lifecycle callbacks. Preserves mouse position
-    when switching between contexts.
+    GuiManager. Preserves mouse position when switching between contexts.
     """
     def __init__(self) -> None:
-        self._contexts: Dict[str, ContextType] = {}
+        self._contexts: Dict[str, GuiManager] = {}
         self._active_context_name: Optional[str] = None
         self.is_running: bool = True
 
-    def register_context(self, name: str, gui: GuiManager,
-                         preamble: Callable[[], None], event_handler: Callable[[BaseEvent], None], postamble: Callable[[], None],
-                         replace: bool = False) -> None:
+    def register_context(self, name: str, gui: GuiManager, replace: bool = False) -> None:
         """Register a new application context.
 
         Args:
             name: Unique identifier for this context.
             gui: GuiManager instance for this context.
-            preamble: Callback invoked before event processing each frame.
-            event_handler: Callback to handle events for this context.
-            postamble: Callback invoked after event processing each frame.
             replace: If True, overwrite an existing context with the same name.
                      If False, raise KeyError when name already exists.
         """
@@ -39,15 +29,9 @@ class StateManager:
             raise ValueError('context name must be a non-empty string')
         if not isinstance(gui, GuiManager):
             raise TypeError('gui must be a GuiManager instance')
-        if not callable(preamble):
-            raise TypeError('preamble must be callable')
-        if not callable(event_handler):
-            raise TypeError('event_handler must be callable')
-        if not callable(postamble):
-            raise TypeError('postamble must be callable')
         if not replace and name in self._contexts:
             raise KeyError(f'duplicate context: {name}')
-        self._contexts[name] = (gui, gui.scheduler, gui.timers, preamble, event_handler, postamble)
+        self._contexts[name] = gui
 
     def switch_context(self, name: str) -> None:
         """Switch to a different application context.
@@ -76,24 +60,15 @@ class StateManager:
         if new_gui:
             new_gui.set_mouse_pos(mouse_pos, True)
 
-    def get_active_context(self) -> Optional[ContextType]:
-        """Get the currently active context tuple.
-
-        Returns:
-            Tuple of (gui, scheduler, timers, preamble, event_handler, postamble) or None.
-        """
-        if self._active_context_name in self._contexts:
-            return self._contexts[self._active_context_name]
-        return None
-
     def get_active_gui(self) -> Optional[GuiManager]:
         """Get the GuiManager for the currently active context.
 
         Returns:
             GuiManager instance or None if no context is active.
         """
-        context: Optional[ContextType] = self.get_active_context()
-        return context[0] if context else None
+        if self._active_context_name in self._contexts:
+            return self._contexts[self._active_context_name]
+        return None
 
     def set_running(self, running: bool) -> None:
         """Set the running state of the application."""
@@ -108,8 +83,8 @@ class StateManager:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
         """Exit context manager: cleanup and shutdown."""
-        for name, context in self._contexts.items():
-            scheduler = context[1]
+        for name, gui in self._contexts.items():
+            scheduler = gui.scheduler
             try:
                 scheduler.shutdown()
             except Exception as exc:

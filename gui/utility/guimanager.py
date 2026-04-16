@@ -23,6 +23,14 @@ from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
 from .constants import GuiError
 
+
+def _noop() -> None:
+    pass
+
+
+def _noop_event(_: BaseEvent) -> None:
+    pass
+
 class _PristineContainer(Protocol):
     surface: Surface
     pristine: Optional[Surface]
@@ -38,6 +46,7 @@ class GuiEvent(BaseEvent):
         self.button: Optional[int] = cast(Optional[int], kwargs.get('button'))
         self.widget_id: Optional[str] = cast(Optional[str], kwargs.get('widget_id'))
         self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
+        self.window: Optional[Window] = cast(Optional[Window], kwargs.get('window'))
 
 class GuiManager:
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
@@ -110,6 +119,10 @@ class GuiManager:
         self.timers: Timers = Timers()
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self._is_registered_button_group)
         self._label_sequence: int = 0
+        # screen-level lifecycle callbacks
+        self._screen_preamble: Callable[[], None] = _noop
+        self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
+        self._screen_postamble: Callable[[], None] = _noop
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
         for widget in self.widgets:
@@ -330,8 +343,52 @@ class GuiManager:
         self.cursor_rect = self.cursor_image.get_rect()
         self.cursor_hotspot = hotspot
 
-    def window(self, title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> Window:
-        return self.add(Window(self, title, pos, size, backdrop))
+    def window(
+        self,
+        title: str,
+        pos: Tuple[int, int],
+        size: Tuple[int, int],
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> Window:
+        return self.add(Window(self, title, pos, size, backdrop, preamble, event_handler, postamble))
+
+    def set_screen_lifecycle(
+        self,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
+        if preamble is not None and not callable(preamble):
+            raise GuiError('screen preamble must be callable or None')
+        if event_handler is not None and not callable(event_handler):
+            raise GuiError('screen event_handler must be callable or None')
+        if postamble is not None and not callable(postamble):
+            raise GuiError('screen postamble must be callable or None')
+        self._screen_preamble = preamble if preamble is not None else _noop
+        self._screen_event_handler = event_handler if event_handler is not None else _noop_event
+        self._screen_postamble = postamble if postamble is not None else _noop
+
+    def run_preamble(self) -> None:
+        self._screen_preamble()
+        for window in self.windows:
+            if window.visible:
+                window.run_preamble()
+
+    def dispatch_event(self, event: BaseEvent) -> None:
+        event_window = cast(Optional[Window], getattr(event, 'window', None))
+        if event_window is not None and event_window in self.windows and event_window.visible:
+            event_window.handle_event(event)
+            return
+        self._screen_event_handler(event)
+
+    def run_postamble(self) -> None:
+        for window in self.windows:
+            if window.visible:
+                window.run_postamble()
+        self._screen_postamble()
 
     def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
         safe_text = '' if text is None else text

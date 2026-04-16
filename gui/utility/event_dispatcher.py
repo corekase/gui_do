@@ -121,7 +121,7 @@ class EventDispatcher:
         window = lock_obj.window if hasattr(lock_obj, 'window') else None
         if self.gui.handle_widget(lock_obj, event, window):
             widget_id = getattr(lock_obj, 'id', None)
-            return self.gui.event(Event.Widget, widget_id=widget_id)
+            return self.gui.event(Event.Widget, widget_id=widget_id, window=window)
         return self.gui.event(Event.Pass)
 
     def _process_window_widgets(self, event: PygameEvent) -> "GuiEvent":
@@ -145,13 +145,13 @@ class EventDispatcher:
                                 if focus_target is not None and self._is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
                                 if widget.WidgetKind == WidgetKind.ButtonGroup:
-                                    return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
-                                return self.gui.event(Event.Widget, widget_id=widget.id)
+                                    return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=window)
+                                return self.gui.event(Event.Widget, widget_id=widget.id, window=window)
                         elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == InteractiveState.Armed:
                             if self.gui.handle_widget(widget, event, window):
                                 if focus_target is not None and self._is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
-                                return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
+                                return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=window)
                 if hit_any and focus_target is not None and self._is_registered_widget(focus_target):
                     self.gui.update_focus(focus_target)
                 else:
@@ -175,8 +175,8 @@ class EventDispatcher:
                         if focus_target is not None and self._is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
                         if widget.WidgetKind == WidgetKind.ButtonGroup:
-                            return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id())
-                        return self.gui.event(Event.Widget, widget_id=widget.id)
+                            return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=None)
+                        return self.gui.event(Event.Widget, widget_id=widget.id, window=None)
         if not hit_any:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)

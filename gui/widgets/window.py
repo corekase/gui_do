@@ -1,17 +1,37 @@
 import pygame
 from pygame import Rect
 from pygame.surface import Surface
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 from ..utility.constants import colours, ContainerKind, InteractiveState
 from ..utility.constants import GuiError
 from .frame import Frame
 
 if TYPE_CHECKING:
+    from ..utility.constants import BaseEvent
     from ..utility.guimanager import GuiManager
     from ..utility.widget import Widget
 
+
+def _noop() -> None:
+    pass
+
+
+def _noop_event(_: "BaseEvent") -> None:
+    pass
+
+
 class Window:
-    def __init__(self, gui: "GuiManager", title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        gui: "GuiManager",
+        title: str,
+        pos: Tuple[int, int],
+        size: Tuple[int, int],
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[["BaseEvent"], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
         if not isinstance(title, str) or title == '':
             raise GuiError('window title must be a non-empty string')
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -55,6 +75,10 @@ class Window:
         self.window_widget_lower_bitmap: Surface = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
         # whether or not the window is visible
         self._visible: bool = True
+        # per-window lifecycle callbacks
+        self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
+        self._event_handler: Callable[["BaseEvent"], None] = event_handler if callable(event_handler) else _noop_event
+        self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
 
     @property
     def visible(self) -> bool:
@@ -87,6 +111,15 @@ class Window:
     def draw_window(self) -> None:
         # called when the gui manager is entering a window to process its widgets
         self.gui.restore_pristine(self.surface.get_rect(), self)
+
+    def run_preamble(self) -> None:
+        self._preamble()
+
+    def handle_event(self, event: "BaseEvent") -> None:
+        self._event_handler(event)
+
+    def run_postamble(self) -> None:
+        self._postamble()
 
     def get_title_bar_rect(self) -> Rect:
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)

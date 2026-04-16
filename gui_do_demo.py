@@ -37,6 +37,11 @@ class Demo:
         # -----------------------
         # create a gui manager
         g1 = GuiManager(self.screen, fonts)
+        g1.set_screen_lifecycle(
+            preamble=self.gui1_screen_preamble,
+            event_handler=self.gui1_screen_event_handler,
+            postamble=self.gui1_screen_postamble,
+        )
         b1 = g1.bitmap_factory
         # blit a background image to the screen surface
         g1.set_pristine('backdrop.jpg')
@@ -69,7 +74,10 @@ class Demo:
         x_pos, y_pos = 50, 150
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
         self.Button_group_win = g1.window('Button Groups, Buttons, and Toggles',
-                                          (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom))
+                                          (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom),
+                                          preamble=self.buttons_window_preamble,
+                                          event_handler=self.buttons_window_event_handler,
+                                          postamble=self.buttons_window_postamble)
         g1.label(g1.gridded(0, 0), 'G1 Boxed', True)
         g1.label(g1.gridded(1, 0), 'G2 Rounded', True)
         g1.label(g1.gridded(2, 0), 'G3 Angled', True)
@@ -127,7 +135,14 @@ class Demo:
         self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
         # make the scrollbar window
         y_pos += 248
-        self.Scrollbar_win = g1.window('Scrollbars', (x_pos, y_pos), (320, 362))
+        self.Scrollbar_win = g1.window(
+            'Scrollbars',
+            (x_pos, y_pos),
+            (320, 362),
+            preamble=self.scrollbars_window_preamble,
+            event_handler=self.scrollbars_window_event_handler,
+            postamble=self.scrollbars_window_postamble,
+        )
         x = y = 10
         g1.scrollbar('Scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Skip, (100, 0, 30, 10))
         y += 22
@@ -151,7 +166,14 @@ class Demo:
         # make the Conway's Game of Life window
         x_pos += 327
         width, height = 600, 600
-        self.life_win = g1.window('Conway\'s Game of Life', (x_pos, y_pos), (width, height))
+        self.life_win = g1.window(
+            'Conway\'s Game of Life',
+            (x_pos, y_pos),
+            (width, height),
+            preamble=self.life_window_preamble,
+            event_handler=self.life_window_event_handler,
+            postamble=self.life_window_postamble,
+        )
         self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
         self.canvas_surface = self.canvas.get_canvas_surface()
@@ -166,7 +188,14 @@ class Demo:
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
-        self.mandel_win = g1.window('Mandelbrot', pos, (width, height))
+        self.mandel_win = g1.window(
+            'Mandelbrot',
+            pos,
+            (width, height),
+            preamble=self.mandel_window_preamble,
+            event_handler=self.mandel_window_event_handler,
+            postamble=self.mandel_window_postamble,
+        )
         self.mandel_canvas = g1.canvas('mandel', mandel_overall)
         g1.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
@@ -191,10 +220,22 @@ class Demo:
         # begin gui2
         # -----------------------
         g2 = GuiManager(self.screen, fonts)
+        g2.set_screen_lifecycle(
+            preamble=self.gui2_screen_preamble,
+            event_handler=self.gui2_screen_event_handler,
+            postamble=self.gui2_screen_postamble,
+        )
         g2.bitmap_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
         g2.button('return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
-        g2.window('GUI 2', (50, 150), (300, 300))
+        g2.window(
+            'GUI 2',
+            (50, 150),
+            (300, 300),
+            preamble=self.gui2_window_preamble,
+            event_handler=self.gui2_window_event_handler,
+            postamble=self.gui2_window_postamble,
+        )
         # set cursor for gui2
         g2.set_cursor((1, 1), 'cursor.png')
         self.gui2 = g2
@@ -203,20 +244,8 @@ class Demo:
         # -----------------------
         self.state_manager = StateManager()
         # Register contexts with StateManager
-        self.state_manager.register_context(
-            'gui1',
-            self.gui1,
-            self.preamble1,
-            self.handle_events1,
-            self.postamble1
-        )
-        self.state_manager.register_context(
-            'gui2',
-            self.gui2,
-            self.preamble2,
-            self.handle_events2,
-            self.postamble2
-        )
+        self.state_manager.register_context('gui1', self.gui1)
+        self.state_manager.register_context('gui2', self.gui2)
         # references to the schedulers
         self.s1 = self.gui1.scheduler
         self.s2 = self.gui2.scheduler
@@ -266,136 +295,36 @@ class Demo:
             pygame.quit()
         sys.exit(exit_code)
 
-    def preamble1(self):
-        # restore the pristine area to the screen before drawing
-        self.gui1.restore_pristine()
-        # if the mouse isn't over the canvas then end the dragging state
-        if not self.canvas.focused():
-            self.dragging = False
-        # draw the circles if their toggle is pushed
-        if self.circles_Toggle.read():
-            self.update_circles(self.size)
-        # update the visible windows
+    def _update_gui1_window_visibility(self):
         self.Button_group_win.visible = self.Buttons_Toggle.read()
         self.Scrollbar_win.visible = self.Scrollbars_Toggle.read()
         self.life_win.visible = self.life_Toggle.read()
         self.mandel_win.visible = self.mandel_Toggle.read()
 
-    def handle_events1(self, event):
-        # handle events
+    def gui1_screen_preamble(self):
+        self.gui1.restore_pristine()
+        if not self.canvas.focused():
+            self.dragging = False
+        if self.circles_Toggle.read():
+            self.update_circles(self.size)
+        self._update_gui1_window_visibility()
+
+    def gui1_screen_event_handler(self, event):
         if event.type == Event.Widget:
             if event.widget_id == 'exit':
-                # exit button was clicked
                 self.state_manager.set_running(False)
             elif event.widget_id == 'gui2':
-                # switch to gui2
                 self.state_manager.switch_context('gui2')
-            elif event.widget_id == 'life_reset':
-                self.life_reset()
-            elif event.widget_id == 'mandel_reset':
-                self.s1.remove_tasks(*Demo.mandel_task_ids)
-                self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                self.gui1.show_widgets(self.mandel_canvas)
-                self.clear_mandel_surfaces()
-            elif not self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
-                if event.widget_id == 'iterative':
-                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui1.show_widgets(self.mandel_canvas)
-                    self.clear_mandel_surfaces()
-                    x, y, w, h = self.mandel_canvas_rect
-                    self.mandel_setup(w, h)
-                    self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
-                elif event.widget_id == 'recursive':
-                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui1.show_widgets(self.mandel_canvas)
-                    self.clear_mandel_surfaces()
-                    x, y, w, h = self.mandel_canvas_rect
-                    self.mandel_setup(w, h)
-                    self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect,
-                                     message_method=self.make_mandel_progress_handler('recu'))
-                elif event.widget_id == '1split':
-                    self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.gui1.show_widgets(self.mandel_canvas)
-                    self.clear_mandel_surfaces()
-                    x, y, w, h = self.mandel_canvas_rect
-                    self.mandel_setup(w, h)
-                    hx, hy = w // 2, h // 2
-                    self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy),
-                                     message_method=self.make_mandel_progress_handler('1'))
-                    self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy),
-                                     message_method=self.make_mandel_progress_handler('2'))
-                    self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy),
-                                     message_method=self.make_mandel_progress_handler('3'))
-                    self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy),
-                                     message_method=self.make_mandel_progress_handler('4'))
-                elif event.widget_id == '4split':
-                    self.gui1.hide_widgets(self.mandel_canvas)
-                    self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-                    self.clear_mandel_surfaces()
-                    _, _, w1, h1 = self.mandel_canvas.get_size()
-                    w1 = w1 // 2
-                    h1 = h1 // 2
-                    self.mandel_setup(w1, h1)
-                    self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1),
-                                     message_method=self.make_mandel_progress_handler('can1'))
-                    self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1),
-                                     message_method=self.make_mandel_progress_handler('can2'))
-                    self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1),
-                                     message_method=self.make_mandel_progress_handler('can3'))
-                    self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
-                                     message_method=self.make_mandel_progress_handler('can4'))
-        elif event.type == Event.Group:
-            if event.group == 'bg1':
-                self.label1.set_label(f'ID: {event.widget_id}')
-            elif event.group == 'bg2':
-                self.label2.set_label(f'ID: {event.widget_id}')
-            elif event.group == 'bg3':
-                self.label3.set_label(f'ID: {event.widget_id}')
-            elif event.group == 'bg4':
-                self.label4.set_label(f'ID: {event.widget_id}')
-            elif event.group == 'bg5':
-                self.label5.set_label(f'ID: {event.widget_id}')
-            elif event.group == 'bg6':
-                self.label6.set_label(f'ID: {event.widget_id}')
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
-                # escape key pressed
                 self.state_manager.set_running(False)
         elif event.type == Event.Task:
-            task_id = getattr(event, 'id', None)
-            if task_id is None:
-                return
-            if getattr(event, 'error', None):
-                print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
-                return
-            if task_id in Demo.mandel_task_ids:
-                self.s1.pop_result(task_id)
+            self.handle_mandel_task_event(event)
         elif event.type == Event.Quit:
-            # window close widget or alt-f4 keypress
             self.state_manager.set_running(False)
 
-    def postamble1(self):
-        # restore the pristine area to the screen before drawing
-        self.gui1.restore_pristine()
-        # if the mouse isn't over the canvas then end the dragging state
-        if not self.canvas.focused():
-            self.dragging = False
-        # draw the circles if their toggle is pushed
-        if self.circles_Toggle.read():
-            self.update_circles(self.size)
-        # update the visible windows
-        self.Button_group_win.visible = self.Buttons_Toggle.read()
-        self.Scrollbar_win.visible = self.Scrollbars_Toggle.read()
-        self.life_win.visible = self.life_Toggle.read()
-        self.mandel_win.visible = self.mandel_Toggle.read()
+    def gui1_screen_postamble(self):
         self.update_gui_do_label()
-        # if the life window is visible then handle it
-        if self.life_win.visible:
-            # generate a new cycle if the togglebutton is pressed
-            if self.Toggle_life.read():
-                self.generate()
-            # draw life cells on the canvas
-            self.draw_life()
 
     def update_gui_do_label(self):
         x = self.gui_do_label.draw_rect.x + self.gui_do_dx
@@ -419,30 +348,150 @@ class Demo:
 
         self.gui_do_label.set_pos((x, y))
 
-    def preamble2(self):
-        # restore the pristine area to the screen before drawing
+    def buttons_window_preamble(self):
+        pass
+
+    def buttons_window_event_handler(self, event):
+        if event.type != Event.Group:
+            return
+        if event.group == 'bg1':
+            self.label1.set_label(f'ID: {event.widget_id}')
+        elif event.group == 'bg2':
+            self.label2.set_label(f'ID: {event.widget_id}')
+        elif event.group == 'bg3':
+            self.label3.set_label(f'ID: {event.widget_id}')
+        elif event.group == 'bg4':
+            self.label4.set_label(f'ID: {event.widget_id}')
+        elif event.group == 'bg5':
+            self.label5.set_label(f'ID: {event.widget_id}')
+        elif event.group == 'bg6':
+            self.label6.set_label(f'ID: {event.widget_id}')
+
+    def buttons_window_postamble(self):
+        pass
+
+    def scrollbars_window_preamble(self):
+        pass
+
+    def scrollbars_window_event_handler(self, _event):
+        pass
+
+    def scrollbars_window_postamble(self):
+        pass
+
+    def life_window_preamble(self):
+        pass
+
+    def life_window_event_handler(self, event):
+        if event.type == Event.Widget and event.widget_id == 'life_reset':
+            self.life_reset()
+
+    def life_window_postamble(self):
+        if self.Toggle_life.read():
+            self.generate()
+        self.draw_life()
+
+    def mandel_window_preamble(self):
+        pass
+
+    def mandel_window_event_handler(self, event):
+        if event.type != Event.Widget:
+            return
+        if event.widget_id == 'mandel_reset':
+            self.s1.remove_tasks(*Demo.mandel_task_ids)
+            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+            self.gui1.show_widgets(self.mandel_canvas)
+            self.clear_mandel_surfaces()
+            return
+        if self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+            return
+        if event.widget_id == 'iterative':
+            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+            self.gui1.show_widgets(self.mandel_canvas)
+            self.clear_mandel_surfaces()
+            _, _, w, h = self.mandel_canvas_rect
+            self.mandel_setup(w, h)
+            self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
+        elif event.widget_id == 'recursive':
+            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+            self.gui1.show_widgets(self.mandel_canvas)
+            self.clear_mandel_surfaces()
+            _, _, w, h = self.mandel_canvas_rect
+            self.mandel_setup(w, h)
+            self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect,
+                             message_method=self.make_mandel_progress_handler('recu'))
+        elif event.widget_id == '1split':
+            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+            self.gui1.show_widgets(self.mandel_canvas)
+            self.clear_mandel_surfaces()
+            x, y, w, h = self.mandel_canvas_rect
+            self.mandel_setup(w, h)
+            hx, hy = w // 2, h // 2
+            self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy),
+                             message_method=self.make_mandel_progress_handler('1'))
+            self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy),
+                             message_method=self.make_mandel_progress_handler('2'))
+            self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy),
+                             message_method=self.make_mandel_progress_handler('3'))
+            self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy),
+                             message_method=self.make_mandel_progress_handler('4'))
+        elif event.widget_id == '4split':
+            self.gui1.hide_widgets(self.mandel_canvas)
+            self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+            self.clear_mandel_surfaces()
+            _, _, w1, h1 = self.mandel_canvas.get_size()
+            w1 = w1 // 2
+            h1 = h1 // 2
+            self.mandel_setup(w1, h1)
+            self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1),
+                             message_method=self.make_mandel_progress_handler('can1'))
+            self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1),
+                             message_method=self.make_mandel_progress_handler('can2'))
+            self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1),
+                             message_method=self.make_mandel_progress_handler('can3'))
+            self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
+                             message_method=self.make_mandel_progress_handler('can4'))
+
+    def mandel_window_postamble(self):
+        pass
+
+    def handle_mandel_task_event(self, event):
+        task_id = getattr(event, 'id', None)
+        if task_id is None:
+            return
+        if getattr(event, 'error', None):
+            print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
+            return
+        if task_id in Demo.mandel_task_ids:
+            self.s1.pop_result(task_id)
+
+    def gui2_screen_preamble(self):
         self.gui2.restore_pristine()
 
-    def handle_events2(self, event):
-        # handle events
+    def gui2_screen_event_handler(self, event):
         if event.type == Event.Widget:
             if event.widget_id == 'return':
-                # return button was clicked
                 self.state_manager.switch_context('gui1')
         elif event.type == Event.Task:
             if getattr(event, 'error', None):
                 print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
-                # escape key pressed
                 self.state_manager.set_running(False)
         elif event.type == Event.Quit:
-            # window close widget or alt-f4 keypress
             self.state_manager.set_running(False)
 
-    def postamble2(self):
-        # restore the pristine area to the screen before drawing
-        self.gui2.restore_pristine()
+    def gui2_screen_postamble(self):
+        pass
+
+    def gui2_window_preamble(self):
+        pass
+
+    def gui2_window_event_handler(self, _event):
+        pass
+
+    def gui2_window_postamble(self):
+        pass
 
     # Canvas callback function
     def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
