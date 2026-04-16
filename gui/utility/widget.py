@@ -7,7 +7,7 @@ Provides common functionality for drawing, event handling, and state management.
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from .constants import ContainerKind, WidgetKind, GuiError
 
 if TYPE_CHECKING:
@@ -92,6 +92,12 @@ class Widget:
         """Get widget size without position offset."""
         _, _, w, h = self.draw_rect
         return Rect(0, 0, w, h)
+
+    def set_pos(self, pos: Tuple[int, int]) -> None:
+        """Set widget drawing position without changing size or z-order."""
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'widget pos must be a tuple of (x, y), got: {pos}')
+        self.draw_rect.x, self.draw_rect.y = pos
 
     def draw(self) -> None:
         """Draw the widget. Override in subclasses. May restore pristine bitmap."""

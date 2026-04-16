@@ -42,8 +42,12 @@ class Demo:
         g1.set_pristine('backdrop.jpg')
         # screen label
         b1.set_font('gui_do')
-        g1.label((50, 30), 'gui_do', True)
+        self.gui_do_label = g1.label((50, 30), 'gui_do', True)
         b1.set_font('normal')
+        self.gui_do_dx = 2
+        self.gui_do_dy = 2
+        # -----------------------
+
         widget_height = 28
         # exit button
         g1.button('exit', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Exit')
@@ -384,6 +388,7 @@ class Demo:
         self.Scrollbar_win.visible = self.Scrollbars_Toggle.read()
         self.life_win.visible = self.life_Toggle.read()
         self.mandel_win.visible = self.mandel_Toggle.read()
+        self.update_gui_do_label()
         # if the life window is visible then handle it
         if self.life_win.visible:
             # generate a new cycle if the togglebutton is pressed
@@ -391,6 +396,28 @@ class Demo:
                 self.generate()
             # draw life cells on the canvas
             self.draw_life()
+
+    def update_gui_do_label(self):
+        x = self.gui_do_label.draw_rect.x + self.gui_do_dx
+        y = self.gui_do_label.draw_rect.y + self.gui_do_dy
+        max_x = self.screen_rect.width - self.gui_do_label.draw_rect.width
+        max_y = self.screen_rect.height - self.gui_do_label.draw_rect.height
+
+        if x < 0:
+            x = 0
+            self.gui_do_dx = -self.gui_do_dx
+        elif x > max_x:
+            x = max_x
+            self.gui_do_dx = -self.gui_do_dx
+
+        if y < 0:
+            y = 0
+            self.gui_do_dy = -self.gui_do_dy
+        elif y > max_y:
+            y = max_y
+            self.gui_do_dy = -self.gui_do_dy
+
+        self.gui_do_label.set_pos((x, y))
 
     def preamble2(self):
         # restore the pristine area to the screen before drawing
