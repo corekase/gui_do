@@ -213,6 +213,23 @@ class GuiManager:
                 gui_object.surface = self.surface
                 # append the widget to the screen list
                 self.widgets.append(gui_object)
+
+            # Allow complex widgets to complete registration after they have
+            # their final container context. Roll back add if hook fails.
+            post_add = getattr(gui_object, '_on_added_to_gui', None)
+            if callable(post_add):
+                try:
+                    post_add()
+                except Exception:
+                    if active_window is not None:
+                        if gui_object in active_window.widgets:
+                            active_window.widgets.remove(gui_object)
+                    else:
+                        if gui_object in self.widgets:
+                            self.widgets.remove(gui_object)
+                    gui_object.window = None
+                    gui_object.surface = None
+                    raise
         return gui_object
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:

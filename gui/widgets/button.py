@@ -45,6 +45,17 @@ class Button(BaseInteractive):
         if self.on_activate is not None:
             self.on_activate()
 
+    def _clear_timer(self) -> None:
+        if self.timer_id is None:
+            return
+        try:
+            self.gui.timers.remove_timer(self.timer_id)
+        except Exception:
+            # Best-effort teardown; timer may already be removed.
+            pass
+        finally:
+            self.timer_id = None
+
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle button events and manage state transitions.
 
@@ -63,9 +74,7 @@ class Button(BaseInteractive):
 
         # Call base interactive logic first
         if not super().handle_event(event, window):
-            if self.timer_id is not None:
-                self.gui.timers.remove_timer(self.timer_id)
-                self.timer_id = None
+            self._clear_timer()
             return False
 
         # manage the state of the button
@@ -80,9 +89,7 @@ class Button(BaseInteractive):
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
                 if getattr(event, 'button', None) == 1:
-                    if self.timer_id is not None:
-                        self.gui.timers.remove_timer(f'{self.id}.timer')
-                        self.timer_id = None
+                    self._clear_timer()
                     self.state = InteractiveState.Hover
                     if self.on_activate is not None:
                         return False
@@ -90,8 +97,9 @@ class Button(BaseInteractive):
         return False
 
     def leave(self) -> None:
-        if self.timer_id is not None:
-            self.gui.timers.remove_timer(f'{self.id}.timer')
-            self.timer_id = None
+        self._clear_timer()
         super().leave()
         self.state = InteractiveState.Idle
+
+    def __del__(self) -> None:
+        self._clear_timer()

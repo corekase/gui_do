@@ -54,6 +54,7 @@ class Canvas(Widget):
         self.dropped_events: int = 0
         self.last_overflow: bool = False
         self.on_overflow: Optional[Callable[[int, int], None]] = None
+        self.coalesce_motion_events: bool = True
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
 
@@ -76,6 +77,11 @@ class Canvas(Widget):
         if callback is not None and not callable(callback):
             raise GuiError('overflow callback must be callable when provided')
         self.on_overflow = callback
+
+    def set_motion_coalescing(self, enabled: bool) -> None:
+        if not isinstance(enabled, bool):
+            raise GuiError(f'motion coalescing flag must be bool, got: {type(enabled).__name__}')
+        self.coalesce_motion_events = enabled
 
     def get_canvas_surface(self) -> Surface:
         # return a reference to the canvas surface
@@ -149,6 +155,20 @@ class Canvas(Widget):
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
                 packet.button = getattr(event, 'button', None)
+
+            # Coalesce motion events so high-frequency pointer movement does not
+            # overwhelm handlers and starve lower-frequency interaction events.
+            if (
+                self.coalesce_motion_events
+                and packet.type == CanvasEvent.MouseMotion
+                and len(self._events) > 0
+                and self._events[-1].type == CanvasEvent.MouseMotion
+            ):
+                self._events[-1] = packet
+                self.queued_event = True
+                self.CEvent = self._events[0]
+                return True
+
             was_full = len(self._events) == self._events.maxlen
             self.last_overflow = was_full
             if was_full:

@@ -16,6 +16,14 @@ class Scrollbar(Frame):
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         # list of registered sub-widgets
         self._registered: List[ArrowBox] = []
+        self._subwidgets_bound: bool = False
+        self._style: ArrowPosition = style
+        self._horizontal: Orientation = horizontal
+        self._overall_rect: Rect = Rect(overall_rect)
+        self._increment_rect: Optional[Rect] = None
+        self._decrement_rect: Optional[Rect] = None
+        self._inc_degree: Optional[float] = None
+        self._dec_degree: Optional[float] = None
         # parse the style
         if style == ArrowPosition.Skip:
             # pass through with no arrowboxes
@@ -52,7 +60,8 @@ class Scrollbar(Frame):
                     increment_rect = Rect(0, height - width, width, width)
             else:
                 raise GuiError('style not implemented')
-        # add arrowboxes
+        # compute arrow metadata; registration is deferred until this scrollbar
+        # is added to its final GUI container context.
         if style != ArrowPosition.Skip:
             x, y, width, height = overall_rect
             scroll_area_rect = Rect(x + scrollbar_rect.x, y + scrollbar_rect.y, scrollbar_rect.width, scrollbar_rect.height)
@@ -64,11 +73,10 @@ class Scrollbar(Frame):
             else:
                 inc_degree = 270
                 dec_degree = 90
-            inc_arrow = gui.arrowbox(f'{id}.increment', inc_rect, inc_degree, self.increment)
-            dec_arrow = gui.arrowbox(f'{id}.decrement', dec_rect, dec_degree, self.decrement)
-            # Store arrows for later - window context will be set after super().__init__()
-            self._registered.append(inc_arrow)
-            self._registered.append(dec_arrow)
+            self._increment_rect = inc_rect
+            self._decrement_rect = dec_rect
+            self._inc_degree = inc_degree
+            self._dec_degree = dec_degree
         else:
             scroll_area_rect = overall_rect
         # Scrollbar range parameters
@@ -79,10 +87,6 @@ class Scrollbar(Frame):
         # initialize common widget values
         super().__init__(gui, id, scroll_area_rect)
         self.WidgetKind = WidgetKind.Scrollbar
-        # Ensure arrows inherit window context from scrollbar when in a window
-        if self.window is not None:
-            for arrow in self._registered:
-                arrow.window = self.window
         # maximum area that can be filled
         self._graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         # setup the parameters of the scrollbar
@@ -96,6 +100,31 @@ class Scrollbar(Frame):
         self._last_mouse_pos: Optional[int] = None
         # whether or not the arrowboxes modified the start_pos
         self._hit: bool = False
+
+    def _on_added_to_gui(self) -> None:
+        if self._subwidgets_bound or self._style == ArrowPosition.Skip:
+            return
+        if self._increment_rect is None or self._decrement_rect is None:
+            raise GuiError('scrollbar arrow geometry is not initialized')
+        if self._inc_degree is None or self._dec_degree is None:
+            raise GuiError('scrollbar arrow direction is not initialized')
+
+        created: List[ArrowBox] = []
+        try:
+            inc_arrow = self.gui.arrowbox(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
+            created.append(inc_arrow)
+            dec_arrow = self.gui.arrowbox(f'{self.id}.decrement', self._decrement_rect, self._dec_degree, self.decrement)
+            created.append(dec_arrow)
+            self._registered.extend(created)
+            self._subwidgets_bound = True
+        except Exception:
+            for arrow in created:
+                if arrow in self.gui.widgets:
+                    self.gui.widgets.remove(arrow)
+                for window in self.gui.windows:
+                    if arrow in window.widgets:
+                        window.widgets.remove(arrow)
+            raise
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if self._hit:
