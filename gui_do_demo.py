@@ -279,15 +279,7 @@ class Demo:
 
     def run(self):
         """Run the application using the Engine with StateManager contexts."""
-        exit_code = 0
-        try:
-            self.engine.run()
-        except Exception:
-            exit_code = 1
-            raise
-        finally:
-            pygame.quit()
-        sys.exit(exit_code)
+        self.engine.run()
 
     def _update_gui1_window_visibility(self):
         self.Button_group_win.visible = self.Buttons_Toggle.read()
