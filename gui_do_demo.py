@@ -67,7 +67,7 @@ class Demo:
         # control whether the background circles are drawn
         self.circles_toggle = g1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
         # control whether the buttons and toggles window is visible
-        self.Buttons_toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
+        self.buttons_toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
         # control whether the scrollbar window is visible
         self.scrollbars_toggle = g1.toggle('Scrollbar_Window', g1.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
         # control whether the life window is visible
@@ -282,7 +282,7 @@ class Demo:
         self.engine.run()
 
     def _update_gui1_window_visibility(self):
-        self.button_group_win.visible = self.Buttons_toggle.read()
+        self.button_group_win.visible = self.buttons_toggle.read()
         self.scrollbar_win.visible = self.scrollbars_toggle.read()
         self.life_win.visible = self.life_toggle.read()
         self.mandel_win.visible = self.mandel_toggle.read()
