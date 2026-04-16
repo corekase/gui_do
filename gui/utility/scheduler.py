@@ -123,8 +123,10 @@ class Scheduler:
         self._task_messages: Deque[TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
         self._message_ingest_limit: Optional[int] = 256
+        self._max_queued_messages_per_task: Optional[int] = 512
 
         self._lock = threading.RLock()
+        self._message_slots_changed = threading.Condition(self._lock)
         self._max_workers: int = max(1, os.cpu_count() or 4)
         self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=self._max_workers)
 
@@ -171,6 +173,7 @@ class Scheduler:
             self._running.discard(id)
             if task is not None and task.future is not None:
                 task.future.cancel()
+        self._message_slots_changed.notify_all()
 
     def _decrement_message_count_locked(self, id: Hashable) -> None:
         count = self._task_message_counts.get(id)
@@ -181,6 +184,7 @@ class Scheduler:
             self._task_message_counts.pop(id, None)
         else:
             self._task_message_counts[id] = next_count
+        self._message_slots_changed.notify_all()
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
         if operation not in (TaskKind.Finished, TaskKind.Failed):
@@ -220,13 +224,23 @@ class Scheduler:
     def send_message(self, id: Hashable, parameters: object) -> None:
         self._validate_task_id(id)
         with self._lock:
-            task = self.tasks.get(id)
-            if task is None:
-                raise GuiError(f'unknown task id: {id}')
-            if task.message_method is None:
-                raise GuiError(f'task "{id}" has no message handler')
-            if not callable(task.message_method):
-                raise GuiError(f'task "{id}" message handler is not callable')
+            while True:
+                task = self.tasks.get(id)
+                if task is None:
+                    raise GuiError(f'unknown task id: {id}')
+                if task.message_method is None:
+                    raise GuiError(f'task "{id}" has no message handler')
+                if not callable(task.message_method):
+                    raise GuiError(f'task "{id}" message handler is not callable')
+
+                queued_count = self._task_message_counts.get(id, 0)
+                if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
+                    break
+
+                # Apply backpressure so worker threads do not flood the message queues
+                # when frame-side ingest/dispatch limits are intentionally low.
+                self._message_slots_changed.wait()
+
             self._task_message_counts[id] = self._task_message_counts.get(id, 0) + 1
             message = TaskMessage(id=id, callback=task.message_method, payload=parameters, generation=task.generation)
         self._incoming_task_messages.put(message)
@@ -294,6 +308,26 @@ class Scheduler:
         """Get max queued task messages ingested into dispatch buffer per update frame."""
         with self._lock:
             return self._message_ingest_limit
+
+    def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
+        """Set max queued progress messages allowed per task before backpressure waits.
+
+        Args:
+            max_queued_messages: Positive integer limit, or None for no per-task cap.
+        """
+        if max_queued_messages is not None:
+            if not isinstance(max_queued_messages, int):
+                raise GuiError(f'max_queued_messages must be int or None, got: {type(max_queued_messages).__name__}')
+            if max_queued_messages <= 0:
+                raise GuiError(f'max_queued_messages must be > 0, got: {max_queued_messages}')
+        with self._lock:
+            self._max_queued_messages_per_task = max_queued_messages
+            self._message_slots_changed.notify_all()
+
+    def get_max_queued_messages_per_task(self) -> Optional[int]:
+        """Get max queued progress messages allowed per task before backpressure waits."""
+        with self._lock:
+            return self._max_queued_messages_per_task
 
     def _drain_incoming_task_messages(self) -> None:
         drained: List[TaskMessage] = []
