@@ -11,14 +11,11 @@ if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
     from ..utility.widget import Widget
 
-
 def _noop() -> None:
     pass
 
-
 def _noop_event(_: "BaseEvent") -> None:
     pass
-
 
 class Window:
     """Top-level container with title bar, child widgets, and lifecycle hooks."""
