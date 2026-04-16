@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
 from .constants import ArrowPosition, BaseEvent, ButtonStyle, ContainerKind, Event, Orientation
 from .bitmapfactory import BitmapFactory
@@ -123,6 +123,8 @@ class GuiManager:
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
+        # task-to-window ownership map for task event dispatch
+        self._task_owner_by_id: Dict[Hashable, Window] = {}
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
         for widget in self.widgets:
@@ -377,7 +379,47 @@ class GuiManager:
             if window.visible:
                 window.run_preamble()
 
+    def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
+        try:
+            hash(task_id)
+        except TypeError as exc:
+            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
+        if window is None:
+            self._task_owner_by_id.pop(task_id, None)
+            return
+        if window not in self.windows:
+            raise GuiError('task owner window must be registered')
+        self._task_owner_by_id[task_id] = window
+
+    def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
+        for task_id in task_ids:
+            self.set_task_owner(task_id, window)
+
+    def clear_task_owners_for_window(self, window: Window) -> None:
+        if window not in self.windows:
+            return
+        stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
+        for task_id in stale_ids:
+            del self._task_owner_by_id[task_id]
+
+    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
+        if getattr(event, 'type', None) != Event.Task:
+            return None
+        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
+        if task_id is None:
+            return None
+        owner = self._task_owner_by_id.get(task_id)
+        if owner is None:
+            return None
+        if owner not in self.windows or not owner.visible:
+            return None
+        return owner
+
     def dispatch_event(self, event: BaseEvent) -> None:
+        task_owner = self._resolve_task_event_owner(event)
+        if task_owner is not None:
+            task_owner.handle_event(event)
+            return
         event_window = cast(Optional[Window], getattr(event, 'window', None))
         if event_window is not None and event_window in self.windows and event_window.visible:
             event_window.handle_event(event)

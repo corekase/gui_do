@@ -196,6 +196,7 @@ class Demo:
             event_handler=self.mandel_window_event_handler,
             postamble=self.mandel_window_postamble,
         )
+        g1.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
         self.mandel_canvas = g1.canvas('mandel', mandel_overall)
         g1.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.get_size()
@@ -318,8 +319,6 @@ class Demo:
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 self.state_manager.set_running(False)
-        elif event.type == Event.Task:
-            self.handle_mandel_task_event(event)
         elif event.type == Event.Quit:
             self.state_manager.set_running(False)
 
@@ -395,6 +394,9 @@ class Demo:
         pass
 
     def mandel_window_event_handler(self, event):
+        if event.type == Event.Task:
+            self.handle_mandel_task_event(event)
+            return
         if event.type != Event.Widget:
             return
         if event.widget_id == 'mandel_reset':
