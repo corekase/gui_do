@@ -70,13 +70,18 @@ class Timers:
                     if interval is None:
                         break
 
-
 @dataclass
 class Task:
     id: Hashable
     run_callable: Callable[[], object]
     message_method: Optional[Callable[[object], None]] = None
     future: Optional[Future[object]] = None
+
+@dataclass
+class TaskMessage:
+    id: Hashable
+    callback: Callable[[object], None]
+    payload: object
 
 
 class TaskEvent(BaseEvent):
@@ -87,7 +92,6 @@ class TaskEvent(BaseEvent):
         self.operation: TaskKind = operation
         self.id: Optional[Hashable] = task_id
         self.error: Optional[str] = error
-
 
 class Scheduler:
     """Concurrent task scheduler.
@@ -113,6 +117,7 @@ class Scheduler:
         self._tasks_finished: List[Hashable] = []
         self._tasks_failed: List[Tuple[Hashable, str]] = []
         self._task_results: Dict[Hashable, object] = {}
+        self._task_messages: Deque[TaskMessage] = deque()
 
         self._lock = threading.RLock()
         self._max_workers: int = max(1, os.cpu_count() or 4)
@@ -155,6 +160,7 @@ class Scheduler:
         self._remove_from_suspended(id)
         task = self.tasks.pop(id, None)
         self._task_results.pop(id, None)
+        self._task_messages = deque(message for message in self._task_messages if message.id != id)
         if id in self._running:
             self._running.discard(id)
             if task is not None and task.future is not None:
@@ -198,17 +204,18 @@ class Scheduler:
 
     def send_message(self, id: Hashable, parameters: object) -> None:
         self._validate_task_id(id)
-        task = self.tasks.get(id)
-        if task is None:
-            from .guimanager import GuiError
-            raise GuiError(f'unknown task id: {id}')
-        if task.message_method is None:
-            from .guimanager import GuiError
-            raise GuiError(f'task "{id}" has no message handler')
-        if not callable(task.message_method):
-            from .guimanager import GuiError
-            raise GuiError(f'task "{id}" message handler is not callable')
-        task.message_method(parameters)
+        with self._lock:
+            task = self.tasks.get(id)
+            if task is None:
+                from .guimanager import GuiError
+                raise GuiError(f'unknown task id: {id}')
+            if task.message_method is None:
+                from .guimanager import GuiError
+                raise GuiError(f'task "{id}" has no message handler')
+            if not callable(task.message_method):
+                from .guimanager import GuiError
+                raise GuiError(f'task "{id}" message handler is not callable')
+            self._task_messages.append(TaskMessage(id=id, callback=task.message_method, payload=parameters))
 
     def remove_all(self) -> None:
         with self._lock:
@@ -223,6 +230,7 @@ class Scheduler:
             self._tasks_finished.clear()
             self._tasks_failed.clear()
             self._task_results.clear()
+            self._task_messages.clear()
 
     def remove_tasks(self, *tasks: Hashable) -> None:
         with self._lock:
@@ -232,6 +240,22 @@ class Scheduler:
             removed = set(tasks)
             self._tasks_finished = [id for id in self._tasks_finished if id not in removed]
             self._tasks_failed = [item for item in self._tasks_failed if item[0] not in removed]
+            self._task_messages = deque(message for message in self._task_messages if message.id not in removed)
+
+    def _dispatch_task_messages(self) -> None:
+        pending_messages: List[TaskMessage]
+        with self._lock:
+            if not self._task_messages:
+                return
+            pending_messages = list(self._task_messages)
+            self._task_messages.clear()
+
+        for message in pending_messages:
+            try:
+                message.callback(message.payload)
+            except Exception as exc:
+                with self._lock:
+                    self._tasks_failed.append((message.id, f'Task message callback failed: {type(exc).__name__}: {exc}'))
 
     def suspend_all(self) -> None:
         with self._lock:
@@ -278,11 +302,6 @@ class Scheduler:
     def read_suspended_len(self) -> int:
         with self._lock:
             return len(self._suspended)
-
-    def task_time(self, id: Hashable) -> bool:
-        self._validate_task_id(id)
-        from .guimanager import GuiError
-        raise GuiError('task_time is no longer supported because cooperative scheduling was removed')
 
     def tasks_active(self) -> bool:
         with self._lock:
@@ -344,7 +363,10 @@ class Scheduler:
             self._tasks_failed.clear()
             self._submit_ready_tasks()
             self._collect_finished_tasks()
-            return self._tasks_finished.copy()
+            finished_tasks = self._tasks_finished.copy()
+
+        self._dispatch_task_messages()
+        return finished_tasks
 
     def get_finished_tasks(self) -> List[Hashable]:
         """Get list of tasks that finished in the most recent update."""

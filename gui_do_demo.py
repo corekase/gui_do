@@ -292,14 +292,15 @@ class Demo:
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.s1.add_task('iter', self.mandel_iterative)
+                    self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
                 elif event.widget_id == 'recursive':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
                     self.clear_mandel_surfaces()
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
-                    self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect)
+                    self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect,
+                                     message_method=self.make_mandel_progress_handler('recu'))
                 elif event.widget_id == '1split':
                     self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
                     self.gui1.show_widgets(self.mandel_canvas)
@@ -307,10 +308,14 @@ class Demo:
                     x, y, w, h = self.mandel_canvas_rect
                     self.mandel_setup(w, h)
                     hx, hy = w // 2, h // 2
-                    self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy))
-                    self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy))
-                    self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy))
-                    self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy))
+                    self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy),
+                                     message_method=self.make_mandel_progress_handler('1'))
+                    self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy),
+                                     message_method=self.make_mandel_progress_handler('2'))
+                    self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy),
+                                     message_method=self.make_mandel_progress_handler('3'))
+                    self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy),
+                                     message_method=self.make_mandel_progress_handler('4'))
                 elif event.widget_id == '4split':
                     self.gui1.hide_widgets(self.mandel_canvas)
                     self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
@@ -319,10 +324,14 @@ class Demo:
                     w1 = w1 // 2
                     h1 = h1 // 2
                     self.mandel_setup(w1, h1)
-                    self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1))
-                    self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1))
-                    self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1))
-                    self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1))
+                    self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1),
+                                     message_method=self.make_mandel_progress_handler('can1'))
+                    self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1),
+                                     message_method=self.make_mandel_progress_handler('can2'))
+                    self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1),
+                                     message_method=self.make_mandel_progress_handler('can3'))
+                    self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
+                                     message_method=self.make_mandel_progress_handler('can4'))
         elif event.type == Event.Group:
             if event.group == 'bg1':
                 self.label1.set_label(f'ID: {event.widget_id}')
@@ -348,9 +357,7 @@ class Demo:
                 print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
                 return
             if task_id in {'iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4'}:
-                result = self.s1.pop_result(task_id)
-                if result is not None:
-                    self.apply_mandel_result(task_id, result)
+                self.s1.pop_result(task_id)
         elif event.type == Event.Quit:
             # window close widget or alt-f4 keypress
             self.state_manager.set_running(False)
@@ -524,19 +531,16 @@ class Demo:
 
     def mandel_iterative(self, id):
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
-        return self._compute_iterative_region(rect)
+        self._compute_iterative_region(id, rect)
+        return None
 
     def mandel_recursive(self, id, item):
         x, y, w, h = item
-        values = [0] * (w * h)
-
         def fill_region(x_pos, y_pos, width, height, value):
-            for y_off in range(height):
-                row_start = ((y_pos - y) + y_off) * w + (x_pos - x)
-                values[row_start:row_start + width] = [value] * width
+            self.s1.send_message(id, (x_pos, y_pos, width, height, [value] * (width * height)))
 
-        def set_pixel(x_pos, y_pos, value):
-            values[(y_pos - y) * w + (x_pos - x)] = value
+        def publish_pixel_block(x_pos, y_pos, width, height, block_values):
+            self.s1.send_message(id, (x_pos, y_pos, width, height, block_values))
 
         def recursive_region(x_pos, y_pos, width, height):
             if width <= 0 or height <= 0:
@@ -573,26 +577,41 @@ class Demo:
             top_right = self.pixel(right, y_pos)
             bottom_left = self.pixel(x_pos, bottom)
             bottom_right = self.pixel(right, bottom)
-            set_pixel(x_pos, y_pos, top_left)
+            block_values = [top_left]
             if width > 1:
-                set_pixel(x_pos + 1, y_pos, top_right)
+                block_values.append(top_right)
             if height > 1:
-                set_pixel(x_pos, y_pos + 1, bottom_left)
+                block_values.append(bottom_left)
             if width > 1 and height > 1:
-                set_pixel(x_pos + 1, y_pos + 1, bottom_right)
+                block_values.append(bottom_right)
+            publish_pixel_block(x_pos, y_pos, width, height, block_values)
 
         recursive_region(x, y, w, h)
-        return (x, y, w, h, values)
+        return None
 
-    def _compute_iterative_region(self, rect):
+    def _compute_iterative_region(self, task_id, rect):
         x, y, w, h = rect
-        values = [0] * (w * h)
-        idx = 0
+        chunk_rows = 8
+        row_values = []
+        chunk_start_y = y
         for y_pos in range(y, y + h):
             for x_pos in range(x, x + w):
-                values[idx] = self.pixel(x_pos, y_pos)
-                idx += 1
-        return (x, y, w, h, values)
+                row_values.append(self.pixel(x_pos, y_pos))
+            rows_in_chunk = ((y_pos - chunk_start_y) + 1)
+            if rows_in_chunk >= chunk_rows:
+                self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
+                chunk_start_y = y_pos + 1
+                row_values = []
+
+        if row_values:
+            rows_in_chunk = y + h - chunk_start_y
+            self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
+
+    def make_mandel_progress_handler(self, task_id):
+        def handler(result):
+            self.apply_mandel_result(task_id, result)
+
+        return handler
 
     def apply_mandel_result(self, task_id, result):
         x, y, w, h, values = result
