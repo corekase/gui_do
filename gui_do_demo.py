@@ -215,9 +215,9 @@ class Demo:
         # references to the schedulers
         self.s1 = self.gui1.scheduler
         self.s2 = self.gui2.scheduler
-        # Limit per-frame task progress callback work to keep frame pacing smoother.
-        self.s1.set_message_dispatch_limit(200)
-        self.s2.set_message_dispatch_limit(200)
+        # Keep per-frame callback work bounded so bursty task progress updates do not hitch rendering.
+        self.s1.set_message_dispatch_limit(256)
+        self.s2.set_message_dispatch_limit(256)
         # Set initial context to gui1
         self.state_manager.switch_context('gui1')
         # Create the engine
@@ -542,7 +542,8 @@ class Demo:
     def mandel_recursive(self, id, item):
         x, y, w, h = item
         def fill_region(x_pos, y_pos, width, height, value):
-            self.s1.send_message(id, (x_pos, y_pos, width, height, [value] * (width * height)))
+            # Send a compact fill payload so the GUI thread can draw this block with one fill call.
+            self.s1.send_message(id, (x_pos, y_pos, width, height, value))
 
         def publish_pixel_block(x_pos, y_pos, width, height, block_values):
             self.s1.send_message(id, (x_pos, y_pos, width, height, block_values))
@@ -624,6 +625,9 @@ class Demo:
         elif task_id == 'can4':
             canvas = self.canvas4.canvas
         else:
+            return
+        if isinstance(values, int):
+            canvas.fill(self.col(values), Rect(x, y, w, h))
             return
         idx = 0
         canvas.lock()
