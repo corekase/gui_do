@@ -190,7 +190,8 @@ class Scrollbar(Frame):
         self._dragging = False
         self._last_mouse_pos = None
 
-    def read(self) -> int:
+    @property
+    def start_pos(self) -> int:
         """Return current start position in total-range units."""
         return self._start_pos
 
