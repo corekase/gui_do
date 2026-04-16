@@ -290,13 +290,3 @@ python gui_do_demo.py
 ```
 
 If assets are missing, verify the `data/` directory contains the files referenced by the demo.
-
-## Where To Extend Next
-
-Good next additions to this package would be:
-
-- A stronger layout system (docking/constraints/stack).
-- Theme and style customization APIs.
-- More widget types and keyboard navigation/focus UX.
-- Dirty-rectangle optimizations for larger UIs.
-- Optional high-DPI scaling strategy beyond current process DPI awareness on Windows.
