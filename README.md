@@ -233,7 +233,10 @@ You can then call `restore_pristine()` each frame (as the demo does) before draw
 
 ## Buffered rendering
 
-Set `gui.buffered = True` to have the renderer save pixels before draws and restore afterward. This reduces flicker at a memory cost.
+Set `gui.buffered = True` to have the renderer save pixels underneath gui objects before draws and restore afterward.
+
+- Use this when your graphical background doesn't change and instead of redrawing the entire background the graphical areas underneath gui objects are restored between gui loops.
+- This setting is not useful if your background graphics are significantly changing, it is meant for mostly static backgrounds.
 
 ## Coordinates
 
