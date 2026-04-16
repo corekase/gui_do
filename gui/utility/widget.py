@@ -8,7 +8,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, TYPE_CHECKING
-from .constants import ContainerKind, WidgetKind
+from .constants import ContainerKind, WidgetKind, GuiError
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -65,6 +65,8 @@ class Widget:
 
     @visible.setter
     def visible(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise GuiError('widget visible must be a bool')
         self._visible = value
 
     def get_collide(self, window: Optional["Window"] = None) -> bool:
