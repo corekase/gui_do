@@ -79,9 +79,8 @@ class Demo:
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
         self.Button_group_win = g1.window('Button Groups, Buttons, and Toggles',
                                           (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom),
-                                          preamble=self.buttons_window_preamble,
                                           event_handler=self.buttons_window_event_handler,
-                                          postamble=self.buttons_window_postamble)
+                                          )
         g1.label(g1.gridded(0, 0), 'G1 Boxed', True)
         g1.label(g1.gridded(1, 0), 'G2 Rounded', True)
         g1.label(g1.gridded(2, 0), 'G3 Angled', True)
@@ -142,10 +141,7 @@ class Demo:
         self.Scrollbar_win = g1.window(
             'Scrollbars',
             (x_pos, y_pos),
-            (320, 362),
-            preamble=self.scrollbars_window_preamble,
-            event_handler=self.scrollbars_window_event_handler,
-            postamble=self.scrollbars_window_postamble,
+            (320, 362)
         )
         x = y = 10
         g1.scrollbar('Scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Skip, (100, 0, 30, 10))
@@ -174,9 +170,8 @@ class Demo:
             'Conway\'s Game of Life',
             (x_pos, y_pos),
             (width, height),
-            preamble=self.life_window_preamble,
             event_handler=self.life_window_event_handler,
-            postamble=self.life_window_postamble,
+            postamble=self.life_window_postamble
         )
         self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
@@ -196,9 +191,7 @@ class Demo:
             'Mandelbrot',
             pos,
             (width, height),
-            preamble=self.mandel_window_preamble,
-            event_handler=self.mandel_window_event_handler,
-            postamble=self.mandel_window_postamble,
+            event_handler=self.mandel_window_event_handler
         )
         g1.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
         self.mandel_canvas = g1.canvas('mandel', mandel_overall)
@@ -227,8 +220,7 @@ class Demo:
         g2 = GuiManager(self.screen, fonts)
         g2.set_screen_lifecycle(
             preamble=self.gui2_screen_preamble,
-            event_handler=self.gui2_screen_event_handler,
-            postamble=self.gui2_screen_postamble,
+            event_handler=self.gui2_screen_event_handler
         )
         g2.bitmap_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
@@ -236,10 +228,7 @@ class Demo:
         g2.window(
             'GUI 2',
             (50, 150),
-            (300, 300),
-            preamble=self.gui2_window_preamble,
-            event_handler=self.gui2_window_event_handler,
-            postamble=self.gui2_window_postamble,
+            (300, 300)
         )
         # set cursor for gui2
         g2.set_cursor((1, 1), 'cursor.png')
@@ -367,9 +356,6 @@ class Demo:
         self.gui_do_pos_y = y
         self.gui_do_label.set_pos((int(round(x)), int(round(y))))
 
-    def buttons_window_preamble(self):
-        pass
-
     def buttons_window_event_handler(self, event):
         if event.type != Event.Group:
             return
@@ -386,21 +372,6 @@ class Demo:
         elif event.group == 'bg6':
             self.label6.set_label(f'ID: {event.widget_id}')
 
-    def buttons_window_postamble(self):
-        pass
-
-    def scrollbars_window_preamble(self):
-        pass
-
-    def scrollbars_window_event_handler(self, _event):
-        pass
-
-    def scrollbars_window_postamble(self):
-        pass
-
-    def life_window_preamble(self):
-        pass
-
     def life_window_event_handler(self, event):
         if event.type == Event.Widget and event.widget_id == 'life_reset':
             self.life_reset()
@@ -409,9 +380,6 @@ class Demo:
         if self.Toggle_life.read():
             self.generate()
         self.draw_life()
-
-    def mandel_window_preamble(self):
-        pass
 
     def mandel_window_event_handler(self, event):
         if event.type == Event.Task:
@@ -474,9 +442,6 @@ class Demo:
             self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
                              message_method=self.make_mandel_progress_handler('can4'))
 
-    def mandel_window_postamble(self):
-        pass
-
     def handle_mandel_task_event(self, event):
         task_id = getattr(event, 'id', None)
         if task_id is None:
@@ -502,18 +467,6 @@ class Demo:
                 self.state_manager.set_running(False)
         elif event.type == Event.Quit:
             self.state_manager.set_running(False)
-
-    def gui2_screen_postamble(self):
-        pass
-
-    def gui2_window_preamble(self):
-        pass
-
-    def gui2_window_event_handler(self, _event):
-        pass
-
-    def gui2_window_postamble(self):
-        pass
 
     # Canvas callback function
     def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
