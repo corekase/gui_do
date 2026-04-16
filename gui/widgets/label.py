@@ -10,14 +10,9 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Label(Widget):
-    """A non-interactive text label widget.
-
-    Renders text to the GUI with optional shadow effect. Labels do not respond to
-    user input and cannot be activated.
-    """
+    """Non-interactive text widget."""
     def __init__(self, gui: "GuiManager", id: str, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
         super().__init__(gui, id, Rect(0, 0, 0, 0))
-        # initialize common widget values
         self.shadow: bool = shadow
         self._font: Optional[str] = self.gui.bitmap_factory.get_current_font_name()
         self._text_bitmap: Surface
@@ -38,7 +33,6 @@ class Label(Widget):
             self._text_bitmap = self.gui.bitmap_factory.render_text(text)
 
     def set_label(self, text: str) -> None:
-        # text bitmap
         if self._font is not None:
             self.gui.bitmap_factory.set_font(self._font)
             self._render(text)
@@ -47,7 +41,7 @@ class Label(Widget):
             self._render(text)
 
     def draw(self) -> None:
-        """Draw the label text to the surface."""
+        """Blit the rendered label bitmap."""
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:

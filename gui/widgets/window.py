@@ -21,6 +21,7 @@ def _noop_event(_: "BaseEvent") -> None:
 
 
 class Window:
+    """Top-level container with title bar, child widgets, and lifecycle hooks."""
     def __init__(
         self,
         gui: "GuiManager",
@@ -40,23 +41,18 @@ class Window:
             raise GuiError(f'window size must be a tuple of (w, h), got: {size}')
         if size[0] <= 0 or size[1] <= 0:
             raise GuiError(f'window size must be positive, got: {size}')
-        # windows don't need names because eventually they are going to be in banks which will be named
         self.gui: "GuiManager" = gui
         self.ContainerKind = ContainerKind.Window
-        # window x and y position from the main surface coordinate, not the titlebar
         self.x: int
         self.y: int
         self.x, self.y = pos
         self.width: int
         self.height: int
         self.width, self.height = size
-        # titlebar size
         self.titlebar_size: int = 24
-        # window surface
         self.surface: pygame.Surface = pygame.surface.Surface(size).convert()
         self.pristine: Optional[Surface] = None
         if backdrop is None:
-            # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'window_frame', Rect(0, 0, size[0], size[1]))
             frame.state = InteractiveState.Idle
             frame.surface = self.surface
@@ -64,18 +60,14 @@ class Window:
         else:
             self.gui.set_pristine(backdrop, self)
         self._window_save_pristine()
-        # widgets on that surface
         self.widgets: List["Widget"] = []
-        # set the window to the position passed in
         self.set_pos(pos)
         self.title_bar_inactive_bitmap: Surface
         self.title_bar_active_bitmap: Surface
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = self.gui.bitmap_factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
         self.title_bar_rect: Rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap: Surface = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
-        # whether or not the window is visible
         self._visible: bool = True
-        # per-window lifecycle callbacks
         self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
         self._event_handler: Callable[["BaseEvent"], None] = event_handler if callable(event_handler) else _noop_event
         self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
@@ -96,8 +88,6 @@ class Window:
         self.x, self.y = pos
 
     def _window_save_pristine(self) -> None:
-        # update the window pristine bitmap
-        # the window pristine bitmap can be used to undo widget bitmap damage to the contents
         self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
     def draw_title_bar_inactive(self) -> None:
@@ -109,7 +99,7 @@ class Window:
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_window(self) -> None:
-        # called when the gui manager is entering a window to process its widgets
+        """Restore pristine contents before drawing child widgets."""
         self.gui.restore_pristine(self.surface.get_rect(), self)
 
     def run_preamble(self) -> None:
@@ -125,7 +115,7 @@ class Window:
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
 
     def get_window_rect(self) -> Rect:
-        # total rect of the window including titlebar and surface
+        """Return window bounds including title bar."""
         return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
     def get_widget_rect(self) -> Rect:

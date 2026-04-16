@@ -53,7 +53,6 @@ class Timers:
             del self.timers[id]
 
     def timer_updates(self, now_time: int) -> None:
-        # Iterate over a key copy because callbacks may remove timers.
         for id in list(self.timers.keys()):
             interval = self.timers.get(id)
             if interval is None:
@@ -88,7 +87,7 @@ class TaskMessage:
 
 
 class TaskEvent(BaseEvent):
-    """Task scheduler event for finished/failed task notifications."""
+    """Event emitted for task completion or failure."""
 
     def __init__(self, operation: TaskKind, task_id: Optional[Hashable] = None, error: Optional[str] = None) -> None:
         super().__init__(Event.Task)
@@ -97,13 +96,7 @@ class TaskEvent(BaseEvent):
         self.error: Optional[str] = error
 
 class Scheduler:
-    """Concurrent task scheduler.
-
-    This scheduler runs tasks using worker threads and supports callables,
-    coroutine functions, and callables that return coroutine objects.
-
-    Cooperative generator scheduling has been removed.
-    """
+    """Threaded task runner with per-frame completion and message dispatch."""
 
     def __init__(self, gui: "GuiManager") -> None:
         self.gui: "GuiManager" = gui
@@ -240,8 +233,6 @@ class Scheduler:
                 if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
                     break
 
-                # Apply backpressure so worker threads do not flood the message queues
-                # when frame-side ingest/dispatch limits are intentionally low.
                 self._message_slots_changed.wait()
 
             self._task_message_counts[id] = self._task_message_counts.get(id, 0) + 1
@@ -275,11 +266,7 @@ class Scheduler:
             self._task_messages = deque(message for message in self._task_messages if message.id not in removed)
 
     def set_message_dispatch_limit(self, max_messages_per_update: Optional[int]) -> None:
-        """Set max task messages dispatched to callbacks per update frame.
-
-        Args:
-            max_messages_per_update: Positive integer limit, or None for no limit.
-        """
+        """Set max callback messages dispatched in each update call."""
         if max_messages_per_update is not None:
             if not isinstance(max_messages_per_update, int):
                 raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
@@ -289,16 +276,12 @@ class Scheduler:
             self._message_dispatch_limit = max_messages_per_update
 
     def get_message_dispatch_limit(self) -> Optional[int]:
-        """Get max task messages dispatched to callbacks per update frame."""
+        """Return dispatch limit per update, or None when unlimited."""
         with self._lock:
             return self._message_dispatch_limit
 
     def set_message_ingest_limit(self, max_messages_per_update: Optional[int]) -> None:
-        """Set max queued task messages ingested into dispatch buffer per update frame.
-
-        Args:
-            max_messages_per_update: Positive integer limit, or None for no limit.
-        """
+        """Set max incoming messages moved into dispatch buffer per update."""
         if max_messages_per_update is not None:
             if not isinstance(max_messages_per_update, int):
                 raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
@@ -308,16 +291,12 @@ class Scheduler:
             self._message_ingest_limit = max_messages_per_update
 
     def get_message_ingest_limit(self) -> Optional[int]:
-        """Get max queued task messages ingested into dispatch buffer per update frame."""
+        """Return ingest limit per update, or None when unlimited."""
         with self._lock:
             return self._message_ingest_limit
 
     def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
-        """Set max queued progress messages allowed per task before backpressure waits.
-
-        Args:
-            max_queued_messages: Positive integer limit, or None for no per-task cap.
-        """
+        """Set per-task queue cap before send_message blocks for backpressure."""
         if max_queued_messages is not None:
             if not isinstance(max_queued_messages, int):
                 raise GuiError(f'max_queued_messages must be int or None, got: {type(max_queued_messages).__name__}')
@@ -328,7 +307,7 @@ class Scheduler:
             self._message_slots_changed.notify_all()
 
     def get_max_queued_messages_per_task(self) -> Optional[int]:
-        """Get max queued progress messages allowed per task before backpressure waits."""
+        """Return per-task queue cap, or None when unlimited."""
         with self._lock:
             return self._max_queued_messages_per_task
 
@@ -440,12 +419,12 @@ class Scheduler:
             return bool(self._pending_set or self._running)
 
     def tasks_busy(self) -> bool:
-        """Return True when tasks are active or progress messages are queued."""
+        """Return True when tasks are running/pending or still have queued messages."""
         with self._lock:
             return bool(self._pending_set or self._running or self._task_message_counts)
 
     def tasks_busy_match_any(self, *tasks: Hashable) -> bool:
-        """Return True if any task id is active or has queued progress messages."""
+        """Return True when any listed id is active or has queued messages."""
         with self._lock:
             for task in tasks:
                 self._validate_task_id(task)
@@ -501,11 +480,7 @@ class Scheduler:
                 self.tasks.pop(task_id, None)
 
     def update(self) -> List[Hashable]:
-        """Update scheduler state for one frame.
-
-        Returns:
-            List of task IDs that finished during this update.
-        """
+        """Advance one frame and return task ids that finished this update."""
         with self._lock:
             self._tasks_finished.clear()
             self._tasks_failed.clear()
@@ -518,33 +493,33 @@ class Scheduler:
         return finished_tasks
 
     def get_finished_tasks(self) -> List[Hashable]:
-        """Get list of tasks that finished in the most recent update."""
+        """Return finished task ids from the latest update."""
         with self._lock:
             return self._tasks_finished.copy()
 
     def clear_finished_tasks(self) -> None:
-        """Clear the finished tasks list."""
+        """Clear stored finished-task ids."""
         with self._lock:
             self._tasks_finished.clear()
 
     def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
-        """Get list of failed tasks in the most recent update."""
+        """Return failed tasks from the latest update as (id, error)."""
         with self._lock:
             return self._tasks_failed.copy()
 
     def clear_failed_tasks(self) -> None:
-        """Clear the failed tasks list."""
+        """Clear stored failed-task entries."""
         with self._lock:
             self._tasks_failed.clear()
 
     def pop_result(self, id: Hashable, default: Optional[object] = None) -> Optional[object]:
-        """Get and remove a completed task's result."""
+        """Return and remove a completed task result."""
         self._validate_task_id(id)
         with self._lock:
             return self._task_results.pop(id, default)
 
     def shutdown(self) -> None:
-        """Release thread resources used by this scheduler."""
+        """Cancel pending work and stop worker threads."""
         with self._lock:
             self.remove_all()
             self._executor.shutdown(wait=False, cancel_futures=True)
@@ -553,5 +528,4 @@ class Scheduler:
         try:
             self.shutdown()
         except Exception as exc:
-            # __del__ cannot safely raise; surface cleanup failures for diagnosis.
             _logger.warning('Scheduler cleanup failed: %s: %s', type(exc).__name__, exc)

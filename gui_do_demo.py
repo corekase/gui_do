@@ -176,7 +176,7 @@ class Demo:
         self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
         self.canvas_surface = self.canvas.get_canvas_surface()
-        self.canvas_rect = self.canvas.get_size()
+        self.canvas_rect = self.canvas.draw_rect
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
         g1.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
@@ -196,8 +196,8 @@ class Demo:
         g1.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
         self.mandel_canvas = g1.canvas('mandel', mandel_overall)
         g1.hide_widgets(self.mandel_canvas)
-        self.mandel_canvas_rect = self.mandel_canvas.get_size()
-        cx, cy, cwidth, cheight = self.mandel_canvas.get_size()
+        self.mandel_canvas_rect = self.mandel_canvas.draw_rect
+        cx, cy, cwidth, cheight = self.mandel_canvas.draw_rect
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
         self.canvas1 = g1.canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10))
         self.canvas2 = g1.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
@@ -400,28 +400,29 @@ class Demo:
             self.clear_mandel_surfaces()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
-            self.s1.add_task('recu', self.mandel_recursive, self.mandel_canvas_rect,
+            self.s1.add_task('recu', self.mandel_recursive, Rect(0, 0, w, h),
                              message_method=self.make_mandel_progress_handler('recu'))
         elif event.widget_id == '1split':
             self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.gui1.show_widgets(self.mandel_canvas)
             self.clear_mandel_surfaces()
-            x, y, w, h = self.mandel_canvas_rect
+            _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
-            hx, hy = w // 2, h // 2
-            self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, hx, hy),
+            left_w, top_h = w // 2, h // 2
+            right_w, bottom_h = w - left_w, h - top_h
+            self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, left_w, top_h),
                              message_method=self.make_mandel_progress_handler('1'))
-            self.s1.add_task('2', self.mandel_recursive, Rect(hx, y, hx, hy),
+            self.s1.add_task('2', self.mandel_recursive, Rect(left_w, 0, right_w, top_h),
                              message_method=self.make_mandel_progress_handler('2'))
-            self.s1.add_task('3', self.mandel_recursive, Rect(x, hy, hx, hy),
+            self.s1.add_task('3', self.mandel_recursive, Rect(0, top_h, left_w, bottom_h),
                              message_method=self.make_mandel_progress_handler('3'))
-            self.s1.add_task('4', self.mandel_recursive, Rect(hx, hy, hx, hy),
+            self.s1.add_task('4', self.mandel_recursive, Rect(left_w, top_h, right_w, bottom_h),
                              message_method=self.make_mandel_progress_handler('4'))
         elif event.widget_id == '4split':
             self.gui1.hide_widgets(self.mandel_canvas)
             self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.clear_mandel_surfaces()
-            _, _, w1, h1 = self.mandel_canvas.get_size()
+            _, _, w1, h1 = self.mandel_canvas.draw_rect
             w1 = w1 // 2
             h1 = h1 // 2
             self.mandel_setup(w1, h1)
@@ -601,6 +602,14 @@ class Demo:
 
     def mandel_recursive(self, id, item):
         x, y, w, h = item
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(self.mandel_width, x + w)
+        y1 = min(self.mandel_height, y + h)
+        if x1 <= x0 or y1 <= y0:
+            return None
+        x, y, w, h = x0, y0, x1 - x0, y1 - y0
+
         def fill_region(x_pos, y_pos, width, height, value):
             # Send a compact fill payload so the GUI thread can draw this block with one fill call.
             self.s1.send_message(id, (x_pos, y_pos, width, height, value))
@@ -652,6 +661,14 @@ class Demo:
 
     def _compute_iterative_region(self, task_id, rect):
         x, y, w, h = rect
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(self.mandel_width, x + w)
+        y1 = min(self.mandel_height, y + h)
+        if x1 <= x0 or y1 <= y0:
+            return
+        x, y, w, h = x0, y0, x1 - x0, y1 - y0
+
         chunk_rows = 4
         row_values = []
         chunk_start_y = y
@@ -686,6 +703,27 @@ class Demo:
             canvas = self.canvas4.canvas
         else:
             return
+
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(canvas.get_width(), x + w)
+        y1 = min(canvas.get_height(), y + h)
+        if x1 <= x0 or y1 <= y0:
+            return
+
+        if (x0, y0, x1, y1) != (x, y, x + w, y + h):
+            if isinstance(values, int):
+                canvas.fill(self.col(values), Rect(x0, y0, x1 - x0, y1 - y0))
+                return
+            src_w = w
+            clipped_values = []
+            for row in range(y0 - y, y1 - y):
+                start = row * src_w + (x0 - x)
+                end = start + (x1 - x0)
+                clipped_values.extend(values[start:end])
+            values = clipped_values
+            x, y, w, h = x0, y0, x1 - x0, y1 - y0
+
         if isinstance(values, int):
             canvas.fill(self.col(values), Rect(x, y, w, h))
             return

@@ -1,9 +1,3 @@
-"""
-Base widget class for all GUI widgets.
-
-Provides common functionality for drawing, event handling, and state management.
-"""
-
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
@@ -14,49 +8,21 @@ if TYPE_CHECKING:
     from .guimanager import GuiManager
     from ..widgets.window import Window
 
-# Widget base class for all GUI widgets
-
 class Widget:
-    """
-    Base class for all GUI widgets.
-
-    Attributes:
-        gui: Reference to the GUI manager
-        GType: Type of widget (button, label, etc.)
-        ctype: Container type (Widget or Window)
-        id: Unique identifier for the widget
-        draw_rect: Rectangle defining widget position and size
-        hit_rect: Rectangle for collision detection (if different from draw_rect)
-        visible: Whether the widget is currently visible
-        on_activate: Optional callback function when widget is activated
-    """
+    """Base widget contract used by all concrete widgets."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
-        # gui reference
         self.gui: "GuiManager" = gui
-        # widget type
         self.WidgetKind: Optional[WidgetKind] = None
-        # container type (Widget or Window)
         self.ContainerKind: ContainerKind = ContainerKind.Widget
-        # surface to draw the widget on
         self.surface: Optional[Surface] = None
-        # window widget may be attached to
         self.window: Optional["Window"] = None
-        # identifier for widget
         self.id: str = id
-        # rect for widget drawing position and size on the surface
         self.draw_rect: Rect = Rect(rect)
-        # rect for mouse collision
         self.hit_rect: Optional[Rect] = None
-        # before widget is first drawn, save what was there in this bitmap
         self.pristine: Optional[Surface] = None
-        # whether or not the widget is visible
         self._visible: bool = True
-        # activation command executed by GuiManager when this widget activates
         self.on_activate: Optional[Callable[[], None]] = None
-        # if this is true then if the widget calls the superclass draw defined in this
-        # class then this class will restore the pristine image, return, and subclasses
-        # continue drawing
         self.auto_restore_pristine: bool = False
 
     @property
@@ -70,42 +36,30 @@ class Widget:
         self._visible = value
 
     def get_collide(self, window: Optional["Window"] = None) -> bool:
-        """Check if mouse is colliding with this widget."""
+        """Return True when the current mouse position is inside this widget."""
         if self.hit_rect is None:
             return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
-        """
-        Handle pygame event. Override in subclasses.
-
-        Returns:
-            bool: True if event was handled, False otherwise
-        """
+        """Handle an input event. Subclasses return True on activation."""
         return False
 
     def get_rect(self) -> Rect:
-        """Get rect that the guimanager uses for buffering."""
+        """Return the screen-space rectangle used for drawing and buffering."""
         return Rect(self.draw_rect)
 
-    def get_size(self) -> Rect:
-        """Get widget size without position offset."""
-        _, _, w, h = self.draw_rect
-        return Rect(0, 0, w, h)
-
     def set_pos(self, pos: Tuple[int, int]) -> None:
-        """Set widget drawing position without changing size or z-order."""
+        """Move the widget without changing size."""
         if not isinstance(pos, tuple) or len(pos) != 2:
             raise GuiError(f'widget pos must be a tuple of (x, y), got: {pos}')
         self.draw_rect.x, self.draw_rect.y = pos
 
     def draw(self) -> None:
-        """Draw the widget. Override in subclasses. May restore pristine bitmap."""
-        # if auto restore flag then restore the pristine bitmap
+        """Draw the widget. Subclasses should call this first when needed."""
         if self.auto_restore_pristine:
             self.gui.restore_pristine(self.draw_rect, self.window)
 
     def leave(self) -> None:
-        """Called when widget loses focus. Override in subclasses."""
-        # what to do when a widget loses focus
+        """Hook called when focus leaves this widget."""
         pass

@@ -10,26 +10,9 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Toggle(BaseInteractive):
-    """A toggle button widget with two states (pushed/raised).
-
-    Toggles between two visual states each time it's clicked. Can have different
-    text for each state.
-
-    Attributes:
-        pushed: Whether the toggle is currently in the pressed state.
-    """
+    """Two-state button that flips pushed state on left click."""
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
-        """Initialize a toggle widget.
-
-        Args:
-            gui: Reference to GuiManager.
-            id: Unique identifier for this toggle.
-            rect: Rect defining toggle position and size.
-            style: ButtonStyle enum value for visual style.
-            pushed: Initial state (True = pressed, False = raised).
-            pressed_text: Text to display when toggle is pressed.
-            raised_text: Text to display when toggle is raised. Defaults to pressed_text.
-        """
+        """Create a toggle with separate bitmaps for raised and pushed states."""
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Toggle
         self.pushed: bool = pushed
@@ -45,18 +28,9 @@ class Toggle(BaseInteractive):
             self.hit_rect = rect2
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Handle toggle events.
-
-        Args:
-            event: The pygame event to handle.
-            window: The parent window, if any.
-
-        Returns:
-            True if toggle state changed, False otherwise.
-        """
+        """Update hover state and flip pushed on left button down."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
-        # Call base logic
         if not super().handle_event(event, window):
             return False
         if self.state == InteractiveState.Hover:
@@ -66,19 +40,11 @@ class Toggle(BaseInteractive):
         return False
 
     def set(self, pushed: bool) -> None:
-        """Set the toggle state programmatically.
-
-        Args:
-            pushed: True for pressed state, False for raised state.
-        """
+        """Set pushed state."""
         self.pushed = pushed
 
     def read(self) -> bool:
-        """Read the current toggle state.
-
-        Returns:
-            True if toggle is pressed, False if raised.
-        """
+        """Return pushed state."""
         return self.pushed
 
     def draw(self) -> None:

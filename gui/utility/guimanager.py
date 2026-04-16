@@ -49,17 +49,9 @@ class GuiEvent(BaseEvent):
         self.window: Optional[Window] = cast(Optional[Window], kwargs.get('window'))
 
 class GuiManager:
+    """Owns widgets/windows, input routing, and rendering for one GUI context."""
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
-        """Initialize the GUI manager.
-
-        Args:
-            surface: Pygame Surface to render GUI onto.
-            fonts: List of (name, filename, size) tuples to load.
-            bitmap_factory: Optional BitmapFactory instance. Creates new one if not provided.
-
-        Raises:
-            GuiError: If surface is invalid or fonts list is empty.
-        """
+        """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
             raise GuiError('surface cannot be None')
         if not fonts or len(fonts) == 0:
@@ -79,51 +71,34 @@ class GuiManager:
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
-        # hide system mouse pointer
         pygame.mouse.set_visible(False)
         for name, filename, size in fonts:
             self._bitmap_factory.load_font(name, filename, size)
-        # screen surface
         self.surface: Surface = surface
-        # list of widgets attached to the screen
         self.widgets: List[Widget] = []
-        # active object for add()
         self._active_object: Optional[Window] = None
-        # list of windows
         self.windows: List[Window] = []
-        # dragging window
         self.dragging: bool = False
         self.dragging_window: Optional[Window] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
-        # current mouse position
         self.mouse_pos: Tuple[int, int] = pygame.mouse.get_pos()
-        # whether the mouse is in a locked area state
         self.mouse_locked: bool = False
-        # area rect to keep the mouse position within
         self.lock_area_rect: Optional[Rect] = None
-        # cursor image and hotspot
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
-        # which window is active
         self.active_window: Optional[Window] = None
-        # current widget
         self._current_widget: Optional[Widget] = None
-        # the pristine state of the screen bitmap
         self.pristine: Optional[Surface] = None
-        # locking object
         self.locking_object: Optional[Widget] = None
-        # whether or not drawing is buffered
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self._is_registered_button_group)
         self._label_sequence: int = 0
-        # screen-level lifecycle callbacks
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
-        # task-to-window ownership map for task event dispatch
         self._task_owner_by_id: Dict[Hashable, Window] = {}
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
@@ -178,17 +153,7 @@ class GuiManager:
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
-        """Add a GUI object (widget or window) to the manager.
-
-        Args:
-            gui_object: Widget or Window to add.
-
-        Returns:
-            The gui_object that was added.
-
-        Raises:
-            GuiError: If gui_object is not a valid Widget or Window.
-        """
+        """Register a window or widget and attach container-specific state."""
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
         if not isinstance(gui_object, (Window, Widget)):
@@ -196,9 +161,7 @@ class GuiManager:
         if self._is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self._describe_gui_object(gui_object)}')
         if isinstance(gui_object, Window):
-            # add this window to the gui
             self.windows.append(gui_object)
-            # make this object the destination for gui add commands
             self._active_object = gui_object
         elif isinstance(gui_object, Widget):
             if not isinstance(gui_object.id, str) or gui_object.id == '':
@@ -213,24 +176,16 @@ class GuiManager:
                     f'on {self._describe_widget_container(conflict)}'
                 )
             active_window = self._resolve_active_object()
-            # callback
             if active_window is not None:
-                # store a reference to the window the widget is in
                 gui_object.window = active_window
-                # give the widget a reference to the window surface
                 gui_object.surface = active_window.surface
-                # append the widget to the window's list
                 active_window.widgets.append(gui_object)
             else:
-                # clear stale window binding for screen-level widgets
                 gui_object.window = None
-                # give the widget a reference to the screen surface
                 gui_object.surface = self.surface
-                # append the widget to the screen list
                 self.widgets.append(gui_object)
 
-            # Allow complex widgets to complete registration after they have
-            # their final container context. Roll back add if hook fails.
+            # Roll back partial registration when post-add hooks fail.
             post_add = getattr(gui_object, '_on_added_to_gui', None)
             if callable(post_add):
                 try:
@@ -248,18 +203,7 @@ class GuiManager:
         return gui_object
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
-        """Configure grid layout properties.
-
-        Args:
-            anchor: (x, y) position of grid origin.
-            width: Width of each grid cell in pixels.
-            height: Height of each grid cell in pixels.
-            spacing: Space between grid cells in pixels.
-            use_rect: If True, cells are Rect objects; if False, tuples.
-
-        Raises:
-            GuiError: If dimensions are invalid.
-        """
+        """Configure grid cell sizing used by gridded."""
         if width <= 0:
             raise GuiError(f'grid width must be positive, got: {width}')
         if height <= 0:
@@ -273,36 +217,30 @@ class GuiManager:
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         return self.layout_manager.get_cell(x, y)
 
-    # convert the point from a main surface one to a window point
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         if window is not None and window not in self.windows:
             window = None
-        # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = self.lock_area(point)
             wx, wy = window.x, window.y
             return (x - wx, y - wy)
-        # conversion not necessary
         return self.lock_area(point)
 
-    # convert the point from a window point to a main surface one
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         if window is not None and window not in self.windows:
             window = None
-        # fall-through function, perform the conversion only if necessary
         if window is not None:
             x, y = point
             wx, wy = window.x, window.y
             return self.lock_area((x + wx, y + wy))
-        # conversion not necessary
         return self.lock_area(point)
 
     def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
-        # set the backdrop bitmap for the main surface and copy it to the pristine bitmap
+        """Load a backdrop image, scale it to target surface, and cache pristine copy."""
         if obj is None:
             obj = self
         if image is not None:
@@ -314,18 +252,14 @@ class GuiManager:
             raise GuiError('set_pristine requires an image')
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
-    # copy graphic helper
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
+        """Return a surface copy of rect from surface."""
         bitmap = pygame.Surface((rect.width, rect.height), flags)
         bitmap.blit(surface, (0, 0), rect)
         return bitmap
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
-        # if obj is ommited then restore_pristine is from the screen pristine.
-        # if obj is supplied the object must have a obj.surface and an obj.pristine
-        # to use here
-        # restores a graphic area from the screen's pristine bitmap to the
-        # screen surface. if area is None then restore entire surface
+        """Restore a region from a previously cached pristine bitmap."""
         if obj is None:
             obj = self
         if obj.pristine is None:
@@ -336,7 +270,7 @@ class GuiManager:
         obj.surface.blit(obj.pristine, (x, y), area)
 
     def set_cursor(self, hotspot: Tuple[int, int], image: str) -> None:
-        # set the cursor image and hotspot
+        """Set custom cursor image and hotspot."""
         if not isinstance(hotspot, tuple) or len(hotspot) != 2:
             raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
         if not isinstance(image, str) or image == '':
@@ -461,8 +395,7 @@ class GuiManager:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
 
     def _is_registered_button_group(self, button: ButtonGroup) -> bool:
-        # During construction, ButtonGroup widgets are registered in group state
-        # before GuiManager.add() assigns their surface/window references.
+        # Construction registers group membership before final GUI attachment.
         if button.surface is None:
             return True
         if button in self.widgets:
@@ -497,7 +430,6 @@ class GuiManager:
         return self._scheduler
 
     def get_mouse_pos(self) -> Tuple[int, int]:
-        # if a gui_do client needs the mouse position they use this method
         return self.lock_area(self.mouse_pos)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
@@ -513,23 +445,18 @@ class GuiManager:
         return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable[GuiEvent]:
-        # process event queue
         for raw_event in pygame.event.get():
-            # process event
             event = self.handle_event(raw_event)
             if event.type == Event.Pass:
-                # no operation
                 continue
-            # yield current event
             yield event
 
     def handle_event(self, event: PygameEvent) -> GuiEvent:
         return self.event_dispatcher.handle(event)
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
-        # if a widget has an activation use the callback or signal that its id be returned from handle_event()
+        """Run widget handler and execute activation callbacks when present."""
         if widget.handle_event(event, window):
-            # widget activated
             if widget.on_activate is not None:
                 if not callable(widget.on_activate):
                     raise GuiError(f'widget callback is not callable for id: {widget.id}')
@@ -585,11 +512,10 @@ class GuiManager:
         return self.locking_object
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
-        # Delegate to the property setter
         self.current_widget = new_hover
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
-        # lock area rect is in screen coordinates
+        """Clamp mouse motion to area until released."""
         if area is not None:
             if not isinstance(area, Rect):
                 raise GuiError('lock area must be a Rect')
@@ -601,19 +527,16 @@ class GuiManager:
                 raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
                 raise GuiError('lock area dimensions must be positive')
-            # switch to relative mouse mode
             self.locking_object = locking_object
             self.mouse_locked = True
         else:
             if self.mouse_locked:
                 pygame.mouse.set_pos(self.mouse_pos)
-            # switch to absolute mouse mode
             self.locking_object = None
             self.mouse_locked = False
         self.lock_area_rect = area
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
-        # keep the position within the lock area rect
         if not isinstance(position, tuple) or len(position) != 2:
             raise GuiError(f'position must be a tuple of (x, y), got: {position}')
         self._resolve_locking_state()
@@ -634,7 +557,6 @@ class GuiManager:
             return position
 
     def raise_window(self, window: Window) -> None:
-        # move the window to the last item in the list which has the highest priority
         self._resolve_active_object()
         if window not in self.windows:
             if self._active_object is window:
@@ -644,7 +566,6 @@ class GuiManager:
         self.windows.append(window)
 
     def lower_window(self, window: Window) -> None:
-        # move the window to the first item in the list which has the lowest priority
         self._resolve_active_object()
         if window not in self.windows:
             if self._active_object is window:

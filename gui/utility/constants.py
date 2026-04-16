@@ -1,7 +1,6 @@
 from enum import Enum
 from types import MappingProxyType
 
-# named colour values (read-only mapping)
 colours = MappingProxyType({
     'full': (255, 255, 255),
     'light': (0, 200, 200),
@@ -17,18 +16,15 @@ class GuiError(Exception):
     pass
 
 class InteractiveState(Enum):
-    # State for interactive widgets (button, toggle, etc.)
     Idle = 'Idle'
     Hover = 'Hover'
     Armed = 'Armed'
 
 class ContainerKind(Enum):
-    # Types of containers (windows vs widgets on screen/in windows)
     Window = 'Window'
     Widget = 'Widget'
 
 class WidgetKind(Enum):
-    # Types of widgets in the GUI framework
     ArrowBox = 'ArrowBox'
     Button = 'Button'
     ButtonGroup = 'ButtonGroup'
@@ -40,7 +36,6 @@ class WidgetKind(Enum):
     Toggle = 'Toggle'
 
 class Event(Enum):
-    # GUI event types (system and widget events)
     Pass = 'Pass'
     Quit = 'Quit'
     KeyDown = 'KeyDown'
@@ -58,7 +53,6 @@ class BaseEvent:
         self.type: Event = event_type
 
 class CanvasEvent(Enum):
-    # Types of canvas-specific events
     MouseWheel = 'MouseWheel'
     MouseMotion = 'MouseMotion'
     MouseButtonDown = 'MouseButtonDown'
@@ -66,14 +60,12 @@ class CanvasEvent(Enum):
     MousePosition = 'MousePosition'
 
 class ArrowPosition(Enum):
-    # Whether scrollbar arrows skip, split, near, or far of the scrollable area
     Skip = 'Skip'
     Split = 'Split'
     Near = 'Near'
     Far = 'Far'
 
 class ButtonStyle(Enum):
-    # Visual style for buttons (box, rounded, angled, radio, checkbox)
     Box = 'Box'
     Round = 'Round'
     Angle = 'Angle'
@@ -81,6 +73,5 @@ class ButtonStyle(Enum):
     Check = 'Check'
 
 class Orientation(Enum):
-    # Horizontal or vertical
     Horizontal = 'Horizontal'
     Vertical = 'Vertical'

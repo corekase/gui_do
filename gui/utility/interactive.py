@@ -1,15 +1,7 @@
-"""
-Base class for interactive widgets.
-
-Provides state management (Idle, Hover, Armed) and common event handling
-for widgets that respond to mouse input.
-"""
-
 from .widget import Widget
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from typing import Optional, TYPE_CHECKING
 from .constants import InteractiveState
 
@@ -18,27 +10,17 @@ if TYPE_CHECKING:
     from ..widgets.window import Window
 
 class BaseInteractive(Widget):
-    """
-    Base class for interactive widgets.
-
-    Manages three-state interaction: Idle → Hover → Armed.
-    Subclasses override handle_event and draw to customize behavior.
-    """
+    """Shared hover/armed state machine for interactive widgets."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.state: InteractiveState = InteractiveState.Idle
-        self.idle: Optional[Surface] = None      # Surface for idle state
-        self.hover: Optional[Surface] = None     # Surface for hover state
-        self.armed: Optional[Surface] = None     # Surface for armed state
+        self.idle: Optional[Surface] = None
+        self.hover: Optional[Surface] = None
+        self.armed: Optional[Surface] = None
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """
-        Handle mouse events and manage state transitions.
-
-        Returns:
-            bool: True if event was handled by widget, False otherwise
-        """
+        """Update interaction state and return True while hovered."""
         collision = self.get_collide(window)
         if not collision:
             if self.state != InteractiveState.Armed:
@@ -50,12 +32,12 @@ class BaseInteractive(Widget):
         return True
 
     def leave(self) -> None:
-        """Called when widget loses focus. Reset state if not armed."""
+        """Reset to idle unless this widget intentionally stays armed."""
         if self.state != InteractiveState.Armed:
             self.state = InteractiveState.Idle
 
     def draw(self) -> None:
-        """Draw widget state appropriate surface."""
+        """Blit the bitmap matching the current interaction state."""
         super().draw()
         if self.state == InteractiveState.Idle and self.idle:
             self.surface.blit(self.idle, (self.draw_rect.x, self.draw_rect.y))

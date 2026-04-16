@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Image(Widget):
+    """Displays a bitmap loaded from data/images."""
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
-        # initialize id and rect
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Image
         self._image: pygame.Surface = pygame.image.load(self.gui.bitmap_factory.file_resource('images', image))
@@ -24,5 +24,4 @@ class Image(Widget):
 
     def draw(self) -> None:
         super().draw()
-        # draw the image bitmap
         self.surface.blit(self._image, self.draw_rect)

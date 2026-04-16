@@ -10,31 +10,11 @@ if TYPE_CHECKING:
     from .window import Window
 
 class Button(BaseInteractive):
-    """An interactive button widget with state feedback.
-
-    Buttons transition through three states (Idle → Hover → Armed) and can execute
-    callbacks when activated. Includes automatic repeat functionality when held down.
-
-    Attributes:
-        on_activate: Optional callback invoked when button is activated.
-        timer_id: ID of the repeat timer, if any.
-    """
+    """Clickable widget with hover/armed visuals and optional repeat callback."""
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
-        """Initialize a button widget.
-
-        Args:
-            gui: Reference to GuiManager.
-            id: Unique identifier for this button.
-            rect: Rect defining button position and size.
-            style: ButtonStyle enum value for visual style.
-            text: Optional text to display on button.
-            on_activate: Optional callback when button is activated.
-            skip_factory: If True, skip bitmap factory initialization (for subclasses).
-        """
-        # initialize common widget values
+        """Create a button and its state bitmaps."""
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Button
-        # this object's timer
         self.timer_id: Optional[str] = None
         if not skip_factory:
             (self.idle, self.hover, self.armed), self.hit_rect = \
@@ -51,33 +31,19 @@ class Button(BaseInteractive):
         try:
             self.gui.timers.remove_timer(self.timer_id)
         except Exception:
-            # Best-effort teardown; timer may already be removed.
             pass
         finally:
             self.timer_id = None
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Handle button events and manage state transitions.
-
-        Updates button state based on mouse position and input. Manages the Armed state
-        and invokes callbacks as appropriate.
-
-        Args:
-            event: The pygame event to handle.
-            window: The parent window, if any.
-
-        Returns:
-            True if the event resulted in button activation, False otherwise.
-        """
+        """Advance button state and return True when activation should be emitted."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
 
-        # Call base interactive logic first
         if not super().handle_event(event, window):
             self._clear_timer()
             return False
 
-        # manage the state of the button
         if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN:
                 if getattr(event, 'button', None) == 1:

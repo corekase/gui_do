@@ -16,19 +16,14 @@ if TYPE_CHECKING:
 
 class BitmapFactory:
     def __init__(self) -> None:
-        # current font object and name
         self._font: Optional[pygame.font.Font] = None
         self._current_font_name: Optional[str] = None
-        # last font name
         self._last_font_name: Optional[str] = None
-        # key:value -> key, name of font and value, font object
         self._fonts: Dict[str, pygame.font.Font] = {}
 
-    # load font
     def load_font(self, name: str, font: str, size: int) -> None:
         self._fonts[name] = pygame.font.Font(self.file_resource('fonts', font), size)
 
-    # make a font active
     def set_font(self, name: str) -> None:
         if name not in self._fonts:
             raise GuiError(f'unknown font "{name}"')
@@ -36,11 +31,9 @@ class BitmapFactory:
         self._font = self._fonts[name]
         self._current_font_name = name
 
-    # get the current font object
     def get_current_font_name(self) -> Optional[str]:
         return self._current_font_name
 
-    # restore the previous font
     def set_last_font(self) -> None:
         if self._last_font_name is not None:
             if self._last_font_name not in self._fonts:
@@ -48,14 +41,10 @@ class BitmapFactory:
             self._font = self._fonts[self._last_font_name]
             self._current_font_name = self._last_font_name
 
-    # filename helper
     def file_resource(self, *names: str) -> str:
-        # return an os-independent filename inside data path
         return os.path.join('data', *names)
 
-    # alpha image loading
     def image_alpha(self, *names: str) -> Surface:
-        # load, convert with an alpha channel, and return an image surface
         return pygame.image.load(self.file_resource(*names)).convert_alpha()
 
     def draw_window_title_bar_bitmaps(self, gui: "GuiManager", title: str, width: int, size: int) -> Tuple[Surface, Surface]:
@@ -158,26 +147,16 @@ class BitmapFactory:
             self._draw_box_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
 
     def _draw_box_bitmap(self, surface: Surface, ul: Tuple[int, int, int], lr: Tuple[int, int, int], ul_d: Tuple[int, int, int], lr_d: Tuple[int, int, int], background: Tuple[int, int, int]) -> None:
-        # ul, lr = upper and left, lower and right lines
-        # ul_d, lr_d = upper-left dot, lower-right dot
-        # get positions and sizes
         _, _, width, height = surface.get_rect()
         x = y = 0
-        # lock surface for drawing
         surface.lock()
-        # draw background
         rect(surface, background, surface.get_rect(), 0)
-        # draw frame upper and left lines
         line(surface, ul, (x, y), (x + width - 1, y))
         line(surface, ul, (x, y), (x, y + height - 1))
-        # draw frame lower and right lines
         line(surface, lr, (x, y + height - 1), (x + width - 1, y + height - 1))
         line(surface, lr, (x + width - 1, y - 1), (x + width - 1, y + height - 1))
-        # plot upper left dot
         surface.set_at((x + 1, y + 1), ul_d)
-        # plot lower right dot
         surface.set_at((x + width - 2, y + height - 2), lr_d)
-        # unlock surface
         surface.unlock()
 
     def _draw_radio_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
@@ -340,72 +319,49 @@ class BitmapFactory:
         return smoothscale(angle_bitmap, (w_surface, h_surface))
 
     def draw_arrow_state_bitmaps(self, rect: Rect, direction: float) -> List[Surface]:
-        # draw idle, hover, and armed bitmaps for the passed direction
-        # and return a list of those three
         states = self.draw_frame_bitmaps(rect)
         glyph_set: List[Surface] = []
         if rect.width <= rect.height:
             size = rect.width
         else:
             size = rect.height
-        # create a polygon for the glyph then draw it in full colour filled
-        # then draw the polygon again in none colour 1 pixel outline
         glyph = Surface((400, 400), SRCALPHA).convert_alpha()
-        # draw polygon
         points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
         polygon(glyph, colours['full'], points, 0)
         polygon(glyph, colours['none'], points, 20)
-        # rotate polygon to direction
         glyph = rotate(glyph, direction)
-        # scale polygon to bitmap size
         glyph = smoothscale(glyph, (size, size))
-        # centre the glyph in the state bitmap area
         glyph_x = self.centre(rect.width, size)
         glyph_y = self.centre(rect.height, size)
-        # draw each state with the glyph
         for state in states:
-            # for each state of the frame bitmap add a glyph bitmap over it
             state.blit(glyph, (glyph_x, glyph_y))
             glyph_set.append(state)
         return glyph_set
 
     def _flood_fill(self, surface: Surface, position: Tuple[int, int], colour: Tuple[int, int, int]) -> None:
-        # convert the surface to an array
         pixels = PixelArray(surface)
-        # convert the fill color to integer representation
         new_colour = surface.map_rgb(colour)
-        # read the color to replace from the starting position
         old_colour = pixels[position]
-        # fill start position is already the fill colour
         if old_colour == new_colour:
             del pixels
             return
         width, height = surface.get_size()
         locations = deque([position])
         while locations:
-            # pop a position from the queue
             x, y = locations.popleft()
-            # if the old color and within the array, replace color
             if pixels[x, y] == old_colour:
                 pixels[x, y] = new_colour
-                # add neighbors to the queue
                 if x > 0: locations.append((x - 1, y))
                 if x < width - 1: locations.append((x + 1, y))
                 if y > 0: locations.append((x, y - 1))
                 if y < height - 1: locations.append((x, y + 1))
-        # convert the array back into the surface
         blit_array(surface, pixels)
-        # delete the array because it implicitly affects locks/unlocks of the surface
         del pixels
 
-    # layout helper
     def centre(self, bigger: int, smaller: int) -> int:
-        # helper function that returns a centred position
         return int((bigger / 2) - (smaller / 2))
 
-    # render text with or without a shadow
     def render_text(self, text: str, colour: Tuple[int, int, int] = colours['text'], shadow: bool = False, shadow_colour: Tuple[int, int, int] = colours['none']) -> Surface:
-        # return a bitmap of the text and a shadow of given colours
         if self._font is None:
             raise GuiError('no active font set; call set_font() before render_text()')
         text_bitmap = self._font.render(text, True, colour, None)

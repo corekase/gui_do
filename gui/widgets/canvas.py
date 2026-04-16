@@ -19,10 +19,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 class CanvasEventPacket:
-    """Event packet for canvas-specific events.
-
-    Contains event type, mouse position relative to canvas, and type-specific data.
-    """
+    """Canvas input payload with normalized coordinates and event-specific fields."""
     def __init__(self) -> None:
         self.type: Optional[CanvasEvent] = None
         self.pos: Optional[Tuple[int, int]] = None
@@ -31,16 +28,14 @@ class CanvasEventPacket:
         self.y: Optional[int] = None
 
 class Canvas(Widget):
+    """Off-screen drawing surface that queues canvas-local input events."""
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Canvas
-        # create canvas surface
         self.canvas: Surface = pygame.surface.Surface((rect.width, rect.height)).convert()
-        # if there is no backdrop make a frame as one otherwise load the backdrop
         if backdrop is None:
-            # make a frame for the backdrop of the window surface
             frame = Frame(gui, 'canvas_frame', Rect(0, 0, rect.width, rect.height))
             frame.state = InteractiveState.Idle
             frame.surface = self.canvas
@@ -84,11 +79,10 @@ class Canvas(Widget):
         self.coalesce_motion_events = enabled
 
     def get_canvas_surface(self) -> Surface:
-        # return a reference to the canvas surface
         return self.canvas
 
     def restore_pristine(self, area: Optional[Rect] = None) -> None:
-        # copy an area from the pristine bitmap to the canvas bitmap
+        """Restore a region from the canvas pristine snapshot."""
         if self.pristine is None:
             raise GuiError('canvas pristine image is not initialized')
         if area is None:
@@ -96,14 +90,7 @@ class Canvas(Widget):
         self.canvas.blit(self.pristine, (area.x, area.y), area)
 
     def read_event(self) -> Optional[CanvasEventPacket]:
-        """Read a queued canvas event.
-
-        Canvas events are blocking - no new events are generated until the previous
-        one is read. This must be called first to retrieve any queued event.
-
-        Returns:
-            CanvasEventPacket if an event is queued, None otherwise.
-        """
+        """Pop the next queued canvas event, or None when empty."""
         if not self._events:
             self.queued_event = False
             self.CEvent = None
@@ -114,35 +101,20 @@ class Canvas(Widget):
         return event
 
     def focused(self) -> bool:
-        # return a boolean of whether or not the mouse is over the canvas
+        """Return True when mouse is inside this canvas."""
         if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
             return True
         else:
             return False
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Handle canvas events and queue them for processing.
-
-        Events are queued while the canvas has focus. If a queued event hasn't been
-        read yet, no new events are generated until it's retrieved via read_event().
-
-        Args:
-            event: The pygame event to handle.
-            window: The parent window, if any.
-
-        Returns:
-            bool: True if event was handled and should signal activation, False otherwise.
-        """
+        """Queue supported events while focused and signal activation on enqueue."""
         if event.type not in (MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
         if self.get_collide(window):
-            # within the canvas so update information about that
             canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
-            # create a new event
             packet = CanvasEventPacket()
-            # all events have the position field
             packet.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
-            # and type specific fields
             if event.type == MOUSEWHEEL:
                 packet.type = CanvasEvent.MouseWheel
                 packet.y = getattr(event, 'y', None)
@@ -156,8 +128,7 @@ class Canvas(Widget):
                 packet.type = CanvasEvent.MouseButtonUp
                 packet.button = getattr(event, 'button', None)
 
-            # Coalesce motion events so high-frequency pointer movement does not
-            # overwhelm handlers and starve lower-frequency interaction events.
+            # Coalescing keeps motion floods from starving click/wheel processing.
             if (
                 self.coalesce_motion_events
                 and packet.type == CanvasEvent.MouseMotion
@@ -181,15 +152,12 @@ class Canvas(Widget):
             self._events.append(packet)
             self.queued_event = True
             self.CEvent = self._events[0]
-            # signal activation; GuiManager dispatches on_activate if present
             return True
         else:
-            # the mouse is not over the canvas
             return False
 
     def draw(self) -> None:
-        # copy the canvas surface to the widget surface
+        """Blit canvas contents into the owning GUI surface."""
         self.surface.blit(self.canvas, self.draw_rect)
-        # handle the pristine surface
         if self.auto_restore_pristine:
             self.restore_pristine()

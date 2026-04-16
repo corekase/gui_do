@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from .guimanager import GuiEvent, GuiManager
 
 class EventDispatcher:
+    """Routes pygame events to windows/widgets and emits GuiEvent values."""
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
@@ -26,28 +27,22 @@ class EventDispatcher:
         return False
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
+        """Dispatch one pygame event using drag/lock/window/widget priority."""
         self.gui._resolve_locking_state()
-        # update internal mouse position
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
-        # check for system events (QUIT, KEYUP, KEYDOWN)
         if event.type in (QUIT, KEYUP, KEYDOWN):
             return self._handle_system_event(event)
-        # find active window context
         self._update_active_window()
-        # Priority 1: Window dragging
         if self.gui.dragging:
             if self.gui.dragging_window is None or self.gui.mouse_delta is None:
                 self._reset_window_drag_state()
                 return self.gui.event(Event.Pass)
             return self._handle_window_dragging(event)
-        # Priority 2: Standard interaction (check for start of drag)
         if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
             self._check_window_drag_start(event)
-        # Priority 3: Locked object
         if self.gui.locking_object:
             return self._handle_locked_object(event)
-        # Priority 4: Window / Screen widgets
         if self.gui.active_window:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
