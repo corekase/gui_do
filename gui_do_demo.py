@@ -1,4 +1,5 @@
 import sys
+import math
 import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
@@ -49,8 +50,11 @@ class Demo:
         b1.set_font('gui_do')
         self.gui_do_label = g1.label((50, 30), 'gui_do', True)
         b1.set_font('normal')
-        self.gui_do_dx = 2
-        self.gui_do_dy = 2
+        self.gui_do_pos_x = float(self.gui_do_label.draw_rect.x)
+        self.gui_do_pos_y = float(self.gui_do_label.draw_rect.y)
+        self.gui_do_speed = 250.0
+        self.gui_do_angle = math.radians(35.0)
+        self.gui_do_last_ms = pygame.time.get_ticks()
         # -----------------------
 
         widget_height = 28
@@ -326,26 +330,49 @@ class Demo:
         self.update_gui_do_label()
 
     def update_gui_do_label(self):
-        x = self.gui_do_label.draw_rect.x + self.gui_do_dx
-        y = self.gui_do_label.draw_rect.y + self.gui_do_dy
+        now_ms = pygame.time.get_ticks()
+        dt = (now_ms - self.gui_do_last_ms) / 1000.0
+        self.gui_do_last_ms = now_ms
+        if dt < 0.0:
+            dt = 0.0
+        elif dt > 0.05:
+            dt = 0.05
+
+        distance = self.gui_do_speed * dt
+        self.gui_do_pos_x += math.cos(self.gui_do_angle) * distance
+        self.gui_do_pos_y += math.sin(self.gui_do_angle) * distance
+
+        x = self.gui_do_pos_x
+        y = self.gui_do_pos_y
         max_x = self.screen_rect.width - self.gui_do_label.draw_rect.width
         max_y = self.screen_rect.height - self.gui_do_label.draw_rect.height
 
+        hit_vertical = False
+        hit_horizontal = False
+
         if x < 0:
             x = 0
-            self.gui_do_dx = -self.gui_do_dx
+            hit_vertical = True
         elif x > max_x:
             x = max_x
-            self.gui_do_dx = -self.gui_do_dx
+            hit_vertical = True
 
         if y < 0:
             y = 0
-            self.gui_do_dy = -self.gui_do_dy
+            hit_horizontal = True
         elif y > max_y:
             y = max_y
-            self.gui_do_dy = -self.gui_do_dy
+            hit_horizontal = True
 
-        self.gui_do_label.set_pos((x, y))
+        if hit_vertical:
+            self.gui_do_angle = math.pi - self.gui_do_angle
+        if hit_horizontal:
+            self.gui_do_angle = -self.gui_do_angle
+        self.gui_do_angle %= (2.0 * math.pi)
+
+        self.gui_do_pos_x = x
+        self.gui_do_pos_y = y
+        self.gui_do_label.set_pos((int(round(x)), int(round(y))))
 
     def buttons_window_preamble(self):
         pass
