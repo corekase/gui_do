@@ -7,6 +7,7 @@ from .statemanager import StateManager
 
 class Engine:
     """Owns the frame loop for the active GUI context."""
+
     def __init__(self, state_manager: StateManager) -> None:
         """Create an engine bound to a state manager."""
         if not isinstance(state_manager, StateManager):

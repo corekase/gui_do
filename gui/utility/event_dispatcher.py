@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 class EventDispatcher:
     """Routes pygame events to windows/widgets and emits GuiEvent values."""
+
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 

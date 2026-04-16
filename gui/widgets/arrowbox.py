@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 class ArrowBox(Button):
     """Button variant that renders an arrow glyph."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> None:
         super().__init__(gui, id, rect, ButtonStyle.Box, None, on_activate, True)
         self.WidgetKind = WidgetKind.ArrowBox

@@ -10,5 +10,5 @@ if os.name == 'nt':
     try:
         ctypes.windll.user32.SetProcessDPIAware()
     except (AttributeError, OSError):
-        # Keep compatibility with runtimes that do not expose SetProcessDPIAware.
+        # Keep compatibility with runtimes that do not expose SetProcessDPIAware such as WINE.
         pass
