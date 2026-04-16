@@ -292,4 +292,4 @@ These are the most useful caveats to know up front:
 python gui_do_demo.py
 ```
 
-If assets are missing, verify the `data/` directory contains the files referenced by the demo.
+If assets are missing or not found, verify the `data/` directory contains the files referenced by the demo and you are starting python in the same directory as the demo.  If the application is running on a system that has case-sensitive filenames, like Linux, then the case of the data directory and the filename string need to match.
