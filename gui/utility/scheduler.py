@@ -2,8 +2,8 @@ import asyncio
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 import inspect
+import logging
 import os
-import sys
 from queue import Empty, SimpleQueue
 import threading
 from dataclasses import dataclass
@@ -15,6 +15,8 @@ from .constants import BaseEvent, Event
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
+
+_logger = logging.getLogger(__name__)
 
 TaskKind = Enum('TaskKind', ['Finished', 'Failed'])
 
@@ -552,4 +554,4 @@ class Scheduler:
             self.shutdown()
         except Exception as exc:
             # __del__ cannot safely raise; surface cleanup failures for diagnosis.
-            print(f'Warning: Scheduler cleanup failed: {type(exc).__name__}: {exc}', file=sys.stderr)
+            _logger.warning('Scheduler cleanup failed: %s: %s', type(exc).__name__, exc)

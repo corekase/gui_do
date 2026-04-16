@@ -1,4 +1,4 @@
-import sys
+import logging
 from types import TracebackType
 from typing import Callable, Dict, Optional, Tuple, Type
 from .guimanager import GuiManager
@@ -6,6 +6,8 @@ from .constants import BaseEvent
 from .scheduler import Scheduler, Timers
 
 ContextType = Tuple[GuiManager, Scheduler, Timers, Callable[[], None], Callable[[BaseEvent], None], Callable[[], None]]
+
+_logger = logging.getLogger(__name__)
 
 class StateManager:
     """Manages multiple GUI contexts for application state transitions.
@@ -112,9 +114,10 @@ class StateManager:
                 scheduler.shutdown()
             except Exception as exc:
                 # Shutdown is best-effort; report failures without masking prior exceptions.
-                print(
-                    f'Warning: failed to shutdown scheduler for context "{name}": '
-                    f'{type(exc).__name__}: {exc}',
-                    file=sys.stderr,
+                _logger.warning(
+                    'Failed to shutdown scheduler for context "%s": %s: %s',
+                    name,
+                    type(exc).__name__,
+                    exc,
                 )
         self.is_running = False
