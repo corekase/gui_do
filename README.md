@@ -4,7 +4,7 @@
 
 This README is an implementation-focused tutorial for what exists now, not full API reference documentation.
 
-Each release includes a link to a video demonstration as it was at each time.
+Each release includes a link to a video demonstration as it was at the time.
 
 ## What You Get Right Now
 
