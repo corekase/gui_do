@@ -18,6 +18,7 @@ def _noop_event(_: "BaseEvent") -> None:
 
 class Window:
     """Top-level container with title bar, child widgets, and lifecycle hooks."""
+
     def __init__(
         self,
         gui: "GuiManager",
@@ -95,7 +96,6 @@ class Window:
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_window(self) -> None:
-        """Restore pristine contents before drawing child widgets."""
         self.gui.restore_pristine(self.surface.get_rect(), self)
 
     def run_preamble(self) -> None:

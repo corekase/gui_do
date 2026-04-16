@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class ButtonGroup(BaseInteractive):
     """Radio-style button that shares exclusive selection within a group."""
+
     def __init__(self, gui: "GuiManager", group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> None:
         """Create one selectable member of a named group."""
         if not isinstance(group, str) or group == '':
@@ -27,12 +28,10 @@ class ButtonGroup(BaseInteractive):
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
-
         collision = self.get_collide(window)
         if collision:
             if self.state == InteractiveState.Idle:
                 self.state = InteractiveState.Hover
-
             if self.state == InteractiveState.Hover:
                 if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
                     self.select()

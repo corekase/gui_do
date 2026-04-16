@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class Label(Widget):
     """Non-interactive text widget."""
+
     def __init__(self, gui: "GuiManager", id: str, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
         super().__init__(gui, id, Rect(0, 0, 0, 0))
         self.shadow: bool = shadow
@@ -41,7 +42,6 @@ class Label(Widget):
             self._render(text)
 
     def draw(self) -> None:
-        """Blit the rendered label bitmap."""
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class Image(Widget):
     """Displays a bitmap loaded from data/images."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Image

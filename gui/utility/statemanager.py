@@ -7,6 +7,7 @@ _logger = logging.getLogger(__name__)
 
 class StateManager:
     """Registers named GUI contexts and tracks the active one."""
+
     def __init__(self) -> None:
         self._contexts: Dict[str, GuiManager] = {}
         self._active_context_name: Optional[str] = None
@@ -30,7 +31,6 @@ class StateManager:
             raise KeyError(f'unknown context: {name}')
         if self._active_context_name == name:
             return
-
         old_gui: Optional[GuiManager] = self.get_active_gui()
         if old_gui is not None:
             mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()

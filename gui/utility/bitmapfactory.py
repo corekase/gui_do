@@ -8,8 +8,7 @@ from pygame import Rect, PixelArray, SRCALPHA
 from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
-from .constants import colours, ButtonStyle
-from .constants import GuiError
+from .constants import colours, GuiError, ButtonStyle
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager

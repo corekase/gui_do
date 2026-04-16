@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 class Renderer:
     """Draws widgets/windows and restores previous pixels when buffered."""
+
     def __init__(self, gui: "GuiManager") -> None:
         """Bind the renderer to a gui manager."""
         self.gui: "GuiManager" = gui

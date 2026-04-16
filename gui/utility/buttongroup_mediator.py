@@ -16,25 +16,21 @@ class ButtonGroupMediator:
         buttons = self._groups.get(group)
         if buttons is None:
             return
-
         deduped: List["ButtonGroup"] = []
         for button in buttons:
             if button in deduped:
                 continue
             if self._is_registered(button):
                 deduped.append(button)
-
         self._groups[group] = deduped
         if len(deduped) == 0:
             self._groups.pop(group, None)
             self._selections.pop(group, None)
             return
-
         selected = self._selections.get(group)
         if selected not in deduped:
             selected = deduped[0]
             self._selections[group] = selected
-
         for button in deduped:
             if button is selected:
                 button.state = InteractiveState.Armed
@@ -54,7 +50,6 @@ class ButtonGroupMediator:
         self._prune(group)
         if not self._is_registered(button):
             return
-
         previous = self._selections.get(group)
         if previous is not None and previous is not button:
             previous.state = InteractiveState.Idle

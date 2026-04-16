@@ -246,9 +246,6 @@ Set `gui.buffered = True` to have the renderer save pixels underneath gui object
 - Coordinates are pixel-based.
 - Screen widgets use screen coordinates.
 - Window child widgets use window-local coordinates.
-- Conversion helpers:
-  - `gui.convert_to_window(point, window)`
-  - `gui.convert_to_screen(point, window)`
 
 ## Layout helper
 

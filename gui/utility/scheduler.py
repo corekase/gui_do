@@ -96,15 +96,12 @@ class Scheduler:
     def __init__(self, gui: "GuiManager") -> None:
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
-
         self.tasks: Dict[Hashable, Task] = {}
-
         self._pending: Deque[Hashable] = deque()
         self._pending_set: Set[Hashable] = set()
         self._suspended: List[Hashable] = []
         self._suspended_set: Set[Hashable] = set()
         self._running: Set[Hashable] = set()
-
         self._tasks_finished: List[Hashable] = []
         self._tasks_failed: List[Tuple[Hashable, str]] = []
         self._task_results: Dict[Hashable, object] = {}
@@ -115,7 +112,6 @@ class Scheduler:
         self._message_dispatch_limit: Optional[int] = None
         self._message_ingest_limit: Optional[int] = 256
         self._max_queued_messages_per_task: Optional[int] = 512
-
         self._lock = threading.RLock()
         self._message_slots_changed = threading.Condition(self._lock)
         self._max_workers: int = max(1, os.cpu_count() or 4)
@@ -198,13 +194,11 @@ class Scheduler:
             raise GuiError('task logic must be callable')
         if message_method is not None and not callable(message_method):
             raise GuiError('task message_method must be callable when provided')
-
         with self._lock:
             self._tasks_failed = [item for item in self._tasks_failed if item[0] != id]
             self._tasks_finished = [task_id for task_id in self._tasks_finished if task_id != id]
             if id in self.tasks or id in self._running or id in self._pending_set or id in self._suspended_set:
                 self._remove_task_internal(id)
-
             generation = self._task_generation.get(id, 0) + 1
             self._task_generation[id] = generation
             task_callable = self._build_task_callable(id, logic, parameters)
@@ -223,13 +217,10 @@ class Scheduler:
                     raise GuiError(f'task "{id}" has no message handler')
                 if not callable(task.message_method):
                     raise GuiError(f'task "{id}" message handler is not callable')
-
                 queued_count = self._task_message_counts.get(id, 0)
                 if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
                     break
-
                 self._message_slots_changed.wait()
-
             self._task_message_counts[id] = self._task_message_counts.get(id, 0) + 1
             message = TaskMessage(id=id, callback=task.message_method, payload=parameters, generation=task.generation)
         self._incoming_task_messages.put(message)
@@ -310,7 +301,6 @@ class Scheduler:
         drained: List[TaskMessage] = []
         with self._lock:
             ingest_limit = self._message_ingest_limit
-
         if ingest_limit is None:
             while True:
                 try:
@@ -323,10 +313,8 @@ class Scheduler:
                     drained.append(self._incoming_task_messages.get_nowait())
                 except Empty:
                     break
-
         if not drained:
             return
-
         with self._lock:
             for message in drained:
                 if self._task_generation.get(message.id) != message.generation:
@@ -339,7 +327,6 @@ class Scheduler:
         with self._lock:
             if not self._task_messages:
                 return
-
             if self._message_dispatch_limit is None:
                 pending_messages = list(self._task_messages)
                 self._task_messages.clear()
@@ -348,7 +335,6 @@ class Scheduler:
                     if not self._task_messages:
                         break
                     pending_messages.append(self._task_messages.popleft())
-
         for message in pending_messages:
             with self._lock:
                 if self._task_generation.get(message.id) != message.generation:
@@ -463,7 +449,6 @@ class Scheduler:
                 continue
             if not task.future.done():
                 continue
-
             self._running.discard(task_id)
             try:
                 result = task.future.result()
@@ -482,7 +467,6 @@ class Scheduler:
             self._submit_ready_tasks()
             self._collect_finished_tasks()
             finished_tasks = self._tasks_finished.copy()
-
         self._drain_incoming_task_messages()
         self._dispatch_task_messages()
         return finished_tasks

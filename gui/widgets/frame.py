@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class Frame(Widget):
     """Static framed panel with idle/hover/armed variants."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.Frame

@@ -18,6 +18,7 @@ _logger = logging.getLogger(__name__)
 
 class CanvasEventPacket:
     """Canvas input payload with normalized coordinates and event-specific fields."""
+
     def __init__(self) -> None:
         self.type: Optional[CanvasEvent] = None
         self.pos: Optional[Tuple[int, int]] = None
@@ -27,6 +28,7 @@ class CanvasEventPacket:
 
 class Canvas(Widget):
     """Off-screen drawing surface that queues canvas-local input events."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
@@ -125,7 +127,6 @@ class Canvas(Widget):
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
                 packet.button = getattr(event, 'button', None)
-
             # Coalescing keeps motion floods from starving click/wheel processing.
             if (
                 self.coalesce_motion_events
@@ -137,7 +138,6 @@ class Canvas(Widget):
                 self.queued_event = True
                 self.CEvent = self._events[0]
                 return True
-
             was_full = len(self._events) == self._events.maxlen
             self.last_overflow = was_full
             if was_full:

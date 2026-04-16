@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class Toggle(BaseInteractive):
     """Two-state button that flips pushed state on left click."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
         """Create a toggle with separate bitmaps for raised and pushed states."""
         super().__init__(gui, id, rect)

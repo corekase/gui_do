@@ -4,7 +4,7 @@ from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
-from .constants import ArrowPosition, BaseEvent, ButtonStyle, ContainerKind, Event, Orientation
+from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
@@ -21,7 +21,6 @@ from ..widgets.toggle import Toggle
 from ..widgets.arrowbox import ArrowBox
 from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
-from .constants import GuiError
 
 def _noop() -> None:
     pass
@@ -48,6 +47,7 @@ class GuiEvent(BaseEvent):
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
+
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -64,7 +64,6 @@ class GuiManager:
                 raise GuiError(f'font filename must be a non-empty string, got: {filename}')
             if not isinstance(size, int) or size <= 0:
                 raise GuiError(f'font size must be a positive integer, got: {size}')
-
         self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
@@ -182,7 +181,6 @@ class GuiManager:
                 gui_object.window = None
                 gui_object.surface = self.surface
                 self.widgets.append(gui_object)
-
             # Roll back partial registration when post-add hooks fail.
             post_add = getattr(gui_object, '_on_added_to_gui', None)
             if callable(post_add):

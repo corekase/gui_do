@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 class Button(BaseInteractive):
     """Clickable widget with hover/armed visuals and optional repeat callback."""
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
         """Create a button and its state bitmaps."""
         super().__init__(gui, id, rect)
@@ -39,11 +40,9 @@ class Button(BaseInteractive):
         """Advance button state and return True when activation should be emitted."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
-
         if not super().handle_event(event, window):
             self._clear_timer()
             return False
-
         if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN:
                 if getattr(event, 'button', None) == 1:

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 class Scrollbar(Frame):
     """Draggable range selector with optional increment/decrement arrow boxes."""
+
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         self._registered: List[ArrowBox] = []
         self._subwidgets_bound: bool = False
@@ -95,7 +96,6 @@ class Scrollbar(Frame):
             raise GuiError('scrollbar arrow geometry is not initialized')
         if self._inc_degree is None or self._dec_degree is None:
             raise GuiError('scrollbar arrow direction is not initialized')
-
         created: List[ArrowBox] = []
         try:
             inc_arrow = self.gui.arrowbox(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
