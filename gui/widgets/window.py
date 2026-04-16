@@ -3,6 +3,7 @@ from pygame import Rect
 from pygame.surface import Surface
 from typing import TYPE_CHECKING, List, Optional, Tuple
 from ..utility.constants import colours, ContainerKind, InteractiveState
+from ..utility.constants import GuiError
 from .frame import Frame
 
 if TYPE_CHECKING:
@@ -11,7 +12,6 @@ if TYPE_CHECKING:
 
 class Window:
     def __init__(self, gui: "GuiManager", title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None) -> None:
-        from ..utility.guimanager import GuiError
         if not isinstance(title, str) or title == '':
             raise GuiError('window title must be a non-empty string')
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -62,13 +62,11 @@ class Window:
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        from ..utility.guimanager import GuiError
         if not isinstance(value, bool):
             raise GuiError('window visible must be a bool')
         self._visible = value
 
     def set_pos(self, pos: Tuple[int, int]) -> None:
-        from ..utility.guimanager import GuiError
         if not isinstance(pos, tuple) or len(pos) != 2:
             raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
         self.x, self.y = pos

@@ -4,6 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.constants import ButtonStyle, WidgetKind
 from ..utility.interactive import BaseInteractive, InteractiveState
+from ..utility.constants import GuiError
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -29,7 +30,6 @@ class ButtonGroup(BaseInteractive):
             text: Text to display on button.
         """
         if not isinstance(group, str) or group == '':
-            from ..utility.guimanager import GuiError
             raise GuiError('button group name must be a non-empty string')
         super().__init__(gui, id, rect)
         self.WidgetKind = WidgetKind.ButtonGroup

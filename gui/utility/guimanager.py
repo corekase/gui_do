@@ -21,15 +21,11 @@ from ..widgets.toggle import Toggle
 from ..widgets.arrowbox import ArrowBox
 from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
-
-class GuiError(Exception):
-    pass
-
+from .constants import GuiError
 
 class _PristineContainer(Protocol):
     surface: Surface
     pristine: Optional[Surface]
-
 
 TGuiObject = TypeVar("TGuiObject", Window, Widget)
 

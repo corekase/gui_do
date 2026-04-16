@@ -9,6 +9,7 @@ from ..utility.constants import WidgetKind, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
 from ..utility.constants import InteractiveState
+from ..utility.constants import GuiError
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -28,7 +29,6 @@ class CanvasEventPacket:
 
 class Canvas(Widget):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
-        from ..utility.guimanager import GuiError
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
         super().__init__(gui, id, rect)
@@ -60,7 +60,6 @@ class Canvas(Widget):
     def restore_pristine(self, area: Optional[Rect] = None) -> None:
         # copy an area from the pristine bitmap to the canvas bitmap
         if self.pristine is None:
-            from ..utility.guimanager import GuiError
             raise GuiError('canvas pristine image is not initialized')
         if area is None:
             area = self.canvas.get_rect()

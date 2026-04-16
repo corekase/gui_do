@@ -6,6 +6,7 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
 from ..utility.constants import colours, WidgetKind, Orientation, ArrowPosition, InteractiveState
+from ..utility.constants import GuiError
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -50,7 +51,6 @@ class Scrollbar(Frame):
                     decrement_rect = Rect(0, height - (width * 2), width, width)
                     increment_rect = Rect(0, height - width, width, width)
             else:
-                from ..utility.guimanager import GuiError
                 raise GuiError('style not implemented')
         # add arrowboxes
         if style != ArrowPosition.Skip:
@@ -185,7 +185,6 @@ class Scrollbar(Frame):
 
     def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
         # set scrollbar data, all variables are in total units
-        from ..utility.guimanager import GuiError
         if total_range <= 0:
             raise GuiError(f'total_range must be > 0, got {total_range}')
         if bar_size <= 0 or bar_size > total_range:
@@ -236,7 +235,6 @@ class Scrollbar(Frame):
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        from ..utility.guimanager import GuiError
         if not isinstance(value, bool):
             raise GuiError('widget visible must be a bool')
         self._visible = value

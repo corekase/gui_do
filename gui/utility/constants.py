@@ -13,6 +13,8 @@ colours = MappingProxyType({
     'background': (0, 60, 60),
 })
 
+class GuiError(Exception):
+    pass
 
 class InteractiveState(Enum):
     # State for interactive widgets (button, toggle, etc.)

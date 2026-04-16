@@ -9,6 +9,7 @@ from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from .constants import colours, ButtonStyle
+from .constants import GuiError
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -30,7 +31,6 @@ class BitmapFactory:
     # make a font active
     def set_font(self, name: str) -> None:
         if name not in self._fonts:
-            from .guimanager import GuiError
             raise GuiError(f'unknown font "{name}"')
         self._last_font_name = self._current_font_name
         self._font = self._fonts[name]
@@ -44,7 +44,6 @@ class BitmapFactory:
     def set_last_font(self) -> None:
         if self._last_font_name is not None:
             if self._last_font_name not in self._fonts:
-                from .guimanager import GuiError
                 raise GuiError(f'unknown previous font "{self._last_font_name}"')
             self._font = self._fonts[self._last_font_name]
             self._current_font_name = self._last_font_name
@@ -124,7 +123,6 @@ class BitmapFactory:
         elif style == ButtonStyle.Check:
             return self._draw_check_style_bitmaps(text, rect)
         else:
-            from .guimanager import GuiError
             raise GuiError('style not implemented')
 
     def _draw_box_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
@@ -409,7 +407,6 @@ class BitmapFactory:
     def render_text(self, text: str, colour: Tuple[int, int, int] = colours['text'], shadow: bool = False, shadow_colour: Tuple[int, int, int] = colours['none']) -> Surface:
         # return a bitmap of the text and a shadow of given colours
         if self._font is None:
-            from .guimanager import GuiError
             raise GuiError('no active font set; call set_font() before render_text()')
         text_bitmap = self._font.render(text, True, colour, None)
         text_rect = text_bitmap.get_rect()

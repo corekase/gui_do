@@ -7,6 +7,7 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING, Any
+from .constants import GuiError
 
 from .constants import BaseEvent, Event
 
@@ -32,13 +33,10 @@ class Timers:
         try:
             hash(id)
         except TypeError as exc:
-            from .guimanager import GuiError
             raise GuiError(f'timer id must be hashable: {id!r}') from exc
         if duration <= 0:
-            from .guimanager import GuiError
             raise GuiError(f'timer duration must be > 0, got: {duration}')
         if not callable(callback):
-            from .guimanager import GuiError
             raise GuiError('timer callback must be callable')
         self.timers[id] = Interval(duration, callback)
 
@@ -46,7 +44,6 @@ class Timers:
         try:
             hash(id)
         except TypeError as exc:
-            from .guimanager import GuiError
             raise GuiError(f'timer id must be hashable: {id!r}') from exc
         if id in self.timers:
             del self.timers[id]
@@ -128,7 +125,6 @@ class Scheduler:
         try:
             hash(id)
         except TypeError as exc:
-            from .guimanager import GuiError
             raise GuiError(f'task id must be hashable: {id!r}') from exc
 
     def _build_task_callable(self, id: Hashable, logic: Callable[..., object], parameters: Optional[object]) -> Callable[[], object]:
@@ -169,7 +165,6 @@ class Scheduler:
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
         if operation not in (TaskKind.Finished, TaskKind.Failed):
-            from .guimanager import GuiError
             raise GuiError(f'unknown task event operation: {operation}')
         if item1 is not None:
             self._validate_task_id(item1)
@@ -186,10 +181,8 @@ class Scheduler:
     ) -> None:
         self._validate_task_id(id)
         if not callable(logic):
-            from .guimanager import GuiError
             raise GuiError('task logic must be callable')
         if message_method is not None and not callable(message_method):
-            from .guimanager import GuiError
             raise GuiError('task message_method must be callable when provided')
 
         with self._lock:
@@ -208,13 +201,10 @@ class Scheduler:
         with self._lock:
             task = self.tasks.get(id)
             if task is None:
-                from .guimanager import GuiError
                 raise GuiError(f'unknown task id: {id}')
             if task.message_method is None:
-                from .guimanager import GuiError
                 raise GuiError(f'task "{id}" has no message handler')
             if not callable(task.message_method):
-                from .guimanager import GuiError
                 raise GuiError(f'task "{id}" message handler is not callable')
             self._task_messages.append(TaskMessage(id=id, callback=task.message_method, payload=parameters))
 
@@ -251,10 +241,8 @@ class Scheduler:
         """
         if max_messages_per_update is not None:
             if not isinstance(max_messages_per_update, int):
-                from .guimanager import GuiError
                 raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
             if max_messages_per_update <= 0:
-                from .guimanager import GuiError
                 raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
         with self._lock:
             self._message_dispatch_limit = max_messages_per_update
