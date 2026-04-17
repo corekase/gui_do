@@ -287,10 +287,10 @@ Example:
 
 ```python
 gui.bitmap_factory.load_cursor((1, 1), "normal", "cursor.png")
-gui.bitmap_factory.load_cursor((8, 8), "hand", "hand.png")
+gui.bitmap_factory.load_cursor((9, 9), "hand", "hand.png")
 
 gui.set_cursor("normal")
-# ... later during drag or hover states
+# ... later during drag state
 gui.set_cursor("hand")
 ```
 
