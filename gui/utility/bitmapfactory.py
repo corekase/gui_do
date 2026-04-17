@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from .guimanager import GuiManager
 
 class BitmapFactory:
+    _cursor_cache: Dict[str, Tuple[Surface, Tuple[int, int]]] = {}
+
     def __init__(self) -> None:
         self._font: Optional[pygame.font.Font] = None
         self._current_font_name: Optional[str] = None
@@ -22,6 +24,20 @@ class BitmapFactory:
 
     def load_font(self, name: str, font: str, size: int) -> None:
         self._fonts[name] = pygame.font.Font(self.file_resource('fonts', font), size)
+
+    def load_cursor(self, hotspot: Tuple[int, int], name: str, filename: str) -> None:
+        if not isinstance(hotspot, tuple) or len(hotspot) != 2:
+            raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
+        if not isinstance(name, str) or name == '':
+            raise GuiError('cursor name must be a non-empty string')
+        if not isinstance(filename, str) or filename == '':
+            raise GuiError('cursor filename must be a non-empty string')
+        BitmapFactory._cursor_cache[name] = (self.image_alpha('cursors', filename), hotspot)
+
+    def get_cursor(self, name: str) -> Tuple[Surface, Tuple[int, int]]:
+        if name not in BitmapFactory._cursor_cache:
+            raise GuiError(f'unknown cursor "{name}"')
+        return BitmapFactory._cursor_cache[name]
 
     def set_font(self, name: str) -> None:
         if name not in self._fonts:

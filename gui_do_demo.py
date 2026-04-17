@@ -43,6 +43,8 @@ class Demo:
             postamble=self.gui1_screen_postamble,
         )
         b1 = g1.bitmap_factory
+        b1.load_cursor((1, 1), 'normal', 'cursor.png')
+        b1.load_cursor((7, 7), 'hand', 'hand.png')
         # blit a background image to the screen surface
         g1.set_pristine('backdrop.jpg')
         # screen label
@@ -211,7 +213,7 @@ class Demo:
         g1.button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
         g1.button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
         # set cursor image
-        g1.set_cursor((1, 1), 'cursor.png')
+        g1.set_cursor('normal')
         self.gui1 = g1
         # -----------------------
         # begin gui2
@@ -230,7 +232,7 @@ class Demo:
             (300, 300)
         )
         # set cursor for gui2
-        g2.set_cursor((1, 1), 'cursor.png')
+        g2.set_cursor('normal')
         self.gui2 = g2
         # -----------------------
         # Setup Engine and StateManager
@@ -477,11 +479,13 @@ class Demo:
                 # right-mouse button pressed, enter dragging state
                 if CEvent.button == 3:
                     self.dragging = True
+                    self.gui1.set_cursor('hand')
                     self.gui1.set_lock_point(self.canvas)
             elif CEvent.type == CanvasEvent.MouseButtonUp:
                 # right-mouse button released, exit dragging state
                 if CEvent.button == 3:
                     self.dragging = False
+                    self.gui1.set_cursor('normal')
                     self.gui1.set_lock_point(None)
             elif CEvent.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position

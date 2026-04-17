@@ -284,15 +284,12 @@ class GuiManager:
         x, y, _, _ = area
         obj.surface.blit(obj.pristine, (x, y), area)
 
-    def set_cursor(self, hotspot: Tuple[int, int], image: str) -> None:
-        """Set custom cursor image and hotspot."""
-        if not isinstance(hotspot, tuple) or len(hotspot) != 2:
-            raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
-        if not isinstance(image, str) or image == '':
-            raise GuiError('cursor image must be a non-empty string')
-        self.cursor_image = self.bitmap_factory.image_alpha('cursors', image)
+    def set_cursor(self, name: str) -> None:
+        """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""
+        if not isinstance(name, str) or name == '':
+            raise GuiError('cursor name must be a non-empty string')
+        self.cursor_image, self.cursor_hotspot = self.bitmap_factory.get_cursor(name)
         self.cursor_rect = self.cursor_image.get_rect()
-        self.cursor_hotspot = hotspot
 
     def window(
         self,
