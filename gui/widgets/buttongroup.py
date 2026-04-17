@@ -12,19 +12,6 @@ if TYPE_CHECKING:
 class ButtonGroup(BaseInteractive):
     """Radio-style button that shares exclusive selection within a group."""
 
-    def __init__(self, gui: "GuiManager", group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> None:
-        """Create one selectable member of a named group."""
-        if not isinstance(group, str) or group == '':
-            raise GuiError('button group name must be a non-empty string')
-        super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.ButtonGroup
-        self.group: str = group
-        (self.idle, self.hover, self.armed), self.hit_rect = \
-            self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
-        self.gui.button_group_mediator.register(group, self)
-        if self.gui.button_group_mediator.get_selection(group) is self:
-            self.select()
-
     @property
     def button_group(self) -> str:
         """Return this button's group name."""
@@ -42,6 +29,19 @@ class ButtonGroup(BaseInteractive):
         if not isinstance(selected_id, str) or selected_id == '':
             return self.id
         return selected_id
+
+    def __init__(self, gui: "GuiManager", group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> None:
+        """Create one selectable member of a named group."""
+        if not isinstance(group, str) or group == '':
+            raise GuiError('button group name must be a non-empty string')
+        super().__init__(gui, id, rect)
+        self.WidgetKind = WidgetKind.ButtonGroup
+        self.group: str = group
+        (self.idle, self.hover, self.armed), self.hit_rect = \
+            self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
+        self.gui.button_group_mediator.register(group, self)
+        if self.gui.button_group_mediator.get_selection(group) is self:
+            self.select()
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
