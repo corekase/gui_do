@@ -9,6 +9,7 @@ from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from .constants import colours, GuiError, ButtonStyle
+from .resource_error_handler import DataResourceErrorHandler
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
@@ -180,13 +181,13 @@ class BitmapFactory:
         return os.path.join('data', *names)
 
     def image_alpha(self, *names: str) -> Surface:
-        path = self.file_resource(*names)
+        full_path = os.path.normpath(os.path.abspath(self.file_resource(*names)))
         try:
-            return pygame.image.load(path).convert_alpha()
+            return pygame.image.load(full_path).convert_alpha()
         except GuiError:
             raise
         except Exception as exc:
-            raise GuiError(f'failed to load image resource: {path}') from exc
+            DataResourceErrorHandler.raise_load_error('failed to load image resource', full_path, exc)
 
     def load_cursor(self, hotspot: Tuple[int, int], name: str, filename: str) -> None:
         if not isinstance(hotspot, tuple) or len(hotspot) != 2:
@@ -195,20 +196,26 @@ class BitmapFactory:
             raise GuiError('cursor name must be a non-empty string')
         if not isinstance(filename, str) or filename == '':
             raise GuiError('cursor filename must be a non-empty string')
+        cursor_path = self.file_resource('cursors', filename)
         try:
             BitmapFactory._cursor_cache[name] = (self.image_alpha('cursors', filename), hotspot)
         except GuiError:
             raise
         except Exception as exc:
-            raise GuiError(f'failed to load cursor "{name}" from file "{filename}"') from exc
+            DataResourceErrorHandler.raise_load_error(f'failed to load cursor "{name}" from file', cursor_path, exc)
 
     def load_font(self, name: str, font: str, size: int) -> None:
+        font_full_path = os.path.normpath(os.path.abspath(self.file_resource('fonts', font)))
         try:
-            self._fonts[name] = pygame.font.Font(self.file_resource('fonts', font), size)
+            self._fonts[name] = pygame.font.Font(font_full_path, size)
         except GuiError:
             raise
         except Exception as exc:
-            raise GuiError(f'failed to load font "{name}" from file "{font}" with size={size}') from exc
+            DataResourceErrorHandler.raise_load_error(
+                f'failed to load font "{name}" from file with size={size}',
+                font_full_path,
+                exc,
+            )
 
     def _draw_angle_state(self, size: Tuple[int, int], state: str) -> Surface:
         if state == 'idle':

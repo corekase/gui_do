@@ -9,6 +9,7 @@ from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
 from .layout_manager import LayoutManager
+from .resource_error_handler import DataResourceErrorHandler
 from .renderer import Renderer
 from .widget import Widget
 from ..widgets.window import Window
@@ -334,7 +335,13 @@ class GuiManager:
         if obj is None:
             obj = self
         if image is not None:
-            bitmap = pygame.image.load(self.bitmap_factory.file_resource('images', image))
+            image_path = self.bitmap_factory.file_resource('images', image)
+            try:
+                bitmap = pygame.image.load(image_path)
+            except GuiError:
+                raise
+            except Exception as exc:
+                DataResourceErrorHandler.raise_load_error('failed to load pristine image', image_path, exc)
             _, _, width, height = obj.surface.get_rect()
             scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
             obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
@@ -676,4 +683,3 @@ class GuiManager:
             self.lock_point_tolerance_rect = None
             return None
         return self.locking_object
-
