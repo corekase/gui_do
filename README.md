@@ -139,16 +139,16 @@ The demo follows this sequence, which is a solid default:
 
 All of these both create and register the widget:
 
-- `gui.button(id, rect, style, text, on_activate=None)`
-- `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
-- `gui.buttongroup(group, id, rect, style, text)`
-- `gui.label(position, text, shadow=False, id=None)`
-- `gui.scrollbar(id, overall_rect, orientation, arrow_position, (total, start, bar_size, inc))`
-- `gui.canvas(id, rect, backdrop=None, on_activate=None, automatic_pristine=False)`
-- `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
-- `gui.arrowbox(id, rect, direction_degrees, on_activate=None)`
-- `gui.frame(id, rect)`
-- `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+- `gui.ArrowBox(id, rect, direction_degrees, on_activate=None)`
+- `gui.Button(id, rect, style, text, on_activate=None)`
+- `gui.ButtonGroup(group, id, rect, style, text)`
+- `gui.Canvas(id, rect, backdrop=None, on_activate=None, automatic_pristine=False)`
+- `gui.Frame(id, rect)`
+- `gui.Image(id, rect, image, automatic_pristine=False, scale=True)`
+- `gui.Label(position, text, shadow=False, id=None)`
+- `gui.Scrollbar(id, overall_rect, orientation, arrow_position, (total, start, bar_size, inc))`
+- `gui.Toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
+- `gui.Window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
 ## Events and Callbacks
 
