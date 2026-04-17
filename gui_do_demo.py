@@ -735,7 +735,6 @@ class Demo:
         if x1 <= x0 or y1 <= y0:
             return
         x, y, w, h = x0, y0, x1 - x0, y1 - y0
-
         chunk_rows = 4
         row_values = []
         chunk_start_y = y
