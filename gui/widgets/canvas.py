@@ -53,41 +53,12 @@ class Canvas(Widget):
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
 
-    def set_event_queue_limit(self, max_events: int) -> None:
-        if not isinstance(max_events, int):
-            raise GuiError(f'max_events must be an int, got: {type(max_events).__name__}')
-        if max_events <= 0:
-            raise GuiError(f'max_events must be > 0, got: {max_events}')
-        if self._events.maxlen == max_events:
-            return
-        self._events = deque(self._events, maxlen=max_events)
-        self.queued_event = len(self._events) > 0
-        self.CEvent = self._events[0] if self._events else None
+    def get_canvas_surface(self) -> Surface:
+        return self.canvas
 
     def get_event_queue_limit(self) -> int:
         maxlen = self._events.maxlen
         return 0 if maxlen is None else maxlen
-
-    def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]]) -> None:
-        if callback is not None and not callable(callback):
-            raise GuiError('overflow callback must be callable when provided')
-        self.on_overflow = callback
-
-    def set_motion_coalescing(self, enabled: bool) -> None:
-        if not isinstance(enabled, bool):
-            raise GuiError(f'motion coalescing flag must be bool, got: {type(enabled).__name__}')
-        self.coalesce_motion_events = enabled
-
-    def get_canvas_surface(self) -> Surface:
-        return self.canvas
-
-    def restore_pristine(self, area: Optional[Rect] = None) -> None:
-        """Restore a region from the canvas pristine snapshot."""
-        if self.pristine is None:
-            raise GuiError('canvas pristine image is not initialized')
-        if area is None:
-            area = self.canvas.get_rect()
-        self.canvas.blit(self.pristine, (area.x, area.y), area)
 
     def read_event(self) -> Optional[CanvasEventPacket]:
         """Pop the next queued canvas event, or None when empty."""
@@ -100,12 +71,26 @@ class Canvas(Widget):
         self.CEvent = self._events[0] if self._events else None
         return event
 
-    def focused(self) -> bool:
-        """Return True when mouse is inside this canvas."""
-        if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
-            return True
-        else:
-            return False
+    def set_event_queue_limit(self, max_events: int) -> None:
+        if not isinstance(max_events, int):
+            raise GuiError(f'max_events must be an int, got: {type(max_events).__name__}')
+        if max_events <= 0:
+            raise GuiError(f'max_events must be > 0, got: {max_events}')
+        if self._events.maxlen == max_events:
+            return
+        self._events = deque(self._events, maxlen=max_events)
+        self.queued_event = len(self._events) > 0
+        self.CEvent = self._events[0] if self._events else None
+
+    def set_motion_coalescing(self, enabled: bool) -> None:
+        if not isinstance(enabled, bool):
+            raise GuiError(f'motion coalescing flag must be bool, got: {type(enabled).__name__}')
+        self.coalesce_motion_events = enabled
+
+    def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]]) -> None:
+        if callback is not None and not callable(callback):
+            raise GuiError('overflow callback must be callable when provided')
+        self.on_overflow = callback
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Queue supported events while focused and signal activation on enqueue."""
@@ -160,3 +145,18 @@ class Canvas(Widget):
         self.surface.blit(self.canvas, self.draw_rect)
         if self.auto_restore_pristine:
             self.restore_pristine()
+    def focused(self) -> bool:
+        """Return True when mouse is inside this canvas."""
+        if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
+            return True
+        else:
+            return False
+
+    def restore_pristine(self, area: Optional[Rect] = None) -> None:
+        """Restore a region from the canvas pristine snapshot."""
+        if self.pristine is None:
+            raise GuiError('canvas pristine image is not initialized')
+        if area is None:
+            area = self.canvas.get_rect()
+        self.canvas.blit(self.pristine, (area.x, area.y), area)
+

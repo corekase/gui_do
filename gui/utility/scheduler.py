@@ -117,70 +117,56 @@ class Scheduler:
         self._max_workers: int = max(1, os.cpu_count() or 4)
         self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=self._max_workers)
 
-    def _validate_task_id(self, id: Hashable) -> None:
-        try:
-            hash(id)
-        except TypeError as exc:
-            raise GuiError(f'task id must be hashable: {id!r}') from exc
+    def shutdown(self) -> None:
+        """Cancel pending work and stop worker threads."""
+        with self._lock:
+            self.remove_all()
+            self._executor.shutdown(wait=False, cancel_futures=True)
 
-    def _build_task_callable(self, id: Hashable, logic: Callable[..., object], parameters: Optional[object]) -> Callable[[], object]:
-        def run() -> object:
-            if parameters is None:
-                outcome = logic(id)
-            else:
-                outcome = logic(id, parameters)
+    def update(self) -> List[Hashable]:
+        """Advance one frame and return task ids that finished this update."""
+        with self._lock:
+            self._tasks_finished.clear()
+            self._tasks_failed.clear()
+            self._submit_ready_tasks()
+            self._collect_finished_tasks()
+            finished_tasks = self._tasks_finished.copy()
+        self._drain_incoming_task_messages()
+        self._dispatch_task_messages()
+        return finished_tasks
 
-            if inspect.isawaitable(outcome):
-                return asyncio.run(outcome)
-            return outcome
+    def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
+        """Return failed tasks from the latest update as (id, error)."""
+        with self._lock:
+            return self._tasks_failed.copy()
 
-        return run
+    def get_finished_tasks(self) -> List[Hashable]:
+        """Return finished task ids from the latest update."""
+        with self._lock:
+            return self._tasks_finished.copy()
 
-    def _remove_from_pending(self, id: Hashable) -> None:
-        if id in self._pending_set:
-            if id in self._pending:
-                self._pending.remove(id)
-            self._pending_set.discard(id)
+    def get_max_queued_messages_per_task(self) -> Optional[int]:
+        """Return per-task queue cap, or None when unlimited."""
+        with self._lock:
+            return self._max_queued_messages_per_task
 
-    def _remove_from_suspended(self, id: Hashable) -> None:
-        if id in self._suspended_set:
-            if id in self._suspended:
-                self._suspended.remove(id)
-            self._suspended_set.discard(id)
+    def get_message_dispatch_limit(self) -> Optional[int]:
+        """Return dispatch limit per update, or None when unlimited."""
+        with self._lock:
+            return self._message_dispatch_limit
 
-    def _remove_task_internal(self, id: Hashable) -> None:
-        self._remove_from_pending(id)
-        self._remove_from_suspended(id)
-        self._task_generation[id] = self._task_generation.get(id, 0) + 1
-        self._task_message_counts.pop(id, None)
-        task = self.tasks.pop(id, None)
-        self._task_results.pop(id, None)
-        self._task_messages = deque(message for message in self._task_messages if message.id != id)
-        if id in self._running:
-            self._running.discard(id)
-            if task is not None and task.future is not None:
-                task.future.cancel()
-        self._message_slots_changed.notify_all()
+    def get_message_ingest_limit(self) -> Optional[int]:
+        """Return ingest limit per update, or None when unlimited."""
+        with self._lock:
+            return self._message_ingest_limit
 
-    def _decrement_message_count_locked(self, id: Hashable) -> None:
-        count = self._task_message_counts.get(id)
-        if count is None:
-            return
-        next_count = count - 1
-        if next_count <= 0:
-            self._task_message_counts.pop(id, None)
-        else:
-            self._task_message_counts[id] = next_count
-        self._message_slots_changed.notify_all()
+    def read_suspended(self) -> List[Hashable]:
+        with self._lock:
+            return self._suspended.copy()
 
-    def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
-        if operation not in (TaskKind.Finished, TaskKind.Failed):
-            raise GuiError(f'unknown task event operation: {operation}')
-        if item1 is not None:
-            self._validate_task_id(item1)
-        if operation == TaskKind.Finished:
-            return TaskEvent(TaskKind.Finished, item1)
-        return TaskEvent(TaskKind.Failed, item1, '' if item2 is None else str(item2))
+    def read_suspended_len(self) -> int:
+        with self._lock:
+            return len(self._suspended)
 
     def add_task(
         self,
@@ -206,24 +192,21 @@ class Scheduler:
             self._pending.append(id)
             self._pending_set.add(id)
 
-    def send_message(self, id: Hashable, parameters: object) -> None:
+    def clear_failed_tasks(self) -> None:
+        """Clear stored failed-task entries."""
+        with self._lock:
+            self._tasks_failed.clear()
+
+    def clear_finished_tasks(self) -> None:
+        """Clear stored finished-task ids."""
+        with self._lock:
+            self._tasks_finished.clear()
+
+    def pop_result(self, id: Hashable, default: Optional[object] = None) -> Optional[object]:
+        """Return and remove a completed task result."""
         self._validate_task_id(id)
         with self._lock:
-            while True:
-                task = self.tasks.get(id)
-                if task is None:
-                    raise GuiError(f'unknown task id: {id}')
-                if task.message_method is None:
-                    raise GuiError(f'task "{id}" has no message handler')
-                if not callable(task.message_method):
-                    raise GuiError(f'task "{id}" message handler is not callable')
-                queued_count = self._task_message_counts.get(id, 0)
-                if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
-                    break
-                self._message_slots_changed.wait()
-            self._task_message_counts[id] = self._task_message_counts.get(id, 0) + 1
-            message = TaskMessage(id=id, callback=task.message_method, payload=parameters, generation=task.generation)
-        self._incoming_task_messages.put(message)
+            return self._task_results.pop(id, default)
 
     def remove_all(self) -> None:
         with self._lock:
@@ -251,36 +234,6 @@ class Scheduler:
             self._tasks_failed = [item for item in self._tasks_failed if item[0] not in removed]
             self._task_messages = deque(message for message in self._task_messages if message.id not in removed)
 
-    def set_message_dispatch_limit(self, max_messages_per_update: Optional[int]) -> None:
-        """Set max callback messages dispatched in each update call."""
-        if max_messages_per_update is not None:
-            if not isinstance(max_messages_per_update, int):
-                raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
-            if max_messages_per_update <= 0:
-                raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
-        with self._lock:
-            self._message_dispatch_limit = max_messages_per_update
-
-    def get_message_dispatch_limit(self) -> Optional[int]:
-        """Return dispatch limit per update, or None when unlimited."""
-        with self._lock:
-            return self._message_dispatch_limit
-
-    def set_message_ingest_limit(self, max_messages_per_update: Optional[int]) -> None:
-        """Set max incoming messages moved into dispatch buffer per update."""
-        if max_messages_per_update is not None:
-            if not isinstance(max_messages_per_update, int):
-                raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
-            if max_messages_per_update <= 0:
-                raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
-        with self._lock:
-            self._message_ingest_limit = max_messages_per_update
-
-    def get_message_ingest_limit(self) -> Optional[int]:
-        """Return ingest limit per update, or None when unlimited."""
-        with self._lock:
-            return self._message_ingest_limit
-
     def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
         """Set per-task queue cap before send_message blocks for backpressure."""
         if max_queued_messages is not None:
@@ -292,35 +245,127 @@ class Scheduler:
             self._max_queued_messages_per_task = max_queued_messages
             self._message_slots_changed.notify_all()
 
-    def get_max_queued_messages_per_task(self) -> Optional[int]:
-        """Return per-task queue cap, or None when unlimited."""
+    def set_message_dispatch_limit(self, max_messages_per_update: Optional[int]) -> None:
+        """Set max callback messages dispatched in each update call."""
+        if max_messages_per_update is not None:
+            if not isinstance(max_messages_per_update, int):
+                raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
+            if max_messages_per_update <= 0:
+                raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
         with self._lock:
-            return self._max_queued_messages_per_task
+            self._message_dispatch_limit = max_messages_per_update
 
-    def _drain_incoming_task_messages(self) -> None:
-        drained: List[TaskMessage] = []
+    def set_message_ingest_limit(self, max_messages_per_update: Optional[int]) -> None:
+        """Set max incoming messages moved into dispatch buffer per update."""
+        if max_messages_per_update is not None:
+            if not isinstance(max_messages_per_update, int):
+                raise GuiError(f'max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}')
+            if max_messages_per_update <= 0:
+                raise GuiError(f'max_messages_per_update must be > 0, got: {max_messages_per_update}')
         with self._lock:
-            ingest_limit = self._message_ingest_limit
-        if ingest_limit is None:
+            self._message_ingest_limit = max_messages_per_update
+
+    def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
+        if operation not in (TaskKind.Finished, TaskKind.Failed):
+            raise GuiError(f'unknown task event operation: {operation}')
+        if item1 is not None:
+            self._validate_task_id(item1)
+        if operation == TaskKind.Finished:
+            return TaskEvent(TaskKind.Finished, item1)
+        return TaskEvent(TaskKind.Failed, item1, '' if item2 is None else str(item2))
+
+    def resume_all(self) -> None:
+        with self._lock:
+            for id in list(self._suspended):
+                if id in self.tasks and id not in self._pending_set:
+                    self._pending.append(id)
+                    self._pending_set.add(id)
+            self._suspended.clear()
+            self._suspended_set.clear()
+
+    def resume_tasks(self, *tasks: Hashable) -> None:
+        with self._lock:
+            for id in tasks:
+                self._validate_task_id(id)
+                if id in self._suspended_set:
+                    self._remove_from_suspended(id)
+                    if id in self.tasks and id not in self._pending_set:
+                        self._pending.append(id)
+                        self._pending_set.add(id)
+
+    def send_message(self, id: Hashable, parameters: object) -> None:
+        self._validate_task_id(id)
+        with self._lock:
             while True:
-                try:
-                    drained.append(self._incoming_task_messages.get_nowait())
-                except Empty:
+                task = self.tasks.get(id)
+                if task is None:
+                    raise GuiError(f'unknown task id: {id}')
+                if task.message_method is None:
+                    raise GuiError(f'task "{id}" has no message handler')
+                if not callable(task.message_method):
+                    raise GuiError(f'task "{id}" message handler is not callable')
+                queued_count = self._task_message_counts.get(id, 0)
+                if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
                     break
-        else:
-            for _ in range(ingest_limit):
-                try:
-                    drained.append(self._incoming_task_messages.get_nowait())
-                except Empty:
-                    break
-        if not drained:
-            return
+                self._message_slots_changed.wait()
+            self._task_message_counts[id] = self._task_message_counts.get(id, 0) + 1
+            message = TaskMessage(id=id, callback=task.message_method, payload=parameters, generation=task.generation)
+        self._incoming_task_messages.put(message)
+
+    def suspend_all(self) -> None:
         with self._lock:
-            for message in drained:
-                if self._task_generation.get(message.id) != message.generation:
-                    self._decrement_message_count_locked(message.id)
-                    continue
-                self._task_messages.append(message)
+            for id in list(self._pending):
+                if id not in self._suspended_set:
+                    self._suspended.append(id)
+                    self._suspended_set.add(id)
+            self._pending.clear()
+            self._pending_set.clear()
+
+    def suspend_tasks(self, *tasks: Hashable) -> None:
+        with self._lock:
+            for id in tasks:
+                self._validate_task_id(id)
+                if id in self._pending_set:
+                    self._remove_from_pending(id)
+                    if id not in self._suspended_set:
+                        self._suspended.append(id)
+                        self._suspended_set.add(id)
+
+    def tasks_active(self) -> bool:
+        with self._lock:
+            return bool(self._pending_set or self._running)
+
+    def tasks_active_match_all(self, *tasks: Hashable) -> bool:
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task not in self._pending_set and task not in self._running:
+                    return False
+            return True
+
+    def tasks_active_match_any(self, *tasks: Hashable) -> bool:
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task in self._pending_set or task in self._running:
+                    return True
+            return False
+
+    def tasks_busy(self) -> bool:
+        """Return True when tasks are running/pending or still have queued messages."""
+        with self._lock:
+            return bool(self._pending_set or self._running or self._task_message_counts)
+
+    def tasks_busy_match_any(self, *tasks: Hashable) -> bool:
+        """Return True when any listed id is active or has queued messages."""
+        with self._lock:
+            for task in tasks:
+                self._validate_task_id(task)
+                if task in self._pending_set or task in self._running:
+                    return True
+                if self._task_message_counts.get(task, 0) > 0:
+                    return True
+            return False
 
     def _dispatch_task_messages(self) -> None:
         pending_messages: List[TaskMessage] = []
@@ -349,97 +394,18 @@ class Scheduler:
                 with self._lock:
                     self._decrement_message_count_locked(message.id)
 
-    def suspend_all(self) -> None:
-        with self._lock:
-            for id in list(self._pending):
-                if id not in self._suspended_set:
-                    self._suspended.append(id)
-                    self._suspended_set.add(id)
-            self._pending.clear()
-            self._pending_set.clear()
+    def _build_task_callable(self, id: Hashable, logic: Callable[..., object], parameters: Optional[object]) -> Callable[[], object]:
+        def run() -> object:
+            if parameters is None:
+                outcome = logic(id)
+            else:
+                outcome = logic(id, parameters)
 
-    def resume_all(self) -> None:
-        with self._lock:
-            for id in list(self._suspended):
-                if id in self.tasks and id not in self._pending_set:
-                    self._pending.append(id)
-                    self._pending_set.add(id)
-            self._suspended.clear()
-            self._suspended_set.clear()
+            if inspect.isawaitable(outcome):
+                return asyncio.run(outcome)
+            return outcome
 
-    def suspend_tasks(self, *tasks: Hashable) -> None:
-        with self._lock:
-            for id in tasks:
-                self._validate_task_id(id)
-                if id in self._pending_set:
-                    self._remove_from_pending(id)
-                    if id not in self._suspended_set:
-                        self._suspended.append(id)
-                        self._suspended_set.add(id)
-
-    def resume_tasks(self, *tasks: Hashable) -> None:
-        with self._lock:
-            for id in tasks:
-                self._validate_task_id(id)
-                if id in self._suspended_set:
-                    self._remove_from_suspended(id)
-                    if id in self.tasks and id not in self._pending_set:
-                        self._pending.append(id)
-                        self._pending_set.add(id)
-
-    def read_suspended(self) -> List[Hashable]:
-        with self._lock:
-            return self._suspended.copy()
-
-    def read_suspended_len(self) -> int:
-        with self._lock:
-            return len(self._suspended)
-
-    def tasks_active(self) -> bool:
-        with self._lock:
-            return bool(self._pending_set or self._running)
-
-    def tasks_busy(self) -> bool:
-        """Return True when tasks are running/pending or still have queued messages."""
-        with self._lock:
-            return bool(self._pending_set or self._running or self._task_message_counts)
-
-    def tasks_busy_match_any(self, *tasks: Hashable) -> bool:
-        """Return True when any listed id is active or has queued messages."""
-        with self._lock:
-            for task in tasks:
-                self._validate_task_id(task)
-                if task in self._pending_set or task in self._running:
-                    return True
-                if self._task_message_counts.get(task, 0) > 0:
-                    return True
-            return False
-
-    def tasks_active_match_any(self, *tasks: Hashable) -> bool:
-        with self._lock:
-            for task in tasks:
-                self._validate_task_id(task)
-                if task in self._pending_set or task in self._running:
-                    return True
-            return False
-
-    def tasks_active_match_all(self, *tasks: Hashable) -> bool:
-        with self._lock:
-            for task in tasks:
-                self._validate_task_id(task)
-                if task not in self._pending_set and task not in self._running:
-                    return False
-            return True
-
-    def _submit_ready_tasks(self) -> None:
-        while self._pending and len(self._running) < self._max_workers:
-            task_id = self._pending.popleft()
-            self._pending_set.discard(task_id)
-            task = self.tasks.get(task_id)
-            if task is None:
-                continue
-            task.future = self._executor.submit(task.run_callable)
-            self._running.add(task_id)
+        return run
 
     def _collect_finished_tasks(self) -> None:
         for task_id in list(self._running):
@@ -459,49 +425,83 @@ class Scheduler:
             finally:
                 self.tasks.pop(task_id, None)
 
-    def update(self) -> List[Hashable]:
-        """Advance one frame and return task ids that finished this update."""
-        with self._lock:
-            self._tasks_finished.clear()
-            self._tasks_failed.clear()
-            self._submit_ready_tasks()
-            self._collect_finished_tasks()
-            finished_tasks = self._tasks_finished.copy()
-        self._drain_incoming_task_messages()
-        self._dispatch_task_messages()
-        return finished_tasks
+    def _decrement_message_count_locked(self, id: Hashable) -> None:
+        count = self._task_message_counts.get(id)
+        if count is None:
+            return
+        next_count = count - 1
+        if next_count <= 0:
+            self._task_message_counts.pop(id, None)
+        else:
+            self._task_message_counts[id] = next_count
+        self._message_slots_changed.notify_all()
 
-    def get_finished_tasks(self) -> List[Hashable]:
-        """Return finished task ids from the latest update."""
+    def _drain_incoming_task_messages(self) -> None:
+        drained: List[TaskMessage] = []
         with self._lock:
-            return self._tasks_finished.copy()
+            ingest_limit = self._message_ingest_limit
+        if ingest_limit is None:
+            while True:
+                try:
+                    drained.append(self._incoming_task_messages.get_nowait())
+                except Empty:
+                    break
+        else:
+            for _ in range(ingest_limit):
+                try:
+                    drained.append(self._incoming_task_messages.get_nowait())
+                except Empty:
+                    break
+        if not drained:
+            return
+        with self._lock:
+            for message in drained:
+                if self._task_generation.get(message.id) != message.generation:
+                    self._decrement_message_count_locked(message.id)
+                    continue
+                self._task_messages.append(message)
 
-    def clear_finished_tasks(self) -> None:
-        """Clear stored finished-task ids."""
-        with self._lock:
-            self._tasks_finished.clear()
+    def _remove_from_pending(self, id: Hashable) -> None:
+        if id in self._pending_set:
+            if id in self._pending:
+                self._pending.remove(id)
+            self._pending_set.discard(id)
 
-    def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
-        """Return failed tasks from the latest update as (id, error)."""
-        with self._lock:
-            return self._tasks_failed.copy()
+    def _remove_from_suspended(self, id: Hashable) -> None:
+        if id in self._suspended_set:
+            if id in self._suspended:
+                self._suspended.remove(id)
+            self._suspended_set.discard(id)
 
-    def clear_failed_tasks(self) -> None:
-        """Clear stored failed-task entries."""
-        with self._lock:
-            self._tasks_failed.clear()
+    def _remove_task_internal(self, id: Hashable) -> None:
+        self._remove_from_pending(id)
+        self._remove_from_suspended(id)
+        self._task_generation[id] = self._task_generation.get(id, 0) + 1
+        self._task_message_counts.pop(id, None)
+        task = self.tasks.pop(id, None)
+        self._task_results.pop(id, None)
+        self._task_messages = deque(message for message in self._task_messages if message.id != id)
+        if id in self._running:
+            self._running.discard(id)
+            if task is not None and task.future is not None:
+                task.future.cancel()
+        self._message_slots_changed.notify_all()
 
-    def pop_result(self, id: Hashable, default: Optional[object] = None) -> Optional[object]:
-        """Return and remove a completed task result."""
-        self._validate_task_id(id)
-        with self._lock:
-            return self._task_results.pop(id, default)
+    def _submit_ready_tasks(self) -> None:
+        while self._pending and len(self._running) < self._max_workers:
+            task_id = self._pending.popleft()
+            self._pending_set.discard(task_id)
+            task = self.tasks.get(task_id)
+            if task is None:
+                continue
+            task.future = self._executor.submit(task.run_callable)
+            self._running.add(task_id)
 
-    def shutdown(self) -> None:
-        """Cancel pending work and stop worker threads."""
-        with self._lock:
-            self.remove_all()
-            self._executor.shutdown(wait=False, cancel_futures=True)
+    def _validate_task_id(self, id: Hashable) -> None:
+        try:
+            hash(id)
+        except TypeError as exc:
+            raise GuiError(f'task id must be hashable: {id!r}') from exc
 
     def __del__(self) -> None:
         try:

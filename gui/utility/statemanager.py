@@ -13,6 +13,12 @@ class StateManager:
         self._active_context_name: Optional[str] = None
         self.is_running: bool = True
 
+    def get_active_gui(self) -> Optional[GuiManager]:
+        """Return the active GuiManager, or None when unset."""
+        if self._active_context_name in self._contexts:
+            return self._contexts[self._active_context_name]
+        return None
+
     def register_context(self, name: str, gui: GuiManager, replace: bool = False) -> None:
         """Register or replace a named GuiManager context."""
         if not isinstance(name, str) or name == '':
@@ -22,6 +28,12 @@ class StateManager:
         if not replace and name in self._contexts:
             raise KeyError(f'duplicate context: {name}')
         self._contexts[name] = gui
+
+    def set_running(self, running: bool) -> None:
+        """Set loop running state."""
+        if not isinstance(running, bool):
+            raise TypeError('running must be a bool')
+        self.is_running = running
 
     def switch_context(self, name: str) -> None:
         """Activate context by name and carry over current mouse position."""
@@ -40,18 +52,6 @@ class StateManager:
         new_gui: Optional[GuiManager] = self.get_active_gui()
         if new_gui:
             new_gui.set_mouse_pos(mouse_pos, True)
-
-    def get_active_gui(self) -> Optional[GuiManager]:
-        """Return the active GuiManager, or None when unset."""
-        if self._active_context_name in self._contexts:
-            return self._contexts[self._active_context_name]
-        return None
-
-    def set_running(self, running: bool) -> None:
-        """Set loop running state."""
-        if not isinstance(running, bool):
-            raise TypeError('running must be a bool')
-        self.is_running = running
 
     def __enter__(self) -> 'StateManager':
         """Enter running state for engine loop usage."""

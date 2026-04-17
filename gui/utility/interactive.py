@@ -19,6 +19,11 @@ class BaseInteractive(Widget):
         self.hover: Optional[Surface] = None
         self.armed: Optional[Surface] = None
 
+    def leave(self) -> None:
+        """Reset to idle unless this widget intentionally stays armed."""
+        if self.state != InteractiveState.Armed:
+            self.state = InteractiveState.Idle
+
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Update interaction state and return True while hovered."""
         collision = self.get_collide(window)
@@ -30,11 +35,6 @@ class BaseInteractive(Widget):
         if self.state == InteractiveState.Idle:
             self.state = InteractiveState.Hover
         return True
-
-    def leave(self) -> None:
-        """Reset to idle unless this widget intentionally stays armed."""
-        if self.state != InteractiveState.Armed:
-            self.state = InteractiveState.Idle
 
     def draw(self) -> None:
         """Blit the bitmap matching the current interaction state."""

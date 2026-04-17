@@ -25,6 +25,22 @@ class ButtonGroup(BaseInteractive):
         if self.gui.button_group_mediator.get_selection(group) is self:
             self.select()
 
+    def read_group(self) -> str:
+        """Return this button's group name."""
+        return self.group
+
+    def read_id(self) -> str:
+        """Return the selected button id for this group."""
+        selection = self.gui.button_group_mediator.get_selection(self.group)
+        if selection is None:
+            return self.id
+        if getattr(selection, 'group', None) != self.group:
+            return self.id
+        selected_id = getattr(selection, 'id', None)
+        if not isinstance(selected_id, str) or selected_id == '':
+            return self.id
+        return selected_id
+
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
@@ -45,19 +61,3 @@ class ButtonGroup(BaseInteractive):
             previous.state = InteractiveState.Idle
         self.state = InteractiveState.Armed
         self.gui.button_group_mediator.select(self.group, self)
-
-    def read_group(self) -> str:
-        """Return this button's group name."""
-        return self.group
-
-    def read_id(self) -> str:
-        """Return the selected button id for this group."""
-        selection = self.gui.button_group_mediator.get_selection(self.group)
-        if selection is None:
-            return self.id
-        if getattr(selection, 'group', None) != self.group:
-            return self.id
-        selected_id = getattr(selection, 'id', None)
-        if not isinstance(selected_id, str) or selected_id == '':
-            return self.id
-        return selected_id

@@ -14,6 +14,23 @@ if TYPE_CHECKING:
 class Scrollbar(Frame):
     """Draggable range selector with optional increment/decrement arrow boxes."""
 
+    @property
+    def start_pos(self) -> int:
+        """Return current start position in total-range units."""
+        return self._start_pos
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise GuiError('widget visible must be a bool')
+        self._visible = value
+        for widget in self._registered:
+            widget.visible = value
+
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         self._registered: List[ArrowBox] = []
         self._subwidgets_bound: bool = False
@@ -89,29 +106,20 @@ class Scrollbar(Frame):
         self._last_mouse_pos: Optional[int] = None
         self._hit: bool = False
 
-    def _on_added_to_gui(self) -> None:
-        if self._subwidgets_bound or self._style == ArrowPosition.Skip:
-            return
-        if self._increment_rect is None or self._decrement_rect is None:
-            raise GuiError('scrollbar arrow geometry is not initialized')
-        if self._inc_degree is None or self._dec_degree is None:
-            raise GuiError('scrollbar arrow direction is not initialized')
-        created: List[ArrowBox] = []
-        try:
-            inc_arrow = self.gui.arrowbox(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
-            created.append(inc_arrow)
-            dec_arrow = self.gui.arrowbox(f'{self.id}.decrement', self._decrement_rect, self._dec_degree, self.decrement)
-            created.append(dec_arrow)
-            self._registered.extend(created)
-            self._subwidgets_bound = True
-        except Exception:
-            for arrow in created:
-                if arrow in self.gui.widgets:
-                    self.gui.widgets.remove(arrow)
-                for window in self.gui.windows:
-                    if arrow in window.widgets:
-                        window.widgets.remove(arrow)
-            raise
+    def leave(self) -> None:
+        self._reset()
+
+    def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
+        """Set total range, start, visible size, and increment in logical units."""
+        if total_range <= 0:
+            raise GuiError(f'total_range must be > 0, got {total_range}')
+        if bar_size <= 0 or bar_size > total_range:
+            raise GuiError(f'bar_size must be in 1..{total_range}, got {bar_size}')
+        if start_pos < 0 or start_pos > (total_range - bar_size):
+            raise GuiError(f'start_pos must be in 0..{total_range - bar_size}, got {start_pos}')
+        if inc_size <= 0:
+            raise GuiError(f'inc_size must be > 0, got {inc_size}')
+        self._total_range, self._start_pos, self._bar_size, self._inc_size = total_range, start_pos, bar_size, inc_size
 
     def set_pos(self, pos: Tuple[int, int]) -> None:
         old_x, old_y = self.draw_rect.x, self.draw_rect.y
@@ -180,32 +188,20 @@ class Scrollbar(Frame):
                 return True
         return False
 
-    def leave(self) -> None:
-        self._reset()
+    def draw(self) -> None:
+        super().draw()
+        rect(self.surface, colours['full'], self._handle_area(), 0)
 
-    def _reset(self) -> None:
-        self.gui.set_lock_area(None)
-        self.state = InteractiveState.Idle
-        self._hit = False
-        self._dragging = False
-        self._last_mouse_pos = None
-
-    @property
-    def start_pos(self) -> int:
-        """Return current start position in total-range units."""
-        return self._start_pos
-
-    def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
-        """Set total range, start, visible size, and increment in logical units."""
-        if total_range <= 0:
-            raise GuiError(f'total_range must be > 0, got {total_range}')
-        if bar_size <= 0 or bar_size > total_range:
-            raise GuiError(f'bar_size must be in 1..{total_range}, got {bar_size}')
-        if start_pos < 0 or start_pos > (total_range - bar_size):
-            raise GuiError(f'start_pos must be in 0..{total_range - bar_size}, got {start_pos}')
-        if inc_size <= 0:
-            raise GuiError(f'inc_size must be > 0, got {inc_size}')
-        self._total_range, self._start_pos, self._bar_size, self._inc_size = total_range, start_pos, bar_size, inc_size
+    def decrement(self) -> None:
+        self._hit = True
+        self._start_pos -= self._inc_size
+        if self._start_pos < 0:
+            self._start_pos = 0
+    def increment(self) -> None:
+        self._hit = True
+        self._start_pos += self._inc_size
+        if self._start_pos + self._bar_size > self._total_range:
+            self._start_pos = self._total_range - self._bar_size
 
     def _handle_area(self) -> Rect:
         start_point = self._total_to_graphical(self._start_pos)
@@ -215,47 +211,51 @@ class Scrollbar(Frame):
         else:
             return Rect(self._graphic_rect.x, self._graphic_rect.y + start_point, self._graphic_rect.width, graphical_size)
 
-    def _graphical_to_total(self, point: int) -> int:
-        graphical = self._graphical_range()
-        if graphical <= 0:
-            return 0
-        return int((point * self._total_range) / graphical)
-
-    def _total_to_graphical(self, point: int) -> int:
-        if self._total_range <= 0:
-            return 0
-        return int((point * self._graphical_range()) / self._total_range)
-
     def _graphical_range(self) -> int:
         if self._horizontal == Orientation.Horizontal:
             return self._graphic_rect.width
         else:
             return self._graphic_rect.height
 
-    def draw(self) -> None:
-        super().draw()
-        rect(self.surface, colours['full'], self._handle_area(), 0)
+    def _graphical_to_total(self, point: int) -> int:
+        graphical = self._graphical_range()
+        if graphical <= 0:
+            return 0
+        return int((point * self._total_range) / graphical)
 
-    @property
-    def visible(self) -> bool:
-        return self._visible
+    def _on_added_to_gui(self) -> None:
+        if self._subwidgets_bound or self._style == ArrowPosition.Skip:
+            return
+        if self._increment_rect is None or self._decrement_rect is None:
+            raise GuiError('scrollbar arrow geometry is not initialized')
+        if self._inc_degree is None or self._dec_degree is None:
+            raise GuiError('scrollbar arrow direction is not initialized')
+        created: List[ArrowBox] = []
+        try:
+            inc_arrow = self.gui.arrowbox(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
+            created.append(inc_arrow)
+            dec_arrow = self.gui.arrowbox(f'{self.id}.decrement', self._decrement_rect, self._dec_degree, self.decrement)
+            created.append(dec_arrow)
+            self._registered.extend(created)
+            self._subwidgets_bound = True
+        except Exception:
+            for arrow in created:
+                if arrow in self.gui.widgets:
+                    self.gui.widgets.remove(arrow)
+                for window in self.gui.windows:
+                    if arrow in window.widgets:
+                        window.widgets.remove(arrow)
+            raise
 
-    @visible.setter
-    def visible(self, value: bool) -> None:
-        if not isinstance(value, bool):
-            raise GuiError('widget visible must be a bool')
-        self._visible = value
-        for widget in self._registered:
-            widget.visible = value
+    def _reset(self) -> None:
+        self.gui.set_lock_area(None)
+        self.state = InteractiveState.Idle
+        self._hit = False
+        self._dragging = False
+        self._last_mouse_pos = None
 
-    def increment(self) -> None:
-        self._hit = True
-        self._start_pos += self._inc_size
-        if self._start_pos + self._bar_size > self._total_range:
-            self._start_pos = self._total_range - self._bar_size
+    def _total_to_graphical(self, point: int) -> int:
+        if self._total_range <= 0:
+            return 0
+        return int((point * self._graphical_range()) / self._total_range)
 
-    def decrement(self) -> None:
-        self._hit = True
-        self._start_pos -= self._inc_size
-        if self._start_pos < 0:
-            self._start_pos = 0

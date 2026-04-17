@@ -48,6 +48,39 @@ class GuiEvent(BaseEvent):
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
+    @property
+    def bitmap_factory(self):
+        return self._bitmap_factory
+
+    @property
+    def buffered(self):
+        return self._buffered
+
+    @buffered.setter
+    def buffered(self, value):
+        if not isinstance(value, bool):
+            raise GuiError('buffered must be a bool')
+        self._buffered = value
+
+    @property
+    def current_widget(self):
+        return self._resolve_current_widget()
+
+    @current_widget.setter
+    def current_widget(self, value):
+        if value is not None:
+            if not isinstance(value, Widget) or not self._is_registered_object(value):
+                value = None
+        current = self._resolve_current_widget()
+        if current != value:
+            if current is not None:
+                current.leave()
+            self._current_widget = value
+
+    @property
+    def scheduler(self):
+        return self._scheduler
+
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -107,66 +140,20 @@ class GuiManager:
             max(1, self.point_lock_recenter_rect.height),
         )
 
-    def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
-        if coverage <= 0.0 or coverage > 1.0:
-            raise GuiError(f'coverage must be in the range (0, 1], got: {coverage}')
-        surface_rect = self.surface.get_rect()
-        width = max(1, int(surface_rect.width * coverage))
-        height = max(1, int(surface_rect.height * coverage))
-        centered = Rect(0, 0, width, height)
-        centered.center = surface_rect.center
-        return centered
-
-    def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
-        for widget in self.widgets:
-            if widget is not candidate and widget.id == widget_id:
-                return widget
+    def run_postamble(self) -> None:
         for window in self.windows:
-            for widget in window.widgets:
-                if widget is not candidate and widget.id == widget_id:
-                    return widget
-        return None
+            if window.visible:
+                window.run_postamble()
+        self._screen_postamble()
 
-    def _is_registered_object(self, gui_object: TGuiObject) -> bool:
-        if isinstance(gui_object, Window):
-            return gui_object in self.windows
-        if isinstance(gui_object, Widget):
-            if gui_object in self.widgets:
-                return True
-            for window in self.windows:
-                if gui_object in window.widgets:
-                    return True
-        return False
+    def run_preamble(self) -> None:
+        self._screen_preamble()
+        for window in self.windows:
+            if window.visible:
+                window.run_preamble()
 
-    def _describe_gui_object(self, gui_object: TGuiObject) -> str:
-        if isinstance(gui_object, Widget):
-            return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
-        if isinstance(gui_object, Window):
-            return (
-                f'{type(gui_object).__name__} '
-                f'pos=({gui_object.x},{gui_object.y}) size=({gui_object.width},{gui_object.height})'
-            )
-        return type(gui_object).__name__
-
-    def _describe_widget_container(self, widget: Widget) -> str:
-        window = getattr(widget, 'window', None)
-        if window is None or not isinstance(window, Window):
-            return 'screen'
-        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
-
-    def _resolve_active_object(self) -> Optional[Window]:
-        if self._active_object is None:
-            return None
-        if self._active_object not in self.windows:
-            self._active_object = None
-            return None
-        return self._active_object
-
-    def _describe_incoming_widget_container(self) -> str:
-        window = self._resolve_active_object()
-        if window is None:
-            return 'screen'
-        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+    def get_mouse_pos(self) -> Tuple[int, int]:
+        return self.lock_area(self.mouse_pos)
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Register a window or widget and attach container-specific state."""
@@ -217,72 +204,39 @@ class GuiManager:
                     raise
         return gui_object
 
-    def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
-        """Configure grid cell sizing used by gridded."""
-        if width <= 0:
-            raise GuiError(f'grid width must be positive, got: {width}')
-        if height <= 0:
-            raise GuiError(f'grid height must be positive, got: {height}')
-        if spacing < 0:
-            raise GuiError(f'grid spacing cannot be negative, got: {spacing}')
-        if not isinstance(anchor, tuple) or len(anchor) != 2:
-            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
-        self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
+    def clear_button_groups(self) -> None:
+        self.button_group_mediator.clear()
 
-    def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
-        return self.layout_manager.get_cell(x, y)
+    def clear_task_owners_for_window(self, window: Window) -> None:
+        if window not in self.windows:
+            return
+        stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
+        for task_id in stale_ids:
+            del self._task_owner_by_id[task_id]
 
-    def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows:
-            window = None
-        if window is not None:
-            x, y = self.lock_area(point)
-            wx, wy = window.x, window.y
-            return (x - wx, y - wy)
-        return self.lock_area(point)
+    def hide_widgets(self, *widgets: Widget) -> None:
+        for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
+            widget.visible = False
 
-    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows:
-            window = None
-        if window is not None:
-            x, y = point
-            wx, wy = window.x, window.y
-            return self.lock_area((x + wx, y + wy))
-        return self.lock_area(point)
+    def lower_window(self, window: Window) -> None:
+        self._resolve_active_object()
+        if window not in self.windows:
+            if self._active_object is window:
+                self._active_object = None
+            return
+        self.windows.remove(window)
+        self.windows.insert(0, window)
 
-    def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
-        """Load a backdrop image, scale it to target surface, and cache pristine copy."""
-        if obj is None:
-            obj = self
-        if image is not None:
-            bitmap = pygame.image.load(self.bitmap_factory.file_resource('images', image))
-            _, _, width, height = obj.surface.get_rect()
-            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-            obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
-        else:
-            raise GuiError('set_pristine requires an image')
-        obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
-
-    def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
-        """Return a surface copy of rect from surface."""
-        bitmap = pygame.Surface((rect.width, rect.height), flags)
-        bitmap.blit(surface, (0, 0), rect)
-        return bitmap
-
-    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
-        """Restore a region from a previously cached pristine bitmap."""
-        if obj is None:
-            obj = self
-        if obj.pristine is None:
-            raise GuiError('restore_pristine called before pristine was initialized')
-        if area is None:
-            area = obj.pristine.get_rect()
-        x, y, _, _ = area
-        obj.surface.blit(obj.pristine, (x, y), area)
+    def raise_window(self, window: Window) -> None:
+        self._resolve_active_object()
+        if window not in self.windows:
+            if self._active_object is window:
+                self._active_object = None
+            return
+        self.windows.remove(window)
+        self.windows.append(window)
 
     def set_cursor(self, name: str) -> None:
         """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""
@@ -301,255 +255,17 @@ class GuiManager:
             hotspot_position[1] - self.cursor_hotspot[1],
         )
 
-    def window(
-        self,
-        title: str,
-        pos: Tuple[int, int],
-        size: Tuple[int, int],
-        backdrop: Optional[str] = None,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> Window:
-        return self.add(Window(self, title, pos, size, backdrop, preamble, event_handler, postamble))
-
-    def set_screen_lifecycle(
-        self,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> None:
-        if preamble is not None and not callable(preamble):
-            raise GuiError('screen preamble must be callable or None')
-        if event_handler is not None and not callable(event_handler):
-            raise GuiError('screen event_handler must be callable or None')
-        if postamble is not None and not callable(postamble):
-            raise GuiError('screen postamble must be callable or None')
-        self._screen_preamble = preamble if preamble is not None else _noop
-        self._screen_event_handler = event_handler if event_handler is not None else _noop_event
-        self._screen_postamble = postamble if postamble is not None else _noop
-
-    def run_preamble(self) -> None:
-        self._screen_preamble()
-        for window in self.windows:
-            if window.visible:
-                window.run_preamble()
-
-    def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
-        try:
-            hash(task_id)
-        except TypeError as exc:
-            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
-        if window is None:
-            self._task_owner_by_id.pop(task_id, None)
-            return
-        if window not in self.windows:
-            raise GuiError('task owner window must be registered')
-        self._task_owner_by_id[task_id] = window
-
-    def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
-        for task_id in task_ids:
-            self.set_task_owner(task_id, window)
-
-    def clear_task_owners_for_window(self, window: Window) -> None:
-        if window not in self.windows:
-            return
-        stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
-        for task_id in stale_ids:
-            del self._task_owner_by_id[task_id]
-
-    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
-        if getattr(event, 'type', None) != Event.Task:
-            return None
-        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
-        if task_id is None:
-            return None
-        owner = self._task_owner_by_id.get(task_id)
-        if owner is None:
-            return None
-        if owner not in self.windows or not owner.visible:
-            return None
-        return owner
-
-    def dispatch_event(self, event: BaseEvent) -> None:
-        task_owner = self._resolve_task_event_owner(event)
-        if task_owner is not None:
-            task_owner.handle_event(event)
-            return
-        event_window = cast(Optional[Window], getattr(event, 'window', None))
-        if event_window is not None and event_window in self.windows and event_window.visible:
-            event_window.handle_event(event)
-            return
-        self._screen_event_handler(event)
-
-    def run_postamble(self) -> None:
-        for window in self.windows:
-            if window.visible:
-                window.run_postamble()
-        self._screen_postamble()
-
-    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
-        safe_text = '' if text is None else text
-        return self.add(Button(self, id, rect, style, safe_text, on_activate, skip_factory))
-
-    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
-        if id is None:
-            self._label_sequence += 1
-            id = f'label_{self._label_sequence}'
-        return self.add(Label(self, id, position, text, shadow))
-
-    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        return self.add(Canvas(self, id, rect, backdrop, on_activate, automatic_pristine))
-
-    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
-        return self.add(Image(self, id, rect, image, automatic_pristine, scale))
-
-    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
-        return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
-
-    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
-        return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
-
-    def arrowbox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
-        return self.add(ArrowBox(self, id, rect, direction, on_activate))
-
-    def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
-        return self.add(ButtonGroup(self, group, id, rect, style, text))
-
-    def _is_registered_button_group(self, button: ButtonGroup) -> bool:
-        # Construction registers group membership before final GUI attachment.
-        if button.surface is None:
-            return True
-        if button in self.widgets:
-            return True
-        for window in self.windows:
-            if button in window.widgets:
-                return True
-        return False
-
-    def clear_button_groups(self) -> None:
-        self.button_group_mediator.clear()
-
-    def frame(self, id: str, rect: Rect) -> Frame:
-        return self.add(Frame(self, id, rect))
-
-    @property
-    def buffered(self):
-        return self._buffered
-
-    @buffered.setter
-    def buffered(self, value):
-        if not isinstance(value, bool):
-            raise GuiError('buffered must be a bool')
-        self._buffered = value
-
-    @property
-    def bitmap_factory(self):
-        return self._bitmap_factory
-
-    @property
-    def scheduler(self):
-        return self._scheduler
-
-    def get_mouse_pos(self) -> Tuple[int, int]:
-        return self.lock_area(self.mouse_pos)
-
-    def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
-        if not isinstance(pos, tuple) or len(pos) != 2:
-            raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
-        self.mouse_pos = self.lock_area(pos)
-        if update_physical_coords:
-            pygame.mouse.set_pos(self.mouse_pos)
-
-    def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
-        if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
-            kwargs.setdefault('pos', self.get_mouse_pos())
-        return GuiEvent(event_type, **kwargs)
-
-    def events(self) -> Iterable[GuiEvent]:
-        for raw_event in pygame.event.get():
-            event = self.handle_event(raw_event)
-            if event.type == Event.Pass:
-                continue
-            yield event
-
-    def handle_event(self, event: PygameEvent) -> GuiEvent:
-        return self.event_dispatcher.handle(event)
-
-    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
-        """Run widget handler and execute activation callbacks when present."""
-        if widget.handle_event(event, window):
-            if widget.on_activate is not None:
-                if not callable(widget.on_activate):
-                    raise GuiError(f'widget callback is not callable for id: {widget.id}')
-                widget.on_activate()
-                return False
-            else:
-                return True
-        return False
-
-    @property
-    def current_widget(self):
-        return self._resolve_current_widget()
-
-    def _resolve_current_widget(self) -> Optional[Widget]:
-        if self._current_widget is None:
-            return None
-        if not self._is_registered_object(self._current_widget):
-            self._current_widget = None
-            return None
-        return self._current_widget
-
-    @current_widget.setter
-    def current_widget(self, value):
-        if value is not None:
-            if not isinstance(value, Widget) or not self._is_registered_object(value):
-                value = None
-        current = self._resolve_current_widget()
-        if current != value:
-            if current is not None:
-                current.leave()
-            self._current_widget = value
-
-    def _resolve_locking_state(self) -> Optional[Widget]:
-        if self.locking_object is None:
-            if self.mouse_locked or self.lock_area_rect is not None or self.lock_point_pos is not None:
-                self.mouse_locked = False
-                self.mouse_point_locked = False
-                self.lock_area_rect = None
-                self.lock_point_pos = None
-                self.lock_point_recenter_pending = False
-                self.lock_point_tolerance_rect = None
-            return None
-        if not isinstance(self.locking_object, Widget):
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_area_rect = None
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        if not self._is_registered_object(self.locking_object):
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_area_rect = None
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        if self.lock_area_rect is None and self.lock_point_pos is None:
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        return self.locking_object
-
-    def update_focus(self, new_hover: Optional[Widget]) -> None:
-        self.current_widget = new_hover
+    def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
+        """Configure grid cell sizing used by gridded."""
+        if width <= 0:
+            raise GuiError(f'grid width must be positive, got: {width}')
+        if height <= 0:
+            raise GuiError(f'grid height must be positive, got: {height}')
+        if spacing < 0:
+            raise GuiError(f'grid spacing cannot be negative, got: {spacing}')
+        if not isinstance(anchor, tuple) or len(anchor) != 2:
+            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
+        self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
@@ -606,6 +322,181 @@ class GuiManager:
         self.lock_point_tolerance_rect = None
         self.lock_point_recenter_pending = False
 
+    def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
+        self.mouse_pos = self.lock_area(pos)
+        if update_physical_coords:
+            pygame.mouse.set_pos(self.mouse_pos)
+
+    def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
+        """Load a backdrop image, scale it to target surface, and cache pristine copy."""
+        if obj is None:
+            obj = self
+        if image is not None:
+            bitmap = pygame.image.load(self.bitmap_factory.file_resource('images', image))
+            _, _, width, height = obj.surface.get_rect()
+            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
+            obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
+        else:
+            raise GuiError('set_pristine requires an image')
+        obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
+
+    def set_screen_lifecycle(
+        self,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
+        if preamble is not None and not callable(preamble):
+            raise GuiError('screen preamble must be callable or None')
+        if event_handler is not None and not callable(event_handler):
+            raise GuiError('screen event_handler must be callable or None')
+        if postamble is not None and not callable(postamble):
+            raise GuiError('screen postamble must be callable or None')
+        self._screen_preamble = preamble if preamble is not None else _noop
+        self._screen_event_handler = event_handler if event_handler is not None else _noop_event
+        self._screen_postamble = postamble if postamble is not None else _noop
+
+    def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
+        try:
+            hash(task_id)
+        except TypeError as exc:
+            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
+        if window is None:
+            self._task_owner_by_id.pop(task_id, None)
+            return
+        if window not in self.windows:
+            raise GuiError('task owner window must be registered')
+        self._task_owner_by_id[task_id] = window
+
+    def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
+        for task_id in task_ids:
+            self.set_task_owner(task_id, window)
+
+    def show_widgets(self, *widgets: Widget) -> None:
+        for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
+            widget.visible = True
+
+    def dispatch_event(self, event: BaseEvent) -> None:
+        task_owner = self._resolve_task_event_owner(event)
+        if task_owner is not None:
+            task_owner.handle_event(event)
+            return
+        event_window = cast(Optional[Window], getattr(event, 'window', None))
+        if event_window is not None and event_window in self.windows and event_window.visible:
+            event_window.handle_event(event)
+            return
+        self._screen_event_handler(event)
+
+    def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
+        if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
+            kwargs.setdefault('pos', self.get_mouse_pos())
+        return GuiEvent(event_type, **kwargs)
+
+    def events(self) -> Iterable[GuiEvent]:
+        for raw_event in pygame.event.get():
+            event = self.handle_event(raw_event)
+            if event.type == Event.Pass:
+                continue
+            yield event
+
+    def handle_event(self, event: PygameEvent) -> GuiEvent:
+        return self.event_dispatcher.handle(event)
+
+    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
+        """Run widget handler and execute activation callbacks when present."""
+        if widget.handle_event(event, window):
+            if widget.on_activate is not None:
+                if not callable(widget.on_activate):
+                    raise GuiError(f'widget callback is not callable for id: {widget.id}')
+                widget.on_activate()
+                return False
+            else:
+                return True
+        return False
+
+    def draw_gui(self) -> None:
+        self.renderer.draw()
+
+    def undraw_gui(self) -> None:
+        self.renderer.undraw()
+    def arrowbox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
+        return self.add(ArrowBox(self, id, rect, direction, on_activate))
+
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
+        safe_text = '' if text is None else text
+        return self.add(Button(self, id, rect, style, safe_text, on_activate, skip_factory))
+
+    def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
+        return self.add(ButtonGroup(self, group, id, rect, style, text))
+
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
+        return self.add(Canvas(self, id, rect, backdrop, on_activate, automatic_pristine))
+
+    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
+        if window is not None and window not in self.windows:
+            window = None
+        if window is not None:
+            x, y = point
+            wx, wy = window.x, window.y
+            return self.lock_area((x + wx, y + wy))
+        return self.lock_area(point)
+
+    def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
+        if window is not None and window not in self.windows:
+            window = None
+        if window is not None:
+            x, y = self.lock_area(point)
+            wx, wy = window.x, window.y
+            return (x - wx, y - wy)
+        return self.lock_area(point)
+
+    def frame(self, id: str, rect: Rect) -> Frame:
+        return self.add(Frame(self, id, rect))
+
+    def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
+        return self.layout_manager.get_cell(x, y)
+
+    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
+        return self.add(Image(self, id, rect, image, automatic_pristine, scale))
+
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
+        if id is None:
+            self._label_sequence += 1
+            id = f'label_{self._label_sequence}'
+        return self.add(Label(self, id, position, text, shadow))
+
+    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
+        return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
+
+    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
+        return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
+
+    def window(
+        self,
+        title: str,
+        pos: Tuple[int, int],
+        size: Tuple[int, int],
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> Window:
+        return self.add(Window(self, title, pos, size, backdrop, preamble, event_handler, postamble))
+
+    def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
+        """Return a surface copy of rect from surface."""
+        bitmap = pygame.Surface((rect.width, rect.height), flags)
+        bitmap.blit(surface, (0, 0), rect)
+        return bitmap
+
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
         if self.lock_point_pos is None:
@@ -642,38 +533,147 @@ class GuiManager:
         else:
             return position
 
-    def raise_window(self, window: Window) -> None:
-        self._resolve_active_object()
-        if window not in self.windows:
-            if self._active_object is window:
-                self._active_object = None
-            return
-        self.windows.remove(window)
-        self.windows.append(window)
+    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
+        """Restore a region from a previously cached pristine bitmap."""
+        if obj is None:
+            obj = self
+        if obj.pristine is None:
+            raise GuiError('restore_pristine called before pristine was initialized')
+        if area is None:
+            area = obj.pristine.get_rect()
+        x, y, _, _ = area
+        obj.surface.blit(obj.pristine, (x, y), area)
 
-    def lower_window(self, window: Window) -> None:
-        self._resolve_active_object()
-        if window not in self.windows:
-            if self._active_object is window:
-                self._active_object = None
-            return
-        self.windows.remove(window)
-        self.windows.insert(0, window)
+    def update_focus(self, new_hover: Optional[Widget]) -> None:
+        self.current_widget = new_hover
 
-    def hide_widgets(self, *widgets: Widget) -> None:
-        for widget in widgets:
-            if not isinstance(widget, Widget):
-                raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
-            widget.visible = False
+    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
+        if getattr(event, 'type', None) != Event.Task:
+            return None
+        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
+        if task_id is None:
+            return None
+        owner = self._task_owner_by_id.get(task_id)
+        if owner is None:
+            return None
+        if owner not in self.windows or not owner.visible:
+            return None
+        return owner
 
-    def show_widgets(self, *widgets: Widget) -> None:
-        for widget in widgets:
-            if not isinstance(widget, Widget):
-                raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
-            widget.visible = True
+    def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
+        if coverage <= 0.0 or coverage > 1.0:
+            raise GuiError(f'coverage must be in the range (0, 1], got: {coverage}')
+        surface_rect = self.surface.get_rect()
+        width = max(1, int(surface_rect.width * coverage))
+        height = max(1, int(surface_rect.height * coverage))
+        centered = Rect(0, 0, width, height)
+        centered.center = surface_rect.center
+        return centered
 
-    def draw_gui(self) -> None:
-        self.renderer.draw()
+    def _describe_gui_object(self, gui_object: TGuiObject) -> str:
+        if isinstance(gui_object, Widget):
+            return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
+        if isinstance(gui_object, Window):
+            return (
+                f'{type(gui_object).__name__} '
+                f'pos=({gui_object.x},{gui_object.y}) size=({gui_object.width},{gui_object.height})'
+            )
+        return type(gui_object).__name__
 
-    def undraw_gui(self) -> None:
-        self.renderer.undraw()
+    def _describe_incoming_widget_container(self) -> str:
+        window = self._resolve_active_object()
+        if window is None:
+            return 'screen'
+        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+
+    def _describe_widget_container(self, widget: Widget) -> str:
+        window = getattr(widget, 'window', None)
+        if window is None or not isinstance(window, Window):
+            return 'screen'
+        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+
+    def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
+        for widget in self.widgets:
+            if widget is not candidate and widget.id == widget_id:
+                return widget
+        for window in self.windows:
+            for widget in window.widgets:
+                if widget is not candidate and widget.id == widget_id:
+                    return widget
+        return None
+
+    def _is_registered_button_group(self, button: ButtonGroup) -> bool:
+        # Construction registers group membership before final GUI attachment.
+        if button.surface is None:
+            return True
+        if button in self.widgets:
+            return True
+        for window in self.windows:
+            if button in window.widgets:
+                return True
+        return False
+
+    def _is_registered_object(self, gui_object: TGuiObject) -> bool:
+        if isinstance(gui_object, Window):
+            return gui_object in self.windows
+        if isinstance(gui_object, Widget):
+            if gui_object in self.widgets:
+                return True
+            for window in self.windows:
+                if gui_object in window.widgets:
+                    return True
+        return False
+
+    def _resolve_active_object(self) -> Optional[Window]:
+        if self._active_object is None:
+            return None
+        if self._active_object not in self.windows:
+            self._active_object = None
+            return None
+        return self._active_object
+
+    def _resolve_current_widget(self) -> Optional[Widget]:
+        if self._current_widget is None:
+            return None
+        if not self._is_registered_object(self._current_widget):
+            self._current_widget = None
+            return None
+        return self._current_widget
+
+    def _resolve_locking_state(self) -> Optional[Widget]:
+        if self.locking_object is None:
+            if self.mouse_locked or self.lock_area_rect is not None or self.lock_point_pos is not None:
+                self.mouse_locked = False
+                self.mouse_point_locked = False
+                self.lock_area_rect = None
+                self.lock_point_pos = None
+                self.lock_point_recenter_pending = False
+                self.lock_point_tolerance_rect = None
+            return None
+        if not isinstance(self.locking_object, Widget):
+            self.locking_object = None
+            self.mouse_locked = False
+            self.mouse_point_locked = False
+            self.lock_area_rect = None
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
+            return None
+        if not self._is_registered_object(self.locking_object):
+            self.locking_object = None
+            self.mouse_locked = False
+            self.mouse_point_locked = False
+            self.lock_area_rect = None
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
+            return None
+        if self.lock_area_rect is None and self.lock_point_pos is None:
+            self.locking_object = None
+            self.mouse_locked = False
+            self.mouse_point_locked = False
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
+            return None
+        return self.locking_object
+

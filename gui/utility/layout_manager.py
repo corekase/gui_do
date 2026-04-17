@@ -9,6 +9,14 @@ class LayoutManager:
         self._spacing: int = 0
         self._use_rect: bool = True
 
+    def get_cell(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
+        base_x, base_y = self._anchor
+        x_pos = base_x + (x * self._cell_width) + (x * self._spacing)
+        y_pos = base_y + (y * self._cell_height) + (y * self._spacing)
+        if self._use_rect:
+            return Rect(x_pos, y_pos, self._cell_width, self._cell_height)
+        return (x_pos, y_pos)
+
     def set_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
         if width <= 0:
             raise ValueError(f'grid width must be positive, got {width}')
@@ -23,11 +31,3 @@ class LayoutManager:
         self._cell_height = height
         self._spacing = spacing
         self._use_rect = use_rect
-
-    def get_cell(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
-        base_x, base_y = self._anchor
-        x_pos = base_x + (x * self._cell_width) + (x * self._spacing)
-        y_pos = base_y + (y * self._cell_height) + (y * self._spacing)
-        if self._use_rect:
-            return Rect(x_pos, y_pos, self._cell_width, self._cell_height)
-        return (x_pos, y_pos)

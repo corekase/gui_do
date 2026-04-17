@@ -27,12 +27,6 @@ class Label(Widget):
             self.draw_rect.x, self.draw_rect.y = x, y
         self.WidgetKind = WidgetKind.Label
 
-    def _render(self, text: str) -> None:
-        if self.shadow:
-            self._text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
-        else:
-            self._text_bitmap = self.gui.bitmap_factory.render_text(text)
-
     def set_label(self, text: str) -> None:
         if self._font is not None:
             self.gui.bitmap_factory.set_font(self._font)
@@ -41,8 +35,14 @@ class Label(Widget):
         else:
             self._render(text)
 
+    def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
+        return False
     def draw(self) -> None:
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
-    def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
-        return False
+    def _render(self, text: str) -> None:
+        if self.shadow:
+            self._text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
+        else:
+            self._text_bitmap = self.gui.bitmap_factory.render_text(text)
+

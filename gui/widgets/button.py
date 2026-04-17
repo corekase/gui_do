@@ -22,19 +22,10 @@ class Button(BaseInteractive):
                 self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
         self.on_activate = on_activate
 
-    def _invoke_on_activate(self) -> None:
-        if self.on_activate is not None:
-            self.on_activate()
-
-    def _clear_timer(self) -> None:
-        if self.timer_id is None:
-            return
-        try:
-            self.gui.timers.remove_timer(self.timer_id)
-        except Exception:
-            pass
-        finally:
-            self.timer_id = None
+    def leave(self) -> None:
+        self._clear_timer()
+        super().leave()
+        self.state = InteractiveState.Idle
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Advance button state and return True when activation should be emitted."""
@@ -61,10 +52,19 @@ class Button(BaseInteractive):
                     return True
         return False
 
-    def leave(self) -> None:
-        self._clear_timer()
-        super().leave()
-        self.state = InteractiveState.Idle
+    def _clear_timer(self) -> None:
+        if self.timer_id is None:
+            return
+        try:
+            self.gui.timers.remove_timer(self.timer_id)
+        except Exception:
+            pass
+        finally:
+            self.timer_id = None
+
+    def _invoke_on_activate(self) -> None:
+        if self.on_activate is not None:
+            self.on_activate()
 
     def __del__(self) -> None:
         self._clear_timer()

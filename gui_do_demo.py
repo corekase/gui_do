@@ -278,15 +278,8 @@ class Demo:
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
 
-    def run(self):
-        """Run the application using the Engine with StateManager contexts."""
-        self.engine.run()
-
-    def _update_gui1_window_visibility(self):
-        self.button_group_win.visible = self.buttons_toggle.pushed
-        self.scrollbar_win.visible = self.scrollbars_toggle.pushed
-        self.life_win.visible = self.life_toggle.pushed
-        self.mandel_win.visible = self.mandel_toggle.pushed
+    def gui1_screen_postamble(self):
+        self.update_gui_do_label()
 
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
@@ -296,58 +289,24 @@ class Demo:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
 
-    def gui1_screen_event_handler(self, event):
-        if event.type == Event.Widget:
-            if event.widget_id == 'exit':
-                self.state_manager.set_running(False)
-            elif event.widget_id == 'gui2':
-                self.state_manager.switch_context('gui2')
-        elif event.type == Event.KeyDown:
-            if event.key == K_ESCAPE:
-                self.state_manager.set_running(False)
-        elif event.type == Event.Quit:
-            self.state_manager.set_running(False)
+    def gui2_screen_preamble(self):
+        self.gui2.restore_pristine()
 
-    def gui1_screen_postamble(self):
-        self.update_gui_do_label()
+    def life_window_postamble(self):
+        if self.toggle_life.pushed:
+            self.generate()
+        self.draw_life()
 
-    def update_gui_do_label(self):
-        now_ms = pygame.time.get_ticks()
-        dt = (now_ms - self.gui_do_last_ms) / 1000.0
-        self.gui_do_last_ms = now_ms
-        if dt < 0.0:
-            dt = 0.0
-        elif dt > 0.05:
-            dt = 0.05
-        distance = self.gui_do_speed * dt
-        self.gui_do_pos_x += math.cos(self.gui_do_angle) * distance
-        self.gui_do_pos_y += math.sin(self.gui_do_angle) * distance
-        x = self.gui_do_pos_x
-        y = self.gui_do_pos_y
-        max_x = self.screen_rect.width - self.gui_do_label.draw_rect.width
-        max_y = self.screen_rect.height - self.gui_do_label.draw_rect.height
-        hit_vertical = False
-        hit_horizontal = False
-        if x < 0:
-            x = 0
-            hit_vertical = True
-        elif x > max_x:
-            x = max_x
-            hit_vertical = True
-        if y < 0:
-            y = 0
-            hit_horizontal = True
-        elif y > max_y:
-            y = max_y
-            hit_horizontal = True
-        if hit_vertical:
-            self.gui_do_angle = math.pi - self.gui_do_angle
-        if hit_horizontal:
-            self.gui_do_angle = -self.gui_do_angle
-        self.gui_do_angle %= (2.0 * math.pi)
-        self.gui_do_pos_x = x
-        self.gui_do_pos_y = y
-        self.gui_do_label.set_pos((int(round(x)), int(round(y))))
+    def run(self):
+        """Run the application using the Engine with StateManager contexts."""
+        self.engine.run()
+
+    def clear_mandel_surfaces(self):
+        self.mandel_canvas.canvas.fill(colours['medium'])
+        self.canvas1.canvas.fill(colours['medium'])
+        self.canvas2.canvas.fill(colours['medium'])
+        self.canvas3.canvas.fill(colours['medium'])
+        self.canvas4.canvas.fill(colours['medium'])
 
     def buttons_window_event_handler(self, event):
         if event.type != Event.Group:
@@ -365,14 +324,96 @@ class Demo:
         elif event.group == 'bg6':
             self.label6.set_label(f'ID: {event.widget_id}')
 
+    def gui1_screen_event_handler(self, event):
+        if event.type == Event.Widget:
+            if event.widget_id == 'exit':
+                self.state_manager.set_running(False)
+            elif event.widget_id == 'gui2':
+                self.state_manager.switch_context('gui2')
+        elif event.type == Event.KeyDown:
+            if event.key == K_ESCAPE:
+                self.state_manager.set_running(False)
+        elif event.type == Event.Quit:
+            self.state_manager.set_running(False)
+
+    def gui2_screen_event_handler(self, event):
+        if event.type == Event.Widget:
+            if event.widget_id == 'return':
+                self.state_manager.switch_context('gui1')
+        elif event.type == Event.Task:
+            if getattr(event, 'error', None):
+                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
+        elif event.type == Event.KeyDown:
+            if event.key == K_ESCAPE:
+                self.state_manager.set_running(False)
+        elif event.type == Event.Quit:
+            self.state_manager.set_running(False)
+
+    # Canvas callback function
+    def handle_Canvas(self):
+        # read the event from the canvas widget
+        CEvent = self.canvas.read_event()
+        if CEvent is not None:
+            # parse that event by kind and parameters
+            if CEvent.type == CanvasEvent.MouseButtonDown:
+                # right-mouse button pressed, enter dragging state
+                if CEvent.button == 3:
+                    self.dragging = True
+                    self.gui1.set_cursor('hand')
+                    self.gui1.set_lock_point(self.canvas)
+            elif CEvent.type == CanvasEvent.MouseButtonUp:
+                # right-mouse button released, exit dragging state
+                if CEvent.button == 3:
+                    self.dragging = False
+                    self.gui1.set_cursor('normal')
+                    self.gui1.set_lock_point(None)
+            elif CEvent.type == CanvasEvent.MouseMotion:
+                # if dragging then track relative position
+                if self.dragging and CEvent.rel is not None:
+                    x, y = CEvent.rel[0], CEvent.rel[1]
+                    self.origin_x += x
+                    self.origin_y += y
+            elif CEvent.type == CanvasEvent.MouseWheel:
+                # handle the mouse wheel
+                if CEvent.y is not None:
+                    old_size = self.cell_size
+                    new_size = old_size + (CEvent.y * 2)
+                    if new_size < 6:
+                        new_size = 6
+                    elif new_size > 24:
+                        new_size = 24
+                    if new_size != old_size:
+                        if self.gui1.mouse_point_locked and self.gui1.lock_point_pos is not None:
+                            # During point-lock dragging, anchor zoom to the rendered (locked) cursor.
+                            lock_x, lock_y = self.gui1.convert_to_window(self.gui1.lock_point_pos, self.canvas.window)
+                            mouse_x = lock_x - self.canvas_rect.x
+                            mouse_y = lock_y - self.canvas_rect.y
+                        else:
+                            mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
+                        # Keep the world position under the mouse fixed while scaling.
+                        self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
+                        self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
+                        self.cell_size = new_size
+
+    # update the position and draw a bitmap at the position
+    def handle_mandel_task_event(self, event):
+        task_id = getattr(event, 'id', None)
+        if task_id is None:
+            return
+        if getattr(event, 'error', None):
+            print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
+            return
+        if task_id in Demo.mandel_task_ids:
+            self.s1.pop_result(task_id)
+
     def life_window_event_handler(self, event):
         if event.type == Event.Widget and event.widget_id == 'life_reset':
             self.life_reset()
 
-    def life_window_postamble(self):
-        if self.toggle_life.pushed:
-            self.generate()
-        self.draw_life()
+    def make_mandel_progress_handler(self, task_id):
+        def handler(result):
+            self.apply_mandel_result(task_id, result)
+        return handler
 
     def mandel_window_event_handler(self, event):
         if event.type == Event.Task:
@@ -436,108 +477,84 @@ class Demo:
             self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
                              message_method=self.make_mandel_progress_handler('can4'))
 
-    def handle_mandel_task_event(self, event):
-        task_id = getattr(event, 'id', None)
-        if task_id is None:
+    def draw_life(self):
+        # Draw contents of the life cells onto the canvas surface
+        self.canvas_surface.set_clip(Rect(1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
+        for cell in self.life:
+            # set initial cell sizes
+            size_x = size_y = self.cell_size
+            # Unpack x and y cell coordinates
+            xpos, ypos = cell
+            # calculate the graphical coordinate of the cell
+            xpos = self.origin_x + (xpos * self.cell_size)
+            ypos = self.origin_y + (ypos * self.cell_size)
+            # Check to see if the cell is on screen and if so draw it
+            bounded = (xpos >= -self.cell_size) and (xpos <= self.canvas_rect.width) and \
+                      (ypos >= -self.cell_size) and (ypos <= self.canvas_rect.height)
+            if bounded:
+                # if either xpos or ypos are less than zero trim the cell drawing size
+                if xpos < 0:
+                    size_x = xpos + self.cell_size
+                    xpos = 0
+                if ypos < 0:
+                    size_y = ypos + self.cell_size
+                    ypos = 0
+                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
+        self.canvas_surface.set_clip(None)
+
+    def apply_mandel_result(self, task_id, result):
+        x, y, w, h, values = result
+        if task_id in {'iter', 'recu', '1', '2', '3', '4'}:
+            canvas = self.mandel_canvas.canvas
+        elif task_id == 'can1':
+            canvas = self.canvas1.canvas
+        elif task_id == 'can2':
+            canvas = self.canvas2.canvas
+        elif task_id == 'can3':
+            canvas = self.canvas3.canvas
+        elif task_id == 'can4':
+            canvas = self.canvas4.canvas
+        else:
             return
-        if getattr(event, 'error', None):
-            print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
+
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(canvas.get_width(), x + w)
+        y1 = min(canvas.get_height(), y + h)
+        if x1 <= x0 or y1 <= y0:
             return
-        if task_id in Demo.mandel_task_ids:
-            self.s1.pop_result(task_id)
 
-    def gui2_screen_preamble(self):
-        self.gui2.restore_pristine()
+        if (x0, y0, x1, y1) != (x, y, x + w, y + h):
+            if isinstance(values, int):
+                canvas.fill(self.col(values), Rect(x0, y0, x1 - x0, y1 - y0))
+                return
+            src_w = w
+            clipped_values = []
+            for row in range(y0 - y, y1 - y):
+                start = row * src_w + (x0 - x)
+                end = start + (x1 - x0)
+                clipped_values.extend(values[start:end])
+            values = clipped_values
+            x, y, w, h = x0, y0, x1 - x0, y1 - y0
 
-    def gui2_screen_event_handler(self, event):
-        if event.type == Event.Widget:
-            if event.widget_id == 'return':
-                self.state_manager.switch_context('gui1')
-        elif event.type == Event.Task:
-            if getattr(event, 'error', None):
-                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
-        elif event.type == Event.KeyDown:
-            if event.key == K_ESCAPE:
-                self.state_manager.set_running(False)
-        elif event.type == Event.Quit:
-            self.state_manager.set_running(False)
+        if isinstance(values, int):
+            canvas.fill(self.col(values), Rect(x, y, w, h))
+            return
+        idx = 0
+        canvas.lock()
+        try:
+            for y_pos in range(y, y + h):
+                for x_pos in range(x, x + w):
+                    canvas.set_at((x_pos, y_pos), self.col(values[idx]))
+                    idx += 1
+        finally:
+            canvas.unlock()
 
-    # Canvas callback function
-    def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
-        # Throttle logging so sustained pressure does not flood stderr.
-        if total_dropped == 1 or (total_dropped - self._life_canvas_last_drop_count) >= 16:
-            delta = total_dropped - self._life_canvas_last_drop_count
-            self._life_canvas_last_drop_count = total_dropped
-            print(f'Canvas event overflow: dropped {delta} events (total={total_dropped})', file=sys.stderr)
-
-    def handle_Canvas(self):
-        # read the event from the canvas widget
-        CEvent = self.canvas.read_event()
-        if CEvent is not None:
-            # parse that event by kind and parameters
-            if CEvent.type == CanvasEvent.MouseButtonDown:
-                # right-mouse button pressed, enter dragging state
-                if CEvent.button == 3:
-                    self.dragging = True
-                    self.gui1.set_cursor('hand')
-                    self.gui1.set_lock_point(self.canvas)
-            elif CEvent.type == CanvasEvent.MouseButtonUp:
-                # right-mouse button released, exit dragging state
-                if CEvent.button == 3:
-                    self.dragging = False
-                    self.gui1.set_cursor('normal')
-                    self.gui1.set_lock_point(None)
-            elif CEvent.type == CanvasEvent.MouseMotion:
-                # if dragging then track relative position
-                if self.dragging and CEvent.rel is not None:
-                    x, y = CEvent.rel[0], CEvent.rel[1]
-                    self.origin_x += x
-                    self.origin_y += y
-            elif CEvent.type == CanvasEvent.MouseWheel:
-                # handle the mouse wheel
-                if CEvent.y is not None:
-                    old_size = self.cell_size
-                    new_size = old_size + (CEvent.y * 2)
-                    if new_size < 6:
-                        new_size = 6
-                    elif new_size > 24:
-                        new_size = 24
-                    if new_size != old_size:
-                        if self.gui1.mouse_point_locked and self.gui1.lock_point_pos is not None:
-                            # During point-lock dragging, anchor zoom to the rendered (locked) cursor.
-                            lock_x, lock_y = self.gui1.convert_to_window(self.gui1.lock_point_pos, self.canvas.window)
-                            mouse_x = lock_x - self.canvas_rect.x
-                            mouse_y = lock_y - self.canvas_rect.y
-                        else:
-                            mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
-                        # Keep the world position under the mouse fixed while scaling.
-                        self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
-                        self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
-                        self.cell_size = new_size
-
-    # update the position and draw a bitmap at the position
-    def update_circles(self, size):
-        new_positions = []
-        for x, y, dx, dy, bitmap in self.positions:
-            x += dx
-            y += dy
-            if x < size or x > self.screen_rect.width - size:
-                dx = -dx
-            if y < size or y > self.screen_rect.height - size:
-                dy = -dy
-            self.screen.blit(bitmap, (x, y))
-            new_positions.append((x, y, dx, dy, bitmap))
-        self.positions = new_positions
-
-    # reset the life simulation to a default state
-    def life_reset(self):
-        self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
-        self.cell_size = 6
-        self.toggle_life.pushed = False
-        # the starting configuration of the Life grid
-        self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
-
-    # function to generate a cycle of life
+    def col(self, k):
+        if k == self.maximum_iters:
+            return (0, 0, 0)
+        else:
+            return Demo.cols[k % 16]
     def generate(self):
         def population(cell):
             count = 0
@@ -566,46 +583,14 @@ class Demo:
         # Replace the old set with the new
         self.life = new_life
 
-    def draw_life(self):
-        # Draw contents of the life cells onto the canvas surface
-        self.canvas_surface.set_clip(Rect(1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
-        for cell in self.life:
-            # set initial cell sizes
-            size_x = size_y = self.cell_size
-            # Unpack x and y cell coordinates
-            xpos, ypos = cell
-            # calculate the graphical coordinate of the cell
-            xpos = self.origin_x + (xpos * self.cell_size)
-            ypos = self.origin_y + (ypos * self.cell_size)
-            # Check to see if the cell is on screen and if so draw it
-            bounded = (xpos >= -self.cell_size) and (xpos <= self.canvas_rect.width) and \
-                      (ypos >= -self.cell_size) and (ypos <= self.canvas_rect.height)
-            if bounded:
-                # if either xpos or ypos are less than zero trim the cell drawing size
-                if xpos < 0:
-                    size_x = xpos + self.cell_size
-                    xpos = 0
-                if ypos < 0:
-                    size_y = ypos + self.cell_size
-                    ypos = 0
-                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
-        self.canvas_surface.set_clip(None)
+    def life_reset(self):
+        self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
+        self.cell_size = 6
+        self.toggle_life.pushed = False
+        # the starting configuration of the Life grid
+        self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
 
-    def clear_mandel_surfaces(self):
-        self.mandel_canvas.canvas.fill(colours['medium'])
-        self.canvas1.canvas.fill(colours['medium'])
-        self.canvas2.canvas.fill(colours['medium'])
-        self.canvas3.canvas.fill(colours['medium'])
-        self.canvas4.canvas.fill(colours['medium'])
-
-    def mandel_setup(self, width, height):
-        self.max_iter = 128
-        self.maximum_iters = self.max_iter - 1
-        self.mandel_width, self.mandel_height = width, height
-        self.center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
-
+    # function to generate a cycle of life
     def mandel_iterative(self, id):
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
         self._compute_iterative_region(id, rect)
@@ -670,6 +655,82 @@ class Demo:
         recursive_region(x, y, w, h)
         return None
 
+    def mandel_setup(self, width, height):
+        self.max_iter = 128
+        self.maximum_iters = self.max_iter - 1
+        self.mandel_width, self.mandel_height = width, height
+        self.center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
+
+    def pixel(self, x, y):
+        c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
+        z = 0
+        for k in range(self.max_iter):
+            z = z ** 2 + c
+            if (z * z.conjugate()).real > 4.0:
+                break
+        return k
+
+    def update_circles(self, size):
+        new_positions = []
+        for x, y, dx, dy, bitmap in self.positions:
+            x += dx
+            y += dy
+            if x < size or x > self.screen_rect.width - size:
+                dx = -dx
+            if y < size or y > self.screen_rect.height - size:
+                dy = -dy
+            self.screen.blit(bitmap, (x, y))
+            new_positions.append((x, y, dx, dy, bitmap))
+        self.positions = new_positions
+
+    # reset the life simulation to a default state
+    def update_gui_do_label(self):
+        now_ms = pygame.time.get_ticks()
+        dt = (now_ms - self.gui_do_last_ms) / 1000.0
+        self.gui_do_last_ms = now_ms
+        if dt < 0.0:
+            dt = 0.0
+        elif dt > 0.05:
+            dt = 0.05
+        distance = self.gui_do_speed * dt
+        self.gui_do_pos_x += math.cos(self.gui_do_angle) * distance
+        self.gui_do_pos_y += math.sin(self.gui_do_angle) * distance
+        x = self.gui_do_pos_x
+        y = self.gui_do_pos_y
+        max_x = self.screen_rect.width - self.gui_do_label.draw_rect.width
+        max_y = self.screen_rect.height - self.gui_do_label.draw_rect.height
+        hit_vertical = False
+        hit_horizontal = False
+        if x < 0:
+            x = 0
+            hit_vertical = True
+        elif x > max_x:
+            x = max_x
+            hit_vertical = True
+        if y < 0:
+            y = 0
+            hit_horizontal = True
+        elif y > max_y:
+            y = max_y
+            hit_horizontal = True
+        if hit_vertical:
+            self.gui_do_angle = math.pi - self.gui_do_angle
+        if hit_horizontal:
+            self.gui_do_angle = -self.gui_do_angle
+        self.gui_do_angle %= (2.0 * math.pi)
+        self.gui_do_pos_x = x
+        self.gui_do_pos_y = y
+        self.gui_do_label.set_pos((int(round(x)), int(round(y))))
+
+    def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
+        # Throttle logging so sustained pressure does not flood stderr.
+        if total_dropped == 1 or (total_dropped - self._life_canvas_last_drop_count) >= 16:
+            delta = total_dropped - self._life_canvas_last_drop_count
+            self._life_canvas_last_drop_count = total_dropped
+            print(f'Canvas event overflow: dropped {delta} events (total={total_dropped})', file=sys.stderr)
+
     def _compute_iterative_region(self, task_id, rect):
         x, y, w, h = rect
         x0 = max(0, x)
@@ -695,73 +756,12 @@ class Demo:
             rows_in_chunk = y + h - chunk_start_y
             self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
 
-    def make_mandel_progress_handler(self, task_id):
-        def handler(result):
-            self.apply_mandel_result(task_id, result)
-        return handler
+    def _update_gui1_window_visibility(self):
+        self.button_group_win.visible = self.buttons_toggle.pushed
+        self.scrollbar_win.visible = self.scrollbars_toggle.pushed
+        self.life_win.visible = self.life_toggle.pushed
+        self.mandel_win.visible = self.mandel_toggle.pushed
 
-    def apply_mandel_result(self, task_id, result):
-        x, y, w, h, values = result
-        if task_id in {'iter', 'recu', '1', '2', '3', '4'}:
-            canvas = self.mandel_canvas.canvas
-        elif task_id == 'can1':
-            canvas = self.canvas1.canvas
-        elif task_id == 'can2':
-            canvas = self.canvas2.canvas
-        elif task_id == 'can3':
-            canvas = self.canvas3.canvas
-        elif task_id == 'can4':
-            canvas = self.canvas4.canvas
-        else:
-            return
-
-        x0 = max(0, x)
-        y0 = max(0, y)
-        x1 = min(canvas.get_width(), x + w)
-        y1 = min(canvas.get_height(), y + h)
-        if x1 <= x0 or y1 <= y0:
-            return
-
-        if (x0, y0, x1, y1) != (x, y, x + w, y + h):
-            if isinstance(values, int):
-                canvas.fill(self.col(values), Rect(x0, y0, x1 - x0, y1 - y0))
-                return
-            src_w = w
-            clipped_values = []
-            for row in range(y0 - y, y1 - y):
-                start = row * src_w + (x0 - x)
-                end = start + (x1 - x0)
-                clipped_values.extend(values[start:end])
-            values = clipped_values
-            x, y, w, h = x0, y0, x1 - x0, y1 - y0
-
-        if isinstance(values, int):
-            canvas.fill(self.col(values), Rect(x, y, w, h))
-            return
-        idx = 0
-        canvas.lock()
-        try:
-            for y_pos in range(y, y + h):
-                for x_pos in range(x, x + w):
-                    canvas.set_at((x_pos, y_pos), self.col(values[idx]))
-                    idx += 1
-        finally:
-            canvas.unlock()
-
-    def pixel(self, x, y):
-        c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
-        z = 0
-        for k in range(self.max_iter):
-            z = z ** 2 + c
-            if (z * z.conjugate()).real > 4.0:
-                break
-        return k
-
-    def col(self, k):
-        if k == self.maximum_iters:
-            return (0, 0, 0)
-        else:
-            return Demo.cols[k % 16]
 
 if __name__ == '__main__':
     Demo().run()

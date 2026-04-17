@@ -19,6 +19,16 @@ def _noop_event(_: "BaseEvent") -> None:
 class Window:
     """Top-level container with title bar, child widgets, and lifecycle hooks."""
 
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise GuiError('window visible must be a bool')
+        self._visible = value
+
     def __init__(
         self,
         gui: "GuiManager",
@@ -68,51 +78,41 @@ class Window:
         self._event_handler: Callable[["BaseEvent"], None] = event_handler if callable(event_handler) else _noop_event
         self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
 
-    @property
-    def visible(self) -> bool:
-        return self._visible
+    def run_postamble(self) -> None:
+        self._postamble()
 
-    @visible.setter
-    def visible(self, value: bool) -> None:
-        if not isinstance(value, bool):
-            raise GuiError('window visible must be a bool')
-        self._visible = value
+    def run_preamble(self) -> None:
+        self._preamble()
+
+    def get_title_bar_rect(self) -> Rect:
+        return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
+
+    def get_widget_rect(self) -> Rect:
+        x, y, w, h = self.window_widget_lower_bitmap.get_rect()
+        return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
+    def get_window_rect(self) -> Rect:
+        """Return window bounds including title bar."""
+        return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
     def set_pos(self, pos: Tuple[int, int]) -> None:
         if not isinstance(pos, tuple) or len(pos) != 2:
             raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
         self.x, self.y = pos
 
-    def _window_save_pristine(self) -> None:
-        self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
-
-    def draw_title_bar_inactive(self) -> None:
-        self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
-        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+    def handle_event(self, event: "BaseEvent") -> None:
+        self._event_handler(event)
 
     def draw_title_bar_active(self) -> None:
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
+    def draw_title_bar_inactive(self) -> None:
+        self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
+        self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
+
     def draw_window(self) -> None:
         self.gui.restore_pristine(self.surface.get_rect(), self)
 
-    def run_preamble(self) -> None:
-        self._preamble()
+    def _window_save_pristine(self) -> None:
+        self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
 
-    def handle_event(self, event: "BaseEvent") -> None:
-        self._event_handler(event)
-
-    def run_postamble(self) -> None:
-        self._postamble()
-
-    def get_title_bar_rect(self) -> Rect:
-        return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
-
-    def get_window_rect(self) -> Rect:
-        """Return window bounds including title bar."""
-        return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
-
-    def get_widget_rect(self) -> Rect:
-        x, y, w, h = self.window_widget_lower_bitmap.get_rect()
-        return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)

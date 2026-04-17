@@ -12,6 +12,32 @@ class ButtonGroupMediator:
         self._groups: Dict[str, List["ButtonGroup"]] = {}
         self._selections: Dict[str, "ButtonGroup"] = {}
 
+    def get_selection(self, group: str) -> Optional["ButtonGroup"]:
+        self._prune(group)
+        return self._selections.get(group)
+
+    def clear(self) -> None:
+        self._groups.clear()
+        self._selections.clear()
+
+    def register(self, group: str, button: "ButtonGroup") -> None:
+        self._prune(group)
+        if group not in self._groups:
+            self._groups[group] = []
+            self._selections[group] = button
+        if button in self._groups[group]:
+            return
+        self._groups[group].append(button)
+
+    def select(self, group: str, button: "ButtonGroup") -> None:
+        self._prune(group)
+        if not self._is_registered(button):
+            return
+        previous = self._selections.get(group)
+        if previous is not None and previous is not button:
+            previous.state = InteractiveState.Idle
+        self._selections[group] = button
+
     def _prune(self, group: str) -> None:
         buttons = self._groups.get(group)
         if buttons is None:
@@ -36,29 +62,3 @@ class ButtonGroupMediator:
                 button.state = InteractiveState.Armed
             elif button.state == InteractiveState.Armed:
                 button.state = InteractiveState.Idle
-
-    def register(self, group: str, button: "ButtonGroup") -> None:
-        self._prune(group)
-        if group not in self._groups:
-            self._groups[group] = []
-            self._selections[group] = button
-        if button in self._groups[group]:
-            return
-        self._groups[group].append(button)
-
-    def select(self, group: str, button: "ButtonGroup") -> None:
-        self._prune(group)
-        if not self._is_registered(button):
-            return
-        previous = self._selections.get(group)
-        if previous is not None and previous is not button:
-            previous.state = InteractiveState.Idle
-        self._selections[group] = button
-
-    def get_selection(self, group: str) -> Optional["ButtonGroup"]:
-        self._prune(group)
-        return self._selections.get(group)
-
-    def clear(self) -> None:
-        self._groups.clear()
-        self._selections.clear()
