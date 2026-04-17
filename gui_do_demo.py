@@ -510,8 +510,8 @@ class Demo:
                 if CEvent.y is not None:
                     old_size = self.cell_size
                     new_size = old_size + (CEvent.y * 2)
-                    if new_size < 6:
-                        new_size = 6
+                    if new_size < 2:
+                        new_size = 2
                     elif new_size > 24:
                         new_size = 24
                     if new_size != old_size:
@@ -565,6 +565,7 @@ class Demo:
     def draw_life(self):
         # Draw contents of the life cells onto the canvas surface
         self.canvas_surface.set_clip(Rect(1, 1, self.canvas_rect.width - 2, self.canvas_rect.height - 2))
+        trim = 0 if self.cell_size == 2 else 1
         for cell in self.life:
             # set initial cell sizes
             size_x = size_y = self.cell_size
@@ -584,7 +585,7 @@ class Demo:
                 if ypos < 0:
                     size_y = ypos + self.cell_size
                     ypos = 0
-                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - 1, size_y - 1))
+                self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - trim, size_y - trim))
         self.canvas_surface.set_clip(None)
 
     def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
