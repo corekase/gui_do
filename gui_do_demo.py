@@ -44,7 +44,7 @@ class Demo:
         )
         b1 = g1.bitmap_factory
         b1.load_cursor((1, 1), 'normal', 'cursor.png')
-        b1.load_cursor((7, 7), 'hand', 'hand.png')
+        b1.load_cursor((9, 9), 'hand', 'hand.png')
         # blit a background image to the screen surface
         g1.set_pristine('backdrop.jpg')
         # screen label

@@ -288,8 +288,18 @@ class GuiManager:
         """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""
         if not isinstance(name, str) or name == '':
             raise GuiError('cursor name must be a non-empty string')
+        hotspot_position = self.lock_point_pos if (self.mouse_point_locked and self.lock_point_pos is not None) else self.mouse_pos
+        if self.cursor_rect is not None and self.cursor_hotspot is not None:
+            hotspot_position = (
+                self.cursor_rect.x + self.cursor_hotspot[0],
+                self.cursor_rect.y + self.cursor_hotspot[1],
+            )
         self.cursor_image, self.cursor_hotspot = self.bitmap_factory.get_cursor(name)
         self.cursor_rect = self.cursor_image.get_rect()
+        self.cursor_rect.topleft = (
+            hotspot_position[0] - self.cursor_hotspot[0],
+            hotspot_position[1] - self.cursor_hotspot[1],
+        )
 
     def window(
         self,

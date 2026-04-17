@@ -44,6 +44,7 @@ class Renderer:
                 cursor_pos = self.gui.mouse_pos
             cursor_rect = Rect(cursor_pos[0] - self.gui.cursor_hotspot[0], cursor_pos[1] - self.gui.cursor_hotspot[1],
                             self.gui.cursor_rect.width, self.gui.cursor_rect.height)
+            self.gui.cursor_rect = cursor_rect
             if self.gui.buffered:
                 self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
             self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
