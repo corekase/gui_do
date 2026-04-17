@@ -1,14 +1,68 @@
 from pygame import Rect
+from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
-from ..utility.constants import ButtonStyle
-from .button import Button
+from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from ..utility.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
+    from .window import Window
 
-class ArrowBox(Button):
-    """Button variant that renders an arrow glyph."""
+class ArrowBox(BaseInteractive):
+    """Arrow button with press-and-hold repeat activation."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> None:
-        super().__init__(gui, id, rect, ButtonStyle.Box, None, on_activate, True)
+        super().__init__(gui, id, rect)
         self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_arrow_state_bitmaps(rect, direction)
+        self.on_activate = on_activate
+        self._timer_id: Optional[str] = None
+
+    def leave(self) -> None:
+        self._clear_timer()
+        super().leave()
+        self.state = InteractiveState.Idle
+
+    def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
+        """Emit once on press and continue firing while held via timer."""
+        if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            return False
+        if not super().handle_event(event, window):
+            self._clear_timer()
+            return False
+        if self.state == InteractiveState.Hover:
+            if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+                self.state = InteractiveState.Armed
+                if self.on_activate is not None and self._timer_id is None:
+                    timer_id = f'{self.id}.timer'
+                    self.gui.timers.add_timer(timer_id, 150, self._invoke_on_activate)
+                    self._timer_id = timer_id
+                return True
+        if self.state == InteractiveState.Armed:
+            if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
+                self._clear_timer()
+                self.state = InteractiveState.Hover
+                if self.on_activate is not None:
+                    return False
+                return True
+        return False
+
+    def should_handle_outside_collision(self) -> bool:
+        """Keep receiving release events while armed so repeat can stop cleanly."""
+        return self.state == InteractiveState.Armed
+
+    def _clear_timer(self) -> None:
+        if self._timer_id is None:
+            return
+        try:
+            self.gui.timers.remove_timer(self._timer_id)
+        except Exception:
+            pass
+        finally:
+            self._timer_id = None
+
+    def _invoke_on_activate(self) -> None:
+        if self.on_activate is not None:
+            self.on_activate()
+
+    def __del__(self) -> None:
+        self._clear_timer()

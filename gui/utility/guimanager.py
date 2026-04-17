@@ -433,9 +433,9 @@ class GuiManager:
     def arrowbox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
         return self.add(ArrowBox(self, id, rect, direction, on_activate))
 
-    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> Button:
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
         safe_text = '' if text is None else text
-        return self.add(Button(self, id, rect, style, safe_text, on_activate, skip_factory))
+        return self.add(Button(self, id, rect, style, safe_text, on_activate))
 
     def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.add(ButtonGroup(self, group, id, rect, style, text))
