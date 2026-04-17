@@ -350,3 +350,69 @@ python gui_do_demo.py
 ```
 
 If assets are missing or not found, verify the `data/` directory contains the files referenced by the demo and you are starting python in the same directory as the demo.  If the application is running on a system that has case-sensitive filenames, like Linux, then the case of the data directory and the filename string need to match.
+
+## Optional Deep Dive: Life and Mandelbrot Internals
+
+This section is intentionally at the end of the README because it is optional.
+
+The earlier sections are enough to build and ship applications. This part exists for developing programmers who want a complete mental model of how to use the GUI APIs in more advanced patterns.
+
+### Life example: how `generate()` uses the delta table
+
+In the demo, live cells are stored as a `set` of grid coordinates, for example `(x, y)`.
+
+The class-level `neighbours` tuple is a delta table:
+
+- `(-1, -1)`, `(-1, 0)`, `(-1, 1)`
+- `(0, -1)`, `(0, 1)`
+- `(1, -1)`, `(1, 0)`, `(1, 1)`
+
+`generate()` works in two stages:
+
+1. It computes local population with a helper (`population(cell)`):
+    for each delta in `neighbours`, it adds the delta to the current cell to get a neighbor coordinate, then checks membership in `self.life`.
+2. It builds a new set (`new_life`) by testing both:
+    - each currently live cell (survival checks)
+    - each neighbor around each live cell (birth checks)
+
+Why this structure is useful:
+
+- The delta table keeps neighbor logic centralized and easy to reason about.
+- Using a set keeps membership checks fast and keeps the simulation sparse.
+- Rebuilding into `new_life` avoids mutating the current generation while still reading from it.
+
+In other words, the Life example shows a clean pattern for "read old state, compute next state, then swap" that maps well to GUI frame updates.
+
+### Mandelbrot example: workers send numbers, UI thread draws pixels
+
+The Mandelbrot tasks use `gui.scheduler` and intentionally avoid touching pygame surfaces in worker code.
+
+Worker side (background task):
+
+- Computes iteration counts (numbers) for pixels or rectangular regions.
+- Sends payloads with `scheduler.send_message(task_id, payload)`.
+- Payloads are numeric data like `(x, y, w, h, value)` or `(x, y, w, h, values)` where `values` is a list of iteration counts.
+
+Important rule demonstrated by the demo:
+
+- Worker tasks do not draw and do not access pygame surfaces.
+- They only publish numeric messages.
+
+UI side (main thread callback):
+
+- The scheduler message handler receives those numeric payloads.
+- `apply_mandel_result(...)` chooses the target canvas by `task_id`.
+- Iteration counts are converted to RGB via `col(...)`.
+- The callback performs actual drawing (`fill` for region blocks or per-pixel writes).
+
+Why this matters for API usage:
+
+- It preserves thread affinity for UI resources.
+- It avoids cross-thread surface access bugs.
+- It gives progressive rendering: users see the fractal appear while computation continues.
+
+If you use the scheduler for any heavy computation, follow the same pattern:
+
+1. Compute in worker.
+2. Send compact numeric progress messages.
+3. Convert numbers to visuals only in the UI-thread callback.
