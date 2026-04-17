@@ -287,7 +287,7 @@ Example:
 
 ```python
 gui.bitmap_factory.load_cursor((1, 1), "normal", "cursor.png")
-gui.bitmap_factory.load_cursor((9, 9), "hand", "hand.png")
+gui.bitmap_factory.load_cursor((12, 12), "hand", "hand.png")
 
 gui.set_cursor("normal")
 # ... later during drag state
