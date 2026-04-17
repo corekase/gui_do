@@ -656,15 +656,30 @@ class Demo:
         finally:
             canvas.unlock()
 
-    def col(self, k):
-        if k == self.maximum_iters:
-            return (0, 0, 0)
-        else:
-            return Demo.cols[k % 16]
-
-    def mandel_iterative(self, id):
+    def mandel_iterative(self, task_id):
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
-        self._compute_iterative_region(id, rect)
+        x, y, w, h = rect
+        x0 = max(0, x)
+        y0 = max(0, y)
+        x1 = min(self.mandel_width, x + w)
+        y1 = min(self.mandel_height, y + h)
+        if x1 <= x0 or y1 <= y0:
+            return
+        x, y, w, h = x0, y0, x1 - x0, y1 - y0
+        chunk_rows = 4
+        row_values = []
+        chunk_start_y = y
+        for y_pos in range(y, y + h):
+            for x_pos in range(x, x + w):
+                row_values.append(self.pixel(x_pos, y_pos))
+            rows_in_chunk = ((y_pos - chunk_start_y) + 1)
+            if rows_in_chunk >= chunk_rows:
+                self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
+                chunk_start_y = y_pos + 1
+                row_values = []
+        if row_values:
+            rows_in_chunk = y + h - chunk_start_y
+            self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
         return None
 
     def mandel_recursive(self, id, item):
@@ -676,14 +691,11 @@ class Demo:
         if x1 <= x0 or y1 <= y0:
             return None
         x, y, w, h = x0, y0, x1 - x0, y1 - y0
-
         def fill_region(x_pos, y_pos, width, height, value):
             # Send a compact fill payload so the GUI thread can draw this block with one fill call.
             self.s1.send_message(id, (x_pos, y_pos, width, height, value))
-
         def publish_pixel_block(x_pos, y_pos, width, height, block_values):
             self.s1.send_message(id, (x_pos, y_pos, width, height, block_values))
-
         def recursive_region(x_pos, y_pos, width, height):
             if width <= 0 or height <= 0:
                 return
@@ -726,30 +738,6 @@ class Demo:
         recursive_region(x, y, w, h)
         return None
 
-    def _compute_iterative_region(self, task_id, rect):
-        x, y, w, h = rect
-        x0 = max(0, x)
-        y0 = max(0, y)
-        x1 = min(self.mandel_width, x + w)
-        y1 = min(self.mandel_height, y + h)
-        if x1 <= x0 or y1 <= y0:
-            return
-        x, y, w, h = x0, y0, x1 - x0, y1 - y0
-        chunk_rows = 4
-        row_values = []
-        chunk_start_y = y
-        for y_pos in range(y, y + h):
-            for x_pos in range(x, x + w):
-                row_values.append(self.pixel(x_pos, y_pos))
-            rows_in_chunk = ((y_pos - chunk_start_y) + 1)
-            if rows_in_chunk >= chunk_rows:
-                self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
-                chunk_start_y = y_pos + 1
-                row_values = []
-        if row_values:
-            rows_in_chunk = y + h - chunk_start_y
-            self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
-
     def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
         z = 0
@@ -758,6 +746,12 @@ class Demo:
             if (z * z.conjugate()).real > 4.0:
                 break
         return k
+
+    def col(self, k):
+        if k == self.maximum_iters:
+            return (0, 0, 0)
+        else:
+            return Demo.cols[k % 16]
 
 if __name__ == '__main__':
     Demo().run()
