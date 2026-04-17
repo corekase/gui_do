@@ -58,6 +58,7 @@ class Widget:
     def leave(self) -> None:
         """Hook called when focus leaves this widget."""
         pass
+
     def get_collide(self, window: Optional["Window"] = None) -> bool:
         """Return True when the current mouse position is inside this widget."""
         if self.hit_rect is None:
