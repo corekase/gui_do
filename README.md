@@ -247,6 +247,53 @@ Set `gui.buffered = True` to have the renderer save pixels underneath gui object
 - Screen widgets use screen coordinates.
 - Window child widgets use window-local coordinates.
 
+## Mouse Locking and Cursors
+
+These APIs are useful when building drag tools, RTS-style camera controls, or custom cursor workflows.
+
+## Lock mouse to a rectangle
+
+`gui.set_lock_area(locking_object, area)` clamps the pointer position to a `Rect` until released.
+
+- `locking_object` must be a registered widget.
+- `area` must be a valid `Rect` with positive width/height.
+- Call `gui.set_lock_area(None)` to release.
+
+## Lock to a point (relative input mode)
+
+`gui.set_lock_point(locking_object, point=None)` enables point-lock mode.
+
+- Input remains active through the locked widget while the hardware pointer is recentred only when it exits a broad center region.
+- If `point` is omitted, the current mouse position is used.
+- Call `gui.set_lock_point(None)` to release.
+
+The demo uses this mode on the Life canvas while right-dragging.
+
+## Load and select custom cursors
+
+Cursor images are loaded through `BitmapFactory` and selected by name in `GuiManager`.
+
+- `gui.bitmap_factory.load_cursor(hotspot, cursor_name, filename)`
+- `gui.set_cursor(cursor_name)`
+
+Notes:
+
+- `hotspot` is a tuple `(x, y)` inside the cursor image.
+- `cursor_name` is the logical ID you use later with `set_cursor`.
+- `filename` is the file inside `data/cursors/`.
+- Cursor cache is shared at class level in `BitmapFactory`, so loading once is enough for all `GuiManager` instances in the same process.
+
+Example:
+
+```python
+gui.bitmap_factory.load_cursor((1, 1), "normal", "cursor.png")
+gui.bitmap_factory.load_cursor((8, 8), "hand", "hand.png")
+
+gui.set_cursor("normal")
+# ... later during drag or hover states
+gui.set_cursor("hand")
+```
+
 ## Layout helper
 
 `set_grid_properties(anchor, width, height, spacing, use_rect=True)` plus `gridded(x, y)` gives a simple uniform grid positioning workflow.
