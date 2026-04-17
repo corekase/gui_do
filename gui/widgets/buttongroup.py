@@ -6,8 +6,7 @@ from ..utility.constants import Event, GuiError, ButtonStyle
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
-    from ..utility.guimanager import GuiEvent
-    from ..utility.guimanager import GuiManager
+    from ..utility.guimanager import GuiEvent, GuiManager
     from .window import Window
 
 class ButtonGroup(BaseInteractive):
