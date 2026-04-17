@@ -25,11 +25,13 @@ class ButtonGroup(BaseInteractive):
         if self.gui.button_group_mediator.get_selection(group) is self:
             self.select()
 
-    def read_group(self) -> str:
+    @property
+    def button_group(self) -> str:
         """Return this button's group name."""
         return self.group
 
-    def read_id(self) -> str:
+    @property
+    def button_id(self) -> str:
         """Return the selected button id for this group."""
         selection = self.gui.button_group_mediator.get_selection(self.group)
         if selection is None:

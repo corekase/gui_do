@@ -131,12 +131,12 @@ class Demo:
         g1.toggle('t4', g1.gridded(7, 4), ButtonStyle.Radio, False, 'Push 4', 'Raise 4')
         g1.toggle('t5', g1.gridded(7, 5), ButtonStyle.Check, False, 'Push 5', 'Raise 5')
         g1.set_grid_properties((10, g1.gridded(0, 5).bottom + 4), 122, widget_height, 0, False)
-        self.label1 = g1.label(g1.gridded(0, 0), f'ID: {lbg1.read_id()}', True)
-        self.label2 = g1.label(g1.gridded(1, 0), f'ID: {lbg2.read_id()}', True)
-        self.label3 = g1.label(g1.gridded(2, 0), f'ID: {lbg3.read_id()}', True)
-        self.label4 = g1.label(g1.gridded(3, 0), f'ID: {lbg4.read_id()}', True)
-        self.label5 = g1.label(g1.gridded(4, 0), f'ID: {lbg5.read_id()}', True)
-        self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.read_id()}', True)
+        self.label1 = g1.label(g1.gridded(0, 0), f'ID: {lbg1.button_id}', True)
+        self.label2 = g1.label(g1.gridded(1, 0), f'ID: {lbg2.button_id}', True)
+        self.label3 = g1.label(g1.gridded(2, 0), f'ID: {lbg3.button_id}', True)
+        self.label4 = g1.label(g1.gridded(3, 0), f'ID: {lbg4.button_id}', True)
+        self.label5 = g1.label(g1.gridded(4, 0), f'ID: {lbg5.button_id}', True)
+        self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.button_id}', True)
         # make the scrollbar window
         y_pos += 248
         self.scrollbar_win = g1.window(

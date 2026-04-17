@@ -109,7 +109,7 @@ class EventDispatcher:
                         if focus_target is not None and self._is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
                         if widget.WidgetKind == WidgetKind.ButtonGroup:
-                            return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=None)
+                            return self.gui.event(Event.Group, group=widget.button_group, widget_id=widget.button_id, window=None)
                         return self.gui.event(Event.Widget, widget_id=widget.id, window=None)
         if not hit_any:
             self.gui.update_focus(None)
@@ -139,13 +139,13 @@ class EventDispatcher:
                                 if focus_target is not None and self._is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
                                 if widget.WidgetKind == WidgetKind.ButtonGroup:
-                                    return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=window)
+                                    return self.gui.event(Event.Group, group=widget.button_group, widget_id=widget.button_id, window=window)
                                 return self.gui.event(Event.Widget, widget_id=widget.id, window=window)
                         elif widget.WidgetKind == WidgetKind.ButtonGroup and widget.state == InteractiveState.Armed:
                             if self.gui.handle_widget(widget, event, window):
                                 if focus_target is not None and self._is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
-                                return self.gui.event(Event.Group, group=widget.read_group(), widget_id=widget.read_id(), window=window)
+                                return self.gui.event(Event.Group, group=widget.button_group, widget_id=widget.button_id, window=window)
                 if hit_any and focus_target is not None and self._is_registered_widget(focus_target):
                     self.gui.update_focus(focus_target)
                 else:
@@ -188,4 +188,3 @@ class EventDispatcher:
                 top_window = window
                 break
         self.gui.active_window = top_window
-
