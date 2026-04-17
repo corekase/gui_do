@@ -37,6 +37,7 @@ class Label(Widget):
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
     def draw(self) -> None:
+        super().draw()
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def _render(self, text: str) -> None:

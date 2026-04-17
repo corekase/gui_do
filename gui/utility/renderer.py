@@ -17,27 +17,35 @@ class Renderer:
         """Render one frame. Cursor is drawn last."""
         if self.gui.buffered:
             self._bitmaps.clear()
-        for widget in self.gui.widgets:
+        for widget in tuple(self.gui.widgets):
             if widget.visible:
                 if self.gui.buffered:
-                    self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, widget.get_rect()), widget.get_rect()))
+                    widget_rect = widget.get_rect()
+                    if widget_rect.width > 0 and widget_rect.height > 0:
+                        self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, widget_rect), widget_rect))
                 widget.draw()
-        for window in self.gui.windows:
+        windows_snapshot = tuple(self.gui.windows)
+        top_window = windows_snapshot[-1] if windows_snapshot else None
+        for window in windows_snapshot:
             if window.visible:
                 if self.gui.buffered:
-                    self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window.get_window_rect()), window.get_window_rect()))
-                if window is self.gui.windows[-1]:
+                    window_rect = window.get_window_rect()
+                    if window_rect.width > 0 and window_rect.height > 0:
+                        self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window_rect), window_rect))
+                if window is top_window:
                     window.draw_title_bar_active()
                 else:
                     window.draw_title_bar_inactive()
                 window.draw_window()
-                for widget in window.widgets:
+                for widget in tuple(window.widgets):
                     if widget.visible:
                         widget.draw()
                 self.gui.surface.blit(window.surface, (window.x, window.y))
         if self.gui.mouse_locked:
             self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
-        if self.gui.cursor_image and self.gui.cursor_hotspot:
+        if self.gui.cursor_image is not None and self.gui.cursor_hotspot is not None:
+            if self.gui.cursor_rect is None:
+                self.gui.cursor_rect = self.gui.cursor_image.get_rect()
             if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
                 cursor_pos = self.gui.lock_point_pos
             else:
@@ -46,7 +54,8 @@ class Renderer:
                             self.gui.cursor_rect.width, self.gui.cursor_rect.height)
             self.gui.cursor_rect = cursor_rect
             if self.gui.buffered:
-                self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
+                if cursor_rect.width > 0 and cursor_rect.height > 0:
+                    self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))
             self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 
     def undraw(self) -> None:

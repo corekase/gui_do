@@ -4,6 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.constants import ButtonStyle, InteractiveState
 from ..utility.interactive import BaseInteractive
+from ..utility.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -51,6 +52,7 @@ class Toggle(BaseInteractive):
 
     def draw(self) -> None:
         if self.pushed:
+            Widget.draw(self)
             self.surface.blit(self.armed, self.draw_rect)
         else:
             super().draw()

@@ -156,7 +156,7 @@ class EventDispatcher:
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
             if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
                 self.gui.lower_window(self.gui.active_window)
-                self.gui.active_window = self.gui.windows[-1]
+                self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
             else:
                 self.gui.dragging = True
                 self.gui.dragging_window = self.gui.active_window

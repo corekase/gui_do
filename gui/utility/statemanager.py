@@ -60,7 +60,7 @@ class StateManager:
 
     def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]) -> None:
         """Shutdown registered schedulers and leave running state."""
-        for name, gui in self._contexts.items():
+        for name, gui in list(self._contexts.items()):
             scheduler = gui.scheduler
             try:
                 scheduler.shutdown()

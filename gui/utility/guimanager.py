@@ -378,7 +378,11 @@ class GuiManager:
         """Load a backdrop image, scale it to target surface, and cache pristine copy."""
         if obj is None:
             obj = self
+        if obj.surface is None:
+            raise GuiError('set_pristine target surface is not initialized')
         if image is not None:
+            if not isinstance(image, str) or image == '':
+                raise GuiError(f'set_pristine image must be a non-empty string, got: {image!r}')
             image_path = self.bitmap_factory.file_resource('images', image)
             try:
                 bitmap = pygame.image.load(image_path)

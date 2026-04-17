@@ -79,5 +79,7 @@ class Widget:
 
     def draw(self) -> None:
         """Draw the widget. Subclasses should call this first when needed."""
+        if self.surface is None:
+            raise GuiError(f'widget "{self.id}" is not bound to a surface')
         if self.auto_restore_pristine:
             self.gui.restore_pristine(self.draw_rect, self.window)

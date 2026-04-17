@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 class BitmapFactory:
     _cursor_cache: Dict[str, Tuple[Surface, Tuple[int, int]]] = {}
+    _data_root: str = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 
     def __init__(self) -> None:
         self._font: Optional[pygame.font.Font] = None
@@ -192,7 +193,21 @@ class BitmapFactory:
         return int((bigger / 2) - (smaller / 2))
 
     def file_resource(self, *names: str) -> str:
-        return os.path.join('data', *names)
+        if len(names) == 0:
+            raise GuiError('resource path must include at least one path component')
+        for name in names:
+            if not isinstance(name, str) or name == '':
+                raise GuiError(f'resource path components must be non-empty strings, got: {name!r}')
+            if os.path.isabs(name):
+                raise GuiError(f'resource path component cannot be absolute: {name!r}')
+        resource_path = os.path.normpath(os.path.join(self._data_root, *names))
+        try:
+            common_root = os.path.commonpath([self._data_root, resource_path])
+        except ValueError as exc:
+            raise GuiError(f'invalid resource path: {names!r}') from exc
+        if common_root != self._data_root:
+            raise GuiError(f'resource path escapes data directory: {names!r}')
+        return resource_path
 
     def image_alpha(self, *names: str) -> Surface:
         full_path = os.path.normpath(os.path.abspath(self.file_resource(*names)))
@@ -285,6 +300,8 @@ class BitmapFactory:
         locked = False
         try:
             _, _, width, height = surface.get_rect()
+            if width <= 0 or height <= 0:
+                return
             x = y = 0
             surface.lock()
             locked = True
@@ -293,8 +310,10 @@ class BitmapFactory:
             line(surface, ul, (x, y), (x, y + height - 1))
             line(surface, lr, (x, y + height - 1), (x + width - 1, y + height - 1))
             line(surface, lr, (x + width - 1, y - 1), (x + width - 1, y + height - 1))
-            surface.set_at((x + 1, y + 1), ul_d)
-            surface.set_at((x + width - 2, y + height - 2), lr_d)
+            if width > 1 and height > 1:
+                surface.set_at((x + 1, y + 1), ul_d)
+            if width > 2 and height > 2:
+                surface.set_at((x + width - 2, y + height - 2), lr_d)
         except GuiError:
             raise
         except Exception as exc:
