@@ -33,7 +33,7 @@ class Button(BaseInteractive):
             if event.type == MOUSEBUTTONDOWN:
                 if getattr(event, 'button', None) == 1:
                     self.state = InteractiveState.Armed
-                    return True
+                    return False
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
                 if getattr(event, 'button', None) == 1:
