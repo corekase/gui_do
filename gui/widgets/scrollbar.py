@@ -5,6 +5,7 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
+from ..utility.widget import Widget
 from ..utility.constants import colours, GuiError, WidgetKind, Orientation, ArrowPosition, InteractiveState
 
 if TYPE_CHECKING:
@@ -30,6 +31,23 @@ class Scrollbar(Frame):
         self._visible = value
         for widget in self._registered:
             widget.visible = value
+
+    @Widget.position.setter
+    def position(self, pos: Tuple[int, int]) -> None:
+        old_x, old_y = self.draw_rect.x, self.draw_rect.y
+        Widget.position.fset(self, pos)
+        delta_x = self.draw_rect.x - old_x
+        delta_y = self.draw_rect.y - old_y
+        if delta_x == 0 and delta_y == 0:
+            return
+        self._overall_rect.move_ip(delta_x, delta_y)
+        self._graphic_rect.move_ip(delta_x, delta_y)
+        if self._increment_rect is not None:
+            self._increment_rect.move_ip(delta_x, delta_y)
+        if self._decrement_rect is not None:
+            self._decrement_rect.move_ip(delta_x, delta_y)
+        for arrow in self._registered:
+            arrow.position = (arrow.draw_rect.x + delta_x, arrow.draw_rect.y + delta_y)
 
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         self._registered: List[ArrowBox] = []
@@ -120,22 +138,6 @@ class Scrollbar(Frame):
         if inc_size <= 0:
             raise GuiError(f'inc_size must be > 0, got {inc_size}')
         self._total_range, self._start_pos, self._bar_size, self._inc_size = total_range, start_pos, bar_size, inc_size
-
-    def set_pos(self, pos: Tuple[int, int]) -> None:
-        old_x, old_y = self.draw_rect.x, self.draw_rect.y
-        super().set_pos(pos)
-        delta_x = self.draw_rect.x - old_x
-        delta_y = self.draw_rect.y - old_y
-        if delta_x == 0 and delta_y == 0:
-            return
-        self._overall_rect.move_ip(delta_x, delta_y)
-        self._graphic_rect.move_ip(delta_x, delta_y)
-        if self._increment_rect is not None:
-            self._increment_rect.move_ip(delta_x, delta_y)
-        if self._decrement_rect is not None:
-            self._decrement_rect.move_ip(delta_x, delta_y)
-        for arrow in self._registered:
-            arrow.set_pos((arrow.draw_rect.x + delta_x, arrow.draw_rect.y + delta_y))
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         if self._hit:
@@ -258,4 +260,3 @@ class Scrollbar(Frame):
         if self._total_range <= 0:
             return 0
         return int((point * self._graphical_range()) / self._total_range)
-

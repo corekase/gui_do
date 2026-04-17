@@ -29,6 +29,16 @@ class Window:
             raise GuiError('window visible must be a bool')
         self._visible = value
 
+    @property
+    def position(self) -> Tuple[int, int]:
+        return self.x, self.y
+
+    @position.setter
+    def position(self, pos: Tuple[int, int]) -> None:
+        if not isinstance(pos, tuple) or len(pos) != 2:
+            raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
+        self.x, self.y = pos
+
     def __init__(
         self,
         gui: "GuiManager",
@@ -67,7 +77,7 @@ class Window:
             self.gui.set_pristine(backdrop, self)
         self._window_save_pristine()
         self.widgets: List["Widget"] = []
-        self.set_pos(pos)
+        self.position = pos
         self.title_bar_inactive_bitmap: Surface
         self.title_bar_active_bitmap: Surface
         self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = self.gui.bitmap_factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
@@ -94,11 +104,6 @@ class Window:
         """Return window bounds including title bar."""
         return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
-    def set_pos(self, pos: Tuple[int, int]) -> None:
-        if not isinstance(pos, tuple) or len(pos) != 2:
-            raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
-        self.x, self.y = pos
-
     def handle_event(self, event: "BaseEvent") -> None:
         self._event_handler(event)
 
@@ -115,4 +120,3 @@ class Window:
 
     def _window_save_pristine(self) -> None:
         self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
-

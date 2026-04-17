@@ -480,7 +480,7 @@ class Demo:
         self.gui_do_angle %= (2.0 * math.pi)
         self.gui_do_pos_x = x
         self.gui_do_pos_y = y
-        self.gui_do_label.set_pos((int(round(x)), int(round(y))))
+        self.gui_do_label.position = (int(round(x)), int(round(y)))
 
     def handle_Canvas(self):
         # read the event from the canvas widget

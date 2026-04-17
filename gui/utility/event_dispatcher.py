@@ -83,7 +83,7 @@ class EventDispatcher:
             return self.gui.event(Event.Pass)
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self.gui.dragging = False
-            self.gui.dragging_window.set_pos((self.gui.dragging_window.x, self.gui.dragging_window.y))
+            self.gui.dragging_window.position = (self.gui.dragging_window.x, self.gui.dragging_window.y)
             self.gui.set_mouse_pos((self.gui.dragging_window.x - self.gui.mouse_delta[0], self.gui.dragging_window.y - self.gui.mouse_delta[1]))
             self.gui.dragging_window = None
             self.gui.mouse_delta = None
@@ -92,7 +92,7 @@ class EventDispatcher:
             x = self.gui.dragging_window.x + rel[0]
             y = self.gui.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
-            self.gui.dragging_window.set_pos((x, y))
+            self.gui.dragging_window.position = (x, y)
         return self.gui.event(Event.Pass)
 
     def _process_screen_widgets(self, event: PygameEvent) -> "GuiEvent":
