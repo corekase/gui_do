@@ -40,10 +40,10 @@ class EventDispatcher:
                 self._reset_window_drag_state()
                 return self.gui.event(Event.Pass)
             return self._handle_window_dragging(event)
-        if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
-            self._check_window_drag_start(event)
         if self.gui.locking_object:
             return self._handle_locked_object(event)
+        if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
+            self._check_window_drag_start(event)
         if self.gui.active_window:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
