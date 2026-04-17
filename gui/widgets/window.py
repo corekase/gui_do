@@ -65,7 +65,7 @@ class Window:
         self.width: int
         self.height: int
         self.width, self.height = size
-        self.titlebar_size: int = 24
+        self.titlebar_size: int = self.gui.bitmap_factory.get_titlebar_height()
         self.surface: pygame.Surface = pygame.surface.Surface(size).convert()
         self.pristine: Optional[Surface] = None
         if backdrop is None:

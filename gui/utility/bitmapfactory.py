@@ -59,6 +59,20 @@ class BitmapFactory:
             self._font = self._fonts[self._last_font_name]
             self._current_font_name = self._last_font_name
 
+    def get_font_height(self, name: str, shadow: bool = False) -> int:
+        if name not in self._fonts:
+            raise GuiError(f'unknown font "{name}"')
+        height = self._fonts[name].get_linesize()
+        if shadow:
+            # render_text() offsets the optional shadow by one pixel in both axes.
+            height += 1
+        return height
+
+    def get_titlebar_height(self, padding: int = 6) -> int:
+        if not isinstance(padding, int) or padding < 0:
+            raise GuiError(f'titlebar padding must be a non-negative int, got: {padding}')
+        return self.get_font_height('titlebar', shadow=True) + padding
+
     def draw_arrow_state_bitmaps(self, rect: Rect, direction: float) -> List[Surface]:
         try:
             states = self.draw_frame_bitmaps(rect)
