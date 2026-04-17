@@ -364,8 +364,8 @@ In the demo, live cells are stored as a `set` of grid coordinates, for example `
 The class-level `neighbours` tuple is a delta table:
 
 - `(-1, -1)`, `(-1, 0)`, `(-1, 1)`
-- `(0, -1)`, `(0, 1)`
-- `(1, -1)`, `(1, 0)`, `(1, 1)`
+- `(0, -1)`,             `(0, 1)`
+- `(1, -1)`,  `(1, 0)`,  `(1, 1)`
 
 `generate()` works in two stages:
 
