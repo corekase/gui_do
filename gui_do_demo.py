@@ -503,7 +503,13 @@ class Demo:
                     elif new_size > 24:
                         new_size = 24
                     if new_size != old_size:
-                        mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
+                        if self.gui1.mouse_point_locked and self.gui1.lock_point_pos is not None:
+                            # During point-lock dragging, anchor zoom to the rendered (locked) cursor.
+                            lock_x, lock_y = self.gui1.convert_to_window(self.gui1.lock_point_pos, self.canvas.window)
+                            mouse_x = lock_x - self.canvas_rect.x
+                            mouse_y = lock_y - self.canvas_rect.y
+                        else:
+                            mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
                         # Keep the world position under the mouse fixed while scaling.
                         self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
                         self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
