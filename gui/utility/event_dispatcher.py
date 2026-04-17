@@ -41,6 +41,7 @@ class EventDispatcher:
         if event.type == MOUSEMOTION:
             return self.gui.event(Event.MouseMotion, rel=getattr(event, 'rel', (0, 0)))
         return self.gui.event(Event.Pass)
+
     def _handle_locked_object(self, event: PygameEvent) -> "GuiEvent":
         lock_obj = self.gui.locking_object
         if not self._is_registered_widget(lock_obj):
