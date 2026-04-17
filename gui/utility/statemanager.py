@@ -2,7 +2,7 @@ import logging
 from types import TracebackType
 from typing import Dict, Optional, Tuple, Type
 from .guimanager import GuiManager
-
+from pygame.mouse import get_pos as m_pos
 _logger = logging.getLogger(__name__)
 
 class StateManager:
@@ -47,7 +47,7 @@ class StateManager:
         if old_gui is not None:
             mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
         else:
-            mouse_pos = (0, 0)
+            mouse_pos = m_pos()
         self._active_context_name = name
         new_gui: Optional[GuiManager] = self.get_active_gui()
         if new_gui:
