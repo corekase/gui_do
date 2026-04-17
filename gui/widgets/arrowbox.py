@@ -11,10 +11,15 @@ if TYPE_CHECKING:
 class ArrowBox(BaseInteractive):
     """Arrow button with press-and-hold repeat activation."""
 
-    def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> None:
+    def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None, repeat_activation_ms: int = 150) -> None:
         super().__init__(gui, id, rect)
+        if not isinstance(repeat_activation_ms, int):
+            raise ValueError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
+        if repeat_activation_ms <= 0:
+            raise ValueError(f'repeat_activation_ms must be > 0, got: {repeat_activation_ms}')
         self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_arrow_state_bitmaps(rect, direction)
         self.on_activate = on_activate
+        self.repeat_activation_ms: int = repeat_activation_ms
         self._timer_id: Optional[str] = None
 
     def leave(self) -> None:
@@ -34,7 +39,7 @@ class ArrowBox(BaseInteractive):
                 self.state = InteractiveState.Armed
                 if self.on_activate is not None and self._timer_id is None:
                     timer_id = f'{self.id}.timer'
-                    self.gui.timers.add_timer(timer_id, 150, self._invoke_on_activate)
+                    self.gui.timers.add_timer(timer_id, self.repeat_activation_ms, self._invoke_on_activate)
                     self._timer_id = timer_id
                 return True
         if self.state == InteractiveState.Armed:

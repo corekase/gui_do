@@ -29,6 +29,8 @@ class CanvasEventPacket:
 class Canvas(Widget):
     """Off-screen drawing surface that queues canvas-local input events."""
 
+    _DEFAULT_MAX_QUEUED_EVENTS = 128
+
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
@@ -44,7 +46,8 @@ class Canvas(Widget):
             self.gui.set_pristine(backdrop, self)
         self.on_activate = on_activate
         self.auto_restore_pristine: bool = automatic_pristine
-        self._events: deque[CanvasEventPacket] = deque(maxlen=128)
+        self._events: deque[CanvasEventPacket] = deque()
+        self._configure_max_queued_events()
         self.dropped_events: int = 0
         self.last_overflow: bool = False
         self.on_overflow: Optional[Callable[[int, int], None]] = None
@@ -71,6 +74,13 @@ class Canvas(Widget):
         return event
 
     def set_event_queue_limit(self, max_events: int) -> None:
+        self._configure_max_queued_events(max_events)
+        self.queued_event = len(self._events) > 0
+        self.CEvent = self._events[0] if self._events else None
+
+    def _configure_max_queued_events(self, max_events: Optional[int] = None) -> None:
+        if max_events is None:
+            max_events = self._DEFAULT_MAX_QUEUED_EVENTS
         if not isinstance(max_events, int):
             raise GuiError(f'max_events must be an int, got: {type(max_events).__name__}')
         if max_events <= 0:
@@ -78,8 +88,6 @@ class Canvas(Widget):
         if self._events.maxlen == max_events:
             return
         self._events = deque(self._events, maxlen=max_events)
-        self.queued_event = len(self._events) > 0
-        self.CEvent = self._events[0] if self._events else None
 
     def set_motion_coalescing(self, enabled: bool) -> None:
         if not isinstance(enabled, bool):
