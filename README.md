@@ -351,13 +351,11 @@ python gui_do_demo.py
 
 If assets are missing or not found, verify the `data/` directory contains the files referenced by the demo and you are starting python in the same directory as the demo.  If the application is running on a system that has case-sensitive filenames, like Linux, then the case of the data directory and the filename string need to match.
 
-## Optional Deep Dive: Life and Mandelbrot Internals
-
-This section is intentionally at the end of the README because it is optional.
+# Optional Deep Dive: Life and Mandelbrot Internals
 
 The earlier sections are enough to build and ship applications. This part exists for developing programmers who want a complete mental model of how to use the GUI APIs in more advanced patterns.
 
-### Life example: how `generate()` uses the delta table
+## Life example: how `generate()` uses the delta table
 
 In the demo, live cells are stored as a `set` of grid coordinates, for example `(x, y)`.
 
@@ -383,7 +381,7 @@ Why this structure is useful:
 
 In other words, the Life example shows a clean pattern for "read old state, compute next state, then swap" that maps well to GUI frame updates.
 
-### Mandelbrot example: workers send numbers, UI thread draws pixels
+## Mandelbrot example: workers send numbers, UI thread draws pixels
 
 The Mandelbrot tasks use `gui.scheduler` and intentionally avoid touching pygame surfaces in worker code.
 
