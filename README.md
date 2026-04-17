@@ -31,7 +31,7 @@ The toolkit expects assets under `data/`:
 - `data/images/`
 - `data/cursors/`
 
-The demo uses this directly (`backdrop.jpg`, `cursor.png`, `realize.png`, and `.ttf` files).
+The demo uses this directly (fonts, `*.ttf` files and images, example `backdrop.jpg` and cursors, example `cursor.png`).
 
 ## 3. Minimal runnable setup
 
