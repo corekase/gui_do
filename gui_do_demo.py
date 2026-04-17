@@ -503,8 +503,8 @@ class Demo:
                 # if dragging then track relative position
                 if self.dragging and CEvent.rel is not None:
                     x, y = CEvent.rel[0], CEvent.rel[1]
-                    self.origin_x += x
-                    self.origin_y += y
+                    self.origin_x -= x
+                    self.origin_y -= y
             elif CEvent.type == CanvasEvent.MouseWheel:
                 # handle the mouse wheel
                 if CEvent.y is not None:
