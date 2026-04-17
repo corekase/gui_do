@@ -239,7 +239,7 @@ class Demo:
         )
         g2.bitmap_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
-        g2.button('return', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
+        g2.button('back', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
         g2.window(
             'GUI 2',
             (50, 150),
@@ -408,11 +408,8 @@ class Demo:
 
     def gui2_screen_event_handler(self, event):
         if event.type == Event.Widget:
-            if event.widget_id == 'return':
+            if event.widget_id == 'back':
                 self.state_manager.switch_context('gui1')
-        elif event.type == Event.Task:
-            if getattr(event, 'error', None):
-                print(f'Task failed: id={getattr(event, "id", None)} error={event.error}', file=sys.stderr)
         elif event.type == Event.KeyDown:
             if event.key == K_ESCAPE:
                 self.state_manager.set_running(False)
