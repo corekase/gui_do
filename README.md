@@ -281,7 +281,7 @@ Notes:
 - `hotspot` is a tuple `(x, y)` inside the cursor image.
 - `cursor_name` is the logical ID you use later with `set_cursor`.
 - `filename` is the file inside `data/cursors/`.
-- Cursor cache is shared at class level in `BitmapFactory`, so loading once is enough for all `GuiManager` instances in the same process.
+- Cursors are shared between bitmap factories and therefore also gui managers.  Any cursor loaded in any gui manager can be set in any other gui manager as long as it has been loaded somewhere at least once.
 
 Example:
 
