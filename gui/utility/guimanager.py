@@ -80,7 +80,11 @@ class GuiManager:
         self.mouse_delta: Optional[Tuple[int, int]] = None
         self.mouse_pos: Tuple[int, int] = pygame.mouse.get_pos()
         self.mouse_locked: bool = False
+        self.mouse_point_locked: bool = False
         self.lock_area_rect: Optional[Rect] = None
+        self.lock_point_pos: Optional[Tuple[int, int]] = None
+        self.lock_point_recenter_pending: bool = False
+        self.lock_point_tolerance_rect: Optional[Rect] = None
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
@@ -97,6 +101,21 @@ class GuiManager:
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
         self._task_owner_by_id: Dict[Hashable, Window] = {}
+        self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()
+        self.point_lock_tolerance_size: Tuple[int, int] = (
+            max(1, self.point_lock_recenter_rect.width),
+            max(1, self.point_lock_recenter_rect.height),
+        )
+
+    def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
+        if coverage <= 0.0 or coverage > 1.0:
+            raise GuiError(f'coverage must be in the range (0, 1], got: {coverage}')
+        surface_rect = self.surface.get_rect()
+        width = max(1, int(surface_rect.width * coverage))
+        height = max(1, int(surface_rect.height * coverage))
+        centered = Rect(0, 0, width, height)
+        centered.center = surface_rect.center
+        return centered
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
         for widget in self.widgets:
@@ -487,23 +506,38 @@ class GuiManager:
 
     def _resolve_locking_state(self) -> Optional[Widget]:
         if self.locking_object is None:
-            if self.mouse_locked or self.lock_area_rect is not None:
+            if self.mouse_locked or self.lock_area_rect is not None or self.lock_point_pos is not None:
                 self.mouse_locked = False
+                self.mouse_point_locked = False
                 self.lock_area_rect = None
+                self.lock_point_pos = None
+                self.lock_point_recenter_pending = False
+                self.lock_point_tolerance_rect = None
             return None
         if not isinstance(self.locking_object, Widget):
             self.locking_object = None
             self.mouse_locked = False
+            self.mouse_point_locked = False
             self.lock_area_rect = None
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
             return None
         if not self._is_registered_object(self.locking_object):
             self.locking_object = None
             self.mouse_locked = False
+            self.mouse_point_locked = False
             self.lock_area_rect = None
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
             return None
-        if self.lock_area_rect is None:
+        if self.lock_area_rect is None and self.lock_point_pos is None:
             self.locking_object = None
             self.mouse_locked = False
+            self.mouse_point_locked = False
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
             return None
         return self.locking_object
 
@@ -525,12 +559,61 @@ class GuiManager:
                 raise GuiError('lock area dimensions must be positive')
             self.locking_object = locking_object
             self.mouse_locked = True
+            self.mouse_point_locked = False
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
         else:
             if self.mouse_locked:
-                pygame.mouse.set_pos(self.mouse_pos)
+                if self.mouse_point_locked and self.lock_point_pos is not None:
+                    pygame.mouse.set_pos(self.lock_point_pos)
+                    self.mouse_pos = self.lock_point_pos
+                else:
+                    pygame.mouse.set_pos(self.mouse_pos)
             self.locking_object = None
             self.mouse_locked = False
+            self.mouse_point_locked = False
+            self.lock_point_pos = None
+            self.lock_point_recenter_pending = False
+            self.lock_point_tolerance_rect = None
         self.lock_area_rect = area
+
+    def set_lock_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
+        """Lock mouse-relative input and recenter hardware pointer when it leaves a broad center area."""
+        if locking_object is None:
+            self.set_lock_area(None)
+            return
+        if not isinstance(locking_object, Widget):
+            raise GuiError('locking_object must be a widget')
+        if not self._is_registered_object(locking_object):
+            raise GuiError('locking_object must be a registered widget')
+        if point is None:
+            point = pygame.mouse.get_pos()
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
+        self.locking_object = locking_object
+        self.mouse_locked = True
+        self.mouse_point_locked = True
+        self.lock_area_rect = None
+        self.lock_point_pos = point
+        self.lock_point_tolerance_rect = None
+        self.lock_point_recenter_pending = False
+
+    def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
+        """Recenters pointer only when it exits the configured broad center region."""
+        if self.lock_point_pos is None:
+            self.lock_point_recenter_pending = False
+            return
+        if not isinstance(hardware_position, tuple) or len(hardware_position) != 2:
+            raise GuiError(f'hardware_position must be a tuple of (x, y), got: {hardware_position}')
+        in_recenter_rect = self.point_lock_recenter_rect.collidepoint(hardware_position)
+        if self.lock_point_recenter_pending:
+            if in_recenter_rect:
+                self.lock_point_recenter_pending = False
+            return
+        if not in_recenter_rect:
+            pygame.mouse.set_pos(self.point_lock_recenter_rect.center)
+            self.lock_point_recenter_pending = True
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         if not isinstance(position, tuple) or len(position) != 2:

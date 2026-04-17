@@ -288,8 +288,8 @@ class Demo:
 
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
-        if not self.canvas.focused():
-            self.dragging = False
+        if not self.dragging and self.gui1.locking_object is self.canvas:
+            self.gui1.set_lock_point(None)
         if self.circles_toggle.pushed:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
@@ -477,10 +477,12 @@ class Demo:
                 # right-mouse button pressed, enter dragging state
                 if CEvent.button == 3:
                     self.dragging = True
+                    self.gui1.set_lock_point(self.canvas)
             elif CEvent.type == CanvasEvent.MouseButtonUp:
                 # right-mouse button released, exit dragging state
                 if CEvent.button == 3:
                     self.dragging = False
+                    self.gui1.set_lock_point(None)
             elif CEvent.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position
                 if self.dragging and CEvent.rel is not None:

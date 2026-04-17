@@ -55,6 +55,7 @@ class EventDispatcher:
             x, y = self.gui.mouse_pos
             dx, dy = rel
             self.gui.mouse_pos = self.gui.lock_area((x + dx, y + dy))
+            self.gui.enforce_point_lock(pos)
         else:
             self.gui.mouse_pos = self.gui.lock_area(pos)
 

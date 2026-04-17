@@ -38,7 +38,11 @@ class Renderer:
         if self.gui.mouse_locked:
             self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
         if self.gui.cursor_image and self.gui.cursor_hotspot:
-            cursor_rect = Rect(self.gui.mouse_pos[0] - self.gui.cursor_hotspot[0], self.gui.mouse_pos[1] - self.gui.cursor_hotspot[1],
+            if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
+                cursor_pos = self.gui.lock_point_pos
+            else:
+                cursor_pos = self.gui.mouse_pos
+            cursor_rect = Rect(cursor_pos[0] - self.gui.cursor_hotspot[0], cursor_pos[1] - self.gui.cursor_hotspot[1],
                             self.gui.cursor_rect.width, self.gui.cursor_rect.height)
             if self.gui.buffered:
                 self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, cursor_rect), cursor_rect))

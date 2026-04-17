@@ -111,7 +111,8 @@ class Canvas(Widget):
         """Queue supported events while focused and signal activation on enqueue."""
         if event.type not in (MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
-        if self.get_collide(window):
+        locked_owner = (self.gui.locking_object is self) and self.gui.mouse_locked
+        if self.get_collide(window) or locked_owner:
             canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
             packet = CanvasEventPacket()
             packet.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
