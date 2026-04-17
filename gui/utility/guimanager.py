@@ -9,7 +9,7 @@ from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
 from .layout_manager import LayoutManager
-from .resource_error_handler import DataResourceErrorHandler
+from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .widget import Widget
 from ..widgets.window import Window

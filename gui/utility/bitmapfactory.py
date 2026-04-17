@@ -9,7 +9,7 @@ from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from .constants import colours, GuiError, ButtonStyle
-from .resource_error_handler import DataResourceErrorHandler
+from .resource_error import DataResourceErrorHandler
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
