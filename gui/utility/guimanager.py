@@ -12,16 +12,16 @@ from .layout_manager import LayoutManager
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .widget import Widget
-from ..widgets.window import Window
-from ..widgets.button import Button
-from ..widgets.label import Label
-from ..widgets.canvas import Canvas
-from ..widgets.image import Image
-from ..widgets.scrollbar import Scrollbar
-from ..widgets.toggle import Toggle
-from ..widgets.arrowbox import ArrowBox
-from ..widgets.buttongroup import ButtonGroup
-from ..widgets.frame import Frame
+from ..widgets.window import Window as gWindow
+from ..widgets.button import Button as gButton
+from ..widgets.label import Label as gLabel
+from ..widgets.canvas import Canvas as gCanvas
+from ..widgets.image import Image as gImage
+from ..widgets.scrollbar import Scrollbar as gScrollbar
+from ..widgets.toggle import Toggle as gToggle
+from ..widgets.arrowbox import ArrowBox as gArrowBox
+from ..widgets.buttongroup import ButtonGroup as gButtonGroup
+from ..widgets.frame import Frame as gFrame
 
 def _noop() -> None:
     pass
@@ -33,7 +33,7 @@ class _PristineContainer(Protocol):
     surface: Surface
     pristine: Optional[Surface]
 
-TGuiObject = TypeVar("TGuiObject", Window, Widget)
+TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 
 class GuiEvent(BaseEvent):
     def __init__(self, event_type: Event, **kwargs: object) -> None:
@@ -44,7 +44,7 @@ class GuiEvent(BaseEvent):
         self.button: Optional[int] = cast(Optional[int], kwargs.get('button'))
         self.widget_id: Optional[str] = cast(Optional[str], kwargs.get('widget_id'))
         self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
-        self.window: Optional[Window] = cast(Optional[Window], kwargs.get('window'))
+        self.window: Optional[gWindow] = cast(Optional[gWindow], kwargs.get('window'))
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
@@ -82,6 +82,50 @@ class GuiManager:
     def scheduler(self):
         return self._scheduler
 
+    # widgets
+    def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
+        return self.add(gArrowBox(self, id, rect, direction, on_activate))
+
+    def Button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
+        safe_text = '' if text is None else text
+        return self.add(gButton(self, id, rect, style, safe_text, on_activate))
+
+    def ButtonGroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
+        return self.add(gButtonGroup(self, group, id, rect, style, text))
+
+    def Canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
+        return self.add(gCanvas(self, id, rect, backdrop, on_activate, automatic_pristine))
+
+    def Frame(self, id: str, rect: Rect) -> gFrame:
+        return self.add(gFrame(self, id, rect))
+
+    def Image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
+        return self.add(gImage(self, id, rect, image, automatic_pristine, scale))
+
+    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
+        if id is None:
+            self._label_sequence += 1
+            id = f'label_{self._label_sequence}'
+        return self.add(gLabel(self, id, position, text, shadow))
+
+    def Scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
+        return self.add(gScrollbar(self, id, overall_rect, horizontal, style, params))
+
+    def Toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
+        return self.add(gToggle(self, id, rect, style, pushed, pressed_text, raised_text))
+
+    def Window(
+        self,
+        title: str,
+        pos: Tuple[int, int],
+        size: Tuple[int, int],
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> gWindow:
+        return self.add(gWindow(self, title, pos, size, backdrop, preamble, event_handler, postamble))
+
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -107,10 +151,10 @@ class GuiManager:
             self._bitmap_factory.load_font(name, filename, size)
         self.surface: Surface = surface
         self.widgets: List[Widget] = []
-        self._active_object: Optional[Window] = None
-        self.windows: List[Window] = []
+        self._active_object: Optional[gWindow] = None
+        self.windows: List[gWindow] = []
         self.dragging: bool = False
-        self.dragging_window: Optional[Window] = None
+        self.dragging_window: Optional[gWindow] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
         self.mouse_pos: Tuple[int, int] = pygame.mouse.get_pos()
         self.mouse_locked: bool = False
@@ -122,7 +166,7 @@ class GuiManager:
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
-        self.active_window: Optional[Window] = None
+        self.active_window: Optional[gWindow] = None
         self._current_widget: Optional[Widget] = None
         self.pristine: Optional[Surface] = None
         self.locking_object: Optional[Widget] = None
@@ -134,7 +178,7 @@ class GuiManager:
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
-        self._task_owner_by_id: Dict[Hashable, Window] = {}
+        self._task_owner_by_id: Dict[Hashable, gWindow] = {}
         self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()
         self.point_lock_tolerance_size: Tuple[int, int] = (
             max(1, self.point_lock_recenter_rect.width),
@@ -160,11 +204,11 @@ class GuiManager:
         """Register a window or widget and attach container-specific state."""
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
-        if not isinstance(gui_object, (Window, Widget)):
+        if not isinstance(gui_object, (gWindow, Widget)):
             raise GuiError('gui_object must be a Window or Widget instance')
         if self._is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self._describe_gui_object(gui_object)}')
-        if isinstance(gui_object, Window):
+        if isinstance(gui_object, gWindow):
             self.windows.append(gui_object)
             self._active_object = gui_object
         elif isinstance(gui_object, Widget):
@@ -208,7 +252,7 @@ class GuiManager:
     def clear_button_groups(self) -> None:
         self.button_group_mediator.clear()
 
-    def clear_task_owners_for_window(self, window: Window) -> None:
+    def clear_task_owners_for_window(self, window: gWindow) -> None:
         if window not in self.windows:
             return
         stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
@@ -221,7 +265,7 @@ class GuiManager:
                 raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = False
 
-    def lower_window(self, window: Window) -> None:
+    def lower_window(self, window: gWindow) -> None:
         self._resolve_active_object()
         if window not in self.windows:
             if self._active_object is window:
@@ -230,7 +274,7 @@ class GuiManager:
         self.windows.remove(window)
         self.windows.insert(0, window)
 
-    def raise_window(self, window: Window) -> None:
+    def raise_window(self, window: gWindow) -> None:
         self._resolve_active_object()
         if window not in self.windows:
             if self._active_object is window:
@@ -365,7 +409,7 @@ class GuiManager:
         self._screen_event_handler = event_handler if event_handler is not None else _noop_event
         self._screen_postamble = postamble if postamble is not None else _noop
 
-    def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
+    def set_task_owner(self, task_id: Hashable, window: Optional[gWindow]) -> None:
         try:
             hash(task_id)
         except TypeError as exc:
@@ -377,7 +421,7 @@ class GuiManager:
             raise GuiError('task owner window must be registered')
         self._task_owner_by_id[task_id] = window
 
-    def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
+    def set_task_owners(self, window: Optional[gWindow], *task_ids: Hashable) -> None:
         for task_id in task_ids:
             self.set_task_owner(task_id, window)
 
@@ -392,7 +436,7 @@ class GuiManager:
         if task_owner is not None:
             task_owner.handle_event(event)
             return
-        event_window = cast(Optional[Window], getattr(event, 'window', None))
+        event_window = cast(Optional[gWindow], getattr(event, 'window', None))
         if event_window is not None and event_window in self.windows and event_window.visible:
             event_window.handle_event(event)
             return
@@ -413,7 +457,7 @@ class GuiManager:
     def handle_event(self, event: PygameEvent) -> GuiEvent:
         return self.event_dispatcher.handle(event)
 
-    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
+    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[gWindow] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
         if widget.handle_event(event, window):
             if widget.on_activate is not None:
@@ -430,20 +474,8 @@ class GuiManager:
 
     def undraw_gui(self) -> None:
         self.renderer.undraw()
-    def arrowbox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
-        return self.add(ArrowBox(self, id, rect, direction, on_activate))
 
-    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
-        safe_text = '' if text is None else text
-        return self.add(Button(self, id, rect, style, safe_text, on_activate))
-
-    def buttongroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
-        return self.add(ButtonGroup(self, group, id, rect, style, text))
-
-    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        return self.add(Canvas(self, id, rect, backdrop, on_activate, automatic_pristine))
-
-    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+    def convert_to_screen(self, point: Tuple[int, int], window: Optional[gWindow]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         if window is not None and window not in self.windows:
@@ -454,7 +486,7 @@ class GuiManager:
             return self.lock_area((x + wx, y + wy))
         return self.lock_area(point)
 
-    def convert_to_window(self, point: Tuple[int, int], window: Optional[Window]) -> Tuple[int, int]:
+    def convert_to_window(self, point: Tuple[int, int], window: Optional[gWindow]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         if window is not None and window not in self.windows:
@@ -465,38 +497,8 @@ class GuiManager:
             return (x - wx, y - wy)
         return self.lock_area(point)
 
-    def frame(self, id: str, rect: Rect) -> Frame:
-        return self.add(Frame(self, id, rect))
-
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         return self.layout_manager.get_cell(x, y)
-
-    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
-        return self.add(Image(self, id, rect, image, automatic_pristine, scale))
-
-    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
-        if id is None:
-            self._label_sequence += 1
-            id = f'label_{self._label_sequence}'
-        return self.add(Label(self, id, position, text, shadow))
-
-    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
-        return self.add(Scrollbar(self, id, overall_rect, horizontal, style, params))
-
-    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
-        return self.add(Toggle(self, id, rect, style, pushed, pressed_text, raised_text))
-
-    def window(
-        self,
-        title: str,
-        pos: Tuple[int, int],
-        size: Tuple[int, int],
-        backdrop: Optional[str] = None,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> Window:
-        return self.add(Window(self, title, pos, size, backdrop, preamble, event_handler, postamble))
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""
@@ -554,7 +556,7 @@ class GuiManager:
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         self.current_widget = new_hover
 
-    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
+    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[gWindow]:
         if getattr(event, 'type', None) != Event.Task:
             return None
         task_id = cast(Optional[Hashable], getattr(event, 'id', None))
@@ -580,7 +582,7 @@ class GuiManager:
     def _describe_gui_object(self, gui_object: TGuiObject) -> str:
         if isinstance(gui_object, Widget):
             return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
-        if isinstance(gui_object, Window):
+        if isinstance(gui_object, gWindow):
             return (
                 f'{type(gui_object).__name__} '
                 f'pos=({gui_object.x},{gui_object.y}) size=({gui_object.width},{gui_object.height})'
@@ -595,7 +597,7 @@ class GuiManager:
 
     def _describe_widget_container(self, widget: Widget) -> str:
         window = getattr(widget, 'window', None)
-        if window is None or not isinstance(window, Window):
+        if window is None or not isinstance(window, gWindow):
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
@@ -609,7 +611,7 @@ class GuiManager:
                     return widget
         return None
 
-    def _is_registered_button_group(self, button: ButtonGroup) -> bool:
+    def _is_registered_button_group(self, button: gButtonGroup) -> bool:
         # Construction registers group membership before final GUI attachment.
         if button.surface is None:
             return True
@@ -621,7 +623,7 @@ class GuiManager:
         return False
 
     def _is_registered_object(self, gui_object: TGuiObject) -> bool:
-        if isinstance(gui_object, Window):
+        if isinstance(gui_object, gWindow):
             return gui_object in self.windows
         if isinstance(gui_object, Widget):
             if gui_object in self.widgets:
@@ -631,7 +633,7 @@ class GuiManager:
                     return True
         return False
 
-    def _resolve_active_object(self) -> Optional[Window]:
+    def _resolve_active_object(self) -> Optional[gWindow]:
         if self._active_object is None:
             return None
         if self._active_object not in self.windows:
