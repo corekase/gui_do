@@ -152,6 +152,7 @@ class Canvas(Widget):
         self.surface.blit(self.canvas, self.draw_rect)
         if self.auto_restore_pristine:
             self.restore_pristine()
+
     def focused(self) -> bool:
         """Return True when mouse is inside this canvas."""
         if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
