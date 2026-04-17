@@ -43,10 +43,6 @@ class Widget:
             return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
         return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
 
-    def get_rect(self) -> Rect:
-        """Return the screen-space rectangle used for drawing and buffering."""
-        return Rect(self.draw_rect)
-
     def set_pos(self, pos: Tuple[int, int]) -> None:
         """Move the widget without changing size."""
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -61,4 +57,3 @@ class Widget:
         """Draw the widget. Subclasses should call this first when needed."""
         if self.auto_restore_pristine:
             self.gui.restore_pristine(self.draw_rect, self.window)
-
