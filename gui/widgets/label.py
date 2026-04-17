@@ -2,7 +2,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, Tuple, Union, TYPE_CHECKING
-from ..utility.constants import colours, WidgetKind
+from ..utility.constants import colours
 from ..utility.widget import Widget
 
 if TYPE_CHECKING:
@@ -25,7 +25,6 @@ class Label(Widget):
             x = position[0] + self.gui.bitmap_factory.centre(position[2], self.draw_rect.width)
             y = position[1] + self.gui.bitmap_factory.centre(position[3], self.draw_rect.height)
             self.draw_rect.x, self.draw_rect.y = x, y
-        self.WidgetKind = WidgetKind.Label
 
     def set_label(self, text: str) -> None:
         if self._font is not None:
@@ -45,4 +44,3 @@ class Label(Widget):
             self._text_bitmap = self.gui.bitmap_factory.render_text(text, colours['text'], True)
         else:
             self._text_bitmap = self.gui.bitmap_factory.render_text(text)
-

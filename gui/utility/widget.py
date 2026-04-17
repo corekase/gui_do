@@ -2,9 +2,10 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
-from .constants import WidgetKind, GuiError
+from .constants import Event, GuiError
 
 if TYPE_CHECKING:
+    from .guimanager import GuiEvent
     from .guimanager import GuiManager
     from ..widgets.window import Window
 
@@ -44,7 +45,6 @@ class Widget:
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
         self.gui: "GuiManager" = gui
-        self.WidgetKind: Optional[WidgetKind] = None
         self.surface: Optional[Surface] = None
         self.window: Optional["Window"] = None
         self.id: str = id
@@ -67,6 +67,14 @@ class Widget:
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """Handle an input event. Subclasses return True on activation."""
+        return False
+
+    def build_gui_event(self, window: Optional["Window"] = None) -> "GuiEvent":
+        """Create the GUI event emitted when this widget activates."""
+        return self.gui.event(Event.Widget, widget_id=self.id, window=window)
+
+    def should_handle_outside_collision(self) -> bool:
+        """Return True when this widget should still process events off-collision."""
         return False
 
     def draw(self) -> None:

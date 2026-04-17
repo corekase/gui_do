@@ -6,7 +6,7 @@ from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.constants import GuiError, InteractiveState, WidgetKind, CanvasEvent
+from ..utility.constants import GuiError, InteractiveState, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
 
@@ -33,7 +33,6 @@ class Canvas(Widget):
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
         super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.Canvas
         self.canvas: Surface = pygame.surface.Surface((rect.width, rect.height)).convert()
         if backdrop is None:
             frame = Frame(gui, 'canvas_frame', Rect(0, 0, rect.width, rect.height))
@@ -159,4 +158,3 @@ class Canvas(Widget):
         if area is None:
             area = self.canvas.get_rect()
         self.canvas.blit(self.pristine, (area.x, area.y), area)
-

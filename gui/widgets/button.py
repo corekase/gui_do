@@ -2,7 +2,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.constants import ButtonStyle, WidgetKind
+from ..utility.constants import ButtonStyle
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
@@ -15,7 +15,6 @@ class Button(BaseInteractive):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None, skip_factory: bool = False) -> None:
         """Create a button and its state bitmaps."""
         super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.Button
         self.timer_id: Optional[str] = None
         if not skip_factory:
             (self.idle, self.hover, self.armed), self.hit_rect = \

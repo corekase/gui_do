@@ -2,10 +2,11 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.constants import GuiError, ButtonStyle, WidgetKind
+from ..utility.constants import Event, GuiError, ButtonStyle
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
+    from ..utility.guimanager import GuiEvent
     from ..utility.guimanager import GuiManager
     from .window import Window
 
@@ -35,7 +36,6 @@ class ButtonGroup(BaseInteractive):
         if not isinstance(group, str) or group == '':
             raise GuiError('button group name must be a non-empty string')
         super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.ButtonGroup
         self.group: str = group
         (self.idle, self.hover, self.armed), self.hit_rect = \
             self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
@@ -55,6 +55,14 @@ class ButtonGroup(BaseInteractive):
                     self.select()
                     return True
         return False
+
+    def build_gui_event(self, window: Optional["Window"] = None) -> "GuiEvent":
+        """Emit a group-selection event with mediator-resolved selected id."""
+        return self.gui.event(Event.Group, group=self.button_group, widget_id=self.button_id, window=window)
+
+    def should_handle_outside_collision(self) -> bool:
+        """Keep receiving events while selected so state can transition correctly."""
+        return self.state == InteractiveState.Armed
 
     def select(self) -> None:
         """Mark this button selected and clear the previous group selection."""

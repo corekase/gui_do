@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
-from ..utility.constants import GuiError, WidgetKind
+from ..utility.constants import GuiError
 from ..utility.resource_error import DataResourceErrorHandler
 from ..utility.widget import Widget
 
@@ -15,7 +15,6 @@ class Image(Widget):
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
         super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.Image
         image_path = self.gui.bitmap_factory.file_resource('images', image)
         try:
             self._image = pygame.image.load(image_path)

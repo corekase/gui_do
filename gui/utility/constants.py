@@ -20,17 +20,6 @@ class InteractiveState(Enum):
     Hover = 'Hover'
     Armed = 'Armed'
 
-class WidgetKind(Enum):
-    ArrowBox = 'ArrowBox'
-    Button = 'Button'
-    ButtonGroup = 'ButtonGroup'
-    Canvas = 'Canvas'
-    Frame = 'Frame'
-    Image = 'Image'
-    Label = 'Label'
-    Scrollbar = 'Scrollbar'
-    Toggle = 'Toggle'
-
 class Event(Enum):
     Pass = 'Pass'
     Quit = 'Quit'

@@ -6,7 +6,7 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
 from ..utility.widget import Widget
-from ..utility.constants import colours, GuiError, WidgetKind, Orientation, ArrowPosition, InteractiveState
+from ..utility.constants import colours, GuiError, Orientation, ArrowPosition, InteractiveState
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -115,7 +115,6 @@ class Scrollbar(Frame):
         self._bar_size: int = 0
         self._inc_size: int = 0
         super().__init__(gui, id, scroll_area_rect)
-        self.WidgetKind = WidgetKind.Scrollbar
         self._graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         total, start, size, inc = params
         self.set(total, start, size, inc)

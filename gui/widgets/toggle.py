@@ -2,7 +2,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.constants import ButtonStyle, WidgetKind, InteractiveState
+from ..utility.constants import ButtonStyle, InteractiveState
 from ..utility.interactive import BaseInteractive
 
 if TYPE_CHECKING:
@@ -25,7 +25,6 @@ class Toggle(BaseInteractive):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> None:
         """Create a toggle with separate bitmaps for raised and pushed states."""
         super().__init__(gui, id, rect)
-        self.WidgetKind = WidgetKind.Toggle
         self._pushed: bool = pushed
         if raised_text is None:
             raised_text = pressed_text
