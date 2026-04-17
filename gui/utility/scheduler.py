@@ -87,6 +87,12 @@ class TaskCompletion:
     generation: int
     future: Future[object]
 
+@dataclass
+class TaskFailure:
+    id: Hashable
+    generation: int
+    error: str
+
 class TaskEvent(BaseEvent):
     """Event emitted for task completion or failure."""
 
@@ -115,6 +121,7 @@ class Scheduler:
         self._task_message_counts: Dict[Hashable, int] = {}
         self._incoming_task_messages: SimpleQueue[TaskMessage] = SimpleQueue()
         self._incoming_task_completions: SimpleQueue[TaskCompletion] = SimpleQueue()
+        self._incoming_task_failures: SimpleQueue[TaskFailure] = SimpleQueue()
         self._task_messages: Deque[TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
         self._message_ingest_limit: Optional[int] = 256
@@ -138,8 +145,10 @@ class Scheduler:
             self._submit_ready_tasks()
             self._collect_finished_tasks()
             finished_tasks = self._tasks_finished.copy()
+        self._drain_incoming_task_failures()
         self._drain_incoming_task_messages()
         self._dispatch_task_messages()
+        self._drain_incoming_task_failures()
         return finished_tasks
 
     def get_failed_tasks(self) -> List[Tuple[Hashable, str]]:
@@ -395,8 +404,11 @@ class Scheduler:
             try:
                 message.callback(message.payload)
             except Exception as exc:
-                with self._lock:
-                    self._tasks_failed.append((message.id, f'Task message callback failed: {type(exc).__name__}: {exc}'))
+                self._enqueue_task_failure(
+                    message.id,
+                    message.generation,
+                    f'Task message callback failed: {type(exc).__name__}: {exc}',
+                )
             finally:
                 with self._lock:
                     self._decrement_message_count_locked(message.id)
@@ -434,12 +446,15 @@ class Scheduler:
                 self._task_results[task_id] = result
                 self._tasks_finished.append(task_id)
             except Exception as exc:
-                self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
+                self._enqueue_task_failure(task_id, completion.generation, f'{type(exc).__name__}: {exc}')
             finally:
                 self.tasks.pop(task_id, None)
 
     def _enqueue_task_completion(self, task_id: Hashable, generation: int, future: Future[object]) -> None:
         self._incoming_task_completions.put(TaskCompletion(id=task_id, generation=generation, future=future))
+
+    def _enqueue_task_failure(self, task_id: Hashable, generation: int, error: str) -> None:
+        self._incoming_task_failures.put(TaskFailure(id=task_id, generation=generation, error=error))
 
     def _decrement_message_count_locked(self, id: Hashable) -> None:
         count = self._task_message_counts.get(id)
@@ -476,6 +491,21 @@ class Scheduler:
                     self._decrement_message_count_locked(message.id)
                     continue
                 self._task_messages.append(message)
+
+    def _drain_incoming_task_failures(self) -> None:
+        drained: List[TaskFailure] = []
+        while True:
+            try:
+                drained.append(self._incoming_task_failures.get_nowait())
+            except Empty:
+                break
+        if not drained:
+            return
+        with self._lock:
+            for failure in drained:
+                if self._task_generation.get(failure.id) != failure.generation:
+                    continue
+                self._tasks_failed.append((failure.id, failure.error))
 
     def _remove_from_pending(self, id: Hashable) -> None:
         if id in self._pending_set:

@@ -219,6 +219,16 @@ The Mandelbrot demo uses this heavily:
 - UI applies payloads in a message callback.
 - `Event.Task` is used for completion/failure handling.
 
+## Threading and affinity rules
+
+Current Python builds still have the GIL, but scheduler worker tasks should be treated as true concurrent producers and the GUI loop as the single consumer/owner of UI state.
+
+- Only mutate widget/window/screen state from main-thread callbacks (screen/window lifecycle, widget handlers, scheduler message callbacks, and `Event.Task` handling).
+- Worker task logic should not directly touch `GuiManager`, widgets, windows, renderer objects, or pygame surfaces.
+- Worker tasks should communicate with the UI only through `scheduler.send_message(...)` and by returning a result consumed through task completion.
+- Task messages, completion notifications, and task failures are queued and then applied on the frame thread during `scheduler.update()`.
+- Removing/re-adding the same task id is generation-protected: stale worker messages/completions/failures from earlier generations are discarded.
+
 ## Timers
 
 `gui.timers.add_timer(id, duration_ms, callback)` lets you run periodic callbacks from the frame loop.
