@@ -81,6 +81,12 @@ class TaskMessage:
     payload: object
     generation: int
 
+@dataclass
+class TaskCompletion:
+    id: Hashable
+    generation: int
+    future: Future[object]
+
 class TaskEvent(BaseEvent):
     """Event emitted for task completion or failure."""
 
@@ -108,6 +114,7 @@ class Scheduler:
         self._task_generation: Dict[Hashable, int] = {}
         self._task_message_counts: Dict[Hashable, int] = {}
         self._incoming_task_messages: SimpleQueue[TaskMessage] = SimpleQueue()
+        self._incoming_task_completions: SimpleQueue[TaskCompletion] = SimpleQueue()
         self._task_messages: Deque[TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
         self._message_ingest_limit: Optional[int] = 256
@@ -408,22 +415,31 @@ class Scheduler:
         return run
 
     def _collect_finished_tasks(self) -> None:
-        for task_id in list(self._running):
-            task = self.tasks.get(task_id)
-            if task is None or task.future is None:
-                self._running.discard(task_id)
+        completed: List[TaskCompletion] = []
+        while True:
+            try:
+                completed.append(self._incoming_task_completions.get_nowait())
+            except Empty:
+                break
+        for completion in completed:
+            task_id = completion.id
+            if self._task_generation.get(task_id) != completion.generation:
                 continue
-            if not task.future.done():
+            task = self.tasks.get(task_id)
+            if task is None or task.future is not completion.future:
                 continue
             self._running.discard(task_id)
             try:
-                result = task.future.result()
+                result = completion.future.result()
                 self._task_results[task_id] = result
                 self._tasks_finished.append(task_id)
             except Exception as exc:
                 self._tasks_failed.append((task_id, f'{type(exc).__name__}: {exc}'))
             finally:
                 self.tasks.pop(task_id, None)
+
+    def _enqueue_task_completion(self, task_id: Hashable, generation: int, future: Future[object]) -> None:
+        self._incoming_task_completions.put(TaskCompletion(id=task_id, generation=generation, future=future))
 
     def _decrement_message_count_locked(self, id: Hashable) -> None:
         count = self._task_message_counts.get(id)
@@ -495,6 +511,9 @@ class Scheduler:
             if task is None:
                 continue
             task.future = self._executor.submit(task.run_callable)
+            task.future.add_done_callback(
+                lambda done_future, task_id=task_id, generation=task.generation: self._enqueue_task_completion(task_id, generation, done_future)
+            )
             self._running.add(task_id)
 
     def _validate_task_id(self, id: Hashable) -> None:
