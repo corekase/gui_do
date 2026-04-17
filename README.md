@@ -223,7 +223,7 @@ The Mandelbrot demo uses this heavily:
 
 `gui.timers.add_timer(id, duration_ms, callback)` lets you run periodic callbacks from the frame loop.
 
-The button implementation uses timers internally for repeat activation behavior while held.
+The arrow box implementation uses timers internally for repeat activation behavior while held.
 
 ## Rendering and Drawing Model
 
