@@ -7,12 +7,14 @@ from pygame.locals import K_ESCAPE
 from gui import colours, GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager
 
 class Demo:
-    # Coordinates around a cell, given as a delta table
+    # Coordinates around a cell, given as a delta table for Conway's Game of Life
     neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),
                   ( 0,  1), ( 1, -1), ( 1, 0), (1,  1))
 
+    # id's for the task scheduler the mandelbrot uses
     mandel_task_ids = ('iter', 'recu', '1', '2', '3', '4', 'can1', 'can2', 'can3', 'can4')
 
+    # a tuple of colours as (R, G, B) the mandelbrot uses
     cols = ((66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
             (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
             (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
@@ -23,7 +25,7 @@ class Demo:
         pygame.init()
         # create main window surface
         self.screen = pygame.display.set_mode((1920, 1080), FULLSCREEN | SCALED)
-        # screen rect
+        # save screen rect
         self.screen_rect = self.screen.get_rect()
         # set window caption
         pygame.display.set_caption('Demo')
@@ -45,20 +47,23 @@ class Demo:
         b1 = g1.bitmap_factory
         b1.load_cursor((1, 1), 'normal', 'cursor.png')
         b1.load_cursor((12, 12), 'hand', 'hand.png')
-        # blit a background image to the screen surface
+        # load an image that will be used for a backdrop, display it on-screen and save it for restore_pristine
         g1.set_pristine('backdrop.jpg')
         # screen label
         b1.set_font('gui_do')
         self.gui_do_label = g1.label((50, 30), 'gui_do', True)
         b1.set_font('normal')
+        # variables for moving the label around the screen
         self.gui_do_pos_x = float(self.gui_do_label.draw_rect.x)
         self.gui_do_pos_y = float(self.gui_do_label.draw_rect.y)
         self.gui_do_speed = 250.0
         self.gui_do_angle = math.radians(35.0)
         self.gui_do_last_ms = pygame.time.get_ticks()
-        # -----------------------
-
+        # general widget height
         widget_height = 28
+        # -----------------------
+        # screen widgets
+        # -----------------------
         # exit button
         g1.button('exit', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
@@ -75,7 +80,9 @@ class Demo:
         self.life_toggle = g1.toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
         self.mandel_toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        # -----------------------
         # make the button groups, buttons, and toggles window
+        # -----------------------
         x_pos, y_pos = 50, 150
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
         self.button_group_win = g1.window('Button Groups, Buttons, and Toggles',
@@ -137,7 +144,9 @@ class Demo:
         self.label4 = g1.label(g1.gridded(3, 0), f'ID: {lbg4.button_id}', True)
         self.label5 = g1.label(g1.gridded(4, 0), f'ID: {lbg5.button_id}', True)
         self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.button_id}', True)
+        # -----------------------
         # make the scrollbar window
+        # -----------------------
         y_pos += 248
         self.scrollbar_win = g1.window(
             'Scrollbars',
@@ -164,7 +173,9 @@ class Demo:
         b1.set_font('scroll')
         g1.label((x + 30, y + 215), 'Scrollbars!', True)
         b1.set_font('normal')
+        # -----------------------
         # make the Conway's Game of Life window
+        # -----------------------
         x_pos += 327
         width, height = 600, 600
         self.life_win = g1.window(
@@ -185,6 +196,9 @@ class Demo:
         g1.button('life_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
         self.toggle_life = g1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        # -----------------------
+        # make the mandelbrot window
+        # -----------------------
         width, height = 600, 600
         pos = x_pos + 607, y_pos
         mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
@@ -405,9 +419,14 @@ class Demo:
         elif event.type == Event.Quit:
             self.state_manager.set_running(False)
 
+    # main entry point of the program, invokes the engine
     def run(self):
         """Run the application using the Engine with StateManager contexts."""
         self.engine.run()
+
+    # -----------------------
+    # various methods needed for the program
+    # -----------------------
 
     def _update_gui1_window_visibility(self):
         self.button_group_win.visible = self.buttons_toggle.pushed
@@ -428,7 +447,6 @@ class Demo:
             new_positions.append((x, y, dx, dy, bitmap))
         self.positions = new_positions
 
-    # reset the life simulation to a default state
     def update_gui_do_label(self):
         now_ms = pygame.time.get_ticks()
         dt = (now_ms - self.gui_do_last_ms) / 1000.0
@@ -467,7 +485,6 @@ class Demo:
         self.gui_do_pos_y = y
         self.gui_do_label.set_pos((int(round(x)), int(round(y))))
 
-    # Canvas callback function
     def handle_Canvas(self):
         # read the event from the canvas widget
         CEvent = self.canvas.read_event()
@@ -513,7 +530,6 @@ class Demo:
                         self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
                         self.cell_size = new_size
 
-    # function to generate a cycle of life
     def generate(self):
         def population(cell):
             count = 0
