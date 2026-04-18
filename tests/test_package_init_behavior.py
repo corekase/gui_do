@@ -1,4 +1,5 @@
 import importlib
+import ctypes
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -25,7 +26,7 @@ class PackageInitBehaviorTests(unittest.TestCase):
             with self.subTest(exception_type=type(exc).__name__):
                 set_dpi = SimpleNamespace(SetProcessDPIAware=lambda: (_ for _ in ()).throw(exc))
                 fake_windll = SimpleNamespace(user32=set_dpi)
-                with patch("os.name", "nt"), patch("ctypes.windll", fake_windll):
+                with patch("os.name", "nt"), patch.object(ctypes, "windll", fake_windll, create=True):
                     # Import-time DPI setup should never escape these known failures.
                     importlib.reload(gui)
 
