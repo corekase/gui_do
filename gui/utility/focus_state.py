@@ -13,9 +13,18 @@ class FocusStateController:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _is_registered_object(self, value: Widget) -> bool:
+        override = self.gui.__dict__.get('_is_registered_object')
+        if callable(override):
+            return bool(override(value))
+        registry = getattr(self.gui, 'object_registry', None)
+        if registry is not None and hasattr(registry, 'is_registered_object'):
+            return bool(registry.is_registered_object(value))
+        return bool(self.gui._is_registered_object(value))
+
     def set_current_widget(self, value: Optional[Widget]) -> None:
         if value is not None:
-            if not isinstance(value, Widget) or not self.gui._is_registered_object(value):
+            if not isinstance(value, Widget) or not self._is_registered_object(value):
                 value = None
         current = self.resolve_current_widget()
         if current != value:
@@ -26,7 +35,7 @@ class FocusStateController:
     def resolve_current_widget(self) -> Optional[Widget]:
         if self.gui.focus_state_data.current_widget is None:
             return None
-        if not self.gui._is_registered_object(self.gui.focus_state_data.current_widget):
+        if not self._is_registered_object(self.gui.focus_state_data.current_widget):
             self.gui.focus_state_data.current_widget = None
             return None
         return self.gui.focus_state_data.current_widget

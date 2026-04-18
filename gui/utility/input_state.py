@@ -16,6 +16,15 @@ class LockStateController:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _is_registered_object(self, value: Widget) -> bool:
+        override = self.gui.__dict__.get('_is_registered_object')
+        if callable(override):
+            return bool(override(value))
+        registry = getattr(self.gui, 'object_registry', None)
+        if registry is not None and hasattr(registry, 'is_registered_object'):
+            return bool(registry.is_registered_object(value))
+        return bool(self.gui._is_registered_object(value))
+
     def set_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         if area is not None:
             if not isinstance(area, Rect):
@@ -24,7 +33,7 @@ class LockStateController:
                 raise GuiError('locking_object is required when setting a lock area')
             if not isinstance(locking_object, Widget):
                 raise GuiError('locking_object must be a widget')
-            if not self.gui._is_registered_object(locking_object):
+            if not self._is_registered_object(locking_object):
                 raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
                 raise GuiError('lock area dimensions must be positive')
@@ -50,7 +59,7 @@ class LockStateController:
             return
         if not isinstance(locking_object, Widget):
             raise GuiError('locking_object must be a widget')
-        if not self.gui._is_registered_object(locking_object):
+        if not self._is_registered_object(locking_object):
             raise GuiError('locking_object must be a registered widget')
         if point is None:
             point = self.gui.input_providers.mouse_get_pos()
@@ -73,7 +82,7 @@ class LockStateController:
         if not isinstance(locking_object, Widget):
             self.clear()
             return None
-        if not self.gui._is_registered_object(locking_object):
+        if not self._is_registered_object(locking_object):
             self.clear()
             return None
         if self.gui.lock_area_rect is None and self.gui.lock_point_pos is None:
