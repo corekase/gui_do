@@ -96,16 +96,7 @@ class RendererTests(unittest.TestCase):
 
 class LockingBehaviourTests(unittest.TestCase):
     def _build_manager_for_locking(self):
-        gui = build_gui_manager_stub()
-        gui.locking_object = Widget.__new__(Widget)
-        gui._is_registered_object = lambda _obj: True
-        gui.mouse_locked = True
-        gui.mouse_point_locked = False
-        gui.lock_area_rect = Rect(10, 20, 5, 6)
-        gui.lock_point_pos = None
-        gui.lock_point_recenter_pending = False
-        gui.lock_point_tolerance_rect = None
-        return gui
+        return build_gui_manager_stub(preset="locking")
 
     def test_lock_area_clamps_to_rect_bounds(self) -> None:
         gui = self._build_manager_for_locking()

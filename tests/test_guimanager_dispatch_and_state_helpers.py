@@ -12,11 +12,7 @@ from gui.widgets.window import Window
 
 class GuiManagerRoiBatch6Tests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = build_gui_manager_stub()
-        gui._screen_events = []
-        gui._screen_event_handler = lambda event: gui._screen_events.append(event)
-        gui.lock_area = lambda point: point
-        return gui
+        return build_gui_manager_stub(preset="routing")
 
     def test_dispatch_event_task_panel_hidden_falls_back_to_screen(self) -> None:
         gui = self._build_manager_stub()

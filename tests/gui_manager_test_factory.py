@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pygame import Rect
 
@@ -21,13 +21,45 @@ from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget_state_coordinator import WidgetStateCoordinator
 from gui.utility.workspace_coordinator import WorkspaceCoordinator
+from gui.utility.widget import Widget
+
+StubPreset = Literal["base", "routing", "locking"]
 
 
 def _default_surface() -> Any:
     return SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
 
 
-def build_gui_manager_stub(*, surface: Optional[Any] = None, include_ui_factory: bool = False) -> GuiManager:
+def _apply_preset(gui: GuiManager, preset: StubPreset) -> None:
+    if preset == "base":
+        return
+
+    if preset == "routing":
+        gui._screen_events = []
+        gui._screen_event_handler = lambda event: gui._screen_events.append(event)
+        gui.lock_area = lambda point: point
+        return
+
+    if preset == "locking":
+        gui.locking_object = Widget.__new__(Widget)
+        gui._is_registered_object = lambda _obj: True
+        gui.mouse_locked = True
+        gui.mouse_point_locked = False
+        gui.lock_area_rect = Rect(10, 20, 5, 6)
+        gui.lock_point_pos = None
+        gui.lock_point_recenter_pending = False
+        gui.lock_point_tolerance_rect = None
+        return
+
+    raise ValueError(f"unknown stub preset: {preset}")
+
+
+def build_gui_manager_stub(
+    *,
+    surface: Optional[Any] = None,
+    include_ui_factory: bool = False,
+    preset: StubPreset = "base",
+) -> GuiManager:
     gui = GuiManager.__new__(GuiManager)
 
     gui.surface = _default_surface() if surface is None else surface
@@ -86,5 +118,7 @@ def build_gui_manager_stub(*, surface: Optional[Any] = None, include_ui_factory:
 
     if include_ui_factory:
         gui.ui_factory = GuiUiFactory(gui)
+
+    _apply_preset(gui, preset)
 
     return gui
