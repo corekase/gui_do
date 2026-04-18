@@ -73,8 +73,8 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             def draw(self):
                 return None
 
-        with patch("gui.utility.guimanager.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
-            "gui.utility.guimanager.gFrame", FakeFrame
+        with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
+            "gui.utility.task_panel.gFrame", FakeFrame
         ):
             panel = gm._ManagedTaskPanel(
                 gui,
@@ -114,7 +114,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             },
         )
 
-        with patch("gui.utility.guimanager.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
+        with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
             panel = gm._ManagedTaskPanel(gui, 20, 0, 4, True, 1.0, 1, "panel.png", None, None, None)
 
         self.assertEqual(len(set_pristine_calls), 1)

@@ -68,7 +68,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.task_panel = old_panel
 
         created = _PanelStub(visible=True)
-        with patch("gui.utility.guimanager._ManagedTaskPanel", return_value=created):
+        with patch("gui.utility.task_panel._ManagedTaskPanel", return_value=created):
             GuiManager.configure_task_panel(gui)
 
         self.assertIs(gui.task_panel, created)
@@ -423,7 +423,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         created = _PanelStub(visible=True)
 
-        with patch("gui.utility.guimanager._ManagedTaskPanel", return_value=created):
+        with patch("gui.utility.task_panel._ManagedTaskPanel", return_value=created):
             GuiManager.configure_task_panel(gui)
 
         self.assertIs(gui.task_panel, created)

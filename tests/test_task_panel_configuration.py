@@ -50,7 +50,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         old_panel = OldPanelStub(widgets=[SimpleNamespace(window=None, surface=None)], visible=True)
         gui.task_panel = old_panel
 
-        with patch.object(gm, "_ManagedTaskPanel", side_effect=GuiError("panel create failed")):
+        with patch("gui.utility.task_panel._ManagedTaskPanel", side_effect=GuiError("panel create failed")):
             with self.assertRaises(GuiError):
                 gm.GuiManager.configure_task_panel(gui, height=40)
 
@@ -71,7 +71,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
             created_panels.append(panel)
             return panel
 
-        with patch.object(gm, "_ManagedTaskPanel", side_effect=create_panel):
+        with patch("gui.utility.task_panel._ManagedTaskPanel", side_effect=create_panel):
             gm.GuiManager.configure_task_panel(gui, height=40)
 
         self.assertEqual(old_panel.dispose_calls, 1)

@@ -27,7 +27,7 @@ class TaskPanelConfigCoordinator:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        from .guimanager import _ManagedTaskPanel
+        from .task_panel import _ManagedTaskPanel
 
         if type(height) is not int or height <= 0:
             raise GuiError(f'task_panel_height must be a positive int, got: {height}')
