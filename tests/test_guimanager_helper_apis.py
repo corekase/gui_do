@@ -140,7 +140,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         new_widget = Widget.__new__(Widget)
         new_widget.leave = lambda: None
         registered = {old_widget, new_widget}
-        gui._current_widget = old_widget
+        gui.focus_state_data.current_widget = old_widget
         gui._is_registered_object = lambda obj: obj in registered
 
         gui.current_widget = new_widget
@@ -388,11 +388,11 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_current_widget_property_clears_stale_registration(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._current_widget = widget
+        gui.focus_state_data.current_widget = widget
         gui._is_registered_object = lambda _obj: False
 
         self.assertIsNone(gui.current_widget)
-        self.assertIsNone(gui._current_widget)
+        self.assertIsNone(gui.focus_state_data.current_widget)
 
     def test_clear_button_groups_delegates_to_mediator(self) -> None:
         gui = self._build_manager_stub()

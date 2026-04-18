@@ -12,6 +12,7 @@ from .dispatch_bridge_coordinator import DispatchBridgeCoordinator
 from .event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
+from .focus_state_model import FocusState
 from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_event_coordinator import InputEventCoordinator
@@ -195,7 +196,7 @@ class GuiManager:
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
         self.active_window: Optional[gWindow] = None
-        self._current_widget: Optional[Widget] = None
+        self.focus_state_data: FocusState = FocusState()
         self.pristine: Optional[Surface] = None
         self.locking_object: Optional[Widget] = None
         self._buffered: bool = False

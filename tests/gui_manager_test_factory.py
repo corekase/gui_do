@@ -6,6 +6,7 @@ from pygame import Rect
 from gui.utility.dispatch_bridge_coordinator import DispatchBridgeCoordinator
 from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
+from gui.utility.focus_state_model import FocusState
 from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_event_coordinator import InputEventCoordinator
@@ -98,7 +99,7 @@ def build_gui_manager_stub(
     gui.cursor_hotspot = None
     gui.cursor_rect = None
     gui.active_window = None
-    gui._current_widget = None
+    gui.focus_state_data = FocusState()
     gui.pristine = None
     gui.locking_object = None
 

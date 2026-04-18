@@ -21,15 +21,15 @@ class FocusStateController:
         if current != value:
             if current is not None:
                 current.leave()
-            self.gui._current_widget = value
+            self.gui.focus_state_data.current_widget = value
 
     def resolve_current_widget(self) -> Optional[Widget]:
-        if self.gui._current_widget is None:
+        if self.gui.focus_state_data.current_widget is None:
             return None
-        if not self.gui._is_registered_object(self.gui._current_widget):
-            self.gui._current_widget = None
+        if not self.gui._is_registered_object(self.gui.focus_state_data.current_widget):
+            self.gui.focus_state_data.current_widget = None
             return None
-        return self.gui._current_widget
+        return self.gui.focus_state_data.current_widget
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         self.set_current_widget(new_hover)

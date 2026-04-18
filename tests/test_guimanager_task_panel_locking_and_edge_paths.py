@@ -161,7 +161,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
         # _resolve_current_widget returns current when registered.
         widget = Widget.__new__(Widget)
-        gui._current_widget = widget
+        gui.focus_state_data.current_widget = widget
         gui._is_registered_object = lambda obj: obj is widget
         self.assertIs(GuiManager._resolve_current_widget(gui), widget)
 
@@ -399,13 +399,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         widget = Widget.__new__(Widget)
         leave_calls = []
         widget.leave = lambda: leave_calls.append(True)
-        gui._current_widget = widget
+        gui.focus_state_data.current_widget = widget
         gui._is_registered_object = lambda obj: obj is widget
 
         GuiManager.current_widget.fset(gui, widget)
 
         self.assertEqual(leave_calls, [])
-        self.assertIs(gui._current_widget, widget)
+        self.assertIs(gui.focus_state_data.current_widget, widget)
 
     def test_label_wrapper_explicit_id_path(self) -> None:
         import gui.utility.guimanager as gm
@@ -590,12 +590,12 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_current_widget_assignment_from_none_registered_path(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._current_widget = None
+        gui.focus_state_data.current_widget = None
         gui._is_registered_object = lambda obj: obj is widget
 
         GuiManager.current_widget.fset(gui, widget)
 
-        self.assertIs(gui._current_widget, widget)
+        self.assertIs(gui.focus_state_data.current_widget, widget)
 
     def test_run_preamble_postamble_hidden_panel_branches(self) -> None:
         gui = self._build_manager_stub()
