@@ -33,7 +33,16 @@ Run the full unit test suite locally from repo root:
 python -m unittest discover -s tests -v
 ```
 
-The same command is run in CI by the GitHub Actions workflow:
+Run tests with coverage (line + branch) locally:
+
+```bash
+python -m pip install coverage
+python -m coverage run --rcfile=.coveragerc -m unittest discover -s tests -v
+python -m coverage report -m
+python -m coverage xml -o coverage.xml
+```
+
+CI runs tests under coverage and uploads `coverage.xml` artifacts for each matrix job via:
 
 - `.github/workflows/unittest.yml`
 

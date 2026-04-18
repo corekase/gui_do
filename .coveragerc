@@ -1,0 +1,11 @@
+[run]
+branch = True
+source =
+    gui
+
+[report]
+show_missing = True
+skip_covered = False
+omit =
+    tests/*
+    gui_do_demo.py
