@@ -418,9 +418,6 @@ class GuiManager:
     def update_active_window(self) -> None:
         self.focus_state.update_active_window()
 
-    def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[gWindow]:
-        return self.event_delivery.resolve_task_event_owner(event)
-
     def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
         if coverage <= 0.0 or coverage > 1.0:
             raise GuiError(f'coverage must be in the range (0, 1], got: {coverage}')

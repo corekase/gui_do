@@ -69,7 +69,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui = self._build_manager_stub()
         event = SimpleNamespace(type=Event.KeyDown, id="task-1")
 
-        owner = GuiManager._resolve_task_event_owner(gui, event)
+        owner = gui.event_delivery.resolve_task_event_owner(event)
 
         self.assertIsNone(owner)
 
@@ -77,7 +77,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui = self._build_manager_stub()
         event = SimpleNamespace(type=Event.Task, id=[])
 
-        owner = GuiManager._resolve_task_event_owner(gui, event)
+        owner = gui.event_delivery.resolve_task_event_owner(event)
 
         self.assertIsNone(owner)
 
@@ -92,8 +92,8 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         hidden_event = SimpleNamespace(type=Event.Task, id="hidden-task")
         missing_event = SimpleNamespace(type=Event.Task, id="missing")
 
-        owner_hidden = GuiManager._resolve_task_event_owner(gui, hidden_event)
-        owner_missing = GuiManager._resolve_task_event_owner(gui, missing_event)
+        owner_hidden = gui.event_delivery.resolve_task_event_owner(hidden_event)
+        owner_missing = gui.event_delivery.resolve_task_event_owner(missing_event)
 
         self.assertIsNone(owner_hidden)
         self.assertIsNone(owner_missing)
@@ -105,7 +105,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui.event_delivery._task_owner_by_id["task-ok"] = owner
         event = SimpleNamespace(type=Event.Task, id="task-ok")
 
-        resolved = GuiManager._resolve_task_event_owner(gui, event)
+        resolved = gui.event_delivery.resolve_task_event_owner(event)
 
         self.assertIs(resolved, owner)
 
