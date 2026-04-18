@@ -118,6 +118,19 @@ class SliderWidgetContractTests(unittest.TestCase):
         self.assertEqual(slider.state, InteractiveState.Disabled)
         self.assertFalse(slider._dragging)
 
+    def test_disabled_slider_does_not_process_input(self) -> None:
+        slider = self._build_slider()
+        slider._dragging = True
+        slider.disabled = True
+        lock_calls_before = len(slider._lock_calls)  # type: ignore[attr-defined]
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None)
+
+        self.assertFalse(handled)
+        self.assertFalse(slider._dragging)
+        self.assertEqual(slider.state, InteractiveState.Disabled)
+        self.assertEqual(len(slider._lock_calls), lock_calls_before)  # type: ignore[attr-defined]
+
     def test_graphical_range_respects_orientation(self) -> None:
         slider = Slider.__new__(Slider)
         slider._disabled = False
