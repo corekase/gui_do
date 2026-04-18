@@ -24,6 +24,7 @@ from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
 from .render_coordinator import RenderCoordinator
 from .renderer import Renderer
+from .task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
 from .widget_state_coordinator import WidgetStateCoordinator
 from .workspace_coordinator import WorkspaceCoordinator
@@ -377,6 +378,7 @@ class GuiManager:
         self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.render_flow: RenderCoordinator = RenderCoordinator(self)
+        self.task_panel_config: TaskPanelConfigCoordinator = TaskPanelConfigCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
@@ -410,57 +412,18 @@ class GuiManager:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        if type(height) is not int or height <= 0:
-            raise GuiError(f'task_panel_height must be a positive int, got: {height}')
-        if type(x) is not int:
-            raise GuiError(f'task_panel_x must be an int, got: {x}')
-        if type(reveal_pixels) is not int or reveal_pixels < 1:
-            raise GuiError(f'task_panel_reveal_pixels must be >= 1, got: {reveal_pixels}')
-        if type(auto_hide) is not bool:
-            raise GuiError('task_panel_auto_hide must be a bool')
-        if type(movement_step) is not int or movement_step <= 0:
-            raise GuiError(f'task_panel_movement_step must be > 0, got: {movement_step}')
-        if isinstance(timer_interval, bool) or not isinstance(timer_interval, (int, float)) or timer_interval <= 0:
-            raise GuiError(f'task_panel_timer_interval must be > 0, got: {timer_interval}')
-        if backdrop is not None and (not isinstance(backdrop, str) or backdrop == ''):
-            raise GuiError(f'task_panel_backdrop must be a non-empty string or None, got: {backdrop!r}')
-        if preamble is not None and not callable(preamble):
-            raise GuiError('task panel preamble must be callable or None')
-        if event_handler is not None and not callable(event_handler):
-            raise GuiError('task panel event_handler must be callable or None')
-        if postamble is not None and not callable(postamble):
-            raise GuiError('task panel postamble must be callable or None')
-        old_panel = self.task_panel
-        existing_widgets: List[Widget] = []
-        existing_visible = True
-        if old_panel is not None:
-            existing_widgets = list(old_panel.widgets)
-            existing_visible = old_panel.visible
-        panel = _ManagedTaskPanel(
-            self,
-            height,
-            x,
-            reveal_pixels,
-            auto_hide,
-            timer_interval,
-            movement_step,
-            backdrop,
-            preamble,
-            event_handler,
-            postamble,
+        self.task_panel_config.configure_task_panel(
+            height=height,
+            x=x,
+            reveal_pixels=reveal_pixels,
+            auto_hide=auto_hide,
+            timer_interval=timer_interval,
+            movement_step=movement_step,
+            backdrop=backdrop,
+            preamble=preamble,
+            event_handler=event_handler,
+            postamble=postamble,
         )
-        if old_panel is not None:
-            old_panel.dispose()
-        if existing_widgets:
-            panel.widgets = existing_widgets
-            for widget in panel.widgets:
-                widget.window = cast(Any, panel)
-                widget.surface = panel.surface
-        if old_panel is not None:
-            panel.set_visible(existing_visible)
-            if not existing_visible:
-                self._task_panel_capture = False
-        self.task_panel = panel
 
     def run_postamble(self) -> None:
         self.lifecycle.run_postamble()

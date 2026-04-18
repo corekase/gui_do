@@ -14,6 +14,7 @@ from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
+from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
@@ -62,6 +63,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.graphics = GraphicsCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
         gui.pointer = PointerCoordinator(gui)
+        gui.task_panel_config = TaskPanelConfigCoordinator(gui)
         gui.workspace = WorkspaceCoordinator(gui)
         return gui
 

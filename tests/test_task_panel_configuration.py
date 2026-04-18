@@ -5,6 +5,7 @@ from unittest.mock import patch
 from pygame import Rect
 
 from gui.utility.constants import GuiError
+from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility import guimanager as gm
 
 
@@ -35,6 +36,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         gui = gm.GuiManager.__new__(gm.GuiManager)
         gui.task_panel = None
         gui._task_panel_capture = True
+        gui.task_panel_config = TaskPanelConfigCoordinator(gui)
         return gui
 
     def test_configure_task_panel_rejects_invalid_auto_hide_type(self) -> None:
