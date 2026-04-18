@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
-from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.events import ArrowPosition, GuiError, InteractiveState, Orientation
@@ -28,11 +28,14 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar._last_mouse_pos = None
         scrollbar._subwidgets_bound = False
         scrollbar._registered = []
+        scrollbar.draw_rect = Rect(0, 0, 200, 40)
+        scrollbar.hit_rect = None
         scrollbar._increment_rect = Rect(50, 10, 20, 20)
         scrollbar._decrement_rect = Rect(10, 10, 20, 20)
         scrollbar._inc_degree = 0
         scrollbar._dec_degree = 180
         scrollbar._visible = True
+        scrollbar._wheel_positive_to_max = False
         return scrollbar
 
     def test_visible_setter_validates_and_propagates(self) -> None:
@@ -173,6 +176,44 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         self.assertEqual(scrollbar.state, InteractiveState.Idle)
         self.assertEqual(lock_calls, [(None, None)])
 
+    def test_mousewheel_on_hover_decrements_towards_zero_by_default(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        scrollbar._start_pos = 10
+        scrollbar._inc_size = 2
+        scrollbar.draw_rect = Rect(0, 0, 200, 40)
+        scrollbar.gui = build_mouse_gui_stub(mouse_pos=scrollbar.draw_rect.center)
+
+        handled = scrollbar.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(scrollbar._start_pos, 8)
+        self.assertEqual(scrollbar.state, InteractiveState.Hover)
+
+    def test_mousewheel_on_hover_increments_towards_max_when_enabled(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        scrollbar._start_pos = 10
+        scrollbar._inc_size = 2
+        scrollbar._wheel_positive_to_max = True
+        scrollbar.draw_rect = Rect(0, 0, 200, 40)
+        scrollbar.gui = build_mouse_gui_stub(mouse_pos=scrollbar.draw_rect.center)
+
+        handled = scrollbar.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(scrollbar._start_pos, 12)
+        self.assertEqual(scrollbar.state, InteractiveState.Hover)
+
+    def test_mousewheel_ignores_events_when_not_hovered(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        scrollbar._start_pos = 10
+        scrollbar.draw_rect = Rect(0, 0, 200, 40)
+        scrollbar.gui = build_mouse_gui_stub(mouse_pos=(999, 999))
+
+        handled = scrollbar.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertFalse(handled)
+        self.assertEqual(scrollbar._start_pos, 10)
+
     def test_on_added_to_gui_validates_geometry_and_binds_arrows(self) -> None:
         scrollbar = self._build_scrollbar_stub()
         scrollbar._increment_rect = None
@@ -246,6 +287,18 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
                 Orientation.Horizontal,
                 "bad-style",  # type: ignore[arg-type]
                 (10, 0, 5, 1),
+            )
+
+    def test_constructor_validates_wheel_positive_to_max_type(self) -> None:
+        with self.assertRaises(GuiError):
+            Scrollbar(
+                SimpleNamespace(),
+                "sb",
+                Rect(0, 0, 100, 20),
+                Orientation.Horizontal,
+                ArrowPosition.Skip,
+                (10, 0, 5, 1),
+                wheel_positive_to_max=1,  # type: ignore[arg-type]
             )
 
 

@@ -4,7 +4,7 @@ from pygame.event import Event as PygameEvent
 from typing import List, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 from pygame.draw import rect
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
+from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP, MOUSEWHEEL
 from .arrowbox import ArrowBox
 from .frame import Frame
 from ..utility.intermediates.axis_range import AxisRangeMixin
@@ -64,10 +64,22 @@ class Scrollbar(Frame, AxisRangeMixin):
         if value:
             self._reset()
 
-    def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
+    def __init__(
+        self,
+        gui: "GuiManager",
+        id: str,
+        overall_rect: Rect,
+        horizontal: Orientation,
+        style: ArrowPosition,
+        params: Tuple[int, int, int, int],
+        wheel_positive_to_max: bool = False,
+    ) -> None:
         """Create Scrollbar."""
+        if not isinstance(wheel_positive_to_max, bool):
+            raise GuiError(f'wheel_positive_to_max must be a bool, got: {wheel_positive_to_max}')
         self._registered: List[ArrowBox] = []
         self._subwidgets_bound: bool = False
+        self._wheel_positive_to_max: bool = wheel_positive_to_max
         self._style: ArrowPosition = style
         self._set_orientation(horizontal)
         self._overall_rect: Rect = Rect(overall_rect)
@@ -165,8 +177,25 @@ class Scrollbar(Frame, AxisRangeMixin):
         if self._hit:
             self._hit = False
             return True
-        if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
+        if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP, MOUSEWHEEL):
             return False
+        if event.type == MOUSEWHEEL:
+            if self._dragging or not self.get_collide(window):
+                return False
+            wheel_delta = int(getattr(event, 'y', 0))
+            if wheel_delta == 0:
+                return False
+            direction = 1 if wheel_delta > 0 else -1
+            if not self._wheel_positive_to_max:
+                direction *= -1
+            max_start_pos = self._total_range - self._bar_size
+            self._start_pos += direction * abs(wheel_delta) * self._inc_size
+            if self._start_pos < 0:
+                self._start_pos = 0
+            if self._start_pos > max_start_pos:
+                self._start_pos = max_start_pos
+            self.state = InteractiveState.Hover
+            return True
         point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self._handle_area().collidepoint(point):
             if getattr(event, 'button', None) == 1:

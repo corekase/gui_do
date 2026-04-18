@@ -7,6 +7,7 @@ from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEMOTION
 
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.events import ButtonStyle, Event, InteractiveState, GuiError
+from gui.utility.intermediates.buttongroup_mediator import ButtonGroupMediator
 from gui.utility.intermediates.interactive import BaseInteractive
 from gui.widgets.buttongroup import ButtonGroup
 
@@ -130,6 +131,17 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
         self.assertEqual(len(mediator.register_calls), 1)
         self.assertIs(mediator.get_selection("grp"), button)
         self.assertEqual(button.state, InteractiveState.Armed)
+
+    def test_buttongroup_init_keeps_first_button_armed_before_registration(self) -> None:
+        gui = self._build_gui_stub()
+        registered = set()
+        gui.button_group_mediator = ButtonGroupMediator(lambda button: button in registered)
+
+        button = ButtonGroup(gui, "grp", "id", Rect(0, 0, 10, 10), ButtonStyle.Box, "x")
+
+        self.assertEqual(button.state, InteractiveState.Armed)
+        registered.add(button)
+        self.assertIs(gui.button_group_mediator.get_selection("grp"), button)
 
     def test_buttongroup_handle_event_non_mouse_is_ignored(self) -> None:
         gui = self._build_gui_stub()

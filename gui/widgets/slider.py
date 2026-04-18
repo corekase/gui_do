@@ -3,7 +3,7 @@ from __future__ import annotations
 from pygame import Rect, SRCALPHA
 from pygame.draw import line, rect
 from pygame.event import Event as PygameEvent
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
 
@@ -39,6 +39,8 @@ class Slider(Widget, AxisRangeMixin):
         position: float = 0.0,
         integer_type: bool = False,
         notch_interval_percent: float = 5.0,
+        wheel_positive_to_max: bool = False,
+        wheel_step: Optional[float] = None,
     ) -> None:
         """Create Slider."""
         super().__init__(gui, id, rect)
@@ -51,11 +53,21 @@ class Slider(Widget, AxisRangeMixin):
             raise GuiError(f'notch_interval_percent must be a number, got: {notch_interval_percent}')
         if notch_interval_percent <= 0 or notch_interval_percent > 100:
             raise GuiError(f'notch_interval_percent must be in (0, 100], got: {notch_interval_percent}')
+        if not isinstance(wheel_positive_to_max, bool):
+            raise GuiError(f'wheel_positive_to_max must be a bool, got: {wheel_positive_to_max}')
+        if wheel_step is not None:
+            if not isinstance(wheel_step, (int, float)):
+                raise GuiError(f'wheel_step must be None or a number, got: {wheel_step}')
+            if float(wheel_step) <= 0.0:
+                raise GuiError(f'wheel_step must be > 0 when provided, got: {wheel_step}')
 
         self._total_range: int = total_range
         self._integer_type: bool = integer_type
         self._notch_interval_percent: float = float(notch_interval_percent)
+        self._wheel_positive_to_max: bool = wheel_positive_to_max
+        self._wheel_step: Optional[float] = None if wheel_step is None else float(wheel_step)
         self.state: InteractiveState = InteractiveState.Idle
+        self._wheel_active: bool = False
         self._dragging: bool = False
         self._drag_anchor_offset: int = 0
 
@@ -96,8 +108,10 @@ class Slider(Widget, AxisRangeMixin):
         """Keep interaction state and lock semantics in sync with disabled state."""
         if disabled:
             self._reset_drag()
+            self._wheel_active = False
             self.state = InteractiveState.Disabled
         else:
+            self._wheel_active = False
             self.state = InteractiveState.Idle
 
     def _build_track_bitmap(self) -> Surface:
@@ -163,6 +177,21 @@ class Slider(Widget, AxisRangeMixin):
             return Rect(self._graphic_rect.x + pixel_point, self._graphic_rect.y, self._handle_size, self._handle_size)
         return Rect(self._graphic_rect.x, self._graphic_rect.y + pixel_point, self._handle_size, self._handle_size)
 
+    def _wheel_hit_area(self) -> Rect:
+        """Return wheel-hit corridor matching handle thickness across full bar travel."""
+        if self._horizontal == Orientation.Horizontal:
+            return Rect(self._graphic_rect.x, self._graphic_rect.y, self._graphic_rect.width + self._handle_size, self._handle_size)
+        return Rect(self._graphic_rect.x, self._graphic_rect.y, self._handle_size, self._graphic_rect.height + self._handle_size)
+
+    def _resolve_wheel_step(self) -> float:
+        """Return per-notch logical wheel movement for this slider."""
+        if self._wheel_step is None:
+            default_step = float(self._total_range) * 0.1
+            if self._integer_type:
+                return float(round(default_step))
+            return default_step
+        return self._wheel_step
+
     def _topmost_window_at_mouse(self) -> Optional["Window"]:
         """Return the topmost visible window currently under the mouse position."""
         mouse_pos = self.gui.get_mouse_pos()
@@ -198,6 +227,7 @@ class Slider(Widget, AxisRangeMixin):
         """Reset hover state when focus leaves this widget."""
         if self._dragging:
             return
+        self._wheel_active = False
         if self.disabled:
             self.state = InteractiveState.Disabled
         else:
@@ -207,8 +237,22 @@ class Slider(Widget, AxisRangeMixin):
         """Handle dragging interactions for slider handle movement."""
         if self.disabled:
             return False
-        if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
+        if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP, MOUSEWHEEL):
             return False
+        if event.type == MOUSEWHEEL:
+            mouse_point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
+            if self._dragging or not self._wheel_hit_area().collidepoint(mouse_point):
+                return False
+            wheel_delta = int(getattr(event, 'y', 0))
+            if wheel_delta == 0:
+                return False
+            direction = 1 if wheel_delta > 0 else -1
+            if not self._wheel_positive_to_max:
+                direction *= -1
+            self.value = self.value + (direction * abs(wheel_delta) * self._resolve_wheel_step())
+            self._wheel_active = True
+            self.state = InteractiveState.Armed
+            return True
         if event.type in (MOUSEMOTION, MOUSEBUTTONUP):
             if self._cancel_drag_for_overlay_contact(window):
                 return True
@@ -241,7 +285,11 @@ class Slider(Widget, AxisRangeMixin):
 
         if event.type == MOUSEMOTION:
             if not self._dragging:
-                if self._handle_area().collidepoint(mouse_point):
+                if self._wheel_active and not self._wheel_hit_area().collidepoint(mouse_point):
+                    self._wheel_active = False
+                if self._wheel_active:
+                    self.state = InteractiveState.Armed
+                elif self._handle_area().collidepoint(mouse_point):
                     self.state = InteractiveState.Hover
                 else:
                     self.state = InteractiveState.Idle
@@ -257,7 +305,9 @@ class Slider(Widget, AxisRangeMixin):
         if getattr(event, 'button', None) != 1 or not self._dragging:
             return False
         self._reset_drag()
-        if self._handle_area().collidepoint(mouse_point):
+        if self._wheel_active and self._wheel_hit_area().collidepoint(mouse_point):
+            self.state = InteractiveState.Armed
+        elif self._handle_area().collidepoint(mouse_point):
             self.state = InteractiveState.Hover
         else:
             self.state = InteractiveState.Idle

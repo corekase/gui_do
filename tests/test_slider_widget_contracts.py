@@ -1,9 +1,10 @@
 import unittest
 from types import SimpleNamespace
+from typing import Optional
 
 import pygame
 from pygame import Rect, SRCALPHA
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.events import GuiError, InteractiveState, Orientation
@@ -30,6 +31,8 @@ class SliderWidgetContractTests(unittest.TestCase):
         total_range: int = 10,
         notch_interval_percent: float = 5.0,
         position: float = 0.0,
+        wheel_positive_to_max: bool = False,
+        wheel_step: Optional[float] = None,
     ) -> Slider:
         lock_calls = []
         gui = build_mouse_gui_stub(
@@ -37,7 +40,18 @@ class SliderWidgetContractTests(unittest.TestCase):
             set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
             extras={"graphics_factory": _FakeGraphicsFactory()},
         )
-        slider = Slider(gui, "slider", Rect(0, 0, 120, 20), orientation, total_range, position, integer_type, notch_interval_percent)
+        slider = Slider(
+            gui,
+            "slider",
+            Rect(0, 0, 120, 20),
+            orientation,
+            total_range,
+            position,
+            integer_type,
+            notch_interval_percent,
+            wheel_positive_to_max,
+            wheel_step,
+        )
         slider._lock_calls = lock_calls  # type: ignore[attr-defined]
         return slider
 
@@ -131,6 +145,111 @@ class SliderWidgetContractTests(unittest.TestCase):
         self.assertFalse(slider._dragging)
         self.assertEqual(slider.state, InteractiveState.Disabled)
         self.assertEqual(len(slider._lock_calls), lock_calls_before)  # type: ignore[attr-defined]
+
+    def test_mousewheel_on_hover_decrements_towards_zero_by_default(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=False)
+        slider.gui.set_mouse_pos(slider.draw_rect.center)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 4.0)
+        self.assertEqual(slider.state, InteractiveState.Armed)
+
+    def test_mousewheel_on_hover_increments_towards_max_when_enabled(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
+        slider.gui.set_mouse_pos(slider.draw_rect.center)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 6.0)
+        self.assertEqual(slider.state, InteractiveState.Armed)
+
+    def test_mousewheel_activation_persists_until_cursor_leaves_hit_corridor(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
+        in_corridor = (slider._wheel_hit_area().left + 1, slider._wheel_hit_area().centery)
+        out_of_corridor = (slider.draw_rect.left + 1, slider.draw_rect.top + 1)
+        self.assertTrue(slider._wheel_hit_area().collidepoint(in_corridor))
+        self.assertFalse(slider._wheel_hit_area().collidepoint(out_of_corridor))
+
+        slider.gui.set_mouse_pos(in_corridor)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None))
+        self.assertEqual(slider.state, InteractiveState.Armed)
+
+        slider.gui.set_mouse_pos((slider._wheel_hit_area().left + 2, slider._wheel_hit_area().centery))
+        self.assertFalse(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+        self.assertEqual(slider.state, InteractiveState.Armed)
+
+        slider.gui.set_mouse_pos(out_of_corridor)
+        self.assertFalse(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+        self.assertEqual(slider.state, InteractiveState.Idle)
+
+    def test_mousewheel_ignores_events_when_not_hovered(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
+        slider.gui.set_mouse_pos((999, 999))
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertFalse(handled)
+        self.assertEqual(slider.value, 5.0)
+
+    def test_mousewheel_ignores_points_inside_slider_but_outside_wheel_hit_corridor(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
+        inside_widget_outside_handle = (slider.draw_rect.left + 1, slider.draw_rect.top + 1)
+        self.assertTrue(slider.draw_rect.collidepoint(inside_widget_outside_handle))
+        self.assertFalse(slider._wheel_hit_area().collidepoint(inside_widget_outside_handle))
+        slider.gui.set_mouse_pos(inside_widget_outside_handle)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertFalse(handled)
+        self.assertEqual(slider.value, 5.0)
+
+    def test_mousewheel_accepts_points_inside_corridor_but_outside_handle(self) -> None:
+        slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
+        inside_corridor_outside_handle = (slider._wheel_hit_area().left + 1, slider._wheel_hit_area().centery)
+        self.assertTrue(slider._wheel_hit_area().collidepoint(inside_corridor_outside_handle))
+        self.assertFalse(slider._handle_area().collidepoint(inside_corridor_outside_handle))
+        slider.gui.set_mouse_pos(inside_corridor_outside_handle)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 6.0)
+
+    def test_mousewheel_default_step_is_ten_percent_of_total_range(self) -> None:
+        slider = self._build_slider(total_range=200, position=100.0, wheel_positive_to_max=True, wheel_step=None)
+        slider.gui.set_mouse_pos(slider._wheel_hit_area().center)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 120.0)
+
+    def test_mousewheel_default_step_rounds_to_nearest_int_for_integer_sliders(self) -> None:
+        slider = self._build_slider(
+            total_range=95,
+            position=10.0,
+            integer_type=True,
+            wheel_positive_to_max=True,
+            wheel_step=None,
+        )
+        slider.gui.set_mouse_pos(slider._wheel_hit_area().center)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 20.0)
+
+    def test_mousewheel_uses_explicit_numeric_step(self) -> None:
+        slider = self._build_slider(total_range=50, position=5.0, wheel_positive_to_max=True, wheel_step=2.5)
+        slider.gui.set_mouse_pos(slider._wheel_hit_area().center)
+
+        handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 2}), None)
+
+        self.assertTrue(handled)
+        self.assertEqual(slider.value, 10.0)
 
     def test_graphical_range_respects_orientation(self) -> None:
         slider = Slider.__new__(Slider)
@@ -315,6 +434,18 @@ class SliderWidgetContractTests(unittest.TestCase):
             self._build_slider(notch_interval_percent=0.0)
         with self.assertRaises(GuiError):
             self._build_slider(notch_interval_percent=101.0)
+
+    def test_constructor_validates_wheel_positive_to_max_type(self) -> None:
+        with self.assertRaises(GuiError):
+            self._build_slider(wheel_positive_to_max=1)  # type: ignore[arg-type]
+
+    def test_constructor_validates_wheel_step(self) -> None:
+        with self.assertRaises(GuiError):
+            self._build_slider(wheel_step="step")  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            self._build_slider(wheel_step=0)
+        with self.assertRaises(GuiError):
+            self._build_slider(wheel_step=-1.0)
 
     def test_handle_size_is_reduced_by_twenty_percent(self) -> None:
         slider = self._build_slider()

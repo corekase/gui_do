@@ -45,9 +45,10 @@ class ButtonGroup(BaseInteractive):
         self.armed = visuals.armed
         self.disabled_graphic = visuals.disabled
         self.hit_rect = visuals.hit_rect
+        selected_before_register = self.gui.button_group_mediator.get_selection(group)
         self.gui.button_group_mediator.register(group, self)
-        if self.gui.button_group_mediator.get_selection(group) is self:
-            self.select()
+        if selected_before_register is None:
+            self.state = InteractiveState.Armed
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle event."""

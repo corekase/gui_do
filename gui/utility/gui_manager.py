@@ -278,9 +278,17 @@ class GuiManager:
         """Label."""
         return self.ui_factory.label(position, text, shadow, id)
 
-    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
+    def scrollbar(
+        self,
+        id: str,
+        overall_rect: Rect,
+        horizontal: Orientation,
+        style: ArrowPosition,
+        params: Tuple[int, int, int, int],
+        wheel_positive_to_max: bool = False,
+    ) -> Scrollbar:
         """Scrollbar."""
-        return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params)
+        return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max)
 
     def slider(
         self,
@@ -291,9 +299,21 @@ class GuiManager:
         position: float = 0.0,
         integer_type: bool = False,
         notch_interval_percent: float = 5.0,
+        wheel_positive_to_max: bool = False,
+        wheel_step: Optional[float] = None,
     ) -> Slider:
         """Slider."""
-        return self.ui_factory.slider(id, rect, horizontal, total_range, position, integer_type, notch_interval_percent)
+        return self.ui_factory.slider(
+            id,
+            rect,
+            horizontal,
+            total_range,
+            position,
+            integer_type,
+            notch_interval_percent,
+            wheel_positive_to_max,
+            wheel_step,
+        )
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         """Toggle."""
