@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pygame
 from collections import deque
 import logging

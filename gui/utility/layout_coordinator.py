@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Tuple, TYPE_CHECKING, Union
 
 from pygame import Rect

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict, Optional, Protocol, TYPE_CHECKING, Tuple
 
 from pygame import Rect

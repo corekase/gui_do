@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 from .events import InteractiveState
 

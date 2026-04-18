@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Hashable, Optional
 
 from ..events import BaseEvent, Event

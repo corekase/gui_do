@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pygame.event import Event as PygameEvent
 from typing import List, Optional, Tuple, TYPE_CHECKING
 from pygame import Rect

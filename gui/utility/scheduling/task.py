@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from concurrent.futures import Future
 from typing import Callable, Hashable, Optional

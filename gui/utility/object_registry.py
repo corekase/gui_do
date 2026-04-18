@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Optional, TYPE_CHECKING, TypeVar, cast
 
 from .events import GuiError

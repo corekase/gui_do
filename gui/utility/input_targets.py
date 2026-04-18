@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from dataclasses import dataclass

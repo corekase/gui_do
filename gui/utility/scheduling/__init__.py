@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .task_kind import TaskKind
 from .interval import Interval
 from .timers import Timers

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Hashable, Optional, TYPE_CHECKING, cast
 
 from .events import Event, GuiError

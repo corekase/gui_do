@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from typing import TYPE_CHECKING

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import pygame
 from typing import Any, Callable, Hashable, List, Optional

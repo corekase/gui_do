@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .widget import Widget
 from pygame import Rect
 from pygame.event import Event as PygameEvent

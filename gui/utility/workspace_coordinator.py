@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict, TYPE_CHECKING
 
 from .events import GuiError

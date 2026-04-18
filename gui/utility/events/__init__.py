@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .colors import colours
 from .gui_error import GuiError
 from .interactive_state import InteractiveState

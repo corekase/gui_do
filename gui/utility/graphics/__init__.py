@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .cursor_asset import CursorAsset
 from .interactive_visuals import InteractiveVisuals
 from .window_chrome_visuals import WindowChromeVisuals

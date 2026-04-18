@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Callable, Iterable, Tuple
 
 from pygame.event import Event as PygameEvent

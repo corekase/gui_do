@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pygame import Rect
 from pygame.surface import Surface
 from typing import List, Tuple, TYPE_CHECKING
