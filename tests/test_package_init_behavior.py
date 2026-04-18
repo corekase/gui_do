@@ -1,4 +1,3 @@
-import importlib
 import ctypes
 import unittest
 from types import SimpleNamespace
@@ -28,7 +27,7 @@ class PackageInitBehaviorTests(unittest.TestCase):
                 fake_windll = SimpleNamespace(user32=set_dpi)
                 with patch("os.name", "nt"), patch.object(ctypes, "windll", fake_windll, create=True):
                     with self.assertRaises(type(exc)):
-                        importlib.reload(gui)
+                        gui._enable_windows_dpi_awareness()
 
 
 if __name__ == "__main__":
