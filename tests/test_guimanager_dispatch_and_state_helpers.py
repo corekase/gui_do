@@ -123,8 +123,8 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         window.width = 30
         window.height = 40
 
-        text = GuiManager._describe_gui_object(gui, window)
-        fallback = GuiManager._describe_gui_object(gui, 123)  # type: ignore[arg-type]
+        text = gui.object_registry.describe_gui_object(window)
+        fallback = gui.object_registry.describe_gui_object(123)  # type: ignore[arg-type]
 
         self.assertIn("Window", text)
         self.assertIn("pos=(1,2)", text)
@@ -144,19 +144,19 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.task_panel = SimpleNamespace(widgets=[panel_widget])
         gui.windows = [SimpleNamespace(widgets=[window_widget])]
 
-        conflict = GuiManager._find_widget_id_conflict(gui, "dup", candidate)
+        conflict = gui.object_registry.find_widget_id_conflict("dup", candidate)
         self.assertIs(conflict, panel_widget)
 
         panel_widget.id = "none"
         window_widget.id = "dup"
-        conflict = GuiManager._find_widget_id_conflict(gui, "dup", candidate)
+        conflict = gui.object_registry.find_widget_id_conflict("dup", candidate)
         self.assertIs(conflict, window_widget)
 
     def test_is_registered_button_group_and_object_paths(self) -> None:
         gui = self._build_manager_stub()
         button = SimpleNamespace(surface=None)
 
-        self.assertTrue(GuiManager._is_registered_button_group(gui, button))
+        self.assertTrue(gui.object_registry.is_registered_button_group(button))
 
         screen_widget = Widget.__new__(Widget)
         panel_widget = Widget.__new__(Widget)

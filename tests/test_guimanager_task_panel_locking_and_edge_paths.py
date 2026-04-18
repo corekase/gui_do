@@ -151,7 +151,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
         # _is_registered_button_group false path when attached and not found.
         button = SimpleNamespace(surface=object())
-        self.assertFalse(GuiManager._is_registered_button_group(gui, button))
+        self.assertFalse(gui.object_registry.is_registered_button_group(button))
 
         # _resolve_active_object returns active when present.
         win = Window.__new__(Window)
@@ -518,7 +518,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.task_panel = SimpleNamespace(widgets=[candidate])
         gui.windows = [SimpleNamespace(widgets=[candidate])]
 
-        self.assertIsNone(GuiManager._find_widget_id_conflict(gui, "same", candidate))
+        self.assertIsNone(gui.object_registry.find_widget_id_conflict("same", candidate))
 
     def test_registered_button_group_true_paths(self) -> None:
         gui = self._build_manager_stub()
@@ -526,15 +526,15 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         button.surface = object()
 
         gui.widgets = [button]
-        self.assertTrue(GuiManager._is_registered_button_group(gui, button))
+        self.assertTrue(gui.object_registry.is_registered_button_group(button))
 
         gui.widgets = []
         gui.task_panel = SimpleNamespace(widgets=[button])
-        self.assertTrue(GuiManager._is_registered_button_group(gui, button))
+        self.assertTrue(gui.object_registry.is_registered_button_group(button))
 
         gui.task_panel = None
         gui.windows = [SimpleNamespace(widgets=[button])]
-        self.assertTrue(GuiManager._is_registered_button_group(gui, button))
+        self.assertTrue(gui.object_registry.is_registered_button_group(button))
 
     def test_registered_object_window_and_false_paths(self) -> None:
         gui = self._build_manager_stub()
@@ -661,7 +661,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         button = SimpleNamespace(surface=object())
         gui.windows = [SimpleNamespace(widgets=[object()])]
-        self.assertFalse(GuiManager._is_registered_button_group(gui, button))
+        self.assertFalse(gui.object_registry.is_registered_button_group(button))
 
         widget = Widget.__new__(Widget)
         gui.widgets = []

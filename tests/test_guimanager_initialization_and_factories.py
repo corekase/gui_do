@@ -224,28 +224,28 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.object_registry = GuiObjectRegistry(gui)
 
         # Incoming container description switches across task panel, screen, and window.
-        self.assertEqual(gm.GuiManager._describe_incoming_widget_container(gui), "screen")
+        self.assertEqual(gui.object_registry.describe_incoming_widget_container(), "screen")
         active = SimpleNamespace(x=3, y=4, width=7, height=8)
         gui.workspace_state.active_object = active
         gui.windows = [active]
-        self.assertIn("window pos=(3,4)", gm.GuiManager._describe_incoming_widget_container(gui))
+        self.assertIn("window pos=(3,4)", gui.object_registry.describe_incoming_widget_container())
         gui.workspace_state.task_panel_capture = True
         gui.task_panel = SimpleNamespace(widgets=[])
-        self.assertEqual(gm.GuiManager._describe_incoming_widget_container(gui), "task_panel")
+        self.assertEqual(gui.object_registry.describe_incoming_widget_container(), "task_panel")
 
         # _describe_widget_container identifies screen, task panel, and window.
         widget = Widget.__new__(Widget)
         widget.window = None
-        self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "screen")
+        self.assertEqual(gui.object_registry.describe_widget_container(widget), "screen")
         gui.task_panel.widgets = [widget]
-        self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "task_panel")
+        self.assertEqual(gui.object_registry.describe_widget_container(widget), "task_panel")
         gui.task_panel.widgets = []
         win = SimpleNamespace(x=1, y=2, width=3, height=4)
         widget.window = win
         with patch("gui.utility.object_registry.gWindow", SimpleNamespace):
-            self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "window pos=(1,2) size=(3,4)")
+            self.assertEqual(gui.object_registry.describe_widget_container(widget), "window pos=(1,2) size=(3,4)")
         widget.window = object()
-        self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "screen")
+        self.assertEqual(gui.object_registry.describe_widget_container(widget), "screen")
 
 
 if __name__ == "__main__":

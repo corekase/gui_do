@@ -424,25 +424,3 @@ class GuiManager:
         centered = Rect(0, 0, width, height)
         centered.center = surface_rect.center
         return centered
-
-    def _describe_gui_object(self, gui_object: TGuiObject) -> str:
-        if isinstance(gui_object, Widget):
-            return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
-        if isinstance(gui_object, gWindow):
-            return (
-                f'{type(gui_object).__name__} '
-                f'pos=({gui_object.x},{gui_object.y}) size=({gui_object.width},{gui_object.height})'
-            )
-        return type(gui_object).__name__
-
-    def _describe_incoming_widget_container(self) -> str:
-        return self.object_registry.describe_incoming_widget_container()
-
-    def _describe_widget_container(self, widget: Widget) -> str:
-        return self.object_registry.describe_widget_container(widget)
-
-    def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
-        return self.object_registry.find_widget_id_conflict(widget_id, candidate)
-
-    def _is_registered_button_group(self, button: gButtonGroup) -> bool:
-        return self.object_registry.is_registered_button_group(button)
