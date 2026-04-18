@@ -181,6 +181,98 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         with self.assertRaises(GuiError):
             gm.GuiManager(surface, [("main", "a.ttf", 12)], graphics_factory=graphics_factory, task_panel_enabled=False, mouse_set_visible=1)  # type: ignore[arg-type]
 
+    def test_configure_fonts_builds_and_loads_in_one_call(self) -> None:
+        loaded_fonts = []
+        gui = gm.GuiManager.__new__(gm.GuiManager)
+        gui._graphics_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
+
+        registry = gm.GuiManager.configure_fonts(
+            gui,
+            titlebar=("Ubuntu-B.ttf", 14),
+            normal=("Gimbot.ttf", 16),
+        )
+
+        self.assertEqual(
+            registry,
+            [("titlebar", "Ubuntu-B.ttf", 14), ("normal", "Gimbot.ttf", 16)],
+        )
+        self.assertEqual(
+            loaded_fonts,
+            [("titlebar", "Ubuntu-B.ttf", 14), ("normal", "Gimbot.ttf", 16)],
+        )
+
+    def test_configure_fonts_validates_entries(self) -> None:
+        gui = gm.GuiManager.__new__(gm.GuiManager)
+        gui._graphics_factory = SimpleNamespace(load_font=lambda *_args: None)
+
+        with self.assertRaises(GuiError):
+            gm.GuiManager.configure_fonts(gui)
+        with self.assertRaises(GuiError):
+            gm.GuiManager.configure_fonts(gui, main=("a.ttf",))  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            gm.GuiManager.configure_fonts(gui, main=("", 12))
+        with self.assertRaises(GuiError):
+            gm.GuiManager.configure_fonts(gui, main=("a.ttf", 0))
+
+    def test_manager_init_without_fonts_is_supported(self) -> None:
+        visible_calls = []
+        loaded_fonts = []
+
+        graphics_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
+        surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80))
+
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
+        ):
+            gm.GuiManager(
+                surface,
+                graphics_factory=graphics_factory,
+                task_panel_enabled=False,
+                event_getter=lambda: [],
+                mouse_get_pos=lambda: (1, 2),
+                mouse_set_pos=lambda _pos: None,
+                mouse_set_visible=lambda visible: visible_calls.append(visible),
+            )
+
+        self.assertEqual(visible_calls, [False])
+        self.assertEqual(loaded_fonts, [])
+
+    def test_manager_init_accepts_fonts_iterable(self) -> None:
+        visible_calls = []
+        loaded_fonts = []
+
+        graphics_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
+        surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80))
+        fonts_iterable = ((name, filename, size) for name, filename, size in [
+            ("main", "a.ttf", 12),
+            ("title", "b.ttf", 14),
+        ])
+
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
+        ):
+            gm.GuiManager(
+                surface,
+                fonts_iterable,
+                graphics_factory=graphics_factory,
+                task_panel_enabled=False,
+                event_getter=lambda: [],
+                mouse_get_pos=lambda: (1, 2),
+                mouse_set_pos=lambda _pos: None,
+                mouse_set_visible=lambda visible: visible_calls.append(visible),
+            )
+
+        self.assertEqual(visible_calls, [False])
+        self.assertEqual(loaded_fonts, [("main", "a.ttf", 12), ("title", "b.ttf", 14)])
+
     def test_widget_factory_helpers_delegate_to_add(self) -> None:
         gui = gm.GuiManager.__new__(gm.GuiManager)
         created = []

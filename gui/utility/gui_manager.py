@@ -56,6 +56,62 @@ TGuiObject = TypeVar("TGuiObject", Window, Widget)
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
+    @staticmethod
+    def _normalize_font_registry(fonts: Iterable[Tuple[str, str, int]]) -> List[Tuple[str, str, int]]:
+        registry = list(fonts)
+        if not registry:
+            raise GuiError('fonts registry cannot be empty')
+        for font_entry in registry:
+            if not isinstance(font_entry, tuple) or len(font_entry) != 3:
+                raise GuiError('each font entry must be a tuple of (name, filename, size)')
+            name, filename, size = font_entry
+            if not isinstance(name, str) or not name:
+                raise GuiError(f'font name must be a non-empty string, got: {name}')
+            if not isinstance(filename, str) or not filename:
+                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
+            if not isinstance(size, int) or size <= 0:
+                raise GuiError(f'font size must be a positive integer, got: {size}')
+        return registry
+
+    def build_font_registry(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
+        """Build a validated font registry from keyword entries.
+
+        Example:
+            gui.build_font_registry(
+                titlebar=('Ubuntu-B.ttf', 14),
+                normal=('Gimbot.ttf', 16),
+            )
+        """
+        if not fonts:
+            raise GuiError('fonts registry cannot be empty')
+        registry: List[Tuple[str, str, int]] = []
+        for name, font_def in fonts.items():
+            if not isinstance(name, str) or not name:
+                raise GuiError(f'font name must be a non-empty string, got: {name}')
+            if not isinstance(font_def, tuple) or len(font_def) != 2:
+                raise GuiError(f'font entry for {name} must be a tuple of (filename, size)')
+            filename, size = font_def
+            if not isinstance(filename, str) or not filename:
+                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
+            if not isinstance(size, int) or size <= 0:
+                raise GuiError(f'font size must be a positive integer, got: {size}')
+            registry.append((name, filename, size))
+        return registry
+
+    def configure_fonts(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
+        """Build and load a font registry in one call.
+
+        Returns the normalized registry as ``(name, filename, size)`` tuples.
+        """
+        registry = self.build_font_registry(**fonts)
+        self.load_fonts(registry)
+        return registry
+
+    def load_fonts(self, fonts: Iterable[Tuple[str, str, int]]) -> None:
+        """Load or reload fonts into this manager's graphics factory."""
+        for name, filename, size in self._normalize_font_registry(fonts):
+            self._graphics_factory.load_font(name, filename, size)
+
     @property
     def graphics_factory(self):
         return self._graphics_factory
@@ -205,7 +261,7 @@ class GuiManager:
     def __init__(
         self,
         surface: Surface,
-        fonts: List[Tuple[str, str, int]],
+        fonts: Optional[Iterable[Tuple[str, str, int]]] = None,
         graphics_factory: Optional[WidgetGraphicsFactory] = None,
         task_panel_enabled: bool = True,
         event_getter: Optional[Callable[[], Iterable[PygameEvent]]] = None,
@@ -216,18 +272,9 @@ class GuiManager:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
             raise GuiError('surface cannot be None')
-        if not fonts or len(fonts) == 0:
-            raise GuiError('fonts list cannot be empty')
-        for font_entry in fonts:
-            if not isinstance(font_entry, tuple) or len(font_entry) != 3:
-                raise GuiError('each font entry must be a tuple of (name, filename, size)')
-            name, filename, size = font_entry
-            if not isinstance(name, str) or not name:
-                raise GuiError(f'font name must be a non-empty string, got: {name}')
-            if not isinstance(filename, str) or not filename:
-                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
-            if not isinstance(size, int) or size <= 0:
-                raise GuiError(f'font size must be a positive integer, got: {size}')
+        normalized_fonts: Optional[List[Tuple[str, str, int]]] = None
+        if fonts is not None:
+            normalized_fonts = self._normalize_font_registry(fonts)
         self._graphics_factory: WidgetGraphicsFactory = graphics_factory or WidgetGraphicsFactory()
         resolved_event_getter = event_getter or pygame.event.get
         resolved_mouse_get_pos = mouse_get_pos or pygame.mouse.get_pos
@@ -257,8 +304,8 @@ class GuiManager:
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
         self.input_providers.mouse_set_visible(False)
-        for name, filename, size in fonts:
-            self._graphics_factory.load_font(name, filename, size)
+        if normalized_fonts is not None:
+            self.load_fonts(normalized_fonts)
         self.surface: Surface = surface
         self.widgets: List[Widget] = []
         self.workspace_state: WorkspaceState = WorkspaceState()
