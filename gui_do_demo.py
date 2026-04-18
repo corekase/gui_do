@@ -389,7 +389,7 @@ class Demo:
             dy = choice([-randrange(2, self.size - 2), randrange(2, self.size - 2)])
             self.positions.append((x, y, dx, dy, choice([circle_bitmap_a, circle_bitmap_b])))
 
-    # preambles, event handlers, and postambles
+    # preambles, event handlers, and postambles in window definition order
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
         if not self.dragging and self.gui1.locking_object is self.canvas:
@@ -405,41 +405,27 @@ class Demo:
                 self.state_manager.set_running(False)
             elif event.widget_id == 'gui2':
                 self.state_manager.switch_context('gui2')
-        elif event.type == Event.KeyDown:
-            if event.key == K_ESCAPE:
-                self.state_manager.set_running(False)
-        elif event.type == Event.Quit:
-            self.state_manager.set_running(False)
+            return
+        self._handle_common_exit_events(event)
 
     def gui1_screen_postamble(self):
         self.update_slider_labels()
         self.update_gui_do_label()
 
-    def update_slider_labels(self):
-        self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')
-        self.h_slider_int_value.set_label(f'{int(round(self.h_slider_int.value))}')
-        self.v_slider_float_value.set_label(f'{self.v_slider_float.value:.2f}')
-        self.v_slider_int_value.set_label(f'{int(round(self.v_slider_int.value))}')
-
     def buttons_window_event_handler(self, event):
         if event.type != Event.Group:
             return
-        if event.group == 'bg1':
-            self.label1.set_label(f'ID: {event.widget_id}')
-        elif event.group == 'bg2':
-            self.label2.set_label(f'ID: {event.widget_id}')
-        elif event.group == 'bg3':
-            self.label3.set_label(f'ID: {event.widget_id}')
-        elif event.group == 'bg4':
-            self.label4.set_label(f'ID: {event.widget_id}')
-        elif event.group == 'bg5':
-            self.label5.set_label(f'ID: {event.widget_id}')
-        elif event.group == 'bg6':
-            self.label6.set_label(f'ID: {event.widget_id}')
-
-    def life_window_event_handler(self, event):
-        if event.type == Event.Widget and event.widget_id == 'life_reset':
-            self.life_reset()
+        label_by_group = {
+            'bg1': self.label1,
+            'bg2': self.label2,
+            'bg3': self.label3,
+            'bg4': self.label4,
+            'bg5': self.label5,
+            'bg6': self.label6,
+        }
+        label = label_by_group.get(event.group)
+        if label is not None:
+            label.set_label(f'ID: {event.widget_id}')
 
     def life_window_preamble(self):
         slider_value = int(self.life_zoom_slider.value)
@@ -462,6 +448,10 @@ class Demo:
         self.origin_y = center_y - ((center_y - self.origin_y) / old_size) * new_size
         self.cell_size = new_size
 
+    def life_window_event_handler(self, event):
+        if event.type == Event.Widget and event.widget_id == 'life_reset':
+            self.life_reset()
+
     def life_window_postamble(self):
         if self.toggle_life.pushed:
             self.generate()
@@ -475,35 +465,24 @@ class Demo:
             return
         if event.widget_id == 'mandel_reset':
             self.s1.remove_tasks(*Demo.mandel_task_ids)
-            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-            self.gui1.show_widgets(self.mandel_canvas)
-            self.clear_mandel_surfaces()
+            self._show_single_mandel_canvas()
             self.set_mandel_task_buttons_disabled(False)
             return
         if self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
             return
         if event.widget_id == 'iterative':
-            self.set_mandel_task_buttons_disabled(True)
-            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-            self.gui1.show_widgets(self.mandel_canvas)
-            self.clear_mandel_surfaces()
+            self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
             self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
         elif event.widget_id == 'recursive':
-            self.set_mandel_task_buttons_disabled(True)
-            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-            self.gui1.show_widgets(self.mandel_canvas)
-            self.clear_mandel_surfaces()
+            self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
             self.s1.add_task('recu', self.mandel_recursive, Rect(0, 0, w, h),
                              message_method=self.make_mandel_progress_handler('recu'))
         elif event.widget_id == '1split':
-            self.set_mandel_task_buttons_disabled(True)
-            self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-            self.gui1.show_widgets(self.mandel_canvas)
-            self.clear_mandel_surfaces()
+            self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
             left_w, top_h = w // 2, h // 2
@@ -517,11 +496,8 @@ class Demo:
             self.s1.add_task('4', self.mandel_recursive, Rect(left_w, top_h, right_w, bottom_h),
                              message_method=self.make_mandel_progress_handler('4'))
         elif event.widget_id == '4split':
-            self.set_mandel_task_buttons_disabled(True)
-            self.gui1.hide_widgets(self.mandel_canvas)
-            self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-            self.clear_mandel_surfaces()
-            _, _, w1, h1 = self.mandel_canvas.draw_rect
+            self._prepare_mandel_split_canvas_run()
+            _, _, w1, h1 = self.mandel_canvas_rect
             w1 = w1 // 2
             h1 = h1 // 2
             self.mandel_setup(w1, h1)
@@ -541,9 +517,12 @@ class Demo:
         if event.type == Event.Widget:
             if event.widget_id == 'back':
                 self.state_manager.switch_context('gui1')
-        elif event.type == Event.KeyDown:
-            if event.key == K_ESCAPE:
-                self.state_manager.set_running(False)
+            return
+        self._handle_common_exit_events(event)
+
+    def _handle_common_exit_events(self, event):
+        if event.type == Event.KeyDown and event.key == K_ESCAPE:
+            self.state_manager.set_running(False)
         elif event.type == Event.Quit:
             self.state_manager.set_running(False)
 
@@ -552,15 +531,18 @@ class Demo:
         """Run the application using the Engine with StateManager contexts."""
         self.engine.run()
 
-    # -----------------------
-    # various methods needed for the program
-    # -----------------------
-
+    # gui1 and shared screen helpers
     def _update_gui1_window_visibility(self):
         self.button_group_win.visible = self.buttons_toggle.pushed
         self.scrollbar_win.visible = self.scrollbars_toggle.pushed
         self.life_win.visible = self.life_toggle.pushed
         self.mandel_win.visible = self.mandel_toggle.pushed
+
+    def update_slider_labels(self):
+        self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')
+        self.h_slider_int_value.set_label(f'{int(round(self.h_slider_int.value))}')
+        self.v_slider_float_value.set_label(f'{self.v_slider_float.value:.2f}')
+        self.v_slider_int_value.set_label(f'{int(round(self.v_slider_int.value))}')
 
     def update_circles(self, size):
         new_positions = []
@@ -613,12 +595,16 @@ class Demo:
         self.gui_do_pos_y = y
         self.gui_do_label.position = (int(round(x)), int(round(y)))
 
+    # life methods
     def handle_Canvas(self):
         # read the event from the canvas widget
         CEvent = self.canvas.read_event()
         if CEvent is not None:
             # parse that event by kind and parameters
             if CEvent.type == CanvasEvent.MouseButtonDown:
+                # left-mouse button toggles the clicked cell when over the canvas
+                if CEvent.button == 1 and CEvent.pos is not None:
+                    self.toggle_life_cell_at_canvas_pos(CEvent.pos)
                 # right-mouse button pressed, enter dragging state
                 if CEvent.button == 3:
                     self.dragging = True
@@ -660,6 +646,18 @@ class Demo:
                         self.life_zoom_slider.value = (new_size // 2) - 1
                         self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
 
+    def toggle_life_cell_at_canvas_pos(self, canvas_pos):
+        x_pos, y_pos = canvas_pos
+        if x_pos < 0 or y_pos < 0 or x_pos >= self.canvas_rect.width or y_pos >= self.canvas_rect.height:
+            return
+        cell_x = math.floor((x_pos - self.origin_x) / self.cell_size)
+        cell_y = math.floor((y_pos - self.origin_y) / self.cell_size)
+        cell = (cell_x, cell_y)
+        if cell in self.life:
+            self.life.remove(cell)
+        else:
+            self.life.add(cell)
+
     def generate(self):
         def population(cell):
             count = 0
@@ -676,8 +674,8 @@ class Demo:
         new_life = set()
         for cell in self.life:
             # Check this cell
-            if population(cell) == 3 or \
-               population(cell) == 2:
+            pop = population(cell)
+            if pop in (2, 3):
                    new_life.add(cell)
             # Check all the neighbours of this cell
             for new_cell in Demo.neighbours:
@@ -730,14 +728,7 @@ class Demo:
             self._life_canvas_last_drop_count = total_dropped
             print(f'Canvas event overflow: dropped {delta} events (total={total_dropped})', file=sys.stderr)
 
-    def mandel_setup(self, width, height):
-        self.max_iter = 128
-        self.maximum_iters = self.max_iter - 1
-        self.mandel_width, self.mandel_height = width, height
-        self.center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
-
+    # mandelbrot methods
     def clear_mandel_surfaces(self):
         self.mandel_canvas.canvas.fill(colours['medium'])
         self.canvas1.canvas.fill(colours['medium'])
@@ -748,6 +739,29 @@ class Demo:
     def set_mandel_task_buttons_disabled(self, disabled):
         for button in self.mandel_task_buttons:
             button.disabled = disabled
+
+    def _show_single_mandel_canvas(self):
+        self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.gui1.show_widgets(self.mandel_canvas)
+        self.clear_mandel_surfaces()
+
+    def _prepare_mandel_single_canvas_run(self):
+        self.set_mandel_task_buttons_disabled(True)
+        self._show_single_mandel_canvas()
+
+    def _prepare_mandel_split_canvas_run(self):
+        self.set_mandel_task_buttons_disabled(True)
+        self.gui1.hide_widgets(self.mandel_canvas)
+        self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.clear_mandel_surfaces()
+
+    def mandel_setup(self, width, height):
+        self.max_iter = 128
+        self.maximum_iters = self.max_iter - 1
+        self.mandel_width, self.mandel_height = width, height
+        self.center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
     def handle_mandel_task_event(self, event):
         task_id = getattr(event, 'id', None)
@@ -811,10 +825,7 @@ class Demo:
             canvas.unlock()
 
     def col(self, k):
-        if k == self.maximum_iters:
-            return (0, 0, 0)
-        else:
-            return Demo.cols[k % 16]
+        return (0, 0, 0) if k == self.maximum_iters else Demo.cols[k % 16]
 
     def mandel_iterative(self, task_id):
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
