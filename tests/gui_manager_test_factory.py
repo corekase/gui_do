@@ -136,3 +136,15 @@ def build_gui_manager_stub(
     _apply_preset(gui, preset)
 
     return gui
+
+
+def build_routing_stub(*, surface: Optional[Any] = None, include_ui_factory: bool = False) -> GuiManager:
+    return build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="routing")
+
+
+def build_locking_stub(*, surface: Optional[Any] = None, include_ui_factory: bool = False) -> GuiManager:
+    return build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="locking")
+
+
+def build_state_manager_stub(*, surface: Optional[Any] = None, include_ui_factory: bool = False) -> GuiManager:
+    return build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="state_manager")

@@ -2,7 +2,7 @@ import unittest
 from concurrent.futures import Future
 from threading import Event
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_state_manager_stub
 from gui.utility.scheduler import Scheduler, Task, Timers
 from gui.utility.statemanager import StateManager
 
@@ -21,7 +21,7 @@ class SchedulerStub:
 class GuiStubFactory:
     @staticmethod
     def build(mouse_pos=(0, 0), fail_shutdown: bool = False):
-        gui = build_gui_manager_stub(preset="state_manager")
+        gui = build_state_manager_stub()
         gui._scheduler = SchedulerStub(fail=fail_shutdown)
         gui._mouse_pos = mouse_pos
         gui.set_calls = []
@@ -34,7 +34,7 @@ class GuiStubFactory:
 
     @staticmethod
     def build_with_real_scheduler(mouse_pos=(0, 0)):
-        gui = build_gui_manager_stub(preset="state_manager")
+        gui = build_state_manager_stub()
         gui._scheduler = Scheduler(gui)
         gui._mouse_pos = mouse_pos
         gui.set_calls = []

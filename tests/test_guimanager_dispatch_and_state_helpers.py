@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_routing_stub
 from gui.utility.constants import Event
 from gui.utility.guimanager import GuiManager
 from gui.utility.widget import Widget
@@ -12,7 +12,7 @@ from gui.widgets.window import Window
 
 class GuiManagerRoiBatch6Tests(unittest.TestCase):
     def _build_manager_stub(self):
-        return build_gui_manager_stub(preset="routing")
+        return build_routing_stub()
 
     def test_dispatch_event_task_panel_hidden_falls_back_to_screen(self) -> None:
         gui = self._build_manager_stub()

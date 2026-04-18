@@ -1,6 +1,6 @@
 import unittest
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_routing_stub
 from gui.utility.constants import Event
 from gui.utility.guimanager import GuiManager
 from gui.widgets.window import Window
@@ -24,7 +24,7 @@ class TaskPanelStub:
 
 class GuiManagerRoutingIntegrationTests(unittest.TestCase):
     def _build_manager_stub(self):
-        return build_gui_manager_stub(preset="routing")
+        return build_routing_stub()
 
     def _build_window_stub(self):
         window = Window.__new__(Window)

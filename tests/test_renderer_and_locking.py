@@ -3,7 +3,7 @@ import unittest
 import pygame
 from pygame import Rect
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_gui_manager_stub, build_locking_stub
 from gui.utility.guimanager import GuiManager
 from gui.utility.renderer import Renderer
 from gui.utility.widget import Widget
@@ -96,7 +96,7 @@ class RendererTests(unittest.TestCase):
 
 class LockingBehaviourTests(unittest.TestCase):
     def _build_manager_for_locking(self):
-        return build_gui_manager_stub(preset="locking")
+        return build_locking_stub()
 
     def test_lock_area_clamps_to_rect_bounds(self) -> None:
         gui = self._build_manager_for_locking()

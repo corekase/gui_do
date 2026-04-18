@@ -2,7 +2,7 @@ import unittest
 
 import pygame
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_state_manager_stub
 from gui.utility.constants import Event
 from gui.utility.guimanager import GuiManager
 from gui.utility.statemanager import StateManager
@@ -19,7 +19,7 @@ class DummyScheduler:
 
 
 def make_minimal_gui_stub(mouse_position=(0, 0)):
-    gui = build_gui_manager_stub(preset="state_manager")
+    gui = build_state_manager_stub()
     gui._scheduler = DummyScheduler()
     gui._mouse_pos = mouse_position
     return gui

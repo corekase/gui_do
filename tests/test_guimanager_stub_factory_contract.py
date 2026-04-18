@@ -1,6 +1,6 @@
 import unittest
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_gui_manager_stub, build_locking_stub, build_routing_stub, build_state_manager_stub
 
 
 class GuiManagerStubFactoryContractTests(unittest.TestCase):
@@ -55,6 +55,15 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
     def test_unknown_preset_raises(self) -> None:
         with self.assertRaises(ValueError):
             build_gui_manager_stub(preset="unknown")  # type: ignore[arg-type]
+
+    def test_convenience_helpers_map_to_expected_presets(self) -> None:
+        routing = build_routing_stub()
+        locking = build_locking_stub()
+        state_manager = build_state_manager_stub()
+
+        self.assertEqual(routing.lock_area((3, 4)), (3, 4))
+        self.assertTrue(locking.mouse_locked)
+        self.assertEqual(state_manager.get_mouse_pos(), (0, 0))
 
 
 if __name__ == "__main__":

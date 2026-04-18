@@ -1,6 +1,6 @@
 import unittest
 
-from gui_manager_test_factory import build_gui_manager_stub
+from gui_manager_test_factory import build_state_manager_stub
 from gui.utility.guimanager import GuiManager
 from gui.utility.statemanager import StateManager
 
@@ -11,7 +11,7 @@ class SchedulerNoopStub:
 
 
 def build_gui_stub() -> GuiManager:
-    gui = build_gui_manager_stub(preset="state_manager")
+    gui = build_state_manager_stub()
     gui._scheduler = SchedulerNoopStub()
     return gui
 
