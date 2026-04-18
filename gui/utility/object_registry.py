@@ -41,21 +41,19 @@ class GuiObjectRegistry:
         gui_object.window = None
         gui_object.surface = None
 
-    def _attach_widget_to_container(self, gui_object: Widget, active_window: Optional[gWindow]) -> bool:
+    def _resolve_widget_attach_target(self, active_window: Optional[gWindow]):
         if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
-            gui_object.window = cast(Any, self.gui.task_panel)
-            gui_object.surface = self.gui.task_panel.surface
-            self.gui.task_panel.widgets.append(gui_object)
-            return True
+            return cast(Any, self.gui.task_panel), self.gui.task_panel.surface, self.gui.task_panel.widgets, True
         if active_window is not None:
-            gui_object.window = active_window
-            gui_object.surface = active_window.surface
-            active_window.widgets.append(gui_object)
-            return False
-        gui_object.window = None
-        gui_object.surface = self.gui.surface
-        self.gui.widgets.append(gui_object)
-        return False
+            return active_window, active_window.surface, active_window.widgets, False
+        return None, self.gui.surface, self.gui.widgets, False
+
+    def _attach_widget_to_container(self, gui_object: Widget, active_window: Optional[gWindow]) -> bool:
+        window, surface, widgets, added_to_task_panel = self._resolve_widget_attach_target(active_window)
+        gui_object.window = window
+        gui_object.surface = surface
+        widgets.append(gui_object)
+        return added_to_task_panel
 
     def register(self, gui_object: TGuiObject) -> TGuiObject:
         if gui_object is None:

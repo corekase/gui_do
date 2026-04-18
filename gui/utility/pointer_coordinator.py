@@ -76,6 +76,14 @@ class PointerCoordinator:
             return None
         return window
 
+    @staticmethod
+    def _apply_window_offset(point: Tuple[int, int], window: Any, to_window: bool) -> Tuple[int, int]:
+        x, y = point
+        wx, wy = window.x, window.y
+        if to_window:
+            return (x - wx, y - wy)
+        return (x + wx, y + wy)
+
     def set_cursor(self, name: str) -> None:
         if not isinstance(name, str) or name == '':
             raise GuiError('cursor name must be a non-empty string')
@@ -93,16 +101,13 @@ class PointerCoordinator:
         self._validate_point(point, 'point')
         window = self._normalize_window(window)
         if window is not None:
-            x, y = point
-            wx, wy = window.x, window.y
-            return self.gui.lock_area((x + wx, y + wy))
+            return self.gui.lock_area(self._apply_window_offset(point, window, to_window=False))
         return self.gui.lock_area(point)
 
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         self._validate_point(point, 'point')
         window = self._normalize_window(window)
         if window is not None:
-            x, y = self.gui.lock_area(point)
-            wx, wy = window.x, window.y
-            return (x - wx, y - wy)
+            locked_point = self.gui.lock_area(point)
+            return self._apply_window_offset(locked_point, window, to_window=True)
         return self.gui.lock_area(point)

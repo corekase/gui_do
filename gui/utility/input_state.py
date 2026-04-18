@@ -47,6 +47,10 @@ class LockStateController:
         self.gui.lock_point_recenter_pending = state.lock_point_recenter_pending
         self.gui.lock_point_tolerance_rect = state.lock_point_tolerance_rect
 
+    def _commit_lock_mutation(self, mutation) -> None:
+        mutation(self.state)
+        self._sync_legacy_lock_fields()
+
     def _is_registered_object(self, value: Widget) -> bool:
         registry = getattr(self.gui, 'object_registry', None)
         if registry is not None and hasattr(registry, 'is_registered_object'):
@@ -54,21 +58,27 @@ class LockStateController:
         return False
 
     def _assign_area_lock(self, locking_object: Widget) -> None:
-        self.state.locking_object = locking_object
-        self.state.mouse_locked = True
-        self.state.mouse_point_locked = False
-        self.state.lock_point_pos = None
-        self.state.lock_point_recenter_pending = False
-        self.state.lock_point_tolerance_rect = None
+        def _mutation(state: LockState) -> None:
+            state.locking_object = locking_object
+            state.mouse_locked = True
+            state.mouse_point_locked = False
+            state.lock_point_pos = None
+            state.lock_point_recenter_pending = False
+            state.lock_point_tolerance_rect = None
+
+        self._commit_lock_mutation(_mutation)
 
     def _assign_point_lock(self, locking_object: Widget, point: Tuple[int, int]) -> None:
-        self.state.locking_object = locking_object
-        self.state.mouse_locked = True
-        self.state.mouse_point_locked = True
-        self.state.lock_area_rect = None
-        self.state.lock_point_pos = point
-        self.state.lock_point_tolerance_rect = None
-        self.state.lock_point_recenter_pending = False
+        def _mutation(state: LockState) -> None:
+            state.locking_object = locking_object
+            state.mouse_locked = True
+            state.mouse_point_locked = True
+            state.lock_area_rect = None
+            state.lock_point_pos = point
+            state.lock_point_tolerance_rect = None
+            state.lock_point_recenter_pending = False
+
+        self._commit_lock_mutation(_mutation)
 
     def _restore_physical_mouse_on_unlock(self) -> None:
         if not self.state.mouse_locked:
@@ -95,8 +105,7 @@ class LockStateController:
         else:
             self._restore_physical_mouse_on_unlock()
             self.clear()
-        self.state.lock_area_rect = area
-        self._sync_legacy_lock_fields()
+        self._commit_lock_mutation(lambda state: setattr(state, 'lock_area_rect', area))
 
     def set_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
         if locking_object is None:
@@ -111,7 +120,6 @@ class LockStateController:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         self._assign_point_lock(locking_object, point)
-        self._sync_legacy_lock_fields()
 
     def resolve(self) -> Optional[Widget]:
         locking_object = self.state.locking_object
@@ -152,30 +160,30 @@ class LockStateController:
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         if self.state.lock_point_pos is None:
-            self.state.lock_point_recenter_pending = False
+            self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', False))
             return
         if not isinstance(hardware_position, tuple) or len(hardware_position) != 2:
             raise GuiError(f'hardware_position must be a tuple of (x, y), got: {hardware_position}')
         in_recenter_rect = self.gui.point_lock_recenter_rect.collidepoint(hardware_position)
         if self.state.lock_point_recenter_pending:
             if in_recenter_rect:
-                self.state.lock_point_recenter_pending = False
-                self._sync_legacy_lock_fields()
+                self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', False))
             return
         if not in_recenter_rect:
             self.gui.pointer.set_physical_mouse_pos(self.gui.point_lock_recenter_rect.center)
-            self.state.lock_point_recenter_pending = True
-            self._sync_legacy_lock_fields()
+            self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', True))
 
     def clear(self) -> None:
-        self.state.locking_object = None
-        self.state.mouse_locked = False
-        self.state.mouse_point_locked = False
-        self.state.lock_area_rect = None
-        self.state.lock_point_pos = None
-        self.state.lock_point_recenter_pending = False
-        self.state.lock_point_tolerance_rect = None
-        self._sync_legacy_lock_fields()
+        def _mutation(state: LockState) -> None:
+            state.locking_object = None
+            state.mouse_locked = False
+            state.mouse_point_locked = False
+            state.lock_area_rect = None
+            state.lock_point_pos = None
+            state.lock_point_recenter_pending = False
+            state.lock_point_tolerance_rect = None
+
+        self._commit_lock_mutation(_mutation)
 
 
 class DragStateController:
@@ -202,6 +210,16 @@ class DragStateController:
     def _pass_event(self) -> InputAction:
         return InputAction.pass_event()
 
+    def _sync_legacy_drag_fields(self) -> None:
+        state = self.state
+        self.gui.dragging = state.dragging
+        self.gui.dragging_window = state.dragging_window
+        self.gui.mouse_delta = state.mouse_delta
+
+    def _commit_drag_mutation(self, mutation) -> None:
+        mutation(self.state)
+        self._sync_legacy_drag_fields()
+
     def _has_valid_drag_context(self) -> bool:
         return (
             self.state.dragging_window is not None
@@ -210,36 +228,40 @@ class DragStateController:
         )
 
     def _set_drag_from_active_window(self) -> None:
-        self.state.dragging = True
-        self.state.dragging_window = self.gui.active_window
-        self.state.mouse_delta = (
-            self.state.dragging_window.x - self.gui.mouse_pos[0],
-            self.state.dragging_window.y - self.gui.mouse_pos[1],
-        )
+        def _mutation(state: DragState) -> None:
+            state.dragging = True
+            state.dragging_window = self.gui.active_window
+            state.mouse_delta = (
+                state.dragging_window.x - self.gui.mouse_pos[0],
+                state.dragging_window.y - self.gui.mouse_pos[1],
+            )
+
+        self._commit_drag_mutation(_mutation)
 
     def _release_drag(self) -> None:
-        self.state.dragging = False
-        self.state.dragging_window.position = (self.state.dragging_window.x, self.state.dragging_window.y)
+        dragging_window = self.state.dragging_window
+        mouse_delta = self.state.mouse_delta
+        dragging_window.position = (dragging_window.x, dragging_window.y)
         self.gui.set_mouse_pos(
             (
-                self.state.dragging_window.x - self.state.mouse_delta[0],
-                self.state.dragging_window.y - self.state.mouse_delta[1],
+                dragging_window.x - mouse_delta[0],
+                dragging_window.y - mouse_delta[1],
             )
         )
-        self.state.dragging_window = None
-        self.state.mouse_delta = None
+        def _mutation(state: DragState) -> None:
+            state.dragging = False
+            state.dragging_window = None
+            state.mouse_delta = None
 
-    def _sync_legacy_drag_fields(self) -> None:
-        state = self.state
-        self.gui.dragging = state.dragging
-        self.gui.dragging_window = state.dragging_window
-        self.gui.mouse_delta = state.mouse_delta
+        self._commit_drag_mutation(_mutation)
 
     def reset(self) -> None:
-        self.state.dragging = False
-        self.state.dragging_window = None
-        self.state.mouse_delta = None
-        self._sync_legacy_drag_fields()
+        def _mutation(state: DragState) -> None:
+            state.dragging = False
+            state.dragging_window = None
+            state.mouse_delta = None
+
+        self._commit_drag_mutation(_mutation)
 
     def start_if_possible(self, event: PygameEvent) -> None:
         event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
@@ -249,7 +271,6 @@ class DragStateController:
                 self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
             else:
                 self._set_drag_from_active_window()
-                self._sync_legacy_drag_fields()
 
     def handle_drag_event(self, event: PygameEvent) -> InputAction:
         if not self._has_valid_drag_context():
@@ -257,12 +278,10 @@ class DragStateController:
             return self._pass_event()
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self._release_drag()
-            self._sync_legacy_drag_fields()
         elif event.type == MOUSEMOTION and self.state.dragging:
             rel = getattr(event, 'rel', (0, 0))
             x = self.state.dragging_window.x + rel[0]
             y = self.state.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
-            self.state.dragging_window.position = (x, y)
-            self._sync_legacy_drag_fields()
+            self._commit_drag_mutation(lambda state: setattr(state.dragging_window, 'position', (x, y)))
         return self._pass_event()

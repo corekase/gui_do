@@ -37,6 +37,33 @@ class InputTargetResolver:
     def _build_widget_action(widget: Any, window: Optional[Any]) -> InputAction:
         return InputAction.from_builder(lambda w=widget, win=window: w.build_gui_event(win))
 
+    def _dispatch_widget_layer(self, event: PygameEvent, container: Any, emit_task_panel: bool = False):
+        hit_any = False
+        focus_target = None
+        for widget in tuple(container.widgets)[::-1]:
+            if widget not in container.widgets:
+                continue
+            if not widget.visible:
+                continue
+            target_meta = self._window_hit_meta(widget, container)
+            if target_meta.collides:
+                hit_any = True
+                focus_target = target_meta.widget
+                if self.gui.handle_widget(target_meta.widget, event, container):
+                    if focus_target is not None and self.is_registered_widget(focus_target):
+                        self.gui.update_focus(focus_target)
+                    if emit_task_panel:
+                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
+                    return self._build_widget_action(target_meta.widget, container)
+            elif target_meta.outside_collision:
+                if self.gui.handle_widget(target_meta.widget, event, container):
+                    if focus_target is not None and self.is_registered_widget(focus_target):
+                        self.gui.update_focus(focus_target)
+                    if emit_task_panel:
+                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
+                    return self._build_widget_action(target_meta.widget, container)
+        return hit_any, focus_target
+
     @staticmethod
     def _screen_hit_meta(widget: Any, mouse_pos, convert_to_window) -> _WidgetTargetMeta:
         hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
@@ -99,25 +126,10 @@ class InputTargetResolver:
         if window is None:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)
-        hit_any = False
-        focus_target = None
-        for widget in tuple(window.widgets)[::-1]:
-            if widget not in window.widgets:
-                continue
-            if widget.visible:
-                target_meta = self._window_hit_meta(widget, window)
-                if target_meta.collides:
-                    hit_any = True
-                    focus_target = target_meta.widget
-                    if self.gui.handle_widget(target_meta.widget, event, window):
-                        if focus_target is not None and self.is_registered_widget(focus_target):
-                            self.gui.update_focus(focus_target)
-                        return self._build_widget_action(target_meta.widget, window)
-                elif target_meta.outside_collision:
-                    if self.gui.handle_widget(target_meta.widget, event, window):
-                        if focus_target is not None and self.is_registered_widget(focus_target):
-                            self.gui.update_focus(focus_target)
-                        return self._build_widget_action(target_meta.widget, window)
+        layer_result = self._dispatch_widget_layer(event, window)
+        if isinstance(layer_result, InputAction):
+            return layer_result
+        hit_any, focus_target = layer_result
         if hit_any and focus_target is not None and self.is_registered_widget(focus_target):
             self.gui.update_focus(focus_target)
         else:
@@ -131,25 +143,10 @@ class InputTargetResolver:
             return None
         if not task_panel.get_rect().collidepoint(context.mouse_pos):
             return None
-        hit_any = False
-        focus_target = None
-        for widget in tuple(task_panel.widgets)[::-1]:
-            if widget not in task_panel.widgets:
-                continue
-            if widget.visible:
-                target_meta = self._window_hit_meta(widget, task_panel)
-                if target_meta.collides:
-                    hit_any = True
-                    focus_target = target_meta.widget
-                    if self.gui.handle_widget(target_meta.widget, event, task_panel):
-                        if focus_target is not None and self.is_registered_widget(focus_target):
-                            self.gui.update_focus(focus_target)
-                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
-                elif target_meta.outside_collision:
-                    if self.gui.handle_widget(target_meta.widget, event, task_panel):
-                        if focus_target is not None and self.is_registered_widget(focus_target):
-                            self.gui.update_focus(focus_target)
-                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
+        layer_result = self._dispatch_widget_layer(event, task_panel, emit_task_panel=True)
+        if isinstance(layer_result, InputAction):
+            return layer_result
+        hit_any, focus_target = layer_result
         if hit_any and focus_target is not None and self.is_registered_widget(focus_target):
             self.gui.update_focus(focus_target)
         else:

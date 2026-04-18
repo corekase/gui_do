@@ -26,6 +26,10 @@ class Renderer:
             if widget.visible:
                 yield widget
 
+    def _draw_widget_collection(self, widgets) -> None:
+        for widget in self._iter_visible_widgets(widgets):
+            widget.draw()
+
     def _resolve_cursor_pos(self) -> Tuple[int, int]:
         if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
             return self.gui.lock_point_pos
@@ -47,8 +51,7 @@ class Renderer:
                 else:
                     window.draw_title_bar_inactive()
                 window.draw_window()
-                for widget in self._iter_visible_widgets(window.widgets):
-                    widget.draw()
+                self._draw_widget_collection(window.widgets)
                 self.gui.surface.blit(window.surface, (window.x, window.y))
 
     def _draw_task_panel(self) -> None:
@@ -58,8 +61,7 @@ class Renderer:
         panel_rect = task_panel.get_rect()
         self._capture_bitmap(panel_rect)
         task_panel.draw_background()
-        for widget in self._iter_visible_widgets(task_panel.widgets):
-            widget.draw()
+        self._draw_widget_collection(task_panel.widgets)
         self.gui.surface.blit(task_panel.surface, (task_panel.x, task_panel.y))
 
     def _draw_cursor(self) -> None:
