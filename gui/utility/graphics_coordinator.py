@@ -16,21 +16,17 @@ class GraphicsCoordinator:
     """Owns pristine/backdrop bitmap operations for manager and managed surfaces."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the GraphicsCoordinator instance."""
+        """Create GraphicsCoordinator."""
         self.gui: "GuiManager" = gui_manager
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
-        """Run copy graphic area and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Copy graphic area."""
         bitmap = pygame.Surface((rect.width, rect.height), flags)
         bitmap.blit(surface, (0, 0), rect)
         return bitmap
 
     def set_pristine(self, image: str, obj: Optional[Any] = None) -> None:
-        """Run set pristine and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set pristine."""
         if obj is None:
             obj = self.gui
         if obj.surface is None:
@@ -52,9 +48,7 @@ class GraphicsCoordinator:
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[Any] = None) -> None:
-        """Run restore pristine and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Restore pristine."""
         if obj is None:
             obj = self.gui
         if obj.pristine is None:

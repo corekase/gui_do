@@ -7,5 +7,5 @@ class BaseEvent:
     """Base event type for all framework-dispatched events."""
 
     def __init__(self, event_type: Event) -> None:
-        """Initialize the BaseEvent instance."""
+        """Create BaseEvent."""
         self.type: Event = event_type

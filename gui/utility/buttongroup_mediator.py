@@ -10,29 +10,23 @@ class ButtonGroupMediator:
     """Mediator coordinating mutually exclusive selection per button group."""
 
     def __init__(self, is_registered: Callable[["ButtonGroup"], bool]) -> None:
-        """Initialize the ButtonGroupMediator instance."""
+        """Create ButtonGroupMediator."""
         self._is_registered = is_registered
         self._groups: Dict[str, List["ButtonGroup"]] = {}
         self._selections: Dict[str, "ButtonGroup"] = {}
 
     def get_selection(self, group: str) -> Optional["ButtonGroup"]:
-        """Run get selection and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get selection."""
         self._prune(group)
         return self._selections.get(group)
 
     def clear(self) -> None:
-        """Run clear and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Clear."""
         self._groups.clear()
         self._selections.clear()
 
     def register(self, group: str, button: "ButtonGroup") -> None:
-        """Run register and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Register."""
         self._prune(group)
         if group not in self._groups:
             self._groups[group] = []
@@ -42,9 +36,7 @@ class ButtonGroupMediator:
         self._groups[group].append(button)
 
     def select(self, group: str, button: "ButtonGroup") -> None:
-        """Run select and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Select."""
         self._prune(group)
         if not self._is_registered(button):
             return
@@ -54,7 +46,7 @@ class ButtonGroupMediator:
         self._selections[group] = button
 
     def _prune(self, group: str) -> None:
-        """Internal helper for prune."""
+        """Prune."""
         buttons = self._groups.get(group)
         if buttons is None:
             return

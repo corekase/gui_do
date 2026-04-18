@@ -20,9 +20,7 @@ class ButtonStyleStrategy(Protocol):
         text: Optional[str],
         rect: Rect,
     ) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
-        """Run render and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Render."""
         ...
 
 

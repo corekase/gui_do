@@ -15,7 +15,7 @@ class BaseInteractive(Widget):
     """Shared hover/armed state machine for interactive widgets."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
-        """Initialize the BaseInteractive instance."""
+        """Create BaseInteractive."""
         super().__init__(gui, id, rect)
         self.state: InteractiveState = InteractiveState.Idle
         self.idle: Optional[Surface] = None

@@ -26,7 +26,7 @@ class Canvas(Widget):
     _OVERFLOW_MODES = ('drop_oldest', 'reject_new')
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
-        """Initialize the Canvas instance."""
+        """Create Canvas."""
         if on_activate is not None and not callable(on_activate):
             raise GuiError('on_activate must be callable when provided')
         super().__init__(gui, id, rect)
@@ -53,9 +53,7 @@ class Canvas(Widget):
         self.CEvent: Optional["CanvasEventPacket"] = None
 
     def get_canvas_surface(self) -> Surface:
-        """Run get canvas surface and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get canvas surface."""
         return self.canvas
 
     def leave(self) -> None:
@@ -63,16 +61,12 @@ class Canvas(Widget):
         return
 
     def get_event_queue_limit(self) -> int:
-        """Run get event queue limit and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get event queue limit."""
         maxlen = self._events.maxlen
         return 0 if maxlen is None else maxlen
 
     def get_event_queue_stats(self) -> Dict[str, Union[int, bool, str]]:
-        """Run get event queue stats and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get event queue stats."""
         return {
             'queued': len(self._events),
             'limit': self.get_event_queue_limit(),
@@ -83,9 +77,7 @@ class Canvas(Widget):
         }
 
     def reset_event_queue_stats(self, clear_queue: bool = False) -> None:
-        """Run reset event queue stats and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Reset event queue stats."""
         if not isinstance(clear_queue, bool):
             raise GuiError(f'clear_queue must be a bool, got: {type(clear_queue).__name__}')
         self.dropped_events = 0
@@ -107,15 +99,13 @@ class Canvas(Widget):
         return event
 
     def set_event_queue_limit(self, max_events: int) -> None:
-        """Run set event queue limit and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set event queue limit."""
         self._configure_max_queued_events(max_events)
         self.queued_event = len(self._events) > 0
         self.CEvent = self._events[0] if self._events else None
 
     def _configure_max_queued_events(self, max_events: Optional[int] = None) -> None:
-        """Internal helper for configure max queued events."""
+        """Configure max queued events."""
         if max_events is None:
             max_events = self._DEFAULT_MAX_QUEUED_EVENTS
         if not isinstance(max_events, int):
@@ -127,17 +117,13 @@ class Canvas(Widget):
         self._events = deque(self._events, maxlen=max_events)
 
     def set_motion_coalescing(self, enabled: bool) -> None:
-        """Run set motion coalescing and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set motion coalescing."""
         if not isinstance(enabled, bool):
             raise GuiError(f'motion coalescing flag must be bool, got: {type(enabled).__name__}')
         self.coalesce_motion_events = enabled
 
     def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]], *, strict: bool = False) -> None:
-        """Run set overflow handler and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set overflow handler."""
         if callback is not None and not callable(callback):
             raise GuiError('overflow callback must be callable when provided')
         if not isinstance(strict, bool):
@@ -146,17 +132,13 @@ class Canvas(Widget):
         self._overflow_callback_strict = strict
 
     def set_overflow_mode(self, mode: str) -> None:
-        """Run set overflow mode and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set overflow mode."""
         if not isinstance(mode, str) or mode not in self._OVERFLOW_MODES:
             raise GuiError(f'overflow mode must be one of {self._OVERFLOW_MODES}, got: {mode!r}')
         self._overflow_mode = mode
 
     def get_overflow_mode(self) -> str:
-        """Run get overflow mode and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get overflow mode."""
         return self._overflow_mode
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
@@ -206,7 +188,7 @@ class Canvas(Widget):
             return False
 
     def _notify_overflow(self) -> None:
-        """Internal helper for notify overflow."""
+        """Notify overflow."""
         if self.on_overflow is None:
             return
         try:

@@ -13,21 +13,19 @@ class EventDispatcher:
     """Consumes routed input actions and emits GuiEvent values."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the EventDispatcher instance."""
+        """Create EventDispatcher."""
         self.gui: "GuiManager" = gui_manager
         self.router: InputRouter = InputRouter(gui_manager)
         self.emitter: InputEventEmitter = gui_manager.input_emitter
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
-        """Run handle and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Handle."""
         return self._emit_action(self._route_action(event))
 
     def _route_action(self, event: PygameEvent):
-        """Internal helper for route action."""
+        """Route action."""
         return self.router.route(event)
 
     def _emit_action(self, action):
-        """Internal helper for emit action."""
+        """Emit action."""
         return self.emitter.emit_action(action)

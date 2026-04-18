@@ -51,7 +51,7 @@ class DragStateController:
         )
 
         def _mutation(state: DragState) -> None:
-            """Internal helper for mutation."""
+            """Mutation."""
             state.begin_drag(active_window, mouse_delta)
 
         self._commit_drag_mutation(_mutation)

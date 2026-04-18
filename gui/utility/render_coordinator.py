@@ -10,17 +10,13 @@ class RenderCoordinator:
     """Owns top-level draw and undraw orchestration wrappers."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the RenderCoordinator instance."""
+        """Create RenderCoordinator."""
         self.gui: "GuiManager" = gui_manager
 
     def draw_gui(self) -> None:
-        """Run draw gui and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Draw gui."""
         self.gui.renderer.draw()
 
     def undraw_gui(self) -> None:
-        """Run undraw gui and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Undraw gui."""
         self.gui.renderer.undraw()

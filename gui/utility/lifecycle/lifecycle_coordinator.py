@@ -12,13 +12,11 @@ class LifecycleCoordinator:
     """Owns screen/task-panel lifecycle callbacks and frame pre/post orchestration."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the LifecycleCoordinator instance."""
+        """Create LifecycleCoordinator."""
         self.gui: "GuiManager" = gui_manager
 
     def run_postamble(self) -> None:
-        """Run run postamble and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Run postamble."""
         for window in self.gui.windows:
             if window.visible:
                 window.run_postamble()
@@ -27,9 +25,7 @@ class LifecycleCoordinator:
         self.gui.screen_lifecycle.run_postamble()
 
     def run_preamble(self) -> None:
-        """Run run preamble and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Run preamble."""
         self.gui.screen_lifecycle.run_preamble()
         for window in self.gui.windows:
             if window.visible:
@@ -43,9 +39,7 @@ class LifecycleCoordinator:
         event_handler: Optional[Callable[["BaseEvent"], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Run set screen lifecycle and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set screen lifecycle."""
         if preamble is not None and not callable(preamble):
             raise GuiError('screen preamble must be callable or None')
         if event_handler is not None and not callable(event_handler):
@@ -60,9 +54,7 @@ class LifecycleCoordinator:
         event_handler: Optional[Callable[["BaseEvent"], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Run set task panel lifecycle and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Set task panel lifecycle."""
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
         if preamble is not None and not callable(preamble):

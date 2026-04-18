@@ -11,7 +11,7 @@ class StateManager:
     """Registers named GUI contexts and tracks the active one."""
 
     def __init__(self, mouse_pos_provider: Optional[Callable[[], Tuple[int, int]]] = None) -> None:
-        """Initialize the StateManager instance."""
+        """Create StateManager."""
         self._contexts: Dict[str, GuiManager] = {}
         self._active_context_name: Optional[str] = None
         self.is_running: bool = True

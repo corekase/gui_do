@@ -9,14 +9,12 @@ class WorkspaceState:
     """Mutable workspace state shared by object registry and workspace coordinator."""
 
     def __init__(self) -> None:
-        """Initialize the WorkspaceState instance."""
+        """Create WorkspaceState."""
         self.task_panel_capture: bool = False
         self.active_object: Optional[Window] = None
 
     def resolve_active_object(self, windows: List[Window]) -> Optional[Window]:
-        """Run resolve active object and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Resolve active object."""
         if self.active_object is None:
             return None
         if self.active_object not in windows:

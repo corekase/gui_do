@@ -16,7 +16,7 @@ class Renderer:
         self._bitmaps: List[Tuple[Surface, Rect]] = []
 
     def _capture_bitmap(self, rect: Rect) -> None:
-        """Internal helper for capture bitmap."""
+        """Capture bitmap."""
         if not self.gui.buffered:
             return
         if rect.width <= 0 or rect.height <= 0:
@@ -25,30 +25,30 @@ class Renderer:
 
     @staticmethod
     def _iter_visible_widgets(widgets):
-        """Internal helper for iter visible widgets."""
+        """Iter visible widgets."""
         for widget in tuple(widgets):
             if widget.visible:
                 yield widget
 
     def _draw_widget_collection(self, widgets) -> None:
-        """Internal helper for draw widget collection."""
+        """Draw widget collection."""
         for widget in self._iter_visible_widgets(widgets):
             widget.draw()
 
     def _resolve_cursor_pos(self) -> Tuple[int, int]:
-        """Internal helper for resolve cursor pos."""
+        """Resolve cursor pos."""
         if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
             return self.gui.lock_point_pos
         return self.gui.mouse_pos
 
     def _draw_root_widgets(self) -> None:
-        """Internal helper for draw root widgets."""
+        """Draw root widgets."""
         for widget in self._iter_visible_widgets(self.gui.widgets):
             self._capture_bitmap(Rect(widget.draw_rect))
             widget.draw()
 
     def _draw_windows(self) -> None:
-        """Internal helper for draw windows."""
+        """Draw windows."""
         windows_snapshot = tuple(self.gui.windows)
         top_window = windows_snapshot[-1] if windows_snapshot else None
         for window in windows_snapshot:
@@ -63,7 +63,7 @@ class Renderer:
                 self.gui.surface.blit(window.surface, (window.x, window.y))
 
     def _draw_task_panel(self) -> None:
-        """Internal helper for draw task panel."""
+        """Draw task panel."""
         task_panel = self.gui.task_panel
         if task_panel is None or not task_panel.visible:
             return
@@ -74,7 +74,7 @@ class Renderer:
         self.gui.surface.blit(task_panel.surface, (task_panel.x, task_panel.y))
 
     def _draw_cursor(self) -> None:
-        """Internal helper for draw cursor."""
+        """Draw cursor."""
         if self.gui.mouse_locked:
             self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
         if self.gui.cursor_image is None or self.gui.cursor_hotspot is None:

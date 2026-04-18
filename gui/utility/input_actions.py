@@ -18,21 +18,15 @@ class InputAction:
 
     @classmethod
     def pass_event(cls) -> "InputAction":
-        """Run pass event and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Pass event."""
         return cls(event_type=Event.Pass)
 
     @classmethod
     def emit(cls, event_type: Event, **kwargs: object) -> "InputAction":
-        """Run emit and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Emit."""
         return cls(event_type=event_type, kwargs=kwargs)
 
     @classmethod
     def from_builder(cls, builder: Callable[[], "GuiEvent"]) -> "InputAction":
-        """Run from builder and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """From builder."""
         return cls(builder=builder)

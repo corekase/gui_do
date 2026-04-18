@@ -24,16 +24,12 @@ class Scrollbar(Frame):
 
     @property
     def visible(self) -> bool:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         return self._visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         if not isinstance(value, bool):
             raise GuiError('widget visible must be a bool')
         self._visible = value
@@ -42,9 +38,7 @@ class Scrollbar(Frame):
 
     @Widget.position.setter
     def position(self, pos: Tuple[int, int]) -> None:
-        """Run position and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Position."""
         old_x, old_y = self.draw_rect.x, self.draw_rect.y
         Widget.position.fset(self, pos)
         delta_x = self.draw_rect.x - old_x
@@ -61,7 +55,7 @@ class Scrollbar(Frame):
             arrow.position = (arrow.draw_rect.x + delta_x, arrow.draw_rect.y + delta_y)
 
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
-        """Initialize the Scrollbar instance."""
+        """Create Scrollbar."""
         self._registered: List[ArrowBox] = []
         self._subwidgets_bound: bool = False
         self._style: ArrowPosition = style
@@ -136,9 +130,7 @@ class Scrollbar(Frame):
         self._hit: bool = False
 
     def leave(self) -> None:
-        """Run leave and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Leave."""
         self._reset()
 
     def set(self, total_range: int, start_pos: int, bar_size: int, inc_size: int) -> None:
@@ -154,9 +146,7 @@ class Scrollbar(Frame):
         self._total_range, self._start_pos, self._bar_size, self._inc_size = total_range, start_pos, bar_size, inc_size
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Run handle event and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Handle event."""
         if self._hit:
             self._hit = False
             return True
@@ -208,31 +198,25 @@ class Scrollbar(Frame):
         return False
 
     def draw(self) -> None:
-        """Run draw and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Draw."""
         super().draw()
         rect(self.surface, colours['full'], self._handle_area(), 0)
 
     def decrement(self) -> None:
-        """Run decrement and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Decrement."""
         self._hit = True
         self._start_pos -= self._inc_size
         if self._start_pos < 0:
             self._start_pos = 0
     def increment(self) -> None:
-        """Run increment and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Increment."""
         self._hit = True
         self._start_pos += self._inc_size
         if self._start_pos + self._bar_size > self._total_range:
             self._start_pos = self._total_range - self._bar_size
 
     def _handle_area(self) -> Rect:
-        """Internal helper for handle area."""
+        """Handle area."""
         start_point = self._total_to_graphical(self._start_pos)
         graphical_size = self._total_to_graphical(self._bar_size)
         if self._horizontal == Orientation.Horizontal:
@@ -241,21 +225,21 @@ class Scrollbar(Frame):
             return Rect(self._graphic_rect.x, self._graphic_rect.y + start_point, self._graphic_rect.width, graphical_size)
 
     def _graphical_range(self) -> int:
-        """Internal helper for graphical range."""
+        """Graphical range."""
         if self._horizontal == Orientation.Horizontal:
             return self._graphic_rect.width
         else:
             return self._graphic_rect.height
 
     def _graphical_to_total(self, point: int) -> int:
-        """Internal helper for graphical to total."""
+        """Graphical to total."""
         graphical = self._graphical_range()
         if graphical <= 0:
             return 0
         return int((point * self._total_range) / graphical)
 
     def _on_added_to_gui(self) -> None:
-        """Internal helper for on added to gui."""
+        """On added to gui."""
         if self._subwidgets_bound or self._style == ArrowPosition.Skip:
             return
         if self._increment_rect is None or self._decrement_rect is None:
@@ -280,7 +264,7 @@ class Scrollbar(Frame):
             raise
 
     def _reset(self) -> None:
-        """Internal helper for reset."""
+        """Reset."""
         self.gui.set_lock_area(None)
         self.state = InteractiveState.Idle
         self._hit = False
@@ -288,7 +272,7 @@ class Scrollbar(Frame):
         self._last_mouse_pos = None
 
     def _total_to_graphical(self, point: int) -> int:
-        """Internal helper for total to graphical."""
+        """Total to graphical."""
         if self._total_range <= 0:
             return 0
         return int((point * self._graphical_range()) / self._total_range)

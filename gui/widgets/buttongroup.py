@@ -49,9 +49,7 @@ class ButtonGroup(BaseInteractive):
             self.select()
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Run handle event and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Handle event."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
         collision = self.get_collide(window)

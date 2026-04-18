@@ -15,17 +15,13 @@ class DragState:
     mouse_delta: Optional[Tuple[int, int]] = None
 
     def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
-        """Run begin drag and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Begin drag."""
         self.dragging = True
         self.dragging_window = window
         self.mouse_delta = mouse_delta
 
     def clear_drag(self) -> None:
-        """Run clear drag and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Clear drag."""
         self.dragging = False
         self.dragging_window = None
         self.mouse_delta = None

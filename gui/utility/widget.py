@@ -16,16 +16,12 @@ class Widget:
 
     @property
     def visible(self) -> bool:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         return self._visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         if not isinstance(value, bool):
             raise GuiError('widget visible must be a bool')
         self._visible = value
@@ -52,7 +48,7 @@ class Widget:
             self.hit_rect.y = self.draw_rect.y + hit_offset_y
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
-        """Initialize the Widget instance."""
+        """Create Widget."""
         self.gui: "GuiManager" = gui
         self.surface: Optional[Surface] = None
         self.window: Optional["Window"] = None

@@ -13,21 +13,17 @@ class InputEventCoordinator:
     """Owns GuiEvent construction and filtered event stream production."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the InputEventCoordinator instance."""
+        """Create InputEventCoordinator."""
         self.gui: "GuiManager" = gui_manager
 
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
-        """Run event and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Event."""
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self.gui.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable["GuiEvent"]:
-        """Run events and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Events."""
         for raw_event in self.gui.input_providers.event_getter():
             event = self.gui.handle_event(raw_event)
             if event.type == Event.Pass:

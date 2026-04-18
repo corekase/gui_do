@@ -15,9 +15,7 @@ class CursorPlacement:
     size: Tuple[int, int]
 
     def build_rect(self) -> Rect:
-        """Run build rect and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Build rect."""
         return Rect(
             self.anchor[0] - self.hotspot[0],
             self.anchor[1] - self.hotspot[1],

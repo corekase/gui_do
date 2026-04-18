@@ -15,7 +15,7 @@ class InputRouter:
     """Resolves input target priority and produces framework GuiEvent values."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
-        """Initialize the InputRouter instance."""
+        """Create InputRouter."""
         self.gui: "GuiManager" = gui_manager
         self.targets: InputTargetResolver = InputTargetResolver(gui_manager)
 
@@ -44,7 +44,7 @@ class InputRouter:
         return self._process_screen_widgets(event)
 
     def _handle_locked_object(self, event: PygameEvent) -> InputAction:
-        """Internal helper for handle locked object."""
+        """Handle locked object."""
         lock_obj = self.gui.locking_object
         if not self._is_registered_widget(lock_obj):
             self.gui.set_lock_area(None)
@@ -56,7 +56,7 @@ class InputRouter:
         return InputAction.pass_event()
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
-        """Internal helper for handle mouse motion."""
+        """Handle mouse motion."""
         rel = getattr(event, 'rel', (0, 0))
         pos = getattr(event, 'pos', self.gui.get_mouse_pos())
         if self.gui.mouse_locked:
@@ -68,7 +68,7 @@ class InputRouter:
             self.gui.mouse_pos = self.gui.lock_state.clamp_position(pos)
 
     def _handle_system_event(self, event: PygameEvent) -> InputAction:
-        """Internal helper for handle system event."""
+        """Handle system event."""
         if event.type == QUIT:
             return InputAction.emit(Event.Quit)
         if event.type == KEYUP:
@@ -78,33 +78,33 @@ class InputRouter:
         return InputAction.pass_event()
 
     def _handle_window_dragging(self, event: PygameEvent) -> InputAction:
-        """Internal helper for handle window dragging."""
+        """Handle window dragging."""
         return self.gui.drag_state.handle_drag_event(event)
 
     def _process_screen_widgets(self, event: PygameEvent) -> InputAction:
-        """Internal helper for process screen widgets."""
+        """Process screen widgets."""
         return self.targets.process_screen_widgets(event)
 
     def _process_window_widgets(self, event: PygameEvent) -> InputAction:
-        """Internal helper for process window widgets."""
+        """Process window widgets."""
         return self.targets.process_window_widgets(event)
 
     def _process_task_panel_widgets(self, event: PygameEvent):
-        """Internal helper for process task panel widgets."""
+        """Process task panel widgets."""
         return self.targets.process_task_panel_widgets(event)
 
     def _check_window_drag_start(self, event: PygameEvent) -> None:
-        """Internal helper for check window drag start."""
+        """Check window drag start."""
         self.gui.drag_state.start_if_possible(event)
 
     def _is_registered_widget(self, widget) -> bool:
-        """Internal helper for is registered widget."""
+        """Is registered widget."""
         return self.targets.is_registered_widget(widget)
 
     def _reset_window_drag_state(self) -> None:
-        """Internal helper for reset window drag state."""
+        """Reset window drag state."""
         self.gui.drag_state.reset()
 
     def _update_active_window(self) -> None:
-        """Internal helper for update active window."""
+        """Update active window."""
         self.targets.update_active_window()

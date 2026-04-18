@@ -18,32 +18,24 @@ class Window:
 
     @property
     def visible(self) -> bool:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         return self._visible
 
     @visible.setter
     def visible(self, value: bool) -> None:
-        """Run visible and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Visible."""
         if not isinstance(value, bool):
             raise GuiError('window visible must be a bool')
         self._visible = value
 
     @property
     def position(self) -> Tuple[int, int]:
-        """Run position and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Position."""
         return self.x, self.y
 
     @position.setter
     def position(self, pos: Tuple[int, int]) -> None:
-        """Run position and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Position."""
         if not isinstance(pos, tuple) or len(pos) != 2:
             raise GuiError(f'window pos must be a tuple of (x, y), got: {pos}')
         self.x, self.y = pos
@@ -59,7 +51,7 @@ class Window:
         event_handler: Optional[Callable[["BaseEvent"], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        """Initialize the Window instance."""
+        """Create Window."""
         if not isinstance(title, str) or title == '':
             raise GuiError('window title must be a non-empty string')
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -102,27 +94,19 @@ class Window:
         self._postamble: Callable[[], None] = callbacks.postamble
 
     def run_postamble(self) -> None:
-        """Run run postamble and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Run postamble."""
         self._postamble()
 
     def run_preamble(self) -> None:
-        """Run run preamble and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Run preamble."""
         self._preamble()
 
     def get_title_bar_rect(self) -> Rect:
-        """Run get title bar rect and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get title bar rect."""
         return Rect(self.x, self.y - self.titlebar_size, self.width, self.titlebar_size)
 
     def get_widget_rect(self) -> Rect:
-        """Run get widget rect and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Get widget rect."""
         x, y, w, h = self.window_widget_lower_bitmap.get_rect()
         return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
     def get_window_rect(self) -> Rect:
@@ -130,31 +114,23 @@ class Window:
         return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
 
     def handle_event(self, event: "BaseEvent") -> None:
-        """Run handle event and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Handle event."""
         self._event_handler(event)
 
     def draw_title_bar_active(self) -> None:
-        """Run draw title bar active and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Draw title bar active."""
         self.gui.surface.blit(self.title_bar_active_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_title_bar_inactive(self) -> None:
-        """Run draw title bar inactive and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Draw title bar inactive."""
         self.gui.surface.blit(self.title_bar_inactive_bitmap, (self.x, self.y - self.titlebar_size))
         self.gui.surface.blit(self.window_widget_lower_bitmap, self.get_widget_rect())
 
     def draw_window(self) -> None:
-        """Run draw window and return the resulting value.
-
-        This method encapsulates the main behavior for this operation."""
+        """Draw window."""
         self.gui.restore_pristine(self.surface.get_rect(), self)
 
     def _window_save_pristine(self) -> None:
-        """Internal helper for window save pristine."""
+        """Window save pristine."""
         self.pristine = self.gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
