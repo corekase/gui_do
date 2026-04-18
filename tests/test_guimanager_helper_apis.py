@@ -13,6 +13,7 @@ from gui.utility.guimanager import GuiManager
 from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
+from gui.utility.widget_state_coordinator import WidgetStateCoordinator
 from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 
@@ -35,6 +36,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.graphics = GraphicsCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
         gui.pointer = PointerCoordinator(gui)
+        gui.widget_state = WidgetStateCoordinator(gui)
         gui.workspace = WorkspaceCoordinator(gui)
         return gui
 

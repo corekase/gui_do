@@ -20,6 +20,7 @@ from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
+from .widget_state_coordinator import WidgetStateCoordinator
 from .workspace_coordinator import WorkspaceCoordinator
 from .widget import Widget
 from ..widgets.window import Window as gWindow
@@ -366,6 +367,7 @@ class GuiManager:
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
+        self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self._screen_preamble: Callable[[], None] = _noop
@@ -502,10 +504,7 @@ class GuiManager:
         self.event_delivery.clear_task_owners_for_window(window)
 
     def hide_widgets(self, *widgets: Widget) -> None:
-        for widget in widgets:
-            if not isinstance(widget, Widget):
-                raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
-            widget.visible = False
+        self.widget_state.hide_widgets(*widgets)
 
     def lower_window(self, window: gWindow) -> None:
         self.workspace.lower_window(window)
@@ -562,10 +561,7 @@ class GuiManager:
         self.event_delivery.set_task_owners(window, *task_ids)
 
     def show_widgets(self, *widgets: Widget) -> None:
-        for widget in widgets:
-            if not isinstance(widget, Widget):
-                raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
-            widget.visible = True
+        self.widget_state.show_widgets(*widgets)
 
     def dispatch_event(self, event: BaseEvent) -> None:
         self.event_delivery.dispatch_event(event)
@@ -587,15 +583,7 @@ class GuiManager:
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[gWindow] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
-        if widget.handle_event(event, window):
-            if widget.on_activate is not None:
-                if not callable(widget.on_activate):
-                    raise GuiError(f'widget callback is not callable for id: {widget.id}')
-                widget.on_activate()
-                return False
-            else:
-                return True
-        return False
+        return self.widget_state.handle_widget(widget, event, window)
 
     def draw_gui(self) -> None:
         self.renderer.draw()
