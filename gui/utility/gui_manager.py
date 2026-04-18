@@ -517,7 +517,7 @@ class GuiManager:
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         return self.lock_flow.lock_area(position)
 
-    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
+    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional["_PristineContainer"] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""
         self.graphics.restore_pristine(area, obj)
 
