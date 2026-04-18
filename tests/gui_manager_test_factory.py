@@ -21,6 +21,7 @@ from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget_state_coordinator import WidgetStateCoordinator
 from gui.utility.workspace_coordinator import WorkspaceCoordinator
+from gui.utility.workspace_state import WorkspaceState
 from gui.utility.widget import Widget
 
 StubPreset = Literal["base", "routing", "locking", "state_manager"]
@@ -80,8 +81,7 @@ def build_gui_manager_stub(
     gui.widgets = []
     gui.windows = []
     gui.task_panel = None
-    gui._task_panel_capture = False
-    gui._active_object = None
+    gui.workspace_state = WorkspaceState()
 
     gui.dragging = False
     gui.dragging_window = None

@@ -16,18 +16,18 @@ class WorkspaceCoordinator:
     def begin_task_panel(self) -> None:
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
-        self.gui._task_panel_capture = True
-        self.gui._active_object = None
+        self.gui.workspace_state.task_panel_capture = True
+        self.gui.workspace_state.active_object = None
 
     def end_task_panel(self) -> None:
-        self.gui._task_panel_capture = False
+        self.gui.workspace_state.task_panel_capture = False
 
     def set_task_panel_enabled(self, enabled: bool) -> None:
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
         self.gui.task_panel.set_visible(enabled)
         if not enabled:
-            self.gui._task_panel_capture = False
+            self.gui.workspace_state.task_panel_capture = False
 
     def set_task_panel_auto_hide(self, auto_hide: bool) -> None:
         if self.gui.task_panel is None:
@@ -65,8 +65,8 @@ class WorkspaceCoordinator:
     def lower_window(self, window: gWindow) -> None:
         self.gui._resolve_active_object()
         if window not in self.gui.windows:
-            if self.gui._active_object is window:
-                self.gui._active_object = None
+            if self.gui.workspace_state.active_object is window:
+                self.gui.workspace_state.active_object = None
             return
         self.gui.windows.remove(window)
         self.gui.windows.insert(0, window)
@@ -74,8 +74,8 @@ class WorkspaceCoordinator:
     def raise_window(self, window: gWindow) -> None:
         self.gui._resolve_active_object()
         if window not in self.gui.windows:
-            if self.gui._active_object is window:
-                self.gui._active_object = None
+            if self.gui.workspace_state.active_object is window:
+                self.gui.workspace_state.active_object = None
             return
         self.gui.windows.remove(window)
         self.gui.windows.append(window)

@@ -167,15 +167,15 @@ class GuiManagerHelperApiTests(unittest.TestCase):
             set_timer_interval=lambda value: set_visible_calls.append(("interval", value)),
         )
         gui.task_panel = panel
-        gui._task_panel_capture = True
-        gui._active_object = object()
+        gui.workspace_state.task_panel_capture = True
+        gui.workspace_state.active_object = object()
 
         GuiManager.begin_task_panel(gui)
-        self.assertTrue(gui._task_panel_capture)
-        self.assertIsNone(gui._active_object)
+        self.assertTrue(gui.workspace_state.task_panel_capture)
+        self.assertIsNone(gui.workspace_state.active_object)
 
         GuiManager.set_task_panel_enabled(gui, False)
-        self.assertFalse(gui._task_panel_capture)
+        self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertEqual(set_visible_calls[0], False)
 
         GuiManager.set_task_panel_auto_hide(gui, False)
@@ -185,7 +185,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         settings = GuiManager.read_task_panel_settings(gui)
         GuiManager.end_task_panel(gui)
 
-        self.assertFalse(gui._task_panel_capture)
+        self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertEqual(settings["enabled"], panel.visible)
         self.assertEqual(settings["auto_hide"], panel.auto_hide)
         self.assertEqual(settings["reveal_pixels"], panel.reveal_pixels)
@@ -287,7 +287,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         w2 = object()
         w3 = object()
         gui.windows = [w1, w2, w3]
-        gui._active_object = w2
+        gui.workspace_state.active_object = w2
 
         GuiManager.lower_window(gui, w3)
         self.assertEqual(gui.windows, [w3, w1, w2])
@@ -296,9 +296,9 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertEqual(gui.windows, [w1, w2, w3])
 
         stale = object()
-        gui._active_object = stale
+        gui.workspace_state.active_object = stale
         GuiManager.raise_window(gui, stale)
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
     def test_handle_widget_executes_callback_paths_and_validates_callable(self) -> None:
         gui = self._build_manager_stub()
@@ -451,10 +451,10 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_resolve_active_object_clears_stale_window(self) -> None:
         gui = self._build_manager_stub()
         stale = object()
-        gui._active_object = stale
+        gui.workspace_state.active_object = stale
 
         self.assertIsNone(GuiManager._resolve_active_object(gui))
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget import Widget
+from gui.utility.workspace_state import WorkspaceState
 from gui.utility import guimanager as gm
 
 
@@ -219,17 +220,16 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.widgets = []
         gui.windows = []
         gui.task_panel = None
-        gui._active_object = None
-        gui._task_panel_capture = False
+        gui.workspace_state = WorkspaceState()
         gui.object_registry = GuiObjectRegistry(gui)
 
         # Incoming container description switches across task panel, screen, and window.
         self.assertEqual(gm.GuiManager._describe_incoming_widget_container(gui), "screen")
         active = SimpleNamespace(x=3, y=4, width=7, height=8)
-        gui._active_object = active
+        gui.workspace_state.active_object = active
         gui.windows = [active]
         self.assertIn("window pos=(3,4)", gm.GuiManager._describe_incoming_widget_container(gui))
-        gui._task_panel_capture = True
+        gui.workspace_state.task_panel_capture = True
         gui.task_panel = SimpleNamespace(widgets=[])
         self.assertEqual(gm.GuiManager._describe_incoming_widget_container(gui), "task_panel")
 

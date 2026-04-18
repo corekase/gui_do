@@ -83,6 +83,6 @@ class TaskPanelConfigCoordinator:
         if old_panel is not None:
             panel.set_visible(existing_visible)
             if not existing_visible:
-                self.gui._task_panel_capture = False
+                self.gui.workspace_state.task_panel_capture = False
 
         self.gui.task_panel = panel

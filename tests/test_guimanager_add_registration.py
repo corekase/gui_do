@@ -40,7 +40,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
 
         self.assertIs(returned, window)
         self.assertIn(window, gui.windows)
-        self.assertIs(gui._active_object, window)
+        self.assertIs(gui.workspace_state.active_object, window)
 
     def test_add_rejects_duplicate_widget_id(self) -> None:
         gui = self._build_manager_stub()
@@ -72,7 +72,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
         gui = self._build_manager_stub()
         window = self._build_window_stub()
         gui.windows.append(window)
-        gui._active_object = window
+        gui.workspace_state.active_object = window
 
         widget = self._build_widget_stub("broken-window")
 

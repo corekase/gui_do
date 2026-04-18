@@ -24,10 +24,10 @@ class GuiObjectRegistry:
         if self.is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self.describe_gui_object(gui_object)}')
         if isinstance(gui_object, gWindow):
-            if self.gui._task_panel_capture and self.gui.task_panel is not None:
+            if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
                 raise GuiError('window nesting inside task panel is not supported; call end_task_panel() before creating a window')
             self.gui.windows.append(gui_object)
-            self.gui._active_object = gui_object
+            self.gui.workspace_state.active_object = gui_object
             return gui_object
 
         if not isinstance(gui_object.id, str) or gui_object.id == '':
@@ -43,7 +43,7 @@ class GuiObjectRegistry:
             )
         active_window = self.resolve_active_object()
         added_to_task_panel = False
-        if self.gui._task_panel_capture and self.gui.task_panel is not None:
+        if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
             gui_object.window = cast(Any, self.gui.task_panel)
             gui_object.surface = self.gui.task_panel.surface
             self.gui.task_panel.widgets.append(gui_object)
@@ -86,7 +86,7 @@ class GuiObjectRegistry:
         return type(gui_object).__name__
 
     def describe_incoming_widget_container(self) -> str:
-        if self.gui._task_panel_capture and self.gui.task_panel is not None:
+        if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
             return 'task_panel'
         window = self.resolve_active_object()
         if window is None:
@@ -134,9 +134,4 @@ class GuiObjectRegistry:
         return False
 
     def resolve_active_object(self) -> Optional[gWindow]:
-        if self.gui._active_object is None:
-            return None
-        if self.gui._active_object not in self.gui.windows:
-            self.gui._active_object = None
-            return None
-        return self.gui._active_object
+        return self.gui.workspace_state.resolve_active_object(self.gui.windows)

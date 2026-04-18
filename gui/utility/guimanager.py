@@ -28,6 +28,7 @@ from .task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
 from .widget_state_coordinator import WidgetStateCoordinator
 from .workspace_coordinator import WorkspaceCoordinator
+from .workspace_state import WorkspaceState
 from .widget import Widget
 from ..widgets.window import Window as gWindow
 from ..widgets.button import Button as gButton
@@ -178,7 +179,7 @@ class GuiManager:
             self._bitmap_factory.load_font(name, filename, size)
         self.surface: Surface = surface
         self.widgets: List[Widget] = []
-        self._active_object: Optional[gWindow] = None
+        self.workspace_state: WorkspaceState = WorkspaceState()
         self.windows: List[gWindow] = []
         self.dragging: bool = False
         self.dragging_window: Optional[gWindow] = None
@@ -216,7 +217,6 @@ class GuiManager:
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self.screen_lifecycle: ScreenLifecycle = ScreenLifecycle()
-        self._task_panel_capture: bool = False
         self.task_panel: Optional["_ManagedTaskPanel"] = None
         self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()
         self.point_lock_tolerance_size: Tuple[int, int] = (

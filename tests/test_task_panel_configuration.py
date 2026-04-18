@@ -7,6 +7,7 @@ from pygame import Rect
 from gui.utility.constants import GuiError
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
+from gui.utility.workspace_state import WorkspaceState
 from gui.utility import guimanager as gm
 
 
@@ -36,7 +37,8 @@ class TaskPanelConfigurationTests(unittest.TestCase):
     def _build_manager_stub(self):
         gui = gm.GuiManager.__new__(gm.GuiManager)
         gui.task_panel = None
-        gui._task_panel_capture = True
+        gui.workspace_state = WorkspaceState()
+        gui.workspace_state.task_panel_capture = True
         gui.task_panel_config = TaskPanelConfigCoordinator(gui)
         return gui
 
@@ -81,7 +83,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         self.assertIs(gui.task_panel, new_panel)
         self.assertEqual(new_panel.widgets, [w1, w2])
         self.assertEqual(new_panel.set_visible_calls, [False])
-        self.assertFalse(gui._task_panel_capture)
+        self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertIs(w1.window, new_panel)
         self.assertIs(w2.window, new_panel)
         self.assertIs(w1.surface, new_panel.surface)

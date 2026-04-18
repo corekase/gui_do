@@ -81,7 +81,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_add_rejects_window_when_task_panel_capture_active(self) -> None:
         gui = self._build_manager_stub()
         gui.task_panel = _PanelStub()
-        gui._task_panel_capture = True
+        gui.workspace_state.task_panel_capture = True
 
         window = Window.__new__(Window)
 
@@ -92,7 +92,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         panel = _PanelStub()
         gui.task_panel = panel
-        gui._task_panel_capture = True
+        gui.workspace_state.task_panel_capture = True
 
         widget = Widget.__new__(Widget)
         widget.id = "tp-w"
@@ -156,7 +156,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         # _resolve_active_object returns active when present.
         win = Window.__new__(Window)
         gui.windows = [win]
-        gui._active_object = win
+        gui.workspace_state.active_object = win
         self.assertIs(GuiManager._resolve_active_object(gui), win)
 
         # _resolve_current_widget returns current when registered.
@@ -238,7 +238,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         panel = _PanelStub()
         gui.task_panel = panel
-        gui._task_panel_capture = True
+        gui.workspace_state.task_panel_capture = True
 
         widget = Widget.__new__(Widget)
         widget.id = "ok"
@@ -275,7 +275,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         active_window = SimpleNamespace(surface=object(), widgets=_NoContainList())
         gui.windows = [active_window]
-        gui._active_object = active_window
+        gui.workspace_state.active_object = active_window
 
         widget = Widget.__new__(Widget)
         widget.id = "active"
@@ -296,14 +296,14 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_raise_and_lower_window_clear_stale_active_when_unregistered(self) -> None:
         gui = self._build_manager_stub()
         stale = Window.__new__(Window)
-        gui._active_object = stale
+        gui.workspace_state.active_object = stale
 
         GuiManager.lower_window(gui, stale)
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
-        gui._active_object = stale
+        gui.workspace_state.active_object = stale
         GuiManager.raise_window(gui, stale)
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
     def test_lock_area_success_and_release_mouse_locked_non_point_mode(self) -> None:
         gui = self._build_manager_stub()
@@ -433,15 +433,15 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_lower_raise_window_unregistered_paths_with_preserved_active(self) -> None:
         gui = self._build_manager_stub()
         window = Window.__new__(Window)
-        gui._active_object = window
+        gui.workspace_state.active_object = window
         gui._resolve_active_object = lambda: window
 
         GuiManager.lower_window(gui, window)
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
-        gui._active_object = window
+        gui.workspace_state.active_object = window
         GuiManager.raise_window(gui, window)
-        self.assertIsNone(gui._active_object)
+        self.assertIsNone(gui.workspace_state.active_object)
 
     def test_set_cursor_without_prior_cursor_anchor_uses_mouse_pos(self) -> None:
         gui = self._build_manager_stub()
@@ -618,12 +618,12 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         panel = _PanelStub(visible=False)
         gui.task_panel = panel
-        gui._task_panel_capture = True
+        gui.workspace_state.task_panel_capture = True
 
         GuiManager.set_task_panel_enabled(gui, True)
 
         self.assertEqual(panel.set_visible_calls, [True])
-        self.assertTrue(gui._task_panel_capture)
+        self.assertTrue(gui.workspace_state.task_panel_capture)
 
     def test_add_screen_widget_rollback_without_membership(self) -> None:
         class _NoContainList(list):
@@ -737,7 +737,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
         self.assertIs(out, window)
         self.assertIn(window, gui.windows)
-        self.assertIs(gui._active_object, window)
+        self.assertIs(gui.workspace_state.active_object, window)
 
     def test_is_registered_object_widget_unmatched_with_nonempty_windows(self) -> None:
         gui = self._build_manager_stub()
