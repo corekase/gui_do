@@ -8,6 +8,7 @@ from .scheduler import Timers, Scheduler
 from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation, InteractiveState
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
+from .dispatch_bridge_coordinator import DispatchBridgeCoordinator
 from .event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
@@ -366,6 +367,7 @@ class GuiManager:
         self.timers: Timers = Timers()
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
+        self.dispatch_bridge: DispatchBridgeCoordinator = DispatchBridgeCoordinator(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.event_input: InputEventCoordinator = InputEventCoordinator(self)
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
@@ -571,7 +573,7 @@ class GuiManager:
         yield from self.event_input.events()
 
     def handle_event(self, event: PygameEvent) -> GuiEvent:
-        return self.event_dispatcher.handle(event)
+        return self.dispatch_bridge.handle_event(event)
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[gWindow] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
