@@ -66,6 +66,8 @@ The toolkit expects assets under `data/`:
 
 The demo uses this directly (fonts, `*.ttf` files, and images, example `backdrop.jpg`, and cursors, example `cursor.png`).
 
+Resource loading resolves from the repository `data/` folder, so it is independent of your current working directory.
+
 ## 3. Minimal runnable setup
 
 ```python
@@ -172,16 +174,16 @@ The demo follows this sequence, which is a solid default:
 
 All of these both create and register the widget:
 
-- `gui.ArrowBox(id, rect, direction_degrees, on_activate=None)`
-- `gui.Button(id, rect, style, text, on_activate=None)`
-- `gui.ButtonGroup(group, id, rect, style, text)`
-- `gui.Canvas(id, rect, backdrop=None, on_activate=None, automatic_pristine=False)`
-- `gui.Frame(id, rect)`
-- `gui.Image(id, rect, image, automatic_pristine=False, scale=True)`
-- `gui.Label(position, text, shadow=False, id=None)`
-- `gui.Scrollbar(id, overall_rect, orientation, arrow_position, (total, start, bar_size, inc))`
-- `gui.Toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
-- `gui.Window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+- `gui.arrow_box(id, rect, direction, on_activate=None)`
+- `gui.button(id, rect, style, text, on_activate=None)`
+- `gui.button_group(group, id, rect, style, text)`
+- `gui.canvas(id, rect, backdrop=None, on_activate=None, automatic_pristine=False)`
+- `gui.frame(id, rect)`
+- `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
+- `gui.label(position, text, shadow=False, id=None)`
+- `gui.scrollbar(id, overall_rect, orientation, arrow_position, params)`
+- `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
+- `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
 Task panel behavior is manager-owned (not a separate widget factory).
 
@@ -250,8 +252,13 @@ Key methods:
 - `canvas.get_canvas_surface()`
 - `canvas.read_event()` returns `CanvasEventPacket | None`
 - `canvas.set_event_queue_limit(max_events)`
-- `canvas.set_overflow_handler(callback)`
+- `canvas.set_overflow_handler(callback, strict=False)`
+- `canvas.set_overflow_mode('drop_oldest' | 'reject_new')`
 - `canvas.set_motion_coalescing(enabled)`
+
+Overflow callback signature:
+
+- `callback(dropped_now, total_dropped)`
 
 The demo uses canvas events for:
 
@@ -276,7 +283,7 @@ The Mandelbrot demo uses this heavily:
 - Worker task computes regions.
 - Task sends incremental draw payloads to main thread.
 - UI applies payloads in a message callback.
-- `Event.Task` is used for completion/failure handling.
+- `Event.Task` is used for completion/failure handling (`TaskEvent.operation`, `TaskEvent.id`, `TaskEvent.error`).
 
 ## Threading and affinity rules
 
@@ -408,7 +415,7 @@ These are the most useful caveats to know up front:
 python gui_do_demo.py
 ```
 
-If assets are missing or not found, verify the `data/` directory contains the files referenced by the demo and you are starting python in the same directory as the demo.  If the application is running on a system that has case-sensitive filenames, like Linux, then the case of the data directory and the filename string need to match.
+If assets are missing or not found, verify the `data/` directory contains the files referenced by the demo. If the application is running on a system that has case-sensitive filenames, like Linux, the case of directory and file names must match the strings used in code.
 
 # Optional Deep Dive: Life and Mandelbrot Internals
 
