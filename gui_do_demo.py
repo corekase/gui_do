@@ -246,6 +246,7 @@ class Demo:
             'Conway\'s Game of Life',
             (x_pos, y_pos),
             (width, height),
+            preamble=self.life_window_preamble,
             event_handler=self.life_window_event_handler,
             postamble=self.life_window_postamble
         )
@@ -260,6 +261,22 @@ class Demo:
         g1.button('life_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
         self.toggle_life = g1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        zoom_label_bitmap = b1.render_text('Zoom', colours['text'], True)
+        zoom_label_padding = 8
+        slider_padding = 12
+        slider_y = height - widget_height - 10
+        zoom_label_x = self.canvas_rect.right - zoom_label_bitmap.get_width()
+        slider_left = self.toggle_life.draw_rect.right + slider_padding
+        slider_right = zoom_label_x - zoom_label_padding
+        self.life_zoom_slider = g1.slider(
+            'life_zoom_slider',
+            Rect(slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
+            Orientation.Horizontal,
+            11,
+            2,
+            True,
+        )
+        g1.label((zoom_label_x, slider_y + 6), 'Zoom', True)
         # -----------------------
         # make the mandelbrot window
         # -----------------------
@@ -422,6 +439,23 @@ class Demo:
     def life_window_event_handler(self, event):
         if event.type == Event.Widget and event.widget_id == 'life_reset':
             self.life_reset()
+
+    def life_window_preamble(self):
+        old_size = self.cell_size
+        if old_size <= 0:
+            return
+        zoom_value = int(self.life_zoom_slider.value) + 1
+        if zoom_value < 1:
+            zoom_value = 1
+        elif zoom_value > 12:
+            zoom_value = 12
+        new_size = zoom_value * 2
+        if new_size == old_size:
+            return
+        center_x, center_y = self.canvas_rect.center
+        self.origin_x = center_x - ((center_x - self.origin_x) / old_size) * new_size
+        self.origin_y = center_y - ((center_y - self.origin_y) / old_size) * new_size
+        self.cell_size = new_size
 
     def life_window_postamble(self):
         if self.toggle_life.pushed:
@@ -650,6 +684,7 @@ class Demo:
     def life_reset(self):
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
+        self.life_zoom_slider.value = 2
         self.toggle_life.pushed = False
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})

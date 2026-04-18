@@ -115,19 +115,27 @@ class Slider(Widget, AxisRangeMixin):
             axis_end = local_track.bottom - half_handle
             trimmed_height = max(1, axis_end - axis_start)
             trimmed_track = Rect(local_track.left, axis_start, local_track.width, trimmed_height)
-        rect(bitmap, colours['medium'] + (255,), trimmed_track, 0)
+        # Use a contrasting fill so the track stays visible on window chrome backgrounds.
+        rect(bitmap, colours['dark'] + (255,), trimmed_track, 0)
+
+        def notch_pixel(value: float, start: int, span: int) -> int:
+            if self._total_range <= 0 or span <= 0:
+                return start
+            ratio = float(value) / float(self._total_range)
+            return int(round(start + (ratio * span)))
 
         for point in self._notch_points():
-            pixel_offset = self.total_to_pixel(point, self._total_range)
             if self._horizontal == Orientation.Horizontal:
-                centre_x = (self._graphic_rect.x - self.draw_rect.x) + pixel_offset + (self._handle_size // 2)
-                y1 = local_track.top - 2
-                y2 = local_track.bottom + 2
+                centre_x = notch_pixel(point, trimmed_track.left, max(0, trimmed_track.width - 1))
+                notch_extension = 2
+                y1 = local_track.top - notch_extension
+                y2 = (local_track.bottom - 1) + notch_extension
                 line(bitmap, colours['full'] + (200,), (centre_x, y1), (centre_x, y2), 1)
             else:
-                centre_y = (self._graphic_rect.y - self.draw_rect.y) + pixel_offset + (self._handle_size // 2)
-                x1 = local_track.left - 2
-                x2 = local_track.right + 2
+                centre_y = notch_pixel(point, trimmed_track.top, max(0, trimmed_track.height - 1))
+                notch_extension = 2
+                x1 = local_track.left - notch_extension
+                x2 = (local_track.right - 1) + notch_extension
                 line(bitmap, colours['full'] + (200,), (x1, centre_y), (x2, centre_y), 1)
         return bitmap
 
