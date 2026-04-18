@@ -4,6 +4,7 @@ from gui.utility.constants import GuiError
 from gui.utility.focus_state import FocusStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.object_registry import GuiObjectRegistry
+from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -19,6 +20,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
         gui._active_object = None
         gui.focus_state = FocusStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.workspace = WorkspaceCoordinator(gui)
         return gui
 
     def _build_widget_stub(self, widget_id="w"):

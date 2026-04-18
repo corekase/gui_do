@@ -19,6 +19,7 @@ from .object_registry import GuiObjectRegistry
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
+from .workspace_coordinator import WorkspaceCoordinator
 from .widget import Widget
 from ..widgets.window import Window as gWindow
 from ..widgets.button import Button as gButton
@@ -362,6 +363,7 @@ class GuiManager:
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
+        self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
@@ -452,13 +454,10 @@ class GuiManager:
         self.lifecycle.run_preamble()
 
     def begin_task_panel(self) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self._task_panel_capture = True
-        self._active_object = None
+        self.workspace.begin_task_panel()
 
     def end_task_panel(self) -> None:
-        self._task_panel_capture = False
+        self.workspace.end_task_panel()
 
     def set_task_panel_lifecycle(
         self,
@@ -469,44 +468,22 @@ class GuiManager:
         self.lifecycle.set_task_panel_lifecycle(preamble, event_handler, postamble)
 
     def set_task_panel_enabled(self, enabled: bool) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.task_panel.set_visible(enabled)
-        if not enabled:
-            self._task_panel_capture = False
+        self.workspace.set_task_panel_enabled(enabled)
 
     def set_task_panel_auto_hide(self, auto_hide: bool) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.task_panel.set_auto_hide(auto_hide)
+        self.workspace.set_task_panel_auto_hide(auto_hide)
 
     def set_task_panel_reveal_pixels(self, reveal_pixels: int) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.task_panel.set_reveal_pixels(reveal_pixels)
+        self.workspace.set_task_panel_reveal_pixels(reveal_pixels)
 
     def set_task_panel_movement_step(self, movement_step: int) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.task_panel.set_movement_step(movement_step)
+        self.workspace.set_task_panel_movement_step(movement_step)
 
     def set_task_panel_timer_interval(self, timer_interval: float) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.task_panel.set_timer_interval(timer_interval)
+        self.workspace.set_task_panel_timer_interval(timer_interval)
 
     def read_task_panel_settings(self) -> Dict[str, object]:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        panel = self.task_panel
-        return {
-            'enabled': panel.visible,
-            'auto_hide': panel.auto_hide,
-            'reveal_pixels': panel.reveal_pixels,
-            'movement_step': panel.movement_step,
-            'timer_interval': panel.timer_interval,
-            'rect': panel.get_rect(),
-        }
+        return self.workspace.read_task_panel_settings()
 
     def get_mouse_pos(self) -> Tuple[int, int]:
         return self.lock_area(self.mouse_pos)
@@ -528,22 +505,10 @@ class GuiManager:
             widget.visible = False
 
     def lower_window(self, window: gWindow) -> None:
-        self._resolve_active_object()
-        if window not in self.windows:
-            if self._active_object is window:
-                self._active_object = None
-            return
-        self.windows.remove(window)
-        self.windows.insert(0, window)
+        self.workspace.lower_window(window)
 
     def raise_window(self, window: gWindow) -> None:
-        self._resolve_active_object()
-        if window not in self.windows:
-            if self._active_object is window:
-                self._active_object = None
-            return
-        self.windows.remove(window)
-        self.windows.append(window)
+        self.workspace.raise_window(window)
 
     def set_cursor(self, name: str) -> None:
         """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""

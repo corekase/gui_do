@@ -11,6 +11,7 @@ from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
+from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 
 
@@ -30,6 +31,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.object_registry = GuiObjectRegistry(gui)
         gui.event_delivery = EventDeliveryCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
+        gui.workspace = WorkspaceCoordinator(gui)
         return gui
 
     def _build_widget_stub(self, visible=True):
