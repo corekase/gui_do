@@ -38,7 +38,7 @@ class Demo:
         # begin gui1
         # -----------------------
         # create a gui manager
-        g1 = GuiManager(self.screen, fonts)
+        g1 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui1_screen_event_handler)
         g1.set_screen_lifecycle(
             preamble=self.gui1_screen_preamble,
             event_handler=self.gui1_screen_event_handler,
@@ -64,17 +64,7 @@ class Demo:
         # -----------------------
         # screen widgets in a bottom task panel
         # -----------------------
-        panel_height = widget_height + 10
-        self.task_panel = g1.Panel(
-            'task_panel',
-            (self.screen_rect.width, panel_height),
-            x=0,
-            reveal_pixels=4,
-            auto_hide=True,
-            timer_interval=16.0,
-            movement_step=4,
-            event_handler=self.gui1_screen_event_handler,
-        )
+        g1.begin_task_panel()
         # exit button
         g1.Button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
@@ -91,6 +81,7 @@ class Demo:
         self.life_toggle = g1.Toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
         # control whether the Mandelbrot window is visible
         self.mandel_toggle = g1.Toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        g1.end_task_panel()
         # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------
@@ -237,7 +228,6 @@ class Demo:
         g1.Button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
         g1.Button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
         g1.Button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
-        g1.raise_window(self.task_panel)
         # set cursor image
         g1.set_cursor('normal')
         self.gui1 = g1

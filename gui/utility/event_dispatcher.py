@@ -27,6 +27,9 @@ class EventDispatcher:
             return self._handle_window_dragging(event)
         if self.gui.locking_object:
             return self._handle_locked_object(event)
+        task_panel_event = self._process_task_panel_widgets(event)
+        if task_panel_event is not None:
+            return task_panel_event
         if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
             self._check_window_drag_start(event)
         if self.gui.active_window:
@@ -123,7 +126,7 @@ class EventDispatcher:
                 self.gui.raise_window(self.gui.active_window)
         hit_any = False
         focus_target = None
-        for window in self._windows_in_hit_order():
+        for window in tuple(self.gui.windows)[::-1]:
             if window not in self.gui.windows:
                 continue
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
@@ -151,6 +154,36 @@ class EventDispatcher:
         self.gui.update_focus(None)
         return self._handle_base_mouse_events(event)
 
+    def _process_task_panel_widgets(self, event: PygameEvent):
+        task_panel = self.gui.task_panel
+        if task_panel is None or not task_panel.visible:
+            return None
+        if not task_panel.get_rect().collidepoint(self.gui.get_mouse_pos()):
+            return None
+        hit_any = False
+        focus_target = None
+        for widget in tuple(task_panel.widgets)[::-1]:
+            if widget not in task_panel.widgets:
+                continue
+            if widget.visible:
+                if widget.get_collide(task_panel):
+                    hit_any = True
+                    focus_target = widget
+                    if self.gui.handle_widget(widget, event, task_panel):
+                        if focus_target is not None and self._is_registered_widget(focus_target):
+                            self.gui.update_focus(focus_target)
+                        return self.gui.event(Event.Widget, widget_id=widget.id, task_panel=True)
+                elif widget.should_handle_outside_collision():
+                    if self.gui.handle_widget(widget, event, task_panel):
+                        if focus_target is not None and self._is_registered_widget(focus_target):
+                            self.gui.update_focus(focus_target)
+                        return self.gui.event(Event.Widget, widget_id=widget.id, task_panel=True)
+        if hit_any and focus_target is not None and self._is_registered_widget(focus_target):
+            self.gui.update_focus(focus_target)
+        else:
+            self.gui.update_focus(None)
+        return self.gui.event(Event.Pass)
+
     def _check_window_drag_start(self, event: PygameEvent) -> None:
         event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
@@ -168,6 +201,8 @@ class EventDispatcher:
             return False
         if widget in self.gui.widgets:
             return True
+        if self.gui.task_panel is not None and widget in self.gui.task_panel.widgets:
+            return True
         for window in self.gui.windows:
             if widget in window.widgets:
                 return True
@@ -178,15 +213,9 @@ class EventDispatcher:
         self.gui.dragging_window = None
         self.gui.mouse_delta = None
 
-    def _windows_in_hit_order(self):
-        windows_snapshot = tuple(self.gui.windows)
-        panel_windows = [window for window in windows_snapshot if window.__class__.__name__ == 'Panel']
-        regular_windows = [window for window in windows_snapshot if window.__class__.__name__ != 'Panel']
-        return tuple(panel_windows[::-1] + regular_windows[::-1])
-
     def _update_active_window(self) -> None:
         top_window = None
-        for window in self._windows_in_hit_order():
+        for window in self.gui.windows[::-1]:
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
                 top_window = window
                 break

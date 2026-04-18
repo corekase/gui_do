@@ -25,17 +25,14 @@ class Renderer:
                         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, widget_rect), widget_rect))
                 widget.draw()
         windows_snapshot = tuple(self.gui.windows)
-        regular_windows = [window for window in windows_snapshot if window.__class__.__name__ != 'Panel']
-        panel_windows = [window for window in windows_snapshot if window.__class__.__name__ == 'Panel']
-        top_regular_window = regular_windows[-1] if regular_windows else None
-
-        for window in tuple(regular_windows):
+        top_window = windows_snapshot[-1] if windows_snapshot else None
+        for window in windows_snapshot:
             if window.visible:
                 if self.gui.buffered:
                     window_rect = window.get_window_rect()
                     if window_rect.width > 0 and window_rect.height > 0:
                         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window_rect), window_rect))
-                if window is top_regular_window:
+                if window is top_window:
                     window.draw_title_bar_active()
                 else:
                     window.draw_title_bar_inactive()
@@ -44,19 +41,17 @@ class Renderer:
                     if widget.visible:
                         widget.draw()
                 self.gui.surface.blit(window.surface, (window.x, window.y))
-
-        # Panels are overlay containers and should always draw above regular windows.
-        for window in tuple(panel_windows):
-            if window.visible:
-                if self.gui.buffered:
-                    window_rect = window.get_window_rect()
-                    if window_rect.width > 0 and window_rect.height > 0:
-                        self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window_rect), window_rect))
-                window.draw_window()
-                for widget in tuple(window.widgets):
-                    if widget.visible:
-                        widget.draw()
-                self.gui.surface.blit(window.surface, (window.x, window.y))
+        task_panel = self.gui.task_panel
+        if task_panel is not None and task_panel.visible:
+            panel_rect = task_panel.get_rect()
+            if self.gui.buffered:
+                if panel_rect.width > 0 and panel_rect.height > 0:
+                    self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, panel_rect), panel_rect))
+            task_panel.draw_background()
+            for widget in tuple(task_panel.widgets):
+                if widget.visible:
+                    widget.draw()
+            self.gui.surface.blit(task_panel.surface, (task_panel.x, task_panel.y))
         if self.gui.mouse_locked:
             self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
         if self.gui.cursor_image is not None and self.gui.cursor_hotspot is not None:

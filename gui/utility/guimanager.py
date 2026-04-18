@@ -3,9 +3,9 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 import logging
-from typing import Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
-from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
+from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation, InteractiveState
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
@@ -23,7 +23,6 @@ from ..widgets.toggle import Toggle as gToggle
 from ..widgets.arrowbox import ArrowBox as gArrowBox
 from ..widgets.buttongroup import ButtonGroup as gButtonGroup
 from ..widgets.frame import Frame as gFrame
-from ..widgets.panel import Panel as gPanel
 
 _logger = logging.getLogger(__name__)
 
@@ -36,6 +35,106 @@ def _noop_event(_: BaseEvent) -> None:
 class _PristineContainer(Protocol):
     surface: Surface
     pristine: Optional[Surface]
+
+class _ManagedTaskPanel:
+    """GuiManager-owned bottom task panel container."""
+
+    def __init__(
+        self,
+        gui: "GuiManager",
+        height: int,
+        x: int,
+        reveal_pixels: int,
+        auto_hide: bool,
+        timer_interval: float,
+        movement_step: int,
+        backdrop: Optional[str],
+        preamble: Optional[Callable[[], None]],
+        event_handler: Optional[Callable[[BaseEvent], None]],
+        postamble: Optional[Callable[[], None]],
+    ) -> None:
+        if not isinstance(height, int) or height <= 0:
+            raise GuiError(f'task_panel_height must be a positive int, got: {height}')
+        if not isinstance(x, int):
+            raise GuiError(f'task_panel_x must be an int, got: {x}')
+        if not isinstance(reveal_pixels, int) or reveal_pixels < 1:
+            raise GuiError(f'task_panel_reveal_pixels must be >= 1, got: {reveal_pixels}')
+        if not isinstance(auto_hide, bool):
+            raise GuiError('task_panel_auto_hide must be a bool')
+        if not isinstance(movement_step, int) or movement_step <= 0:
+            raise GuiError(f'task_panel_movement_step must be > 0, got: {movement_step}')
+        if timer_interval <= 0:
+            raise GuiError(f'task_panel_timer_interval must be > 0, got: {timer_interval}')
+        screen_rect = gui.surface.get_rect()
+        if x < 0 or x >= screen_rect.width:
+            raise GuiError(f'task_panel_x must be in range [0, {screen_rect.width - 1}], got: {x}')
+        width = screen_rect.width - x
+        if reveal_pixels >= height:
+            raise GuiError(f'task_panel_reveal_pixels must be < panel height ({height}), got: {reveal_pixels}')
+        self.gui: "GuiManager" = gui
+        self.x: int = x
+        self.width: int = width
+        self.height: int = height
+        self.visible: bool = True
+        self.widgets: List[Widget] = []
+        self.surface: Surface = pygame.surface.Surface((self.width, self.height)).convert()
+        self.pristine: Optional[Surface] = None
+        self.reveal_pixels: int = reveal_pixels
+        self.auto_hide: bool = auto_hide
+        self.timer_interval: float = timer_interval
+        self.movement_step: int = movement_step
+        self._shown_y: int = screen_rect.height - self.height
+        self._hidden_y: int = screen_rect.height - self.reveal_pixels
+        self.y: int = self._shown_y
+        self._hovered: bool = False
+        self._timer_id: Tuple[str, int] = ('task-panel-motion', id(self))
+        self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
+        self._event_handler: Callable[[BaseEvent], None] = event_handler if callable(event_handler) else _noop_event
+        self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
+        if backdrop is None:
+            frame = gFrame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.height))
+            frame.state = InteractiveState.Idle
+            frame.surface = self.surface
+            frame.draw()
+            self.pristine = gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
+        else:
+            gui.set_pristine(backdrop, self)
+        gui.timers.add_timer(self._timer_id, self.timer_interval, self.animate)
+
+    def run_preamble(self) -> None:
+        self._preamble()
+
+    def run_postamble(self) -> None:
+        self._postamble()
+
+    def handle_event(self, event: BaseEvent) -> None:
+        self._event_handler(event)
+
+    def get_rect(self) -> Rect:
+        return Rect(self.x, self.y, self.width, self.height)
+
+    def refresh_targets(self) -> None:
+        screen_rect = self.gui.surface.get_rect()
+        self._shown_y = screen_rect.height - self.height
+        self._hidden_y = screen_rect.height - self.reveal_pixels
+        self._hovered = self.get_rect().collidepoint(self.gui.get_mouse_pos())
+
+    def draw_background(self) -> None:
+        if self.pristine is None:
+            raise GuiError('task panel pristine is not initialized')
+        self.gui.restore_pristine(self.surface.get_rect(), self)
+
+    def animate(self) -> None:
+        if not self.visible:
+            return
+        self.refresh_targets()
+        target_y = self._hidden_y
+        if not self.auto_hide or self._hovered:
+            target_y = self._shown_y
+        if self.y < target_y:
+            self.y = min(target_y, self.y + self.movement_step)
+        elif self.y > target_y:
+            self.y = max(target_y, self.y - self.movement_step)
 
 TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 
@@ -51,6 +150,7 @@ class GuiEvent(BaseEvent):
         self.widget_id: Optional[str] = kwargs.get('widget_id') if isinstance(kwargs.get('widget_id'), str) else None
         self.group: Optional[str] = kwargs.get('group') if isinstance(kwargs.get('group'), str) else None
         self.window: Optional[gWindow] = kwargs.get('window') if isinstance(kwargs.get('window'), gWindow) else None
+        self.task_panel: bool = kwargs.get('task_panel') is True
 
     @staticmethod
     def _as_optional_int(value: object) -> Optional[int]:
@@ -146,38 +246,23 @@ class GuiManager:
     ) -> gWindow:
         return self.add(gWindow(self, title, pos, size, backdrop, preamble, event_handler, postamble))
 
-    def Panel(
+    def __init__(
         self,
-        id: str,
-        size: Tuple[int, int],
-        x: int = 0,
-        reveal_pixels: int = 4,
-        auto_hide: bool = True,
-        timer_interval: float = 16.0,
-        movement_step: int = 4,
-        backdrop: Optional[str] = None,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> gPanel:
-        return self.add(
-            gPanel(
-                self,
-                id,
-                size,
-                x,
-                reveal_pixels,
-                auto_hide,
-                timer_interval,
-                movement_step,
-                backdrop,
-                preamble,
-                event_handler,
-                postamble,
-            )
-        )
-
-    def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
+        surface: Surface,
+        fonts: List[Tuple[str, str, int]],
+        bitmap_factory: Optional[BitmapFactory] = None,
+        task_panel_enabled: bool = True,
+        task_panel_height: int = 38,
+        task_panel_x: int = 0,
+        task_panel_reveal_pixels: int = 4,
+        task_panel_auto_hide: bool = True,
+        task_panel_timer_interval: float = 16.0,
+        task_panel_movement_step: int = 4,
+        task_panel_backdrop: Optional[str] = None,
+        task_panel_preamble: Optional[Callable[[], None]] = None,
+        task_panel_event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        task_panel_postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
             raise GuiError('surface cannot be None')
@@ -230,16 +315,36 @@ class GuiManager:
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
         self._task_owner_by_id: Dict[Hashable, gWindow] = {}
+        self._task_panel_capture: bool = False
+        self.task_panel: Optional[_ManagedTaskPanel] = None
         self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()
         self.point_lock_tolerance_size: Tuple[int, int] = (
             max(1, self.point_lock_recenter_rect.width),
             max(1, self.point_lock_recenter_rect.height),
         )
+        if not isinstance(task_panel_enabled, bool):
+            raise GuiError('task_panel_enabled must be a bool')
+        if task_panel_enabled:
+            self.task_panel = _ManagedTaskPanel(
+                self,
+                task_panel_height,
+                task_panel_x,
+                task_panel_reveal_pixels,
+                task_panel_auto_hide,
+                task_panel_timer_interval,
+                task_panel_movement_step,
+                task_panel_backdrop,
+                task_panel_preamble,
+                task_panel_event_handler,
+                task_panel_postamble,
+            )
 
     def run_postamble(self) -> None:
         for window in self.windows:
             if window.visible:
                 window.run_postamble()
+        if self.task_panel is not None and self.task_panel.visible:
+            self.task_panel.run_postamble()
         self._screen_postamble()
 
     def run_preamble(self) -> None:
@@ -247,6 +352,35 @@ class GuiManager:
         for window in self.windows:
             if window.visible:
                 window.run_preamble()
+        if self.task_panel is not None and self.task_panel.visible:
+            self.task_panel.run_preamble()
+
+    def begin_task_panel(self) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self._task_panel_capture = True
+        self._active_object = None
+
+    def end_task_panel(self) -> None:
+        self._task_panel_capture = False
+
+    def set_task_panel_lifecycle(
+        self,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        if preamble is not None and not callable(preamble):
+            raise GuiError('task panel preamble must be callable or None')
+        if event_handler is not None and not callable(event_handler):
+            raise GuiError('task panel event_handler must be callable or None')
+        if postamble is not None and not callable(postamble):
+            raise GuiError('task panel postamble must be callable or None')
+        self.task_panel._preamble = preamble if preamble is not None else _noop
+        self.task_panel._event_handler = event_handler if event_handler is not None else _noop_event
+        self.task_panel._postamble = postamble if postamble is not None else _noop
 
     def get_mouse_pos(self) -> Tuple[int, int]:
         return self.lock_area(self.mouse_pos)
@@ -275,7 +409,13 @@ class GuiManager:
                     f'on {self._describe_widget_container(conflict)}'
                 )
             active_window = self._resolve_active_object()
-            if active_window is not None:
+            added_to_task_panel = False
+            if self._task_panel_capture and self.task_panel is not None:
+                gui_object.window = None
+                gui_object.surface = self.task_panel.surface
+                self.task_panel.widgets.append(gui_object)
+                added_to_task_panel = True
+            elif active_window is not None:
                 gui_object.window = active_window
                 gui_object.surface = active_window.surface
                 active_window.widgets.append(gui_object)
@@ -289,7 +429,9 @@ class GuiManager:
                 try:
                     post_add()
                 except Exception:
-                    if active_window is not None:
+                    if added_to_task_panel and self.task_panel is not None and gui_object in self.task_panel.widgets:
+                        self.task_panel.widgets.remove(gui_object)
+                    elif active_window is not None:
                         if gui_object in active_window.widgets:
                             active_window.widgets.remove(gui_object)
                     else:
@@ -491,6 +633,10 @@ class GuiManager:
         if task_owner is not None:
             task_owner.handle_event(event)
             return
+        if getattr(event, 'task_panel', False):
+            if self.task_panel is not None and self.task_panel.visible:
+                self.task_panel.handle_event(event)
+                return
         event_window = getattr(event, 'window', None)
         if not isinstance(event_window, gWindow):
             event_window = None
@@ -532,10 +678,10 @@ class GuiManager:
     def undraw_gui(self) -> None:
         self.renderer.undraw()
 
-    def convert_to_screen(self, point: Tuple[int, int], window: Optional[gWindow]) -> Tuple[int, int]:
+    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows:
+        if window is not None and window not in self.windows and window is not self.task_panel:
             window = None
         if window is not None:
             x, y = point
@@ -543,10 +689,10 @@ class GuiManager:
             return self.lock_area((x + wx, y + wy))
         return self.lock_area(point)
 
-    def convert_to_window(self, point: Tuple[int, int], window: Optional[gWindow]) -> Tuple[int, int]:
+    def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows:
+        if window is not None and window not in self.windows and window is not self.task_panel:
             window = None
         if window is not None:
             x, y = self.lock_area(point)
@@ -657,12 +803,16 @@ class GuiManager:
         return type(gui_object).__name__
 
     def _describe_incoming_widget_container(self) -> str:
+        if self._task_panel_capture and self.task_panel is not None:
+            return 'task_panel'
         window = self._resolve_active_object()
         if window is None:
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
     def _describe_widget_container(self, widget: Widget) -> str:
+        if self.task_panel is not None and widget in self.task_panel.widgets:
+            return 'task_panel'
         window = getattr(widget, 'window', None)
         if window is None or not isinstance(window, gWindow):
             return 'screen'
@@ -672,6 +822,10 @@ class GuiManager:
         for widget in self.widgets:
             if widget is not candidate and widget.id == widget_id:
                 return widget
+        if self.task_panel is not None:
+            for widget in self.task_panel.widgets:
+                if widget is not candidate and widget.id == widget_id:
+                    return widget
         for window in self.windows:
             for widget in window.widgets:
                 if widget is not candidate and widget.id == widget_id:
@@ -684,6 +838,8 @@ class GuiManager:
             return True
         if button in self.widgets:
             return True
+        if self.task_panel is not None and button in self.task_panel.widgets:
+            return True
         for window in self.windows:
             if button in window.widgets:
                 return True
@@ -694,6 +850,8 @@ class GuiManager:
             return gui_object in self.windows
         if isinstance(gui_object, Widget):
             if gui_object in self.widgets:
+                return True
+            if self.task_panel is not None and gui_object in self.task_panel.widgets:
                 return True
             for window in self.windows:
                 if gui_object in window.widgets:

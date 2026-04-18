@@ -146,10 +146,28 @@ All of these both create and register the widget:
 - `gui.Frame(id, rect)`
 - `gui.Image(id, rect, image, automatic_pristine=False, scale=True)`
 - `gui.Label(position, text, shadow=False, id=None)`
-- `gui.Panel(id, size, x=0, reveal_pixels=4, auto_hide=True, timer_interval=16.0, movement_step=4, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 - `gui.Scrollbar(id, overall_rect, orientation, arrow_position, (total, start, bar_size, inc))`
 - `gui.Toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.Window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+
+Task panel behavior is configured at `GuiManager(...)` construction time and is manager-owned (not a separate widget factory). Use:
+
+- `task_panel_enabled=True`
+- `task_panel_height=38`
+- `task_panel_x=0`
+- `task_panel_reveal_pixels=4`
+- `task_panel_auto_hide=True`
+- `task_panel_timer_interval=16.0`
+- `task_panel_movement_step=4`
+- `task_panel_backdrop=None`
+- `task_panel_preamble=None`
+- `task_panel_event_handler=None`
+- `task_panel_postamble=None`
+
+To parent newly created widgets into the task panel container, bracket creation with:
+
+- `gui.begin_task_panel()`
+- `gui.end_task_panel()`
 
 ## Events and Callbacks
 
