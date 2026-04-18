@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 from gui_manager_test_factory import build_gui_manager_stub, build_locking_stub, build_routing_stub, build_state_manager_stub
 
@@ -64,6 +65,39 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
         self.assertEqual(routing.lock_area((3, 4)), (3, 4))
         self.assertTrue(locking.mouse_locked)
         self.assertEqual(state_manager.get_mouse_pos(), (0, 0))
+
+    def test_convenience_helpers_forward_common_options(self) -> None:
+        surface = SimpleNamespace(tag="surface")
+
+        routing = build_routing_stub(surface=surface, include_ui_factory=True)
+        locking = build_locking_stub(surface=surface, include_ui_factory=True)
+        state_manager = build_state_manager_stub(surface=surface, include_ui_factory=True)
+
+        self.assertIs(routing.surface, surface)
+        self.assertIs(locking.surface, surface)
+        self.assertIs(state_manager.surface, surface)
+        self.assertTrue(hasattr(routing, "ui_factory"))
+        self.assertTrue(hasattr(locking, "ui_factory"))
+        self.assertTrue(hasattr(state_manager, "ui_factory"))
+
+    def test_state_manager_helper_supports_scheduler_and_tracking_hooks(self) -> None:
+        scheduler = object()
+        gui = build_state_manager_stub(mouse_pos=(4, 5), scheduler=scheduler, track_set_calls=True)
+
+        self.assertIs(gui._scheduler, scheduler)
+        self.assertEqual(gui.get_mouse_pos(), (4, 5))
+        gui.set_mouse_pos((7, 8), False)
+        self.assertEqual(gui.set_calls[-1], ((7, 8), False))
+
+    def test_state_manager_helper_supports_scheduler_factory(self) -> None:
+        marker = object()
+        gui = build_state_manager_stub(scheduler_factory=lambda _gui: marker)
+
+        self.assertIs(gui._scheduler, marker)
+
+    def test_state_manager_helper_rejects_conflicting_scheduler_options(self) -> None:
+        with self.assertRaises(ValueError):
+            build_state_manager_stub(scheduler=object(), scheduler_factory=lambda _gui: object())
 
 
 if __name__ == "__main__":

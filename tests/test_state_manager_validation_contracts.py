@@ -11,9 +11,7 @@ class SchedulerNoopStub:
 
 
 def build_gui_stub() -> GuiManager:
-    gui = build_state_manager_stub()
-    gui._scheduler = SchedulerNoopStub()
-    return gui
+    return build_state_manager_stub(scheduler=SchedulerNoopStub())
 
 
 class StateManagerValidationContractTests(unittest.TestCase):

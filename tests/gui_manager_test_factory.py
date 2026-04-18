@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 from pygame import Rect
 
@@ -146,5 +146,33 @@ def build_locking_stub(*, surface: Optional[Any] = None, include_ui_factory: boo
     return build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="locking")
 
 
-def build_state_manager_stub(*, surface: Optional[Any] = None, include_ui_factory: bool = False) -> GuiManager:
-    return build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="state_manager")
+def build_state_manager_stub(
+    *,
+    surface: Optional[Any] = None,
+    include_ui_factory: bool = False,
+    mouse_pos: Any = (0, 0),
+    scheduler: Optional[Any] = None,
+    scheduler_factory: Optional[Callable[[GuiManager], Any]] = None,
+    track_set_calls: bool = False,
+) -> GuiManager:
+    if scheduler is not None and scheduler_factory is not None:
+        raise ValueError("scheduler and scheduler_factory are mutually exclusive")
+
+    gui = build_gui_manager_stub(surface=surface, include_ui_factory=include_ui_factory, preset="state_manager")
+    gui._mouse_pos = mouse_pos
+
+    if track_set_calls:
+        gui.set_calls = []
+
+        def set_mouse_pos(pos: Any, update_physical_coords: bool = True) -> None:
+            gui._mouse_pos = pos
+            gui.set_calls.append((pos, update_physical_coords))
+
+        gui.set_mouse_pos = set_mouse_pos
+
+    if scheduler is not None:
+        gui._scheduler = scheduler
+    elif scheduler_factory is not None:
+        gui._scheduler = scheduler_factory(gui)
+
+    return gui

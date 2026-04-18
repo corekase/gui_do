@@ -19,10 +19,7 @@ class DummyScheduler:
 
 
 def make_minimal_gui_stub(mouse_position=(0, 0)):
-    gui = build_state_manager_stub()
-    gui._scheduler = DummyScheduler()
-    gui._mouse_pos = mouse_position
-    return gui
+    return build_state_manager_stub(mouse_pos=mouse_position, scheduler=DummyScheduler())
 
 
 class InputProviderAbstractionTests(unittest.TestCase):
