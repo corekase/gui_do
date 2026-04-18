@@ -434,7 +434,6 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         window = Window.__new__(Window)
         gui.workspace_state.active_object = window
-        gui._resolve_active_object = lambda: window
 
         GuiManager.lower_window(gui, window)
         self.assertIsNone(gui.workspace_state.active_object)
