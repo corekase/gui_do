@@ -19,7 +19,7 @@ class PackageInitBehaviorTests(unittest.TestCase):
         self.assertTrue(hasattr(gui, "ButtonStyle"))
         self.assertTrue(hasattr(gui, "colours"))
 
-    def test_windows_dpi_awareness_exceptions_are_swallowed(self) -> None:
+    def test_windows_dpi_awareness_exceptions_propagate(self) -> None:
         exception_cases = [OSError("dpi fail"), AttributeError("missing api")]
 
         for exc in exception_cases:
@@ -27,8 +27,8 @@ class PackageInitBehaviorTests(unittest.TestCase):
                 set_dpi = SimpleNamespace(SetProcessDPIAware=lambda: (_ for _ in ()).throw(exc))
                 fake_windll = SimpleNamespace(user32=set_dpi)
                 with patch("os.name", "nt"), patch.object(ctypes, "windll", fake_windll, create=True):
-                    # Import-time DPI setup should never escape these known failures.
-                    importlib.reload(gui)
+                    with self.assertRaises(type(exc)):
+                        importlib.reload(gui)
 
 
 if __name__ == "__main__":

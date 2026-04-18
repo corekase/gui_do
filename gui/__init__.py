@@ -7,8 +7,4 @@ from .utility.constants import colours, Event, CanvasEvent, Orientation, ArrowPo
 
 if os.name == 'nt':
     import ctypes
-    try:
-        ctypes.windll.user32.SetProcessDPIAware()
-    except (AttributeError, OSError):
-        # Keep compatibility with runtimes that do not expose SetProcessDPIAware such as WINE.
-        pass
+    ctypes.windll.user32.SetProcessDPIAware()
