@@ -3,9 +3,8 @@ import unittest
 import pygame
 from pygame import Rect
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.guimanager import GuiManager
-from gui.utility.input_state import LockStateController
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.renderer import Renderer
 from gui.utility.widget import Widget
 
@@ -97,7 +96,7 @@ class RendererTests(unittest.TestCase):
 
 class LockingBehaviourTests(unittest.TestCase):
     def _build_manager_for_locking(self):
-        gui = GuiManager.__new__(GuiManager)
+        gui = build_gui_manager_stub()
         gui.locking_object = Widget.__new__(Widget)
         gui._is_registered_object = lambda _obj: True
         gui.mouse_locked = True
@@ -106,8 +105,6 @@ class LockingBehaviourTests(unittest.TestCase):
         gui.lock_point_pos = None
         gui.lock_point_recenter_pending = False
         gui.lock_point_tolerance_rect = None
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
         return gui
 
     def test_lock_area_clamps_to_rect_bounds(self) -> None:
@@ -118,12 +115,10 @@ class LockingBehaviourTests(unittest.TestCase):
         self.assertEqual(gui.lock_area((12, 23)), (12, 23))
 
     def test_enforce_point_lock_recenters_once_until_back_inside(self) -> None:
-        gui = GuiManager.__new__(GuiManager)
+        gui = build_gui_manager_stub()
         gui.lock_point_pos = (40, 40)
         gui.lock_point_recenter_pending = False
         gui.point_lock_recenter_rect = Rect(25, 25, 30, 30)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
         set_calls = []
         gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 

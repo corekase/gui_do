@@ -1,5 +1,6 @@
 import unittest
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.guimanager import GuiManager
 from gui.utility.statemanager import StateManager
 
@@ -10,7 +11,7 @@ class SchedulerNoopStub:
 
 
 def build_gui_stub() -> GuiManager:
-    gui = GuiManager.__new__(GuiManager)
+    gui = build_gui_manager_stub()
     gui._scheduler = SchedulerNoopStub()
     gui._mouse_pos = (0, 0)
 

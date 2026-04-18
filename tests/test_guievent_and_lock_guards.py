@@ -2,11 +2,8 @@ import unittest
 
 from pygame import Rect
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import Event, GuiError
-from gui.utility.input_emitter import InputEventEmitter
-from gui.utility.input_event_coordinator import InputEventCoordinator
-from gui.utility.input_state import DragStateController, LockStateController
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.guimanager import GuiEvent, GuiManager
 from gui.utility.widget import Widget
 
@@ -53,12 +50,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         self.assertTrue(event.task_panel)
 
     def test_guimanager_event_injects_mouse_position_for_mouse_events(self) -> None:
-        gui = GuiManager.__new__(GuiManager)
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
-        gui.event_input = InputEventCoordinator(gui)
+        gui = build_gui_manager_stub()
         gui.get_mouse_pos = lambda: (7, 8)
 
         event = GuiManager.event(gui, Event.MouseButtonDown, button=1)
@@ -67,11 +59,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         self.assertEqual(event.button, 1)
 
     def test_set_lock_area_release_clears_lock_state(self) -> None:
-        gui = GuiManager.__new__(GuiManager)
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
+        gui = build_gui_manager_stub()
         lock_widget = Widget.__new__(Widget)
 
         gui.locking_object = lock_widget
@@ -97,22 +85,14 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         self.assertIsNone(gui.lock_point_tolerance_rect)
 
     def test_set_lock_point_rejects_non_widget_lock_owner(self) -> None:
-        gui = GuiManager.__new__(GuiManager)
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
+        gui = build_gui_manager_stub()
         gui._is_registered_object = lambda _obj: False
 
         with self.assertRaises(GuiError):
             GuiManager.set_lock_point(gui, object(), (1, 2))
 
     def test_set_lock_point_uses_mouse_provider_when_point_missing(self) -> None:
-        gui = GuiManager.__new__(GuiManager)
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
+        gui = build_gui_manager_stub()
         lock_widget = Widget.__new__(Widget)
         gui._is_registered_object = lambda obj: obj is lock_widget
         gui._mouse_get_pos = lambda: (12, 13)
