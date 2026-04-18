@@ -167,7 +167,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         self.assertIsNone(gui.lock_state.resolve())
 
     def test_managed_task_panel_helper_methods_success_paths(self) -> None:
-        import gui.utility.guimanager as gm
+        import gui.utility.gui_manager as gm
 
         timer_calls = []
         pre_calls = []
@@ -366,7 +366,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             GuiManager.lock_area(gui, "bad")  # type: ignore[arg-type]
 
     def test_managed_task_panel_branches_for_no_refresh_paths(self) -> None:
-        import gui.utility.guimanager as gm
+        import gui.utility.gui_manager as gm
 
         panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         refresh_calls = []
@@ -402,13 +402,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         self.assertIs(gui.focus_state_data.current_widget, widget)
 
     def test_label_wrapper_explicit_id_path(self) -> None:
-        import gui.utility.guimanager as gm
+        import gui.utility.gui_manager as gm
 
         gui = self._build_manager_stub()
         added = []
         gui.add = lambda obj: added.append(obj) or obj
 
-        with patch("gui.utility.ui_factory.gLabel", side_effect=lambda *_args: SimpleNamespace(args=_args)):
+        with patch("gui.utility.ui_factory.Label", side_effect=lambda *_args: SimpleNamespace(args=_args)):
             gm.GuiManager.label(gui, (1, 2), "text", id="explicit")
 
         self.assertEqual(added[0].args[1], "explicit")
@@ -566,7 +566,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         self.assertIsNone(gui.lock_state.resolve())
 
     def test_managed_task_panel_animate_no_movement_when_at_target(self) -> None:
-        import gui.utility.guimanager as gm
+        import gui.utility.gui_manager as gm
 
         panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.visible = True
@@ -680,7 +680,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         self.assertIsNone(gui.lock_state.resolve())
 
     def test_manager_init_task_panel_enabled_type_and_true_branch(self) -> None:
-        import gui.utility.guimanager as gm
+        import gui.utility.gui_manager as gm
 
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
         graphics_factory = SimpleNamespace(load_font=lambda *_args: None)

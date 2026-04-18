@@ -8,7 +8,7 @@ from gui.utility.events import GuiError
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.workspace_state import WorkspaceState
-from gui.utility import guimanager as gm
+import gui.utility.gui_manager as gm
 
 
 class OldPanelStub:

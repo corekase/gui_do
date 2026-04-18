@@ -11,7 +11,7 @@ from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget import Widget
 from gui.utility.workspace_state import WorkspaceState
-from gui.utility import guimanager as gm
+import gui.utility.gui_manager as gm
 
 
 class _Convertible:
@@ -76,7 +76,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
                 return None
 
         with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
-            "gui.utility.task_panel.gFrame", FakeFrame
+            "gui.utility.task_panel.Frame", FakeFrame
         ):
             panel = _ManagedTaskPanel(
                 gui,
@@ -187,16 +187,16 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.add = lambda obj: created.append(obj) or obj
         gui.ui_factory = GuiUiFactory(gui)
 
-        with patch("gui.utility.ui_factory.gArrowBox", side_effect=lambda *args: SimpleNamespace(kind="arrow", args=args)), patch(
-            "gui.utility.ui_factory.gButton", side_effect=lambda *args: SimpleNamespace(kind="button", args=args)
-        ), patch("gui.utility.ui_factory.gButtonGroup", side_effect=lambda *args: SimpleNamespace(kind="group", args=args)), patch(
-            "gui.utility.ui_factory.gCanvas", side_effect=lambda *args: SimpleNamespace(kind="canvas", args=args)
-        ), patch("gui.utility.ui_factory.gFrame", side_effect=lambda *args: SimpleNamespace(kind="frame", args=args)), patch(
-            "gui.utility.ui_factory.gImage", side_effect=lambda *args: SimpleNamespace(kind="image", args=args)
-        ), patch("gui.utility.ui_factory.gLabel", side_effect=lambda *args: SimpleNamespace(kind="label", args=args)), patch(
-            "gui.utility.ui_factory.gScrollbar", side_effect=lambda *args: SimpleNamespace(kind="scrollbar", args=args)
-        ), patch("gui.utility.ui_factory.gToggle", side_effect=lambda *args: SimpleNamespace(kind="toggle", args=args)), patch(
-            "gui.utility.ui_factory.gWindow", side_effect=lambda *args: SimpleNamespace(kind="window", args=args)
+        with patch("gui.utility.ui_factory.ArrowBox", side_effect=lambda *args: SimpleNamespace(kind="arrow", args=args)), patch(
+            "gui.utility.ui_factory.Button", side_effect=lambda *args: SimpleNamespace(kind="button", args=args)
+        ), patch("gui.utility.ui_factory.ButtonGroup", side_effect=lambda *args: SimpleNamespace(kind="group", args=args)), patch(
+            "gui.utility.ui_factory.Canvas", side_effect=lambda *args: SimpleNamespace(kind="canvas", args=args)
+        ), patch("gui.utility.ui_factory.Frame", side_effect=lambda *args: SimpleNamespace(kind="frame", args=args)), patch(
+            "gui.utility.ui_factory.Image", side_effect=lambda *args: SimpleNamespace(kind="image", args=args)
+        ), patch("gui.utility.ui_factory.Label", side_effect=lambda *args: SimpleNamespace(kind="label", args=args)), patch(
+            "gui.utility.ui_factory.Scrollbar", side_effect=lambda *args: SimpleNamespace(kind="scrollbar", args=args)
+        ), patch("gui.utility.ui_factory.Toggle", side_effect=lambda *args: SimpleNamespace(kind="toggle", args=args)), patch(
+            "gui.utility.ui_factory.Window", side_effect=lambda *args: SimpleNamespace(kind="window", args=args)
         ):
             gm.GuiManager.arrow_box(gui, "a", Rect(0, 0, 1, 1), 90)
             gm.GuiManager.button(gui, "b", Rect(0, 0, 1, 1), ButtonStyle.Box, None)
@@ -240,10 +240,13 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.task_panel.widgets = [widget]
         self.assertEqual(gui.object_registry.describe_widget_container(widget), "task_panel")
         gui.task_panel.widgets = []
-        win = SimpleNamespace(x=1, y=2, width=3, height=4)
+        win = gm.Window.__new__(gm.Window)
+        win.x = 1
+        win.y = 2
+        win.width = 3
+        win.height = 4
         widget.window = win
-        with patch("gui.utility.object_registry.gWindow", SimpleNamespace):
-            self.assertEqual(gui.object_registry.describe_widget_container(widget), "window pos=(1,2) size=(3,4)")
+        self.assertEqual(gui.object_registry.describe_widget_container(widget), "window pos=(1,2) size=(3,4)")
         widget.window = object()
         self.assertEqual(gui.object_registry.describe_widget_container(widget), "screen")
 
