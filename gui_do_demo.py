@@ -676,6 +676,12 @@ class Demo:
         finally:
             canvas.unlock()
 
+    def col(self, k):
+        if k == self.maximum_iters:
+            return (0, 0, 0)
+        else:
+            return Demo.cols[k % 16]
+
     def mandel_iterative(self, task_id):
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
         x, y, w, h = rect
@@ -702,7 +708,7 @@ class Demo:
             self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
         return None
 
-    def mandel_recursive(self, id, item):
+    def mandel_recursive(self, task_id, item):
         x, y, w, h = item
         x0 = max(0, x)
         y0 = max(0, y)
@@ -711,52 +717,55 @@ class Demo:
         if x1 <= x0 or y1 <= y0:
             return None
         x, y, w, h = x0, y0, x1 - x0, y1 - y0
-        def fill_region(x_pos, y_pos, width, height, value):
-            # Send a compact fill payload so the GUI thread can draw this block with one fill call.
-            self.s1.send_message(id, (x_pos, y_pos, width, height, value))
-        def publish_pixel_block(x_pos, y_pos, width, height, block_values):
-            self.s1.send_message(id, (x_pos, y_pos, width, height, block_values))
-        def recursive_region(x_pos, y_pos, width, height):
-            if width <= 0 or height <= 0:
-                return
-            top_left = self.pixel(x_pos, y_pos)
-            accuracy = 2
-            not_hit = True
-            for x_test in range(0, width, accuracy):
-                if (self.pixel(x_pos + x_test, y_pos) != top_left) or (self.pixel(x_pos + x_test, y_pos + height - 1) != top_left):
+        self.recursive_region(task_id, x, y, w, h)
+        return None
+
+    def recursive_region(self, task_id, x_pos, y_pos, width, height):
+        if width <= 0 or height <= 0:
+            return
+        top_left = self.pixel(x_pos, y_pos)
+        accuracy = 2
+        not_hit = True
+        for x_test in range(0, width, accuracy):
+            if (self.pixel(x_pos + x_test, y_pos) != top_left) or (self.pixel(x_pos + x_test, y_pos + height - 1) != top_left):
+                not_hit = False
+                break
+        if not_hit:
+            for y_test in range(0, height, accuracy):
+                if (self.pixel(x_pos, y_pos + y_test) != top_left) or (self.pixel(x_pos + width - 1, y_pos + y_test) != top_left):
                     not_hit = False
                     break
-            if not_hit:
-                for y_test in range(0, height, accuracy):
-                    if (self.pixel(x_pos, y_pos + y_test) != top_left) or (self.pixel(x_pos + width - 1, y_pos + y_test) != top_left):
-                        not_hit = False
-                        break
-            if not_hit:
-                fill_region(x_pos, y_pos, width, height, top_left)
-                return
-            if width > 2 or height > 2:
-                half_x = (width + (width % 2)) // 2
-                half_y = (height + (height % 2)) // 2
-                recursive_region(x_pos, y_pos, half_x, half_y)
-                recursive_region(x_pos + half_x, y_pos, width - half_x, half_y)
-                recursive_region(x_pos + half_x, y_pos + half_y, width - half_x, height - half_y)
-                recursive_region(x_pos, y_pos + half_y, half_x, height - half_y)
-                return
-            right = x_pos + width - 1
-            bottom = y_pos + height - 1
-            top_right = self.pixel(right, y_pos)
-            bottom_left = self.pixel(x_pos, bottom)
-            bottom_right = self.pixel(right, bottom)
-            block_values = [top_left]
-            if width > 1:
-                block_values.append(top_right)
-            if height > 1:
-                block_values.append(bottom_left)
-            if width > 1 and height > 1:
-                block_values.append(bottom_right)
-            publish_pixel_block(x_pos, y_pos, width, height, block_values)
-        recursive_region(x, y, w, h)
-        return None
+        if not_hit:
+            self.fill_region(task_id, x_pos, y_pos, width, height, top_left)
+            return
+        if width > 2 or height > 2:
+            half_x = (width + (width % 2)) // 2
+            half_y = (height + (height % 2)) // 2
+            self.recursive_region(task_id, x_pos, y_pos, half_x, half_y)
+            self.recursive_region(task_id, x_pos + half_x, y_pos, width - half_x, half_y)
+            self.recursive_region(task_id, x_pos + half_x, y_pos + half_y, width - half_x, height - half_y)
+            self.recursive_region(task_id, x_pos, y_pos + half_y, half_x, height - half_y)
+            return
+        right = x_pos + width - 1
+        bottom = y_pos + height - 1
+        top_right = self.pixel(right, y_pos)
+        bottom_left = self.pixel(x_pos, bottom)
+        bottom_right = self.pixel(right, bottom)
+        block_values = [top_left]
+        if width > 1:
+            block_values.append(top_right)
+        if height > 1:
+            block_values.append(bottom_left)
+        if width > 1 and height > 1:
+            block_values.append(bottom_right)
+        self.publish_pixel_block(task_id, x_pos, y_pos, width, height, block_values)
+
+    def fill_region(self, task_id, x_pos, y_pos, width, height, value):
+        # Send a compact fill payload so the GUI thread can draw this block with one fill call.
+        self.s1.send_message(task_id, (x_pos, y_pos, width, height, value))
+
+    def publish_pixel_block(self, task_id, x_pos, y_pos, width, height, block_values):
+        self.s1.send_message(task_id, (x_pos, y_pos, width, height, block_values))
 
     def pixel(self, x, y):
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
@@ -766,12 +775,6 @@ class Demo:
             if (z * z.conjugate()).real > 4.0:
                 break
         return k
-
-    def col(self, k):
-        if k == self.maximum_iters:
-            return (0, 0, 0)
-        else:
-            return Demo.cols[k % 16]
 
 if __name__ == '__main__':
     Demo().run()
