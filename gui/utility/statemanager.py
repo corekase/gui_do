@@ -1,6 +1,6 @@
 import logging
 from types import TracebackType
-from typing import Dict, Optional, Tuple, Type
+from typing import Callable, Dict, Optional, Tuple, Type
 from .guimanager import GuiManager
 from pygame.mouse import get_pos as m_pos
 _logger = logging.getLogger(__name__)
@@ -8,10 +8,13 @@ _logger = logging.getLogger(__name__)
 class StateManager:
     """Registers named GUI contexts and tracks the active one."""
 
-    def __init__(self) -> None:
+    def __init__(self, mouse_pos_provider: Optional[Callable[[], Tuple[int, int]]] = None) -> None:
         self._contexts: Dict[str, GuiManager] = {}
         self._active_context_name: Optional[str] = None
         self.is_running: bool = True
+        self._mouse_pos_provider: Callable[[], Tuple[int, int]] = mouse_pos_provider or m_pos
+        if not callable(self._mouse_pos_provider):
+            raise TypeError('mouse_pos_provider must be callable')
 
     def get_active_gui(self) -> Optional[GuiManager]:
         """Return the active GuiManager, or None when unset."""
@@ -47,7 +50,7 @@ class StateManager:
         if old_gui is not None:
             mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
         else:
-            mouse_pos = m_pos()
+            mouse_pos = self._mouse_pos_provider()
         self._active_context_name = name
         new_gui: Optional[GuiManager] = self.get_active_gui()
         if new_gui:

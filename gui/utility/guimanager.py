@@ -295,6 +295,10 @@ class GuiManager:
         fonts: List[Tuple[str, str, int]],
         bitmap_factory: Optional[BitmapFactory] = None,
         task_panel_enabled: bool = True,
+        event_getter: Optional[Callable[[], Iterable[PygameEvent]]] = None,
+        mouse_get_pos: Optional[Callable[[], Tuple[int, int]]] = None,
+        mouse_set_pos: Optional[Callable[[Tuple[int, int]], None]] = None,
+        mouse_set_visible: Optional[Callable[[bool], None]] = None,
     ) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -312,10 +316,22 @@ class GuiManager:
             if not isinstance(size, int) or size <= 0:
                 raise GuiError(f'font size must be a positive integer, got: {size}')
         self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
+        self._event_getter: Callable[[], Iterable[PygameEvent]] = event_getter or pygame.event.get
+        self._mouse_get_pos: Callable[[], Tuple[int, int]] = mouse_get_pos or pygame.mouse.get_pos
+        self._mouse_set_pos: Callable[[Tuple[int, int]], None] = mouse_set_pos or pygame.mouse.set_pos
+        self._mouse_set_visible: Callable[[bool], None] = mouse_set_visible or pygame.mouse.set_visible
+        if not callable(self._event_getter):
+            raise GuiError('event_getter must be callable')
+        if not callable(self._mouse_get_pos):
+            raise GuiError('mouse_get_pos must be callable')
+        if not callable(self._mouse_set_pos):
+            raise GuiError('mouse_set_pos must be callable')
+        if not callable(self._mouse_set_visible):
+            raise GuiError('mouse_set_visible must be callable')
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
-        pygame.mouse.set_visible(False)
+        self._mouse_set_visible(False)
         for name, filename, size in fonts:
             self._bitmap_factory.load_font(name, filename, size)
         self.surface: Surface = surface
@@ -325,7 +341,7 @@ class GuiManager:
         self.dragging: bool = False
         self.dragging_window: Optional[gWindow] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
-        self.mouse_pos: Tuple[int, int] = pygame.mouse.get_pos()
+        self.mouse_pos: Tuple[int, int] = self._mouse_get_pos()
         self.mouse_locked: bool = False
         self.mouse_point_locked: bool = False
         self.lock_area_rect: Optional[Rect] = None
@@ -678,7 +694,7 @@ class GuiManager:
         if not self._is_registered_object(locking_object):
             raise GuiError('locking_object must be a registered widget')
         if point is None:
-            point = pygame.mouse.get_pos()
+            point = self._mouse_get_pos()
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         self.locking_object = locking_object
@@ -780,7 +796,7 @@ class GuiManager:
         return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable[GuiEvent]:
-        for raw_event in pygame.event.get():
+        for raw_event in self._event_getter():
             event = self.handle_event(raw_event)
             if event.type == Event.Pass:
                 continue
@@ -856,9 +872,9 @@ class GuiManager:
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
         try:
-            pygame.mouse.set_pos(pos)
+            self._mouse_set_pos(pos)
         except Exception as exc:
-            _logger.debug('pygame.mouse.set_pos failed: %s: %s', type(exc).__name__, exc)
+            _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         if not isinstance(position, tuple) or len(position) != 2:

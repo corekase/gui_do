@@ -1,22 +1,55 @@
 import sys
 import pygame
-from typing import Hashable, List, Optional
+from typing import Callable, Hashable, List, Optional, Protocol
 from .guimanager import GuiManager
 from .scheduler import Scheduler, TaskEvent, TaskKind, Timers
 from .statemanager import StateManager
 
+
+class _TickClock(Protocol):
+    def tick(self, fps: int) -> None:
+        ...
+
 class Engine:
     """Owns the frame loop for the active GUI context."""
 
-    def __init__(self, state_manager: StateManager) -> None:
+    def __init__(
+        self,
+        state_manager: StateManager,
+        fps: int = 60,
+        *,
+        clock: Optional[_TickClock] = None,
+        ticks_provider: Optional[Callable[[], int]] = None,
+        display_flip: Optional[Callable[[], None]] = None,
+        quit_callable: Optional[Callable[[], None]] = None,
+        exit_callable: Optional[Callable[[int], None]] = None,
+        exit_on_finish: bool = True,
+    ) -> None:
         """Create an engine bound to a state manager."""
         if not isinstance(state_manager, StateManager):
             raise TypeError('state_manager must be a StateManager instance')
-        self.state_manager: StateManager = state_manager
-        self.clock: pygame.time.Clock = pygame.time.Clock()
-        self.fps: int = 60
-        if self.fps <= 0:
+        if not isinstance(fps, int) or fps <= 0:
             raise ValueError('fps must be > 0')
+        if not isinstance(exit_on_finish, bool):
+            raise TypeError('exit_on_finish must be a bool')
+        self.state_manager: StateManager = state_manager
+        self.clock: _TickClock = clock or pygame.time.Clock()
+        if not callable(getattr(self.clock, 'tick', None)):
+            raise TypeError('clock must provide a callable tick(fps) method')
+        self.fps: int = fps
+        self._ticks_provider: Callable[[], int] = ticks_provider or pygame.time.get_ticks
+        self._display_flip: Callable[[], None] = display_flip or pygame.display.flip
+        self._quit_callable: Callable[[], None] = quit_callable or pygame.quit
+        self._exit_callable: Callable[[int], None] = exit_callable or sys.exit
+        self._exit_on_finish: bool = exit_on_finish
+        if not callable(self._ticks_provider):
+            raise TypeError('ticks_provider must be callable')
+        if not callable(self._display_flip):
+            raise TypeError('display_flip must be callable')
+        if not callable(self._quit_callable):
+            raise TypeError('quit_callable must be callable')
+        if not callable(self._exit_callable):
+            raise TypeError('exit_callable must be callable')
 
     def run(self) -> None:
         """Run frames until no active context remains or shutdown is requested."""
@@ -31,7 +64,7 @@ class Engine:
                     timers: Timers = gui.timers
                     gui.run_preamble()
                     if timers:
-                        timers.timer_updates(pygame.time.get_ticks())
+                        timers.timer_updates(self._ticks_provider())
                     for event in gui.events():
                         gui.dispatch_event(event)
                     finished_task_ids: List[Hashable] = scheduler.update()
@@ -43,7 +76,7 @@ class Engine:
                         gui.dispatch_event(task_event)
                     gui.run_postamble()
                     gui.draw_gui()
-                    pygame.display.flip()
+                    self._display_flip()
                     if gui.buffered:
                         gui.undraw_gui()
                     self.clock.tick(self.fps)
@@ -51,5 +84,6 @@ class Engine:
             exit_code = 1
             raise
         finally:
-            pygame.quit()
-        sys.exit(exit_code)
+            self._quit_callable()
+        if self._exit_on_finish:
+            self._exit_callable(exit_code)
