@@ -78,12 +78,12 @@ from gui import GuiManager, Engine, StateManager, Event, ButtonStyle
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 
-fonts = [
-    ("normal", "Gimbot.ttf", 16),
-    ("titlebar", "Ubuntu-B.ttf", 14),
-]
-
-gui = GuiManager(screen, fonts)
+gui = GuiManager(screen)
+gui.configure_fonts(
+    normal=("Gimbot.ttf", 16),
+    titlebar=("Ubuntu-B.ttf", 14),
+)
+gui.graphics_factory.set_font("normal")
 gui.set_pristine("backdrop.jpg")
 
 def on_button():
@@ -250,7 +250,7 @@ def gui1_screen_event_handler(self, event):
 Key methods:
 
 - `canvas.get_canvas_surface()`
-- `canvas.read_event()` returns `CanvasEventPacket | None`
+- `canvas.read_event()` returns `CanvasEventPacket` or `None`
 - `canvas.set_event_queue_limit(max_events)`
 - `canvas.set_overflow_handler(callback, strict=False)`
 - `canvas.set_overflow_mode('drop_oldest' | 'reject_new')`
