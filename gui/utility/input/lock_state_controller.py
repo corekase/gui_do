@@ -16,31 +16,38 @@ class LockStateController:
     """Encapsulates input-lock lifecycle and clamping semantics."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Bind lock-state operations to a specific GUI manager."""
         self.gui: "GuiManager" = gui_manager
 
     @property
     def state(self):
+        """Return the mutable lock-state model owned by the manager."""
         return self.gui._lock_state
 
     def _commit_lock_mutation(self, mutation) -> None:
+        """Apply a mutation callback to the shared lock-state model."""
         mutation(self.state)
 
     def _is_registered_object(self, value: Widget) -> bool:
+        """Return registration status via object registry when available."""
         registry = getattr(self.gui, 'object_registry', None)
         if registry is not None and hasattr(registry, 'is_registered_object'):
             return bool(registry.is_registered_object(value))
         return False
 
     def _assign_area_lock(self, locking_object: Widget) -> None:
+        """Assign area lock using current lock-area rectangle."""
         area = self.state.lock_area_rect
         if area is None:
             raise GuiError('lock area must be set before assigning area lock')
         self._commit_lock_mutation(lambda state: state.apply_area_lock(locking_object, area))
 
     def _assign_point_lock(self, locking_object: Widget, point: Tuple[int, int]) -> None:
+        """Assign point lock to a specific widget and lock anchor."""
         self._commit_lock_mutation(lambda state: state.apply_point_lock(locking_object, point))
 
     def _restore_physical_mouse_on_unlock(self) -> None:
+        """Restore hardware pointer when releasing an active mouse lock."""
         if not self.state.mouse_locked:
             return
         if self.state.mouse_point_locked and self.state.lock_point_pos is not None:
@@ -50,6 +57,7 @@ class LockStateController:
         self.gui.pointer.set_physical_mouse_pos(self.gui.mouse_pos)
 
     def set_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
+        """Set or clear area lock for a registered widget."""
         if area is not None:
             if not isinstance(area, Rect):
                 raise GuiError('lock area must be a Rect')
@@ -64,10 +72,12 @@ class LockStateController:
             self._commit_lock_mutation(lambda state: setattr(state, 'lock_area_rect', area))
             self._assign_area_lock(locking_object)
         else:
+            # Clearing lock restores pointer before wiping lock-state fields.
             self._restore_physical_mouse_on_unlock()
             self.clear()
 
     def set_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
+        """Set or clear point lock for a registered widget."""
         if locking_object is None:
             self.set_area(None)
             return
@@ -82,6 +92,7 @@ class LockStateController:
         self._assign_point_lock(locking_object, point)
 
     def resolve(self) -> Optional[Widget]:
+        """Return valid locking widget, clearing stale/invalid lock state as needed."""
         locking_object = self.state.locking_object
         if locking_object is None:
             if self.state.mouse_locked or self.state.lock_area_rect is not None or self.state.lock_point_pos is not None:
@@ -99,6 +110,7 @@ class LockStateController:
         return locking_object
 
     def clamp_position(self, position: Tuple[int, int]) -> Tuple[int, int]:
+        """Clamp a position into the active lock area when area lock is enabled."""
         if not isinstance(position, tuple) or len(position) != 2:
             raise GuiError(f'position must be a tuple of (x, y), got: {position}')
         self.resolve()
@@ -119,6 +131,7 @@ class LockStateController:
         return (x, y)
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
+        """Recenter hardware pointer when point-lock recenter constraints are violated."""
         if self.state.lock_point_pos is None:
             self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', False))
             return
@@ -134,4 +147,5 @@ class LockStateController:
             self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', True))
 
     def clear(self) -> None:
+        """Clear all active lock-state fields."""
         self._commit_lock_mutation(lambda state: state.clear_lock())

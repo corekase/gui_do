@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Scheduling primitives used by GUI background work orchestration."""
+
 from .task_kind import TaskKind
 from .interval import Interval
 from .timers import Timers

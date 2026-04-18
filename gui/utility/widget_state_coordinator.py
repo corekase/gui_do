@@ -16,21 +16,31 @@ class WidgetStateCoordinator:
     """Owns widget visibility toggles and per-widget event handling flow."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the WidgetStateCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
 
     def hide_widgets(self, *widgets: Widget) -> None:
+        """Run hide widgets and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         for widget in widgets:
             if not isinstance(widget, Widget):
                 raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = False
 
     def show_widgets(self, *widgets: Widget) -> None:
+        """Run show widgets and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         for widget in widgets:
             if not isinstance(widget, Widget):
                 raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = True
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional["Window"] = None) -> bool:
+        """Run handle widget and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if widget.handle_event(event, window):
             if widget.on_activate is not None:
                 if not callable(widget.on_activate):

@@ -48,6 +48,9 @@ class Toggle(BaseInteractive):
         return False
 
     def draw(self) -> None:
+        """Run draw and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if self.pushed:
             Widget.draw(self)
             self.surface.blit(self.armed, self.draw_rect)

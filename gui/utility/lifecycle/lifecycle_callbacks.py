@@ -6,10 +6,12 @@ from ..events import BaseEvent
 
 
 def _noop() -> None:
+    """Internal helper for noop."""
     pass
 
 
 def _noop_event(_: BaseEvent) -> None:
+    """Internal helper for noop event."""
     pass
 
 
@@ -22,6 +24,7 @@ class LifecycleCallbacks:
         event_handler: Callable[[BaseEvent], None] = _noop_event,
         postamble: Callable[[], None] = _noop,
     ) -> None:
+        """Initialize the LifecycleCallbacks instance."""
         self.preamble: Callable[[], None] = preamble
         self.event_handler: Callable[[BaseEvent], None] = event_handler
         self.postamble: Callable[[], None] = postamble
@@ -33,6 +36,9 @@ class LifecycleCallbacks:
         event_handler: object | None,
         postamble: object | None,
     ) -> "LifecycleCallbacks":
+        """Run from optionals and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         resolved_preamble = preamble if callable(preamble) else _noop
         resolved_event_handler = event_handler if callable(event_handler) else _noop_event
         resolved_postamble = postamble if callable(postamble) else _noop

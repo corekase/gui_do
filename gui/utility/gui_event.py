@@ -7,7 +7,15 @@ from ..widgets.window import Window as Window
 
 
 class GuiEvent(BaseEvent):
+    """Framework event envelope with normalized optional payload fields.
+
+    Incoming event kwargs can originate from external systems and tests with
+    varying types. This class performs strict type normalization so dispatch
+    layers can rely on stable, typed attributes.
+    """
+
     def __init__(self, event_type: Event, **kwargs: object) -> None:
+        """Create an event and coerce optional payload members into safe types."""
         super().__init__(event_type)
         # Normalize optional payloads defensively so malformed external event data
         # cannot corrupt GUI event routing.
@@ -22,14 +30,19 @@ class GuiEvent(BaseEvent):
 
     @staticmethod
     def _as_optional_int(value: object) -> Optional[int]:
+        """Return `value` when it is exactly an `int`, otherwise `None`."""
+        # Use exact-type checks to avoid bool-as-int surprises.
         if type(value) is int:
             return value
         return None
 
     @staticmethod
     def _as_optional_int_pair(value: object) -> Optional[Tuple[int, int]]:
+        """Return `(x, y)` when `value` is a two-int tuple; otherwise `None`."""
+        # Validate structure before element type checks.
         if not isinstance(value, tuple) or len(value) != 2:
             return None
+        # Keep tuple elements strict so downstream consumers skip extra guards.
         if type(value[0]) is not int or type(value[1]) is not int:
             return None
         return (value[0], value[1])

@@ -15,6 +15,7 @@ class InputProviders:
         mouse_set_pos: Callable[[Tuple[int, int]], None],
         mouse_set_visible: Callable[[bool], None],
     ) -> None:
+        """Initialize the InputProviders instance."""
         self.event_getter = event_getter
         self.mouse_get_pos = mouse_get_pos
         self.mouse_set_pos = mouse_set_pos

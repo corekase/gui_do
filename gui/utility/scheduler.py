@@ -21,6 +21,7 @@ class Scheduler:
     """Threaded task runner with per-frame completion and message dispatch."""
 
     def __init__(self, gui: "GuiManager") -> None:
+        """Initialize the Scheduler instance."""
         self.gui: "GuiManager" = gui
         self.stop_scheduler: bool = False
         self.tasks: Dict[Hashable, Task] = {}
@@ -92,10 +93,16 @@ class Scheduler:
             return self._message_ingest_limit
 
     def read_suspended(self) -> List[Hashable]:
+        """Run read suspended and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             return self._suspended.copy()
 
     def read_suspended_len(self) -> int:
+        """Run read suspended len and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             return len(self._suspended)
 
@@ -106,6 +113,9 @@ class Scheduler:
         parameters: Optional[object] = None,
         message_method: Optional[Callable[[object], None]] = None,
     ) -> None:
+        """Run add task and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self._validate_task_id(id)
         if not callable(logic):
             raise GuiError('task logic must be callable')
@@ -140,6 +150,9 @@ class Scheduler:
             return self._task_results.pop(id, default)
 
     def remove_all(self) -> None:
+        """Run remove all and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             ids = list(self.tasks.keys())
             for id in ids:
@@ -156,6 +169,9 @@ class Scheduler:
             self._task_message_counts.clear()
 
     def remove_tasks(self, *tasks: Hashable) -> None:
+        """Run remove tasks and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for id in tasks:
                 self._validate_task_id(id)
@@ -197,6 +213,9 @@ class Scheduler:
             self._message_ingest_limit = max_messages_per_update
 
     def event(self, operation: TaskKind, item1: Optional[Hashable] = None, item2: Optional[str] = None) -> TaskEvent:
+        """Run event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if operation not in (TaskKind.Finished, TaskKind.Failed):
             raise GuiError(f'unknown task event operation: {operation}')
         if item1 is not None:
@@ -206,6 +225,9 @@ class Scheduler:
         return TaskEvent(TaskKind.Failed, item1, '' if item2 is None else str(item2))
 
     def resume_all(self) -> None:
+        """Run resume all and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for id in list(self._suspended):
                 if id in self.tasks and id not in self._pending_set:
@@ -215,6 +237,9 @@ class Scheduler:
             self._suspended_set.clear()
 
     def resume_tasks(self, *tasks: Hashable) -> None:
+        """Run resume tasks and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for id in tasks:
                 self._validate_task_id(id)
@@ -225,6 +250,9 @@ class Scheduler:
                         self._pending_set.add(id)
 
     def send_message(self, id: Hashable, parameters: object) -> None:
+        """Run send message and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self._validate_task_id(id)
         with self._lock:
             while True:
@@ -244,6 +272,9 @@ class Scheduler:
         self._incoming_task_messages.put(message)
 
     def suspend_all(self) -> None:
+        """Run suspend all and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for id in list(self._pending):
                 if id not in self._suspended_set:
@@ -253,6 +284,9 @@ class Scheduler:
             self._pending_set.clear()
 
     def suspend_tasks(self, *tasks: Hashable) -> None:
+        """Run suspend tasks and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for id in tasks:
                 self._validate_task_id(id)
@@ -263,10 +297,16 @@ class Scheduler:
                         self._suspended_set.add(id)
 
     def tasks_active(self) -> bool:
+        """Run tasks active and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             return bool(self._pending_set or self._running)
 
     def tasks_active_match_all(self, *tasks: Hashable) -> bool:
+        """Run tasks active match all and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for task in tasks:
                 self._validate_task_id(task)
@@ -275,6 +315,9 @@ class Scheduler:
             return True
 
     def tasks_active_match_any(self, *tasks: Hashable) -> bool:
+        """Run tasks active match any and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         with self._lock:
             for task in tasks:
                 self._validate_task_id(task)
@@ -299,6 +342,7 @@ class Scheduler:
             return False
 
     def _dispatch_task_messages(self) -> None:
+        """Internal helper for dispatch task messages."""
         pending_messages: List[TaskMessage] = []
         with self._lock:
             if not self._task_messages:
@@ -329,7 +373,11 @@ class Scheduler:
                     self._decrement_message_count_locked(message.id)
 
     def _build_task_callable(self, id: Hashable, logic: Callable[..., object], parameters: Optional[object]) -> Callable[[], object]:
+        """Internal helper for build task callable."""
         def run() -> object:
+            """Run run and return the resulting value.
+
+            This method encapsulates the main behavior for this operation."""
             if parameters is None:
                 outcome = logic(id)
             else:
@@ -342,6 +390,7 @@ class Scheduler:
         return run
 
     def _collect_finished_tasks(self) -> None:
+        """Internal helper for collect finished tasks."""
         completed: List[TaskCompletion] = []
         while True:
             try:
@@ -366,12 +415,15 @@ class Scheduler:
                 self.tasks.pop(task_id, None)
 
     def _enqueue_task_completion(self, task_id: Hashable, generation: int, future: Future[object]) -> None:
+        """Internal helper for enqueue task completion."""
         self._incoming_task_completions.put(TaskCompletion(id=task_id, generation=generation, future=future))
 
     def _enqueue_task_failure(self, task_id: Hashable, generation: int, error: str) -> None:
+        """Internal helper for enqueue task failure."""
         self._incoming_task_failures.put(TaskFailure(id=task_id, generation=generation, error=error))
 
     def _decrement_message_count_locked(self, id: Hashable) -> None:
+        """Internal helper for decrement message count locked."""
         count = self._task_message_counts.get(id)
         if count is None:
             return
@@ -383,6 +435,7 @@ class Scheduler:
         self._message_slots_changed.notify_all()
 
     def _drain_incoming_task_messages(self) -> None:
+        """Internal helper for drain incoming task messages."""
         drained: List[TaskMessage] = []
         with self._lock:
             ingest_limit = self._message_ingest_limit
@@ -408,6 +461,7 @@ class Scheduler:
                 self._task_messages.append(message)
 
     def _drain_incoming_task_failures(self) -> None:
+        """Internal helper for drain incoming task failures."""
         drained: List[TaskFailure] = []
         while True:
             try:
@@ -423,18 +477,21 @@ class Scheduler:
                 self._tasks_failed.append((failure.id, failure.error))
 
     def _remove_from_pending(self, id: Hashable) -> None:
+        """Internal helper for remove from pending."""
         if id in self._pending_set:
             if id in self._pending:
                 self._pending.remove(id)
             self._pending_set.discard(id)
 
     def _remove_from_suspended(self, id: Hashable) -> None:
+        """Internal helper for remove from suspended."""
         if id in self._suspended_set:
             if id in self._suspended:
                 self._suspended.remove(id)
             self._suspended_set.discard(id)
 
     def _remove_task_internal(self, id: Hashable) -> None:
+        """Internal helper for remove task internal."""
         self._remove_from_pending(id)
         self._remove_from_suspended(id)
         self._task_generation[id] = self._task_generation.get(id, 0) + 1
@@ -449,6 +506,7 @@ class Scheduler:
         self._message_slots_changed.notify_all()
 
     def _submit_ready_tasks(self) -> None:
+        """Internal helper for submit ready tasks."""
         while self._pending and len(self._running) < self._max_workers:
             task_id = self._pending.popleft()
             self._pending_set.discard(task_id)
@@ -462,6 +520,7 @@ class Scheduler:
             self._running.add(task_id)
 
     def _validate_task_id(self, id: Hashable) -> None:
+        """Internal helper for validate task id."""
         try:
             hash(id)
         except TypeError as exc:

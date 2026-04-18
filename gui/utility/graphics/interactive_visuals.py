@@ -8,6 +8,8 @@ from pygame.surface import Surface
 
 @dataclass(frozen=True)
 class InteractiveVisuals:
+    """Pre-rendered bitmaps and hit geometry for interactive controls."""
+
     idle: Surface
     hover: Surface
     armed: Surface

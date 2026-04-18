@@ -22,10 +22,18 @@ if TYPE_CHECKING:
 
 
 class WidgetGraphicsFactory:
+    """Render and cache reusable visual assets for widgets and controls.
+
+    The factory owns font registrations, cursor loading, and style-based bitmap
+    rendering pipelines. Public methods expose higher-level visual bundles while
+    private helpers implement concrete drawing routines.
+    """
+
     _cursor_cache: Dict[str, CursorAsset] = {}
     _data_root: str = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data'))
 
     def __init__(self) -> None:
+        """Initialize font registries and button-style rendering strategies."""
         self._font: Optional[pygame.font.Font] = None
         self._current_font_name: Optional[str] = None
         self._last_font_name: Optional[str] = None
@@ -33,14 +41,17 @@ class WidgetGraphicsFactory:
         self._style_strategies = build_default_button_style_strategies()
 
     def get_current_font_name(self) -> Optional[str]:
+        """Return the active font registration name, if any."""
         return self._current_font_name
 
     def get_cursor(self, name: str) -> CursorAsset:
+        """Return a previously registered cursor asset by name."""
         if name not in WidgetGraphicsFactory._cursor_cache:
             raise GuiError(f'unknown cursor "{name}"')
         return WidgetGraphicsFactory._cursor_cache[name]
 
     def build_interactive_visuals(self, style: ButtonStyle, text: Optional[str], rect: Rect) -> InteractiveVisuals:
+        """Build idle/hover/armed bitmaps and hit geometry for an interactive control."""
         bitmaps, hit_rect = self.get_styled_bitmaps(style, text, rect)
         idle, hover, armed = bitmaps
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=hit_rect)
@@ -52,11 +63,14 @@ class WidgetGraphicsFactory:
         raised_text: Optional[str],
         rect: Rect,
     ) -> InteractiveVisuals:
+        """Build visuals for toggle-like controls with distinct raised/pressed labels."""
+        # Mirror pressed label when a dedicated raised label is not supplied.
         if raised_text is None:
             raised_text = pressed_text
         pressed_visuals = self.build_interactive_visuals(style, pressed_text, rect)
         raised_visuals = self.build_interactive_visuals(style, raised_text, rect)
         hit_rect = raised_visuals.hit_rect
+        # Keep the larger hit rect so both visual states remain clickable.
         if pressed_visuals.hit_rect.width > hit_rect.width:
             hit_rect = pressed_visuals.hit_rect
         return InteractiveVisuals(
@@ -67,10 +81,12 @@ class WidgetGraphicsFactory:
         )
 
     def build_frame_visuals(self, rect: Rect) -> InteractiveVisuals:
+        """Build frame visuals where hit geometry matches the supplied rect."""
         idle, hover, armed = self.draw_frame_bitmaps(rect)
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=rect)
 
     def build_window_chrome_visuals(self, gui: "GuiManager", title: str, width: int, titlebar_size: int) -> WindowChromeVisuals:
+        """Build titlebar and lower-widget chrome assets for window widgets."""
         inactive, active = self.draw_window_title_bar_bitmaps(gui, title, width, titlebar_size)
         lower = self.draw_window_lower_widget_bitmap(titlebar_size - 2, colours['full'], colours['medium'])
         return WindowChromeVisuals(
@@ -80,19 +96,23 @@ class WidgetGraphicsFactory:
         )
 
     def get_styled_bitmaps(self, style: ButtonStyle, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Dispatch bitmap rendering to the registered strategy for `style`."""
         strategy = self._style_strategies.get(style)
         if strategy is None:
             raise GuiError('style not implemented')
         return strategy.render(self, text, rect)
 
     def set_font(self, name: str) -> None:
+        """Activate a previously loaded font by registration name."""
         if name not in self._fonts:
             raise GuiError(f'unknown font "{name}"')
+        # Preserve previous font so temporary overrides can be restored.
         self._last_font_name = self._current_font_name
         self._font = self._fonts[name]
         self._current_font_name = name
 
     def set_last_font(self) -> None:
+        """Restore the most recently active font when available."""
         if self._last_font_name is not None:
             if self._last_font_name not in self._fonts:
                 raise GuiError(f'unknown previous font "{self._last_font_name}"')
@@ -100,6 +120,7 @@ class WidgetGraphicsFactory:
             self._current_font_name = self._last_font_name
 
     def get_font_height(self, name: str, shadow: bool = False) -> int:
+        """Return line height for a loaded font, optionally including shadow offset."""
         if name not in self._fonts:
             raise GuiError(f'unknown font "{name}"')
         height = self._fonts[name].get_linesize()
@@ -109,11 +130,13 @@ class WidgetGraphicsFactory:
         return height
 
     def get_titlebar_height(self, padding: int = 6) -> int:
+        """Return computed titlebar height using titlebar font metrics and padding."""
         if not isinstance(padding, int) or padding < 0:
             raise GuiError(f'titlebar padding must be a non-negative int, got: {padding}')
         return self.get_font_height('titlebar', shadow=True) + padding
 
     def draw_arrow_state_bitmaps(self, rect: Rect, direction: float) -> List[Surface]:
+        """Draw framed arrow glyph bitmaps for interactive states."""
         try:
             states = self.draw_frame_bitmaps(rect)
             glyph_set: List[Surface] = []
@@ -121,6 +144,7 @@ class WidgetGraphicsFactory:
                 size = rect.width
             else:
                 size = rect.height
+            # Build a high-resolution glyph first, then rotate/scale for quality.
             glyph = Surface((400, 400), SRCALPHA).convert_alpha()
             points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
             polygon(glyph, colours['full'], points, 0)
@@ -139,6 +163,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw arrow state bitmaps for rect={rect} direction={direction}') from exc
 
     def draw_frame_bitmaps(self, rect: Rect) -> Tuple[Surface, Surface, Surface]:
+        """Draw standard frame visuals for idle, hover, and armed states."""
         try:
             _, _, w, h = rect
             saved: List[Surface] = []
@@ -158,6 +183,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw frame bitmaps for rect={rect}') from exc
 
     def draw_radio_bitmap(self, size: int, col1: Tuple[int, int, int], col2: Tuple[int, int, int]) -> Surface:
+        """Draw a circular radio glyph surface using fill and ring colors."""
         try:
             radio_bitmap = Surface((400, 400), SRCALPHA).convert_alpha()
             centre_point = 200
@@ -177,6 +203,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw radio bitmap for size={size}') from exc
 
     def draw_window_lower_widget_bitmap(self, size: int, col1: Tuple[int, int, int], col2: Tuple[int, int, int]) -> Surface:
+        """Draw the lower-widget icon used in window chrome."""
         try:
             surface = Surface((size, size), SRCALPHA).convert_alpha()
             self._draw_box_bitmaps(surface, 'idle')
@@ -198,6 +225,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw window lower widget bitmap for size={size}') from exc
 
     def draw_window_title_bar_bitmaps(self, gui: "GuiManager", title: str, width: int, size: int) -> Tuple[Surface, Surface]:
+        """Draw inactive and active window title bar bitmaps."""
         try:
             saved: List[Surface] = []
             saved.append(self._draw_window_title_bar_bitmap(gui, title, width, size, colours['full']))
@@ -209,12 +237,14 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw window title bar bitmaps for title="{title}"') from exc
 
     def render_text(self, text: str, colour: Tuple[int, int, int] = colours['text'], shadow: bool = False, shadow_colour: Tuple[int, int, int] = colours['none']) -> Surface:
+        """Render text with optional 1px shadow using the currently active font."""
         try:
             if self._font is None:
                 raise GuiError('no active font set; call set_font() before render_text()')
             text_bitmap = self._font.render(text, True, colour, None)
             text_rect = text_bitmap.get_rect()
             w, h = text_rect.width, text_rect.height
+            # Expand the destination bitmap to include the shadow offset.
             if shadow:
                 w += 1
                 h += 1
@@ -228,10 +258,14 @@ class WidgetGraphicsFactory:
             raise
         except Exception as exc:
             raise GuiError(f'failed to render text: {text!r}') from exc
+
     def centre(self, bigger: int, smaller: int) -> int:
+        """Return the integer offset to center `smaller` within `bigger`."""
         return int((bigger / 2) - (smaller / 2))
 
     def file_resource(self, *names: str) -> str:
+        """Resolve a safe, normalized resource path rooted under `data/`."""
+        # Guard against empty, absolute, or traversal-style path components.
         if len(names) == 0:
             raise GuiError('resource path must include at least one path component')
         for name in names:
@@ -244,11 +278,13 @@ class WidgetGraphicsFactory:
             common_root = os.path.commonpath([self._data_root, resource_path])
         except ValueError as exc:
             raise GuiError(f'invalid resource path: {names!r}') from exc
+        # Reject paths that escape the project data root.
         if common_root != self._data_root:
             raise GuiError(f'resource path escapes data directory: {names!r}')
         return resource_path
 
     def image_alpha(self, *names: str) -> Surface:
+        """Load an image resource and return an alpha-converted surface."""
         full_path = os.path.normpath(os.path.abspath(self.file_resource(*names)))
         try:
             return pygame.image.load(full_path).convert_alpha()
@@ -258,6 +294,7 @@ class WidgetGraphicsFactory:
             DataResourceErrorHandler.raise_load_error('failed to load image resource', full_path, exc)
 
     def register_cursor(self, *, name: str, filename: str, hotspot: Tuple[int, int]) -> CursorAsset:
+        """Load and register a cursor asset, then cache it by name."""
         if not isinstance(hotspot, tuple) or len(hotspot) != 2:
             raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
         if not isinstance(name, str) or name == '':
@@ -280,6 +317,7 @@ class WidgetGraphicsFactory:
             DataResourceErrorHandler.raise_load_error(f'failed to load cursor "{name}" from file', cursor_path, exc)
 
     def load_font(self, name: str, font: str, size: int) -> None:
+        """Load a font from the data font directory and register it by name."""
         font_full_path = os.path.normpath(os.path.abspath(self.file_resource('fonts', font)))
         try:
             self._fonts[name] = pygame.font.Font(font_full_path, size)
@@ -293,6 +331,7 @@ class WidgetGraphicsFactory:
             )
 
     def _draw_angle_state(self, size: Tuple[int, int], state: str) -> Surface:
+        """Draw an angle-style button bitmap for a specific interaction state."""
         if state == 'idle':
             return self._draw_angle_style_bitmap(size, colours['light'], colours['medium'])
         elif state == 'hover':
@@ -302,6 +341,7 @@ class WidgetGraphicsFactory:
         return self._draw_angle_style_bitmap(size, colours['light'], colours['medium'])
 
     def _draw_angle_style_bitmap(self, size: Tuple[int, int], border: Tuple[int, int, int], background: Tuple[int, int, int]) -> Surface:
+        """Draw a beveled octagonal-style button face."""
         try:
             w_surface, h_surface = size
             angle_bitmap = Surface((w_surface * 10, h_surface * 10), SRCALPHA).convert_alpha()
@@ -317,10 +357,12 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw angle style bitmap for size={size}') from exc
 
     def _draw_angle_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Draw idle/hover/armed angle-style button bitmaps with centered text."""
         try:
             text = '' if text is None else text
             _, _, w, h = rect
             saved: List[Surface] = []
+            # Render neutral text for idle/hover, then highlighted text for armed.
             text_bitmap = self.render_text(text, colours['text'], True)
             text_x = self.centre(w, text_bitmap.get_rect().width)
             text_y = self.centre(h, text_bitmap.get_rect().height)
@@ -343,12 +385,14 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw angle style bitmaps for rect={rect} text={text!r}') from exc
 
     def _draw_box_bitmap(self, surface: Surface, ul: Tuple[int, int, int], lr: Tuple[int, int, int], ul_d: Tuple[int, int, int], lr_d: Tuple[int, int, int], background: Tuple[int, int, int]) -> None:
+        """Draw a bordered box surface with simple highlight/shadow accents."""
         locked = False
         try:
             _, _, width, height = surface.get_rect()
             if width <= 0 or height <= 0:
                 return
             x = y = 0
+            # Lock pixel writes while drawing to avoid intermediate state issues.
             surface.lock()
             locked = True
             rect(surface, background, surface.get_rect(), 0)
@@ -369,6 +413,7 @@ class WidgetGraphicsFactory:
                 surface.unlock()
 
     def _draw_box_bitmaps(self, surface: Surface, state: str) -> None:
+        """Draw box-style border/background colors for the requested state."""
         if state == 'idle':
             self._draw_box_bitmap(surface, colours['light'], colours['dark'], colours['full'], colours['none'], colours['medium'])
         elif state == 'hover':
@@ -377,6 +422,7 @@ class WidgetGraphicsFactory:
             self._draw_box_bitmap(surface, colours['none'], colours['light'], colours['none'], colours['full'], colours['dark'])
 
     def _draw_box_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Draw idle/hover/armed box-style button bitmaps with centered text."""
         try:
             text = '' if text is None else text
             _, _, w, h = rect
@@ -406,6 +452,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw box style bitmaps for rect={rect} text={text!r}') from exc
 
     def _draw_check_bitmap(self, state: int, size: int) -> Surface:
+        """Draw the checkbox glyph for the given visual state."""
         try:
             shrink = size * 0.65
             offset = int(self.centre(size, shrink))
@@ -432,6 +479,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw check bitmap for state={state} size={size}') from exc
 
     def _draw_check_style_bitmap(self, rect: Rect, state: int, text: Optional[str]) -> Tuple[Surface, Rect]:
+        """Draw a checkbox-style button bitmap and matching hit rect."""
         try:
             text = '' if text is None else text
             text_bitmap = self.render_text(text, colours['text'], True)
@@ -450,6 +498,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw check style bitmap for rect={rect} state={state} text={text!r}') from exc
 
     def _draw_check_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Draw all checkbox-style interactive state bitmaps."""
         try:
             text = '' if text is None else text
             idle_bitmap, hit_rect = self._draw_check_style_bitmap(rect, 0, text)
@@ -462,6 +511,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw check style bitmaps for rect={rect} text={text!r}') from exc
 
     def _draw_radio_style_bitmap(self, rect: Rect, text: Optional[str], col1: Tuple[int, int, int], col2: Tuple[int, int, int]) -> Tuple[Surface, Rect]:
+        """Draw a single radio-style state bitmap and hit rect."""
         try:
             text = '' if text is None else text
             text_bitmap = self.render_text(text, colours['text'], True)
@@ -479,6 +529,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw radio style bitmap for rect={rect} text={text!r}') from exc
 
     def _draw_radio_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Draw all radio-style interactive state bitmaps."""
         try:
             text = '' if text is None else text
             idle_bitmap, idle_rect = self._draw_radio_style_bitmap(rect, text, colours['light'], colours['dark'])
@@ -491,6 +542,7 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw radio style bitmaps for rect={rect} text={text!r}') from exc
 
     def _draw_round_style_bitmap(self, surface: Surface, border: Tuple[int, int, int], background: Tuple[int, int, int]) -> None:
+        """Draw a rounded-rectangle control face and flood-fill its interior."""
         try:
             _, _, w, h = surface.get_rect()
             radius = h // 4
@@ -509,6 +561,7 @@ class WidgetGraphicsFactory:
             raise GuiError('failed to draw round style bitmap') from exc
 
     def _draw_rounded_state(self, surface: Surface, state: str) -> None:
+        """Draw rounded control colors for the requested interaction state."""
         if state == 'idle':
             self._draw_round_style_bitmap(surface, colours['light'], colours['medium'])
         elif state == 'hover':
@@ -517,6 +570,7 @@ class WidgetGraphicsFactory:
             self._draw_round_style_bitmap(surface, colours['none'], colours['dark'])
 
     def _draw_rounded_style_bitmaps(self, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
+        """Draw idle/hover/armed rounded-style button bitmaps."""
         try:
             text = '' if text is None else text
             _, _, w, h = rect
@@ -546,10 +600,12 @@ class WidgetGraphicsFactory:
             raise GuiError(f'failed to draw rounded style bitmaps for rect={rect} text={text!r}') from exc
 
     def _draw_window_title_bar_bitmap(self, gui: "GuiManager", title: str, width: int, size: int, colour: Optional[Tuple[int, int, int]] = None) -> Surface:
+        """Draw a single titlebar bitmap with framed chrome and title text."""
         titlebar_font_set = False
         try:
             from ...widgets.frame import Frame
             from ..events import InteractiveState
+            # Temporarily switch to titlebar font for consistent text metrics.
             self.set_font('titlebar')
             titlebar_font_set = True
             if colour is None:
@@ -572,6 +628,7 @@ class WidgetGraphicsFactory:
                 self.set_last_font()
 
     def _flood_fill(self, surface: Surface, position: Tuple[int, int], colour: Tuple[int, int, int]) -> None:
+        """Flood-fill connected pixels starting at `position` with `colour`."""
         pixels: Optional[PixelArray] = None
         try:
             pixels = PixelArray(surface)
@@ -581,6 +638,7 @@ class WidgetGraphicsFactory:
                 return
             width, height = surface.get_size()
             locations = deque([position])
+            # Use queue-based fill to avoid recursion depth limits on large regions.
             while locations:
                 x, y = locations.popleft()
                 if pixels[x, y] == old_colour:

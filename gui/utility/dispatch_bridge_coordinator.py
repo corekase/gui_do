@@ -13,7 +13,11 @@ class DispatchBridgeCoordinator:
     """Owns GUI raw-event to GuiEvent dispatch bridging."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the DispatchBridgeCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
 
     def handle_event(self, event: PygameEvent) -> "GuiEvent":
+        """Run handle event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return self.gui.event_dispatcher.handle(event)

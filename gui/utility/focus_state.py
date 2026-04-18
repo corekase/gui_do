@@ -13,9 +13,11 @@ class FocusStateController:
     """Owns current hover focus and active-window refresh rules."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the FocusStateController instance."""
         self.gui: "GuiManager" = gui_manager
 
     def _is_registered_object(self, value: Widget) -> bool:
+        """Internal helper for is registered object."""
         registry = getattr(self.gui, 'object_registry', None)
         if registry is not None and hasattr(registry, 'is_registered_object'):
             return bool(registry.is_registered_object(value))
@@ -23,13 +25,22 @@ class FocusStateController:
 
     @property
     def current_widget(self) -> Optional[Widget]:
+        """Run current widget and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return self.resolve_current_widget()
 
     @current_widget.setter
     def current_widget(self, value: Optional[Widget]) -> None:
+        """Run current widget and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.set_current_widget(value)
 
     def set_current_widget(self, value: Optional[Widget]) -> None:
+        """Run set current widget and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if value is not None:
             if not isinstance(value, Widget) or not self._is_registered_object(value):
                 value = None
@@ -40,6 +51,9 @@ class FocusStateController:
             self.gui.focus_state_data.set_current_widget(value)
 
     def resolve_current_widget(self) -> Optional[Widget]:
+        """Run resolve current widget and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         current = self.gui.focus_state_data.read_current_widget()
         if current is None:
             return None
@@ -49,9 +63,15 @@ class FocusStateController:
         return current
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
+        """Run update focus and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.set_current_widget(new_hover)
 
     def update_active_window(self) -> None:
+        """Run update active window and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         top_window: Optional["Window"] = None
         for window in self.gui.windows[::-1]:
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):

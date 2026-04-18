@@ -6,6 +6,8 @@ from typing import Callable, Hashable
 
 @dataclass
 class TaskMessage:
+    """Progress/message dispatch payload emitted by active tasks."""
+
     id: Hashable
     callback: Callable[[object], None]
     payload: object

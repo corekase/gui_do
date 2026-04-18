@@ -15,9 +15,13 @@ class InputEventEmitter:
     """Centralized translation from routed input outcomes to GuiEvent values."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the InputEventEmitter instance."""
         self.gui: "GuiManager" = gui_manager
 
     def emit_action(self, action: InputAction) -> "GuiEvent":
+        """Run emit action and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if action.builder is not None:
             return action.builder()
         if action.event_type is None:
@@ -25,6 +29,9 @@ class InputEventEmitter:
         return self.gui.event(action.event_type, **action.kwargs)
 
     def base_mouse_event(self, event: PygameEvent) -> "GuiEvent":
+        """Run base mouse event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if event.type == MOUSEBUTTONUP:
             return self.gui.event(Event.MouseButtonUp, button=getattr(event, 'button', None))
         if event.type == MOUSEBUTTONDOWN:
@@ -34,6 +41,9 @@ class InputEventEmitter:
         return self.pass_event()
 
     def system_event(self, event: PygameEvent) -> "GuiEvent":
+        """Run system event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if event.type == QUIT:
             return self.gui.event(Event.Quit)
         if event.type == KEYUP:
@@ -43,6 +53,9 @@ class InputEventEmitter:
         return self.pass_event()
 
     def widget_event(self, widget_id: Optional[str] = None, *, window=None, task_panel: bool = False) -> "GuiEvent":
+        """Run widget event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         kwargs = {}
         if widget_id is not None:
             kwargs['widget_id'] = widget_id
@@ -53,4 +66,7 @@ class InputEventEmitter:
         return self.gui.event(Event.Widget, **kwargs)
 
     def pass_event(self) -> "GuiEvent":
+        """Run pass event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return self.gui.event(Event.Pass)

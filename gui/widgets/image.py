@@ -16,6 +16,7 @@ class Image(Widget):
     """Displays a bitmap loaded from data/images."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> None:
+        """Initialize the Image instance."""
         super().__init__(gui, id, rect)
         if not isinstance(image, str) or image == '':
             raise GuiError(f'image must be a non-empty string, got: {image!r}')
@@ -31,6 +32,9 @@ class Image(Widget):
         self.auto_restore_pristine = automatic_pristine
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
+        """Run handle event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return False
 
     def leave(self) -> None:
@@ -38,5 +42,8 @@ class Image(Widget):
         return
 
     def draw(self) -> None:
+        """Run draw and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         super().draw()
         self.surface.blit(self._image, self.draw_rect)

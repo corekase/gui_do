@@ -14,19 +14,32 @@ class LockFlowCoordinator:
     """Owns manager-level lock API flow and lock-state delegation."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the LockFlowCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
+        """Run set lock area and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.gui.lock_state.set_area(locking_object, area)
 
     def set_lock_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
+        """Run set lock point and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if locking_object is None:
             self.gui.set_lock_area(None)
             return
         self.gui.lock_state.set_point(locking_object, point)
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
+        """Run enforce point lock and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.gui.lock_state.enforce_point_lock(hardware_position)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
+        """Run lock area and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return self.gui.lock_state.clamp_position(position)

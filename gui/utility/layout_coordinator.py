@@ -14,9 +14,13 @@ class LayoutCoordinator:
     """Owns layout/grid helper validation and forwarding."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the LayoutCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
+        """Run set grid properties and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if width <= 0:
             raise GuiError(f'grid width must be positive, got: {width}')
         if height <= 0:
@@ -28,4 +32,7 @@ class LayoutCoordinator:
         self.gui.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
+        """Run gridded and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return self.gui.layout_manager.get_cell(x, y)

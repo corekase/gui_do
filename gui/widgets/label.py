@@ -15,6 +15,7 @@ class Label(Widget):
     """Non-interactive text widget."""
 
     def __init__(self, gui: "GuiManager", id: str, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False) -> None:
+        """Initialize the Label instance."""
         super().__init__(gui, id, Rect(0, 0, 0, 0))
         self.shadow: bool = shadow
         self._font: Optional[str] = self.gui.graphics_factory.get_current_font_name()
@@ -29,6 +30,9 @@ class Label(Widget):
             self.draw_rect.x, self.draw_rect.y = x, y
 
     def set_label(self, text: str) -> None:
+        """Run set label and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if self._font is not None:
             self.gui.graphics_factory.set_font(self._font)
             self._render(text)
@@ -37,6 +41,9 @@ class Label(Widget):
             self._render(text)
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
+        """Run handle event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return False
 
     def leave(self) -> None:
@@ -44,10 +51,14 @@ class Label(Widget):
         return
 
     def draw(self) -> None:
+        """Run draw and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         super().draw()
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def _render(self, text: str) -> None:
+        """Internal helper for render."""
         if self.shadow:
             self._text_bitmap = self.gui.graphics_factory.render_text(text, colours['text'], True)
         else:

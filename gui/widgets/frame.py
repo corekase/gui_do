@@ -15,6 +15,7 @@ class Frame(Widget):
     """Static framed panel with idle/hover/armed variants."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect) -> None:
+        """Initialize the Frame instance."""
         super().__init__(gui, id, rect)
         self._idle: Surface
         self._hover: Surface
@@ -26,6 +27,9 @@ class Frame(Widget):
         self.state: InteractiveState = InteractiveState.Idle
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
+        """Run handle event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         return False
 
     def leave(self) -> None:
@@ -33,6 +37,9 @@ class Frame(Widget):
         return
 
     def draw(self) -> None:
+        """Run draw and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         super().draw()
         if self.state == InteractiveState.Idle:
             self.surface.blit(self._idle, (self.draw_rect.x, self.draw_rect.y))

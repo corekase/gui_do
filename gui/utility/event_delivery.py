@@ -13,10 +13,14 @@ class EventDeliveryCoordinator:
     """Owns GuiEvent delivery policy across task owners, panel, windows, and screen."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the EventDeliveryCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
         self._task_owner_by_id: dict[Hashable, Window] = {}
 
     def dispatch_event(self, event: "BaseEvent") -> None:
+        """Run dispatch event and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         task_owner = self.resolve_task_event_owner(event)
         if task_owner is not None:
             task_owner.handle_event(event)
@@ -34,6 +38,9 @@ class EventDeliveryCoordinator:
         self.gui.screen_lifecycle.handle_event(event)
 
     def resolve_task_event_owner(self, event: "BaseEvent") -> Optional[Window]:
+        """Run resolve task event owner and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if getattr(event, 'type', None) != Event.Task:
             return None
         task_id = cast(Optional[Hashable], getattr(event, 'id', None))
@@ -51,6 +58,9 @@ class EventDeliveryCoordinator:
         return owner
 
     def clear_task_owners_for_window(self, window: Window) -> None:
+        """Run clear task owners for window and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         if window not in self.gui.windows:
             return
         stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
@@ -58,6 +68,9 @@ class EventDeliveryCoordinator:
             del self._task_owner_by_id[task_id]
 
     def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
+        """Run set task owner and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         try:
             hash(task_id)
         except TypeError as exc:
@@ -70,5 +83,8 @@ class EventDeliveryCoordinator:
         self._task_owner_by_id[task_id] = window
 
     def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
+        """Run set task owners and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         for task_id in task_ids:
             self.set_task_owner(task_id, window)

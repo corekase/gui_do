@@ -21,6 +21,9 @@ class LockState:
     lock_point_tolerance_rect: Optional[Rect] = None
 
     def apply_area_lock(self, locking_object: Widget, area: Rect) -> None:
+        """Run apply area lock and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.locking_object = locking_object
         self.mouse_locked = True
         self.mouse_point_locked = False
@@ -30,6 +33,9 @@ class LockState:
         self.lock_point_tolerance_rect = None
 
     def apply_point_lock(self, locking_object: Widget, point: Tuple[int, int]) -> None:
+        """Run apply point lock and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.locking_object = locking_object
         self.mouse_locked = True
         self.mouse_point_locked = True
@@ -39,6 +45,9 @@ class LockState:
         self.lock_point_tolerance_rect = None
 
     def clear_lock(self) -> None:
+        """Run clear lock and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self.locking_object = None
         self.mouse_locked = False
         self.mouse_point_locked = False

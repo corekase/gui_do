@@ -4,6 +4,8 @@ from enum import Enum
 
 
 class Event(Enum):
+    """Top-level event categories routed by the GUI dispatcher."""
+
     Pass = 'Pass'
     Quit = 'Quit'
     KeyDown = 'KeyDown'

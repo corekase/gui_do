@@ -18,6 +18,7 @@ class ArrowBox(BaseInteractive):
     """Arrow button with press-and-hold repeat activation."""
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None, repeat_activation_ms: int = 150) -> None:
+        """Initialize the ArrowBox instance."""
         super().__init__(gui, id, rect)
         if not isinstance(repeat_activation_ms, int):
             raise GuiError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
@@ -29,6 +30,9 @@ class ArrowBox(BaseInteractive):
         self._timer_id: Optional[str] = None
 
     def leave(self) -> None:
+        """Run leave and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         self._clear_timer()
         super().leave()
         self.state = InteractiveState.Idle
@@ -62,6 +66,7 @@ class ArrowBox(BaseInteractive):
         return self.state == InteractiveState.Armed
 
     def _clear_timer(self) -> None:
+        """Internal helper for clear timer."""
         timer_id = getattr(self, '_timer_id', None)
         if timer_id is None:
             return
@@ -77,6 +82,7 @@ class ArrowBox(BaseInteractive):
             self._timer_id = None
 
     def _invoke_on_activate(self) -> None:
+        """Internal helper for invoke on activate."""
         if self.on_activate is not None:
             self.on_activate()
 

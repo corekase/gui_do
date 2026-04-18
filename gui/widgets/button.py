@@ -25,6 +25,9 @@ class Button(BaseInteractive):
         self.on_activate = on_activate
 
     def leave(self) -> None:
+        """Run leave and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         super().leave()
         self.state = InteractiveState.Idle
 

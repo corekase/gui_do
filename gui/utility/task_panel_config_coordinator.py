@@ -13,6 +13,7 @@ class TaskPanelConfigCoordinator:
     """Owns task-panel configuration validation and atomic panel replacement."""
 
     def __init__(self, gui_manager: "GuiManager") -> None:
+        """Initialize the TaskPanelConfigCoordinator instance."""
         self.gui: "GuiManager" = gui_manager
 
     def configure_task_panel(
@@ -29,6 +30,9 @@ class TaskPanelConfigCoordinator:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
+        """Run configure task panel and return the resulting value.
+
+        This method encapsulates the main behavior for this operation."""
         from .task_panel import _ManagedTaskPanel
 
         if type(height) is not int or height <= 0:
