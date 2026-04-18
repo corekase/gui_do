@@ -2,12 +2,12 @@ from typing import Any, Optional, TYPE_CHECKING, TypeVar, cast
 
 from .events import GuiError
 from .widget import Widget
-from ..widgets.window import Window as gWindow
+from ..widgets.window import Window as Window
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
 
-TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
+TGuiObject = TypeVar("TGuiObject", Window, Widget)
 
 
 class GuiObjectRegistry:
@@ -26,7 +26,7 @@ class GuiObjectRegistry:
             for widget in window.widgets:
                 yield widget
 
-    def _detach_widget_from_current_container(self, gui_object: Widget, active_window: Optional[gWindow], added_to_task_panel: bool) -> None:
+    def _detach_widget_from_current_container(self, gui_object: Widget, active_window: Optional[Window], added_to_task_panel: bool) -> None:
         if added_to_task_panel and self.gui.task_panel is not None and gui_object in self.gui.task_panel.widgets:
             self.gui.task_panel.widgets.remove(gui_object)
             return
@@ -36,19 +36,19 @@ class GuiObjectRegistry:
         if gui_object in self.gui.widgets:
             self.gui.widgets.remove(gui_object)
 
-    def _reset_widget_registration(self, gui_object: Widget, active_window: Optional[gWindow], added_to_task_panel: bool) -> None:
+    def _reset_widget_registration(self, gui_object: Widget, active_window: Optional[Window], added_to_task_panel: bool) -> None:
         self._detach_widget_from_current_container(gui_object, active_window, added_to_task_panel)
         gui_object.window = None
         gui_object.surface = None
 
-    def _resolve_widget_attach_target(self, active_window: Optional[gWindow]):
+    def _resolve_widget_attach_target(self, active_window: Optional[Window]):
         if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
             return cast(Any, self.gui.task_panel), self.gui.task_panel.surface, self.gui.task_panel.widgets, True
         if active_window is not None:
             return active_window, active_window.surface, active_window.widgets, False
         return None, self.gui.surface, self.gui.widgets, False
 
-    def _attach_widget_to_container(self, gui_object: Widget, active_window: Optional[gWindow]) -> bool:
+    def _attach_widget_to_container(self, gui_object: Widget, active_window: Optional[Window]) -> bool:
         window, surface, widgets, added_to_task_panel = self._resolve_widget_attach_target(active_window)
         gui_object.window = window
         gui_object.surface = surface
@@ -58,11 +58,11 @@ class GuiObjectRegistry:
     def register(self, gui_object: TGuiObject) -> TGuiObject:
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
-        if not isinstance(gui_object, (gWindow, Widget)):
+        if not isinstance(gui_object, (Window, Widget)):
             raise GuiError('gui_object must be a Window or Widget instance')
         if self.is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self.describe_gui_object(gui_object)}')
-        if isinstance(gui_object, gWindow):
+        if isinstance(gui_object, Window):
             if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
                 raise GuiError('window nesting inside task panel is not supported; call end_task_panel() before creating a window')
             self.gui.windows.append(gui_object)
@@ -95,7 +95,7 @@ class GuiObjectRegistry:
     def describe_gui_object(self, gui_object: TGuiObject) -> str:
         if isinstance(gui_object, Widget):
             return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
-        if isinstance(gui_object, gWindow):
+        if isinstance(gui_object, Window):
             return (
                 f'{type(gui_object).__name__} '
                 f'pos=({gui_object.x},{gui_object.y}) size=({gui_object.width},{gui_object.height})'
@@ -114,7 +114,7 @@ class GuiObjectRegistry:
         if self.gui.task_panel is not None and widget in self.gui.task_panel.widgets:
             return 'task_panel'
         window = getattr(widget, 'window', None)
-        if window is None or not isinstance(window, gWindow):
+        if window is None or not isinstance(window, Window):
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
@@ -130,7 +130,7 @@ class GuiObjectRegistry:
         return self.is_registered_object(button)
 
     def is_registered_object(self, gui_object: TGuiObject) -> bool:
-        if isinstance(gui_object, gWindow):
+        if isinstance(gui_object, Window):
             return gui_object in self.gui.windows
         if isinstance(gui_object, Widget):
             for widget in self._iter_registered_widgets():
@@ -138,10 +138,10 @@ class GuiObjectRegistry:
                     return True
         return False
 
-    def resolve_active_object(self) -> Optional[gWindow]:
+    def resolve_active_object(self) -> Optional[Window]:
         return self.gui.workspace_state.resolve_active_object(self.gui.windows)
 
-    def resolve_registered_window(self, window: Optional[gWindow]) -> Optional[gWindow]:
+    def resolve_registered_window(self, window: Optional[Window]) -> Optional[Window]:
         self.resolve_active_object()
         if window is None:
             return None

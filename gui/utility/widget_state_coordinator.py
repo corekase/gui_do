@@ -7,7 +7,7 @@ from .widget import Widget
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
-    from ..widgets.window import Window as gWindow
+    from ..widgets.window import Window as Window
 
 
 class WidgetStateCoordinator:
@@ -28,7 +28,7 @@ class WidgetStateCoordinator:
                 raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
             widget.visible = True
 
-    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional["gWindow"] = None) -> bool:
+    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional["Window"] = None) -> bool:
         if widget.handle_event(event, window):
             if widget.on_activate is not None:
                 if not callable(widget.on_activate):

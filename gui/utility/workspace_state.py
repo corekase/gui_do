@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from ..widgets.window import Window as gWindow
+from ..widgets.window import Window as Window
 
 
 class WorkspaceState:
@@ -8,9 +8,9 @@ class WorkspaceState:
 
     def __init__(self) -> None:
         self.task_panel_capture: bool = False
-        self.active_object: Optional[gWindow] = None
+        self.active_object: Optional[Window] = None
 
-    def resolve_active_object(self, windows: List[gWindow]) -> Optional[gWindow]:
+    def resolve_active_object(self, windows: List[Window]) -> Optional[Window]:
         if self.active_object is None:
             return None
         if self.active_object not in windows:

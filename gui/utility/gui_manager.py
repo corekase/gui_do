@@ -34,16 +34,16 @@ from .widget_state_coordinator import WidgetStateCoordinator
 from .workspace_coordinator import WorkspaceCoordinator
 from .workspace_state import WorkspaceState
 from .widget import Widget
-from ..widgets.window import Window as gWindow
-from ..widgets.button import Button as gButton
-from ..widgets.label import Label as gLabel
-from ..widgets.canvas import Canvas as gCanvas
-from ..widgets.image import Image as gImage
-from ..widgets.scrollbar import Scrollbar as gScrollbar
-from ..widgets.toggle import Toggle as gToggle
-from ..widgets.arrowbox import ArrowBox as gArrowBox
-from ..widgets.buttongroup import ButtonGroup as gButtonGroup
-from ..widgets.frame import Frame as gFrame
+from ..widgets.window import Window as Window
+from ..widgets.button import Button as Button
+from ..widgets.label import Label as Label
+from ..widgets.canvas import Canvas as Canvas
+from ..widgets.image import Image as Image
+from ..widgets.scrollbar import Scrollbar as Scrollbar
+from ..widgets.toggle import Toggle as Toggle
+from ..widgets.arrowbox import ArrowBox as ArrowBox
+from ..widgets.buttongroup import ButtonGroup as ButtonGroup
+from ..widgets.frame import Frame as Frame
 
 _logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from .gui_event import GuiEvent
     from .task_panel import _ManagedTaskPanel
 
-TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
+TGuiObject = TypeVar("TGuiObject", Window, Widget)
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
@@ -91,11 +91,11 @@ class GuiManager:
         self._drag_state.dragging = value
 
     @property
-    def dragging_window(self) -> Optional[gWindow]:
+    def dragging_window(self) -> Optional[Window]:
         return self._drag_state.dragging_window
 
     @dragging_window.setter
-    def dragging_window(self, value: Optional[gWindow]) -> None:
+    def dragging_window(self, value: Optional[Window]) -> None:
         self._drag_state.dragging_window = value
 
     @property
@@ -163,31 +163,31 @@ class GuiManager:
         self._lock_state.lock_point_tolerance_rect = value
 
     # widgets
-    def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
+    def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
         return self.ui_factory.arrow_box(id, rect, direction, on_activate)
 
-    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
         return self.ui_factory.button(id, rect, style, text, on_activate)
 
-    def button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
+    def button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
         return self.ui_factory.button_group(group, id, rect, style, text)
 
-    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
         return self.ui_factory.canvas(id, rect, backdrop, on_activate, automatic_pristine)
 
-    def frame(self, id: str, rect: Rect) -> gFrame:
+    def frame(self, id: str, rect: Rect) -> Frame:
         return self.ui_factory.frame(id, rect)
 
-    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
+    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
         return self.ui_factory.image(id, rect, image, automatic_pristine, scale)
 
-    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
         return self.ui_factory.label(position, text, shadow, id)
 
-    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
+    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
         return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params)
 
-    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
+    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         return self.ui_factory.toggle(id, rect, style, pushed, pressed_text, raised_text)
 
     def window(
@@ -199,7 +199,7 @@ class GuiManager:
         preamble: Optional[Callable[[], None]] = None,
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
-    ) -> gWindow:
+    ) -> Window:
         return self.ui_factory.window(title, pos, size, backdrop, preamble, event_handler, postamble)
 
     def __init__(
@@ -262,12 +262,12 @@ class GuiManager:
         self.surface: Surface = surface
         self.widgets: List[Widget] = []
         self.workspace_state: WorkspaceState = WorkspaceState()
-        self.windows: List[gWindow] = []
+        self.windows: List[Window] = []
         self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
-        self.active_window: Optional[gWindow] = None
+        self.active_window: Optional[Window] = None
         self.focus_state_data: FocusState = FocusState()
         self.pristine: Optional[Surface] = None
         self._buffered: bool = False
@@ -375,16 +375,16 @@ class GuiManager:
     def clear_button_groups(self) -> None:
         self.button_group_mediator.clear()
 
-    def clear_task_owners_for_window(self, window: gWindow) -> None:
+    def clear_task_owners_for_window(self, window: Window) -> None:
         self.event_delivery.clear_task_owners_for_window(window)
 
     def hide_widgets(self, *widgets: Widget) -> None:
         self.widget_state.hide_widgets(*widgets)
 
-    def lower_window(self, window: gWindow) -> None:
+    def lower_window(self, window: Window) -> None:
         self.workspace.lower_window(window)
 
-    def raise_window(self, window: gWindow) -> None:
+    def raise_window(self, window: Window) -> None:
         self.workspace.raise_window(window)
 
     def set_cursor(self, name: str) -> None:
@@ -418,10 +418,10 @@ class GuiManager:
     ) -> None:
         self.lifecycle.set_screen_lifecycle(preamble, event_handler, postamble)
 
-    def set_task_owner(self, task_id: Hashable, window: Optional[gWindow]) -> None:
+    def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
         self.event_delivery.set_task_owner(task_id, window)
 
-    def set_task_owners(self, window: Optional[gWindow], *task_ids: Hashable) -> None:
+    def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
         self.event_delivery.set_task_owners(window, *task_ids)
 
     def show_widgets(self, *widgets: Widget) -> None:
@@ -439,7 +439,7 @@ class GuiManager:
     def handle_event(self, event: PygameEvent) -> "GuiEvent":
         return self.dispatch_bridge.handle_event(event)
 
-    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[gWindow] = None) -> bool:
+    def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
         return self.widget_state.handle_widget(widget, event, window)
 

@@ -4,7 +4,7 @@ from .widget import Widget
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
-    from ..widgets.window import Window as gWindow
+    from ..widgets.window import Window as Window
 
 
 class FocusStateController:
@@ -41,7 +41,7 @@ class FocusStateController:
         self.set_current_widget(new_hover)
 
     def update_active_window(self) -> None:
-        top_window: Optional["gWindow"] = None
+        top_window: Optional["Window"] = None
         for window in self.gui.windows[::-1]:
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
                 top_window = window

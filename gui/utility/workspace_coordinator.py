@@ -1,7 +1,7 @@
 from typing import Dict, TYPE_CHECKING
 
 from .events import GuiError
-from ..widgets.window import Window as gWindow
+from ..widgets.window import Window as Window
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
@@ -62,14 +62,14 @@ class WorkspaceCoordinator:
             'rect': panel.get_rect(),
         }
 
-    def lower_window(self, window: gWindow) -> None:
+    def lower_window(self, window: Window) -> None:
         resolved_window = self.gui.object_registry.resolve_registered_window(window)
         if resolved_window is None:
             return
         self.gui.windows.remove(resolved_window)
         self.gui.windows.insert(0, resolved_window)
 
-    def raise_window(self, window: gWindow) -> None:
+    def raise_window(self, window: Window) -> None:
         resolved_window = self.gui.object_registry.resolve_registered_window(window)
         if resolved_window is None:
             return

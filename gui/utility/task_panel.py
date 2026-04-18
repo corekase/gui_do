@@ -5,7 +5,7 @@ from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 
 from .events import BaseEvent, GuiError, InteractiveState
 from .widget import Widget
-from ..widgets.frame import Frame as gFrame
+from ..widgets.frame import Frame as Frame
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
@@ -76,7 +76,7 @@ class _ManagedTaskPanel:
         self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
         self.backdrop: Optional[str] = backdrop
         if backdrop is None:
-            frame = gFrame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.height))
+            frame = Frame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.height))
             frame.state = InteractiveState.Idle
             frame.surface = self.surface
             frame.draw()

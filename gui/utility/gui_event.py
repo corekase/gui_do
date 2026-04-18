@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
 from .events import BaseEvent, Event
-from ..widgets.window import Window as gWindow
+from ..widgets.window import Window as Window
 
 
 class GuiEvent(BaseEvent):
@@ -15,7 +15,7 @@ class GuiEvent(BaseEvent):
         self.button: Optional[int] = self._as_optional_int(kwargs.get('button'))
         self.widget_id: Optional[str] = kwargs.get('widget_id') if isinstance(kwargs.get('widget_id'), str) else None
         self.group: Optional[str] = kwargs.get('group') if isinstance(kwargs.get('group'), str) else None
-        self.window: Optional[gWindow] = kwargs.get('window') if isinstance(kwargs.get('window'), gWindow) else None
+        self.window: Optional[Window] = kwargs.get('window') if isinstance(kwargs.get('window'), Window) else None
         self.task_panel: bool = kwargs.get('task_panel') is True
 
     @staticmethod
