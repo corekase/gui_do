@@ -1,13 +1,13 @@
 from pygame import Rect
 from pygame.event import Event as PygameEvent
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, Tuple, TYPE_CHECKING
-from .constants import Event, GuiError
+from .constants import GuiError
 from .input_actions import InputAction
 from .widget import Widget
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent, GuiManager
+    from .guimanager import GuiManager
 
 
 class LockStateController:

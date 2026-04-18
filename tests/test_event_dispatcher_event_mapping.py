@@ -114,10 +114,10 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         motion_with_rel = pygame.event.Event(MOUSEMOTION, {"rel": (4, -2)})
         motion_without_rel = pygame.event.Event(MOUSEMOTION, {})
 
-        mapped_down = self._emit(self.dispatcher.router._handle_base_mouse_events(down))
-        mapped_up = self._emit(self.dispatcher.router._handle_base_mouse_events(up))
-        mapped_motion = self._emit(self.dispatcher.router._handle_base_mouse_events(motion_with_rel))
-        mapped_motion_default = self._emit(self.dispatcher.router._handle_base_mouse_events(motion_without_rel))
+        mapped_down = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(down))
+        mapped_up = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(up))
+        mapped_motion = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_with_rel))
+        mapped_motion_default = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_without_rel))
 
         self.assertEqual(mapped_down.type, Event.MouseButtonDown)
         self.assertEqual(mapped_down.button, 1)
@@ -130,7 +130,7 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
     def test_unhandled_base_event_returns_pass(self) -> None:
         unknown = pygame.event.Event(KEYDOWN, {"key": 1})
 
-        mapped = self._emit(self.dispatcher.router._handle_base_mouse_events(unknown))
+        mapped = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(unknown))
 
         self.assertEqual(mapped.type, Event.Pass)
 

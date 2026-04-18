@@ -1,12 +1,12 @@
 from pygame.event import Event as PygameEvent
-from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from typing import TYPE_CHECKING
 from .constants import Event
 from .input_actions import InputAction
 from .input_targets import InputTargetResolver
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent, GuiManager
+    from .guimanager import GuiManager
 
 
 class InputRouter:
@@ -39,9 +39,6 @@ class InputRouter:
         if self.gui.active_window:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
-
-    def _handle_base_mouse_events(self, event: PygameEvent) -> InputAction:
-        return self.targets._handle_base_mouse_events(event)
 
     def _handle_locked_object(self, event: PygameEvent) -> InputAction:
         lock_obj = self.gui.locking_object
