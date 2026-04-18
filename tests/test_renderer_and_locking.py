@@ -5,6 +5,7 @@ from pygame import Rect
 
 from gui.utility.guimanager import GuiManager
 from gui.utility.input_state import LockStateController
+from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.renderer import Renderer
 from gui.utility.widget import Widget
 
@@ -106,6 +107,7 @@ class LockingBehaviourTests(unittest.TestCase):
         gui.lock_point_recenter_pending = False
         gui.lock_point_tolerance_rect = None
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         return gui
 
     def test_lock_area_clamps_to_rect_bounds(self) -> None:
@@ -121,6 +123,7 @@ class LockingBehaviourTests(unittest.TestCase):
         gui.lock_point_recenter_pending = False
         gui.point_lock_recenter_rect = Rect(25, 25, 30, 30)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         set_calls = []
         gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 

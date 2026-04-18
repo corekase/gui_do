@@ -6,6 +6,7 @@ from gui.utility.constants import Event, GuiError
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_state import DragStateController, LockStateController
+from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.guimanager import GuiEvent, GuiManager
 from gui.utility.widget import Widget
 
@@ -56,6 +57,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         gui.event_input = InputEventCoordinator(gui)
         gui.get_mouse_pos = lambda: (7, 8)
 
@@ -69,6 +71,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         lock_widget = Widget.__new__(Widget)
 
         gui.locking_object = lock_widget
@@ -98,6 +101,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         gui._is_registered_object = lambda _obj: False
 
         with self.assertRaises(GuiError):
@@ -108,6 +112,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         lock_widget = Widget.__new__(Widget)
         gui._is_registered_object = lambda obj: obj is lock_widget
         gui._mouse_get_pos = lambda: (12, 13)

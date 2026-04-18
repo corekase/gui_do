@@ -19,6 +19,7 @@ from .input_state import DragStateController, LockStateController
 from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator
+from .lock_flow_coordinator import LockFlowCoordinator
 from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
 from .render_coordinator import RenderCoordinator
@@ -373,6 +374,7 @@ class GuiManager:
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
         self.layout: LayoutCoordinator = LayoutCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
+        self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.render_flow: RenderCoordinator = RenderCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
@@ -530,14 +532,11 @@ class GuiManager:
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
-        self.lock_state.set_area(locking_object, area)
+        self.lock_flow.set_lock_area(locking_object, area)
 
     def set_lock_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
         """Lock mouse-relative input and recenter hardware pointer when it leaves a broad center area."""
-        if locking_object is None:
-            self.set_lock_area(None)
-            return
-        self.lock_state.set_point(locking_object, point)
+        self.lock_flow.set_lock_point(locking_object, point)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
         self.pointer.set_mouse_pos(pos, update_physical_coords)
@@ -600,7 +599,7 @@ class GuiManager:
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
-        self.lock_state.enforce_point_lock(hardware_position)
+        self.lock_flow.enforce_point_lock(hardware_position)
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
         try:
@@ -609,7 +608,7 @@ class GuiManager:
             _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
-        return self.lock_state.clamp_position(position)
+        return self.lock_flow.lock_area(position)
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""

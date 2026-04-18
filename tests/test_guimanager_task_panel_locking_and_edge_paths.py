@@ -11,6 +11,7 @@ from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.lifecycle import LifecycleCoordinator
+from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
 from gui.utility.ui_factory import GuiUiFactory
@@ -55,6 +56,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.drag_state = DragStateController(gui)
         gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.lock_flow = LockFlowCoordinator(gui)
         gui.ui_factory = GuiUiFactory(gui)
         gui.object_registry = GuiObjectRegistry(gui)
         gui.graphics = GraphicsCoordinator(gui)
