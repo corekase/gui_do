@@ -82,7 +82,6 @@ def build_gui_manager_stub(
     gui.task_panel = None
     gui._task_panel_capture = False
     gui._active_object = None
-    gui._task_owner_by_id = {}
 
     gui.dragging = False
     gui.dragging_window = None

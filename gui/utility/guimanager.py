@@ -216,7 +216,6 @@ class GuiManager:
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self.screen_lifecycle: ScreenLifecycle = ScreenLifecycle()
-        self._task_owner_by_id: Dict[Hashable, gWindow] = {}
         self._task_panel_capture: bool = False
         self.task_panel: Optional["_ManagedTaskPanel"] = None
         self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()

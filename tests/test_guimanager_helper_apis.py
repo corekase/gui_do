@@ -379,11 +379,11 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_clear_task_owners_for_window_is_noop_when_window_unregistered(self) -> None:
         gui = self._build_manager_stub()
         window = object()
-        gui._task_owner_by_id = {"a": window}
+        gui.event_delivery._task_owner_by_id = {"a": window}
 
         GuiManager.clear_task_owners_for_window(gui, window)
 
-        self.assertEqual(gui._task_owner_by_id, {"a": window})
+        self.assertEqual(gui.event_delivery._task_owner_by_id, {"a": window})
 
     def test_current_widget_property_clears_stale_registration(self) -> None:
         gui = self._build_manager_stub()

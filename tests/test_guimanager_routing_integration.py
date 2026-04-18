@@ -37,7 +37,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         gui = self._build_manager_stub()
         owner = self._build_window_stub()
         gui.windows.append(owner)
-        gui._task_owner_by_id["task-1"] = owner
+        GuiManager.set_task_owner(gui, "task-1", owner)
         event = SimpleEvent(Event.Task, id="task-1")
 
         GuiManager.dispatch_event(gui, event)

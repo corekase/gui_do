@@ -31,10 +31,10 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui.windows.append(window)
 
         GuiManager.set_task_owner(gui, "task-1", window)
-        self.assertIs(gui._task_owner_by_id["task-1"], window)
+        self.assertIs(gui.event_delivery._task_owner_by_id["task-1"], window)
 
         GuiManager.set_task_owner(gui, "task-1", None)
-        self.assertNotIn("task-1", gui._task_owner_by_id)
+        self.assertNotIn("task-1", gui.event_delivery._task_owner_by_id)
 
     def test_set_task_owners_assigns_multiple_ids(self) -> None:
         gui = self._build_manager_stub()
@@ -43,16 +43,16 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
 
         GuiManager.set_task_owners(gui, window, "a", "b", "c")
 
-        self.assertIs(gui._task_owner_by_id["a"], window)
-        self.assertIs(gui._task_owner_by_id["b"], window)
-        self.assertIs(gui._task_owner_by_id["c"], window)
+        self.assertIs(gui.event_delivery._task_owner_by_id["a"], window)
+        self.assertIs(gui.event_delivery._task_owner_by_id["b"], window)
+        self.assertIs(gui.event_delivery._task_owner_by_id["c"], window)
 
     def test_clear_task_owners_for_window_removes_only_matching_owner(self) -> None:
         gui = self._build_manager_stub()
         w1 = SimpleNamespace(visible=True)
         w2 = SimpleNamespace(visible=True)
         gui.windows.extend([w1, w2])
-        gui._task_owner_by_id = {
+        gui.event_delivery._task_owner_by_id = {
             "task-a": w1,
             "task-b": w2,
             "task-c": w1,
@@ -60,10 +60,10 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
 
         GuiManager.clear_task_owners_for_window(gui, w1)
 
-        self.assertNotIn("task-a", gui._task_owner_by_id)
-        self.assertNotIn("task-c", gui._task_owner_by_id)
-        self.assertIn("task-b", gui._task_owner_by_id)
-        self.assertIs(gui._task_owner_by_id["task-b"], w2)
+        self.assertNotIn("task-a", gui.event_delivery._task_owner_by_id)
+        self.assertNotIn("task-c", gui.event_delivery._task_owner_by_id)
+        self.assertIn("task-b", gui.event_delivery._task_owner_by_id)
+        self.assertIs(gui.event_delivery._task_owner_by_id["task-b"], w2)
 
     def test_resolve_task_event_owner_returns_none_for_non_task_event(self) -> None:
         gui = self._build_manager_stub()
@@ -86,8 +86,8 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         hidden = SimpleNamespace(visible=False)
         visible = SimpleNamespace(visible=True)
         gui.windows.append(visible)
-        gui._task_owner_by_id["hidden-task"] = hidden
-        gui._task_owner_by_id["visible-task"] = visible
+        gui.event_delivery._task_owner_by_id["hidden-task"] = hidden
+        gui.event_delivery._task_owner_by_id["visible-task"] = visible
 
         hidden_event = SimpleNamespace(type=Event.Task, id="hidden-task")
         missing_event = SimpleNamespace(type=Event.Task, id="missing")
@@ -102,7 +102,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui = self._build_manager_stub()
         owner = SimpleNamespace(visible=True)
         gui.windows.append(owner)
-        gui._task_owner_by_id["task-ok"] = owner
+        gui.event_delivery._task_owner_by_id["task-ok"] = owner
         event = SimpleNamespace(type=Event.Task, id="task-ok")
 
         resolved = GuiManager._resolve_task_event_owner(gui, event)
