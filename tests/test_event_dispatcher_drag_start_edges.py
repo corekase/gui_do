@@ -5,6 +5,8 @@ from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN
 
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 
 
 class WindowStub:
@@ -38,8 +40,15 @@ class DragStartGuiStub:
         self.widgets = []
         self.mouse_locked = False
         self.mouse_pos = (0, 0)
+        self.lock_area_rect = None
+        self.lock_point_pos = None
+        self.lock_point_recenter_pending = False
+        self.lock_point_tolerance_rect = None
         self.lowered = []
         self.lock_area_calls = []
+        self.input_emitter = InputEventEmitter(self)
+        self.drag_state = DragStateController(self)
+        self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
         return self.locking_object
@@ -86,7 +95,7 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui = DragStartGuiStub()
         dispatcher = EventDispatcher(gui)
 
-        dispatcher._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
+        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
 
         self.assertFalse(gui.dragging)
         self.assertIsNone(gui.dragging_window)
@@ -106,7 +115,7 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui.windows = [window]
         dispatcher = EventDispatcher(gui)
 
-        dispatcher._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}))
+        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}))
 
         self.assertTrue(gui.dragging)
         self.assertIs(gui.dragging_window, window)
@@ -126,7 +135,7 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui.windows = [window]
         dispatcher = EventDispatcher(gui)
 
-        dispatcher._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
+        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
 
         self.assertEqual(gui.lowered, [window])
         self.assertEqual(gui.windows, [])

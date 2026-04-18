@@ -330,10 +330,10 @@ class GuiManager:
             raise GuiError('mouse_set_pos must be callable')
         if not callable(self._mouse_set_visible):
             raise GuiError('mouse_set_visible must be callable')
-        self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.lock_state: LockStateController = LockStateController(self)
+        self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
         self._mouse_set_visible(False)
@@ -657,14 +657,14 @@ class GuiManager:
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
-        self._get_lock_state_controller().set_area(locking_object, area)
+        self.lock_state.set_area(locking_object, area)
 
     def set_lock_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
         """Lock mouse-relative input and recenter hardware pointer when it leaves a broad center area."""
         if locking_object is None:
             self.set_lock_area(None)
             return
-        self._get_lock_state_controller().set_point(locking_object, point)
+        self.lock_state.set_point(locking_object, point)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -817,7 +817,7 @@ class GuiManager:
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
-        self._get_lock_state_controller().enforce_point_lock(hardware_position)
+        self.lock_state.enforce_point_lock(hardware_position)
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
         try:
@@ -968,18 +968,4 @@ class GuiManager:
         return self._current_widget
 
     def _resolve_locking_state(self) -> Optional[Widget]:
-        return self._get_lock_state_controller().resolve()
-
-    def _get_drag_state_controller(self) -> DragStateController:
-        controller = getattr(self, 'drag_state', None)
-        if controller is None:
-            controller = DragStateController(self)
-            self.drag_state = controller
-        return controller
-
-    def _get_lock_state_controller(self) -> LockStateController:
-        controller = getattr(self, 'lock_state', None)
-        if controller is None:
-            controller = LockStateController(self)
-            self.lock_state = controller
-        return controller
+        return self.lock_state.resolve()

@@ -57,21 +57,13 @@ class InputRouter:
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         rel = getattr(event, 'rel', (0, 0))
         pos = getattr(event, 'pos', self.gui.get_mouse_pos())
-        lock_state = getattr(self.gui, 'lock_state', None)
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = rel
-            if lock_state is not None:
-                self.gui.mouse_pos = lock_state.clamp_position((x + dx, y + dy))
-                lock_state.enforce_point_lock(pos)
-            else:
-                self.gui.mouse_pos = self.gui.lock_area((x + dx, y + dy))
-                self.gui.enforce_point_lock(pos)
+            self.gui.mouse_pos = self.gui.lock_state.clamp_position((x + dx, y + dy))
+            self.gui.lock_state.enforce_point_lock(pos)
         else:
-            if lock_state is not None:
-                self.gui.mouse_pos = lock_state.clamp_position(pos)
-            else:
-                self.gui.mouse_pos = self.gui.lock_area(pos)
+            self.gui.mouse_pos = self.gui.lock_state.clamp_position(pos)
 
     def _handle_system_event(self, event: PygameEvent) -> InputAction:
         if event.type == QUIT:
@@ -83,34 +75,7 @@ class InputRouter:
         return InputAction.pass_event()
 
     def _handle_window_dragging(self, event: PygameEvent) -> InputAction:
-        drag_state = getattr(self.gui, 'drag_state', None)
-        if drag_state is not None:
-            return drag_state.handle_drag_event(event)
-        if (
-            self.gui.dragging_window is None
-            or self.gui.dragging_window not in self.gui.windows
-            or self.gui.mouse_delta is None
-        ):
-            self._reset_window_drag_state()
-            return InputAction.pass_event()
-        if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
-            self.gui.dragging = False
-            self.gui.dragging_window.position = (self.gui.dragging_window.x, self.gui.dragging_window.y)
-            self.gui.set_mouse_pos(
-                (
-                    self.gui.dragging_window.x - self.gui.mouse_delta[0],
-                    self.gui.dragging_window.y - self.gui.mouse_delta[1],
-                )
-            )
-            self.gui.dragging_window = None
-            self.gui.mouse_delta = None
-        elif event.type == MOUSEMOTION and self.gui.dragging:
-            rel = getattr(event, 'rel', (0, 0))
-            x = self.gui.dragging_window.x + rel[0]
-            y = self.gui.dragging_window.y + rel[1]
-            self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
-            self.gui.dragging_window.position = (x, y)
-        return InputAction.pass_event()
+        return self.gui.drag_state.handle_drag_event(event)
 
     def _process_screen_widgets(self, event: PygameEvent) -> InputAction:
         return self.targets.process_screen_widgets(event)
@@ -122,34 +87,13 @@ class InputRouter:
         return self.targets.process_task_panel_widgets(event)
 
     def _check_window_drag_start(self, event: PygameEvent) -> None:
-        drag_state = getattr(self.gui, 'drag_state', None)
-        if drag_state is not None:
-            drag_state.start_if_possible(event)
-            return
-        event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
-        if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
-            if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
-                self.gui.lower_window(self.gui.active_window)
-                self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
-            else:
-                self.gui.dragging = True
-                self.gui.dragging_window = self.gui.active_window
-                self.gui.mouse_delta = (
-                    self.gui.dragging_window.x - self.gui.mouse_pos[0],
-                    self.gui.dragging_window.y - self.gui.mouse_pos[1],
-                )
+        self.gui.drag_state.start_if_possible(event)
 
     def _is_registered_widget(self, widget) -> bool:
         return self.targets.is_registered_widget(widget)
 
     def _reset_window_drag_state(self) -> None:
-        drag_state = getattr(self.gui, 'drag_state', None)
-        if drag_state is not None:
-            drag_state.reset()
-            return
-        self.gui.dragging = False
-        self.gui.dragging_window = None
-        self.gui.mouse_delta = None
+        self.gui.drag_state.reset()
 
     def _update_active_window(self) -> None:
         self.targets.update_active_window()

@@ -3,6 +3,8 @@ import unittest
 from pygame import Rect
 
 from gui.utility.constants import Event, GuiError
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiEvent, GuiManager
 from gui.utility.widget import Widget
 
@@ -50,6 +52,9 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
 
     def test_guimanager_event_injects_mouse_position_for_mouse_events(self) -> None:
         gui = GuiManager.__new__(GuiManager)
+        gui.input_emitter = InputEventEmitter(gui)
+        gui.drag_state = DragStateController(gui)
+        gui.lock_state = LockStateController(gui)
         gui.get_mouse_pos = lambda: (7, 8)
 
         event = GuiManager.event(gui, Event.MouseButtonDown, button=1)
@@ -59,6 +64,9 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
 
     def test_set_lock_area_release_clears_lock_state(self) -> None:
         gui = GuiManager.__new__(GuiManager)
+        gui.input_emitter = InputEventEmitter(gui)
+        gui.drag_state = DragStateController(gui)
+        gui.lock_state = LockStateController(gui)
         lock_widget = Widget.__new__(Widget)
 
         gui.locking_object = lock_widget
@@ -85,12 +93,19 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
 
     def test_set_lock_point_rejects_non_widget_lock_owner(self) -> None:
         gui = GuiManager.__new__(GuiManager)
+        gui.input_emitter = InputEventEmitter(gui)
+        gui.drag_state = DragStateController(gui)
+        gui.lock_state = LockStateController(gui)
+        gui._is_registered_object = lambda _obj: False
 
         with self.assertRaises(GuiError):
             GuiManager.set_lock_point(gui, object(), (1, 2))
 
     def test_set_lock_point_uses_mouse_provider_when_point_missing(self) -> None:
         gui = GuiManager.__new__(GuiManager)
+        gui.input_emitter = InputEventEmitter(gui)
+        gui.drag_state = DragStateController(gui)
+        gui.lock_state = LockStateController(gui)
         lock_widget = Widget.__new__(Widget)
         gui._is_registered_object = lambda obj: obj is lock_widget
         gui._mouse_get_pos = lambda: (12, 13)

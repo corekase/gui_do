@@ -5,6 +5,8 @@ from unittest.mock import patch
 from pygame import Rect
 
 from gui.utility.constants import GuiError
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
@@ -42,6 +44,9 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_pos = None
         gui.lock_point_recenter_pending = False
         gui.lock_point_tolerance_rect = None
+        gui.input_emitter = InputEventEmitter(gui)
+        gui.drag_state = DragStateController(gui)
+        gui.lock_state = LockStateController(gui)
         return gui
 
     def test_module_noop_helpers_are_callable(self) -> None:

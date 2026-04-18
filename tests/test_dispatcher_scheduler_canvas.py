@@ -7,6 +7,8 @@ from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEMOTION
 
 from gui.utility.constants import Event
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.scheduler import Scheduler, Task
 from gui.widgets.canvas import Canvas, CanvasEvent
 
@@ -30,7 +32,14 @@ class EventDispatcherGuiStub:
         self.widgets = []
         self.mouse_locked = False
         self.mouse_pos = (0, 0)
+        self.lock_area_rect = None
+        self.lock_point_pos = None
+        self.lock_point_recenter_pending = False
+        self.lock_point_tolerance_rect = None
         self._focus = None
+        self.input_emitter = InputEventEmitter(self)
+        self.drag_state = DragStateController(self)
+        self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
         return self.locking_object

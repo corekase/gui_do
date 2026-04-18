@@ -3,6 +3,8 @@ import unittest
 from pygame import Rect
 
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 
 
 class WindowStub:
@@ -27,6 +29,13 @@ class ActiveWindowGuiStub:
         self.widgets = []
         self.mouse_locked = False
         self.mouse_pos = (0, 0)
+        self.lock_area_rect = None
+        self.lock_point_pos = None
+        self.lock_point_recenter_pending = False
+        self.lock_point_tolerance_rect = None
+        self.input_emitter = InputEventEmitter(self)
+        self.drag_state = DragStateController(self)
+        self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
         return self.locking_object
@@ -76,7 +85,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.windows = [back, front]
         self.gui.mouse_pos = (10, 10)
 
-        self.dispatcher._update_active_window()
+        self.dispatcher.router._update_active_window()
 
         self.assertIs(self.gui.active_window, front)
 
@@ -86,7 +95,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.windows = [visible, hidden_top]
         self.gui.mouse_pos = (5, 5)
 
-        self.dispatcher._update_active_window()
+        self.dispatcher.router._update_active_window()
 
         self.assertIs(self.gui.active_window, visible)
 
@@ -97,7 +106,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.active_window = old_active
         self.gui.mouse_pos = (10, 10)
 
-        self.dispatcher._update_active_window()
+        self.dispatcher.router._update_active_window()
 
         self.assertIsNone(self.gui.active_window)
 

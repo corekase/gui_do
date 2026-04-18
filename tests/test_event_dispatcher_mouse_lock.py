@@ -3,7 +3,10 @@ import unittest
 import pygame
 from pygame.locals import MOUSEMOTION
 
+from gui.utility.constants import Event
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 
 
 class MouseLockGuiStub:
@@ -18,8 +21,15 @@ class MouseLockGuiStub:
         self.widgets = []
         self.mouse_locked = False
         self.mouse_pos = (10, 10)
+        self.lock_area_rect = None
+        self.lock_point_pos = None
+        self.lock_point_recenter_pending = False
+        self.lock_point_tolerance_rect = None
         self.enforced = []
         self.locked_inputs = []
+        self.input_emitter = InputEventEmitter(self)
+        self.drag_state = DragStateController(self)
+        self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
         return self.locking_object
@@ -36,8 +46,9 @@ class MouseLockGuiStub:
     def enforce_point_lock(self, pos):
         self.enforced.append(pos)
 
-    def event(self, _event_type, **_kwargs):
+    def event(self, event_type, **_kwargs):
         event = type("GuiEvent", (), {})()
+        event.type = event_type
         return event
 
     def update_focus(self, _widget):
@@ -68,11 +79,12 @@ class EventDispatcherMouseLockBatch10Tests(unittest.TestCase):
         gui.mouse_locked = False
         dispatcher = EventDispatcher(gui)
 
-        dispatcher._handle_mouse_motion(pygame.event.Event(MOUSEMOTION, {"rel": (5, 7), "pos": (120, -10)}))
+        event = dispatcher.handle(pygame.event.Event(MOUSEMOTION, {"rel": (5, 7), "pos": (120, -10)}))
 
-        self.assertEqual(gui.locked_inputs, [(120, -10)])
-        self.assertEqual(gui.mouse_pos, (100, 0))
+        self.assertEqual(gui.locked_inputs, [])
+        self.assertEqual(gui.mouse_pos, (120, -10))
         self.assertEqual(gui.enforced, [])
+        self.assertEqual(event.type, Event.MouseMotion)
 
     def test_mouse_motion_locked_uses_delta_and_enforces_point_lock(self) -> None:
         gui = MouseLockGuiStub()
@@ -80,11 +92,12 @@ class EventDispatcherMouseLockBatch10Tests(unittest.TestCase):
         gui.mouse_pos = (90, 95)
         dispatcher = EventDispatcher(gui)
 
-        dispatcher._handle_mouse_motion(pygame.event.Event(MOUSEMOTION, {"rel": (20, 10), "pos": (200, 150)}))
+        event = dispatcher.handle(pygame.event.Event(MOUSEMOTION, {"rel": (20, 10), "pos": (200, 150)}))
 
-        self.assertEqual(gui.locked_inputs, [(110, 105)])
-        self.assertEqual(gui.mouse_pos, (100, 100))
-        self.assertEqual(gui.enforced, [(200, 150)])
+        self.assertEqual(gui.locked_inputs, [])
+        self.assertEqual(gui.mouse_pos, (110, 105))
+        self.assertEqual(gui.enforced, [])
+        self.assertEqual(event.type, Event.MouseMotion)
 
 
 if __name__ == "__main__":

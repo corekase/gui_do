@@ -35,12 +35,12 @@ class LockStateController:
             self.gui.lock_point_recenter_pending = False
             self.gui.lock_point_tolerance_rect = None
         else:
-            if getattr(self.gui, 'mouse_locked', False):
-                if getattr(self.gui, 'mouse_point_locked', False) and getattr(self.gui, 'lock_point_pos', None) is not None:
+            if self.gui.mouse_locked:
+                if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
                     self.gui._set_physical_mouse_pos(self.gui.lock_point_pos)
                     self.gui.mouse_pos = self.gui.lock_point_pos
                 else:
-                    self.gui._set_physical_mouse_pos(getattr(self.gui, 'mouse_pos', (0, 0)))
+                    self.gui._set_physical_mouse_pos(self.gui.mouse_pos)
             self.clear()
         self.gui.lock_area_rect = area
 
@@ -65,9 +65,9 @@ class LockStateController:
         self.gui.lock_point_recenter_pending = False
 
     def resolve(self) -> Optional[Widget]:
-        locking_object = getattr(self.gui, 'locking_object', None)
+        locking_object = self.gui.locking_object
         if locking_object is None:
-            if getattr(self.gui, 'mouse_locked', False) or getattr(self.gui, 'lock_area_rect', None) is not None or getattr(self.gui, 'lock_point_pos', None) is not None:
+            if self.gui.mouse_locked or self.gui.lock_area_rect is not None or self.gui.lock_point_pos is not None:
                 self.clear()
             return None
         if not isinstance(locking_object, Widget):
@@ -76,7 +76,7 @@ class LockStateController:
         if not self.gui._is_registered_object(locking_object):
             self.clear()
             return None
-        if getattr(self.gui, 'lock_area_rect', None) is None and getattr(self.gui, 'lock_point_pos', None) is None:
+        if self.gui.lock_area_rect is None and self.gui.lock_point_pos is None:
             self.clear()
             return None
         return locking_object
@@ -85,7 +85,7 @@ class LockStateController:
         if not isinstance(position, tuple) or len(position) != 2:
             raise GuiError(f'position must be a tuple of (x, y), got: {position}')
         self.resolve()
-        lock_area_rect = getattr(self.gui, 'lock_area_rect', None)
+        lock_area_rect = self.gui.lock_area_rect
         if lock_area_rect is None:
             return position
         x, y = position

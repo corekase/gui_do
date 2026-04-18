@@ -5,6 +5,8 @@ from pygame.locals import KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEM
 
 from gui.utility.constants import Event
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_state import DragStateController, LockStateController
 
 
 class SimpleGuiEvent:
@@ -26,6 +28,13 @@ class MappingGuiStub:
         self.widgets = []
         self.mouse_locked = False
         self.mouse_pos = (0, 0)
+        self.lock_area_rect = None
+        self.lock_point_pos = None
+        self.lock_point_recenter_pending = False
+        self.lock_point_tolerance_rect = None
+        self.input_emitter = InputEventEmitter(self)
+        self.drag_state = DragStateController(self)
+        self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
         return self.locking_object
@@ -69,14 +78,17 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         self.gui = MappingGuiStub()
         self.dispatcher = EventDispatcher(self.gui)
 
+    def _emit(self, action):
+        return self.dispatcher.emitter.emit_action(action)
+
     def test_system_event_mappings(self) -> None:
         quit_event = pygame.event.Event(QUIT, {})
         keydown_event = pygame.event.Event(KEYDOWN, {"key": 123})
         keyup_event = pygame.event.Event(KEYUP, {"key": 99})
 
-        mapped_quit = self.dispatcher._handle_system_event(quit_event)
-        mapped_down = self.dispatcher._handle_system_event(keydown_event)
-        mapped_up = self.dispatcher._handle_system_event(keyup_event)
+        mapped_quit = self._emit(self.dispatcher.router._handle_system_event(quit_event))
+        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event))
+        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event))
 
         self.assertEqual(mapped_quit.type, Event.Quit)
         self.assertEqual(mapped_down.type, Event.KeyDown)
@@ -88,8 +100,8 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         keydown_event = pygame.event.Event(KEYDOWN, {})
         keyup_event = pygame.event.Event(KEYUP, {})
 
-        mapped_down = self.dispatcher._handle_system_event(keydown_event)
-        mapped_up = self.dispatcher._handle_system_event(keyup_event)
+        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event))
+        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event))
 
         self.assertEqual(mapped_down.type, Event.KeyDown)
         self.assertIsNone(mapped_down.key)
@@ -102,10 +114,10 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         motion_with_rel = pygame.event.Event(MOUSEMOTION, {"rel": (4, -2)})
         motion_without_rel = pygame.event.Event(MOUSEMOTION, {})
 
-        mapped_down = self.dispatcher._handle_base_mouse_events(down)
-        mapped_up = self.dispatcher._handle_base_mouse_events(up)
-        mapped_motion = self.dispatcher._handle_base_mouse_events(motion_with_rel)
-        mapped_motion_default = self.dispatcher._handle_base_mouse_events(motion_without_rel)
+        mapped_down = self._emit(self.dispatcher.router._handle_base_mouse_events(down))
+        mapped_up = self._emit(self.dispatcher.router._handle_base_mouse_events(up))
+        mapped_motion = self._emit(self.dispatcher.router._handle_base_mouse_events(motion_with_rel))
+        mapped_motion_default = self._emit(self.dispatcher.router._handle_base_mouse_events(motion_without_rel))
 
         self.assertEqual(mapped_down.type, Event.MouseButtonDown)
         self.assertEqual(mapped_down.button, 1)
@@ -118,7 +130,7 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
     def test_unhandled_base_event_returns_pass(self) -> None:
         unknown = pygame.event.Event(KEYDOWN, {"key": 1})
 
-        mapped = self.dispatcher._handle_base_mouse_events(unknown)
+        mapped = self._emit(self.dispatcher.router._handle_base_mouse_events(unknown))
 
         self.assertEqual(mapped.type, Event.Pass)
 
