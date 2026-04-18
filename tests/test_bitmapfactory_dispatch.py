@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pygame
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import ButtonStyle, GuiError
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import ButtonStyle, GuiError
 
 
 class WidgetGraphicsFactoryDispatchBatch2Tests(unittest.TestCase):

@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -6,7 +6,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP
 
-from gui.utility.constants import ButtonStyle, GuiError, InteractiveState
+from gui.utility.events import ButtonStyle, GuiError, InteractiveState
 from gui.widgets.arrowbox import ArrowBox
 from gui.widgets.button import Button
 from gui.widgets.frame import Frame

@@ -2,7 +2,7 @@ from typing import Callable, Optional, TYPE_CHECKING, Tuple, Union
 
 from pygame import Rect
 
-from .constants import ArrowPosition, BaseEvent, ButtonStyle, Orientation
+from .events import ArrowPosition, BaseEvent, ButtonStyle, Orientation
 from ..widgets.arrowbox import ArrowBox as gArrowBox
 from ..widgets.button import Button as gButton
 from ..widgets.buttongroup import ButtonGroup as gButtonGroup
@@ -15,7 +15,7 @@ from ..widgets.toggle import Toggle as gToggle
 from ..widgets.window import Window as gWindow
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class GuiUiFactory:

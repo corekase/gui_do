@@ -6,7 +6,7 @@ from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEMOTION
 
 from event_mouse_fixtures import build_mouse_gui_stub
-from gui.utility.constants import ButtonStyle, Event, InteractiveState, GuiError
+from gui.utility.events import ButtonStyle, Event, InteractiveState, GuiError
 from gui.utility.interactive import BaseInteractive
 from gui.widgets.buttongroup import ButtonGroup
 

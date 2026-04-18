@@ -3,10 +3,10 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
-from .constants import InteractiveState
+from .events import InteractiveState
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
     from ..widgets.window import Window
 
 class BaseInteractive(Widget):

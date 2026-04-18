@@ -1,5 +1,5 @@
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
-from .constants import InteractiveState
+from .events import InteractiveState
 
 if TYPE_CHECKING:
     from ..widgets.buttongroup import ButtonGroup

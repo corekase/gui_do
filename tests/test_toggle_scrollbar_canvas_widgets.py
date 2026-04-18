@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN
 
-from gui.utility.constants import InteractiveState, Orientation
+from gui.utility.events import InteractiveState, Orientation
 from gui.widgets.canvas import Canvas
 from gui.widgets.scrollbar import Scrollbar
 from gui.widgets.toggle import Toggle

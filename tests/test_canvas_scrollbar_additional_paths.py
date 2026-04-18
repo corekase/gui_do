@@ -8,7 +8,7 @@ from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 
 from event_mouse_fixtures import build_mouse_gui_stub
-from gui.utility.constants import ArrowPosition, CanvasEvent, GuiError, InteractiveState, Orientation
+from gui.utility.events import ArrowPosition, CanvasEvent, GuiError, InteractiveState, Orientation
 from gui.widgets.canvas import Canvas
 from gui.widgets.scrollbar import Scrollbar
 

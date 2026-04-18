@@ -3,7 +3,7 @@ import unittest
 from pygame import Rect
 
 from gui.utility.buttongroup_mediator import ButtonGroupMediator
-from gui.utility.constants import InteractiveState
+from gui.utility.events import InteractiveState
 from gui.utility.layout_manager import LayoutManager
 
 

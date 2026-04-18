@@ -13,7 +13,7 @@ from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_providers import InputProviders
 from gui.utility.drag_state_model import DragState
 from gui.utility.input_state import DragStateController, LockStateController
-from gui.utility.guimanager import GuiManager
+from gui.utility.gui_manager import GuiManager
 from gui.utility.layout_coordinator import LayoutCoordinator
 from gui.utility.lifecycle import LifecycleCoordinator, ScreenLifecycle
 from gui.utility.lock_flow_coordinator import LockFlowCoordinator

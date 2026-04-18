@@ -1,7 +1,7 @@
 import unittest
 
 from gui.utility.engine import Engine
-from gui.utility.statemanager import StateManager
+from gui.utility.state_manager import StateManager
 
 
 class RecordingClock:

@@ -2,10 +2,10 @@ from typing import Tuple, TYPE_CHECKING, Union
 
 from pygame import Rect
 
-from .constants import GuiError
+from .events import GuiError
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class LayoutCoordinator:

@@ -6,7 +6,7 @@ from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 
 from event_mouse_fixtures import build_mouse_gui_stub
-from gui.utility.constants import ArrowPosition, GuiError, InteractiveState, Orientation
+from gui.utility.events import ArrowPosition, GuiError, InteractiveState, Orientation
 from gui.widgets.scrollbar import Scrollbar
 
 

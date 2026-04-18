@@ -1,5 +1,5 @@
 import os
-from .constants import GuiError
+from .events import GuiError
 
 
 class DataResourceErrorHandler:

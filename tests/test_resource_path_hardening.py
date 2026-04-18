@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import GuiError
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import GuiError
 from gui.utility.resource_error import DataResourceErrorHandler
 
 

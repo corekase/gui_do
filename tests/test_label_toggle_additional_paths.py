@@ -1,11 +1,11 @@
-﻿import unittest
+import unittest
 from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEMOTION
 
-from gui.utility.constants import InteractiveState
+from gui.utility.events import InteractiveState
 from gui.widgets.label import Label
 from gui.widgets.toggle import Toggle
 

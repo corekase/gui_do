@@ -3,7 +3,7 @@ from typing import Optional, TYPE_CHECKING
 from .widget import Widget
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
     from ..widgets.window import Window as gWindow
 
 

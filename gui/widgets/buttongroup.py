@@ -2,12 +2,12 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.constants import Event, GuiError, ButtonStyle
+from ..utility.events import Event, GuiError, ButtonStyle
 from ..utility.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
     from ..utility.gui_event import GuiEvent
-    from ..utility.guimanager import GuiManager
+    from ..utility.gui_manager import GuiManager
     from .window import Window
 
 class ButtonGroup(BaseInteractive):

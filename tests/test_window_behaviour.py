@@ -2,7 +2,7 @@ import unittest
 
 from pygame import Rect
 
-from gui.utility.constants import GuiError
+from gui.utility.events import GuiError
 from gui.widgets.window import Window
 
 

@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from gui.utility.constants import GuiError
+from gui.utility.events import GuiError
 from gui.utility.scheduler import Scheduler, Task, TaskFailure
 
 

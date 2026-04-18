@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from pygame import Rect
 
-from gui.utility.constants import GuiError
+from gui.utility.events import GuiError
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.workspace_state import WorkspaceState

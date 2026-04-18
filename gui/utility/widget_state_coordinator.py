@@ -2,11 +2,11 @@ from typing import Optional, TYPE_CHECKING
 
 from pygame.event import Event as PygameEvent
 
-from .constants import GuiError
+from .events import GuiError
 from .widget import Widget
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
     from ..widgets.window import Window as gWindow
 
 

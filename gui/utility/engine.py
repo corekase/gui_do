@@ -1,14 +1,9 @@
 import sys
 import pygame
-from typing import Callable, Hashable, List, Optional, Protocol
-from .guimanager import GuiManager
+from typing import Any, Callable, Hashable, List, Optional
+from .gui_manager import GuiManager
 from .scheduler import Scheduler, TaskEvent, TaskKind, Timers
-from .statemanager import StateManager
-
-
-class _TickClock(Protocol):
-    def tick(self, fps: int) -> None:
-        ...
+from .state_manager import StateManager
 
 class Engine:
     """Owns the frame loop for the active GUI context."""
@@ -18,7 +13,7 @@ class Engine:
         state_manager: StateManager,
         fps: int = 60,
         *,
-        clock: Optional[_TickClock] = None,
+        clock: Optional[Any] = None,
         ticks_provider: Optional[Callable[[], int]] = None,
         display_flip: Optional[Callable[[], None]] = None,
         quit_callable: Optional[Callable[[], None]] = None,
@@ -33,7 +28,7 @@ class Engine:
         if not isinstance(exit_on_finish, bool):
             raise TypeError('exit_on_finish must be a bool')
         self.state_manager: StateManager = state_manager
-        self.clock: _TickClock = clock or pygame.time.Clock()
+        self.clock: Any = clock or pygame.time.Clock()
         if not callable(getattr(self.clock, 'tick', None)):
             raise TypeError('clock must provide a callable tick(fps) method')
         self.fps: int = fps

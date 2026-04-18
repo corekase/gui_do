@@ -6,8 +6,8 @@ from pygame import Rect
 
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui_manager_test_factory import build_gui_manager_stub
-from gui.utility.constants import GuiError
-from gui.utility.guimanager import GuiManager
+from gui.utility.events import GuiError
+from gui.utility.gui_manager import GuiManager
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
@@ -685,12 +685,12 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
         graphics_factory = SimpleNamespace(load_font=lambda *_args: None)
 
-        with patch("gui.utility.guimanager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.LayoutManager", return_value=SimpleNamespace()
-        ), patch("gui.utility.guimanager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
-        ), patch("gui.utility.guimanager.Timers", return_value=SimpleNamespace()), patch(
-            "gui.utility.guimanager.ButtonGroupMediator", return_value=SimpleNamespace()
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
         ):
             with self.assertRaises(GuiError):
                 gm.GuiManager(
@@ -704,12 +704,12 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
                     mouse_set_visible=lambda _visible: None,
                 )
 
-        with patch("gui.utility.guimanager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.LayoutManager", return_value=SimpleNamespace()
-        ), patch("gui.utility.guimanager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
-        ), patch("gui.utility.guimanager.Timers", return_value=SimpleNamespace()), patch(
-            "gui.utility.guimanager.ButtonGroupMediator", return_value=SimpleNamespace()
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
         ), patch.object(gm.GuiManager, "configure_task_panel", return_value=None) as configure_task_panel:
             gm.GuiManager(
                 surface,

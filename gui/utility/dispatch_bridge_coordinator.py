@@ -4,7 +4,7 @@ from pygame.event import Event as PygameEvent
 
 if TYPE_CHECKING:
     from .gui_event import GuiEvent
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class DispatchBridgeCoordinator:

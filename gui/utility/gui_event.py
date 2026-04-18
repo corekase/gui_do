@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from .constants import BaseEvent, Event
+from .events import BaseEvent, Event
 from ..widgets.window import Window as gWindow
 
 

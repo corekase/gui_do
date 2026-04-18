@@ -3,7 +3,7 @@ import unittest
 import pygame
 from pygame.locals import MOUSEMOTION
 
-from gui.utility.constants import Event
+from gui.utility.events import Event
 from gui.utility.event_dispatcher import EventDispatcher
 from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter

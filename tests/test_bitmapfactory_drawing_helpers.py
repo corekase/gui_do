@@ -2,8 +2,8 @@ import unittest
 
 import pygame
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import GuiError
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import GuiError
 
 
 class WidgetGraphicsFactoryDrawingHelpersBatch3Tests(unittest.TestCase):

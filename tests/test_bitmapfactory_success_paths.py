@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
 
 
 class _FakeSurface:
@@ -42,10 +42,10 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
         states = [_FakeSurface((10, 10)), _FakeSurface((10, 10)), _FakeSurface((10, 10))]
 
         with patch.object(self.factory, "draw_frame_bitmaps", return_value=tuple(states)), patch(
-            "gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)
-        ), patch("gui.utility.bitmapfactory.polygon", return_value=None), patch(
-            "gui.utility.bitmapfactory.rotate", side_effect=lambda surf, _deg: surf
-        ), patch("gui.utility.bitmapfactory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
+            "gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)
+        ), patch("gui.utility.graphics.widget_graphics_factory.polygon", return_value=None), patch(
+            "gui.utility.graphics.widget_graphics_factory.rotate", side_effect=lambda surf, _deg: surf
+        ), patch("gui.utility.graphics.widget_graphics_factory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
             rendered = self.factory.draw_arrow_state_bitmaps(Rect(0, 0, 12, 8), 45)
 
         self.assertEqual(len(rendered), 3)
@@ -53,17 +53,17 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
             self.assertEqual(len(surface.blit_calls), 1)
 
     def test_draw_radio_bitmap_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
-            "gui.utility.bitmapfactory.polygon", return_value=None
-        ), patch("gui.utility.bitmapfactory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
+            "gui.utility.graphics.widget_graphics_factory.polygon", return_value=None
+        ), patch("gui.utility.graphics.widget_graphics_factory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
             out = self.factory.draw_radio_bitmap(14, (1, 2, 3), (4, 5, 6))
 
         self.assertEqual(out.get_rect().size, (14, 14))
 
     def test_draw_window_lower_widget_bitmap_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory, "_draw_box_bitmaps", return_value=None
-        ), patch("gui.utility.bitmapfactory.rect", return_value=None):
+        ), patch("gui.utility.graphics.widget_graphics_factory.rect", return_value=None):
             out = self.factory.draw_window_lower_widget_bitmap(16, (1, 2, 3), (4, 5, 6))
 
         self.assertEqual(out.get_rect().size, (16, 16))
@@ -77,15 +77,15 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
         self.assertEqual(drawer.call_count, 3)
 
     def test_draw_angle_style_bitmap_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
-            "gui.utility.bitmapfactory.polygon", return_value=None
-        ), patch("gui.utility.bitmapfactory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
+            "gui.utility.graphics.widget_graphics_factory.polygon", return_value=None
+        ), patch("gui.utility.graphics.widget_graphics_factory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)):
             out = self.factory._draw_angle_style_bitmap((15, 11), (1, 2, 3), (4, 5, 6))
 
         self.assertEqual(out.get_rect().size, (15, 11))
 
     def test_draw_box_style_bitmaps_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory, "render_text", side_effect=[pygame.Surface((8, 4)), pygame.Surface((9, 4))]
         ), patch.object(self.factory, "_draw_box_bitmaps", return_value=None):
             out, rect = self.factory._draw_box_style_bitmaps("text", Rect(1, 2, 20, 10))
@@ -94,10 +94,10 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
         self.assertEqual(rect, Rect(1, 2, 20, 10))
 
     def test_draw_check_bitmap_success_states(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory, "_draw_box_bitmaps", return_value=None
-        ), patch("gui.utility.bitmapfactory.polygon", return_value=None), patch(
-            "gui.utility.bitmapfactory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)
+        ), patch("gui.utility.graphics.widget_graphics_factory.polygon", return_value=None), patch(
+            "gui.utility.graphics.widget_graphics_factory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)
         ):
             idle = self.factory._draw_check_bitmap(0, 12)
             hover = self.factory._draw_check_bitmap(1, 12)
@@ -108,7 +108,7 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
         self.assertEqual(armed.get_rect().size, (12, 12))
 
     def test_draw_check_and_radio_style_bitmap_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory, "render_text", return_value=pygame.Surface((10, 8))
         ), patch.object(self.factory, "_draw_check_bitmap", return_value=_FakeSurface((8, 8))), patch.object(
             self.factory, "draw_radio_bitmap", return_value=_FakeSurface((8, 8))
@@ -120,7 +120,7 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
         self.assertGreater(radio_rect.width, 0)
 
     def test_draw_rounded_style_bitmaps_success(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory, "render_text", side_effect=[pygame.Surface((7, 4)), pygame.Surface((8, 4))]
         ), patch.object(self.factory, "_draw_rounded_state", return_value=None):
             out, rect = self.factory._draw_rounded_style_bitmaps("text", Rect(0, 0, 18, 10))
@@ -137,7 +137,7 @@ class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
             def draw(self) -> None:
                 return None
 
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
             "gui.widgets.frame.Frame", FakeFrame
         ), patch.object(self.factory, "set_font", return_value=None), patch.object(
             self.factory, "set_last_font", return_value=None

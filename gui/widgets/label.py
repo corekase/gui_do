@@ -2,11 +2,11 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, Tuple, Union, TYPE_CHECKING
-from ..utility.constants import colours
+from ..utility.events import colours
 from ..utility.widget import Widget
 
 if TYPE_CHECKING:
-    from ..utility.guimanager import GuiManager
+    from ..utility.gui_manager import GuiManager
     from .window import Window
 
 class Label(Widget):

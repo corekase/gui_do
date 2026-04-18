@@ -2,11 +2,11 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
-from ..utility.constants import InteractiveState
+from ..utility.events import InteractiveState
 from ..utility.widget import Widget
 
 if TYPE_CHECKING:
-    from ..utility.guimanager import GuiManager
+    from ..utility.gui_manager import GuiManager
     from .window import Window
 
 class Frame(Widget):

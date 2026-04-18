@@ -1,10 +1,10 @@
 from typing import Any, Callable, List, Optional, TYPE_CHECKING, cast
 
-from .constants import BaseEvent, GuiError
+from .events import BaseEvent, GuiError
 from .widget import Widget
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class TaskPanelConfigCoordinator:

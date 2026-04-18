@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from pygame import Rect
 
 from gui_manager_test_factory import build_routing_stub
-from gui.utility.constants import Event
-from gui.utility.guimanager import GuiManager
+from gui.utility.events import Event
+from gui.utility.gui_manager import GuiManager
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 

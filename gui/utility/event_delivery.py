@@ -1,10 +1,10 @@
 from typing import Hashable, Optional, TYPE_CHECKING, cast
 
-from .constants import Event, GuiError
+from .events import Event, GuiError
 from ..widgets.window import Window as gWindow
 
 if TYPE_CHECKING:
-    from .guimanager import BaseEvent, GuiManager
+    from .gui_manager import BaseEvent, GuiManager
 
 
 class EventDeliveryCoordinator:

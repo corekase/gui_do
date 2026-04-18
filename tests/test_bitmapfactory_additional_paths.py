@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import GuiError, colours
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import GuiError, colours
 
 
 class _FakeSurface:
@@ -33,7 +33,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
     def test_draw_frame_bitmaps_builds_idle_hover_armed(self) -> None:
         states = []
 
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory,
             "_draw_box_bitmaps",
             side_effect=lambda _surface, state: states.append(state),
@@ -44,7 +44,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
         self.assertEqual(states, ["idle", "hover", "armed"])
 
     def test_draw_frame_bitmaps_wraps_generic_failure(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=RuntimeError("boom")):
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=RuntimeError("boom")):
             with self.assertRaises(GuiError) as ctx:
                 self.factory.draw_frame_bitmaps(Rect(0, 0, 9, 7))
 
@@ -105,7 +105,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
         self.assertIn("failed to draw window lower widget bitmap", str(ctx.exception))
 
     def test_draw_radio_bitmap_wraps_generic_failure(self) -> None:
-        with patch("gui.utility.bitmapfactory.polygon", side_effect=RuntimeError("boom")):
+        with patch("gui.utility.graphics.widget_graphics_factory.polygon", side_effect=RuntimeError("boom")):
             with self.assertRaises(GuiError) as ctx:
                 self.factory.draw_radio_bitmap(12, (1, 2, 3), (4, 5, 6))
 
@@ -144,7 +144,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
         self.assertIn("failed to draw angle style bitmaps", str(ctx.exception))
 
     def test_draw_check_style_bitmap_computes_hit_rect(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory,
             "render_text",
             return_value=pygame.Surface((10, 8)),
@@ -158,7 +158,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
         self.assertEqual(hit_rect, Rect(5, 12, 18, 8))
 
     def test_draw_radio_style_bitmap_computes_hit_rect(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch.object(
             self.factory,
             "render_text",
             return_value=pygame.Surface((9, 10)),
@@ -198,7 +198,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
             def draw(self) -> None:
                 pass
 
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
             "gui.widgets.frame.Frame",
             FakeFrame,
         ), patch.object(
@@ -228,7 +228,7 @@ class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
             def draw(self) -> None:
                 pass
 
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)), patch(
             "gui.widgets.frame.Frame",
             FakeFrame,
         ), patch.object(

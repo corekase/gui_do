@@ -6,25 +6,16 @@ from pygame.surface import Surface
 from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING, Union
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.constants import GuiError, InteractiveState, CanvasEvent
+from ..utility.events import GuiError, InteractiveState, CanvasEvent
 from ..utility.widget import Widget
 from .frame import Frame
+from .events.canvas_event_packet import CanvasEventPacket
 
 if TYPE_CHECKING:
-    from ..utility.guimanager import GuiManager
+    from ..utility.gui_manager import GuiManager
     from .window import Window
 
 _logger = logging.getLogger(__name__)
-
-class CanvasEventPacket:
-    """Canvas input payload with normalized coordinates and event-specific fields."""
-
-    def __init__(self) -> None:
-        self.type: Optional[CanvasEvent] = None
-        self.pos: Optional[Tuple[int, int]] = None
-        self.rel: Optional[Tuple[int, int]] = None
-        self.button: Optional[int] = None
-        self.y: Optional[int] = None
 
 class Canvas(Widget):
     """Off-screen drawing surface that queues canvas-local input events."""

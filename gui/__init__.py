@@ -1,8 +1,8 @@
 import os
-from .utility.guimanager import GuiManager
+from .utility.gui_manager import GuiManager
 from .utility.engine import Engine
-from .utility.statemanager import StateManager
-from .utility.constants import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
+from .utility.state_manager import StateManager
+from .utility.events import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 
 
 if os.name == 'nt':

@@ -3,8 +3,8 @@ import unittest
 import pygame
 from pygame.locals import KEYDOWN, MOUSEMOTION, QUIT
 
-from gui.utility.constants import Event
-from gui.utility.guimanager import GuiManager
+from gui.utility.events import Event
+from gui.utility.gui_manager import GuiManager
 from gui.utility.scheduler import TaskKind
 
 

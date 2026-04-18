@@ -6,101 +6,14 @@ import logging
 import os
 from queue import Empty, SimpleQueue
 import threading
-from dataclasses import dataclass
-from enum import Enum
 from typing import Callable, Deque, Dict, Hashable, List, Optional, Set, Tuple, TYPE_CHECKING
-from .constants import GuiError, BaseEvent, Event
+from .events import GuiError
+from .scheduling import TaskKind, Timers, Task, TaskMessage, TaskCompletion, TaskFailure, TaskEvent
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 _logger = logging.getLogger(__name__)
-
-TaskKind = Enum('TaskKind', ['Finished', 'Failed'])
-
-class Interval:
-    def __init__(self, duration: float, callback: Callable[[], None]) -> None:
-        self.timer: float = 0
-        self.previous_time: Optional[float] = None
-        self.duration: float = duration
-        self.callback: Callable[[], None] = callback
-
-class Timers:
-    def __init__(self) -> None:
-        self.timers: Dict[Hashable, "Interval"] = {}
-
-    def add_timer(self, id: Hashable, duration: float, callback: Callable[[], None]) -> None:
-        try:
-            hash(id)
-        except TypeError as exc:
-            raise GuiError(f'timer id must be hashable: {id!r}') from exc
-        if duration <= 0:
-            raise GuiError(f'timer duration must be > 0, got: {duration}')
-        if not callable(callback):
-            raise GuiError('timer callback must be callable')
-        self.timers[id] = Interval(duration, callback)
-
-    def remove_timer(self, id: Hashable) -> None:
-        try:
-            hash(id)
-        except TypeError as exc:
-            raise GuiError(f'timer id must be hashable: {id!r}') from exc
-        if id in self.timers:
-            del self.timers[id]
-
-    def timer_updates(self, now_time: int) -> None:
-        for id in list(self.timers.keys()):
-            interval = self.timers.get(id)
-            if interval is None:
-                continue
-            if interval.previous_time is None:
-                interval.previous_time = now_time
-            else:
-                elapsed_time = now_time - interval.previous_time
-                interval.previous_time = now_time
-                interval.timer += elapsed_time
-                while interval.timer >= interval.duration:
-                    interval.timer -= interval.duration
-                    interval.callback()
-                    interval = self.timers.get(id)
-                    if interval is None:
-                        break
-
-@dataclass
-class Task:
-    id: Hashable
-    run_callable: Callable[[], object]
-    message_method: Optional[Callable[[object], None]] = None
-    future: Optional[Future[object]] = None
-    generation: int = 0
-
-@dataclass
-class TaskMessage:
-    id: Hashable
-    callback: Callable[[object], None]
-    payload: object
-    generation: int
-
-@dataclass
-class TaskCompletion:
-    id: Hashable
-    generation: int
-    future: Future[object]
-
-@dataclass
-class TaskFailure:
-    id: Hashable
-    generation: int
-    error: str
-
-class TaskEvent(BaseEvent):
-    """Event emitted for task completion or failure."""
-
-    def __init__(self, operation: TaskKind, task_id: Optional[Hashable] = None, error: Optional[str] = None) -> None:
-        super().__init__(Event.Task)
-        self.operation: TaskKind = operation
-        self.id: Optional[Hashable] = task_id
-        self.error: Optional[str] = error
 
 class Scheduler:
     """Threaded task runner with per-frame completion and message dispatch."""

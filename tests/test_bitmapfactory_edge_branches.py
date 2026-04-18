@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import GuiError
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import GuiError
 
 
 class _FakeSurface:
@@ -47,11 +47,11 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
         states = [_FakeSurface((8, 12)) for _ in range(2)]
 
         with patch.object(self.factory, "draw_frame_bitmaps", return_value=tuple(states)), patch(
-            "gui.utility.bitmapfactory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)
-        ), patch("gui.utility.bitmapfactory.polygon", return_value=None), patch(
-            "gui.utility.bitmapfactory.rotate", side_effect=lambda surf, _deg: surf
+            "gui.utility.graphics.widget_graphics_factory.Surface", side_effect=lambda size, *_a, **_k: _FakeSurface(size)
+        ), patch("gui.utility.graphics.widget_graphics_factory.polygon", return_value=None), patch(
+            "gui.utility.graphics.widget_graphics_factory.rotate", side_effect=lambda surf, _deg: surf
         ), patch(
-            "gui.utility.bitmapfactory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)
+            "gui.utility.graphics.widget_graphics_factory.smoothscale", side_effect=lambda _surf, size: _FakeSurface(size)
         ):
             rendered = self.factory.draw_arrow_state_bitmaps(Rect(0, 0, 8, 12), 45)
 
@@ -62,7 +62,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
                 self.factory.draw_arrow_state_bitmaps(Rect(0, 0, 8, 12), 45)
 
     def test_draw_frame_bitmaps_reraises_guierror(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", return_value=pygame.Surface((4, 4), pygame.SRCALPHA)), patch.object(
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", return_value=pygame.Surface((4, 4), pygame.SRCALPHA)), patch.object(
             self.factory,
             "_draw_box_bitmaps",
             side_effect=GuiError("draw fail"),
@@ -88,7 +88,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
         self.assertIn("failed to render text", str(ctx.exception))
 
     def test_file_resource_wraps_commonpath_value_error(self) -> None:
-        with patch("gui.utility.bitmapfactory.os.path.commonpath", side_effect=ValueError("bad paths")):
+        with patch("gui.utility.graphics.widget_graphics_factory.os.path.commonpath", side_effect=ValueError("bad paths")):
             with self.assertRaises(GuiError) as ctx:
                 self.factory.file_resource("images", "x.png")
 
@@ -110,7 +110,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
         self.assertIn("failed to load cursor", str(ctx.exception))
 
     def test_angle_style_bitmap_and_bitmaps_reraise_guierror(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=GuiError("surface fail")):
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=GuiError("surface fail")):
             with self.assertRaises(GuiError):
                 self.factory._draw_angle_style_bitmap((10, 8), (1, 2, 3), (4, 5, 6))
 
@@ -122,7 +122,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
         surface = pygame.Surface((4, 4), pygame.SRCALPHA)
         self.factory._draw_box_bitmap(surface, (1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11, 12), (13, 14, 15))
 
-        with patch("gui.utility.bitmapfactory.line", side_effect=RuntimeError("line fail")):
+        with patch("gui.utility.graphics.widget_graphics_factory.line", side_effect=RuntimeError("line fail")):
             with self.assertRaises(GuiError):
                 self.factory._draw_box_bitmap(surface, (1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11, 12), (13, 14, 15))
 
@@ -137,7 +137,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
         self.assertEqual(len(calls), 3)
 
     def test_check_and_radio_exception_reraise_paths(self) -> None:
-        with patch("gui.utility.bitmapfactory.Surface", side_effect=GuiError("surface fail")):
+        with patch("gui.utility.graphics.widget_graphics_factory.Surface", side_effect=GuiError("surface fail")):
             with self.assertRaises(GuiError):
                 self.factory._draw_check_bitmap(2, 12)
 
@@ -156,8 +156,8 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
                 self.factory._draw_radio_style_bitmaps("x", Rect(0, 0, 20, 10))
 
     def test_round_and_rounded_state_branches(self) -> None:
-        with patch("gui.utility.bitmapfactory.circle", return_value=None), patch(
-            "gui.utility.bitmapfactory.line", return_value=None
+        with patch("gui.utility.graphics.widget_graphics_factory.circle", return_value=None), patch(
+            "gui.utility.graphics.widget_graphics_factory.line", return_value=None
         ), patch.object(self.factory, "_flood_fill", return_value=None) as flood_fill:
             surface = pygame.Surface((20, 20), pygame.SRCALPHA)
             self.factory._draw_round_style_bitmap(surface, (1, 2, 3), (4, 5, 6))
@@ -175,7 +175,7 @@ class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
 
     def test_flood_fill_reraises_guierror(self) -> None:
         surface = pygame.Surface((5, 5), pygame.SRCALPHA)
-        with patch("gui.utility.bitmapfactory.PixelArray", side_effect=GuiError("pixel fail")):
+        with patch("gui.utility.graphics.widget_graphics_factory.PixelArray", side_effect=GuiError("pixel fail")):
             with self.assertRaises(GuiError):
                 self.factory._flood_fill(surface, (1, 1), (1, 2, 3))
 

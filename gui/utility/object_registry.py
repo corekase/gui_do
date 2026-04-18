@@ -1,11 +1,11 @@
 from typing import Any, Optional, TYPE_CHECKING, TypeVar, cast
 
-from .constants import GuiError
+from .events import GuiError
 from .widget import Widget
 from ..widgets.window import Window as gWindow
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 

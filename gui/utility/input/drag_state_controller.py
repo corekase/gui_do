@@ -1,0 +1,94 @@
+from typing import TYPE_CHECKING
+
+from pygame.event import Event as PygameEvent
+from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
+
+from ..drag_state_model import DragState
+from ..input_actions import InputAction
+
+if TYPE_CHECKING:
+    from ..gui_manager import GuiManager
+
+
+class DragStateController:
+    """Encapsulates window drag state transitions and movement updates."""
+
+    def __init__(self, gui_manager: "GuiManager") -> None:
+        self.gui: "GuiManager" = gui_manager
+
+    @property
+    def state(self) -> DragState:
+        return self.gui._drag_state
+
+    def _pass_event(self) -> InputAction:
+        return InputAction.pass_event()
+
+    def _commit_drag_mutation(self, mutation) -> None:
+        mutation(self.state)
+
+    def _has_valid_drag_context(self) -> bool:
+        return (
+            self.state.dragging_window is not None
+            and self.state.dragging_window in self.gui.windows
+            and self.state.mouse_delta is not None
+        )
+
+    def _set_drag_from_active_window(self) -> None:
+        def _mutation(state: DragState) -> None:
+            state.dragging = True
+            state.dragging_window = self.gui.active_window
+            state.mouse_delta = (
+                state.dragging_window.x - self.gui.mouse_pos[0],
+                state.dragging_window.y - self.gui.mouse_pos[1],
+            )
+
+        self._commit_drag_mutation(_mutation)
+
+    def _release_drag(self) -> None:
+        dragging_window = self.state.dragging_window
+        mouse_delta = self.state.mouse_delta
+        dragging_window.position = (dragging_window.x, dragging_window.y)
+        self.gui.set_mouse_pos(
+            (
+                dragging_window.x - mouse_delta[0],
+                dragging_window.y - mouse_delta[1],
+            )
+        )
+
+        def _mutation(state: DragState) -> None:
+            state.dragging = False
+            state.dragging_window = None
+            state.mouse_delta = None
+
+        self._commit_drag_mutation(_mutation)
+
+    def reset(self) -> None:
+        def _mutation(state: DragState) -> None:
+            state.dragging = False
+            state.dragging_window = None
+            state.mouse_delta = None
+
+        self._commit_drag_mutation(_mutation)
+
+    def start_if_possible(self, event: PygameEvent) -> None:
+        event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
+        if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
+            if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
+                self.gui.lower_window(self.gui.active_window)
+                self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
+            else:
+                self._set_drag_from_active_window()
+
+    def handle_drag_event(self, event: PygameEvent) -> InputAction:
+        if not self._has_valid_drag_context():
+            self.reset()
+            return self._pass_event()
+        if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
+            self._release_drag()
+        elif event.type == MOUSEMOTION and self.state.dragging:
+            rel = getattr(event, 'rel', (0, 0))
+            x = self.state.dragging_window.x + rel[0]
+            y = self.state.dragging_window.y + rel[1]
+            self.gui.set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
+            self._commit_drag_mutation(lambda state: setattr(state.dragging_window, 'position', (x, y)))
+        return self._pass_event()

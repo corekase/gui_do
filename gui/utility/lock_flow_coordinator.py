@@ -5,7 +5,7 @@ from pygame import Rect
 from .widget import Widget
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class LockFlowCoordinator:

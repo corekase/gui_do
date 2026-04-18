@@ -3,7 +3,7 @@ from pygame.surface import Surface
 from typing import List, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 class Renderer:
     """Draws widgets/windows and restores previous pixels when buffered."""

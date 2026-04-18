@@ -1,10 +1,10 @@
 from typing import Iterable, TYPE_CHECKING
 
-from .constants import Event
+from .events import Event
 from .gui_event import GuiEvent
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class InputEventCoordinator:

@@ -1,8 +1,8 @@
 import unittest
 
 from gui_manager_test_factory import build_state_manager_stub
-from gui.utility.guimanager import GuiManager
-from gui.utility.statemanager import StateManager
+from gui.utility.gui_manager import GuiManager
+from gui.utility.state_manager import StateManager
 
 
 class SchedulerNoopStub:

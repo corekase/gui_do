@@ -4,7 +4,7 @@ from threading import Event
 
 from gui_manager_test_factory import build_state_manager_stub
 from gui.utility.scheduler import Scheduler, Task, Timers
-from gui.utility.statemanager import StateManager
+from gui.utility.state_manager import StateManager
 
 
 class SchedulerStub:
@@ -98,7 +98,7 @@ class StateManagerLifecycleTests(unittest.TestCase):
         manager.register_context("ok", gui_ok)
         manager.register_context("fail", gui_fail)
 
-        with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+        with self.assertLogs("gui.utility.state_manager", level="WARNING") as captured:
             manager.__exit__(None, None, None)
 
         self.assertEqual(gui_ok._scheduler.shutdown_calls, 1)
@@ -118,7 +118,7 @@ class StateManagerLifecycleTests(unittest.TestCase):
         for _ in range(3):
             manager.__enter__()
             self.assertTrue(manager.is_running)
-            with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+            with self.assertLogs("gui.utility.state_manager", level="WARNING") as captured:
                 manager.__exit__(None, None, None)
             self.assertFalse(manager.is_running)
             self.assertTrue(any('context "fail"' in message for message in captured.output))
@@ -270,7 +270,7 @@ class StateManagerLifecycleTests(unittest.TestCase):
         scheduler._drain_incoming_task_messages()
         self.assertTrue(scheduler.tasks_busy())
 
-        with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+        with self.assertLogs("gui.utility.state_manager", level="WARNING") as captured:
             manager.__exit__(None, None, None)
 
         self.assertFalse(manager.is_running)

@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pygame
 
-from gui.utility.bitmapfactory import WidgetGraphicsFactory
-from gui.utility.constants import GuiError
+from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
+from gui.utility.events import GuiError
 
 
 class WidgetGraphicsFactoryExceptionWrappingBatch4Tests(unittest.TestCase):
@@ -14,7 +14,7 @@ class WidgetGraphicsFactoryExceptionWrappingBatch4Tests(unittest.TestCase):
     def test_draw_round_style_bitmap_wraps_generic_draw_error(self) -> None:
         surface = pygame.Surface((8, 8), pygame.SRCALPHA)
 
-        with patch("gui.utility.bitmapfactory.circle", side_effect=RuntimeError("boom")):
+        with patch("gui.utility.graphics.widget_graphics_factory.circle", side_effect=RuntimeError("boom")):
             with self.assertRaises(GuiError) as ctx:
                 self.factory._draw_round_style_bitmap(surface, (1, 2, 3), (4, 5, 6))
 
@@ -23,7 +23,7 @@ class WidgetGraphicsFactoryExceptionWrappingBatch4Tests(unittest.TestCase):
     def test_draw_round_style_bitmap_reraises_guierror(self) -> None:
         surface = pygame.Surface((8, 8), pygame.SRCALPHA)
 
-        with patch("gui.utility.bitmapfactory.circle", side_effect=GuiError("round-fail")):
+        with patch("gui.utility.graphics.widget_graphics_factory.circle", side_effect=GuiError("round-fail")):
             with self.assertRaises(GuiError) as ctx:
                 self.factory._draw_round_style_bitmap(surface, (1, 2, 3), (4, 5, 6))
 

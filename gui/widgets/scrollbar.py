@@ -6,10 +6,10 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
 from ..utility.widget import Widget
-from ..utility.constants import colours, GuiError, Orientation, ArrowPosition, InteractiveState
+from ..utility.events import colours, GuiError, Orientation, ArrowPosition, InteractiveState
 
 if TYPE_CHECKING:
-    from ..utility.guimanager import GuiManager
+    from ..utility.gui_manager import GuiManager
     from .window import Window
 
 class Scrollbar(Frame):

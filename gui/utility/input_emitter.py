@@ -1,12 +1,12 @@
 from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, TYPE_CHECKING
-from .constants import Event
+from .events import Event
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
     from .gui_event import GuiEvent
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class InputEventEmitter:

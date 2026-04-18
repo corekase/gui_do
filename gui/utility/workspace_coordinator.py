@@ -1,10 +1,10 @@
 from typing import Dict, TYPE_CHECKING
 
-from .constants import GuiError
+from .events import GuiError
 from ..widgets.window import Window as gWindow
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 class WorkspaceCoordinator:

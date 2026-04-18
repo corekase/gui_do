@@ -2,12 +2,12 @@ import pygame
 from pygame import Rect
 from pygame.surface import Surface
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
-from ..utility.constants import colours, GuiError, InteractiveState
+from ..utility.events import colours, GuiError, InteractiveState
 from .frame import Frame
 
 if TYPE_CHECKING:
-    from ..utility.constants import BaseEvent
-    from ..utility.guimanager import GuiManager
+    from ..utility.events import BaseEvent
+    from ..utility.gui_manager import GuiManager
     from ..utility.widget import Widget
 
 def _noop() -> None:

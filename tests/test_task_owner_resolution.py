@@ -2,8 +2,8 @@ import unittest
 from types import SimpleNamespace
 
 from gui_manager_test_factory import build_gui_manager_stub
-from gui.utility.constants import Event, GuiError
-from gui.utility.guimanager import GuiManager
+from gui.utility.events import Event, GuiError
+from gui.utility.gui_manager import GuiManager
 
 
 class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):

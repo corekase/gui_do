@@ -1,33 +1,14 @@
 import logging
-from dataclasses import dataclass
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 
-from pygame import Rect
-
-from .constants import GuiError
+from .events import GuiError
+from .input.cursor_placement import CursorPlacement
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
+    from .gui_manager import GuiManager
 
 
 _logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class _CursorPlacement:
-    """Value object for cursor anchor, hotspot, and resulting rect."""
-
-    anchor: Tuple[int, int]
-    hotspot: Tuple[int, int]
-    size: Tuple[int, int]
-
-    def build_rect(self) -> Rect:
-        return Rect(
-            self.anchor[0] - self.hotspot[0],
-            self.anchor[1] - self.hotspot[1],
-            self.size[0],
-            self.size[1],
-        )
 
 
 class PointerCoordinator:
@@ -63,8 +44,8 @@ class PointerCoordinator:
         return self.gui.mouse_pos
 
     @staticmethod
-    def _build_cursor_placement(anchor: Tuple[int, int], hotspot: Tuple[int, int], size: Tuple[int, int]) -> _CursorPlacement:
-        return _CursorPlacement(anchor=anchor, hotspot=hotspot, size=size)
+    def _build_cursor_placement(anchor: Tuple[int, int], hotspot: Tuple[int, int], size: Tuple[int, int]) -> CursorPlacement:
+        return CursorPlacement(anchor=anchor, hotspot=hotspot, size=size)
 
     @staticmethod
     def _validate_point(point: Tuple[int, int], label: str) -> None:

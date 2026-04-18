@@ -1,18 +1,13 @@
 import pygame
 from pygame import Rect
 from pygame.surface import Surface
-from typing import Optional, Protocol, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
-from .constants import GuiError
+from .events import GuiError
 from .resource_error import DataResourceErrorHandler
 
 if TYPE_CHECKING:
-    from .guimanager import GuiManager
-
-
-class _PristineContainer(Protocol):
-    surface: Surface
-    pristine: Optional[Surface]
+    from .gui_manager import GuiManager
 
 
 class GraphicsCoordinator:
@@ -26,7 +21,7 @@ class GraphicsCoordinator:
         bitmap.blit(surface, (0, 0), rect)
         return bitmap
 
-    def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
+    def set_pristine(self, image: str, obj: Optional[Any] = None) -> None:
         if obj is None:
             obj = self.gui
         if obj.surface is None:
@@ -47,7 +42,7 @@ class GraphicsCoordinator:
         obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
         obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
-    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
+    def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[Any] = None) -> None:
         if obj is None:
             obj = self.gui
         if obj.pristine is None:

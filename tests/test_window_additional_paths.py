@@ -1,10 +1,10 @@
-﻿import unittest
+import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from pygame import Rect
 
-from gui.utility.constants import GuiError, InteractiveState
+from gui.utility.events import GuiError, InteractiveState
 from gui.widgets.window import Window
 
 

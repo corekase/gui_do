@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Dict, Optional
-from .constants import Event
+from .events import Event
 
 if TYPE_CHECKING:
     from .gui_event import GuiEvent

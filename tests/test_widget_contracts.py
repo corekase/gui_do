@@ -1,11 +1,11 @@
-﻿import unittest
+import unittest
 from collections import deque
 from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
 
-from gui.utility.constants import CanvasEvent, GuiError, Orientation
+from gui.utility.events import CanvasEvent, GuiError, Orientation
 from gui.widgets.buttongroup import ButtonGroup
 from gui.widgets.canvas import Canvas, CanvasEventPacket
 from gui.widgets.label import Label

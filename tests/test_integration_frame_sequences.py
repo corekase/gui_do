@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from gui.utility.engine import Engine
 from gui.utility.scheduler import TaskKind
-from gui.utility.statemanager import StateManager
+from gui.utility.state_manager import StateManager
 
 
 class TimersStub:

@@ -1,7 +1,7 @@
 import threading
 import unittest
 
-from gui.utility.constants import GuiError
+from gui.utility.events import GuiError
 from gui.utility.scheduler import Scheduler, Task
 
 

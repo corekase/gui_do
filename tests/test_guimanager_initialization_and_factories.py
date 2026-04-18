@@ -5,7 +5,7 @@ from unittest.mock import patch
 from pygame import Rect
 
 from event_mouse_fixtures import build_mouse_gui_stub
-from gui.utility.constants import ArrowPosition, ButtonStyle, GuiError, Orientation
+from gui.utility.events import ArrowPosition, ButtonStyle, GuiError, Orientation
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.ui_factory import GuiUiFactory
@@ -146,12 +146,12 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         graphics_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80))
 
-        with patch("gui.utility.guimanager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.LayoutManager", return_value=SimpleNamespace()
-        ), patch("gui.utility.guimanager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
-            "gui.utility.guimanager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
-        ), patch("gui.utility.guimanager.Timers", return_value=SimpleNamespace()), patch(
-            "gui.utility.guimanager.ButtonGroupMediator", return_value=SimpleNamespace()
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
         ):
             gui = gm.GuiManager(
                 surface,
