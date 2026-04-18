@@ -403,10 +403,7 @@ class GuiManager:
         self.lock_flow.enforce_point_lock(hardware_position)
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
-        try:
-            self.input_providers.mouse_set_pos(pos)
-        except Exception as exc:
-            _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
+        self.pointer.set_physical_mouse_pos(pos)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         return self.lock_flow.lock_area(position)

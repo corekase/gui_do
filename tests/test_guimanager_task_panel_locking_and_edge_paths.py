@@ -311,7 +311,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui._is_registered_object = lambda obj: obj is widget
         gui.mouse_pos = (9, 8)
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
         GuiManager.set_lock_area(gui, widget, Rect(1, 2, 5, 6))
         self.assertIs(gui.locking_object, widget)
@@ -364,7 +364,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_pos = (4, 4)
         gui.lock_point_recenter_pending = False
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
         GuiManager.enforce_point_lock(gui, (3, 3))
         self.assertEqual(set_calls, [])
 
@@ -462,7 +462,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.mouse_point_locked = False
         gui.mouse_pos = (4, 5)
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
         GuiManager.set_lock_area(gui, None)
 

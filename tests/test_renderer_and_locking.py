@@ -111,7 +111,7 @@ class LockingBehaviourTests(unittest.TestCase):
         gui.lock_point_recenter_pending = False
         gui.point_lock_recenter_rect = Rect(25, 25, 30, 30)
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
         # Outside recenter rect triggers one recenter and marks pending.
         GuiManager.enforce_point_lock(gui, (0, 0))

@@ -72,7 +72,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.lock_point_tolerance_rect = Rect(0, 0, 3, 3)
         gui.mouse_pos = (9, 9)
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
         GuiManager.set_lock_area(gui, None)
 

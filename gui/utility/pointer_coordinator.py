@@ -1,9 +1,13 @@
+import logging
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 from .constants import GuiError
 
 if TYPE_CHECKING:
     from .guimanager import GuiManager
+
+
+_logger = logging.getLogger(__name__)
 
 
 class PointerCoordinator:
@@ -20,7 +24,13 @@ class PointerCoordinator:
             raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
         self.gui.mouse_pos = self.gui.lock_area(pos)
         if update_physical_coords:
-            self.gui._set_physical_mouse_pos(self.gui.mouse_pos)
+            self.set_physical_mouse_pos(self.gui.mouse_pos)
+
+    def set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
+        try:
+            self.gui.input_providers.mouse_set_pos(pos)
+        except Exception as exc:
+            _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 
     def set_cursor(self, name: str) -> None:
         if not isinstance(name, str) or name == '':

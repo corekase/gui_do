@@ -37,10 +37,10 @@ class LockStateController:
         else:
             if self.gui.mouse_locked:
                 if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
-                    self.gui._set_physical_mouse_pos(self.gui.lock_point_pos)
+                    self.gui.pointer.set_physical_mouse_pos(self.gui.lock_point_pos)
                     self.gui.mouse_pos = self.gui.lock_point_pos
                 else:
-                    self.gui._set_physical_mouse_pos(self.gui.mouse_pos)
+                    self.gui.pointer.set_physical_mouse_pos(self.gui.mouse_pos)
             self.clear()
         self.gui.lock_area_rect = area
 
@@ -113,7 +113,7 @@ class LockStateController:
                 self.gui.lock_point_recenter_pending = False
             return
         if not in_recenter_rect:
-            self.gui._set_physical_mouse_pos(self.gui.point_lock_recenter_rect.center)
+            self.gui.pointer.set_physical_mouse_pos(self.gui.point_lock_recenter_rect.center)
             self.gui.lock_point_recenter_pending = True
 
     def clear(self) -> None:

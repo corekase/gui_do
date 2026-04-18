@@ -363,7 +363,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_set_mouse_pos_respects_update_physical_flag(self) -> None:
         gui = self._build_manager_stub()
         set_calls = []
-        gui._set_physical_mouse_pos = lambda pos: set_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
         GuiManager.set_mouse_pos(gui, (5, 6), update_physical_coords=False)
         self.assertEqual(gui.mouse_pos, (5, 6))

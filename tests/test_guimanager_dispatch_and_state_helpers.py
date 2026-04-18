@@ -96,7 +96,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.point_lock_recenter_rect = Rect(20, 20, 20, 20)
         gui.lock_point_recenter_pending = True
         recenter_calls = []
-        gui._set_physical_mouse_pos = lambda pos: recenter_calls.append(pos)
+        gui.pointer.set_physical_mouse_pos = lambda pos: recenter_calls.append(pos)
 
         GuiManager.enforce_point_lock(gui, (25, 25))
         self.assertFalse(gui.lock_point_recenter_pending)
