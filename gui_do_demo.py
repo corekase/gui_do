@@ -294,7 +294,7 @@ class Demo:
         self.mandel_canvas = g1.canvas('mandel', mandel_overall)
         g1.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.draw_rect
-        cx, cy, cwidth, cheight = self.mandel_canvas.draw_rect
+        _, _, cwidth, cheight = self.mandel_canvas.draw_rect
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
         self.canvas1 = g1.canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10))
         self.canvas2 = g1.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
@@ -435,11 +435,7 @@ class Demo:
         old_size = self.cell_size
         if old_size <= 0:
             return
-        zoom_value = slider_value + 1
-        if zoom_value < 1:
-            zoom_value = 1
-        elif zoom_value > 12:
-            zoom_value = 12
+        zoom_value = max(1, min(12, slider_value + 1))
         new_size = zoom_value * 2
         if new_size == old_size:
             return
@@ -458,57 +454,53 @@ class Demo:
         self.draw_life()
 
     def mandel_window_event_handler(self, event):
+        # Task events carry async worker progress/completion payloads.
         if event.type == Event.Task:
             self.handle_mandel_task_event(event)
             return
         if event.type != Event.Widget:
             return
-        if event.widget_id == 'mandel_reset':
+        widget_id = event.widget_id
+        if widget_id == 'mandel_reset':
             self.s1.remove_tasks(*Demo.mandel_task_ids)
             self._show_single_mandel_canvas()
             self.set_mandel_task_buttons_disabled(False)
             return
         if self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+            # Ignore new launch requests while any Mandelbrot job is running.
             return
-        if event.widget_id == 'iterative':
+        if widget_id == 'iterative':
+            # One full-canvas task using scanline iteration.
             self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
             self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
-        elif event.widget_id == 'recursive':
+        elif widget_id == 'recursive':
+            # One full-canvas task using adaptive recursive subdivision.
             self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
-            self.s1.add_task('recu', self.mandel_recursive, Rect(0, 0, w, h),
-                             message_method=self.make_mandel_progress_handler('recu'))
-        elif event.widget_id == '1split':
+            self._queue_mandel_recursive_task('recu', Rect(0, 0, w, h))
+        elif widget_id == '1split':
+            # Four quadrant tasks that render into one shared Mandelbrot canvas.
             self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
             left_w, top_h = w // 2, h // 2
             right_w, bottom_h = w - left_w, h - top_h
-            self.s1.add_task('1', self.mandel_recursive, Rect(0, 0, left_w, top_h),
-                             message_method=self.make_mandel_progress_handler('1'))
-            self.s1.add_task('2', self.mandel_recursive, Rect(left_w, 0, right_w, top_h),
-                             message_method=self.make_mandel_progress_handler('2'))
-            self.s1.add_task('3', self.mandel_recursive, Rect(0, top_h, left_w, bottom_h),
-                             message_method=self.make_mandel_progress_handler('3'))
-            self.s1.add_task('4', self.mandel_recursive, Rect(left_w, top_h, right_w, bottom_h),
-                             message_method=self.make_mandel_progress_handler('4'))
-        elif event.widget_id == '4split':
+            self._queue_mandel_recursive_task('1', Rect(0, 0, left_w, top_h))
+            self._queue_mandel_recursive_task('2', Rect(left_w, 0, right_w, top_h))
+            self._queue_mandel_recursive_task('3', Rect(0, top_h, left_w, bottom_h))
+            self._queue_mandel_recursive_task('4', Rect(left_w, top_h, right_w, bottom_h))
+        elif widget_id == '4split':
+            # Four independent canvases, each rendering its own quadrant-sized image.
             self._prepare_mandel_split_canvas_run()
             _, _, w1, h1 = self.mandel_canvas_rect
             w1 = w1 // 2
             h1 = h1 // 2
             self.mandel_setup(w1, h1)
-            self.s1.add_task('can1', self.mandel_recursive, Rect(0, 0, w1, h1),
-                             message_method=self.make_mandel_progress_handler('can1'))
-            self.s1.add_task('can2', self.mandel_recursive, Rect(0, 0, w1, h1),
-                             message_method=self.make_mandel_progress_handler('can2'))
-            self.s1.add_task('can3', self.mandel_recursive, Rect(0, 0, w1, h1),
-                             message_method=self.make_mandel_progress_handler('can3'))
-            self.s1.add_task('can4', self.mandel_recursive, Rect(0, 0, w1, h1),
-                             message_method=self.make_mandel_progress_handler('can4'))
+            for task_id in ('can1', 'can2', 'can3', 'can4'):
+                self._queue_mandel_recursive_task(task_id, Rect(0, 0, w1, h1))
 
     def gui2_screen_preamble(self):
         self.gui2.restore_pristine()
@@ -598,39 +590,35 @@ class Demo:
     # life methods
     def handle_Canvas(self):
         # read the event from the canvas widget
-        CEvent = self.canvas.read_event()
-        if CEvent is not None:
+        c_event = self.canvas.read_event()
+        if c_event is not None:
             # parse that event by kind and parameters
-            if CEvent.type == CanvasEvent.MouseButtonDown:
+            if c_event.type == CanvasEvent.MouseButtonDown:
                 # left-mouse button toggles the clicked cell when over the canvas
-                if CEvent.button == 1 and CEvent.pos is not None:
-                    self.toggle_life_cell_at_canvas_pos(CEvent.pos)
+                if c_event.button == 1 and c_event.pos is not None:
+                    self.toggle_life_cell_at_canvas_pos(c_event.pos)
                 # right-mouse button pressed, enter dragging state
-                if CEvent.button == 3:
+                if c_event.button == 3:
                     self.dragging = True
                     self.gui1.set_cursor('hand')
                     self.gui1.set_lock_point(self.canvas)
-            elif CEvent.type == CanvasEvent.MouseButtonUp:
+            elif c_event.type == CanvasEvent.MouseButtonUp:
                 # right-mouse button released, exit dragging state
-                if CEvent.button == 3:
+                if c_event.button == 3:
                     self.dragging = False
                     self.gui1.set_cursor('normal')
                     self.gui1.set_lock_point(None)
-            elif CEvent.type == CanvasEvent.MouseMotion:
+            elif c_event.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position
-                if self.dragging and CEvent.rel is not None:
-                    x, y = CEvent.rel[0], CEvent.rel[1]
+                if self.dragging and c_event.rel is not None:
+                    x, y = c_event.rel[0], c_event.rel[1]
                     self.origin_x -= x
                     self.origin_y -= y
-            elif CEvent.type == CanvasEvent.MouseWheel:
+            elif c_event.type == CanvasEvent.MouseWheel:
                 # handle the mouse wheel
-                if CEvent.y is not None:
+                if c_event.y is not None:
                     old_size = self.cell_size
-                    new_size = old_size + (CEvent.y * 2)
-                    if new_size < 2:
-                        new_size = 2
-                    elif new_size > 24:
-                        new_size = 24
+                    new_size = max(2, min(24, old_size + (c_event.y * 2)))
                     if new_size != old_size:
                         if self.gui1.mouse_point_locked and self.gui1.lock_point_pos is not None:
                             # During point-lock dragging, anchor zoom to the rendered (locked) cursor.
@@ -638,7 +626,7 @@ class Demo:
                             mouse_x = lock_x - self.canvas_rect.x
                             mouse_y = lock_y - self.canvas_rect.y
                         else:
-                            mouse_x, mouse_y = (CEvent.pos if CEvent.pos is not None else self.canvas_rect.center)
+                            mouse_x, mouse_y = (c_event.pos if c_event.pos is not None else self.canvas_rect.center)
                         # Keep the world position under the mouse fixed while scaling.
                         self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
                         self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
@@ -648,7 +636,7 @@ class Demo:
 
     def toggle_life_cell_at_canvas_pos(self, canvas_pos):
         x_pos, y_pos = canvas_pos
-        if x_pos < 0 or y_pos < 0 or x_pos >= self.canvas_rect.width or y_pos >= self.canvas_rect.height:
+        if not (0 <= x_pos < self.canvas_rect.width and 0 <= y_pos < self.canvas_rect.height):
             return
         cell_x = math.floor((x_pos - self.origin_x) / self.cell_size)
         cell_y = math.floor((y_pos - self.origin_y) / self.cell_size)
@@ -741,21 +729,30 @@ class Demo:
             button.disabled = disabled
 
     def _show_single_mandel_canvas(self):
+        # Show the primary Mandelbrot canvas and hide split panes.
         self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.gui1.show_widgets(self.mandel_canvas)
         self.clear_mandel_surfaces()
 
     def _prepare_mandel_single_canvas_run(self):
+        # Disable launch buttons while work is in flight.
         self.set_mandel_task_buttons_disabled(True)
         self._show_single_mandel_canvas()
 
     def _prepare_mandel_split_canvas_run(self):
+        # Switch to split-pane view for per-canvas rendering tasks.
         self.set_mandel_task_buttons_disabled(True)
         self.gui1.hide_widgets(self.mandel_canvas)
         self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
 
+    def _queue_mandel_recursive_task(self, task_id, rect):
+        # Route task progress through a per-task callback that draws incremental updates.
+        self.s1.add_task(task_id, self.mandel_recursive, rect,
+                         message_method=self.make_mandel_progress_handler(task_id))
+
     def mandel_setup(self, width, height):
+        # Precompute viewport and complex-plane mapping for workers.
         self.max_iter = 128
         self.maximum_iters = self.max_iter - 1
         self.mandel_width, self.mandel_height = width, height
@@ -770,28 +767,22 @@ class Demo:
         if getattr(event, 'error', None):
             print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
         if task_id in Demo.mandel_task_ids:
+            # Consume buffered result payloads for finished/updated tasks.
             self.s1.pop_result(task_id)
             if not self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+                # Re-enable controls only when all Mandelbrot tasks have drained.
                 self.set_mandel_task_buttons_disabled(False)
 
     def make_mandel_progress_handler(self, task_id):
         def handler(result):
+            # Execute on main thread: apply worker payload onto the target canvas.
             self.apply_mandel_result(task_id, result)
         return handler
 
     def apply_mandel_result(self, task_id, result):
         x, y, w, h, values = result
-        if task_id in {'iter', 'recu', '1', '2', '3', '4'}:
-            canvas = self.mandel_canvas.canvas
-        elif task_id == 'can1':
-            canvas = self.canvas1.canvas
-        elif task_id == 'can2':
-            canvas = self.canvas2.canvas
-        elif task_id == 'can3':
-            canvas = self.canvas3.canvas
-        elif task_id == 'can4':
-            canvas = self.canvas4.canvas
-        else:
+        canvas = self._mandel_canvas_for_task(task_id)
+        if canvas is None:
             return
         x0 = max(0, x)
         y0 = max(0, y)
@@ -800,6 +791,7 @@ class Demo:
         if x1 <= x0 or y1 <= y0:
             return
         if (x0, y0, x1, y1) != (x, y, x + w, y + h):
+            # Clip out-of-range payloads defensively before drawing.
             if isinstance(values, int):
                 canvas.fill(self.col(values), Rect(x0, y0, x1 - x0, y1 - y0))
                 return
@@ -812,11 +804,13 @@ class Demo:
             values = clipped_values
             x, y, w, h = x0, y0, x1 - x0, y1 - y0
         if isinstance(values, int):
+            # Compact fill payload: single color value for the full region.
             canvas.fill(self.col(values), Rect(x, y, w, h))
             return
         idx = 0
         canvas.lock()
         try:
+            # Expanded payload: per-pixel iteration counts.
             for y_pos in range(y, y + h):
                 for x_pos in range(x, x + w):
                     canvas.set_at((x_pos, y_pos), self.col(values[idx]))
@@ -824,10 +818,27 @@ class Demo:
         finally:
             canvas.unlock()
 
+    def _mandel_canvas_for_task(self, task_id):
+        # Map task ids to their destination canvas surface.
+        canvas_by_task = {
+            'iter': self.mandel_canvas.canvas,
+            'recu': self.mandel_canvas.canvas,
+            '1': self.mandel_canvas.canvas,
+            '2': self.mandel_canvas.canvas,
+            '3': self.mandel_canvas.canvas,
+            '4': self.mandel_canvas.canvas,
+            'can1': self.canvas1.canvas,
+            'can2': self.canvas2.canvas,
+            'can3': self.canvas3.canvas,
+            'can4': self.canvas4.canvas,
+        }
+        return canvas_by_task.get(task_id)
+
     def col(self, k):
         return (0, 0, 0) if k == self.maximum_iters else Demo.cols[k % 16]
 
     def mandel_iterative(self, task_id):
+        # Iterative renderer sends scanlines in small row chunks for responsive updates.
         rect = Rect(0, 0, self.mandel_width, self.mandel_height)
         x, y, w, h = rect
         x0 = max(0, x)
@@ -854,6 +865,7 @@ class Demo:
         return None
 
     def mandel_recursive(self, task_id, item):
+        # Recursive renderer receives a region and adaptively subdivides it.
         x, y, w, h = item
         x0 = max(0, x)
         y0 = max(0, y)
@@ -871,6 +883,7 @@ class Demo:
         top_left = self.pixel(x_pos, y_pos)
         accuracy = 2
         not_hit = True
+        # Edge-uniformity probe: if edges match, fill block without per-pixel recursion.
         for x_test in range(0, width, accuracy):
             if (self.pixel(x_pos + x_test, y_pos) != top_left) or (self.pixel(x_pos + x_test, y_pos + height - 1) != top_left):
                 not_hit = False
@@ -884,6 +897,7 @@ class Demo:
             self.fill_region(task_id, x_pos, y_pos, width, height, top_left)
             return
         if width > 2 or height > 2:
+            # Subdivide into quadrants until regions are uniform or tiny.
             half_x = (width + (width % 2)) // 2
             half_y = (height + (height % 2)) // 2
             self.recursive_region(task_id, x_pos, y_pos, half_x, half_y)
@@ -910,9 +924,11 @@ class Demo:
         self.s1.send_message(task_id, (x_pos, y_pos, width, height, value))
 
     def publish_pixel_block(self, task_id, x_pos, y_pos, width, height, block_values):
+        # Small explicit block payload for base-case non-uniform regions.
         self.s1.send_message(task_id, (x_pos, y_pos, width, height, block_values))
 
     def pixel(self, x, y):
+        # Convert screen-space pixel to complex-plane point and iterate z = z^2 + c.
         c = self.center + (x - self.mandel_width // 2 + (y - self.mandel_height // 2) * 1j) * self.scale
         z = 0
         for k in range(self.max_iter):
