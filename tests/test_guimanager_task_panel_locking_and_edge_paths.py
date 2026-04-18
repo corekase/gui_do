@@ -6,6 +6,7 @@ from pygame import Rect
 
 from gui.utility.constants import GuiError
 from gui.utility.focus_state import FocusStateController
+from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
@@ -56,6 +57,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_state = LockStateController(gui)
         gui.ui_factory = GuiUiFactory(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.graphics = GraphicsCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
         gui.pointer = PointerCoordinator(gui)
         gui.workspace = WorkspaceCoordinator(gui)
@@ -365,10 +367,10 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             pristine=None,
         )
         gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
-        gui.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
+        gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
-        with patch("gui.utility.guimanager.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.guimanager.pygame.transform.smoothscale",
+        with patch("gui.utility.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.graphics_coordinator.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png", target)
@@ -504,19 +506,19 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None)
         gui.pristine = None
         gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
-        gui.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
+        gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
         scaled = SimpleNamespace(convert=lambda: object(), get_rect=lambda: Rect(0, 0, 10, 6))
-        with patch("gui.utility.guimanager.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.guimanager.pygame.transform.smoothscale",
+        with patch("gui.utility.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.graphics_coordinator.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png")
 
         self.assertEqual(gui.pristine, "copied")
 
-        with patch("gui.utility.guimanager.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
-            "gui.utility.guimanager.DataResourceErrorHandler.raise_load_error",
+        with patch("gui.utility.graphics_coordinator.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
+            "gui.utility.graphics_coordinator.DataResourceErrorHandler.raise_load_error",
             side_effect=GuiError("wrapped"),
         ):
             with self.assertRaises(GuiError):
@@ -673,7 +675,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         target = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None), pristine=None)
 
-        with patch("gui.utility.guimanager.pygame.image.load", side_effect=GuiError("load guierror")):
+        with patch("gui.utility.graphics_coordinator.pygame.image.load", side_effect=GuiError("load guierror")):
             with self.assertRaises(GuiError):
                 GuiManager.set_pristine(gui, "bg.png", target)
 

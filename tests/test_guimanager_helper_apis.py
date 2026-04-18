@@ -6,6 +6,7 @@ from pygame import Rect
 from gui.utility.constants import GuiError
 from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
+from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
@@ -31,6 +32,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.lock_state = LockStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
         gui.event_delivery = EventDeliveryCoordinator(gui)
+        gui.graphics = GraphicsCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
         gui.pointer = PointerCoordinator(gui)
         gui.workspace = WorkspaceCoordinator(gui)

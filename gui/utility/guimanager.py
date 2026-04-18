@@ -11,13 +11,13 @@ from .buttongroup_mediator import ButtonGroupMediator
 from .event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
+from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator
 from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
-from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
 from .workspace_coordinator import WorkspaceCoordinator
@@ -363,6 +363,7 @@ class GuiManager:
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
+        self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
@@ -544,26 +545,7 @@ class GuiManager:
 
     def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
         """Load a backdrop image, scale it to target surface, and cache pristine copy."""
-        if obj is None:
-            obj = self
-        if obj.surface is None:
-            raise GuiError('set_pristine target surface is not initialized')
-        if image is not None:
-            if not isinstance(image, str) or image == '':
-                raise GuiError(f'set_pristine image must be a non-empty string, got: {image!r}')
-            image_path = self.bitmap_factory.file_resource('images', image)
-            try:
-                bitmap = pygame.image.load(image_path)
-            except GuiError:
-                raise
-            except Exception as exc:
-                DataResourceErrorHandler.raise_load_error('failed to load pristine image', image_path, exc)
-            _, _, width, height = obj.surface.get_rect()
-            scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
-            obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
-        else:
-            raise GuiError('set_pristine requires an image')
-        obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
+        self.graphics.set_pristine(image, obj)
 
     def set_screen_lifecycle(
         self,
@@ -632,9 +614,7 @@ class GuiManager:
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""
-        bitmap = pygame.Surface((rect.width, rect.height), flags)
-        bitmap.blit(surface, (0, 0), rect)
-        return bitmap
+        return self.graphics.copy_graphic_area(surface, rect, flags)
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
@@ -651,14 +631,7 @@ class GuiManager:
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""
-        if obj is None:
-            obj = self
-        if obj.pristine is None:
-            raise GuiError('restore_pristine called before pristine was initialized')
-        if area is None:
-            area = obj.pristine.get_rect()
-        x, y, _, _ = area
-        obj.surface.blit(obj.pristine, (x, y), area)
+        self.graphics.restore_pristine(area, obj)
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         self.focus_state.update_focus(new_hover)
