@@ -43,6 +43,7 @@ class ButtonGroup(BaseInteractive):
         self.idle = visuals.idle
         self.hover = visuals.hover
         self.armed = visuals.armed
+        self.disabled_graphic = visuals.disabled
         self.hit_rect = visuals.hit_rect
         self.gui.button_group_mediator.register(group, self)
         if self.gui.button_group_mediator.get_selection(group) is self:
@@ -50,6 +51,8 @@ class ButtonGroup(BaseInteractive):
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle event."""
+        if self.disabled:
+            return False
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
         collision = self.get_collide(window)

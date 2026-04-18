@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
@@ -13,6 +14,21 @@ if TYPE_CHECKING:
 
 class Widget:
     """Base widget contract used by all concrete widgets."""
+
+    @property
+    def disabled(self) -> bool:
+        """Return True when this widget should draw dimmed and ignore input."""
+        return self._disabled
+
+    @disabled.setter
+    def disabled(self, value: bool) -> None:
+        """Enable or disable this widget's interaction."""
+        if not isinstance(value, bool):
+            raise GuiError('widget disabled must be a bool')
+        if self._disabled == value:
+            return
+        self._disabled = value
+        self._on_disabled_changed(value)
 
     @property
     def visible(self) -> bool:
@@ -57,8 +73,27 @@ class Widget:
         self.hit_rect: Optional[Rect] = None
         self.pristine: Optional[Surface] = None
         self._visible: bool = True
+        self._disabled: bool = False
         self.on_activate: Optional[Callable[[], None]] = None
         self.auto_restore_pristine: bool = False
+
+    def _on_disabled_changed(self, _: bool) -> None:
+        """Hook for subclasses to react to disabled-state changes."""
+        return
+
+    def _build_disabled_surface(self, source: Surface) -> Surface:
+        """Return a 75% intensity copy of `source`."""
+        dimmed = source.copy()
+        dimmed.fill((191, 191, 191, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        return dimmed
+
+    def _blit_disabled_overlay(self) -> None:
+        """Overlay the widget draw rect with a 25% black tint."""
+        if self.surface is None:
+            return
+        overlay = Surface((self.draw_rect.width, self.draw_rect.height), pygame.SRCALPHA).convert_alpha()
+        overlay.fill((0, 0, 0, 64))
+        self.surface.blit(overlay, (self.draw_rect.x, self.draw_rect.y))
 
     def leave(self) -> None:
         """Hook called when focus leaves this widget."""

@@ -112,6 +112,7 @@ class WindowAdditionalPathTests(unittest.TestCase):
                 idle=_FakeSurface((30, 20)),
                 hover=_FakeSurface((30, 20)),
                 armed=_FakeSurface((30, 20)),
+                disabled=_FakeSurface((30, 20)),
                 hit_rect=Rect(0, 0, 30, 20),
             ),
             build_window_chrome_visuals=lambda *_args: SimpleNamespace(

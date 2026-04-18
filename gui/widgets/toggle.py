@@ -33,10 +33,13 @@ class Toggle(BaseInteractive):
         self.idle = visuals.idle
         self.hover = visuals.hover
         self.armed = visuals.armed
+        self.disabled_graphic = visuals.disabled
         self.hit_rect = visuals.hit_rect
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Update hover state and flip pushed on left button down."""
+        if self.disabled:
+            return False
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
         if not super().handle_event(event, window):
@@ -49,6 +52,13 @@ class Toggle(BaseInteractive):
 
     def draw(self) -> None:
         """Draw."""
+        if self.disabled:
+            if self.disabled_graphic is not None:
+                Widget.draw(self)
+                self.surface.blit(self.disabled_graphic, self.draw_rect)
+            else:
+                super().draw()
+            return
         if self.pushed:
             Widget.draw(self)
             self.surface.blit(self.armed, self.draw_rect)

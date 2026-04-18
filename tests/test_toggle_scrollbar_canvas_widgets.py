@@ -14,6 +14,7 @@ from gui.widgets.toggle import Toggle
 class ToggleWidgetTests(unittest.TestCase):
     def _build_toggle(self, pushed: bool = False):
         toggle = Toggle.__new__(Toggle)
+        toggle._disabled = False
         toggle._pushed = pushed
         toggle.state = InteractiveState.Idle
         toggle.draw_rect = Rect(0, 0, 20, 10)
@@ -51,6 +52,7 @@ class ToggleWidgetTests(unittest.TestCase):
 class ScrollbarWidgetTests(unittest.TestCase):
     def test_increment_and_decrement_are_clamped_to_valid_range(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._hit = False
         scrollbar._total_range = 10
         scrollbar._bar_size = 4
@@ -71,6 +73,7 @@ class ScrollbarWidgetTests(unittest.TestCase):
         arrow2 = SimpleNamespace(draw_rect=Rect(30, 20, 4, 4), position=(30, 20))
 
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar.draw_rect = Rect(10, 10, 20, 8)
         scrollbar.hit_rect = None
         scrollbar._overall_rect = Rect(10, 10, 40, 8)
@@ -91,6 +94,7 @@ class ScrollbarWidgetTests(unittest.TestCase):
 
     def test_handle_area_respects_orientation(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._graphic_rect = Rect(100, 200, 50, 20)
         scrollbar._total_range = 100
         scrollbar._start_pos = 10
@@ -108,6 +112,7 @@ class ScrollbarWidgetTests(unittest.TestCase):
 class CanvasFocusedTests(unittest.TestCase):
     def test_focused_uses_converted_mouse_position(self) -> None:
         canvas = Canvas.__new__(Canvas)
+        canvas._disabled = False
         canvas.draw_rect = Rect(0, 0, 10, 10)
         canvas.window = None
 

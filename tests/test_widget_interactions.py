@@ -37,7 +37,15 @@ def build_interactive_gui_stub():
     gui.get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
-    gui.graphics_factory = SimpleNamespace()
+    gui.graphics_factory = SimpleNamespace(
+        build_arrow_visuals=lambda rect, _direction: SimpleNamespace(
+            idle=object(),
+            hover=object(),
+            armed=object(),
+            disabled=object(),
+            hit_rect=Rect(rect),
+        )
+    )
     return gui
 
 
@@ -46,14 +54,21 @@ def build_interactive_gui_stub_with_failing_timers():
     gui.get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
     gui.timers = FailingTimersSpy()
-    gui.graphics_factory = SimpleNamespace()
+    gui.graphics_factory = SimpleNamespace(
+        build_arrow_visuals=lambda rect, _direction: SimpleNamespace(
+            idle=object(),
+            hover=object(),
+            armed=object(),
+            disabled=object(),
+            hit_rect=Rect(rect),
+        )
+    )
     return gui
 
 
 class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_arrowbox_leave_clears_timer_and_resets_idle(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: None, repeat_activation_ms=50)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
@@ -67,7 +82,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_invoke_on_activate_noop_without_callback(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=None, repeat_activation_ms=50)
 
         arrow._invoke_on_activate()
@@ -76,7 +90,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_leave_logs_warning_when_timer_remove_fails(self) -> None:
         gui = build_interactive_gui_stub_with_failing_timers()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: None, repeat_activation_ms=50)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
@@ -91,7 +104,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_ignores_non_mouse_events(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=None, repeat_activation_ms=50)
 
         other = pygame.event.Event(pygame.USEREVENT, {})
@@ -99,7 +111,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_motion_outside_clears_repeat_timer(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: None, repeat_activation_ms=50)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
@@ -114,7 +125,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_press_without_callback_does_not_register_timer(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=None, repeat_activation_ms=50)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
@@ -123,7 +133,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_outside_collision_and_callback_invoke_paths(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         calls = []
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: calls.append(True), repeat_activation_ms=50)
 
@@ -135,7 +144,6 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_clear_timer_is_noop_when_timers_absent(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=None, repeat_activation_ms=50)
         arrow._timer_id = "arrow.timer"
         arrow.gui = SimpleNamespace(timers=None)
@@ -159,7 +167,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_button_leave_resets_state_to_idle(self) -> None:
         gui = build_interactive_gui_stub()
         gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
-            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+            idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
         button.state = InteractiveState.Armed
@@ -171,7 +179,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_button_non_left_click_does_not_arm_or_activate(self) -> None:
         gui = build_interactive_gui_stub()
         gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
-            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+            idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
 
@@ -186,7 +194,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_button_returns_false_when_mouse_event_not_colliding(self) -> None:
         gui = build_interactive_gui_stub()
         gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
-            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+            idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
         gui.get_mouse_pos = lambda: (50, 50)
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
@@ -197,7 +205,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_button_ignores_non_mouse_events(self) -> None:
         gui = build_interactive_gui_stub()
         gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
-            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+            idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
 

@@ -229,10 +229,17 @@ class Demo:
         self.clear_mandel_surfaces()
         g1.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
         g1.button('mandel_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
-        g1.button('iterative', g1.gridded(1, 0), ButtonStyle.Round, 'Iterative')
-        g1.button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
-        g1.button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
-        g1.button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        self.mandel_iterative_button = g1.button('iterative', g1.gridded(1, 0), ButtonStyle.Round, 'Iterative')
+        self.mandel_recursive_button = g1.button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
+        self.mandel_one_split_button = g1.button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
+        self.mandel_four_split_button = g1.button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        self.mandel_task_buttons = (
+            self.mandel_iterative_button,
+            self.mandel_recursive_button,
+            self.mandel_one_split_button,
+            self.mandel_four_split_button,
+        )
+        self.set_mandel_task_buttons_disabled(False)
         # set cursor image
         g1.set_cursor('normal')
         self.gui1 = g1
@@ -312,6 +319,7 @@ class Demo:
         self.gui1.restore_pristine()
         if not self.dragging and self.gui1.locking_object is self.canvas:
             self.gui1.set_lock_point(None)
+        self.set_mandel_task_buttons_disabled(self.s1.tasks_busy_match_any(*Demo.mandel_task_ids))
         if self.circles_toggle.pushed:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
@@ -367,10 +375,12 @@ class Demo:
             self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.gui1.show_widgets(self.mandel_canvas)
             self.clear_mandel_surfaces()
+            self.set_mandel_task_buttons_disabled(False)
             return
         if self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
             return
         if event.widget_id == 'iterative':
+            self.set_mandel_task_buttons_disabled(True)
             self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.gui1.show_widgets(self.mandel_canvas)
             self.clear_mandel_surfaces()
@@ -378,6 +388,7 @@ class Demo:
             self.mandel_setup(w, h)
             self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
         elif event.widget_id == 'recursive':
+            self.set_mandel_task_buttons_disabled(True)
             self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.gui1.show_widgets(self.mandel_canvas)
             self.clear_mandel_surfaces()
@@ -386,6 +397,7 @@ class Demo:
             self.s1.add_task('recu', self.mandel_recursive, Rect(0, 0, w, h),
                              message_method=self.make_mandel_progress_handler('recu'))
         elif event.widget_id == '1split':
+            self.set_mandel_task_buttons_disabled(True)
             self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.gui1.show_widgets(self.mandel_canvas)
             self.clear_mandel_surfaces()
@@ -402,6 +414,7 @@ class Demo:
             self.s1.add_task('4', self.mandel_recursive, Rect(left_w, top_h, right_w, bottom_h),
                              message_method=self.make_mandel_progress_handler('4'))
         elif event.widget_id == '4split':
+            self.set_mandel_task_buttons_disabled(True)
             self.gui1.hide_widgets(self.mandel_canvas)
             self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
             self.clear_mandel_surfaces()
@@ -625,15 +638,20 @@ class Demo:
         self.canvas3.canvas.fill(colours['medium'])
         self.canvas4.canvas.fill(colours['medium'])
 
+    def set_mandel_task_buttons_disabled(self, disabled):
+        for button in self.mandel_task_buttons:
+            button.disabled = disabled
+
     def handle_mandel_task_event(self, event):
         task_id = getattr(event, 'id', None)
         if task_id is None:
             return
         if getattr(event, 'error', None):
             print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
-            return
         if task_id in Demo.mandel_task_ids:
             self.s1.pop_result(task_id)
+            if not self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+                self.set_mandel_task_buttons_disabled(False)
 
     def make_mandel_progress_handler(self, task_id):
         def handler(result):

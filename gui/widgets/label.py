@@ -20,6 +20,7 @@ class Label(Widget):
         self.shadow: bool = shadow
         self._font: Optional[str] = self.gui.graphics_factory.get_current_font_name()
         self._text_bitmap: Surface
+        self._disabled_text_bitmap: Optional[Surface] = None
         self._render(text)
         self.draw_rect = self._text_bitmap.get_rect()
         if len(position) == 2:
@@ -37,6 +38,7 @@ class Label(Widget):
             self.gui.graphics_factory.set_last_font()
         else:
             self._render(text)
+        self._disabled_text_bitmap = self._build_disabled_surface(self._text_bitmap)
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """Handle event."""
@@ -49,6 +51,9 @@ class Label(Widget):
     def draw(self) -> None:
         """Draw."""
         super().draw()
+        if self.disabled and self._disabled_text_bitmap is not None:
+            self.surface.blit(self._disabled_text_bitmap, (self.draw_rect.x, self.draw_rect.y))
+            return
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))
 
     def _render(self, text: str) -> None:
@@ -57,3 +62,4 @@ class Label(Widget):
             self._text_bitmap = self.gui.graphics_factory.render_text(text, colours['text'], True)
         else:
             self._text_bitmap = self.gui.graphics_factory.render_text(text)
+        self._disabled_text_bitmap = self._build_disabled_surface(self._text_bitmap)

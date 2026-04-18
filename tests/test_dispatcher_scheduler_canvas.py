@@ -192,6 +192,7 @@ class SchedulerMessageFlowTests(unittest.TestCase):
 class CanvasQueueTests(unittest.TestCase):
     def _build_canvas_without_display_init(self) -> Canvas:
         canvas = Canvas.__new__(Canvas)
+        canvas._disabled = False
         canvas.gui = CanvasGuiStub()
         canvas.window = None
         canvas.draw_rect = Rect(0, 0, 20, 20)

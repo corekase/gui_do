@@ -9,3 +9,4 @@ class InteractiveState(Enum):
     Idle = 'Idle'
     Hover = 'Hover'
     Armed = 'Armed'
+    Disabled = 'Disabled'

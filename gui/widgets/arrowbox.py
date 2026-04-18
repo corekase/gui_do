@@ -24,10 +24,21 @@ class ArrowBox(BaseInteractive):
             raise GuiError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
         if repeat_activation_ms <= 0:
             raise GuiError(f'repeat_activation_ms must be > 0, got: {repeat_activation_ms}')
-        self.idle, self.hover, self.armed = self.gui.graphics_factory.draw_arrow_state_bitmaps(rect, direction)
+        visuals = self.gui.graphics_factory.build_arrow_visuals(rect, direction)
+        self.idle = visuals.idle
+        self.hover = visuals.hover
+        self.armed = visuals.armed
+        self.disabled_graphic = visuals.disabled
+        self.hit_rect = visuals.hit_rect
         self.on_activate = on_activate
         self.repeat_activation_ms: int = repeat_activation_ms
         self._timer_id: Optional[str] = None
+
+    def _on_disabled_changed(self, disabled: bool) -> None:
+        """Stop repeat activation immediately when disabled."""
+        super()._on_disabled_changed(disabled)
+        if disabled:
+            self._clear_timer()
 
     def leave(self) -> None:
         """Leave."""

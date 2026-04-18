@@ -29,10 +29,13 @@ class Image(Widget):
             DataResourceErrorHandler.raise_load_error('failed to load widget image', image_path, exc)
         if scale:
             self._image = pygame.transform.smoothscale(self._image, (rect.width, rect.height))
+        self._disabled_image = self._build_disabled_surface(self._image)
         self.auto_restore_pristine = automatic_pristine
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """Handle event."""
+        if self.disabled:
+            return False
         return False
 
     def leave(self) -> None:
@@ -42,4 +45,7 @@ class Image(Widget):
     def draw(self) -> None:
         """Draw."""
         super().draw()
+        if self.disabled:
+            self.surface.blit(self._disabled_image, self.draw_rect)
+            return
         self.surface.blit(self._image, self.draw_rect)

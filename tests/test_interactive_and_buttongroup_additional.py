@@ -45,7 +45,7 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
                 "event": lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs),
                 "graphics_factory": SimpleNamespace(
                     build_interactive_visuals=lambda _style, _text, rect: SimpleNamespace(
-                        idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+                        idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
                     )
                 ),
                 "button_group_mediator": _MediatorStub(),
@@ -54,6 +54,7 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
 
     def test_baseinteractive_leave_only_resets_non_armed(self) -> None:
         widget = BaseInteractive.__new__(BaseInteractive)
+        widget._disabled = False
         widget.state = InteractiveState.Hover
         BaseInteractive.leave(widget)
         self.assertEqual(widget.state, InteractiveState.Idle)
@@ -64,6 +65,7 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
 
     def test_baseinteractive_handle_event_collision_flow(self) -> None:
         widget = BaseInteractive.__new__(BaseInteractive)
+        widget._disabled = False
         widget.state = InteractiveState.Idle
         widget.get_collide = lambda _window: False
 
@@ -85,9 +87,11 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
         widget.surface = _SurfaceSpy()
         widget.draw_rect = Rect(10, 20, 5, 5)
         widget.auto_restore_pristine = False
+        widget._disabled = False
         widget.idle = object()
         widget.hover = object()
         widget.armed = object()
+        widget.disabled_graphic = object()
 
         widget.state = InteractiveState.Idle
         BaseInteractive.draw(widget)

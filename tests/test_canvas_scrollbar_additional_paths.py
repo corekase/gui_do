@@ -36,6 +36,7 @@ class _CanvasSurface:
 class CanvasRoiBatch5Tests(unittest.TestCase):
     def _build_canvas_stub(self) -> Canvas:
         canvas = Canvas.__new__(Canvas)
+        canvas._disabled = False
         canvas.gui = build_mouse_gui_stub(
             mouse_pos=(5, 5),
             extras={"locking_object": None, "mouse_locked": False},
@@ -304,6 +305,7 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
 
     def test_leave_calls_reset_and_buttonup_non_left_falls_through(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._dragging = True
         scrollbar._last_mouse_pos = 3
         scrollbar.state = InteractiveState.Hover
@@ -325,6 +327,7 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
 
     def test_vertical_drag_path_and_graphical_range_vertical(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._hit = False
         scrollbar._dragging = True
         scrollbar._horizontal = Orientation.Vertical

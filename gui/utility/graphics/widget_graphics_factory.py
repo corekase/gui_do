@@ -54,7 +54,13 @@ class WidgetGraphicsFactory:
         """Build idle/hover/armed bitmaps and hit geometry for an interactive control."""
         bitmaps, hit_rect = self.get_styled_bitmaps(style, text, rect)
         idle, hover, armed = bitmaps
-        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=hit_rect)
+        return InteractiveVisuals(
+            idle=idle,
+            hover=hover,
+            armed=armed,
+            disabled=self.build_disabled_bitmap(idle),
+            hit_rect=hit_rect,
+        )
 
     def build_toggle_visuals(
         self,
@@ -77,13 +83,37 @@ class WidgetGraphicsFactory:
             idle=raised_visuals.idle,
             hover=raised_visuals.hover,
             armed=pressed_visuals.armed,
+            disabled=self.build_disabled_bitmap(raised_visuals.idle),
             hit_rect=hit_rect,
         )
 
     def build_frame_visuals(self, rect: Rect) -> InteractiveVisuals:
         """Build frame visuals where hit geometry matches the supplied rect."""
         idle, hover, armed = self.draw_frame_bitmaps(rect)
-        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=rect)
+        return InteractiveVisuals(
+            idle=idle,
+            hover=hover,
+            armed=armed,
+            disabled=self.build_disabled_bitmap(idle),
+            hit_rect=rect,
+        )
+
+    def build_arrow_visuals(self, rect: Rect, direction: float) -> InteractiveVisuals:
+        """Build arrow-box visuals with a disabled bitmap derived from idle."""
+        idle, hover, armed = self.draw_arrow_state_bitmaps(rect, direction)
+        return InteractiveVisuals(
+            idle=idle,
+            hover=hover,
+            armed=armed,
+            disabled=self.build_disabled_bitmap(idle),
+            hit_rect=rect,
+        )
+
+    def build_disabled_bitmap(self, idle_bitmap: Surface) -> Surface:
+        """Return a 75% intensity copy of `idle_bitmap` for disabled widgets."""
+        dimmed = idle_bitmap.copy()
+        dimmed.fill((191, 191, 191, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        return dimmed
 
     def build_window_chrome_visuals(self, gui: "GuiManager", title: str, width: int, titlebar_size: int) -> WindowChromeVisuals:
         """Build titlebar and lower-widget chrome assets for window widgets."""

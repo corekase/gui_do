@@ -17,6 +17,12 @@ class _FakeBitmap:
     def get_rect(self):
         return Rect(self._rect)
 
+    def copy(self):
+        return _FakeBitmap(self._rect.width, self._rect.height)
+
+    def fill(self, *_args, **_kwargs):
+        return None
+
 
 class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_label_init_with_point_and_rect_positioning_paths(self) -> None:
@@ -105,7 +111,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
 
         def build_toggle_visuals(_style, pressed_text, raised_text, _rect):
             calls.extend([pressed_text, raised_text])
-            return SimpleNamespace(idle="idle", hover="hover", armed="armed", hit_rect=Rect(0, 0, 14, 8))
+            return SimpleNamespace(idle="idle", hover="hover", armed="armed", disabled="disabled", hit_rect=Rect(0, 0, 14, 8))
 
         gui = SimpleNamespace(graphics_factory=SimpleNamespace(build_toggle_visuals=build_toggle_visuals))
         toggle = Toggle(gui, "t1", Rect(0, 0, 20, 10), object(), False, "pressed", "raised")
@@ -121,7 +127,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
 
         def build_toggle_visuals(_style, pressed_text, raised_text, _rect):
             calls.extend([pressed_text, raised_text])
-            return SimpleNamespace(idle="i", hover="h", armed="a", hit_rect=Rect(0, 0, 9, 7))
+            return SimpleNamespace(idle="i", hover="h", armed="a", disabled="d", hit_rect=Rect(0, 0, 9, 7))
 
         gui = SimpleNamespace(graphics_factory=SimpleNamespace(build_toggle_visuals=build_toggle_visuals))
         Toggle(gui, "t2", Rect(0, 0, 20, 10), object(), False, "same")
@@ -131,6 +137,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_pushed_property_and_handle_non_hover_branch(self) -> None:
         toggle = Toggle.__new__(Toggle)
         toggle._pushed = False
+        toggle._disabled = False
 
         toggle.pushed = True
         self.assertTrue(toggle.pushed)
@@ -152,6 +159,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
         blits = []
         toggle = Toggle.__new__(Toggle)
         toggle._pushed = True
+        toggle._disabled = False
         toggle.armed = "armed-bitmap"
         toggle.draw_rect = Rect(2, 3, 10, 6)
         toggle.surface = SimpleNamespace(blit=lambda bmp, pos: blits.append((bmp, pos)))
@@ -185,6 +193,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_handle_event_returns_false_when_base_handler_rejects(self) -> None:
         toggle = Toggle.__new__(Toggle)
         toggle._pushed = False
+        toggle._disabled = False
         toggle.state = InteractiveState.Idle
 
         import gui.widgets.toggle as toggle_module
@@ -200,6 +209,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_handle_event_returns_false_for_hover_non_activating_input(self) -> None:
         toggle = Toggle.__new__(Toggle)
         toggle._pushed = False
+        toggle._disabled = False
         toggle.state = InteractiveState.Hover
 
         import gui.widgets.toggle as toggle_module
@@ -215,6 +225,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_handle_event_rejects_non_mouse_events(self) -> None:
         toggle = Toggle.__new__(Toggle)
         toggle._pushed = False
+        toggle._disabled = False
         toggle.state = InteractiveState.Idle
 
         event = pygame.event.Event(KEYDOWN, {"key": 32})

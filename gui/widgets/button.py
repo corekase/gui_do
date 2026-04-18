@@ -21,6 +21,7 @@ class Button(BaseInteractive):
         self.idle = visuals.idle
         self.hover = visuals.hover
         self.armed = visuals.armed
+        self.disabled_graphic = visuals.disabled
         self.hit_rect = visuals.hit_rect
         self.on_activate = on_activate
 

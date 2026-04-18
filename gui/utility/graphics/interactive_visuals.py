@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from pygame import Rect
 from pygame.surface import Surface
@@ -14,3 +15,4 @@ class InteractiveVisuals:
     hover: Surface
     armed: Surface
     hit_rect: Rect
+    disabled: Optional[Surface] = None

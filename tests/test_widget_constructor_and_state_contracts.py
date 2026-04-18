@@ -38,14 +38,21 @@ def build_interactive_gui_stub():
     gui.get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
-    gui.graphics_factory = SimpleNamespace()
+    gui.graphics_factory = SimpleNamespace(
+        build_arrow_visuals=lambda rect, _direction: SimpleNamespace(
+            idle=object(),
+            hover=object(),
+            armed=object(),
+            disabled=object(),
+            hit_rect=Rect(rect),
+        )
+    )
     return gui
 
 
 class WidgetConstructorAndStateContractTests(unittest.TestCase):
     def test_arrowbox_rejects_invalid_repeat_interval(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
 
         with self.assertRaises(GuiError):
             ArrowBox(gui, "a", Rect(0, 0, 10, 10), 0, repeat_activation_ms="bad")  # type: ignore[arg-type]
@@ -54,7 +61,6 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
 
     def test_arrowbox_press_adds_repeat_timer_and_release_clears_it(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         activated = []
 
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: activated.append(True), repeat_activation_ms=50)
@@ -85,7 +91,7 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
     def test_button_state_machine_and_activation_contract(self) -> None:
         gui = build_interactive_gui_stub()
         gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
-            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+            idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
 
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
@@ -122,7 +128,13 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
 
         gui = SimpleNamespace()
         gui.graphics_factory = SimpleNamespace(
-            build_frame_visuals=lambda rect: SimpleNamespace(idle=idle, hover=hover, armed=armed, hit_rect=Rect(rect))
+            build_frame_visuals=lambda rect: SimpleNamespace(
+                idle=idle,
+                hover=hover,
+                armed=armed,
+                disabled=object(),
+                hit_rect=Rect(rect),
+            )
         )
 
         frame = Frame(gui, "frame", Rect(1, 2, 10, 10))

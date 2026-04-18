@@ -54,6 +54,15 @@ class Scrollbar(Frame):
         for arrow in self._registered:
             arrow.position = (arrow.draw_rect.x + delta_x, arrow.draw_rect.y + delta_y)
 
+    @Widget.disabled.setter
+    def disabled(self, value: bool) -> None:
+        """Disabled."""
+        Widget.disabled.fset(self, value)
+        for widget in self._registered:
+            widget.disabled = value
+        if value:
+            self._reset()
+
     def __init__(self, gui: "GuiManager", id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> None:
         """Create Scrollbar."""
         self._registered: List[ArrowBox] = []
@@ -147,6 +156,8 @@ class Scrollbar(Frame):
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle event."""
+        if self.disabled:
+            return False
         if self._hit:
             self._hit = False
             return True
@@ -200,7 +211,10 @@ class Scrollbar(Frame):
     def draw(self) -> None:
         """Draw."""
         super().draw()
-        rect(self.surface, colours['full'], self._handle_area(), 0)
+        handle_colour = colours['full']
+        if self.disabled:
+            handle_colour = tuple(max(0, int(channel * 0.75)) for channel in colours['full'])
+        rect(self.surface, handle_colour, self._handle_area(), 0)
 
     def decrement(self) -> None:
         """Decrement."""

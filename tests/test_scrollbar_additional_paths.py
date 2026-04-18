@@ -13,6 +13,7 @@ from gui.widgets.scrollbar import Scrollbar
 class ScrollbarAdditionalPathTests(unittest.TestCase):
     def _build_scrollbar_stub(self) -> Scrollbar:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar.id = "sb"
         scrollbar.state = InteractiveState.Idle
         scrollbar._style = ArrowPosition.Split
@@ -47,6 +48,35 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         with self.assertRaises(GuiError):
             scrollbar.visible = 1  # type: ignore[assignment]
+
+    def test_disabled_setter_propagates_to_arrows_and_resets_state(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        arrow1 = SimpleNamespace(disabled=False)
+        arrow2 = SimpleNamespace(disabled=False)
+        scrollbar._registered = [arrow1, arrow2]
+        scrollbar._dragging = True
+        scrollbar._last_mouse_pos = 7
+        scrollbar.state = InteractiveState.Hover
+        lock_calls = []
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+        )
+
+        scrollbar.disabled = True
+
+        self.assertTrue(scrollbar.disabled)
+        self.assertTrue(arrow1.disabled)
+        self.assertTrue(arrow2.disabled)
+        self.assertFalse(scrollbar._dragging)
+        self.assertIsNone(scrollbar._last_mouse_pos)
+        self.assertEqual(scrollbar.state, InteractiveState.Idle)
+        self.assertEqual(lock_calls, [(None, None)])
+
+        scrollbar.disabled = False
+        self.assertFalse(scrollbar.disabled)
+        self.assertFalse(arrow1.disabled)
+        self.assertFalse(arrow2.disabled)
 
     def test_set_validates_ranges(self) -> None:
         scrollbar = self._build_scrollbar_stub()

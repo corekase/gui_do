@@ -33,6 +33,7 @@ class GraphicsFactorySpy:
 class CanvasContractTests(unittest.TestCase):
     def _build_canvas(self) -> Canvas:
         canvas = Canvas.__new__(Canvas)
+        canvas._disabled = False
         canvas._events = deque([], maxlen=4)
         canvas.queued_event = False
         canvas.CEvent = None
@@ -177,6 +178,7 @@ class ButtonGroupContractTests(unittest.TestCase):
 class ScrollbarConversionHelperTests(unittest.TestCase):
     def test_graphical_range_respects_orientation(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._graphic_rect = Rect(0, 0, 40, 10)
 
         scrollbar._horizontal = Orientation.Horizontal
@@ -187,6 +189,7 @@ class ScrollbarConversionHelperTests(unittest.TestCase):
 
     def test_graphical_to_total_handles_zero_graphical_range(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._graphic_rect = Rect(0, 0, 0, 10)
         scrollbar._horizontal = Orientation.Horizontal
         scrollbar._total_range = 100
@@ -195,6 +198,7 @@ class ScrollbarConversionHelperTests(unittest.TestCase):
 
     def test_total_to_graphical_handles_non_positive_total_range(self) -> None:
         scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
         scrollbar._graphic_rect = Rect(0, 0, 20, 6)
         scrollbar._horizontal = Orientation.Horizontal
         scrollbar._total_range = 0

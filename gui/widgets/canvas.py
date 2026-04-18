@@ -143,6 +143,8 @@ class Canvas(Widget):
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Queue supported events while focused and signal activation on enqueue."""
+        if self.disabled:
+            return False
         if event.type not in (MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
         locked_owner = (self.gui.locking_object is self) and self.gui.mouse_locked
@@ -201,6 +203,8 @@ class Canvas(Widget):
     def draw(self) -> None:
         """Blit canvas contents into the owning GUI surface."""
         self.surface.blit(self.canvas, self.draw_rect)
+        if self.disabled:
+            self._blit_disabled_overlay()
         if self.auto_restore_pristine:
             self.restore_pristine()
 
