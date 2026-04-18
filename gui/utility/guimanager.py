@@ -12,6 +12,7 @@ from .event_dispatcher import EventDispatcher
 from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
+from .object_registry import GuiObjectRegistry
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .widget import Widget
@@ -363,7 +364,8 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
-        self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self._is_registered_button_group)
+        self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
+        self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self._label_sequence: int = 0
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
@@ -535,62 +537,7 @@ class GuiManager:
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Register a window or widget and attach container-specific state."""
-        if gui_object is None:
-            raise GuiError('gui_object cannot be None')
-        if not isinstance(gui_object, (gWindow, Widget)):
-            raise GuiError('gui_object must be a Window or Widget instance')
-        if self._is_registered_object(gui_object):
-            raise GuiError(f'gui_object is already registered: {self._describe_gui_object(gui_object)}')
-        if isinstance(gui_object, gWindow):
-            if self._task_panel_capture and self.task_panel is not None:
-                raise GuiError('window nesting inside task panel is not supported; call end_task_panel() before creating a window')
-            self.windows.append(gui_object)
-            self._active_object = gui_object
-        elif isinstance(gui_object, Widget):
-            if not isinstance(gui_object.id, str) or gui_object.id == '':
-                raise GuiError('widget id must be a non-empty string')
-            conflict = self._find_widget_id_conflict(gui_object.id, gui_object)
-            if conflict is not None:
-                raise GuiError(
-                    f'duplicate widget id: {gui_object.id}; '
-                    f'incoming={self._describe_gui_object(gui_object)} '
-                    f'on {self._describe_incoming_widget_container()}; '
-                    f'conflict={self._describe_gui_object(conflict)} '
-                    f'on {self._describe_widget_container(conflict)}'
-                )
-            active_window = self._resolve_active_object()
-            added_to_task_panel = False
-            if self._task_panel_capture and self.task_panel is not None:
-                gui_object.window = cast(Any, self.task_panel)
-                gui_object.surface = self.task_panel.surface
-                self.task_panel.widgets.append(gui_object)
-                added_to_task_panel = True
-            elif active_window is not None:
-                gui_object.window = active_window
-                gui_object.surface = active_window.surface
-                active_window.widgets.append(gui_object)
-            else:
-                gui_object.window = None
-                gui_object.surface = self.surface
-                self.widgets.append(gui_object)
-            # Roll back partial registration when post-add hooks fail.
-            post_add = getattr(gui_object, '_on_added_to_gui', None)
-            if callable(post_add):
-                try:
-                    post_add()
-                except Exception:
-                    if added_to_task_panel and self.task_panel is not None and gui_object in self.task_panel.widgets:
-                        self.task_panel.widgets.remove(gui_object)
-                    elif active_window is not None:
-                        if gui_object in active_window.widgets:
-                            active_window.widgets.remove(gui_object)
-                    else:
-                        if gui_object in self.widgets:
-                            self.widgets.remove(gui_object)
-                    gui_object.window = None
-                    gui_object.surface = None
-                    raise
-        return gui_object
+        return self.object_registry.register(gui_object)
 
     def clear_button_groups(self) -> None:
         self.button_group_mediator.clear()
@@ -880,68 +827,22 @@ class GuiManager:
         return type(gui_object).__name__
 
     def _describe_incoming_widget_container(self) -> str:
-        if self._task_panel_capture and self.task_panel is not None:
-            return 'task_panel'
-        window = self._resolve_active_object()
-        if window is None:
-            return 'screen'
-        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+        return self.object_registry.describe_incoming_widget_container()
 
     def _describe_widget_container(self, widget: Widget) -> str:
-        if self.task_panel is not None and widget in self.task_panel.widgets:
-            return 'task_panel'
-        window = getattr(widget, 'window', None)
-        if window is None or not isinstance(window, gWindow):
-            return 'screen'
-        return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
+        return self.object_registry.describe_widget_container(widget)
 
     def _find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
-        for widget in self.widgets:
-            if widget is not candidate and widget.id == widget_id:
-                return widget
-        if self.task_panel is not None:
-            for widget in self.task_panel.widgets:
-                if widget is not candidate and widget.id == widget_id:
-                    return widget
-        for window in self.windows:
-            for widget in window.widgets:
-                if widget is not candidate and widget.id == widget_id:
-                    return widget
-        return None
+        return self.object_registry.find_widget_id_conflict(widget_id, candidate)
 
     def _is_registered_button_group(self, button: gButtonGroup) -> bool:
-        # Construction registers group membership before final GUI attachment.
-        if button.surface is None:
-            return True
-        if button in self.widgets:
-            return True
-        if self.task_panel is not None and button in self.task_panel.widgets:
-            return True
-        for window in self.windows:
-            if button in window.widgets:
-                return True
-        return False
+        return self.object_registry.is_registered_button_group(button)
 
     def _is_registered_object(self, gui_object: TGuiObject) -> bool:
-        if isinstance(gui_object, gWindow):
-            return gui_object in self.windows
-        if isinstance(gui_object, Widget):
-            if gui_object in self.widgets:
-                return True
-            if self.task_panel is not None and gui_object in self.task_panel.widgets:
-                return True
-            for window in self.windows:
-                if gui_object in window.widgets:
-                    return True
-        return False
+        return self.object_registry.is_registered_object(gui_object)
 
     def _resolve_active_object(self) -> Optional[gWindow]:
-        if self._active_object is None:
-            return None
-        if self._active_object not in self.windows:
-            self._active_object = None
-            return None
-        return self._active_object
+        return self.object_registry.resolve_active_object()
 
     def _resolve_current_widget(self) -> Optional[Widget]:
         if self._current_widget is None:

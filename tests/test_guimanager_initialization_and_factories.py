@@ -5,6 +5,7 @@ from unittest.mock import patch
 from pygame import Rect
 
 from gui.utility.constants import ArrowPosition, ButtonStyle, GuiError, Orientation
+from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
 from gui.utility import guimanager as gm
 
@@ -213,6 +214,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.task_panel = None
         gui._active_object = None
         gui._task_panel_capture = False
+        gui.object_registry = GuiObjectRegistry(gui)
 
         # Incoming container description switches across task panel, screen, and window.
         self.assertEqual(gm.GuiManager._describe_incoming_widget_container(gui), "screen")
@@ -233,7 +235,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui.task_panel.widgets = []
         win = SimpleNamespace(x=1, y=2, width=3, height=4)
         widget.window = win
-        with patch("gui.utility.guimanager.gWindow", SimpleNamespace):
+        with patch("gui.utility.object_registry.gWindow", SimpleNamespace):
             self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "window pos=(1,2) size=(3,4)")
         widget.window = object()
         self.assertEqual(gm.GuiManager._describe_widget_container(gui, widget), "screen")

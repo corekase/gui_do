@@ -2,6 +2,7 @@ import unittest
 
 from gui.utility.constants import Event
 from gui.utility.guimanager import GuiManager
+from gui.utility.object_registry import GuiObjectRegistry
 from gui.widgets.window import Window
 
 
@@ -29,6 +30,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         gui._task_owner_by_id = {}
         gui.screen_events = []
         gui._screen_event_handler = lambda event: gui.screen_events.append(event)
+        gui.object_registry = GuiObjectRegistry(gui)
         return gui
 
     def _build_window_stub(self):

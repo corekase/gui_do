@@ -8,6 +8,7 @@ from gui.utility.constants import GuiError
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -47,6 +48,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.object_registry = GuiObjectRegistry(gui)
         return gui
 
     def test_module_noop_helpers_are_callable(self) -> None:
@@ -265,11 +267,11 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         duplicate.id = "dup"
         duplicate.window = None
         duplicate.surface = None
-        gui._is_registered_object = lambda obj: obj is duplicate
+        gui.object_registry.is_registered_object = lambda obj: obj is duplicate
         with self.assertRaises(GuiError):
             GuiManager.add(gui, duplicate)
 
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
         bad_id = Widget.__new__(Widget)
         bad_id.id = ""
         bad_id.window = None
@@ -534,7 +536,8 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
     def test_registered_button_group_true_paths(self) -> None:
         gui = self._build_manager_stub()
-        button = SimpleNamespace(surface=object())
+        button = Widget.__new__(Widget)
+        button.surface = object()
 
         gui.widgets = [button]
         self.assertTrue(GuiManager._is_registered_button_group(gui, button))

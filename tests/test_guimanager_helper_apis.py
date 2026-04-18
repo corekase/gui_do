@@ -7,6 +7,7 @@ from gui.utility.constants import GuiError
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
 
 
@@ -22,6 +23,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.object_registry = GuiObjectRegistry(gui)
         return gui
 
     def _build_widget_stub(self, visible=True):

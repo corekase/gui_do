@@ -7,6 +7,7 @@ from gui.utility.constants import Event
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -24,6 +25,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.object_registry = GuiObjectRegistry(gui)
         return gui
 
     def test_dispatch_event_task_panel_hidden_falls_back_to_screen(self) -> None:
