@@ -150,19 +150,17 @@ All of these both create and register the widget:
 - `gui.Toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.Window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
-Task panel behavior is configured at `GuiManager(...)` construction time and is manager-owned (not a separate widget factory). Use:
+Task panel behavior is manager-owned (not a separate widget factory).
+
+Constructor takes one task panel switch:
 
 - `task_panel_enabled=True`
-- `task_panel_height=38`
-- `task_panel_x=0`
-- `task_panel_reveal_pixels=4`
-- `task_panel_auto_hide=True`
-- `task_panel_timer_interval=16.0`
-- `task_panel_movement_step=4`
-- `task_panel_backdrop=None`
-- `task_panel_preamble=None`
-- `task_panel_event_handler=None`
-- `task_panel_postamble=None`
+
+When enabled, optional customization is done through:
+
+- `gui.configure_task_panel(height=38, x=0, reveal_pixels=4, auto_hide=True, timer_interval=16.0, movement_step=4, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+
+You can call `configure_task_panel(...)` with any subset of keyword arguments to override defaults.
 
 To parent newly created widgets into the task panel container, bracket creation with:
 

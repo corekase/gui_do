@@ -91,6 +91,7 @@ class _ManagedTaskPanel:
         self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
         self._event_handler: Callable[[BaseEvent], None] = event_handler if callable(event_handler) else _noop_event
         self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
+        self.backdrop: Optional[str] = backdrop
         if backdrop is None:
             frame = gFrame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.height))
             frame.state = InteractiveState.Idle
@@ -100,6 +101,9 @@ class _ManagedTaskPanel:
         else:
             gui.set_pristine(backdrop, self)
         gui.timers.add_timer(self._timer_id, self.timer_interval, self.animate)
+
+    def dispose(self) -> None:
+        self.gui.timers.remove_timer(self._timer_id)
 
     def run_preamble(self) -> None:
         self._preamble()
@@ -291,16 +295,6 @@ class GuiManager:
         fonts: List[Tuple[str, str, int]],
         bitmap_factory: Optional[BitmapFactory] = None,
         task_panel_enabled: bool = True,
-        task_panel_height: int = 38,
-        task_panel_x: int = 0,
-        task_panel_reveal_pixels: int = 4,
-        task_panel_auto_hide: bool = True,
-        task_panel_timer_interval: float = 16.0,
-        task_panel_movement_step: int = 4,
-        task_panel_backdrop: Optional[str] = None,
-        task_panel_preamble: Optional[Callable[[], None]] = None,
-        task_panel_event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        task_panel_postamble: Optional[Callable[[], None]] = None,
     ) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -364,19 +358,51 @@ class GuiManager:
         if not isinstance(task_panel_enabled, bool):
             raise GuiError('task_panel_enabled must be a bool')
         if task_panel_enabled:
-            self.task_panel = _ManagedTaskPanel(
-                self,
-                task_panel_height,
-                task_panel_x,
-                task_panel_reveal_pixels,
-                task_panel_auto_hide,
-                task_panel_timer_interval,
-                task_panel_movement_step,
-                task_panel_backdrop,
-                task_panel_preamble,
-                task_panel_event_handler,
-                task_panel_postamble,
-            )
+            self.configure_task_panel()
+
+    def configure_task_panel(
+        self,
+        *,
+        height: int = 38,
+        x: int = 0,
+        reveal_pixels: int = 4,
+        auto_hide: bool = True,
+        timer_interval: float = 16.0,
+        movement_step: int = 4,
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
+        old_panel = self.task_panel
+        existing_widgets: List[Widget] = []
+        existing_visible = True
+        if old_panel is not None:
+            existing_widgets = list(old_panel.widgets)
+            existing_visible = old_panel.visible
+            old_panel.dispose()
+        panel = _ManagedTaskPanel(
+            self,
+            height,
+            x,
+            reveal_pixels,
+            auto_hide,
+            timer_interval,
+            movement_step,
+            backdrop,
+            preamble,
+            event_handler,
+            postamble,
+        )
+        if existing_widgets:
+            panel.widgets = existing_widgets
+            for widget in panel.widgets:
+                widget.surface = panel.surface
+        if old_panel is not None:
+            panel.set_visible(existing_visible)
+            if not existing_visible:
+                self._task_panel_capture = False
+        self.task_panel = panel
 
     def run_postamble(self) -> None:
         for window in self.windows:

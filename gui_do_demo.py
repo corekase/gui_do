@@ -38,7 +38,8 @@ class Demo:
         # begin gui1
         # -----------------------
         # create a gui manager
-        g1 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui1_panel_event_handler)
+        g1 = GuiManager(self.screen, fonts)
+        g1.configure_task_panel(event_handler=self.gui1_panel_event_handler)
         g1.set_screen_lifecycle(
             preamble=self.gui1_screen_preamble,
             event_handler=self.gui1_panel_event_handler,
@@ -234,7 +235,8 @@ class Demo:
         # -----------------------
         # begin gui2
         # -----------------------
-        g2 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui2_panel_event_handler)
+        g2 = GuiManager(self.screen, fonts)
+        g2.configure_task_panel(event_handler=self.gui2_panel_event_handler)
         g2.set_screen_lifecycle(
             preamble=self.gui2_screen_preamble,
             event_handler=self.gui2_panel_event_handler
