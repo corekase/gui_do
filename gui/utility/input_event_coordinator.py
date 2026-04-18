@@ -19,7 +19,7 @@ class InputEventCoordinator:
         return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable["GuiEvent"]:
-        for raw_event in self.gui._event_getter():
+        for raw_event in self.gui.input_providers.event_getter():
             event = self.gui.handle_event(raw_event)
             if event.type == Event.Pass:
                 continue

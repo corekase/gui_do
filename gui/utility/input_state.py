@@ -53,7 +53,7 @@ class LockStateController:
         if not self.gui._is_registered_object(locking_object):
             raise GuiError('locking_object must be a registered widget')
         if point is None:
-            point = self.gui._mouse_get_pos()
+            point = self.gui.input_providers.mouse_get_pos()
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
         self.gui.locking_object = locking_object

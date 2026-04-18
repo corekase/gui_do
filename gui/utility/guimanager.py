@@ -16,6 +16,7 @@ from .focus_state_model import FocusState
 from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_event_coordinator import InputEventCoordinator
+from .input_providers import InputProviders
 from .input_state import DragStateController, LockStateController
 from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
@@ -156,18 +157,24 @@ class GuiManager:
             if not isinstance(size, int) or size <= 0:
                 raise GuiError(f'font size must be a positive integer, got: {size}')
         self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
-        self._event_getter: Callable[[], Iterable[PygameEvent]] = event_getter or pygame.event.get
-        self._mouse_get_pos: Callable[[], Tuple[int, int]] = mouse_get_pos or pygame.mouse.get_pos
-        self._mouse_set_pos: Callable[[Tuple[int, int]], None] = mouse_set_pos or pygame.mouse.set_pos
-        self._mouse_set_visible: Callable[[bool], None] = mouse_set_visible or pygame.mouse.set_visible
-        if not callable(self._event_getter):
+        resolved_event_getter = event_getter or pygame.event.get
+        resolved_mouse_get_pos = mouse_get_pos or pygame.mouse.get_pos
+        resolved_mouse_set_pos = mouse_set_pos or pygame.mouse.set_pos
+        resolved_mouse_set_visible = mouse_set_visible or pygame.mouse.set_visible
+        if not callable(resolved_event_getter):
             raise GuiError('event_getter must be callable')
-        if not callable(self._mouse_get_pos):
+        if not callable(resolved_mouse_get_pos):
             raise GuiError('mouse_get_pos must be callable')
-        if not callable(self._mouse_set_pos):
+        if not callable(resolved_mouse_set_pos):
             raise GuiError('mouse_set_pos must be callable')
-        if not callable(self._mouse_set_visible):
+        if not callable(resolved_mouse_set_visible):
             raise GuiError('mouse_set_visible must be callable')
+        self.input_providers: InputProviders = InputProviders(
+            resolved_event_getter,
+            resolved_mouse_get_pos,
+            resolved_mouse_set_pos,
+            resolved_mouse_set_visible,
+        )
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.focus_state: FocusStateController = FocusStateController(self)
@@ -175,7 +182,7 @@ class GuiManager:
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
-        self._mouse_set_visible(False)
+        self.input_providers.mouse_set_visible(False)
         for name, filename, size in fonts:
             self._bitmap_factory.load_font(name, filename, size)
         self.surface: Surface = surface
@@ -185,7 +192,7 @@ class GuiManager:
         self.dragging: bool = False
         self.dragging_window: Optional[gWindow] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
-        self.mouse_pos: Tuple[int, int] = self._mouse_get_pos()
+        self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
         self.mouse_locked: bool = False
         self.mouse_point_locked: bool = False
         self.lock_area_rect: Optional[Rect] = None
@@ -397,7 +404,7 @@ class GuiManager:
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
         try:
-            self._mouse_set_pos(pos)
+            self.input_providers.mouse_set_pos(pos)
         except Exception as exc:
             _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 

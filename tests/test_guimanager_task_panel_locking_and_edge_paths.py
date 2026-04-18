@@ -327,7 +327,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
         gui._is_registered_object = lambda obj: obj is widget
-        gui._mouse_get_pos = lambda: (12, 13)
+        gui.input_providers.mouse_get_pos = lambda: (12, 13)
 
         GuiManager.set_lock_point(gui, widget)
         self.assertEqual(gui.lock_point_pos, (12, 13))

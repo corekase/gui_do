@@ -44,7 +44,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
 
     def test_events_filters_pass_and_yields_non_pass(self) -> None:
         gui = self._build_manager_stub()
-        gui._event_getter = lambda: ["a", "b", "c"]
+        gui.input_providers.event_getter = lambda: ["a", "b", "c"]
         mapped = {
             "a": SimpleNamespace(type=Event.Pass),
             "b": SimpleNamespace(type=Event.Widget, marker="kept"),
@@ -73,7 +73,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         def _boom(_pos):
             raise RuntimeError("mouse failure")
 
-        gui._mouse_set_pos = _boom
+        gui.input_providers.mouse_set_pos = _boom
 
         # Should not raise.
         GuiManager._set_physical_mouse_pos(gui, (1, 2))

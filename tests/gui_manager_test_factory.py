@@ -10,6 +10,7 @@ from gui.utility.focus_state_model import FocusState
 from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_event_coordinator import InputEventCoordinator
+from gui.utility.input_providers import InputProviders
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.layout_coordinator import LayoutCoordinator
@@ -105,9 +106,12 @@ def build_gui_manager_stub(
 
     gui.screen_lifecycle = ScreenLifecycle()
 
-    gui._event_getter = lambda: []
-    gui._mouse_get_pos = lambda: (0, 0)
-    gui._mouse_set_pos = lambda _pos: None
+    gui.input_providers = InputProviders(
+        lambda: [],
+        lambda: (0, 0),
+        lambda _pos: None,
+        lambda _visible: None,
+    )
 
     gui.input_emitter = InputEventEmitter(gui)
     gui.drag_state = DragStateController(gui)

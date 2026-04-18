@@ -96,7 +96,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui = build_gui_manager_stub()
         lock_widget = Widget.__new__(Widget)
         gui._is_registered_object = lambda obj: obj is lock_widget
-        gui._mouse_get_pos = lambda: (12, 13)
+        gui.input_providers.mouse_get_pos = lambda: (12, 13)
 
         GuiManager.set_lock_point(gui, lock_widget)
 
