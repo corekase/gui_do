@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pygame numpy coverage
+          python -m pip install pygame numpy coverage
 
       - name: Run unit tests with coverage
         run: python -m coverage run --rcfile=.coveragerc -m unittest discover -s tests -v
