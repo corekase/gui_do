@@ -167,7 +167,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         scrollbar._inc_degree = 0
         scrollbar._dec_degree = 180
-        scrollbar.gui = SimpleNamespace(ArrowBox=build_arrow, widgets=[], windows=[])
+        scrollbar.gui = SimpleNamespace(arrow_box=build_arrow, widgets=[], windows=[])
 
         scrollbar._on_added_to_gui()
 
@@ -199,7 +199,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         scrollbar._registered = _FailingRegistry()
 
-        scrollbar.gui = SimpleNamespace(ArrowBox=build_arrow, widgets=widgets, windows=[window])
+        scrollbar.gui = SimpleNamespace(arrow_box=build_arrow, widgets=widgets, windows=[window])
 
         with self.assertRaises(RuntimeError):
             scrollbar._on_added_to_gui()

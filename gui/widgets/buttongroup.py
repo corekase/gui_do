@@ -37,8 +37,11 @@ class ButtonGroup(BaseInteractive):
             raise GuiError('button group name must be a non-empty string')
         super().__init__(gui, id, rect)
         self.group: str = group
-        (self.idle, self.hover, self.armed), self.hit_rect = \
-            self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
+        visuals = self.gui.graphics_factory.build_interactive_visuals(style, text, rect)
+        self.idle = visuals.idle
+        self.hover = visuals.hover
+        self.armed = visuals.armed
+        self.hit_rect = visuals.hit_rect
         self.gui.button_group_mediator.register(group, self)
         if self.gui.button_group_mediator.get_selection(group) is self:
             self.select()

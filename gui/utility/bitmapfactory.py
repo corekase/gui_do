@@ -24,7 +24,22 @@ class CursorAsset:
     source_path: str
 
 
-class BitmapFactory:
+@dataclass(frozen=True)
+class InteractiveVisuals:
+    idle: Surface
+    hover: Surface
+    armed: Surface
+    hit_rect: Rect
+
+
+@dataclass(frozen=True)
+class WindowChromeVisuals:
+    title_bar_inactive: Surface
+    title_bar_active: Surface
+    lower_widget: Surface
+
+
+class WidgetGraphicsFactory:
     _cursor_cache: Dict[str, CursorAsset] = {}
     _data_root: str = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 
@@ -38,9 +53,48 @@ class BitmapFactory:
         return self._current_font_name
 
     def get_cursor(self, name: str) -> CursorAsset:
-        if name not in BitmapFactory._cursor_cache:
+        if name not in WidgetGraphicsFactory._cursor_cache:
             raise GuiError(f'unknown cursor "{name}"')
-        return BitmapFactory._cursor_cache[name]
+        return WidgetGraphicsFactory._cursor_cache[name]
+
+    def build_interactive_visuals(self, style: ButtonStyle, text: Optional[str], rect: Rect) -> InteractiveVisuals:
+        bitmaps, hit_rect = self.get_styled_bitmaps(style, text, rect)
+        idle, hover, armed = bitmaps
+        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=hit_rect)
+
+    def build_toggle_visuals(
+        self,
+        style: ButtonStyle,
+        pressed_text: str,
+        raised_text: Optional[str],
+        rect: Rect,
+    ) -> InteractiveVisuals:
+        if raised_text is None:
+            raised_text = pressed_text
+        pressed_visuals = self.build_interactive_visuals(style, pressed_text, rect)
+        raised_visuals = self.build_interactive_visuals(style, raised_text, rect)
+        hit_rect = raised_visuals.hit_rect
+        if pressed_visuals.hit_rect.width > hit_rect.width:
+            hit_rect = pressed_visuals.hit_rect
+        return InteractiveVisuals(
+            idle=raised_visuals.idle,
+            hover=raised_visuals.hover,
+            armed=pressed_visuals.armed,
+            hit_rect=hit_rect,
+        )
+
+    def build_frame_visuals(self, rect: Rect) -> InteractiveVisuals:
+        idle, hover, armed = self.draw_frame_bitmaps(rect)
+        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, hit_rect=rect)
+
+    def build_window_chrome_visuals(self, gui: "GuiManager", title: str, width: int, titlebar_size: int) -> WindowChromeVisuals:
+        inactive, active = self.draw_window_title_bar_bitmaps(gui, title, width, titlebar_size)
+        lower = self.draw_window_lower_widget_bitmap(titlebar_size - 2, colours['full'], colours['medium'])
+        return WindowChromeVisuals(
+            title_bar_inactive=inactive,
+            title_bar_active=active,
+            lower_widget=lower,
+        )
 
     def get_styled_bitmaps(self, style: ButtonStyle, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
         if style == ButtonStyle.Box:
@@ -243,7 +297,7 @@ class BitmapFactory:
                 hotspot=hotspot,
                 source_path=cursor_path,
             )
-            BitmapFactory._cursor_cache[name] = asset
+            WidgetGraphicsFactory._cursor_cache[name] = asset
             return asset
         except GuiError:
             raise

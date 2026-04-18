@@ -88,7 +88,7 @@ class PointerCoordinator:
         if not isinstance(name, str) or name == '':
             raise GuiError('cursor name must be a non-empty string')
         anchor = self._resolve_cursor_anchor()
-        cursor_asset = self.gui.bitmap_factory.get_cursor(name)
+        cursor_asset = self.gui.graphics_factory.get_cursor(name)
         self.gui.cursor_image = cursor_asset.image
         self.gui.cursor_hotspot = cursor_asset.hotspot
         self.gui.cursor_rect = self.gui.cursor_image.get_rect()

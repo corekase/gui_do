@@ -1,4 +1,4 @@
-# gui_do
+﻿# gui_do
 
 [![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
 
@@ -340,9 +340,9 @@ The demo uses this mode on the Life canvas while right-dragging.
 
 ## Load and select custom cursors
 
-Cursor images are loaded through `BitmapFactory` and selected by name in `GuiManager`.
+Cursor images are loaded through `WidgetGraphicsFactory` and selected by name in `GuiManager`.
 
-- `gui.bitmap_factory.register_cursor(name=..., filename=..., hotspot=(x, y))`
+- `gui.graphics_factory.register_cursor(name=..., filename=..., hotspot=(x, y))`
 - `gui.set_cursor(cursor_name)`
 
 Notes:
@@ -350,13 +350,13 @@ Notes:
 - `hotspot` is a tuple `(x, y)` inside the cursor image.
 - `cursor_name` is the logical ID you use later with `set_cursor`.
 - `filename` is the file inside `data/cursors/`.
-- Cursors are shared between bitmap factories and therefore also gui managers.  Any cursor loaded in any gui manager can be set in any other gui manager as long as it has been loaded somewhere at least once.
+- Cursors are shared between graphics factories and therefore also gui managers. Any cursor loaded in any gui manager can be set in any other gui manager as long as it has been loaded somewhere at least once.
 
 Example:
 
 ```python
-gui.bitmap_factory.register_cursor(name="normal", filename="cursor.png", hotspot=(1, 1))
-gui.bitmap_factory.register_cursor(name="hand", filename="hand.png", hotspot=(12, 12))
+gui.graphics_factory.register_cursor(name="normal", filename="cursor.png", hotspot=(1, 1))
+gui.graphics_factory.register_cursor(name="hand", filename="hand.png", hotspot=(12, 12))
 
 gui.set_cursor("normal")
 # ... later during drag state

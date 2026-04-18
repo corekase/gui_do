@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -30,7 +30,7 @@ class _CopySurface:
 
 class WindowAdditionalPathTests(unittest.TestCase):
     def test_constructor_validates_title_position_and_size(self) -> None:
-        gui = SimpleNamespace(bitmap_factory=SimpleNamespace(get_titlebar_height=lambda: 10))
+        gui = SimpleNamespace(graphics_factory=SimpleNamespace(get_titlebar_height=lambda: 10))
 
         with self.assertRaises(GuiError):
             Window(gui, "", (0, 0), (10, 10))
@@ -58,10 +58,13 @@ class WindowAdditionalPathTests(unittest.TestCase):
         lower = _FakeSurface((8, 8))
 
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(
+        gui.graphics_factory = SimpleNamespace(
             get_titlebar_height=lambda: 12,
-            draw_window_title_bar_bitmaps=lambda *_args: (title_inactive, title_active),
-            draw_window_lower_widget_bitmap=lambda *_args: lower,
+            build_window_chrome_visuals=lambda *_args: SimpleNamespace(
+                title_bar_inactive=title_inactive,
+                title_bar_active=title_active,
+                lower_widget=lower,
+            ),
         )
         gui.copy_graphic_area = lambda *_args, **_kwargs: _CopySurface()
         gui.set_pristine = lambda *_args, **_kwargs: None
@@ -82,10 +85,13 @@ class WindowAdditionalPathTests(unittest.TestCase):
         surface_obj = _FakeSurface((50, 25))
 
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(
+        gui.graphics_factory = SimpleNamespace(
             get_titlebar_height=lambda: 10,
-            draw_window_title_bar_bitmaps=lambda *_args: (_FakeSurface((50, 10)), _FakeSurface((50, 10))),
-            draw_window_lower_widget_bitmap=lambda *_args: _FakeSurface((8, 8)),
+            build_window_chrome_visuals=lambda *_args: SimpleNamespace(
+                title_bar_inactive=_FakeSurface((50, 10)),
+                title_bar_active=_FakeSurface((50, 10)),
+                lower_widget=_FakeSurface((8, 8)),
+            ),
         )
         gui.copy_graphic_area = lambda *_args, **_kwargs: _CopySurface()
         gui.set_pristine = lambda backdrop, target: set_pristine_calls.append((backdrop, target))
@@ -100,11 +106,19 @@ class WindowAdditionalPathTests(unittest.TestCase):
     def test_constructor_normalizes_non_callable_lifecycle_handlers(self) -> None:
         surface_obj = _FakeSurface((30, 20))
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(
+        gui.graphics_factory = SimpleNamespace(
             get_titlebar_height=lambda: 10,
-            draw_frame_bitmaps=lambda _rect: (_FakeSurface((30, 20)), _FakeSurface((30, 20)), _FakeSurface((30, 20))),
-            draw_window_title_bar_bitmaps=lambda *_args: (_FakeSurface((30, 10)), _FakeSurface((30, 10))),
-            draw_window_lower_widget_bitmap=lambda *_args: _FakeSurface((8, 8)),
+            build_frame_visuals=lambda _rect: SimpleNamespace(
+                idle=_FakeSurface((30, 20)),
+                hover=_FakeSurface((30, 20)),
+                armed=_FakeSurface((30, 20)),
+                hit_rect=Rect(0, 0, 30, 20),
+            ),
+            build_window_chrome_visuals=lambda *_args: SimpleNamespace(
+                title_bar_inactive=_FakeSurface((30, 10)),
+                title_bar_active=_FakeSurface((30, 10)),
+                lower_widget=_FakeSurface((8, 8)),
+            ),
         )
         gui.copy_graphic_area = lambda *_args, **_kwargs: _CopySurface()
         gui.set_pristine = lambda *_args, **_kwargs: None

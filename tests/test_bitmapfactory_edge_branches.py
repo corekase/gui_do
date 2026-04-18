@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError
 
 
@@ -30,9 +30,9 @@ class _FakeFontBoom:
         raise RuntimeError("render boom")
 
 
-class BitmapFactoryRoiBatch7Tests(unittest.TestCase):
+class WidgetGraphicsFactoryRoiBatch7Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_set_last_font_noop_when_previous_missing(self) -> None:
         self.factory._font = object()

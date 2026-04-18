@@ -8,7 +8,7 @@ from gui.utility.guimanager import GuiManager
 from gui.utility.scheduler import TaskKind
 
 
-class BitmapFactoryStub:
+class GraphicsFactoryStub:
     def load_font(self, _name: str, _filename: str, _size: int) -> None:
         return None
 
@@ -38,7 +38,7 @@ class IntegrationGuiManagerPipelineTests(unittest.TestCase):
         gui = GuiManager(
             surface=pygame.Surface((80, 60)),
             fonts=[("normal", "unused.ttf", 12)],
-            bitmap_factory=BitmapFactoryStub(),
+            graphics_factory=GraphicsFactoryStub(),
             task_panel_enabled=False,
             event_getter=event_getter,
             mouse_get_pos=mouse_get_pos,

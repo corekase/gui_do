@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError, colours
 
 
@@ -26,9 +26,9 @@ class _FakeSurface:
         self.blit_calls.append((bitmap, pos))
 
 
-class BitmapFactoryAdditionalPathTests(unittest.TestCase):
+class WidgetGraphicsFactoryAdditionalPathTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_draw_frame_bitmaps_builds_idle_hover_armed(self) -> None:
         states = []

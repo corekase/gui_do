@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from collections import deque
 from types import SimpleNamespace
 
@@ -12,7 +12,7 @@ from gui.widgets.label import Label
 from gui.widgets.scrollbar import Scrollbar
 
 
-class BitmapFactorySpy:
+class GraphicsFactorySpy:
     def __init__(self) -> None:
         self.calls = []
 
@@ -117,24 +117,24 @@ class CanvasContractTests(unittest.TestCase):
 class LabelContractTests(unittest.TestCase):
     def test_render_uses_shadow_colour_when_enabled(self) -> None:
         label = Label.__new__(Label)
-        label.gui = SimpleNamespace(bitmap_factory=BitmapFactorySpy())
+        label.gui = SimpleNamespace(graphics_factory=GraphicsFactorySpy())
         label.shadow = True
 
         Label._render(label, "hello")
 
-        self.assertEqual(label.gui.bitmap_factory.calls[-1][0], "render_text")
-        self.assertEqual(label.gui.bitmap_factory.calls[-1][1], "hello")
-        self.assertEqual(label.gui.bitmap_factory.calls[-1][3], True)
+        self.assertEqual(label.gui.graphics_factory.calls[-1][0], "render_text")
+        self.assertEqual(label.gui.graphics_factory.calls[-1][1], "hello")
+        self.assertEqual(label.gui.graphics_factory.calls[-1][3], True)
 
     def test_set_label_restores_previous_font_when_font_captured(self) -> None:
         label = Label.__new__(Label)
-        label.gui = SimpleNamespace(bitmap_factory=BitmapFactorySpy())
+        label.gui = SimpleNamespace(graphics_factory=GraphicsFactorySpy())
         label.shadow = False
         label._font = "main"
 
         Label.set_label(label, "updated")
 
-        calls = label.gui.bitmap_factory.calls
+        calls = label.gui.graphics_factory.calls
         self.assertEqual(calls[0], ("set_font", "main"))
         self.assertEqual(calls[1][0], "render_text")
         self.assertEqual(calls[2], ("set_last_font", None))

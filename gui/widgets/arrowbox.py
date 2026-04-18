@@ -18,7 +18,7 @@ class ArrowBox(BaseInteractive):
             raise GuiError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
         if repeat_activation_ms <= 0:
             raise GuiError(f'repeat_activation_ms must be > 0, got: {repeat_activation_ms}')
-        self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_arrow_state_bitmaps(rect, direction)
+        self.idle, self.hover, self.armed = self.gui.graphics_factory.draw_arrow_state_bitmaps(rect, direction)
         self.on_activate = on_activate
         self.repeat_activation_ms: int = repeat_activation_ms
         self._timer_id: Optional[str] = None

@@ -2,13 +2,13 @@ import unittest
 
 import pygame
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError
 
 
-class BitmapFactoryDrawingHelpersBatch3Tests(unittest.TestCase):
+class WidgetGraphicsFactoryDrawingHelpersBatch3Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_draw_box_bitmap_handles_zero_sized_surface(self) -> None:
         surface = pygame.Surface((0, 0))

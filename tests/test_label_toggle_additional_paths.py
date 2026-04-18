@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 
 import pygame
@@ -25,7 +25,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
             render_text=lambda text, *_args: _FakeBitmap(len(text) + 3, 7),
             centre=lambda bigger, smaller: int((bigger - smaller) / 2),
         )
-        gui = SimpleNamespace(bitmap_factory=factory)
+        gui = SimpleNamespace(graphics_factory=factory)
 
         label_point = Label(gui, "l1", (10, 20), "abc", shadow=False)
         self.assertEqual(label_point.draw_rect.topleft, (10, 20))
@@ -49,7 +49,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
             set_last_font=lambda: calls.append(("set_last_font", None)),
             centre=lambda bigger, smaller: int((bigger - smaller) / 2),
         )
-        gui = SimpleNamespace(bitmap_factory=factory)
+        gui = SimpleNamespace(graphics_factory=factory)
 
         label = Label(gui, "l1", (0, 0), "start")
         calls.clear()
@@ -69,7 +69,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
             centre=lambda bigger, smaller: int((bigger - smaller) / 2),
         )
         blits = []
-        gui = SimpleNamespace(bitmap_factory=factory)
+        gui = SimpleNamespace(graphics_factory=factory)
 
         label = Label(gui, "l1", (4, 6), "go")
         label.surface = SimpleNamespace(blit=lambda bmp, pos: blits.append((bmp, pos)))
@@ -91,7 +91,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
             render_text=render_text,
             centre=lambda bigger, smaller: int((bigger - smaller) / 2),
         )
-        gui = SimpleNamespace(bitmap_factory=factory)
+        gui = SimpleNamespace(graphics_factory=factory)
 
         Label(gui, "plain", (0, 0), "p", shadow=False)
         Label(gui, "shadow", (0, 0), "s", shadow=True)
@@ -103,13 +103,11 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_init_hit_rect_selects_larger_variant(self) -> None:
         calls = []
 
-        def styled(_style, text, _rect):
-            calls.append(text)
-            if text == "pressed":
-                return ((None, None, "armed"), Rect(0, 0, 14, 8))
-            return (("idle", "hover", None), Rect(0, 0, 10, 8))
+        def build_toggle_visuals(_style, pressed_text, raised_text, _rect):
+            calls.extend([pressed_text, raised_text])
+            return SimpleNamespace(idle="idle", hover="hover", armed="armed", hit_rect=Rect(0, 0, 14, 8))
 
-        gui = SimpleNamespace(bitmap_factory=SimpleNamespace(get_styled_bitmaps=styled))
+        gui = SimpleNamespace(graphics_factory=SimpleNamespace(build_toggle_visuals=build_toggle_visuals))
         toggle = Toggle(gui, "t1", Rect(0, 0, 20, 10), object(), False, "pressed", "raised")
 
         self.assertEqual(calls, ["pressed", "raised"])
@@ -121,14 +119,14 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
     def test_toggle_init_defaults_raised_text_to_pressed_text(self) -> None:
         calls = []
 
-        def styled(_style, text, _rect):
-            calls.append(text)
-            return (("i", "h", "a"), Rect(0, 0, 9, 7))
+        def build_toggle_visuals(_style, pressed_text, raised_text, _rect):
+            calls.extend([pressed_text, raised_text])
+            return SimpleNamespace(idle="i", hover="h", armed="a", hit_rect=Rect(0, 0, 9, 7))
 
-        gui = SimpleNamespace(bitmap_factory=SimpleNamespace(get_styled_bitmaps=styled))
+        gui = SimpleNamespace(graphics_factory=SimpleNamespace(build_toggle_visuals=build_toggle_visuals))
         Toggle(gui, "t2", Rect(0, 0, 20, 10), object(), False, "same")
 
-        self.assertEqual(calls, ["same", "same"])
+        self.assertEqual(calls, ["same", None])
 
     def test_toggle_pushed_property_and_handle_non_hover_branch(self) -> None:
         toggle = Toggle.__new__(Toggle)

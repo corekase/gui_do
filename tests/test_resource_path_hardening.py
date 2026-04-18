@@ -1,14 +1,14 @@
 import os
 import unittest
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError
 from gui.utility.resource_error import DataResourceErrorHandler
 
 
 class ResourcePathHardeningTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_file_resource_requires_at_least_one_component(self) -> None:
         with self.assertRaises(GuiError):

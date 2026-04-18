@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -29,14 +29,14 @@ def build_interactive_gui_stub():
     gui.get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
-    gui.bitmap_factory = SimpleNamespace()
+    gui.graphics_factory = SimpleNamespace()
     return gui
 
 
 class WidgetInteractionsBatch3Tests(unittest.TestCase):
     def test_arrowbox_leave_clears_timer_and_resets_idle(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
+        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: None, repeat_activation_ms=50)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
@@ -50,7 +50,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_arrowbox_invoke_on_activate_noop_without_callback(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
+        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=None, repeat_activation_ms=50)
 
         arrow._invoke_on_activate()
@@ -59,7 +59,9 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_button_leave_resets_state_to_idle(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.get_styled_bitmaps = lambda style, text, rect: ((object(), object(), object()), Rect(rect))
+        gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
+            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+        )
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
         button.state = InteractiveState.Armed
 
@@ -92,7 +94,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
 
     def test_image_scales_when_enabled_and_skips_when_disabled(self) -> None:
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(file_resource=lambda *parts: "D:/Code/gui_do/data/images/test.png")
+        gui.graphics_factory = SimpleNamespace(file_resource=lambda *parts: "D:/Code/gui_do/data/images/test.png")
         base_surface = pygame.Surface((4, 4))
 
         with patch("pygame.image.load", return_value=base_surface), patch(

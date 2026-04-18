@@ -6,7 +6,7 @@ import logging
 from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from .scheduler import Timers, Scheduler
 from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
-from .bitmapfactory import BitmapFactory
+from .bitmapfactory import WidgetGraphicsFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .dispatch_bridge_coordinator import DispatchBridgeCoordinator
 from .event_delivery import EventDeliveryCoordinator
@@ -61,8 +61,8 @@ class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
     @property
-    def bitmap_factory(self):
-        return self._bitmap_factory
+    def graphics_factory(self):
+        return self._graphics_factory
 
     @property
     def buffered(self):
@@ -167,34 +167,34 @@ class GuiManager:
         self._lock_state.lock_point_tolerance_rect = value
 
     # widgets
-    def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
-        return self.ui_factory.ArrowBox(id, rect, direction, on_activate)
+    def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
+        return self.ui_factory.arrow_box(id, rect, direction, on_activate)
 
-    def Button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
-        return self.ui_factory.Button(id, rect, style, text, on_activate)
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
+        return self.ui_factory.button(id, rect, style, text, on_activate)
 
-    def ButtonGroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
-        return self.ui_factory.ButtonGroup(group, id, rect, style, text)
+    def button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
+        return self.ui_factory.button_group(group, id, rect, style, text)
 
-    def Canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
-        return self.ui_factory.Canvas(id, rect, backdrop, on_activate, automatic_pristine)
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
+        return self.ui_factory.canvas(id, rect, backdrop, on_activate, automatic_pristine)
 
-    def Frame(self, id: str, rect: Rect) -> gFrame:
-        return self.ui_factory.Frame(id, rect)
+    def frame(self, id: str, rect: Rect) -> gFrame:
+        return self.ui_factory.frame(id, rect)
 
-    def Image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
-        return self.ui_factory.Image(id, rect, image, automatic_pristine, scale)
+    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
+        return self.ui_factory.image(id, rect, image, automatic_pristine, scale)
 
-    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
-        return self.ui_factory.Label(position, text, shadow, id)
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
+        return self.ui_factory.label(position, text, shadow, id)
 
-    def Scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
-        return self.ui_factory.Scrollbar(id, overall_rect, horizontal, style, params)
+    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
+        return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params)
 
-    def Toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
-        return self.ui_factory.Toggle(id, rect, style, pushed, pressed_text, raised_text)
+    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
+        return self.ui_factory.toggle(id, rect, style, pushed, pressed_text, raised_text)
 
-    def Window(
+    def window(
         self,
         title: str,
         pos: Tuple[int, int],
@@ -204,13 +204,13 @@ class GuiManager:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> gWindow:
-        return self.ui_factory.Window(title, pos, size, backdrop, preamble, event_handler, postamble)
+        return self.ui_factory.window(title, pos, size, backdrop, preamble, event_handler, postamble)
 
     def __init__(
         self,
         surface: Surface,
         fonts: List[Tuple[str, str, int]],
-        bitmap_factory: Optional[BitmapFactory] = None,
+        graphics_factory: Optional[WidgetGraphicsFactory] = None,
         task_panel_enabled: bool = True,
         event_getter: Optional[Callable[[], Iterable[PygameEvent]]] = None,
         mouse_get_pos: Optional[Callable[[], Tuple[int, int]]] = None,
@@ -232,7 +232,7 @@ class GuiManager:
                 raise GuiError(f'font filename must be a non-empty string, got: {filename}')
             if not isinstance(size, int) or size <= 0:
                 raise GuiError(f'font size must be a positive integer, got: {size}')
-        self._bitmap_factory: BitmapFactory = bitmap_factory or BitmapFactory()
+        self._graphics_factory: WidgetGraphicsFactory = graphics_factory or WidgetGraphicsFactory()
         resolved_event_getter = event_getter or pygame.event.get
         resolved_mouse_get_pos = mouse_get_pos or pygame.mouse.get_pos
         resolved_mouse_set_pos = mouse_set_pos or pygame.mouse.set_pos
@@ -262,7 +262,7 @@ class GuiManager:
         self.renderer: Renderer = Renderer(self)
         self.input_providers.mouse_set_visible(False)
         for name, filename, size in fonts:
-            self._bitmap_factory.load_font(name, filename, size)
+            self._graphics_factory.load_font(name, filename, size)
         self.surface: Surface = surface
         self.widgets: List[Widget] = []
         self.workspace_state: WorkspaceState = WorkspaceState()
@@ -392,7 +392,7 @@ class GuiManager:
         self.workspace.raise_window(window)
 
     def set_cursor(self, name: str) -> None:
-        """Set custom cursor from a named cursor loaded via BitmapFactory.register_cursor."""
+        """Set custom cursor from a named cursor loaded via WidgetGraphicsFactory.register_cursor."""
         self.pointer.set_cursor(name)
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:

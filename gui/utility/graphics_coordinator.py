@@ -34,7 +34,7 @@ class GraphicsCoordinator:
         if image is None or not isinstance(image, str) or image == '':
             raise GuiError(f'set_pristine image must be a non-empty string, got: {image!r}')
 
-        image_path = self.gui.bitmap_factory.file_resource('images', image)
+        image_path = self.gui.graphics_factory.file_resource('images', image)
         try:
             bitmap = pygame.image.load(image_path)
         except GuiError:

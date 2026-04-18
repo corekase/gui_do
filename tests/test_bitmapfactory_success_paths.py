@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 
 
 class _FakeSurface:
@@ -34,9 +34,9 @@ class _FakeSurface:
         return None
 
 
-class BitmapFactoryRoiBatch3Tests(unittest.TestCase):
+class WidgetGraphicsFactoryRoiBatch3Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_draw_arrow_state_bitmaps_success(self) -> None:
         states = [_FakeSurface((10, 10)), _FakeSurface((10, 10)), _FakeSurface((10, 10))]

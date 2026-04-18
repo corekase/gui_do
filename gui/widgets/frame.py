@@ -17,7 +17,10 @@ class Frame(Widget):
         self._idle: Surface
         self._hover: Surface
         self._armed: Surface
-        self._idle, self._hover, self._armed = self.gui.bitmap_factory.draw_frame_bitmaps(rect)
+        visuals = self.gui.graphics_factory.build_frame_visuals(rect)
+        self._idle = visuals.idle
+        self._hover = visuals.hover
+        self._armed = visuals.armed
         self.state: InteractiveState = InteractiveState.Idle
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:

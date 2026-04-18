@@ -143,7 +143,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         visible_calls = []
         loaded_fonts = []
 
-        bitmap_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
+        graphics_factory = SimpleNamespace(load_font=lambda *args: loaded_fonts.append(args))
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80))
 
         with patch("gui.utility.guimanager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
@@ -156,7 +156,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             gui = gm.GuiManager(
                 surface,
                 [("main", "a.ttf", 12), ("title", "b.ttf", 14)],
-                bitmap_factory=bitmap_factory,
+                graphics_factory=graphics_factory,
                 task_panel_enabled=False,
                 event_getter=lambda: [],
                 mouse_get_pos=lambda: (1, 2),
@@ -170,18 +170,18 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
 
     def test_manager_init_rejects_non_callable_injected_providers(self) -> None:
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
-        bitmap_factory = SimpleNamespace(load_font=lambda *_args: None)
+        graphics_factory = SimpleNamespace(load_font=lambda *_args: None)
 
         with self.assertRaises(GuiError):
-            gm.GuiManager(surface, [("main", "a.ttf", 12)], bitmap_factory=bitmap_factory, task_panel_enabled=False, event_getter=1)  # type: ignore[arg-type]
+            gm.GuiManager(surface, [("main", "a.ttf", 12)], graphics_factory=graphics_factory, task_panel_enabled=False, event_getter=1)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            gm.GuiManager(surface, [("main", "a.ttf", 12)], bitmap_factory=bitmap_factory, task_panel_enabled=False, mouse_get_pos=1)  # type: ignore[arg-type]
+            gm.GuiManager(surface, [("main", "a.ttf", 12)], graphics_factory=graphics_factory, task_panel_enabled=False, mouse_get_pos=1)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            gm.GuiManager(surface, [("main", "a.ttf", 12)], bitmap_factory=bitmap_factory, task_panel_enabled=False, mouse_set_pos=1)  # type: ignore[arg-type]
+            gm.GuiManager(surface, [("main", "a.ttf", 12)], graphics_factory=graphics_factory, task_panel_enabled=False, mouse_set_pos=1)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            gm.GuiManager(surface, [("main", "a.ttf", 12)], bitmap_factory=bitmap_factory, task_panel_enabled=False, mouse_set_visible=1)  # type: ignore[arg-type]
+            gm.GuiManager(surface, [("main", "a.ttf", 12)], graphics_factory=graphics_factory, task_panel_enabled=False, mouse_set_visible=1)  # type: ignore[arg-type]
 
-    def test_widget_factory_wrappers_delegate_to_add(self) -> None:
+    def test_widget_factory_helpers_delegate_to_add(self) -> None:
         gui = gm.GuiManager.__new__(gm.GuiManager)
         created = []
         gui.add = lambda obj: created.append(obj) or obj
@@ -198,16 +198,16 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         ), patch("gui.utility.ui_factory.gToggle", side_effect=lambda *args: SimpleNamespace(kind="toggle", args=args)), patch(
             "gui.utility.ui_factory.gWindow", side_effect=lambda *args: SimpleNamespace(kind="window", args=args)
         ):
-            gm.GuiManager.ArrowBox(gui, "a", Rect(0, 0, 1, 1), 90)
-            gm.GuiManager.Button(gui, "b", Rect(0, 0, 1, 1), ButtonStyle.Box, None)
-            gm.GuiManager.ButtonGroup(gui, "grp", "bg", Rect(0, 0, 1, 1), ButtonStyle.Box, "x")
-            gm.GuiManager.Canvas(gui, "c", Rect(0, 0, 1, 1))
-            gm.GuiManager.Frame(gui, "f", Rect(0, 0, 1, 1))
-            gm.GuiManager.Image(gui, "i", Rect(0, 0, 1, 1), "img.png")
-            gm.GuiManager.Label(gui, (1, 2), "lbl")
-            gm.GuiManager.Scrollbar(gui, "s", Rect(0, 0, 20, 6), Orientation.Horizontal, ArrowPosition.Skip, (10, 0, 5, 1))
-            gm.GuiManager.Toggle(gui, "t", Rect(0, 0, 1, 1), ButtonStyle.Box, False, "p")
-            gm.GuiManager.Window(gui, "w", (0, 0), (10, 10))
+            gm.GuiManager.arrow_box(gui, "a", Rect(0, 0, 1, 1), 90)
+            gm.GuiManager.button(gui, "b", Rect(0, 0, 1, 1), ButtonStyle.Box, None)
+            gm.GuiManager.button_group(gui, "grp", "bg", Rect(0, 0, 1, 1), ButtonStyle.Box, "x")
+            gm.GuiManager.canvas(gui, "c", Rect(0, 0, 1, 1))
+            gm.GuiManager.frame(gui, "f", Rect(0, 0, 1, 1))
+            gm.GuiManager.image(gui, "i", Rect(0, 0, 1, 1), "img.png")
+            gm.GuiManager.label(gui, (1, 2), "lbl")
+            gm.GuiManager.scrollbar(gui, "s", Rect(0, 0, 20, 6), Orientation.Horizontal, ArrowPosition.Skip, (10, 0, 5, 1))
+            gm.GuiManager.toggle(gui, "t", Rect(0, 0, 1, 1), ButtonStyle.Box, False, "p")
+            gm.GuiManager.window(gui, "w", (0, 0), (10, 10))
 
         self.assertEqual(len(created), 10)
         # Button wrapper should normalize None text to empty string.

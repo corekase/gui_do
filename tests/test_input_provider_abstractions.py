@@ -8,7 +8,7 @@ from gui.utility.guimanager import GuiManager
 from gui.utility.statemanager import StateManager
 
 
-class DummyBitmapFactory:
+class DummyGraphicsFactory:
     def load_font(self, name: str, filename: str, size: int) -> None:
         return None
 
@@ -57,7 +57,7 @@ class InputProviderAbstractionTests(unittest.TestCase):
         gui = GuiManager(
             surface=pygame.Surface((100, 80)),
             fonts=[("normal", "ignored.ttf", 12)],
-            bitmap_factory=DummyBitmapFactory(),
+            graphics_factory=DummyGraphicsFactory(),
             task_panel_enabled=False,
             event_getter=event_getter,
             mouse_get_pos=lambda: (11, 13),

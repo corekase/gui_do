@@ -3,13 +3,13 @@ from unittest.mock import patch
 
 import pygame
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError
 
 
-class BitmapFactoryExceptionWrappingBatch4Tests(unittest.TestCase):
+class WidgetGraphicsFactoryExceptionWrappingBatch4Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_draw_round_style_bitmap_wraps_generic_draw_error(self) -> None:
         surface = pygame.Surface((8, 8), pygame.SRCALPHA)

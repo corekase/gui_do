@@ -65,7 +65,7 @@ class Window:
         self.width: int
         self.height: int
         self.width, self.height = size
-        self.titlebar_size: int = self.gui.bitmap_factory.get_titlebar_height()
+        self.titlebar_size: int = self.gui.graphics_factory.get_titlebar_height()
         self.surface: pygame.Surface = pygame.surface.Surface(size).convert()
         self.pristine: Optional[Surface] = None
         if backdrop is None:
@@ -80,9 +80,11 @@ class Window:
         self.position = pos
         self.title_bar_inactive_bitmap: Surface
         self.title_bar_active_bitmap: Surface
-        self.title_bar_inactive_bitmap, self.title_bar_active_bitmap = self.gui.bitmap_factory.draw_window_title_bar_bitmaps(self.gui, title, self.width, self.titlebar_size)
+        chrome = self.gui.graphics_factory.build_window_chrome_visuals(self.gui, title, self.width, self.titlebar_size)
+        self.title_bar_inactive_bitmap = chrome.title_bar_inactive
+        self.title_bar_active_bitmap = chrome.title_bar_active
         self.title_bar_rect: Rect = self.title_bar_active_bitmap.get_rect()
-        self.window_widget_lower_bitmap: Surface = self.gui.bitmap_factory.draw_window_lower_widget_bitmap(self.titlebar_size - 2, colours['full'], colours['medium'])
+        self.window_widget_lower_bitmap: Surface = chrome.lower_widget
         self._visible: bool = True
         self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
         self._event_handler: Callable[["BaseEvent"], None] = event_handler if callable(event_handler) else _noop_event

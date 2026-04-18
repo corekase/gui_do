@@ -43,8 +43,10 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
             extras={
                 "restore_pristine": lambda *_args, **_kwargs: None,
                 "event": lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs),
-                "bitmap_factory": SimpleNamespace(
-                    get_styled_bitmaps=lambda _style, _text, rect: ((object(), object(), object()), Rect(rect))
+                "graphics_factory": SimpleNamespace(
+                    build_interactive_visuals=lambda _style, _text, rect: SimpleNamespace(
+                        idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+                    )
                 ),
                 "button_group_mediator": _MediatorStub(),
             },

@@ -17,7 +17,7 @@ class Image(Widget):
         super().__init__(gui, id, rect)
         if not isinstance(image, str) or image == '':
             raise GuiError(f'image must be a non-empty string, got: {image!r}')
-        image_path = self.gui.bitmap_factory.file_resource('images', image)
+        image_path = self.gui.graphics_factory.file_resource('images', image)
         try:
             self._image = pygame.image.load(image_path)
         except GuiError:

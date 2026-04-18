@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -38,14 +38,14 @@ def build_interactive_gui_stub():
     gui.get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
-    gui.bitmap_factory = SimpleNamespace()
+    gui.graphics_factory = SimpleNamespace()
     return gui
 
 
 class WidgetConstructorAndStateContractTests(unittest.TestCase):
     def test_arrowbox_rejects_invalid_repeat_interval(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
+        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
 
         with self.assertRaises(GuiError):
             ArrowBox(gui, "a", Rect(0, 0, 10, 10), 0, repeat_activation_ms="bad")  # type: ignore[arg-type]
@@ -54,7 +54,7 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
 
     def test_arrowbox_press_adds_repeat_timer_and_release_clears_it(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
+        gui.graphics_factory.draw_arrow_state_bitmaps = lambda rect, direction: (object(), object(), object())
         activated = []
 
         arrow = ArrowBox(gui, "arrow", Rect(0, 0, 10, 10), 0, on_activate=lambda: activated.append(True), repeat_activation_ms=50)
@@ -84,7 +84,9 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
 
     def test_button_state_machine_and_activation_contract(self) -> None:
         gui = build_interactive_gui_stub()
-        gui.bitmap_factory.get_styled_bitmaps = lambda style, text, rect: ((object(), object(), object()), Rect(rect))
+        gui.graphics_factory.build_interactive_visuals = lambda style, text, rect: SimpleNamespace(
+            idle=object(), hover=object(), armed=object(), hit_rect=Rect(rect)
+        )
 
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
 
@@ -102,7 +104,7 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
 
     def test_image_rejects_empty_name_and_wraps_load_failure(self) -> None:
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(file_resource=lambda *parts: "D:/Code/gui_do/data/images/missing.png")
+        gui.graphics_factory = SimpleNamespace(file_resource=lambda *parts: "D:/Code/gui_do/data/images/missing.png")
 
         with self.assertRaises(GuiError):
             Image(gui, "img", Rect(0, 0, 10, 10), "")
@@ -119,7 +121,9 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
         armed = object()
 
         gui = SimpleNamespace()
-        gui.bitmap_factory = SimpleNamespace(draw_frame_bitmaps=lambda rect: (idle, hover, armed))
+        gui.graphics_factory = SimpleNamespace(
+            build_frame_visuals=lambda rect: SimpleNamespace(idle=idle, hover=hover, armed=armed, hit_rect=Rect(rect))
+        )
 
         frame = Frame(gui, "frame", Rect(1, 2, 10, 10))
         frame.surface = SurfaceSpy()

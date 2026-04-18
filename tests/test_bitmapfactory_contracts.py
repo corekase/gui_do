@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pygame
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import GuiError
 
 
@@ -19,9 +19,9 @@ class FontStub:
         return pygame.Surface((width, self.linesize))
 
 
-class BitmapFactoryContractsBatchTests(unittest.TestCase):
+class WidgetGraphicsFactoryContractsBatchTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_get_cursor_rejects_unknown_name(self) -> None:
         with self.assertRaises(GuiError):

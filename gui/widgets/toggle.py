@@ -27,16 +27,11 @@ class Toggle(BaseInteractive):
         """Create a toggle with separate bitmaps for raised and pushed states."""
         super().__init__(gui, id, rect)
         self._pushed: bool = pushed
-        if raised_text is None:
-            raised_text = pressed_text
-        (_, _, self.armed), rect1 = \
-            self.gui.bitmap_factory.get_styled_bitmaps(style, pressed_text, rect)
-        (self.idle, self.hover, _), rect2 = \
-            self.gui.bitmap_factory.get_styled_bitmaps(style, raised_text, rect)
-        if rect1.width > rect2.width:
-            self.hit_rect = rect1
-        else:
-            self.hit_rect = rect2
+        visuals = self.gui.graphics_factory.build_toggle_visuals(style, pressed_text, raised_text, rect)
+        self.idle = visuals.idle
+        self.hover = visuals.hover
+        self.armed = visuals.armed
+        self.hit_rect = visuals.hit_rect
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Update hover state and flip pushed on left button down."""

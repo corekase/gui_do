@@ -336,7 +336,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None),
             pristine=None,
         )
-        gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
+        gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
         with patch("gui.utility.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
@@ -409,7 +409,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.add = lambda obj: added.append(obj) or obj
 
         with patch("gui.utility.ui_factory.gLabel", side_effect=lambda *_args: SimpleNamespace(args=_args)):
-            gm.GuiManager.Label(gui, (1, 2), "text", id="explicit")
+            gm.GuiManager.label(gui, (1, 2), "text", id="explicit")
 
         self.assertEqual(added[0].args[1], "explicit")
         self.assertEqual(gui.ui_factory._label_sequence, 0)
@@ -439,7 +439,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_set_cursor_without_prior_cursor_anchor_uses_mouse_pos(self) -> None:
         gui = self._build_manager_stub()
         bitmap = SimpleNamespace(get_rect=lambda: Rect(0, 0, 6, 6))
-        gui._bitmap_factory = SimpleNamespace(
+        gui._graphics_factory = SimpleNamespace(
             get_cursor=lambda _name: SimpleNamespace(name=_name, image=bitmap, hotspot=(1, 1))
         )
         gui.mouse_pos = (10, 10)
@@ -476,7 +476,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         gui.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None)
         gui.pristine = None
-        gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
+        gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
         scaled = SimpleNamespace(convert=lambda: object(), get_rect=lambda: Rect(0, 0, 10, 6))
@@ -646,7 +646,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
     def test_set_pristine_reraises_guierror_from_loader(self) -> None:
         gui = self._build_manager_stub()
-        gui._bitmap_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
+        gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         target = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None), pristine=None)
 
         with patch("gui.utility.graphics_coordinator.pygame.image.load", side_effect=GuiError("load guierror")):
@@ -683,7 +683,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         import gui.utility.guimanager as gm
 
         surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
-        bitmap_factory = SimpleNamespace(load_font=lambda *_args: None)
+        graphics_factory = SimpleNamespace(load_font=lambda *_args: None)
 
         with patch("gui.utility.guimanager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
             "gui.utility.guimanager.LayoutManager", return_value=SimpleNamespace()
@@ -696,7 +696,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
                 gm.GuiManager(
                     surface,
                     [("main", "a.ttf", 12)],
-                    bitmap_factory=bitmap_factory,
+                    graphics_factory=graphics_factory,
                     task_panel_enabled="yes",  # type: ignore[arg-type]
                     event_getter=lambda: [],
                     mouse_get_pos=lambda: (0, 0),
@@ -714,7 +714,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             gm.GuiManager(
                 surface,
                 [("main", "a.ttf", 12)],
-                bitmap_factory=bitmap_factory,
+                graphics_factory=graphics_factory,
                 task_panel_enabled=True,
                 event_getter=lambda: [],
                 mouse_get_pos=lambda: (0, 0),

@@ -25,38 +25,38 @@ class GuiUiFactory:
         self.gui: "GuiManager" = gui_manager
         self._label_sequence: int = 0
 
-    def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
+    def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
         return self.gui.add(gArrowBox(self.gui, id, rect, direction, on_activate))
 
-    def Button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
+    def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
         safe_text = '' if text is None else text
         return self.gui.add(gButton(self.gui, id, rect, style, safe_text, on_activate))
 
-    def ButtonGroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
+    def button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
         return self.gui.add(gButtonGroup(self.gui, group, id, rect, style, text))
 
-    def Canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
+    def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
         return self.gui.add(gCanvas(self.gui, id, rect, backdrop, on_activate, automatic_pristine))
 
-    def Frame(self, id: str, rect: Rect) -> gFrame:
+    def frame(self, id: str, rect: Rect) -> gFrame:
         return self.gui.add(gFrame(self.gui, id, rect))
 
-    def Image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
+    def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
         return self.gui.add(gImage(self.gui, id, rect, image, automatic_pristine, scale))
 
-    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
+    def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
         if id is None:
             self._label_sequence += 1
             id = f'label_{self._label_sequence}'
         return self.gui.add(gLabel(self.gui, id, position, text, shadow))
 
-    def Scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
+    def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
         return self.gui.add(gScrollbar(self.gui, id, overall_rect, horizontal, style, params))
 
-    def Toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
+    def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
         return self.gui.add(gToggle(self.gui, id, rect, style, pushed, pressed_text, raised_text))
 
-    def Window(
+    def window(
         self,
         title: str,
         pos: Tuple[int, int],

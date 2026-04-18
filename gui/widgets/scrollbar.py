@@ -233,9 +233,9 @@ class Scrollbar(Frame):
             raise GuiError('scrollbar arrow direction is not initialized')
         created: List[ArrowBox] = []
         try:
-            inc_arrow = self.gui.ArrowBox(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
+            inc_arrow = self.gui.arrow_box(f'{self.id}.increment', self._increment_rect, self._inc_degree, self.increment)
             created.append(inc_arrow)
-            dec_arrow = self.gui.ArrowBox(f'{self.id}.decrement', self._decrement_rect, self._dec_degree, self.decrement)
+            dec_arrow = self.gui.arrow_box(f'{self.id}.decrement', self._decrement_rect, self._dec_degree, self.decrement)
             created.append(dec_arrow)
             self._registered.extend(created)
             self._subwidgets_bound = True

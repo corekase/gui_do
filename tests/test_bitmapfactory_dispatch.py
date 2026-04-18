@@ -3,13 +3,13 @@ from unittest.mock import patch
 
 import pygame
 
-from gui.utility.bitmapfactory import BitmapFactory
+from gui.utility.bitmapfactory import WidgetGraphicsFactory
 from gui.utility.constants import ButtonStyle, GuiError
 
 
-class BitmapFactoryDispatchBatch2Tests(unittest.TestCase):
+class WidgetGraphicsFactoryDispatchBatch2Tests(unittest.TestCase):
     def setUp(self) -> None:
-        self.factory = BitmapFactory()
+        self.factory = WidgetGraphicsFactory()
 
     def test_get_styled_bitmaps_dispatches_to_each_style_handler(self) -> None:
         rect = pygame.Rect(0, 0, 10, 10)

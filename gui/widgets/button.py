@@ -15,8 +15,11 @@ class Button(BaseInteractive):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> None:
         """Create a button and its state bitmaps."""
         super().__init__(gui, id, rect)
-        (self.idle, self.hover, self.armed), self.hit_rect = \
-            self.gui.bitmap_factory.get_styled_bitmaps(style, text, rect)
+        visuals = self.gui.graphics_factory.build_interactive_visuals(style, text, rect)
+        self.idle = visuals.idle
+        self.hover = visuals.hover
+        self.armed = visuals.armed
+        self.hit_rect = visuals.hit_rect
         self.on_activate = on_activate
 
     def leave(self) -> None:
