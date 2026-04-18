@@ -21,37 +21,27 @@ class SchedulerStub:
 class GuiStubFactory:
     @staticmethod
     def build(mouse_pos=(0, 0), fail_shutdown: bool = False):
-        gui = build_gui_manager_stub()
+        gui = build_gui_manager_stub(preset="state_manager")
         gui._scheduler = SchedulerStub(fail=fail_shutdown)
         gui._mouse_pos = mouse_pos
         gui.set_calls = []
 
-        def get_mouse_pos():
-            return gui._mouse_pos
-
         def set_mouse_pos(pos, update_physical_coords=True):
             gui._mouse_pos = pos
             gui.set_calls.append((pos, update_physical_coords))
-
-        gui.get_mouse_pos = get_mouse_pos
         gui.set_mouse_pos = set_mouse_pos
         return gui
 
     @staticmethod
     def build_with_real_scheduler(mouse_pos=(0, 0)):
-        gui = build_gui_manager_stub()
+        gui = build_gui_manager_stub(preset="state_manager")
         gui._scheduler = Scheduler(gui)
         gui._mouse_pos = mouse_pos
         gui.set_calls = []
 
-        def get_mouse_pos():
-            return gui._mouse_pos
-
         def set_mouse_pos(pos, update_physical_coords=True):
             gui._mouse_pos = pos
             gui.set_calls.append((pos, update_physical_coords))
-
-        gui.get_mouse_pos = get_mouse_pos
         gui.set_mouse_pos = set_mouse_pos
         return gui
 

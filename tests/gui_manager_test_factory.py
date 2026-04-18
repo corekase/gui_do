@@ -23,7 +23,7 @@ from gui.utility.widget_state_coordinator import WidgetStateCoordinator
 from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 
-StubPreset = Literal["base", "routing", "locking"]
+StubPreset = Literal["base", "routing", "locking", "state_manager"]
 
 
 def _default_surface() -> Any:
@@ -49,6 +49,20 @@ def _apply_preset(gui: GuiManager, preset: StubPreset) -> None:
         gui.lock_point_pos = None
         gui.lock_point_recenter_pending = False
         gui.lock_point_tolerance_rect = None
+        return
+
+    if preset == "state_manager":
+        gui._mouse_pos = (0, 0)
+
+        def get_mouse_pos() -> Any:
+            return gui._mouse_pos
+
+        def set_mouse_pos(pos: Any, update_physical_coords: bool = True) -> None:
+            _ = update_physical_coords
+            gui._mouse_pos = pos
+
+        gui.get_mouse_pos = get_mouse_pos
+        gui.set_mouse_pos = set_mouse_pos
         return
 
     raise ValueError(f"unknown stub preset: {preset}")

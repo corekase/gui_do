@@ -11,18 +11,8 @@ class SchedulerNoopStub:
 
 
 def build_gui_stub() -> GuiManager:
-    gui = build_gui_manager_stub()
+    gui = build_gui_manager_stub(preset="state_manager")
     gui._scheduler = SchedulerNoopStub()
-    gui._mouse_pos = (0, 0)
-
-    def get_mouse_pos():
-        return gui._mouse_pos
-
-    def set_mouse_pos(pos, _update_physical_coords=True):
-        gui._mouse_pos = pos
-
-    gui.get_mouse_pos = get_mouse_pos
-    gui.set_mouse_pos = set_mouse_pos
     return gui
 
 

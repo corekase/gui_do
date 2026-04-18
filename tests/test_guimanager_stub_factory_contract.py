@@ -45,6 +45,13 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
         self.assertFalse(gui.mouse_point_locked)
         self.assertIsNotNone(gui.lock_area_rect)
 
+    def test_state_manager_preset_sets_mouse_shims(self) -> None:
+        gui = build_gui_manager_stub(preset="state_manager")
+
+        self.assertEqual(gui.get_mouse_pos(), (0, 0))
+        gui.set_mouse_pos((8, 9), True)
+        self.assertEqual(gui.get_mouse_pos(), (8, 9))
+
     def test_unknown_preset_raises(self) -> None:
         with self.assertRaises(ValueError):
             build_gui_manager_stub(preset="unknown")  # type: ignore[arg-type]

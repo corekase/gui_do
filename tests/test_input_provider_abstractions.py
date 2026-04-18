@@ -19,18 +19,11 @@ class DummyScheduler:
 
 
 def make_minimal_gui_stub(mouse_position=(0, 0)):
-    gui = build_gui_manager_stub()
+    gui = build_gui_manager_stub(preset="state_manager")
     gui._scheduler = DummyScheduler()
     gui._mouse = mouse_position
-
-    def get_mouse_pos():
-        return gui._mouse
-
-    def set_mouse_pos(pos, update_physical_coords=True):
-        gui._mouse = pos
-
-    gui.get_mouse_pos = get_mouse_pos
-    gui.set_mouse_pos = set_mouse_pos
+    gui.get_mouse_pos = lambda: gui._mouse
+    gui.set_mouse_pos = lambda pos, update_physical_coords=True: setattr(gui, "_mouse", pos)
     return gui
 
 
