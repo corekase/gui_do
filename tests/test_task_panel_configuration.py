@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from pygame import Rect
+
 from gui.utility.constants import GuiError
 from gui.utility import guimanager as gm
 
@@ -81,6 +83,116 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         self.assertIs(w2.window, new_panel)
         self.assertIs(w1.surface, new_panel.surface)
         self.assertIs(w2.surface, new_panel.surface)
+
+
+class ManagedTaskPanelMethodTests(unittest.TestCase):
+    def test_set_visible_validates_bool_and_refreshes_when_enabled(self) -> None:
+        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel.visible = False
+        refresh_calls = []
+        panel.refresh_targets = lambda: refresh_calls.append(True)
+
+        with self.assertRaises(GuiError):
+            panel.set_visible("yes")  # type: ignore[arg-type]
+
+        panel.set_visible(True)
+
+        self.assertTrue(panel.visible)
+        self.assertEqual(refresh_calls, [True])
+
+    def test_set_auto_hide_false_snaps_to_shown_y(self) -> None:
+        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel.auto_hide = True
+        panel.y = 99
+        panel._shown_y = 12
+        refresh_calls = []
+        panel.refresh_targets = lambda: refresh_calls.append(True)
+
+        with self.assertRaises(GuiError):
+            panel.set_auto_hide(1)  # type: ignore[arg-type]
+
+        panel.set_auto_hide(False)
+
+        self.assertFalse(panel.auto_hide)
+        self.assertEqual(panel.y, 12)
+        self.assertEqual(refresh_calls, [True])
+
+    def test_set_reveal_pixels_and_movement_step_validate_inputs(self) -> None:
+        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel.height = 20
+        panel.reveal_pixels = 4
+        panel.movement_step = 2
+        refresh_calls = []
+        panel.refresh_targets = lambda: refresh_calls.append(True)
+
+        with self.assertRaises(GuiError):
+            panel.set_reveal_pixels("x")  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            panel.set_reveal_pixels(0)
+        with self.assertRaises(GuiError):
+            panel.set_reveal_pixels(20)
+
+        panel.set_reveal_pixels(5)
+        self.assertEqual(panel.reveal_pixels, 5)
+        self.assertEqual(refresh_calls, [True])
+
+        with self.assertRaises(GuiError):
+            panel.set_movement_step("x")  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            panel.set_movement_step(0)
+
+        panel.set_movement_step(7)
+        self.assertEqual(panel.movement_step, 7)
+
+    def test_set_timer_interval_replaces_timer_registration(self) -> None:
+        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel._timer_id = ("task-panel-motion", 123)
+        panel.timer_interval = 10.0
+        panel.animate = lambda: None
+        timer_calls = []
+        panel.gui = SimpleNamespace(
+            timers=SimpleNamespace(
+                remove_timer=lambda timer_id: timer_calls.append(("remove", timer_id)),
+                add_timer=lambda timer_id, interval, callback: timer_calls.append(("add", timer_id, interval, callback)),
+            )
+        )
+
+        with self.assertRaises(GuiError):
+            panel.set_timer_interval(0)
+
+        panel.set_timer_interval(3.5)
+
+        self.assertEqual(panel.timer_interval, 3.5)
+        self.assertEqual(timer_calls[0], ("remove", panel._timer_id))
+        self.assertEqual(timer_calls[1][0:3], ("add", panel._timer_id, 3.5))
+
+    def test_animate_moves_toward_target_and_draw_background_guards_pristine(self) -> None:
+        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel.visible = True
+        panel.auto_hide = True
+        panel._hovered = False
+        panel._shown_y = 10
+        panel._hidden_y = 30
+        panel.y = 15
+        panel.movement_step = 4
+        panel.refresh_targets = lambda: None
+
+        panel.animate()
+        self.assertEqual(panel.y, 19)
+
+        panel._hovered = True
+        panel.animate()
+        self.assertEqual(panel.y, 15)
+
+        panel.visible = False
+        panel.animate()
+        self.assertEqual(panel.y, 15)
+
+        panel.pristine = None
+        panel.gui = SimpleNamespace(restore_pristine=lambda *_args, **_kwargs: None)
+        panel.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 5, 5))
+        with self.assertRaises(GuiError):
+            panel.draw_background()
 
 
 if __name__ == "__main__":
