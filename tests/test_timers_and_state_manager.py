@@ -98,11 +98,14 @@ class StateManagerLifecycleTests(unittest.TestCase):
         manager.register_context("ok", gui_ok)
         manager.register_context("fail", gui_fail)
 
-        manager.__exit__(None, None, None)
+        with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+            manager.__exit__(None, None, None)
 
         self.assertEqual(gui_ok._scheduler.shutdown_calls, 1)
         self.assertEqual(gui_fail._scheduler.shutdown_calls, 1)
         self.assertEqual(manager.is_running, False)
+        self.assertTrue(any('context "fail"' in message for message in captured.output))
+        self.assertTrue(any('shutdown failed' in message for message in captured.output))
 
 
 if __name__ == "__main__":
