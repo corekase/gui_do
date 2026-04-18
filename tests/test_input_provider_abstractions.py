@@ -83,7 +83,7 @@ class InputProviderAbstractionTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].type, Event.KeyDown)
 
-        gui._set_physical_mouse_pos((4, 5))
+        gui.pointer.set_physical_mouse_pos((4, 5))
         self.assertEqual(mouse_set_calls, [(4, 5)])
 
 

@@ -402,9 +402,6 @@ class GuiManager:
         """Recenters pointer only when it exits the configured broad center region."""
         self.lock_flow.enforce_point_lock(hardware_position)
 
-    def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
-        self.pointer.set_physical_mouse_pos(pos)
-
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         return self.lock_flow.lock_area(position)
 
@@ -449,12 +446,3 @@ class GuiManager:
 
     def _is_registered_button_group(self, button: gButtonGroup) -> bool:
         return self.object_registry.is_registered_button_group(button)
-
-    def _is_registered_object(self, gui_object: TGuiObject) -> bool:
-        return self.object_registry.is_registered_object(gui_object)
-
-    def _resolve_active_object(self) -> Optional[gWindow]:
-        return self.object_registry.resolve_active_object()
-
-    def _resolve_locking_state(self) -> Optional[Widget]:
-        return self.lock_state.resolve()

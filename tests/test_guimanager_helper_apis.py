@@ -226,7 +226,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.lock_point_tolerance_rect = Rect(0, 0, 2, 2)
         gui.object_registry.is_registered_object = lambda _obj: False
 
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
         self.assertIsNone(gui.locking_object)
         self.assertFalse(gui.mouse_locked)
         self.assertFalse(gui.mouse_point_locked)
@@ -243,7 +243,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.lock_point_pos = None
         gui.object_registry.is_registered_object = lambda obj: obj is widget
 
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
         self.assertIsNone(gui.locking_object)
         self.assertFalse(gui.mouse_locked)
         self.assertFalse(gui.mouse_point_locked)
@@ -453,7 +453,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         stale = object()
         gui.workspace_state.active_object = stale
 
-        self.assertIsNone(GuiManager._resolve_active_object(gui))
+        self.assertIsNone(gui.object_registry.resolve_active_object())
         self.assertIsNone(gui.workspace_state.active_object)
 
 

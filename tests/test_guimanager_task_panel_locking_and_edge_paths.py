@@ -157,7 +157,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         win = Window.__new__(Window)
         gui.windows = [win]
         gui.workspace_state.active_object = win
-        self.assertIs(GuiManager._resolve_active_object(gui), win)
+        self.assertIs(gui.object_registry.resolve_active_object(), win)
 
         # _resolve_current_widget returns current when registered.
         widget = Widget.__new__(Widget)
@@ -170,7 +170,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.mouse_locked = False
         gui.lock_area_rect = None
         gui.lock_point_pos = None
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
 
     def test_managed_task_panel_helper_methods_success_paths(self) -> None:
         import gui.utility.guimanager as gm
@@ -541,10 +541,10 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         window = Window.__new__(Window)
 
         gui.windows = [window]
-        self.assertTrue(GuiManager._is_registered_object(gui, window))
+        self.assertTrue(gui.object_registry.is_registered_object(window))
 
         gui.windows = []
-        self.assertFalse(GuiManager._is_registered_object(gui, window))
+        self.assertFalse(gui.object_registry.is_registered_object(window))
 
     def test_resolve_locking_state_non_widget_and_unregistered_paths(self) -> None:
         gui = self._build_manager_stub()
@@ -556,7 +556,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_pos = (1, 1)
         gui.lock_point_recenter_pending = True
         gui.lock_point_tolerance_rect = Rect(0, 0, 1, 1)
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
 
         widget = Widget.__new__(Widget)
         gui.locking_object = widget
@@ -567,7 +567,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_recenter_pending = True
         gui.lock_point_tolerance_rect = Rect(0, 0, 1, 1)
         gui.object_registry.is_registered_object = lambda _obj: False
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
 
     def test_managed_task_panel_animate_no_movement_when_at_target(self) -> None:
         import gui.utility.guimanager as gm
@@ -667,7 +667,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.widgets = []
         gui.task_panel = None
         gui.windows = [SimpleNamespace(widgets=[Widget.__new__(Widget)])]
-        self.assertFalse(GuiManager._is_registered_object(gui, widget))
+        self.assertFalse(gui.object_registry.is_registered_object(widget))
 
     def test_resolve_locking_state_registered_with_no_area_or_point(self) -> None:
         gui = self._build_manager_stub()
@@ -681,7 +681,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_tolerance_rect = Rect(0, 0, 1, 1)
         gui.object_registry.is_registered_object = lambda obj: obj is widget
 
-        self.assertIsNone(GuiManager._resolve_locking_state(gui))
+        self.assertIsNone(gui.lock_state.resolve())
 
     def test_manager_init_task_panel_enabled_type_and_true_branch(self) -> None:
         import gui.utility.guimanager as gm
@@ -746,7 +746,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.task_panel = None
         gui.windows = [SimpleNamespace(widgets=[other])]
 
-        self.assertFalse(GuiManager._is_registered_object(gui, widget))
+        self.assertFalse(gui.object_registry.is_registered_object(widget))
 
     def test_resolve_locking_state_none_owner_alt_short_circuit_paths(self) -> None:
         gui = self._build_manager_stub()
@@ -755,13 +755,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.mouse_locked = False
         gui.lock_area_rect = Rect(0, 0, 2, 2)
         gui.lock_point_pos = None
-        GuiManager._resolve_locking_state(gui)
+        gui.lock_state.resolve()
         self.assertIsNone(gui.lock_area_rect)
 
         gui.mouse_locked = False
         gui.lock_area_rect = None
         gui.lock_point_pos = (3, 4)
-        GuiManager._resolve_locking_state(gui)
+        gui.lock_state.resolve()
         self.assertIsNone(gui.lock_point_pos)
 
 

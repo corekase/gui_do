@@ -76,7 +76,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.input_providers.mouse_set_pos = _boom
 
         # Should not raise.
-        GuiManager._set_physical_mouse_pos(gui, (1, 2))
+        gui.pointer.set_physical_mouse_pos((1, 2))
 
     def test_lock_area_clamps_to_bounds(self) -> None:
         gui = self._build_manager_stub()
@@ -166,9 +166,9 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.task_panel = SimpleNamespace(widgets=[panel_widget])
         gui.windows = [SimpleNamespace(widgets=[window_widget])]
 
-        self.assertTrue(GuiManager._is_registered_object(gui, screen_widget))
-        self.assertTrue(GuiManager._is_registered_object(gui, panel_widget))
-        self.assertTrue(GuiManager._is_registered_object(gui, window_widget))
+        self.assertTrue(gui.object_registry.is_registered_object(screen_widget))
+        self.assertTrue(gui.object_registry.is_registered_object(panel_widget))
+        self.assertTrue(gui.object_registry.is_registered_object(window_widget))
 
     def test_resolve_locking_state_returns_valid_locking_object(self) -> None:
         gui = self._build_manager_stub()
@@ -182,7 +182,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.lock_point_tolerance_rect = None
         gui.object_registry.is_registered_object = lambda obj: obj is widget
 
-        resolved = GuiManager._resolve_locking_state(gui)
+        resolved = gui.lock_state.resolve()
 
         self.assertIs(resolved, widget)
         self.assertIs(gui.locking_object, widget)
