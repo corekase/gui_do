@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .widget import Widget
+from ..intermediates.widget import Widget
 
 
 class FocusState:

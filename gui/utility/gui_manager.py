@@ -9,34 +9,34 @@ from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Tupl
 from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .graphics.widget_graphics_factory import WidgetGraphicsFactory
-from .buttongroup_mediator import ButtonGroupMediator
-from .dispatch_bridge_coordinator import DispatchBridgeCoordinator
-from .event_delivery import EventDeliveryCoordinator
+from .intermediates.buttongroup_mediator import ButtonGroupMediator
+from .coordinators.dispatch_bridge_coordinator import DispatchBridgeCoordinator
+from .coordinators.event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
-from .focus_state_model import FocusState
-from .drag_state_model import DragState
-from .graphics_coordinator import GraphicsCoordinator
+from .gui_utils.focus_state_model import FocusState
+from .gui_utils.drag_state_model import DragState
+from .coordinators.graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
-from .input_event_coordinator import InputEventCoordinator
-from .input_providers import InputProviders
+from .coordinators.input_event_coordinator import InputEventCoordinator
+from .gui_utils.input_providers import InputProviders
 from .input.drag_state_controller import DragStateController
 from .input.lock_state_controller import LockStateController
-from .layout_coordinator import LayoutCoordinator
+from .coordinators.layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator, ScreenLifecycle
-from .lock_flow_coordinator import LockFlowCoordinator
-from .lock_state_model import LockState
+from .coordinators.lock_flow_coordinator import LockFlowCoordinator
+from .gui_utils.lock_state_model import LockState
 from .object_registry import GuiObjectRegistry
-from .pointer_coordinator import PointerCoordinator
-from .render_coordinator import RenderCoordinator
+from .coordinators.pointer_coordinator import PointerCoordinator
+from .coordinators.render_coordinator import RenderCoordinator
 from .renderer import Renderer
-from .task_panel_config_coordinator import TaskPanelConfigCoordinator
+from .coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
-from .widget_state_coordinator import WidgetStateCoordinator
-from .workspace_coordinator import WorkspaceCoordinator
-from .workspace_state import WorkspaceState
-from .widget import Widget
+from .coordinators.widget_state_coordinator import WidgetStateCoordinator
+from .coordinators.workspace_coordinator import WorkspaceCoordinator
+from .gui_utils.workspace_state import WorkspaceState
+from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
 from ..widgets.label import Label
@@ -52,8 +52,8 @@ from ..widgets.frame import Frame
 _logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .gui_event import GuiEvent
-    from .task_panel import _ManagedTaskPanel
+    from .gui_utils.gui_event import GuiEvent
+    from .gui_utils.task_panel import _ManagedTaskPanel
 
 TGuiObject = TypeVar("TGuiObject", Window, Widget)
 

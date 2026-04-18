@@ -6,7 +6,7 @@ from .input_emitter import InputEventEmitter
 from .input_router import InputRouter
 
 if TYPE_CHECKING:
-    from .gui_event import GuiEvent
+    from .gui_utils.gui_event import GuiEvent
     from .gui_manager import GuiManager
 
 class EventDispatcher:

@@ -7,7 +7,7 @@ from .events import Event
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
-    from .gui_event import GuiEvent
+    from .gui_utils.gui_event import GuiEvent
     from .gui_manager import GuiManager
 
 

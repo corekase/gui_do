@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class RenderCoordinator:

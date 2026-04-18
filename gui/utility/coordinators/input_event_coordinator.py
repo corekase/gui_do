@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Iterable, TYPE_CHECKING
 
-from .events import Event
-from .gui_event import GuiEvent
+from ..events import Event
+from ..gui_utils.gui_event import GuiEvent
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class InputEventCoordinator:

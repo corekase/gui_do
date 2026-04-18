@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from pygame.event import Event as PygameEvent
 
 if TYPE_CHECKING:
-    from .gui_event import GuiEvent
-    from .gui_manager import GuiManager
+    from ..gui_utils.gui_event import GuiEvent
+    from ..gui_manager import GuiManager
 
 
 class DispatchBridgeCoordinator:

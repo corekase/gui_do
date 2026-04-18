@@ -3,11 +3,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 
-from .events import GuiError
-from .input.cursor_placement import CursorPlacement
+from ..events import GuiError
+from ..input.cursor_placement import CursorPlacement
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 _logger = logging.getLogger(__name__)

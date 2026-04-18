@@ -5,10 +5,10 @@ from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.events import Event, GuiError, ButtonStyle
-from ..utility.interactive import BaseInteractive, InteractiveState
+from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 
 if TYPE_CHECKING:
-    from ..utility.gui_event import GuiEvent
+    from ..utility.gui_utils.gui_event import GuiEvent
     from ..utility.gui_manager import GuiManager
     from .window import Window
 

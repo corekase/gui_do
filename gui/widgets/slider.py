@@ -7,9 +7,9 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
 
-from ..utility.axis_range import AxisRangeMixin
+from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.events import colours, GuiError, InteractiveState, Orientation
-from ..utility.widget import Widget
+from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager

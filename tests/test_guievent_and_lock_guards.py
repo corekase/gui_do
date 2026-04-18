@@ -4,9 +4,9 @@ from pygame import Rect
 
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import Event, GuiError
-from gui.utility.gui_event import GuiEvent
+from gui.utility.gui_utils.gui_event import GuiEvent
 from gui.utility.gui_manager import GuiManager
-from gui.utility.widget import Widget
+from gui.utility.intermediates.widget import Widget
 
 
 class GuiEventAndLockGuardTests(unittest.TestCase):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from ..widgets.window import Window as Window
+from ...widgets.window import Window as Window
 
 
 class WorkspaceState:

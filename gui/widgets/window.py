@@ -11,7 +11,7 @@ from .frame import Frame
 if TYPE_CHECKING:
     from ..utility.events import BaseEvent
     from ..utility.gui_manager import GuiManager
-    from ..utility.widget import Widget
+    from ..utility.intermediates.widget import Widget
 
 class Window:
     """Top-level container with title bar, child widgets, and lifecycle hooks."""

@@ -5,11 +5,11 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
-from .events import InteractiveState
+from ..events import InteractiveState
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
-    from ..widgets.window import Window
+    from ..gui_manager import GuiManager
+    from ...widgets.window import Window
 
 class BaseInteractive(Widget):
     """Shared hover/armed state machine for interactive widgets."""

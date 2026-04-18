@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Dict, TYPE_CHECKING
 
-from .events import GuiError
-from ..widgets.window import Window as Window
+from ..events import GuiError
+from ...widgets.window import Window as Window
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class WorkspaceCoordinator:

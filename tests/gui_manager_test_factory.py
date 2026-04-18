@@ -3,31 +3,31 @@ from typing import Any, Callable, Literal, Optional
 
 from pygame import Rect
 
-from gui.utility.dispatch_bridge_coordinator import DispatchBridgeCoordinator
-from gui.utility.event_delivery import EventDeliveryCoordinator
+from gui.utility.coordinators.dispatch_bridge_coordinator import DispatchBridgeCoordinator
+from gui.utility.coordinators.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
-from gui.utility.focus_state_model import FocusState
-from gui.utility.graphics_coordinator import GraphicsCoordinator
+from gui.utility.gui_utils.focus_state_model import FocusState
+from gui.utility.coordinators.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
-from gui.utility.input_event_coordinator import InputEventCoordinator
-from gui.utility.input_providers import InputProviders
-from gui.utility.drag_state_model import DragState
+from gui.utility.coordinators.input_event_coordinator import InputEventCoordinator
+from gui.utility.gui_utils.input_providers import InputProviders
+from gui.utility.gui_utils.drag_state_model import DragState
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
 from gui.utility.gui_manager import GuiManager
-from gui.utility.layout_coordinator import LayoutCoordinator
+from gui.utility.coordinators.layout_coordinator import LayoutCoordinator
 from gui.utility.lifecycle import LifecycleCoordinator, ScreenLifecycle
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
-from gui.utility.lock_state_model import LockState
+from gui.utility.coordinators.lock_flow_coordinator import LockFlowCoordinator
+from gui.utility.gui_utils.lock_state_model import LockState
 from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.pointer_coordinator import PointerCoordinator
-from gui.utility.render_coordinator import RenderCoordinator
-from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
+from gui.utility.coordinators.pointer_coordinator import PointerCoordinator
+from gui.utility.coordinators.render_coordinator import RenderCoordinator
+from gui.utility.coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.ui_factory import GuiUiFactory
-from gui.utility.widget_state_coordinator import WidgetStateCoordinator
-from gui.utility.workspace_coordinator import WorkspaceCoordinator
-from gui.utility.workspace_state import WorkspaceState
-from gui.utility.widget import Widget
+from gui.utility.coordinators.widget_state_coordinator import WidgetStateCoordinator
+from gui.utility.coordinators.workspace_coordinator import WorkspaceCoordinator
+from gui.utility.gui_utils.workspace_state import WorkspaceState
+from gui.utility.intermediates.widget import Widget
 
 StubPreset = Literal["base", "routing", "locking", "state_manager"]
 

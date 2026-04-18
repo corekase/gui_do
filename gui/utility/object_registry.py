@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional, TYPE_CHECKING, TypeVar, cast
 
 from .events import GuiError
-from .widget import Widget
+from .intermediates.widget import Widget
 from ..widgets.window import Window as Window
 
 if TYPE_CHECKING:

@@ -1,5 +1,5 @@
-from gui.utility.drag_state_model import DragState
-from gui.utility.lock_state_model import LockState
+from gui.utility.gui_utils.drag_state_model import DragState
+from gui.utility.gui_utils.lock_state_model import LockState
 
 
 class StateModelBackedStub:

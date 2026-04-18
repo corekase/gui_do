@@ -7,8 +7,8 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
-from ..utility.axis_range import AxisRangeMixin
-from ..utility.widget import Widget
+from ..utility.intermediates.axis_range import AxisRangeMixin
+from ..utility.intermediates.widget import Widget
 from ..utility.events import colours, GuiError, Orientation, ArrowPosition, InteractiveState
 
 if TYPE_CHECKING:

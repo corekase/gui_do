@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from ..widgets.window import Window as Window
+from ...widgets.window import Window as Window
 
 
 @dataclass

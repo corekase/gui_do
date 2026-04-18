@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from pygame import Rect
 
-from .widget import Widget
+from ..intermediates.widget import Widget
 
 
 @dataclass

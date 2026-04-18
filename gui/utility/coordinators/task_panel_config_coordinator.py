@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, Optional, TYPE_CHECKING, cast
 
-from .events import BaseEvent, GuiError
-from .widget import Widget
+from ..events import BaseEvent, GuiError
+from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class TaskPanelConfigCoordinator:
@@ -31,7 +31,7 @@ class TaskPanelConfigCoordinator:
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
         """Configure task panel."""
-        from .task_panel import _ManagedTaskPanel
+        from ..gui_utils.task_panel import _ManagedTaskPanel
 
         if type(height) is not int or height <= 0:
             raise GuiError(f'task_panel_height must be a positive int, got: {height}')

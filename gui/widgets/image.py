@@ -6,7 +6,7 @@ from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from ..utility.events import GuiError
 from ..utility.resource_error import DataResourceErrorHandler
-from ..utility.widget import Widget
+from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager

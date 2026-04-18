@@ -7,10 +7,10 @@ from pygame import Rect
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.events import ArrowPosition, ButtonStyle, GuiError, Orientation
 from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.task_panel import _ManagedTaskPanel
+from gui.utility.gui_utils.task_panel import _ManagedTaskPanel
 from gui.utility.ui_factory import GuiUiFactory
-from gui.utility.widget import Widget
-from gui.utility.workspace_state import WorkspaceState
+from gui.utility.intermediates.widget import Widget
+from gui.utility.gui_utils.workspace_state import WorkspaceState
 import gui.utility.gui_manager as gm
 
 
@@ -75,8 +75,8 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             def draw(self):
                 return None
 
-        with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
-            "gui.utility.task_panel.Frame", FakeFrame
+        with patch("gui.utility.gui_utils.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
+            "gui.utility.gui_utils.task_panel.Frame", FakeFrame
         ):
             panel = _ManagedTaskPanel(
                 gui,
@@ -116,7 +116,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             },
         )
 
-        with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
+        with patch("gui.utility.gui_utils.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
             panel = _ManagedTaskPanel(gui, 20, 0, 4, True, 1.0, 1, "panel.png", None, None, None)
 
         self.assertEqual(len(set_pristine_calls), 1)

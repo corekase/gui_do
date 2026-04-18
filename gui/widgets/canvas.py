@@ -9,7 +9,7 @@ from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING, Union
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.events import GuiError, InteractiveState, CanvasEvent
-from ..utility.widget import Widget
+from ..utility.intermediates.widget import Widget
 from .frame import Frame
 from .events.canvas_event_packet import CanvasEventPacket
 

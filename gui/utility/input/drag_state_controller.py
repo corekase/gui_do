@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 
-from ..drag_state_model import DragState
+from ..gui_utils.drag_state_model import DragState
 from ..input_actions import InputAction
 
 if TYPE_CHECKING:

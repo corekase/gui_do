@@ -5,8 +5,8 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 
 from ..events import GuiError
-from ..lock_state_model import LockState
-from ..widget import Widget
+from ..gui_utils.lock_state_model import LockState
+from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..gui_manager import GuiManager

@@ -1,6 +1,6 @@
 import unittest
 
-from gui.utility.buttongroup_mediator import ButtonGroupMediator
+from gui.utility.intermediates.buttongroup_mediator import ButtonGroupMediator
 from gui.utility.events import InteractiveState
 
 

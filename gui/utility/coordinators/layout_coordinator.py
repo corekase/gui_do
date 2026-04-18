@@ -4,10 +4,10 @@ from typing import Tuple, TYPE_CHECKING, Union
 
 from pygame import Rect
 
-from .events import GuiError
+from ..events import GuiError
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class LayoutCoordinator:

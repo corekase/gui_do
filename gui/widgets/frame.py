@@ -5,7 +5,7 @@ from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Optional, TYPE_CHECKING
 from ..utility.events import InteractiveState
-from ..utility.widget import Widget
+from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager

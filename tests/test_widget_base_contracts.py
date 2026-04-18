@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from pygame import Rect
 
 from gui.utility.events import Event, GuiError
-from gui.utility.widget import Widget
+from gui.utility.intermediates.widget import Widget
 
 
 class DummyWidget(Widget):

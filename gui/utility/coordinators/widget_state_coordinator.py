@@ -4,12 +4,12 @@ from typing import Optional, TYPE_CHECKING
 
 from pygame.event import Event as PygameEvent
 
-from .events import GuiError
-from .widget import Widget
+from ..events import GuiError
+from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
-    from ..widgets.window import Window as Window
+    from ..gui_manager import GuiManager
+    from ...widgets.window import Window as Window
 
 
 class WidgetStateCoordinator:

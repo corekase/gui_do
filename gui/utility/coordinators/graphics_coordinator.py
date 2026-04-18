@@ -5,11 +5,11 @@ from pygame import Rect
 from pygame.surface import Surface
 from typing import Any, Optional, TYPE_CHECKING
 
-from .events import GuiError
-from .resource_error import DataResourceErrorHandler
+from ..events import GuiError
+from ..resource_error import DataResourceErrorHandler
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class GraphicsCoordinator:

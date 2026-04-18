@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pygame import Rect
 
-from .events import GuiError, Orientation
+from ..events import GuiError, Orientation
 
 
 class AxisRangeMixin:

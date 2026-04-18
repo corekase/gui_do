@@ -5,12 +5,12 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
-from .events import Event, GuiError
+from ..events import Event, GuiError
 
 if TYPE_CHECKING:
-    from .gui_event import GuiEvent
-    from .gui_manager import GuiManager
-    from ..widgets.window import Window
+    from ..gui_utils.gui_event import GuiEvent
+    from ..gui_manager import GuiManager
+    from ...widgets.window import Window
 
 class Widget:
     """Base widget contract used by all concrete widgets."""

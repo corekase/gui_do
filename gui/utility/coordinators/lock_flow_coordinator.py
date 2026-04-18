@@ -4,10 +4,10 @@ from typing import Optional, Tuple, TYPE_CHECKING
 
 from pygame import Rect
 
-from .widget import Widget
+from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class LockFlowCoordinator:

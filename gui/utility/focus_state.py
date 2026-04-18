@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from .widget import Widget
+from .intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager

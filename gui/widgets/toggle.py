@@ -5,8 +5,8 @@ from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.events import ButtonStyle, InteractiveState
-from ..utility.interactive import BaseInteractive
-from ..utility.widget import Widget
+from ..utility.intermediates.interactive import BaseInteractive
+from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager

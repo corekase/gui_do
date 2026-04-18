@@ -6,7 +6,7 @@ from pygame import Rect
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
 from gui.utility.gui_manager import GuiManager
-from gui.utility.widget import Widget
+from gui.utility.intermediates.widget import Widget
 
 
 class GuiManagerHelperApiTests(unittest.TestCase):

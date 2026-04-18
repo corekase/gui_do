@@ -8,8 +8,8 @@ from event_mouse_fixtures import build_mouse_gui_stub
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
 from gui.utility.gui_manager import GuiManager
-from gui.utility.task_panel import _ManagedTaskPanel
-from gui.utility.widget import Widget
+from gui.utility.gui_utils.task_panel import _ManagedTaskPanel
+from gui.utility.intermediates.widget import Widget
 from gui.widgets.window import Window
 
 
@@ -63,7 +63,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.task_panel = old_panel
 
         created = _PanelStub(visible=True)
-        with patch("gui.utility.task_panel._ManagedTaskPanel", return_value=created):
+        with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", return_value=created):
             GuiManager.configure_task_panel(gui)
 
         self.assertIs(gui.task_panel, created)
@@ -339,8 +339,8 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
-        with patch("gui.utility.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.graphics_coordinator.pygame.transform.smoothscale",
+        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.coordinators.graphics_coordinator.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png", target)
@@ -418,7 +418,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         created = _PanelStub(visible=True)
 
-        with patch("gui.utility.task_panel._ManagedTaskPanel", return_value=created):
+        with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", return_value=created):
             GuiManager.configure_task_panel(gui)
 
         self.assertIs(gui.task_panel, created)
@@ -480,16 +480,16 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
         scaled = SimpleNamespace(convert=lambda: object(), get_rect=lambda: Rect(0, 0, 10, 6))
-        with patch("gui.utility.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.graphics_coordinator.pygame.transform.smoothscale",
+        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.coordinators.graphics_coordinator.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png")
 
         self.assertEqual(gui.pristine, "copied")
 
-        with patch("gui.utility.graphics_coordinator.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
-            "gui.utility.graphics_coordinator.DataResourceErrorHandler.raise_load_error",
+        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
+            "gui.utility.coordinators.graphics_coordinator.DataResourceErrorHandler.raise_load_error",
             side_effect=GuiError("wrapped"),
         ):
             with self.assertRaises(GuiError):
@@ -649,7 +649,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         target = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None), pristine=None)
 
-        with patch("gui.utility.graphics_coordinator.pygame.image.load", side_effect=GuiError("load guierror")):
+        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", side_effect=GuiError("load guierror")):
             with self.assertRaises(GuiError):
                 GuiManager.set_pristine(gui, "bg.png", target)
 

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
-from .events import InteractiveState
+from ..events import InteractiveState
 
 if TYPE_CHECKING:
-    from ..widgets.buttongroup import ButtonGroup
+    from ...widgets.buttongroup import ButtonGroup
 
 class ButtonGroupMediator:
     """Mediator coordinating mutually exclusive selection per button group."""
