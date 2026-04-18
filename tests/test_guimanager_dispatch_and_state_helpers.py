@@ -7,6 +7,7 @@ from gui.utility.constants import Event
 from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.object_registry import GuiObjectRegistry
@@ -29,6 +30,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.drag_state = DragStateController(gui)
         gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.event_input = InputEventCoordinator(gui)
         gui.object_registry = GuiObjectRegistry(gui)
         gui.event_delivery = EventDeliveryCoordinator(gui)
         gui.workspace = WorkspaceCoordinator(gui)

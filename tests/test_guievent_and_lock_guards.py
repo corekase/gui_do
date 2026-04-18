@@ -4,6 +4,7 @@ from pygame import Rect
 
 from gui.utility.constants import Event, GuiError
 from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiEvent, GuiManager
 from gui.utility.widget import Widget
@@ -55,6 +56,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.event_input = InputEventCoordinator(gui)
         gui.get_mouse_pos = lambda: (7, 8)
 
         event = GuiManager.event(gui, Event.MouseButtonDown, button=1)

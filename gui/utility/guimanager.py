@@ -13,6 +13,7 @@ from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
 from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
+from .input_event_coordinator import InputEventCoordinator
 from .input_state import DragStateController, LockStateController
 from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
@@ -365,6 +366,7 @@ class GuiManager:
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
+        self.event_input: InputEventCoordinator = InputEventCoordinator(self)
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
         self.layout: LayoutCoordinator = LayoutCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
@@ -561,16 +563,10 @@ class GuiManager:
         self.event_delivery.dispatch_event(event)
 
     def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
-        if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
-            kwargs.setdefault('pos', self.get_mouse_pos())
-        return GuiEvent(event_type, **kwargs)
+        return self.event_input.event(event_type, **kwargs)
 
     def events(self) -> Iterable[GuiEvent]:
-        for raw_event in self._event_getter():
-            event = self.handle_event(raw_event)
-            if event.type == Event.Pass:
-                continue
-            yield event
+        yield from self.event_input.events()
 
     def handle_event(self, event: PygameEvent) -> GuiEvent:
         return self.event_dispatcher.handle(event)
