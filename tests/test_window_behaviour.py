@@ -29,7 +29,7 @@ class WindowBehaviourTests(unittest.TestCase):
 
         rect = Window.get_window_rect(window)
 
-        self.assertEqual(rect, Rect(100, 179, 300, 169))
+        self.assertEqual(rect, Rect(100, 180, 300, 170))
 
     def test_get_widget_rect_is_anchored_to_top_right_control_area(self) -> None:
         window = self._build_window_stub()

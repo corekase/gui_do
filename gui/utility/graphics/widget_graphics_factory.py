@@ -429,7 +429,7 @@ class WidgetGraphicsFactory:
             line(surface, ul, (x, y), (x + width - 1, y))
             line(surface, ul, (x, y), (x, y + height - 1))
             line(surface, lr, (x, y + height - 1), (x + width - 1, y + height - 1))
-            line(surface, lr, (x + width - 1, y - 1), (x + width - 1, y + height - 1))
+            line(surface, lr, (x + width - 1, y), (x + width - 1, y + height - 1))
             if width > 1 and height > 1:
                 surface.set_at((x + 1, y + 1), ul_d)
             if width > 2 and height > 2:

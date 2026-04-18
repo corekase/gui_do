@@ -140,10 +140,10 @@ class Demo:
             12.25,
             True,
         )
-        g1.label((v_float_x - 10, v_slider_y - 20), 'V Float', True)
+        g1.label((v_float_x - 8, v_slider_y - 40), 'V Float', True)
         g1.label((v_int_x - 14, v_slider_y + v_slider_height), 'V Int Snap', True)
-        self.v_slider_float_value = g1.label((v_float_x - 14, v_slider_y + v_slider_height + 20), '0.00', True)
-        self.v_slider_int_value = g1.label((v_int_x - 8, v_slider_y + v_slider_height + 20), '0', True)
+        self.v_slider_float_value = g1.label((v_float_x - 6, v_slider_y - 20), '0.00', True)
+        self.v_slider_int_value = g1.label((v_int_x + 14, v_slider_y + v_slider_height + 20), '0', True)
         # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------

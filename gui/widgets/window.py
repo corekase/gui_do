@@ -111,7 +111,7 @@ class Window:
         return Rect(self.get_window_rect().x + 2 + self.get_window_rect().width - self.titlebar_size, self.get_title_bar_rect().y + 1, w, h)
     def get_window_rect(self) -> Rect:
         """Return window bounds including title bar."""
-        return Rect(self.x, self.y - self.titlebar_size - 1, self.width, self.height + self.titlebar_size - 1)
+        return Rect(self.x, self.y - self.titlebar_size, self.width, self.height + self.titlebar_size)
 
     def handle_event(self, event: "BaseEvent") -> None:
         """Handle event."""
