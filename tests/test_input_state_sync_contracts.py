@@ -5,7 +5,8 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEBUTTONUP
 
-from gui.utility.input_state import DragStateController, LockStateController
+from gui.utility.input.drag_state_controller import DragStateController
+from gui.utility.input.lock_state_controller import LockStateController
 from gui.utility.widget import Widget
 from state_model_backed_stub import StateModelBackedStub
 

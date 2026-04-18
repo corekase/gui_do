@@ -18,7 +18,8 @@ from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_event_coordinator import InputEventCoordinator
 from .input_providers import InputProviders
-from .input_state import DragStateController, LockStateController
+from .input.drag_state_controller import DragStateController
+from .input.lock_state_controller import LockStateController
 from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator, ScreenLifecycle
