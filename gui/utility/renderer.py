@@ -25,17 +25,33 @@ class Renderer:
                         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, widget_rect), widget_rect))
                 widget.draw()
         windows_snapshot = tuple(self.gui.windows)
-        top_window = windows_snapshot[-1] if windows_snapshot else None
-        for window in windows_snapshot:
+        regular_windows = [window for window in windows_snapshot if window.__class__.__name__ != 'Panel']
+        panel_windows = [window for window in windows_snapshot if window.__class__.__name__ == 'Panel']
+        top_regular_window = regular_windows[-1] if regular_windows else None
+
+        for window in tuple(regular_windows):
             if window.visible:
                 if self.gui.buffered:
                     window_rect = window.get_window_rect()
                     if window_rect.width > 0 and window_rect.height > 0:
                         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window_rect), window_rect))
-                if window is top_window:
+                if window is top_regular_window:
                     window.draw_title_bar_active()
                 else:
                     window.draw_title_bar_inactive()
+                window.draw_window()
+                for widget in tuple(window.widgets):
+                    if widget.visible:
+                        widget.draw()
+                self.gui.surface.blit(window.surface, (window.x, window.y))
+
+        # Panels are overlay containers and should always draw above regular windows.
+        for window in tuple(panel_windows):
+            if window.visible:
+                if self.gui.buffered:
+                    window_rect = window.get_window_rect()
+                    if window_rect.width > 0 and window_rect.height > 0:
+                        self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, window_rect), window_rect))
                 window.draw_window()
                 for widget in tuple(window.widgets):
                     if widget.visible:

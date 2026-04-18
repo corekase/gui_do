@@ -12,7 +12,7 @@ Each release includes a link to a video demonstration as it was at the time.
 - Multiple GUI contexts (`StateManager`) so you can switch between complete interfaces.
 - A central manager (`GuiManager`) that creates widgets and routes events.
 - Windowed and screen-level widgets.
-- Common controls: buttons, toggles, button groups, scrollbars, labels, images, frames, arrow boxes, and canvases.
+- Common controls: buttons, toggles, button groups, scrollbars, labels, images, frames, arrow boxes, canvases, and bottom task panels.
 - A task scheduler for background computation with UI-thread progress callbacks.
 
 ## Quick Start
@@ -146,6 +146,7 @@ All of these both create and register the widget:
 - `gui.Frame(id, rect)`
 - `gui.Image(id, rect, image, automatic_pristine=False, scale=True)`
 - `gui.Label(position, text, shadow=False, id=None)`
+- `gui.Panel(id, size, x=0, reveal_pixels=4, auto_hide=True, timer_interval=16.0, movement_step=4, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 - `gui.Scrollbar(id, overall_rect, orientation, arrow_position, (total, start, bar_size, inc))`
 - `gui.Toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.Window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`

@@ -62,12 +62,23 @@ class Demo:
         # general widget height
         widget_height = 28
         # -----------------------
-        # screen widgets
+        # screen widgets in a bottom task panel
         # -----------------------
+        panel_height = widget_height + 10
+        self.task_panel = g1.Panel(
+            'task_panel',
+            (self.screen_rect.width, panel_height),
+            x=0,
+            reveal_pixels=4,
+            auto_hide=True,
+            timer_interval=16.0,
+            movement_step=4,
+            event_handler=self.gui1_screen_event_handler,
+        )
         # exit button
-        g1.Button('exit', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Exit')
+        g1.Button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
-        g1.set_grid_properties((85, 1042), 120, widget_height, 4)
+        g1.set_grid_properties((85, 5), 120, widget_height, 4)
         # switch to gui2 button
         self.gui2_button = g1.Button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
         # control whether the background circles are drawn
@@ -226,6 +237,7 @@ class Demo:
         g1.Button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
         g1.Button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
         g1.Button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        g1.raise_window(self.task_panel)
         # set cursor image
         g1.set_cursor('normal')
         self.gui1 = g1

@@ -23,6 +23,7 @@ from ..widgets.toggle import Toggle as gToggle
 from ..widgets.arrowbox import ArrowBox as gArrowBox
 from ..widgets.buttongroup import ButtonGroup as gButtonGroup
 from ..widgets.frame import Frame as gFrame
+from ..widgets.panel import Panel as gPanel
 
 _logger = logging.getLogger(__name__)
 
@@ -144,6 +145,37 @@ class GuiManager:
         postamble: Optional[Callable[[], None]] = None,
     ) -> gWindow:
         return self.add(gWindow(self, title, pos, size, backdrop, preamble, event_handler, postamble))
+
+    def Panel(
+        self,
+        id: str,
+        size: Tuple[int, int],
+        x: int = 0,
+        reveal_pixels: int = 4,
+        auto_hide: bool = True,
+        timer_interval: float = 16.0,
+        movement_step: int = 4,
+        backdrop: Optional[str] = None,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[BaseEvent], None]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> gPanel:
+        return self.add(
+            gPanel(
+                self,
+                id,
+                size,
+                x,
+                reveal_pixels,
+                auto_hide,
+                timer_interval,
+                movement_step,
+                backdrop,
+                preamble,
+                event_handler,
+                postamble,
+            )
+        )
 
     def __init__(self, surface: Surface, fonts: List[Tuple[str, str, int]], bitmap_factory: Optional[BitmapFactory] = None) -> None:
         """Create a GUI manager bound to a target surface and font registry."""

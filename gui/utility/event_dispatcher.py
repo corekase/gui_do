@@ -123,7 +123,7 @@ class EventDispatcher:
                 self.gui.raise_window(self.gui.active_window)
         hit_any = False
         focus_target = None
-        for window in tuple(self.gui.windows)[::-1]:
+        for window in self._windows_in_hit_order():
             if window not in self.gui.windows:
                 continue
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
@@ -178,9 +178,15 @@ class EventDispatcher:
         self.gui.dragging_window = None
         self.gui.mouse_delta = None
 
+    def _windows_in_hit_order(self):
+        windows_snapshot = tuple(self.gui.windows)
+        panel_windows = [window for window in windows_snapshot if window.__class__.__name__ == 'Panel']
+        regular_windows = [window for window in windows_snapshot if window.__class__.__name__ != 'Panel']
+        return tuple(panel_windows[::-1] + regular_windows[::-1])
+
     def _update_active_window(self) -> None:
         top_window = None
-        for window in self.gui.windows[::-1]:
+        for window in self._windows_in_hit_order():
             if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
                 top_window = window
                 break
