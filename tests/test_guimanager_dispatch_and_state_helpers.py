@@ -3,39 +3,19 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import Event
-from gui.utility.event_delivery import EventDeliveryCoordinator
-from gui.utility.focus_state import FocusStateController
-from gui.utility.input_emitter import InputEventEmitter
-from gui.utility.input_event_coordinator import InputEventCoordinator
-from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
-from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
 
 class GuiManagerRoiBatch6Tests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = GuiManager.__new__(GuiManager)
-        gui.windows = []
-        gui.widgets = []
-        gui.task_panel = None
-        gui._task_owner_by_id = {}
+        gui = build_gui_manager_stub()
         gui._screen_events = []
         gui._screen_event_handler = lambda event: gui._screen_events.append(event)
         gui.lock_area = lambda point: point
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.focus_state = FocusStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
-        gui.event_input = InputEventCoordinator(gui)
-        gui.object_registry = GuiObjectRegistry(gui)
-        gui.event_delivery = EventDeliveryCoordinator(gui)
-        gui.workspace = WorkspaceCoordinator(gui)
         return gui
 
     def test_dispatch_event_task_panel_hidden_falls_back_to_screen(self) -> None:

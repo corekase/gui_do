@@ -3,45 +3,19 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import GuiError
-from gui.utility.event_delivery import EventDeliveryCoordinator
-from gui.utility.focus_state import FocusStateController
-from gui.utility.graphics_coordinator import GraphicsCoordinator
-from gui.utility.input_emitter import InputEventEmitter
-from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
-from gui.utility.layout_coordinator import LayoutCoordinator
-from gui.utility.lifecycle import LifecycleCoordinator
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
-from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.pointer_coordinator import PointerCoordinator
-from gui.utility.widget_state_coordinator import WidgetStateCoordinator
-from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 
 
 class GuiManagerHelperApiTests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = GuiManager.__new__(GuiManager)
-        gui.windows = []
-        gui.task_panel = None
+        gui = build_gui_manager_stub()
         gui.lock_area = lambda point: point
         gui._screen_preamble = None
         gui._screen_event_handler = None
         gui._screen_postamble = None
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.focus_state = FocusStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
-        gui.object_registry = GuiObjectRegistry(gui)
-        gui.event_delivery = EventDeliveryCoordinator(gui)
-        gui.graphics = GraphicsCoordinator(gui)
-        gui.layout = LayoutCoordinator(gui)
-        gui.lifecycle = LifecycleCoordinator(gui)
-        gui.pointer = PointerCoordinator(gui)
-        gui.widget_state = WidgetStateCoordinator(gui)
-        gui.workspace = WorkspaceCoordinator(gui)
         return gui
 
     def _build_widget_stub(self, visible=True):

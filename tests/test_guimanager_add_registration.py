@@ -1,27 +1,15 @@
 import unittest
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import GuiError
-from gui.utility.focus_state import FocusStateController
 from gui.utility.guimanager import GuiManager
-from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
 
 class GuiManagerAddRegistrationTests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = GuiManager.__new__(GuiManager)
-        gui.surface = object()
-        gui.widgets = []
-        gui.windows = []
-        gui.task_panel = None
-        gui._task_panel_capture = False
-        gui._active_object = None
-        gui.focus_state = FocusStateController(gui)
-        gui.object_registry = GuiObjectRegistry(gui)
-        gui.workspace = WorkspaceCoordinator(gui)
-        return gui
+        return build_gui_manager_stub(surface=object())
 
     def _build_widget_stub(self, widget_id="w"):
         widget = Widget.__new__(Widget)

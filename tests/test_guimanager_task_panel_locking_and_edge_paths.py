@@ -4,19 +4,9 @@ from unittest.mock import patch
 
 from pygame import Rect
 
+from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import GuiError
-from gui.utility.focus_state import FocusStateController
-from gui.utility.graphics_coordinator import GraphicsCoordinator
-from gui.utility.input_emitter import InputEventEmitter
-from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
-from gui.utility.lifecycle import LifecycleCoordinator
-from gui.utility.lock_flow_coordinator import LockFlowCoordinator
-from gui.utility.object_registry import GuiObjectRegistry
-from gui.utility.pointer_coordinator import PointerCoordinator
-from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
-from gui.utility.ui_factory import GuiUiFactory
-from gui.utility.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -39,32 +29,10 @@ class _PanelStub:
 
 class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = GuiManager.__new__(GuiManager)
-        gui.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60))
-        gui.widgets = []
-        gui.windows = []
-        gui.task_panel = None
-        gui._task_panel_capture = False
-        gui._active_object = None
-        gui._task_owner_by_id = {}
-        gui.mouse_locked = False
-        gui.mouse_point_locked = False
-        gui.lock_area_rect = None
-        gui.lock_point_pos = None
-        gui.lock_point_recenter_pending = False
-        gui.lock_point_tolerance_rect = None
-        gui.input_emitter = InputEventEmitter(gui)
-        gui.drag_state = DragStateController(gui)
-        gui.focus_state = FocusStateController(gui)
-        gui.lock_state = LockStateController(gui)
-        gui.lock_flow = LockFlowCoordinator(gui)
-        gui.ui_factory = GuiUiFactory(gui)
-        gui.object_registry = GuiObjectRegistry(gui)
-        gui.graphics = GraphicsCoordinator(gui)
-        gui.lifecycle = LifecycleCoordinator(gui)
-        gui.pointer = PointerCoordinator(gui)
-        gui.task_panel_config = TaskPanelConfigCoordinator(gui)
-        gui.workspace = WorkspaceCoordinator(gui)
+        gui = build_gui_manager_stub(
+            surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60)),
+            include_ui_factory=True,
+        )
         return gui
 
     def test_module_noop_helpers_are_callable(self) -> None:
