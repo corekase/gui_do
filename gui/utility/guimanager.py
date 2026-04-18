@@ -85,7 +85,7 @@ class _ManagedTaskPanel:
         self.movement_step: int = movement_step
         self._shown_y: int = screen_rect.height - self.height
         self._hidden_y: int = screen_rect.height - self.reveal_pixels
-        self.y: int = self._shown_y
+        self.y: int = self._hidden_y if self.auto_hide else self._shown_y
         self._hovered: bool = False
         self._timer_id: Tuple[str, int] = ('task-panel-motion', id(self))
         self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
@@ -135,6 +135,45 @@ class _ManagedTaskPanel:
             self.y = min(target_y, self.y + self.movement_step)
         elif self.y > target_y:
             self.y = max(target_y, self.y - self.movement_step)
+
+    def set_visible(self, visible: bool) -> None:
+        if not isinstance(visible, bool):
+            raise GuiError('task panel visibility must be a bool')
+        self.visible = visible
+        if visible:
+            self.refresh_targets()
+
+    def set_auto_hide(self, auto_hide: bool) -> None:
+        if not isinstance(auto_hide, bool):
+            raise GuiError('task panel auto_hide must be a bool')
+        self.auto_hide = auto_hide
+        if not auto_hide:
+            self.refresh_targets()
+            self.y = self._shown_y
+
+    def set_reveal_pixels(self, reveal_pixels: int) -> None:
+        if not isinstance(reveal_pixels, int):
+            raise GuiError(f'task panel reveal_pixels must be an int, got: {reveal_pixels}')
+        if reveal_pixels < 1:
+            raise GuiError(f'task panel reveal_pixels must be >= 1, got: {reveal_pixels}')
+        if reveal_pixels >= self.height:
+            raise GuiError(f'task panel reveal_pixels must be < panel height ({self.height}), got: {reveal_pixels}')
+        self.reveal_pixels = reveal_pixels
+        self.refresh_targets()
+
+    def set_movement_step(self, movement_step: int) -> None:
+        if not isinstance(movement_step, int):
+            raise GuiError(f'task panel movement_step must be an int, got: {movement_step}')
+        if movement_step <= 0:
+            raise GuiError(f'task panel movement_step must be > 0, got: {movement_step}')
+        self.movement_step = movement_step
+
+    def set_timer_interval(self, timer_interval: float) -> None:
+        if timer_interval <= 0:
+            raise GuiError(f'task panel timer_interval must be > 0, got: {timer_interval}')
+        self.timer_interval = timer_interval
+        self.gui.timers.remove_timer(self._timer_id)
+        self.gui.timers.add_timer(self._timer_id, self.timer_interval, self.animate)
 
 TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 
@@ -381,6 +420,46 @@ class GuiManager:
         self.task_panel._preamble = preamble if preamble is not None else _noop
         self.task_panel._event_handler = event_handler if event_handler is not None else _noop_event
         self.task_panel._postamble = postamble if postamble is not None else _noop
+
+    def set_task_panel_enabled(self, enabled: bool) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self.task_panel.set_visible(enabled)
+        if not enabled:
+            self._task_panel_capture = False
+
+    def set_task_panel_auto_hide(self, auto_hide: bool) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self.task_panel.set_auto_hide(auto_hide)
+
+    def set_task_panel_reveal_pixels(self, reveal_pixels: int) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self.task_panel.set_reveal_pixels(reveal_pixels)
+
+    def set_task_panel_movement_step(self, movement_step: int) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self.task_panel.set_movement_step(movement_step)
+
+    def set_task_panel_timer_interval(self, timer_interval: float) -> None:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        self.task_panel.set_timer_interval(timer_interval)
+
+    def read_task_panel_settings(self) -> Dict[str, object]:
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        panel = self.task_panel
+        return {
+            'enabled': panel.visible,
+            'auto_hide': panel.auto_hide,
+            'reveal_pixels': panel.reveal_pixels,
+            'movement_step': panel.movement_step,
+            'timer_interval': panel.timer_interval,
+            'rect': panel.get_rect(),
+        }
 
     def get_mouse_pos(self) -> Tuple[int, int]:
         return self.lock_area(self.mouse_pos)

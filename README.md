@@ -169,6 +169,15 @@ To parent newly created widgets into the task panel container, bracket creation 
 - `gui.begin_task_panel()`
 - `gui.end_task_panel()`
 
+Runtime task panel helpers on `GuiManager`:
+
+- `gui.set_task_panel_enabled(enabled)`
+- `gui.set_task_panel_auto_hide(auto_hide)`
+- `gui.set_task_panel_reveal_pixels(reveal_pixels)`
+- `gui.set_task_panel_movement_step(movement_step)`
+- `gui.set_task_panel_timer_interval(timer_interval)`
+- `gui.read_task_panel_settings()`
+
 ## Events and Callbacks
 
 ## GUI events

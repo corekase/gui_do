@@ -38,10 +38,10 @@ class Demo:
         # begin gui1
         # -----------------------
         # create a gui manager
-        g1 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui1_screen_event_handler)
+        g1 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui1_panel_event_handler)
         g1.set_screen_lifecycle(
             preamble=self.gui1_screen_preamble,
-            event_handler=self.gui1_screen_event_handler,
+            event_handler=self.gui1_panel_event_handler,
             postamble=self.gui1_screen_postamble,
         )
         b1 = g1.bitmap_factory
@@ -234,14 +234,16 @@ class Demo:
         # -----------------------
         # begin gui2
         # -----------------------
-        g2 = GuiManager(self.screen, fonts)
+        g2 = GuiManager(self.screen, fonts, task_panel_event_handler=self.gui2_panel_event_handler)
         g2.set_screen_lifecycle(
             preamble=self.gui2_screen_preamble,
-            event_handler=self.gui2_screen_event_handler
+            event_handler=self.gui2_panel_event_handler
         )
         g2.bitmap_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
-        g2.Button('back', Rect(10, 1042, 70, widget_height), ButtonStyle.Angle, 'Back')
+        g2.begin_task_panel()
+        g2.Button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
+        g2.end_task_panel()
         g2.Window(
             'GUI 2',
             (50, 150),
@@ -303,7 +305,7 @@ class Demo:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
 
-    def gui1_screen_event_handler(self, event):
+    def gui1_panel_event_handler(self, event):
         if event.type == Event.Widget:
             if event.widget_id == 'exit':
                 self.state_manager.set_running(False)
@@ -408,7 +410,7 @@ class Demo:
     def gui2_screen_preamble(self):
         self.gui2.restore_pristine()
 
-    def gui2_screen_event_handler(self, event):
+    def gui2_panel_event_handler(self, event):
         if event.type == Event.Widget:
             if event.widget_id == 'back':
                 self.state_manager.switch_context('gui1')
