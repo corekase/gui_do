@@ -97,6 +97,16 @@ class _ManagedTaskPanel:
     def handle_event(self, event: BaseEvent) -> None:
         self._event_handler(event)
 
+    def set_lifecycle(
+        self,
+        preamble: Optional[Callable[[], None]],
+        event_handler: Optional[Callable[[BaseEvent], None]],
+        postamble: Optional[Callable[[], None]],
+    ) -> None:
+        self._preamble = preamble if preamble is not None else _noop
+        self._event_handler = event_handler if event_handler is not None else _noop_event
+        self._postamble = postamble if postamble is not None else _noop
+
     def get_rect(self) -> Rect:
         return Rect(self.x, self.y, self.width, self.height)
 

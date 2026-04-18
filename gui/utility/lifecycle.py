@@ -1,9 +1,9 @@
 from typing import Callable, Optional, TYPE_CHECKING
 
-from .constants import GuiError
+from .constants import BaseEvent, GuiError
 
 if TYPE_CHECKING:
-    from .guimanager import BaseEvent, GuiManager
+    from .guimanager import GuiManager
 
 
 class LifecycleCoordinator:
@@ -58,6 +58,4 @@ class LifecycleCoordinator:
             raise GuiError('task panel event_handler must be callable or None')
         if postamble is not None and not callable(postamble):
             raise GuiError('task panel postamble must be callable or None')
-        self.gui.task_panel._preamble = preamble if preamble is not None else (lambda: None)
-        self.gui.task_panel._event_handler = event_handler if event_handler is not None else (lambda _event: None)
-        self.gui.task_panel._postamble = postamble if postamble is not None else (lambda: None)
+        self.gui.task_panel.set_lifecycle(preamble, event_handler, postamble)

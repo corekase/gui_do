@@ -97,6 +97,13 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_set_task_panel_lifecycle_validates_callables(self) -> None:
         gui = self._build_manager_stub()
         panel = SimpleNamespace(_preamble=None, _event_handler=None, _postamble=None)
+
+        def set_lifecycle(preamble, event_handler, postamble):
+            panel._preamble = preamble if preamble is not None else (lambda: None)
+            panel._event_handler = event_handler if event_handler is not None else (lambda _event: None)
+            panel._postamble = postamble if postamble is not None else (lambda: None)
+
+        panel.set_lifecycle = set_lifecycle
         gui.task_panel = panel
 
         with self.assertRaises(GuiError):
