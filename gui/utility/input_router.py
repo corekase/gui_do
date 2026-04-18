@@ -2,6 +2,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import TYPE_CHECKING
 from .constants import Event
+from .input_emitter import InputEventEmitter
 from .input_targets import InputTargetResolver
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ class InputRouter:
 
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
+        self.emitter: InputEventEmitter = getattr(gui_manager, 'input_emitter', InputEventEmitter(gui_manager))
         self.targets: InputTargetResolver = InputTargetResolver(gui_manager)
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
@@ -26,7 +28,7 @@ class InputRouter:
         if self.gui.dragging:
             if self.gui.dragging_window is None or self.gui.mouse_delta is None:
                 self._reset_window_drag_state()
-                return self.gui.event(Event.Pass)
+                return self.emitter.pass_event()
             return self._handle_window_dragging(event)
         if self.gui.locking_object:
             return self._handle_locked_object(event)
@@ -46,12 +48,12 @@ class InputRouter:
         lock_obj = self.gui.locking_object
         if not self._is_registered_widget(lock_obj):
             self.gui.set_lock_area(None)
-            return self.gui.event(Event.Pass)
+            return self.emitter.pass_event()
         window = lock_obj.window if hasattr(lock_obj, 'window') else None
         if self.gui.handle_widget(lock_obj, event, window):
             widget_id = getattr(lock_obj, 'id', None)
-            return self.gui.event(Event.Widget, widget_id=widget_id, window=window)
-        return self.gui.event(Event.Pass)
+            return self.emitter.widget_event(widget_id=widget_id, window=window)
+        return self.emitter.pass_event()
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         rel = getattr(event, 'rel', (0, 0))
@@ -73,13 +75,7 @@ class InputRouter:
                 self.gui.mouse_pos = self.gui.lock_area(pos)
 
     def _handle_system_event(self, event: PygameEvent) -> "GuiEvent":
-        if event.type == QUIT:
-            return self.gui.event(Event.Quit)
-        if event.type == KEYUP:
-            return self.gui.event(Event.KeyUp, key=getattr(event, 'key', None))
-        if event.type == KEYDOWN:
-            return self.gui.event(Event.KeyDown, key=getattr(event, 'key', None))
-        return self.gui.event(Event.Pass)
+        return self.emitter.system_event(event)
 
     def _handle_window_dragging(self, event: PygameEvent) -> "GuiEvent":
         drag_state = getattr(self.gui, 'drag_state', None)
@@ -91,7 +87,7 @@ class InputRouter:
             or self.gui.mouse_delta is None
         ):
             self._reset_window_drag_state()
-            return self.gui.event(Event.Pass)
+            return self.emitter.pass_event()
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self.gui.dragging = False
             self.gui.dragging_window.position = (self.gui.dragging_window.x, self.gui.dragging_window.y)
@@ -109,7 +105,7 @@ class InputRouter:
             y = self.gui.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
             self.gui.dragging_window.position = (x, y)
-        return self.gui.event(Event.Pass)
+        return self.emitter.pass_event()
 
     def _process_screen_widgets(self, event: PygameEvent) -> "GuiEvent":
         return self.targets.process_screen_widgets(event)

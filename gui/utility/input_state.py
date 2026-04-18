@@ -131,6 +131,12 @@ class DragStateController:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _pass_event(self) -> "GuiEvent":
+        emitter = getattr(self.gui, 'input_emitter', None)
+        if emitter is not None:
+            return emitter.pass_event()
+        return self.gui.event(Event.Pass)
+
     def reset(self) -> None:
         self.gui.dragging = False
         self.gui.dragging_window = None
@@ -157,7 +163,7 @@ class DragStateController:
             or self.gui.mouse_delta is None
         ):
             self.reset()
-            return self.gui.event(Event.Pass)
+            return self._pass_event()
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self.gui.dragging = False
             self.gui.dragging_window.position = (self.gui.dragging_window.x, self.gui.dragging_window.y)
@@ -175,4 +181,4 @@ class DragStateController:
             y = self.gui.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.gui.mouse_delta[0], y - self.gui.mouse_delta[1]), False)
             self.gui.dragging_window.position = (x, y)
-        return self.gui.event(Event.Pass)
+        return self._pass_event()

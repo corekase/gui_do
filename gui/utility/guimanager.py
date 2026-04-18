@@ -9,6 +9,7 @@ from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, O
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
+from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
 from .resource_error import DataResourceErrorHandler
@@ -330,6 +331,7 @@ class GuiManager:
         if not callable(self._mouse_set_visible):
             raise GuiError('mouse_set_visible must be callable')
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
+        self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.lock_state: LockStateController = LockStateController(self)
         self.layout_manager: LayoutManager = LayoutManager()
