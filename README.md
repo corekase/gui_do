@@ -181,8 +181,8 @@ All of these both create and register the widget:
 - `gui.frame(id, rect)`
 - `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
 - `gui.label(position, text, shadow=False, id=None)`
-- `gui.slider(id, rect, orientation, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0)`
-- `gui.scrollbar(id, overall_rect, orientation, arrow_position, params)`
+- `gui.slider(id, rect, orientation, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0, wheel_positive_to_max=False, wheel_step=None)`
+- `gui.scrollbar(id, overall_rect, orientation, arrow_position, params, wheel_positive_to_max=False)`
 - `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
