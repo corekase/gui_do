@@ -52,6 +52,10 @@ class Canvas(Widget):
     def get_canvas_surface(self) -> Surface:
         return self.canvas
 
+    def leave(self) -> None:
+        """Canvas has no leave-state transition; keep hook explicit for Widget contract."""
+        return
+
     def get_event_queue_limit(self) -> int:
         maxlen = self._events.maxlen
         return 0 if maxlen is None else maxlen

@@ -1,3 +1,4 @@
+import logging
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
@@ -8,6 +9,8 @@ from ..utility.events import GuiError
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager
     from .window import Window
+
+_logger = logging.getLogger(__name__)
 
 class ArrowBox(BaseInteractive):
     """Arrow button with press-and-hold repeat activation."""
@@ -65,8 +68,9 @@ class ArrowBox(BaseInteractive):
             timers = getattr(gui, 'timers', None)
             if timers is not None:
                 timers.remove_timer(timer_id)
-        except Exception:
-            pass
+        except Exception as exc:
+            widget_id = getattr(self, 'id', '<unknown>')
+            _logger.warning('ArrowBox timer cleanup failed for %s: %s: %s', widget_id, type(exc).__name__, exc)
         finally:
             self._timer_id = None
 
@@ -77,5 +81,5 @@ class ArrowBox(BaseInteractive):
     def __del__(self) -> None:
         try:
             self._clear_timer()
-        except Exception:
-            pass
+        except Exception as exc:
+            _logger.debug('ArrowBox destructor cleanup failed: %s: %s', type(exc).__name__, exc)

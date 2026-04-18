@@ -13,6 +13,30 @@ class RecordingClock:
 
 
 class EngineTestabilityTests(unittest.TestCase):
+    def test_constructor_validates_core_arguments(self) -> None:
+        state = StateManager(mouse_pos_provider=lambda: (0, 0))
+
+        with self.assertRaises(TypeError):
+            Engine(None)  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            Engine(state, fps=0)
+        with self.assertRaises(TypeError):
+            Engine(state, exit_on_finish="no")  # type: ignore[arg-type]
+
+    def test_constructor_validates_clock_and_callables(self) -> None:
+        state = StateManager(mouse_pos_provider=lambda: (0, 0))
+
+        with self.assertRaises(TypeError):
+            Engine(state, clock=object())
+        with self.assertRaises(TypeError):
+            Engine(state, ticks_provider=123)  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            Engine(state, display_flip=123)  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            Engine(state, quit_callable=123)  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            Engine(state, exit_callable=123)  # type: ignore[arg-type]
+
     def test_run_does_not_hard_exit_when_exit_disabled(self) -> None:
         state = StateManager(mouse_pos_provider=lambda: (0, 0))
         quit_calls = []

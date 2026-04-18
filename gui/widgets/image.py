@@ -31,6 +31,10 @@ class Image(Widget):
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
 
+    def leave(self) -> None:
+        """Image is non-interactive and keeps no focus state."""
+        return
+
     def draw(self) -> None:
         super().draw()
         self.surface.blit(self._image, self.draw_rect)

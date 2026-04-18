@@ -36,6 +36,11 @@ class Label(Widget):
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
+
+    def leave(self) -> None:
+        """Label is non-interactive and keeps no focus state."""
+        return
+
     def draw(self) -> None:
         super().draw()
         self.surface.blit(self._text_bitmap, (self.draw_rect.x, self.draw_rect.y))

@@ -26,6 +26,10 @@ class Frame(Widget):
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         return False
 
+    def leave(self) -> None:
+        """Frame is non-interactive and keeps no focus state."""
+        return
+
     def draw(self) -> None:
         super().draw()
         if self.state == InteractiveState.Idle:
