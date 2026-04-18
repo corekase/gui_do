@@ -9,6 +9,7 @@ from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, O
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
+from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
@@ -329,6 +330,8 @@ class GuiManager:
         if not callable(self._mouse_set_visible):
             raise GuiError('mouse_set_visible must be callable')
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
+        self.drag_state: DragStateController = DragStateController(self)
+        self.lock_state: LockStateController = LockStateController(self)
         self.layout_manager: LayoutManager = LayoutManager()
         self.renderer: Renderer = Renderer(self)
         self._mouse_set_visible(False)
@@ -652,58 +655,14 @@ class GuiManager:
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
-        if area is not None:
-            if not isinstance(area, Rect):
-                raise GuiError('lock area must be a Rect')
-            if locking_object is None:
-                raise GuiError('locking_object is required when setting a lock area')
-            if not isinstance(locking_object, Widget):
-                raise GuiError('locking_object must be a widget')
-            if not self._is_registered_object(locking_object):
-                raise GuiError('locking_object must be a registered widget')
-            if area.width <= 0 or area.height <= 0:
-                raise GuiError('lock area dimensions must be positive')
-            self.locking_object = locking_object
-            self.mouse_locked = True
-            self.mouse_point_locked = False
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-        else:
-            if self.mouse_locked:
-                if self.mouse_point_locked and self.lock_point_pos is not None:
-                    self._set_physical_mouse_pos(self.lock_point_pos)
-                    self.mouse_pos = self.lock_point_pos
-                else:
-                    self._set_physical_mouse_pos(self.mouse_pos)
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-        self.lock_area_rect = area
+        self._get_lock_state_controller().set_area(locking_object, area)
 
     def set_lock_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
         """Lock mouse-relative input and recenter hardware pointer when it leaves a broad center area."""
         if locking_object is None:
             self.set_lock_area(None)
             return
-        if not isinstance(locking_object, Widget):
-            raise GuiError('locking_object must be a widget')
-        if not self._is_registered_object(locking_object):
-            raise GuiError('locking_object must be a registered widget')
-        if point is None:
-            point = self._mouse_get_pos()
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        self.locking_object = locking_object
-        self.mouse_locked = True
-        self.mouse_point_locked = True
-        self.lock_area_rect = None
-        self.lock_point_pos = point
-        self.lock_point_tolerance_rect = None
-        self.lock_point_recenter_pending = False
+        self._get_lock_state_controller().set_point(locking_object, point)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
         if not isinstance(pos, tuple) or len(pos) != 2:
@@ -856,19 +815,7 @@ class GuiManager:
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
-        if self.lock_point_pos is None:
-            self.lock_point_recenter_pending = False
-            return
-        if not isinstance(hardware_position, tuple) or len(hardware_position) != 2:
-            raise GuiError(f'hardware_position must be a tuple of (x, y), got: {hardware_position}')
-        in_recenter_rect = self.point_lock_recenter_rect.collidepoint(hardware_position)
-        if self.lock_point_recenter_pending:
-            if in_recenter_rect:
-                self.lock_point_recenter_pending = False
-            return
-        if not in_recenter_rect:
-            self._set_physical_mouse_pos(self.point_lock_recenter_rect.center)
-            self.lock_point_recenter_pending = True
+        self._get_lock_state_controller().enforce_point_lock(hardware_position)
 
     def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
         try:
@@ -893,8 +840,7 @@ class GuiManager:
             elif y > max_y:
                 y = max_y
             return (x, y)
-        else:
-            return position
+        return position
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""
@@ -1020,38 +966,18 @@ class GuiManager:
         return self._current_widget
 
     def _resolve_locking_state(self) -> Optional[Widget]:
-        if self.locking_object is None:
-            if self.mouse_locked or self.lock_area_rect is not None or self.lock_point_pos is not None:
-                self.mouse_locked = False
-                self.mouse_point_locked = False
-                self.lock_area_rect = None
-                self.lock_point_pos = None
-                self.lock_point_recenter_pending = False
-                self.lock_point_tolerance_rect = None
-            return None
-        if not isinstance(self.locking_object, Widget):
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_area_rect = None
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        if not self._is_registered_object(self.locking_object):
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_area_rect = None
-            self.lock_point_pos = None
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        if self.lock_area_rect is None and self.lock_point_pos is None:
-            self.locking_object = None
-            self.mouse_locked = False
-            self.mouse_point_locked = False
-            self.lock_point_recenter_pending = False
-            self.lock_point_tolerance_rect = None
-            return None
-        return self.locking_object
+        return self._get_lock_state_controller().resolve()
+
+    def _get_drag_state_controller(self) -> DragStateController:
+        controller = getattr(self, 'drag_state', None)
+        if controller is None:
+            controller = DragStateController(self)
+            self.drag_state = controller
+        return controller
+
+    def _get_lock_state_controller(self) -> LockStateController:
+        controller = getattr(self, 'lock_state', None)
+        if controller is None:
+            controller = LockStateController(self)
+            self.lock_state = controller
+        return controller

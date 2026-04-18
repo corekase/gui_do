@@ -60,13 +60,21 @@ class InputRouter:
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         rel = getattr(event, 'rel', (0, 0))
         pos = getattr(event, 'pos', self.gui.get_mouse_pos())
+        lock_state = getattr(self.gui, 'lock_state', None)
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = rel
-            self.gui.mouse_pos = self.gui.lock_area((x + dx, y + dy))
-            self.gui.enforce_point_lock(pos)
+            if lock_state is not None:
+                self.gui.mouse_pos = lock_state.clamp_position((x + dx, y + dy))
+                lock_state.enforce_point_lock(pos)
+            else:
+                self.gui.mouse_pos = self.gui.lock_area((x + dx, y + dy))
+                self.gui.enforce_point_lock(pos)
         else:
-            self.gui.mouse_pos = self.gui.lock_area(pos)
+            if lock_state is not None:
+                self.gui.mouse_pos = lock_state.clamp_position(pos)
+            else:
+                self.gui.mouse_pos = self.gui.lock_area(pos)
 
     def _handle_system_event(self, event: PygameEvent) -> "GuiEvent":
         if event.type == QUIT:
@@ -78,6 +86,9 @@ class InputRouter:
         return self.gui.event(Event.Pass)
 
     def _handle_window_dragging(self, event: PygameEvent) -> "GuiEvent":
+        drag_state = getattr(self.gui, 'drag_state', None)
+        if drag_state is not None:
+            return drag_state.handle_drag_event(event)
         if (
             self.gui.dragging_window is None
             or self.gui.dragging_window not in self.gui.windows
@@ -191,6 +202,10 @@ class InputRouter:
         return self.gui.event(Event.Pass)
 
     def _check_window_drag_start(self, event: PygameEvent) -> None:
+        drag_state = getattr(self.gui, 'drag_state', None)
+        if drag_state is not None:
+            drag_state.start_if_possible(event)
+            return
         event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
             if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
@@ -217,6 +232,10 @@ class InputRouter:
         return False
 
     def _reset_window_drag_state(self) -> None:
+        drag_state = getattr(self.gui, 'drag_state', None)
+        if drag_state is not None:
+            drag_state.reset()
+            return
         self.gui.dragging = False
         self.gui.dragging_window = None
         self.gui.mouse_delta = None
