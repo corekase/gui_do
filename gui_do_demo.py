@@ -46,8 +46,8 @@ class Demo:
             postamble=self.gui1_screen_postamble,
         )
         b1 = g1.bitmap_factory
-        b1.load_cursor((1, 1), 'normal', 'cursor.png')
-        b1.load_cursor((12, 12), 'hand', 'hand.png')
+        b1.register_cursor(name='normal', filename='cursor.png', hotspot=(1, 1))
+        b1.register_cursor(name='hand', filename='hand.png', hotspot=(12, 12))
         # load an image that will be used for a backdrop, display it on-screen and save it for restore_pristine
         g1.set_pristine('backdrop.jpg')
         # screen label

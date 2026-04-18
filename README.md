@@ -342,7 +342,7 @@ The demo uses this mode on the Life canvas while right-dragging.
 
 Cursor images are loaded through `BitmapFactory` and selected by name in `GuiManager`.
 
-- `gui.bitmap_factory.load_cursor(hotspot, cursor_name, filename)`
+- `gui.bitmap_factory.register_cursor(name=..., filename=..., hotspot=(x, y))`
 - `gui.set_cursor(cursor_name)`
 
 Notes:
@@ -355,8 +355,8 @@ Notes:
 Example:
 
 ```python
-gui.bitmap_factory.load_cursor((1, 1), "normal", "cursor.png")
-gui.bitmap_factory.load_cursor((12, 12), "hand", "hand.png")
+gui.bitmap_factory.register_cursor(name="normal", filename="cursor.png", hotspot=(1, 1))
+gui.bitmap_factory.register_cursor(name="hand", filename="hand.png", hotspot=(12, 12))
 
 gui.set_cursor("normal")
 # ... later during drag state

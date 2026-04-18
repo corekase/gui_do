@@ -392,7 +392,7 @@ class GuiManager:
         self.workspace.raise_window(window)
 
     def set_cursor(self, name: str) -> None:
-        """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""
+        """Set custom cursor from a named cursor loaded via BitmapFactory.register_cursor."""
         self.pointer.set_cursor(name)
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:

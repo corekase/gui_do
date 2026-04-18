@@ -327,7 +327,9 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_set_cursor_prefers_existing_cursor_rect_hotspot_when_present(self) -> None:
         gui = self._build_manager_stub()
         cursor_bitmap = SimpleNamespace(get_rect=lambda: Rect(0, 0, 6, 8))
-        gui._bitmap_factory = SimpleNamespace(get_cursor=lambda name: (cursor_bitmap, (1, 2)))
+        gui._bitmap_factory = SimpleNamespace(
+            get_cursor=lambda name: SimpleNamespace(name=name, image=cursor_bitmap, hotspot=(1, 2))
+        )
         gui.mouse_point_locked = True
         gui.lock_point_pos = (50, 60)
         gui.mouse_pos = (10, 20)

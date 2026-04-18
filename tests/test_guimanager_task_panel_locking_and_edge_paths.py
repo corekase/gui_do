@@ -439,7 +439,9 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_set_cursor_without_prior_cursor_anchor_uses_mouse_pos(self) -> None:
         gui = self._build_manager_stub()
         bitmap = SimpleNamespace(get_rect=lambda: Rect(0, 0, 6, 6))
-        gui._bitmap_factory = SimpleNamespace(get_cursor=lambda _name: (bitmap, (1, 1)))
+        gui._bitmap_factory = SimpleNamespace(
+            get_cursor=lambda _name: SimpleNamespace(name=_name, image=bitmap, hotspot=(1, 1))
+        )
         gui.mouse_pos = (10, 10)
         gui.mouse_point_locked = False
         gui.lock_point_pos = None

@@ -94,18 +94,18 @@ class BitmapFactoryRoiBatch7Tests(unittest.TestCase):
 
         self.assertIn("invalid resource path", str(ctx.exception))
 
-    def test_image_alpha_reraises_guierror_and_load_cursor_paths(self) -> None:
+    def test_image_alpha_reraises_guierror_and_register_cursor_paths(self) -> None:
         with patch("pygame.image.load", side_effect=GuiError("img fail")):
             with self.assertRaises(GuiError):
                 self.factory.image_alpha("images", "missing.png")
 
         with patch.object(self.factory, "image_alpha", side_effect=GuiError("cursor fail")):
             with self.assertRaises(GuiError):
-                self.factory.load_cursor((0, 0), "name", "cursor.png")
+                self.factory.register_cursor(name="name", filename="cursor.png", hotspot=(0, 0))
 
         with patch.object(self.factory, "image_alpha", side_effect=RuntimeError("cursor boom")):
             with self.assertRaises(GuiError) as ctx:
-                self.factory.load_cursor((0, 0), "name2", "cursor.png")
+                self.factory.register_cursor(name="name2", filename="cursor.png", hotspot=(0, 0))
 
         self.assertIn("failed to load cursor", str(ctx.exception))
 

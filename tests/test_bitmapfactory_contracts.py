@@ -78,23 +78,25 @@ class BitmapFactoryContractsBatchTests(unittest.TestCase):
     def test_centre_returns_expected_offset(self) -> None:
         self.assertEqual(self.factory.centre(100, 20), 40)
 
-    def test_load_cursor_validates_inputs(self) -> None:
+    def test_register_cursor_validates_inputs(self) -> None:
         with self.assertRaises(GuiError):
-            self.factory.load_cursor((1,), "cursor", "file.cur")  # type: ignore[arg-type]
+            self.factory.register_cursor(name="cursor", filename="file.cur", hotspot=(1,))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            self.factory.load_cursor((0, 0), "", "file.cur")
+            self.factory.register_cursor(name="", filename="file.cur", hotspot=(0, 0))
         with self.assertRaises(GuiError):
-            self.factory.load_cursor((0, 0), "cursor", "")
+            self.factory.register_cursor(name="cursor", filename="", hotspot=(0, 0))
 
-    def test_load_cursor_populates_cache_via_image_alpha(self) -> None:
+    def test_register_cursor_populates_cache_via_image_alpha(self) -> None:
         surface = pygame.Surface((2, 2))
 
         with patch.object(self.factory, "image_alpha", return_value=surface):
-            self.factory.load_cursor((1, 2), "cursor", "cursor.png")
+            self.factory.register_cursor(name="cursor", filename="cursor.png", hotspot=(1, 2))
 
-        loaded_surface, hotspot = self.factory.get_cursor("cursor")
-        self.assertIs(loaded_surface, surface)
-        self.assertEqual(hotspot, (1, 2))
+        cursor = self.factory.get_cursor("cursor")
+        self.assertEqual(cursor.name, "cursor")
+        self.assertIs(cursor.image, surface)
+        self.assertEqual(cursor.hotspot, (1, 2))
+        self.assertTrue(cursor.source_path.endswith("cursor.png"))
 
     def test_load_font_wraps_loader_error_with_guierror(self) -> None:
         with patch("pygame.font.Font", side_effect=RuntimeError("boom")):

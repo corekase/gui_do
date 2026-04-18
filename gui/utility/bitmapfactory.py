@@ -1,5 +1,6 @@
 import os
 import pygame
+from dataclasses import dataclass
 from math import cos, sin, radians
 from pygame.surface import Surface
 from pygame.surfarray import blit_array
@@ -14,8 +15,17 @@ from .resource_error import DataResourceErrorHandler
 if TYPE_CHECKING:
     from .guimanager import GuiManager
 
+
+@dataclass(frozen=True)
+class CursorAsset:
+    name: str
+    image: Surface
+    hotspot: Tuple[int, int]
+    source_path: str
+
+
 class BitmapFactory:
-    _cursor_cache: Dict[str, Tuple[Surface, Tuple[int, int]]] = {}
+    _cursor_cache: Dict[str, CursorAsset] = {}
     _data_root: str = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'data'))
 
     def __init__(self) -> None:
@@ -27,7 +37,7 @@ class BitmapFactory:
     def get_current_font_name(self) -> Optional[str]:
         return self._current_font_name
 
-    def get_cursor(self, name: str) -> Tuple[Surface, Tuple[int, int]]:
+    def get_cursor(self, name: str) -> CursorAsset:
         if name not in BitmapFactory._cursor_cache:
             raise GuiError(f'unknown cursor "{name}"')
         return BitmapFactory._cursor_cache[name]
@@ -218,7 +228,7 @@ class BitmapFactory:
         except (pygame.error, FileNotFoundError, OSError, TypeError, ValueError, RuntimeError) as exc:
             DataResourceErrorHandler.raise_load_error('failed to load image resource', full_path, exc)
 
-    def load_cursor(self, hotspot: Tuple[int, int], name: str, filename: str) -> None:
+    def register_cursor(self, *, name: str, filename: str, hotspot: Tuple[int, int]) -> CursorAsset:
         if not isinstance(hotspot, tuple) or len(hotspot) != 2:
             raise GuiError(f'hotspot must be a tuple of (x, y), got: {hotspot}')
         if not isinstance(name, str) or name == '':
@@ -227,7 +237,14 @@ class BitmapFactory:
             raise GuiError('cursor filename must be a non-empty string')
         cursor_path = self.file_resource('cursors', filename)
         try:
-            BitmapFactory._cursor_cache[name] = (self.image_alpha('cursors', filename), hotspot)
+            asset = CursorAsset(
+                name=name,
+                image=self.image_alpha('cursors', filename),
+                hotspot=hotspot,
+                source_path=cursor_path,
+            )
+            BitmapFactory._cursor_cache[name] = asset
+            return asset
         except GuiError:
             raise
         except (pygame.error, FileNotFoundError, OSError, TypeError, ValueError, RuntimeError) as exc:
