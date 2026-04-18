@@ -163,7 +163,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         widget = Widget.__new__(Widget)
         gui.focus_state_data.current_widget = widget
         gui.object_registry.is_registered_object = lambda obj: obj is widget
-        self.assertIs(GuiManager._resolve_current_widget(gui), widget)
+        self.assertIs(gui.focus_state.resolve_current_widget(), widget)
 
         # _resolve_locking_state early return when no locking object and no lock flags.
         gui.locking_object = None

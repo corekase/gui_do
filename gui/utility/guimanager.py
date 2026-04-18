@@ -456,8 +456,5 @@ class GuiManager:
     def _resolve_active_object(self) -> Optional[gWindow]:
         return self.object_registry.resolve_active_object()
 
-    def _resolve_current_widget(self) -> Optional[Widget]:
-        return self.focus_state.resolve_current_widget()
-
     def _resolve_locking_state(self) -> Optional[Widget]:
         return self.lock_state.resolve()
