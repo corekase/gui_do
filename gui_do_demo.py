@@ -243,8 +243,6 @@ class Demo:
         g2.configure_fonts(
             titlebar=('Ubuntu-B.ttf', 14),
             normal=('Gimbot.ttf', 16),
-            scroll=('Gimbot.ttf', 32),
-            gui_do=('Gimbot.ttf', 72),
         )
         g2.configure_task_panel(event_handler=self.gui2_panel_event_handler)
         g2.set_screen_lifecycle(
