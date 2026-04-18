@@ -78,6 +78,7 @@ class ContentionGuiStub:
         self.drag_state = DragStateController(self)
         self.focus_state = FocusStateController(self)
         self.lock_state = LockStateController(self)
+        self.lock_state.resolve = lambda: self.locking_object
 
     def _resolve_locking_state(self):
         return self.locking_object

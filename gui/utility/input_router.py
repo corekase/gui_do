@@ -18,7 +18,7 @@ class InputRouter:
 
     def handle(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
-        self.gui._resolve_locking_state()
+        self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
         if event.type in (QUIT, KEYUP, KEYDOWN):
