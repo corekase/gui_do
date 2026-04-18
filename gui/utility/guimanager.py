@@ -2,6 +2,7 @@ import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
+import logging
 from typing import Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
 from .scheduler import Timers, Scheduler
 from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
@@ -22,6 +23,8 @@ from ..widgets.toggle import Toggle as gToggle
 from ..widgets.arrowbox import ArrowBox as gArrowBox
 from ..widgets.buttongroup import ButtonGroup as gButtonGroup
 from ..widgets.frame import Frame as gFrame
+
+_logger = logging.getLogger(__name__)
 
 def _noop() -> None:
     pass
@@ -334,10 +337,10 @@ class GuiManager:
         else:
             if self.mouse_locked:
                 if self.mouse_point_locked and self.lock_point_pos is not None:
-                    pygame.mouse.set_pos(self.lock_point_pos)
+                    self._set_physical_mouse_pos(self.lock_point_pos)
                     self.mouse_pos = self.lock_point_pos
                 else:
-                    pygame.mouse.set_pos(self.mouse_pos)
+                    self._set_physical_mouse_pos(self.mouse_pos)
             self.locking_object = None
             self.mouse_locked = False
             self.mouse_point_locked = False
@@ -372,7 +375,7 @@ class GuiManager:
             raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
         self.mouse_pos = self.lock_area(pos)
         if update_physical_coords:
-            pygame.mouse.set_pos(self.mouse_pos)
+            self._set_physical_mouse_pos(self.mouse_pos)
 
     def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
         """Load a backdrop image, scale it to target surface, and cache pristine copy."""
@@ -523,8 +526,14 @@ class GuiManager:
                 self.lock_point_recenter_pending = False
             return
         if not in_recenter_rect:
-            pygame.mouse.set_pos(self.point_lock_recenter_rect.center)
+            self._set_physical_mouse_pos(self.point_lock_recenter_rect.center)
             self.lock_point_recenter_pending = True
+
+    def _set_physical_mouse_pos(self, pos: Tuple[int, int]) -> None:
+        try:
+            pygame.mouse.set_pos(pos)
+        except Exception as exc:
+            _logger.debug('pygame.mouse.set_pos failed: %s: %s', type(exc).__name__, exc)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
         if not isinstance(position, tuple) or len(position) != 2:

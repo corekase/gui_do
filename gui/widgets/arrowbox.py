@@ -3,6 +3,7 @@ from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.interactive import BaseInteractive, InteractiveState
+from ..utility.constants import GuiError
 
 if TYPE_CHECKING:
     from ..utility.guimanager import GuiManager
@@ -14,9 +15,9 @@ class ArrowBox(BaseInteractive):
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None, repeat_activation_ms: int = 150) -> None:
         super().__init__(gui, id, rect)
         if not isinstance(repeat_activation_ms, int):
-            raise ValueError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
+            raise GuiError(f'repeat_activation_ms must be an int, got: {type(repeat_activation_ms).__name__}')
         if repeat_activation_ms <= 0:
-            raise ValueError(f'repeat_activation_ms must be > 0, got: {repeat_activation_ms}')
+            raise GuiError(f'repeat_activation_ms must be > 0, got: {repeat_activation_ms}')
         self.idle, self.hover, self.armed = self.gui.bitmap_factory.draw_arrow_state_bitmaps(rect, direction)
         self.on_activate = on_activate
         self.repeat_activation_ms: int = repeat_activation_ms

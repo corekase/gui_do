@@ -20,7 +20,7 @@ class Renderer:
         for widget in tuple(self.gui.widgets):
             if widget.visible:
                 if self.gui.buffered:
-                    widget_rect = widget.get_rect()
+                    widget_rect = Rect(widget.draw_rect)
                     if widget_rect.width > 0 and widget_rect.height > 0:
                         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, widget_rect), widget_rect))
                 widget.draw()
