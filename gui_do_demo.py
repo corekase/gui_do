@@ -30,9 +30,6 @@ class Demo:
         # set window caption
         pygame.display.set_caption('Demo')
         # -----------------------
-        # begin gui setup
-        # -----------------------
-        # -----------------------
         # begin gui1
         # -----------------------
         # create a gui manager
