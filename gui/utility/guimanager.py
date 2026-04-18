@@ -20,6 +20,7 @@ from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator
 from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
+from .render_coordinator import RenderCoordinator
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
 from .widget_state_coordinator import WidgetStateCoordinator
@@ -371,6 +372,7 @@ class GuiManager:
         self.layout: LayoutCoordinator = LayoutCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
+        self.render_flow: RenderCoordinator = RenderCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
@@ -576,10 +578,10 @@ class GuiManager:
         return self.widget_state.handle_widget(widget, event, window)
 
     def draw_gui(self) -> None:
-        self.renderer.draw()
+        self.render_flow.draw_gui()
 
     def undraw_gui(self) -> None:
-        self.renderer.undraw()
+        self.render_flow.undraw_gui()
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         return self.pointer.convert_to_screen(point, window)
