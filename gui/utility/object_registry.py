@@ -16,6 +16,26 @@ class GuiObjectRegistry:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
+    def _iter_registered_widgets(self):
+        for widget in self.gui.widgets:
+            yield widget
+        if self.gui.task_panel is not None:
+            for widget in self.gui.task_panel.widgets:
+                yield widget
+        for window in self.gui.windows:
+            for widget in window.widgets:
+                yield widget
+
+    def _detach_widget_from_current_container(self, gui_object: Widget, active_window: Optional[gWindow], added_to_task_panel: bool) -> None:
+        if added_to_task_panel and self.gui.task_panel is not None and gui_object in self.gui.task_panel.widgets:
+            self.gui.task_panel.widgets.remove(gui_object)
+            return
+        if active_window is not None and gui_object in active_window.widgets:
+            active_window.widgets.remove(gui_object)
+            return
+        if gui_object in self.gui.widgets:
+            self.gui.widgets.remove(gui_object)
+
     def register(self, gui_object: TGuiObject) -> TGuiObject:
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
@@ -62,14 +82,7 @@ class GuiObjectRegistry:
             try:
                 post_add()
             except Exception:
-                if added_to_task_panel and self.gui.task_panel is not None and gui_object in self.gui.task_panel.widgets:
-                    self.gui.task_panel.widgets.remove(gui_object)
-                elif active_window is not None:
-                    if gui_object in active_window.widgets:
-                        active_window.widgets.remove(gui_object)
-                else:
-                    if gui_object in self.gui.widgets:
-                        self.gui.widgets.remove(gui_object)
+                self._detach_widget_from_current_container(gui_object, active_window, added_to_task_panel)
                 gui_object.window = None
                 gui_object.surface = None
                 raise
@@ -102,17 +115,9 @@ class GuiObjectRegistry:
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'
 
     def find_widget_id_conflict(self, widget_id: str, candidate: Widget) -> Optional[Widget]:
-        for widget in self.gui.widgets:
+        for widget in self._iter_registered_widgets():
             if widget is not candidate and widget.id == widget_id:
                 return widget
-        if self.gui.task_panel is not None:
-            for widget in self.gui.task_panel.widgets:
-                if widget is not candidate and widget.id == widget_id:
-                    return widget
-        for window in self.gui.windows:
-            for widget in window.widgets:
-                if widget is not candidate and widget.id == widget_id:
-                    return widget
         return None
 
     def is_registered_button_group(self, button) -> bool:
@@ -124,12 +129,8 @@ class GuiObjectRegistry:
         if isinstance(gui_object, gWindow):
             return gui_object in self.gui.windows
         if isinstance(gui_object, Widget):
-            if gui_object in self.gui.widgets:
-                return True
-            if self.gui.task_panel is not None and gui_object in self.gui.task_panel.widgets:
-                return True
-            for window in self.gui.windows:
-                if gui_object in window.widgets:
+            for widget in self._iter_registered_widgets():
+                if gui_object is widget:
                     return True
         return False
 

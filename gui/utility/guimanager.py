@@ -13,6 +13,7 @@ from .event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
 from .focus_state_model import FocusState
+from .drag_state_model import DragState
 from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_event_coordinator import InputEventCoordinator
@@ -59,6 +60,13 @@ TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
+    def _ensure_drag_state_data(self) -> DragState:
+        state = getattr(self, 'drag_state_data', None)
+        if state is None:
+            state = DragState()
+            self.drag_state_data = state
+        return state
+
     def _ensure_lock_state_data(self) -> LockState:
         state = getattr(self, 'lock_state_data', None)
         if state is None:
@@ -91,6 +99,30 @@ class GuiManager:
     @property
     def scheduler(self):
         return self._scheduler
+
+    @property
+    def dragging(self) -> bool:
+        return self._ensure_drag_state_data().dragging
+
+    @dragging.setter
+    def dragging(self, value: bool) -> None:
+        self._ensure_drag_state_data().dragging = value
+
+    @property
+    def dragging_window(self) -> Optional[gWindow]:
+        return self._ensure_drag_state_data().dragging_window
+
+    @dragging_window.setter
+    def dragging_window(self, value: Optional[gWindow]) -> None:
+        self._ensure_drag_state_data().dragging_window = value
+
+    @property
+    def mouse_delta(self) -> Optional[Tuple[int, int]]:
+        return self._ensure_drag_state_data().mouse_delta
+
+    @mouse_delta.setter
+    def mouse_delta(self, value: Optional[Tuple[int, int]]) -> None:
+        self._ensure_drag_state_data().mouse_delta = value
 
     @property
     def locking_object(self) -> Optional[Widget]:
@@ -247,9 +279,7 @@ class GuiManager:
         self.widgets: List[Widget] = []
         self.workspace_state: WorkspaceState = WorkspaceState()
         self.windows: List[gWindow] = []
-        self.dragging: bool = False
-        self.dragging_window: Optional[gWindow] = None
-        self.mouse_delta: Optional[Tuple[int, int]] = None
+        self.drag_state_data: DragState = DragState()
         self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
         self.lock_state_data: LockState = LockState()
         self.cursor_image: Optional[Surface] = None

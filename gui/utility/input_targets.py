@@ -46,6 +46,15 @@ class InputTargetResolver:
                 return window
         return None
 
+    def _is_registered_via_registry(self, widget: Any) -> Optional[bool]:
+        registry = getattr(self.gui, 'object_registry', None)
+        if registry is None or not hasattr(registry, 'is_registered_object'):
+            return None
+        try:
+            return bool(registry.is_registered_object(widget))
+        except Exception:
+            return None
+
     def process_screen_widgets(self, event: PygameEvent) -> InputAction:
         hit_any = False
         focus_target = None
@@ -136,6 +145,9 @@ class InputTargetResolver:
     def is_registered_widget(self, widget) -> bool:
         if widget is None:
             return False
+        registry_result = self._is_registered_via_registry(widget)
+        if registry_result is not None:
+            return registry_result
         if widget in self.gui.widgets:
             return True
         if self.gui.task_panel is not None and widget in self.gui.task_panel.widgets:
