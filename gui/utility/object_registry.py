@@ -135,3 +135,13 @@ class GuiObjectRegistry:
 
     def resolve_active_object(self) -> Optional[gWindow]:
         return self.gui.workspace_state.resolve_active_object(self.gui.windows)
+
+    def resolve_registered_window(self, window: Optional[gWindow]) -> Optional[gWindow]:
+        self.resolve_active_object()
+        if window is None:
+            return None
+        if window not in self.gui.windows:
+            if self.gui.workspace_state.active_object is window:
+                self.gui.workspace_state.active_object = None
+            return None
+        return window

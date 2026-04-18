@@ -37,12 +37,6 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         )
         return gui
 
-    def test_module_noop_helpers_are_callable(self) -> None:
-        import gui.utility.guimanager as gm
-
-        self.assertIsNone(gm._noop())
-        self.assertIsNone(gm._noop_event(SimpleNamespace()))
-
     def test_configure_task_panel_validates_remaining_inputs(self) -> None:
         gui = self._build_manager_stub()
 

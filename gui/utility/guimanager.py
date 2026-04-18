@@ -22,6 +22,7 @@ from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator, ScreenLifecycle
 from .lock_flow_coordinator import LockFlowCoordinator
+from .lock_state_model import LockState
 from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
 from .render_coordinator import RenderCoordinator
@@ -49,12 +50,6 @@ if TYPE_CHECKING:
     from .gui_event import GuiEvent
     from .task_panel import _ManagedTaskPanel
 
-def _noop() -> None:
-    pass
-
-def _noop_event(_: BaseEvent) -> None:
-    pass
-
 class _PristineContainer(Protocol):
     surface: Surface
     pristine: Optional[Surface]
@@ -63,6 +58,13 @@ TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
+
+    def _ensure_lock_state_data(self) -> LockState:
+        state = getattr(self, 'lock_state_data', None)
+        if state is None:
+            state = LockState()
+            self.lock_state_data = state
+        return state
 
     @property
     def bitmap_factory(self):
@@ -89,6 +91,62 @@ class GuiManager:
     @property
     def scheduler(self):
         return self._scheduler
+
+    @property
+    def locking_object(self) -> Optional[Widget]:
+        return self._ensure_lock_state_data().locking_object
+
+    @locking_object.setter
+    def locking_object(self, value: Optional[Widget]) -> None:
+        self._ensure_lock_state_data().locking_object = value
+
+    @property
+    def mouse_locked(self) -> bool:
+        return self._ensure_lock_state_data().mouse_locked
+
+    @mouse_locked.setter
+    def mouse_locked(self, value: bool) -> None:
+        self._ensure_lock_state_data().mouse_locked = value
+
+    @property
+    def mouse_point_locked(self) -> bool:
+        return self._ensure_lock_state_data().mouse_point_locked
+
+    @mouse_point_locked.setter
+    def mouse_point_locked(self, value: bool) -> None:
+        self._ensure_lock_state_data().mouse_point_locked = value
+
+    @property
+    def lock_area_rect(self) -> Optional[Rect]:
+        return self._ensure_lock_state_data().lock_area_rect
+
+    @lock_area_rect.setter
+    def lock_area_rect(self, value: Optional[Rect]) -> None:
+        self._ensure_lock_state_data().lock_area_rect = value
+
+    @property
+    def lock_point_pos(self) -> Optional[Tuple[int, int]]:
+        return self._ensure_lock_state_data().lock_point_pos
+
+    @lock_point_pos.setter
+    def lock_point_pos(self, value: Optional[Tuple[int, int]]) -> None:
+        self._ensure_lock_state_data().lock_point_pos = value
+
+    @property
+    def lock_point_recenter_pending(self) -> bool:
+        return self._ensure_lock_state_data().lock_point_recenter_pending
+
+    @lock_point_recenter_pending.setter
+    def lock_point_recenter_pending(self, value: bool) -> None:
+        self._ensure_lock_state_data().lock_point_recenter_pending = value
+
+    @property
+    def lock_point_tolerance_rect(self) -> Optional[Rect]:
+        return self._ensure_lock_state_data().lock_point_tolerance_rect
+
+    @lock_point_tolerance_rect.setter
+    def lock_point_tolerance_rect(self, value: Optional[Rect]) -> None:
+        self._ensure_lock_state_data().lock_point_tolerance_rect = value
 
     # widgets
     def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
@@ -193,19 +251,13 @@ class GuiManager:
         self.dragging_window: Optional[gWindow] = None
         self.mouse_delta: Optional[Tuple[int, int]] = None
         self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
-        self.mouse_locked: bool = False
-        self.mouse_point_locked: bool = False
-        self.lock_area_rect: Optional[Rect] = None
-        self.lock_point_pos: Optional[Tuple[int, int]] = None
-        self.lock_point_recenter_pending: bool = False
-        self.lock_point_tolerance_rect: Optional[Rect] = None
+        self.lock_state_data: LockState = LockState()
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None
         self.active_window: Optional[gWindow] = None
         self.focus_state_data: FocusState = FocusState()
         self.pristine: Optional[Surface] = None
-        self.locking_object: Optional[Widget] = None
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()

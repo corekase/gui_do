@@ -63,19 +63,15 @@ class WorkspaceCoordinator:
         }
 
     def lower_window(self, window: gWindow) -> None:
-        self.gui.object_registry.resolve_active_object()
-        if window not in self.gui.windows:
-            if self.gui.workspace_state.active_object is window:
-                self.gui.workspace_state.active_object = None
+        resolved_window = self.gui.object_registry.resolve_registered_window(window)
+        if resolved_window is None:
             return
-        self.gui.windows.remove(window)
-        self.gui.windows.insert(0, window)
+        self.gui.windows.remove(resolved_window)
+        self.gui.windows.insert(0, resolved_window)
 
     def raise_window(self, window: gWindow) -> None:
-        self.gui.object_registry.resolve_active_object()
-        if window not in self.gui.windows:
-            if self.gui.workspace_state.active_object is window:
-                self.gui.workspace_state.active_object = None
+        resolved_window = self.gui.object_registry.resolve_registered_window(window)
+        if resolved_window is None:
             return
-        self.gui.windows.remove(window)
-        self.gui.windows.append(window)
+        self.gui.windows.remove(resolved_window)
+        self.gui.windows.append(resolved_window)

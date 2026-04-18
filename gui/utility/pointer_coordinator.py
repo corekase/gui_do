@@ -1,5 +1,8 @@
 import logging
+from dataclasses import dataclass
 from typing import Any, Optional, Tuple, TYPE_CHECKING
+
+from pygame import Rect
 
 from .constants import GuiError
 
@@ -8,6 +11,23 @@ if TYPE_CHECKING:
 
 
 _logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class _CursorPlacement:
+    """Value object for cursor anchor, hotspot, and resulting rect."""
+
+    anchor: Tuple[int, int]
+    hotspot: Tuple[int, int]
+    size: Tuple[int, int]
+
+    def build_rect(self) -> Rect:
+        return Rect(
+            self.anchor[0] - self.hotspot[0],
+            self.anchor[1] - self.hotspot[1],
+            self.size[0],
+            self.size[1],
+        )
 
 
 class PointerCoordinator:
@@ -32,21 +52,32 @@ class PointerCoordinator:
         except Exception as exc:
             _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 
-    def set_cursor(self, name: str) -> None:
-        if not isinstance(name, str) or name == '':
-            raise GuiError('cursor name must be a non-empty string')
-        hotspot_position = self.gui.lock_point_pos if (self.gui.mouse_point_locked and self.gui.lock_point_pos is not None) else self.gui.mouse_pos
+    def _resolve_cursor_anchor(self) -> Tuple[int, int]:
         if self.gui.cursor_rect is not None and self.gui.cursor_hotspot is not None:
-            hotspot_position = (
+            return (
                 self.gui.cursor_rect.x + self.gui.cursor_hotspot[0],
                 self.gui.cursor_rect.y + self.gui.cursor_hotspot[1],
             )
+        if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
+            return self.gui.lock_point_pos
+        return self.gui.mouse_pos
+
+    @staticmethod
+    def _build_cursor_placement(anchor: Tuple[int, int], hotspot: Tuple[int, int], size: Tuple[int, int]) -> _CursorPlacement:
+        return _CursorPlacement(anchor=anchor, hotspot=hotspot, size=size)
+
+    def set_cursor(self, name: str) -> None:
+        if not isinstance(name, str) or name == '':
+            raise GuiError('cursor name must be a non-empty string')
+        anchor = self._resolve_cursor_anchor()
         self.gui.cursor_image, self.gui.cursor_hotspot = self.gui.bitmap_factory.get_cursor(name)
         self.gui.cursor_rect = self.gui.cursor_image.get_rect()
-        self.gui.cursor_rect.topleft = (
-            hotspot_position[0] - self.gui.cursor_hotspot[0],
-            hotspot_position[1] - self.gui.cursor_hotspot[1],
+        placement = self._build_cursor_placement(
+            anchor=anchor,
+            hotspot=self.gui.cursor_hotspot,
+            size=(self.gui.cursor_rect.width, self.gui.cursor_rect.height),
         )
+        self.gui.cursor_rect = placement.build_rect()
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         if not isinstance(point, tuple) or len(point) != 2:
