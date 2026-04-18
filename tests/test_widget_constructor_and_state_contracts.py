@@ -76,6 +76,12 @@ class WidgetConstructorAndStateContractTests(unittest.TestCase):
         self.assertEqual(gui.timers.remove_calls, ["arrow.timer"])
         self.assertEqual(activated, [])
 
+    def test_arrowbox_destructor_tolerates_partial_initialization(self) -> None:
+        # Simulate constructor failure before attributes like _timer_id are assigned.
+        arrow = ArrowBox.__new__(ArrowBox)
+
+        ArrowBox.__del__(arrow)
+
     def test_button_state_machine_and_activation_contract(self) -> None:
         gui = build_interactive_gui_stub()
         gui.bitmap_factory.get_styled_bitmaps = lambda style, text, rect: ((object(), object(), object()), Rect(rect))

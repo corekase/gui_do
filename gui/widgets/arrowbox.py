@@ -57,10 +57,14 @@ class ArrowBox(BaseInteractive):
         return self.state == InteractiveState.Armed
 
     def _clear_timer(self) -> None:
-        if self._timer_id is None:
+        timer_id = getattr(self, '_timer_id', None)
+        if timer_id is None:
             return
         try:
-            self.gui.timers.remove_timer(self._timer_id)
+            gui = getattr(self, 'gui', None)
+            timers = getattr(gui, 'timers', None)
+            if timers is not None:
+                timers.remove_timer(timer_id)
         except Exception:
             pass
         finally:
@@ -71,4 +75,7 @@ class ArrowBox(BaseInteractive):
             self.on_activate()
 
     def __del__(self) -> None:
-        self._clear_timer()
+        try:
+            self._clear_timer()
+        except Exception:
+            pass
