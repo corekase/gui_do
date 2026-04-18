@@ -211,6 +211,20 @@ class StateManagerLifecycleTests(unittest.TestCase):
         self.assertEqual(gui_b.set_calls[-1], ((5, 6), True))
         self.assertEqual(gui_c.set_calls[-1], ((7, 8), True))
 
+    def test_switch_to_same_context_is_noop_for_mouse_transfer(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (44, 55))
+        gui = GuiStubFactory.build(mouse_pos=(0, 0))
+        manager.register_context("ctx", gui)
+
+        manager.switch_context("ctx")
+        set_call_count = len(gui.set_calls)
+        gui._mouse_pos = (9, 9)
+
+        manager.switch_context("ctx")
+
+        self.assertEqual(len(gui.set_calls), set_call_count)
+        self.assertEqual(gui._mouse_pos, (9, 9))
+
     def test_exit_cleans_real_scheduler_backlog_for_all_contexts(self) -> None:
         manager = StateManager(mouse_pos_provider=lambda: (0, 0))
         gui_a = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
@@ -243,6 +257,47 @@ class StateManagerLifecycleTests(unittest.TestCase):
             self.assertEqual(scheduler.tasks, {})
             self.assertEqual(len(scheduler._task_messages), 0)
             self.assertEqual(scheduler._task_message_counts, {})
+
+    def test_rapid_switch_then_exit_handles_mixed_context_cleanup(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (13, 17))
+        gui_real = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        gui_regular = GuiStubFactory.build(mouse_pos=(2, 2), fail_shutdown=False)
+        gui_fail = GuiStubFactory.build(mouse_pos=(3, 3), fail_shutdown=True)
+
+        manager.register_context("real", gui_real)
+        manager.register_context("regular", gui_regular)
+        manager.register_context("fail", gui_fail)
+
+        manager.switch_context("real")
+        gui_real._mouse_pos = (20, 21)
+        manager.switch_context("regular")
+        gui_regular._mouse_pos = (22, 23)
+        manager.switch_context("fail")
+
+        scheduler = gui_real._scheduler
+        scheduler.tasks["task"] = Task(
+            id="task",
+            run_callable=lambda: None,
+            message_method=lambda _payload: None,
+            generation=1,
+        )
+        scheduler._task_generation["task"] = 1
+        scheduler._pending.append("task")
+        scheduler._pending_set.add("task")
+        scheduler.send_message("task", "m1")
+        scheduler._drain_incoming_task_messages()
+        self.assertTrue(scheduler.tasks_busy())
+
+        with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+            manager.__exit__(None, None, None)
+
+        self.assertFalse(manager.is_running)
+        self.assertEqual(gui_regular._scheduler.shutdown_calls, 1)
+        self.assertEqual(gui_fail._scheduler.shutdown_calls, 1)
+        self.assertTrue(any('context "fail"' in message for message in captured.output))
+        self.assertTrue(any('shutdown failed' in message for message in captured.output))
+        self.assertFalse(scheduler.tasks_active())
+        self.assertFalse(scheduler.tasks_busy())
 
 
 if __name__ == "__main__":
