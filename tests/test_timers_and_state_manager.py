@@ -139,6 +139,60 @@ class StateManagerLifecycleTests(unittest.TestCase):
 
         self.assertTrue(manager.is_running)
 
+    def test_rapid_multi_context_switch_carries_previous_mouse_each_hop(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (111, 222))
+        gui_a = GuiStubFactory.build(mouse_pos=(1, 1))
+        gui_b = GuiStubFactory.build(mouse_pos=(2, 2))
+        gui_c = GuiStubFactory.build(mouse_pos=(3, 3))
+
+        manager.register_context("a", gui_a)
+        manager.register_context("b", gui_b)
+        manager.register_context("c", gui_c)
+
+        manager.switch_context("a")
+        gui_a._mouse_pos = (10, 10)
+
+        manager.switch_context("b")
+        self.assertEqual(gui_b._mouse_pos, (10, 10))
+        self.assertEqual(gui_b.set_calls[-1], ((10, 10), True))
+        gui_b._mouse_pos = (20, 20)
+
+        manager.switch_context("c")
+        self.assertEqual(gui_c._mouse_pos, (20, 20))
+        self.assertEqual(gui_c.set_calls[-1], ((20, 20), True))
+        gui_c._mouse_pos = (30, 30)
+
+        manager.switch_context("a")
+        self.assertEqual(gui_a._mouse_pos, (30, 30))
+        self.assertEqual(gui_a.set_calls[-1], ((30, 30), True))
+
+    def test_mouse_provider_used_only_for_first_activation_in_switch_chain(self) -> None:
+        provider_calls = []
+
+        def provider():
+            provider_calls.append(True)
+            return (77, 66)
+
+        manager = StateManager(mouse_pos_provider=provider)
+        gui_a = GuiStubFactory.build(mouse_pos=(0, 0))
+        gui_b = GuiStubFactory.build(mouse_pos=(0, 0))
+        gui_c = GuiStubFactory.build(mouse_pos=(0, 0))
+
+        manager.register_context("a", gui_a)
+        manager.register_context("b", gui_b)
+        manager.register_context("c", gui_c)
+
+        manager.switch_context("a")
+        gui_a._mouse_pos = (5, 6)
+        manager.switch_context("b")
+        gui_b._mouse_pos = (7, 8)
+        manager.switch_context("c")
+
+        self.assertEqual(len(provider_calls), 1)
+        self.assertEqual(gui_a.set_calls[-1], ((77, 66), True))
+        self.assertEqual(gui_b.set_calls[-1], ((5, 6), True))
+        self.assertEqual(gui_c.set_calls[-1], ((7, 8), True))
+
 
 if __name__ == "__main__":
     unittest.main()
