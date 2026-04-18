@@ -35,16 +35,16 @@ from .widget_state_coordinator import WidgetStateCoordinator
 from .workspace_coordinator import WorkspaceCoordinator
 from .workspace_state import WorkspaceState
 from .widget import Widget
-from ..widgets.window import Window as Window
-from ..widgets.button import Button as Button
-from ..widgets.label import Label as Label
-from ..widgets.canvas import Canvas as Canvas
-from ..widgets.image import Image as Image
-from ..widgets.scrollbar import Scrollbar as Scrollbar
-from ..widgets.toggle import Toggle as Toggle
-from ..widgets.arrowbox import ArrowBox as ArrowBox
-from ..widgets.buttongroup import ButtonGroup as ButtonGroup
-from ..widgets.frame import Frame as Frame
+from ..widgets.window import Window
+from ..widgets.button import Button
+from ..widgets.label import Label
+from ..widgets.canvas import Canvas
+from ..widgets.image import Image
+from ..widgets.scrollbar import Scrollbar
+from ..widgets.toggle import Toggle
+from ..widgets.arrowbox import ArrowBox
+from ..widgets.buttongroup import ButtonGroup
+from ..widgets.frame import Frame
 
 _logger = logging.getLogger(__name__)
 
@@ -129,17 +129,11 @@ class GuiManager:
 
     @property
     def current_widget(self):
-        focus_controller = getattr(self, 'focus', None)
-        if focus_controller is None:
-            focus_controller = self.focus_state
-        return focus_controller.current_widget
+        return self.focus_state.current_widget
 
     @current_widget.setter
     def current_widget(self, value):
-        focus_controller = getattr(self, 'focus', None)
-        if focus_controller is None:
-            focus_controller = self.focus_state
-        focus_controller.current_widget = value
+        self.focus_state.current_widget = value
 
     @property
     def scheduler(self):
@@ -306,7 +300,6 @@ class GuiManager:
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.focus_state: FocusStateController = FocusStateController(self)
-        self.focus: FocusStateController = self.focus_state
         self.lock_state: LockStateController = LockStateController(self)
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
@@ -529,16 +522,10 @@ class GuiManager:
         self.graphics.restore_pristine(area, obj)
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
-        focus_controller = getattr(self, 'focus', None)
-        if focus_controller is None:
-            focus_controller = self.focus_state
-        focus_controller.update_focus(new_hover)
+        self.focus_state.update_focus(new_hover)
 
     def update_active_window(self) -> None:
-        focus_controller = getattr(self, 'focus', None)
-        if focus_controller is None:
-            focus_controller = self.focus_state
-        focus_controller.update_active_window()
+        self.focus_state.update_active_window()
 
     def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
         if coverage <= 0.0 or coverage > 1.0:

@@ -40,10 +40,6 @@ class InputRouter:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
 
-    def handle(self, event: PygameEvent) -> InputAction:
-        """Compatibility alias for route()."""
-        return self.route(event)
-
     def _handle_locked_object(self, event: PygameEvent) -> InputAction:
         lock_obj = self.gui.locking_object
         if not self._is_registered_widget(lock_obj):
