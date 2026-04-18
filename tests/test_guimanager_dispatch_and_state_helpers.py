@@ -85,7 +85,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.mouse_locked = True
         gui.lock_point_pos = None
         gui.lock_area_rect = Rect(10, 20, 5, 4)
-        gui._is_registered_object = lambda obj: obj is locker
+        gui.object_registry.is_registered_object = lambda obj: obj is locker
 
         self.assertEqual(GuiManager.lock_area(gui, (0, 0)), (10, 20))
         self.assertEqual(GuiManager.lock_area(gui, (99, 99)), (14, 23))
@@ -180,7 +180,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.lock_point_pos = None
         gui.lock_point_recenter_pending = False
         gui.lock_point_tolerance_rect = None
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         resolved = GuiManager._resolve_locking_state(gui)
 

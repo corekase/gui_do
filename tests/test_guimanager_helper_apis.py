@@ -141,7 +141,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         new_widget.leave = lambda: None
         registered = {old_widget, new_widget}
         gui.focus_state_data.current_widget = old_widget
-        gui._is_registered_object = lambda obj: obj in registered
+        gui.object_registry.is_registered_object = lambda obj: obj in registered
 
         gui.current_widget = new_widget
         self.assertEqual(leave_calls, ["left"])
@@ -224,7 +224,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.lock_point_pos = (2, 3)
         gui.lock_point_recenter_pending = True
         gui.lock_point_tolerance_rect = Rect(0, 0, 2, 2)
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
 
         self.assertIsNone(GuiManager._resolve_locking_state(gui))
         self.assertIsNone(gui.locking_object)
@@ -241,7 +241,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.mouse_point_locked = True
         gui.lock_area_rect = None
         gui.lock_point_pos = None
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         self.assertIsNone(GuiManager._resolve_locking_state(gui))
         self.assertIsNone(gui.locking_object)
@@ -343,7 +343,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_set_lock_area_validates_area_and_locking_object_requirements(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, widget, area="bad")  # type: ignore[arg-type]
@@ -352,11 +352,11 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, object(), area=Rect(0, 0, 2, 2))  # type: ignore[arg-type]
 
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, widget, area=Rect(0, 0, 2, 2))
 
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, widget, area=Rect(0, 0, 0, 2))
 
@@ -389,7 +389,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
         gui.focus_state_data.current_widget = widget
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
 
         self.assertIsNone(gui.current_widget)
         self.assertIsNone(gui.focus_state_data.current_widget)

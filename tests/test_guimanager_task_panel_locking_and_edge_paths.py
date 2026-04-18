@@ -162,7 +162,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         # _resolve_current_widget returns current when registered.
         widget = Widget.__new__(Widget)
         gui.focus_state_data.current_widget = widget
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
         self.assertIs(GuiManager._resolve_current_widget(gui), widget)
 
         # _resolve_locking_state early return when no locking object and no lock flags.
@@ -308,7 +308,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_lock_area_success_and_release_mouse_locked_non_point_mode(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
         gui.mouse_pos = (9, 8)
         set_calls = []
         gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
@@ -326,7 +326,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_set_lock_point_defaults_and_invalid_point(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
         gui.input_providers.mouse_get_pos = lambda: (12, 13)
 
         GuiManager.set_lock_point(gui, widget)
@@ -400,7 +400,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         leave_calls = []
         widget.leave = lambda: leave_calls.append(True)
         gui.focus_state_data.current_widget = widget
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         GuiManager.current_widget.fset(gui, widget)
 
@@ -471,7 +471,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_set_lock_point_unregistered_guard(self) -> None:
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
 
         with self.assertRaises(GuiError):
             GuiManager.set_lock_point(gui, widget, (1, 2))
@@ -566,7 +566,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_pos = (1, 1)
         gui.lock_point_recenter_pending = True
         gui.lock_point_tolerance_rect = Rect(0, 0, 1, 1)
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
         self.assertIsNone(GuiManager._resolve_locking_state(gui))
 
     def test_managed_task_panel_animate_no_movement_when_at_target(self) -> None:
@@ -590,7 +590,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         widget = Widget.__new__(Widget)
         gui.focus_state_data.current_widget = None
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         GuiManager.current_widget.fset(gui, widget)
 
@@ -679,7 +679,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.lock_point_pos = None
         gui.lock_point_recenter_pending = True
         gui.lock_point_tolerance_rect = Rect(0, 0, 1, 1)
-        gui._is_registered_object = lambda obj: obj is widget
+        gui.object_registry.is_registered_object = lambda obj: obj is widget
 
         self.assertIsNone(GuiManager._resolve_locking_state(gui))
 

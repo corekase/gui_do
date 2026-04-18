@@ -87,7 +87,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
 
     def test_set_lock_point_rejects_non_widget_lock_owner(self) -> None:
         gui = build_gui_manager_stub()
-        gui._is_registered_object = lambda _obj: False
+        gui.object_registry.is_registered_object = lambda _obj: False
 
         with self.assertRaises(GuiError):
             GuiManager.set_lock_point(gui, object(), (1, 2))
@@ -95,7 +95,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
     def test_set_lock_point_uses_mouse_provider_when_point_missing(self) -> None:
         gui = build_gui_manager_stub()
         lock_widget = Widget.__new__(Widget)
-        gui._is_registered_object = lambda obj: obj is lock_widget
+        gui.object_registry.is_registered_object = lambda obj: obj is lock_widget
         gui.input_providers.mouse_get_pos = lambda: (12, 13)
 
         GuiManager.set_lock_point(gui, lock_widget)

@@ -45,7 +45,7 @@ def _apply_preset(gui: GuiManager, preset: StubPreset) -> None:
 
     if preset == "locking":
         gui.locking_object = Widget.__new__(Widget)
-        gui._is_registered_object = lambda _obj: True
+        gui.object_registry.is_registered_object = lambda _obj: True
         gui.mouse_locked = True
         gui.mouse_point_locked = False
         gui.lock_area_rect = Rect(10, 20, 5, 6)
