@@ -5,6 +5,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 
+from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.constants import ArrowPosition, GuiError, InteractiveState, Orientation
 from gui.widgets.scrollbar import Scrollbar
 
@@ -75,10 +76,8 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
     def test_handle_event_mouse_down_starts_drag_and_locks(self) -> None:
         scrollbar = self._build_scrollbar_stub()
         lock_calls = []
-        scrollbar.gui = SimpleNamespace(
-            get_mouse_pos=lambda: (25, 15),
-            convert_to_window=lambda point, _window: point,
-            convert_to_screen=lambda point, _window: point,
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(25, 15),
             set_lock_area=lambda widget, area=None: lock_calls.append((widget, area)),
         )
 
@@ -93,10 +92,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
     def test_handle_event_drag_motion_clamps_and_tracks(self) -> None:
         scrollbar = self._build_scrollbar_stub()
         scrollbar._dragging = True
-        scrollbar.gui = SimpleNamespace(
-            get_mouse_pos=lambda: (0, 0),
-            convert_to_window=lambda point, _window: point,
-        )
+        scrollbar.gui = build_mouse_gui_stub(mouse_pos=(0, 0))
 
         motion = pygame.event.Event(MOUSEMOTION, {})
 
@@ -106,7 +102,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         self.assertEqual(scrollbar._last_mouse_pos, 0)
 
         # Extreme right motion clamps to max start.
-        scrollbar.gui.get_mouse_pos = lambda: (1000, 0)
+        scrollbar.gui.set_mouse_pos((1000, 0))
         self.assertTrue(scrollbar.handle_event(motion, None))
         self.assertEqual(scrollbar._start_pos, 80)
         self.assertEqual(scrollbar._last_mouse_pos, 80)
@@ -114,7 +110,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         # Mid-range motion updates by delta.
         scrollbar._start_pos = 10
         scrollbar._last_mouse_pos = 20
-        scrollbar.gui.get_mouse_pos = lambda: (40, 0)
+        scrollbar.gui.set_mouse_pos((40, 0))
         self.assertTrue(scrollbar.handle_event(motion, None))
         self.assertEqual(scrollbar._start_pos, 20)
         self.assertEqual(scrollbar._last_mouse_pos, 30)
@@ -122,17 +118,16 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         # First mid-range event with no last mouse pos sets tracker and returns False.
         scrollbar._last_mouse_pos = None
         scrollbar._start_pos = 10
-        scrollbar.gui.get_mouse_pos = lambda: (30, 0)
+        scrollbar.gui.set_mouse_pos((30, 0))
         self.assertFalse(scrollbar.handle_event(motion, None))
         self.assertEqual(scrollbar._last_mouse_pos, 20)
 
     def test_handle_event_mouse_up_resets_drag(self) -> None:
         scrollbar = self._build_scrollbar_stub()
         lock_calls = []
-        scrollbar.gui = SimpleNamespace(
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
             set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
-            get_mouse_pos=lambda: (0, 0),
-            convert_to_window=lambda point, _window: point,
         )
         scrollbar._dragging = True
         scrollbar._last_mouse_pos = 5

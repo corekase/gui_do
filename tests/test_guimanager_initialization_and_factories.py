@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from pygame import Rect
 
+from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.constants import ArrowPosition, ButtonStyle, GuiError, Orientation
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.ui_factory import GuiUiFactory
@@ -54,12 +55,14 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         evt_calls = []
         post_calls = []
 
-        gui = SimpleNamespace(
-            surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 120, 80)),
-            timers=SimpleNamespace(add_timer=lambda tid, interval, cb: timer_calls.append((tid, interval, cb))),
-            copy_graphic_area=lambda *_args, **_kwargs: _Convertible(),
-            set_pristine=lambda *_args, **_kwargs: None,
-            get_mouse_pos=lambda: (0, 0),
+        gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
+            extras={
+                "surface": SimpleNamespace(get_rect=lambda: Rect(0, 0, 120, 80)),
+                "timers": SimpleNamespace(add_timer=lambda tid, interval, cb: timer_calls.append((tid, interval, cb))),
+                "copy_graphic_area": lambda *_args, **_kwargs: _Convertible(),
+                "set_pristine": lambda *_args, **_kwargs: None,
+            },
         )
 
         class FakeFrame:
@@ -101,12 +104,14 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
 
     def test_managed_task_panel_constructor_with_backdrop_uses_set_pristine(self) -> None:
         set_pristine_calls = []
-        gui = SimpleNamespace(
-            surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60)),
-            timers=SimpleNamespace(add_timer=lambda *_args, **_kwargs: None),
-            copy_graphic_area=lambda *_args, **_kwargs: _Convertible(),
-            set_pristine=lambda backdrop, panel: set_pristine_calls.append((backdrop, panel)),
-            get_mouse_pos=lambda: (0, 0),
+        gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
+            extras={
+                "surface": SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 60)),
+                "timers": SimpleNamespace(add_timer=lambda *_args, **_kwargs: None),
+                "copy_graphic_area": lambda *_args, **_kwargs: _Convertible(),
+                "set_pristine": lambda backdrop, panel: set_pristine_calls.append((backdrop, panel)),
+            },
         )
 
         with patch("gui.utility.guimanager.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):

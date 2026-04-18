@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from pygame import Rect
 
+from event_mouse_fixtures import build_mouse_gui_stub
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import GuiError
 from gui.utility.guimanager import GuiManager
@@ -180,11 +181,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         restore_calls = []
 
         panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
-        panel.gui = SimpleNamespace(
-            timers=SimpleNamespace(remove_timer=lambda timer_id: timer_calls.append(timer_id)),
-            surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 120, 70)),
-            get_mouse_pos=lambda: (20, 65),
-            restore_pristine=lambda area, obj: restore_calls.append((area, obj)),
+        panel.gui = build_mouse_gui_stub(
+            mouse_pos=(20, 65),
+            extras={
+                "timers": SimpleNamespace(remove_timer=lambda timer_id: timer_calls.append(timer_id)),
+                "surface": SimpleNamespace(get_rect=lambda: Rect(0, 0, 120, 70)),
+                "restore_pristine": lambda area, obj: restore_calls.append((area, obj)),
+            },
         )
         panel._timer_id = ("task-panel-motion", 1)
         panel._preamble = lambda: pre_calls.append(True)

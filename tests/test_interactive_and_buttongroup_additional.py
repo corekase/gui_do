@@ -5,6 +5,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEMOTION
 
+from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.constants import ButtonStyle, Event, InteractiveState, GuiError
 from gui.utility.interactive import BaseInteractive
 from gui.widgets.buttongroup import ButtonGroup
@@ -37,16 +38,17 @@ class _MediatorStub:
 
 class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
     def _build_gui_stub(self):
-        gui = SimpleNamespace()
-        gui.get_mouse_pos = lambda: (5, 5)
-        gui.convert_to_window = lambda point, _window: point
-        gui.restore_pristine = lambda *_args, **_kwargs: None
-        gui.event = lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs)
-        gui.bitmap_factory = SimpleNamespace(
-            get_styled_bitmaps=lambda _style, _text, rect: ((object(), object(), object()), Rect(rect))
+        return build_mouse_gui_stub(
+            mouse_pos=(5, 5),
+            extras={
+                "restore_pristine": lambda *_args, **_kwargs: None,
+                "event": lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs),
+                "bitmap_factory": SimpleNamespace(
+                    get_styled_bitmaps=lambda _style, _text, rect: ((object(), object(), object()), Rect(rect))
+                ),
+                "button_group_mediator": _MediatorStub(),
+            },
         )
-        gui.button_group_mediator = _MediatorStub()
-        return gui
 
     def test_baseinteractive_leave_only_resets_non_armed(self) -> None:
         widget = BaseInteractive.__new__(BaseInteractive)

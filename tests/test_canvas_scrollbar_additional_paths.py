@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 
+from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.constants import ArrowPosition, CanvasEvent, GuiError, InteractiveState, Orientation
 from gui.widgets.canvas import Canvas
 from gui.widgets.scrollbar import Scrollbar
@@ -35,12 +36,9 @@ class _CanvasSurface:
 class CanvasRoiBatch5Tests(unittest.TestCase):
     def _build_canvas_stub(self) -> Canvas:
         canvas = Canvas.__new__(Canvas)
-        canvas.gui = SimpleNamespace(
-            get_mouse_pos=lambda: (5, 5),
-            convert_to_window=lambda point, _window: point,
-            convert_to_screen=lambda point, _window: point,
-            locking_object=None,
-            mouse_locked=False,
+        canvas.gui = build_mouse_gui_stub(
+            mouse_pos=(5, 5),
+            extras={"locking_object": None, "mouse_locked": False},
         )
         canvas.window = None
         canvas.draw_rect = Rect(2, 3, 20, 20)
@@ -264,7 +262,7 @@ class CanvasRoiBatch5Tests(unittest.TestCase):
         canvas.draw()
         self.assertEqual(restore_calls, [None])
 
-        canvas.gui.get_mouse_pos = lambda: (999, 999)
+        canvas.gui.set_mouse_pos((999, 999))
         self.assertFalse(canvas.focused())
 
 
@@ -311,10 +309,9 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar.state = InteractiveState.Hover
         scrollbar._hit = False
         lock_calls = []
-        scrollbar.gui = SimpleNamespace(
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
             set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
-            get_mouse_pos=lambda: (0, 0),
-            convert_to_window=lambda point, _window: point,
         )
 
         Scrollbar.leave(scrollbar)
@@ -336,10 +333,7 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
         scrollbar._last_mouse_pos = None
-        scrollbar.gui = SimpleNamespace(
-            get_mouse_pos=lambda: (20, 40),
-            convert_to_window=lambda point, _window: point,
-        )
+        scrollbar.gui = build_mouse_gui_stub(mouse_pos=(20, 40))
 
         motion = pygame.event.Event(MOUSEMOTION, {})
         self.assertFalse(scrollbar.handle_event(motion, None))
