@@ -473,6 +473,8 @@ class GuiManager:
         if self._is_registered_object(gui_object):
             raise GuiError(f'gui_object is already registered: {self._describe_gui_object(gui_object)}')
         if isinstance(gui_object, gWindow):
+            if self._task_panel_capture and self.task_panel is not None:
+                raise GuiError('window nesting inside task panel is not supported; call end_task_panel() before creating a window')
             self.windows.append(gui_object)
             self._active_object = gui_object
         elif isinstance(gui_object, Widget):
