@@ -1,5 +1,7 @@
 # gui_do
 
+[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
+
 `gui_do` is a pygame-based GUI toolkit that is currently best used as a practical framework for building interactive desktop UIs inside a game loop.
 
 This README is an implementation-focused tutorial for what exists now, not full API reference documentation.
@@ -22,6 +24,28 @@ Each release includes a link to a video demonstration as it was at the time.
 ```bash
 pip install pygame numpy
 ```
+
+## Testing
+
+Run the full unit test suite locally from repo root:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The same command is run in CI by the GitHub Actions workflow:
+
+- `.github/workflows/unittest.yml`
+
+## Contributing
+
+Before opening a PR, run the local test suite and confirm it passes:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Please include any new tests needed for behavior changes or bug fixes.
 
 ## 2. Project layout expected by gui_do
 
