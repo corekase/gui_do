@@ -1,5 +1,6 @@
 from pygame.event import Event as PygameEvent
 from typing import TYPE_CHECKING
+from .input_emitter import InputEventEmitter
 from .input_router import InputRouter
 
 if TYPE_CHECKING:
@@ -11,33 +12,37 @@ class EventDispatcher:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
         self.router: InputRouter = InputRouter(gui_manager)
+        self.emitter: InputEventEmitter = getattr(gui_manager, 'input_emitter', InputEventEmitter(gui_manager))
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
-        return self.router.handle(event)
+        return self.emitter.emit_action(self.router.handle(event))
 
     def _handle_base_mouse_events(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._handle_base_mouse_events(event)
+        return self.emitter.emit_action(self.router._handle_base_mouse_events(event))
 
     def _handle_locked_object(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._handle_locked_object(event)
+        return self.emitter.emit_action(self.router._handle_locked_object(event))
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         self.router._handle_mouse_motion(event)
 
     def _handle_system_event(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._handle_system_event(event)
+        return self.emitter.emit_action(self.router._handle_system_event(event))
 
     def _handle_window_dragging(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._handle_window_dragging(event)
+        return self.emitter.emit_action(self.router._handle_window_dragging(event))
 
     def _process_screen_widgets(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._process_screen_widgets(event)
+        return self.emitter.emit_action(self.router._process_screen_widgets(event))
 
     def _process_window_widgets(self, event: PygameEvent) -> "GuiEvent":
-        return self.router._process_window_widgets(event)
+        return self.emitter.emit_action(self.router._process_window_widgets(event))
 
     def _process_task_panel_widgets(self, event: PygameEvent):
-        return self.router._process_task_panel_widgets(event)
+        action = self.router._process_task_panel_widgets(event)
+        if action is None:
+            return None
+        return self.emitter.emit_action(action)
 
     def _check_window_drag_start(self, event: PygameEvent) -> None:
         self.router._check_window_drag_start(event)

@@ -3,6 +3,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, Tuple, TYPE_CHECKING
 from .constants import Event, GuiError
+from .input_actions import InputAction
 from .widget import Widget
 
 if TYPE_CHECKING:
@@ -131,11 +132,8 @@ class DragStateController:
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
 
-    def _pass_event(self) -> "GuiEvent":
-        emitter = getattr(self.gui, 'input_emitter', None)
-        if emitter is not None:
-            return emitter.pass_event()
-        return self.gui.event(Event.Pass)
+    def _pass_event(self) -> InputAction:
+        return InputAction.pass_event()
 
     def reset(self) -> None:
         self.gui.dragging = False
@@ -156,7 +154,7 @@ class DragStateController:
                     self.gui.dragging_window.y - self.gui.mouse_pos[1],
                 )
 
-    def handle_drag_event(self, event: PygameEvent) -> "GuiEvent":
+    def handle_drag_event(self, event: PygameEvent) -> InputAction:
         if (
             self.gui.dragging_window is None
             or self.gui.dragging_window not in self.gui.windows

@@ -2,6 +2,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, TYPE_CHECKING
 from .constants import Event
+from .input_actions import InputAction
 
 if TYPE_CHECKING:
     from .guimanager import GuiEvent, GuiManager
@@ -12,6 +13,13 @@ class InputEventEmitter:
 
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
+
+    def emit_action(self, action: InputAction) -> "GuiEvent":
+        if action.builder is not None:
+            return action.builder()
+        if action.event_type is None:
+            return self.gui.event(Event.Pass)
+        return self.gui.event(action.event_type, **action.kwargs)
 
     def base_mouse_event(self, event: PygameEvent) -> "GuiEvent":
         if event.type == MOUSEBUTTONUP:

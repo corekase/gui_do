@@ -2,7 +2,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import TYPE_CHECKING
 from .constants import Event
-from .input_emitter import InputEventEmitter
+from .input_actions import InputAction
 
 if TYPE_CHECKING:
     from .guimanager import GuiEvent, GuiManager
@@ -13,7 +13,6 @@ class InputTargetResolver:
 
     def __init__(self, gui_manager: "GuiManager") -> None:
         self.gui: "GuiManager" = gui_manager
-        self.emitter: InputEventEmitter = getattr(gui_manager, 'input_emitter', InputEventEmitter(gui_manager))
 
     def update_active_window(self) -> None:
         top_window = None
@@ -23,7 +22,7 @@ class InputTargetResolver:
                 break
         self.gui.active_window = top_window
 
-    def process_screen_widgets(self, event: PygameEvent) -> "GuiEvent":
+    def process_screen_widgets(self, event: PygameEvent) -> InputAction:
         hit_any = False
         focus_target = None
         for widget in tuple(self.gui.widgets)[::-1]:
@@ -37,15 +36,15 @@ class InputTargetResolver:
                     if self.gui.handle_widget(widget, event):
                         if focus_target is not None and self.is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
-                        return widget.build_gui_event(None)
+                        return InputAction.from_builder(lambda w=widget: w.build_gui_event(None))
         if not hit_any:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)
         if focus_target is not None and self.is_registered_widget(focus_target):
             self.gui.update_focus(focus_target)
-        return self.emitter.pass_event()
+        return InputAction.pass_event()
 
-    def process_window_widgets(self, event: PygameEvent) -> "GuiEvent":
+    def process_window_widgets(self, event: PygameEvent) -> InputAction:
         if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
             if self.gui.active_window is not None and self.gui.active_window in self.gui.windows:
                 self.gui.raise_window(self.gui.active_window)
@@ -65,17 +64,17 @@ class InputTargetResolver:
                             if self.gui.handle_widget(widget, event, window):
                                 if focus_target is not None and self.is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
-                                return widget.build_gui_event(window)
+                                return InputAction.from_builder(lambda w=widget, win=window: w.build_gui_event(win))
                         elif widget.should_handle_outside_collision():
                             if self.gui.handle_widget(widget, event, window):
                                 if focus_target is not None and self.is_registered_widget(focus_target):
                                     self.gui.update_focus(focus_target)
-                                return widget.build_gui_event(window)
+                                return InputAction.from_builder(lambda w=widget, win=window: w.build_gui_event(win))
                 if hit_any and focus_target is not None and self.is_registered_widget(focus_target):
                     self.gui.update_focus(focus_target)
                 else:
                     self.gui.update_focus(None)
-                return self.emitter.pass_event()
+                return InputAction.pass_event()
         self.gui.update_focus(None)
         return self._handle_base_mouse_events(event)
 
@@ -97,17 +96,17 @@ class InputTargetResolver:
                     if self.gui.handle_widget(widget, event, task_panel):
                         if focus_target is not None and self.is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
-                        return self.emitter.widget_event(widget_id=widget.id, task_panel=True)
+                        return InputAction.emit(Event.Widget, widget_id=widget.id, task_panel=True)
                 elif widget.should_handle_outside_collision():
                     if self.gui.handle_widget(widget, event, task_panel):
                         if focus_target is not None and self.is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
-                        return self.emitter.widget_event(widget_id=widget.id, task_panel=True)
+                        return InputAction.emit(Event.Widget, widget_id=widget.id, task_panel=True)
         if hit_any and focus_target is not None and self.is_registered_widget(focus_target):
             self.gui.update_focus(focus_target)
         else:
             self.gui.update_focus(None)
-        return self.emitter.pass_event()
+        return InputAction.pass_event()
 
     def is_registered_widget(self, widget) -> bool:
         if widget is None:
@@ -121,5 +120,11 @@ class InputTargetResolver:
                 return True
         return False
 
-    def _handle_base_mouse_events(self, event: PygameEvent) -> "GuiEvent":
-        return self.emitter.base_mouse_event(event)
+    def _handle_base_mouse_events(self, event: PygameEvent) -> InputAction:
+        if event.type == MOUSEBUTTONUP:
+            return InputAction.emit(Event.MouseButtonUp, button=getattr(event, 'button', None))
+        if event.type == MOUSEBUTTONDOWN:
+            return InputAction.emit(Event.MouseButtonDown, button=getattr(event, 'button', None))
+        if event.type == MOUSEMOTION:
+            return InputAction.emit(Event.MouseMotion, rel=getattr(event, 'rel', (0, 0)))
+        return InputAction.pass_event()
