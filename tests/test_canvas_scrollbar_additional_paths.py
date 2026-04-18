@@ -1,0 +1,281 @@
+import unittest
+from collections import deque
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import pygame
+from pygame import Rect
+from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+
+from gui.utility.constants import ArrowPosition, CanvasEvent, GuiError, InteractiveState, Orientation
+from gui.widgets.canvas import Canvas
+from gui.widgets.scrollbar import Scrollbar
+
+
+class _Convertible:
+    def convert(self):
+        return self
+
+
+class _CanvasSurface:
+    def __init__(self, size):
+        self._rect = Rect(0, 0, size[0], size[1])
+        self.blit_calls = []
+
+    def convert(self):
+        return self
+
+    def get_rect(self):
+        return Rect(self._rect)
+
+    def blit(self, src, pos, area=None):
+        self.blit_calls.append((src, pos, area))
+
+
+class CanvasRoiBatch5Tests(unittest.TestCase):
+    def _build_canvas_stub(self) -> Canvas:
+        canvas = Canvas.__new__(Canvas)
+        canvas.gui = SimpleNamespace(
+            get_mouse_pos=lambda: (5, 5),
+            convert_to_window=lambda point, _window: point,
+            convert_to_screen=lambda point, _window: point,
+            locking_object=None,
+            mouse_locked=False,
+        )
+        canvas.window = None
+        canvas.draw_rect = Rect(2, 3, 20, 20)
+        canvas.hit_rect = None
+        canvas._events = deque([], maxlen=2)
+        canvas.dropped_events = 0
+        canvas.last_overflow = False
+        canvas.on_overflow = None
+        canvas.coalesce_motion_events = True
+        canvas.queued_event = False
+        canvas.CEvent = None
+        canvas.surface = SimpleNamespace(blit=lambda *_args, **_kwargs: None)
+        canvas.canvas = _CanvasSurface((20, 20))
+        canvas.pristine = _Convertible()
+        canvas.auto_restore_pristine = False
+        return canvas
+
+    def test_constructor_validates_on_activate_callable(self) -> None:
+        with self.assertRaises(GuiError):
+            Canvas(SimpleNamespace(), "c", Rect(0, 0, 10, 10), on_activate=123)  # type: ignore[arg-type]
+
+    def test_constructor_without_backdrop_draws_frame_and_caches_pristine(self) -> None:
+        frame_calls = []
+        copy_calls = []
+        gui = SimpleNamespace(
+            copy_graphic_area=lambda surface, area: copy_calls.append((surface, area)) or _Convertible(),
+            set_pristine=lambda *_args, **_kwargs: None,
+        )
+
+        class FakeFrame:
+            def __init__(self, *_args, **_kwargs):
+                self.state = None
+                self.surface = None
+
+            def draw(self):
+                frame_calls.append(True)
+
+        with patch("gui.widgets.canvas.pygame.surface.Surface", side_effect=lambda size: _CanvasSurface(size)), patch(
+            "gui.widgets.canvas.Frame", FakeFrame
+        ):
+            canvas = Canvas(gui, "canvas", Rect(0, 0, 30, 20), backdrop=None)
+
+        self.assertEqual(len(frame_calls), 1)
+        self.assertEqual(len(copy_calls), 1)
+        self.assertIsNotNone(canvas.pristine)
+
+    def test_constructor_with_backdrop_uses_set_pristine(self) -> None:
+        pristine_calls = []
+        gui = SimpleNamespace(
+            copy_graphic_area=lambda *_args, **_kwargs: _Convertible(),
+            set_pristine=lambda image, obj: pristine_calls.append((image, obj)),
+        )
+
+        with patch("gui.widgets.canvas.pygame.surface.Surface", side_effect=lambda size: _CanvasSurface(size)):
+            canvas = Canvas(gui, "canvas", Rect(0, 0, 16, 10), backdrop="bg.png")
+
+        self.assertEqual(len(pristine_calls), 1)
+        self.assertEqual(pristine_calls[0][0], "bg.png")
+        self.assertIs(pristine_calls[0][1], canvas)
+
+    def test_queue_limit_and_read_event_paths(self) -> None:
+        canvas = self._build_canvas_stub()
+
+        self.assertEqual(canvas.get_event_queue_limit(), 2)
+        canvas._events = deque([1, 2])
+        self.assertEqual(canvas.get_event_queue_limit(), 0)
+
+        canvas._events = deque([], maxlen=2)
+        self.assertIsNone(canvas.read_event())
+        self.assertFalse(canvas.queued_event)
+        self.assertIsNone(canvas.CEvent)
+
+        evt1 = SimpleNamespace(type=CanvasEvent.MouseMotion)
+        evt2 = SimpleNamespace(type=CanvasEvent.MouseWheel)
+        canvas._events = deque([evt1, evt2], maxlen=2)
+        self.assertIs(canvas.read_event(), evt1)
+        self.assertTrue(canvas.queued_event)
+        self.assertIs(canvas.CEvent, evt2)
+
+    def test_set_queue_limit_and_validation_guards(self) -> None:
+        canvas = self._build_canvas_stub()
+        canvas._events = deque([SimpleNamespace(type=CanvasEvent.MouseButtonDown)], maxlen=2)
+
+        canvas.set_event_queue_limit(4)
+        self.assertEqual(canvas.get_event_queue_limit(), 4)
+        self.assertTrue(canvas.queued_event)
+        self.assertIsNotNone(canvas.CEvent)
+
+        with self.assertRaises(GuiError):
+            canvas.set_event_queue_limit("bad")  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            canvas.set_event_queue_limit(0)
+
+        # No-op branch when maxlen already matches.
+        existing = canvas._events
+        canvas._configure_max_queued_events(4)
+        self.assertIs(canvas._events, existing)
+
+    def test_motion_and_overflow_callback_validation(self) -> None:
+        canvas = self._build_canvas_stub()
+
+        canvas.set_motion_coalescing(False)
+        self.assertFalse(canvas.coalesce_motion_events)
+        with self.assertRaises(GuiError):
+            canvas.set_motion_coalescing(1)  # type: ignore[arg-type]
+
+        canvas.set_overflow_handler(None)
+        canvas.set_overflow_handler(lambda _dropped, _total: None)
+        with self.assertRaises(GuiError):
+            canvas.set_overflow_handler(1)  # type: ignore[arg-type]
+
+    def test_handle_event_non_collide_but_locked_owner_still_queues(self) -> None:
+        canvas = self._build_canvas_stub()
+        canvas.gui.locking_object = canvas
+        canvas.gui.mouse_locked = True
+        canvas.get_collide = lambda _window=None: False
+
+        event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        handled = canvas.handle_event(event, None)
+
+        self.assertTrue(handled)
+        self.assertEqual(len(canvas._events), 1)
+        self.assertEqual(canvas._events[0].type, CanvasEvent.MouseButtonDown)
+
+    def test_overflow_callback_exception_is_swallowed(self) -> None:
+        canvas = self._build_canvas_stub()
+        canvas.get_collide = lambda _window=None: True
+        canvas.coalesce_motion_events = False
+        canvas._events = deque([], maxlen=1)
+
+        def _boom(_dropped: int, _total: int) -> None:
+            raise RuntimeError("overflow callback boom")
+
+        canvas.on_overflow = _boom
+
+        first = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        second = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+
+        self.assertTrue(canvas.handle_event(first, None))
+        self.assertTrue(canvas.handle_event(second, None))
+        self.assertEqual(canvas.dropped_events, 1)
+        self.assertTrue(canvas.last_overflow)
+        self.assertEqual(len(canvas._events), 1)
+
+    def test_draw_auto_restore_branch_and_focus_else(self) -> None:
+        canvas = self._build_canvas_stub()
+        restore_calls = []
+        canvas.auto_restore_pristine = True
+        canvas.restore_pristine = lambda area=None: restore_calls.append(area)
+
+        canvas.draw()
+        self.assertEqual(restore_calls, [None])
+
+        canvas.gui.get_mouse_pos = lambda: (999, 999)
+        self.assertFalse(canvas.focused())
+
+
+class ScrollbarRoiBatch5Tests(unittest.TestCase):
+    def _fake_frame_init(self, instance, gui, sid, rect):
+        instance.gui = gui
+        instance.id = sid
+        instance.draw_rect = Rect(rect)
+        instance.hit_rect = None
+        instance.surface = SimpleNamespace(blit=lambda *_args, **_kwargs: None)
+
+    def test_constructor_covers_skip_near_far_split_and_orientation_branches(self) -> None:
+        gui = SimpleNamespace()
+
+        with patch(
+            "gui.widgets.scrollbar.Frame.__init__",
+            autospec=True,
+            side_effect=lambda s, g, i, r: self._fake_frame_init(s, g, i, r),
+        ):
+            skip = Scrollbar(gui, "skip", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Skip, (20, 0, 10, 1))
+            self.assertIsNone(skip._increment_rect)
+            self.assertIsNone(skip._decrement_rect)
+
+            near_h = Scrollbar(gui, "near_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Near, (20, 0, 10, 1))
+            self.assertEqual(near_h._inc_degree, 0)
+            self.assertEqual(near_h._dec_degree, 180)
+
+            near_v = Scrollbar(gui, "near_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Near, (20, 0, 10, 1))
+            self.assertEqual(near_v._inc_degree, 270)
+            self.assertEqual(near_v._dec_degree, 90)
+
+            far_h = Scrollbar(gui, "far_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Far, (20, 0, 10, 1))
+            self.assertIsNotNone(far_h._increment_rect)
+            self.assertIsNotNone(far_h._decrement_rect)
+
+            split_v = Scrollbar(gui, "split_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Split, (20, 0, 10, 1))
+            self.assertIsNotNone(split_v._increment_rect)
+            self.assertIsNotNone(split_v._decrement_rect)
+
+    def test_leave_calls_reset_and_buttonup_non_left_falls_through(self) -> None:
+        scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._dragging = True
+        scrollbar._last_mouse_pos = 3
+        scrollbar.state = InteractiveState.Hover
+        scrollbar._hit = False
+        lock_calls = []
+        scrollbar.gui = SimpleNamespace(
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+            get_mouse_pos=lambda: (0, 0),
+            convert_to_window=lambda point, _window: point,
+        )
+
+        Scrollbar.leave(scrollbar)
+        self.assertFalse(scrollbar._dragging)
+        self.assertEqual(scrollbar.state, InteractiveState.Idle)
+
+        scrollbar._dragging = True
+        evt = pygame.event.Event(MOUSEBUTTONUP, {"button": 3})
+        self.assertFalse(scrollbar.handle_event(evt, None))
+        self.assertEqual(lock_calls, [(None, None)])
+
+    def test_vertical_drag_path_and_graphical_range_vertical(self) -> None:
+        scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._hit = False
+        scrollbar._dragging = True
+        scrollbar._horizontal = Orientation.Vertical
+        scrollbar._graphic_rect = Rect(10, 10, 20, 100)
+        scrollbar._total_range = 100
+        scrollbar._bar_size = 20
+        scrollbar._start_pos = 5
+        scrollbar._last_mouse_pos = None
+        scrollbar.gui = SimpleNamespace(
+            get_mouse_pos=lambda: (20, 40),
+            convert_to_window=lambda point, _window: point,
+        )
+
+        motion = pygame.event.Event(MOUSEMOTION, {})
+        self.assertFalse(scrollbar.handle_event(motion, None))
+        self.assertEqual(scrollbar._last_mouse_pos, 30)
+        self.assertEqual(Scrollbar._graphical_range(scrollbar), 100)
+
+
+if __name__ == "__main__":
+    unittest.main()
