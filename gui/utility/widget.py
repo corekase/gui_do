@@ -5,7 +5,7 @@ from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from .constants import Event, GuiError
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent
+    from .gui_event import GuiEvent
     from .guimanager import GuiManager
     from ..widgets.window import Window
 

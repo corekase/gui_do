@@ -1,9 +1,9 @@
 from typing import Iterable, TYPE_CHECKING
 
 from .constants import Event
+from .gui_event import GuiEvent
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent
     from .guimanager import GuiManager
 
 
@@ -14,8 +14,6 @@ class InputEventCoordinator:
         self.gui: "GuiManager" = gui_manager
 
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
-        from .guimanager import GuiEvent
-
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self.gui.get_mouse_pos())
         return GuiEvent(event_type, **kwargs)

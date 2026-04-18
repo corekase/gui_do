@@ -8,6 +8,7 @@ from event_mouse_fixtures import build_mouse_gui_stub
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import GuiError
 from gui.utility.guimanager import GuiManager
+from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -180,7 +181,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         post_calls = []
         restore_calls = []
 
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.gui = build_mouse_gui_stub(
             mouse_pos=(20, 65),
             extras={
@@ -373,7 +374,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_managed_task_panel_branches_for_no_refresh_paths(self) -> None:
         import gui.utility.guimanager as gm
 
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         refresh_calls = []
         panel.refresh_targets = lambda: refresh_calls.append(True)
         panel.visible = True
@@ -572,7 +573,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_managed_task_panel_animate_no_movement_when_at_target(self) -> None:
         import gui.utility.guimanager as gm
 
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.visible = True
         panel.auto_hide = True
         panel._hovered = False

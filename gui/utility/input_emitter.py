@@ -5,7 +5,8 @@ from .constants import Event
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent, GuiManager
+    from .gui_event import GuiEvent
+    from .guimanager import GuiManager
 
 
 class InputEventEmitter:

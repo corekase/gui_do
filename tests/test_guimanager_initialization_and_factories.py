@@ -7,6 +7,7 @@ from pygame import Rect
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui.utility.constants import ArrowPosition, ButtonStyle, GuiError, Orientation
 from gui.utility.object_registry import GuiObjectRegistry
+from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget import Widget
 from gui.utility import guimanager as gm
@@ -33,21 +34,21 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80)))
 
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 0, 0, 1, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 0, 0, 1, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, "x", 1, True, 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
+            _ManagedTaskPanel(gui, 20, "x", 1, True, 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 0, 0, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, 0, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 0, 1, "yes", 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
+            _ManagedTaskPanel(gui, 20, 0, 1, "yes", 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 0, 1, True, 1.0, 0, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, 1, True, 1.0, 0, None, None, None, None)
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 0, 1, True, 0.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, 1, True, 0.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 100, 1, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 100, 1, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            gm._ManagedTaskPanel(gui, 20, 0, 20, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, 20, True, 1.0, 1, None, None, None, None)
 
     def test_managed_task_panel_constructor_without_backdrop_builds_pristine(self) -> None:
         timer_calls = []
@@ -76,7 +77,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)), patch(
             "gui.utility.task_panel.gFrame", FakeFrame
         ):
-            panel = gm._ManagedTaskPanel(
+            panel = _ManagedTaskPanel(
                 gui,
                 height=20,
                 x=10,
@@ -115,7 +116,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         )
 
         with patch("gui.utility.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
-            panel = gm._ManagedTaskPanel(gui, 20, 0, 4, True, 1.0, 1, "panel.png", None, None, None)
+            panel = _ManagedTaskPanel(gui, 20, 0, 4, True, 1.0, 1, "panel.png", None, None, None)
 
         self.assertEqual(len(set_pristine_calls), 1)
         self.assertEqual(set_pristine_calls[0][0], "panel.png")

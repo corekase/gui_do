@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Callable, Dict, Optional
 from .constants import Event
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent
+    from .gui_event import GuiEvent
 
 
 @dataclass

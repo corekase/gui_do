@@ -6,6 +6,8 @@ from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
 from gui import colours, GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager
 
+# Demo targets the public package API only; internal utility compatibility aliases are not used.
+
 class Demo:
     # Coordinates around a cell, given as a delta table for Conway's Game of Life
     neighbours = ((-1, -1), (-1,  0), (-1, 1), (0, -1),

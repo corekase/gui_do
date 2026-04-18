@@ -4,7 +4,8 @@ from pygame import Rect
 
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.constants import Event, GuiError
-from gui.utility.guimanager import GuiEvent, GuiManager
+from gui.utility.gui_event import GuiEvent
+from gui.utility.guimanager import GuiManager
 from gui.utility.widget import Widget
 
 

@@ -3,7 +3,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 import logging
-from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Protocol, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from .scheduler import Timers, Scheduler
 from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .bitmapfactory import BitmapFactory
@@ -24,7 +24,6 @@ from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
 from .render_coordinator import RenderCoordinator
 from .renderer import Renderer
-from .task_panel import _ManagedTaskPanel
 from .task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
 from .widget_state_coordinator import WidgetStateCoordinator
@@ -43,6 +42,10 @@ from ..widgets.frame import Frame as gFrame
 
 _logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from .gui_event import GuiEvent
+    from .task_panel import _ManagedTaskPanel
+
 def _noop() -> None:
     pass
 
@@ -54,34 +57,6 @@ class _PristineContainer(Protocol):
     pristine: Optional[Surface]
 
 TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
-
-class GuiEvent(BaseEvent):
-    def __init__(self, event_type: Event, **kwargs: object) -> None:
-        super().__init__(event_type)
-        # Normalize optional payloads defensively so malformed external event data
-        # cannot corrupt GUI event routing.
-        self.key: Optional[int] = self._as_optional_int(kwargs.get('key'))
-        self.pos: Optional[Tuple[int, int]] = self._as_optional_int_pair(kwargs.get('pos'))
-        self.rel: Optional[Tuple[int, int]] = self._as_optional_int_pair(kwargs.get('rel'))
-        self.button: Optional[int] = self._as_optional_int(kwargs.get('button'))
-        self.widget_id: Optional[str] = kwargs.get('widget_id') if isinstance(kwargs.get('widget_id'), str) else None
-        self.group: Optional[str] = kwargs.get('group') if isinstance(kwargs.get('group'), str) else None
-        self.window: Optional[gWindow] = kwargs.get('window') if isinstance(kwargs.get('window'), gWindow) else None
-        self.task_panel: bool = kwargs.get('task_panel') is True
-
-    @staticmethod
-    def _as_optional_int(value: object) -> Optional[int]:
-        if type(value) is int:
-            return value
-        return None
-
-    @staticmethod
-    def _as_optional_int_pair(value: object) -> Optional[Tuple[int, int]]:
-        if not isinstance(value, tuple) or len(value) != 2:
-            return None
-        if type(value[0]) is not int or type(value[1]) is not int:
-            return None
-        return (value[0], value[1])
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
@@ -245,7 +220,7 @@ class GuiManager:
         self._screen_postamble: Callable[[], None] = _noop
         self._task_owner_by_id: Dict[Hashable, gWindow] = {}
         self._task_panel_capture: bool = False
-        self.task_panel: Optional[_ManagedTaskPanel] = None
+        self.task_panel: Optional["_ManagedTaskPanel"] = None
         self.point_lock_recenter_rect: Rect = self._build_centered_recenter_rect()
         self.point_lock_tolerance_size: Tuple[int, int] = (
             max(1, self.point_lock_recenter_rect.width),
@@ -386,13 +361,13 @@ class GuiManager:
     def dispatch_event(self, event: BaseEvent) -> None:
         self.event_delivery.dispatch_event(event)
 
-    def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
+    def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
         return self.event_input.event(event_type, **kwargs)
 
-    def events(self) -> Iterable[GuiEvent]:
+    def events(self) -> Iterable["GuiEvent"]:
         yield from self.event_input.events()
 
-    def handle_event(self, event: PygameEvent) -> GuiEvent:
+    def handle_event(self, event: PygameEvent) -> "GuiEvent":
         return self.dispatch_bridge.handle_event(event)
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[gWindow] = None) -> bool:

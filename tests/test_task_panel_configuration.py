@@ -5,6 +5,7 @@ from unittest.mock import patch
 from pygame import Rect
 
 from gui.utility.constants import GuiError
+from gui.utility.task_panel import _ManagedTaskPanel
 from gui.utility.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility import guimanager as gm
 
@@ -89,7 +90,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
 
 class ManagedTaskPanelMethodTests(unittest.TestCase):
     def test_set_visible_validates_bool_and_refreshes_when_enabled(self) -> None:
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.visible = False
         refresh_calls = []
         panel.refresh_targets = lambda: refresh_calls.append(True)
@@ -103,7 +104,7 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         self.assertEqual(refresh_calls, [True])
 
     def test_set_auto_hide_false_snaps_to_shown_y(self) -> None:
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.auto_hide = True
         panel.y = 99
         panel._shown_y = 12
@@ -120,7 +121,7 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         self.assertEqual(refresh_calls, [True])
 
     def test_set_reveal_pixels_and_movement_step_validate_inputs(self) -> None:
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.height = 20
         panel.reveal_pixels = 4
         panel.movement_step = 2
@@ -147,7 +148,7 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         self.assertEqual(panel.movement_step, 7)
 
     def test_set_timer_interval_replaces_timer_registration(self) -> None:
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel._timer_id = ("task-panel-motion", 123)
         panel.timer_interval = 10.0
         panel.animate = lambda: None
@@ -169,7 +170,7 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         self.assertEqual(timer_calls[1][0:3], ("add", panel._timer_id, 3.5))
 
     def test_animate_moves_toward_target_and_draw_background_guards_pristine(self) -> None:
-        panel = gm._ManagedTaskPanel.__new__(gm._ManagedTaskPanel)
+        panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel.visible = True
         panel.auto_hide = True
         panel._hovered = False

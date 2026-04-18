@@ -4,7 +4,8 @@ from .input_emitter import InputEventEmitter
 from .input_router import InputRouter
 
 if TYPE_CHECKING:
-    from .guimanager import GuiEvent, GuiManager
+    from .gui_event import GuiEvent
+    from .guimanager import GuiManager
 
 class EventDispatcher:
     """Consumes routed input actions and emits GuiEvent values."""
