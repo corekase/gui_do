@@ -23,7 +23,7 @@ class LockStateController:
         registry = getattr(self.gui, 'object_registry', None)
         if registry is not None and hasattr(registry, 'is_registered_object'):
             return bool(registry.is_registered_object(value))
-        return bool(self.gui._is_registered_object(value))
+        return False
 
     def set_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         if area is not None:

@@ -20,7 +20,7 @@ class FocusStateController:
         registry = getattr(self.gui, 'object_registry', None)
         if registry is not None and hasattr(registry, 'is_registered_object'):
             return bool(registry.is_registered_object(value))
-        return bool(self.gui._is_registered_object(value))
+        return False
 
     def set_current_widget(self, value: Optional[Widget]) -> None:
         if value is not None:
