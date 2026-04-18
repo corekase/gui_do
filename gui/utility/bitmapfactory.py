@@ -215,7 +215,7 @@ class BitmapFactory:
             return pygame.image.load(full_path).convert_alpha()
         except GuiError:
             raise
-        except Exception as exc:
+        except (pygame.error, FileNotFoundError, OSError, TypeError, ValueError, RuntimeError) as exc:
             DataResourceErrorHandler.raise_load_error('failed to load image resource', full_path, exc)
 
     def load_cursor(self, hotspot: Tuple[int, int], name: str, filename: str) -> None:
@@ -230,7 +230,7 @@ class BitmapFactory:
             BitmapFactory._cursor_cache[name] = (self.image_alpha('cursors', filename), hotspot)
         except GuiError:
             raise
-        except Exception as exc:
+        except (pygame.error, FileNotFoundError, OSError, TypeError, ValueError, RuntimeError) as exc:
             DataResourceErrorHandler.raise_load_error(f'failed to load cursor "{name}" from file', cursor_path, exc)
 
     def load_font(self, name: str, font: str, size: int) -> None:
@@ -239,7 +239,7 @@ class BitmapFactory:
             self._fonts[name] = pygame.font.Font(font_full_path, size)
         except GuiError:
             raise
-        except Exception as exc:
+        except (pygame.error, FileNotFoundError, OSError, TypeError, ValueError, RuntimeError) as exc:
             DataResourceErrorHandler.raise_load_error(
                 f'failed to load font "{name}" from file with size={size}',
                 font_full_path,

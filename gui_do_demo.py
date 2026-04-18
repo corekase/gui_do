@@ -279,7 +279,8 @@ class Demo:
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
         self._life_canvas_last_drop_count = 0
-        self.canvas.set_overflow_handler(self._handle_life_canvas_overflow)
+        self.canvas.set_overflow_mode('drop_oldest')
+        self.canvas.set_overflow_handler(self._handle_life_canvas_overflow, strict=True)
         # number of circles
         circles = 64
         # size of circles

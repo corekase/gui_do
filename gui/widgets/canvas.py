@@ -3,7 +3,7 @@ from collections import deque
 import logging
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-from typing import Callable, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING, Union
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.constants import GuiError, InteractiveState, CanvasEvent
@@ -30,6 +30,7 @@ class Canvas(Widget):
     """Off-screen drawing surface that queues canvas-local input events."""
 
     _DEFAULT_MAX_QUEUED_EVENTS = 128
+    _OVERFLOW_MODES = ('drop_oldest', 'reject_new')
 
     def __init__(self, gui: "GuiManager", id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> None:
         if on_activate is not None and not callable(on_activate):
@@ -51,6 +52,8 @@ class Canvas(Widget):
         self.dropped_events: int = 0
         self.last_overflow: bool = False
         self.on_overflow: Optional[Callable[[int, int], None]] = None
+        self._overflow_callback_strict: bool = False
+        self._overflow_mode: str = 'drop_oldest'
         self.coalesce_motion_events: bool = True
         self.queued_event: bool = False
         self.CEvent: Optional["CanvasEventPacket"] = None
@@ -61,6 +64,26 @@ class Canvas(Widget):
     def get_event_queue_limit(self) -> int:
         maxlen = self._events.maxlen
         return 0 if maxlen is None else maxlen
+
+    def get_event_queue_stats(self) -> Dict[str, Union[int, bool, str]]:
+        return {
+            'queued': len(self._events),
+            'limit': self.get_event_queue_limit(),
+            'dropped_events': self.dropped_events,
+            'last_overflow': self.last_overflow,
+            'coalesce_motion_events': self.coalesce_motion_events,
+            'overflow_mode': self._overflow_mode,
+        }
+
+    def reset_event_queue_stats(self, clear_queue: bool = False) -> None:
+        if not isinstance(clear_queue, bool):
+            raise GuiError(f'clear_queue must be a bool, got: {type(clear_queue).__name__}')
+        self.dropped_events = 0
+        self.last_overflow = False
+        if clear_queue:
+            self._events.clear()
+            self.queued_event = False
+            self.CEvent = None
 
     def read_event(self) -> Optional[CanvasEventPacket]:
         """Pop the next queued canvas event, or None when empty."""
@@ -94,10 +117,21 @@ class Canvas(Widget):
             raise GuiError(f'motion coalescing flag must be bool, got: {type(enabled).__name__}')
         self.coalesce_motion_events = enabled
 
-    def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]]) -> None:
+    def set_overflow_handler(self, callback: Optional[Callable[[int, int], None]], *, strict: bool = False) -> None:
         if callback is not None and not callable(callback):
             raise GuiError('overflow callback must be callable when provided')
+        if not isinstance(strict, bool):
+            raise GuiError(f'overflow callback strict flag must be bool, got: {type(strict).__name__}')
         self.on_overflow = callback
+        self._overflow_callback_strict = strict
+
+    def set_overflow_mode(self, mode: str) -> None:
+        if not isinstance(mode, str) or mode not in self._OVERFLOW_MODES:
+            raise GuiError(f'overflow mode must be one of {self._OVERFLOW_MODES}, got: {mode!r}')
+        self._overflow_mode = mode
+
+    def get_overflow_mode(self) -> str:
+        return self._overflow_mode
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Queue supported events while focused and signal activation on enqueue."""
@@ -135,17 +169,25 @@ class Canvas(Widget):
             self.last_overflow = was_full
             if was_full:
                 self.dropped_events += 1
-                if self.on_overflow is not None:
-                    try:
-                        self.on_overflow(1, self.dropped_events)
-                    except Exception as exc:
-                        _logger.warning('Canvas overflow callback failed: %s: %s', type(exc).__name__, exc)
+                self._notify_overflow()
+                if getattr(self, '_overflow_mode', 'drop_oldest') == 'reject_new':
+                    return True
             self._events.append(packet)
             self.queued_event = True
             self.CEvent = self._events[0]
             return True
         else:
             return False
+
+    def _notify_overflow(self) -> None:
+        if self.on_overflow is None:
+            return
+        try:
+            self.on_overflow(1, self.dropped_events)
+        except Exception as exc:
+            if getattr(self, '_overflow_callback_strict', False):
+                raise GuiError('canvas overflow callback failed in strict mode') from exc
+            _logger.warning('Canvas overflow callback failed: %s: %s', type(exc).__name__, exc)
 
     def draw(self) -> None:
         """Blit canvas contents into the owning GUI surface."""

@@ -49,6 +49,8 @@ class CanvasRoiBatch5Tests(unittest.TestCase):
         canvas.dropped_events = 0
         canvas.last_overflow = False
         canvas.on_overflow = None
+        canvas._overflow_callback_strict = False
+        canvas._overflow_mode = 'drop_oldest'
         canvas.coalesce_motion_events = True
         canvas.queued_event = False
         canvas.CEvent = None
@@ -149,8 +151,42 @@ class CanvasRoiBatch5Tests(unittest.TestCase):
 
         canvas.set_overflow_handler(None)
         canvas.set_overflow_handler(lambda _dropped, _total: None)
+        canvas.set_overflow_handler(lambda _dropped, _total: None, strict=True)
         with self.assertRaises(GuiError):
             canvas.set_overflow_handler(1)  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            canvas.set_overflow_handler(lambda _dropped, _total: None, strict=1)  # type: ignore[arg-type]
+
+    def test_overflow_mode_and_stats_reset(self) -> None:
+        canvas = self._build_canvas_stub()
+
+        self.assertEqual(canvas.get_overflow_mode(), 'drop_oldest')
+        canvas.set_overflow_mode('reject_new')
+        self.assertEqual(canvas.get_overflow_mode(), 'reject_new')
+
+        stats = canvas.get_event_queue_stats()
+        self.assertEqual(stats['queued'], 0)
+        self.assertEqual(stats['limit'], 2)
+        self.assertEqual(stats['dropped_events'], 0)
+        self.assertFalse(stats['last_overflow'])
+        self.assertEqual(stats['overflow_mode'], 'reject_new')
+
+        canvas._events.append(SimpleNamespace(type=CanvasEvent.MouseMotion))
+        canvas.dropped_events = 3
+        canvas.last_overflow = True
+        canvas.queued_event = True
+        canvas.CEvent = canvas._events[0]
+        canvas.reset_event_queue_stats(clear_queue=True)
+        self.assertEqual(canvas.dropped_events, 0)
+        self.assertFalse(canvas.last_overflow)
+        self.assertEqual(len(canvas._events), 0)
+        self.assertFalse(canvas.queued_event)
+        self.assertIsNone(canvas.CEvent)
+
+        with self.assertRaises(GuiError):
+            canvas.set_overflow_mode('bad-mode')
+        with self.assertRaises(GuiError):
+            canvas.reset_event_queue_stats(clear_queue=1)  # type: ignore[arg-type]
 
     def test_handle_event_non_collide_but_locked_owner_still_queues(self) -> None:
         canvas = self._build_canvas_stub()
@@ -184,6 +220,40 @@ class CanvasRoiBatch5Tests(unittest.TestCase):
         self.assertEqual(canvas.dropped_events, 1)
         self.assertTrue(canvas.last_overflow)
         self.assertEqual(len(canvas._events), 1)
+
+    def test_overflow_callback_exception_strict_mode_raises(self) -> None:
+        canvas = self._build_canvas_stub()
+        canvas.get_collide = lambda _window=None: True
+        canvas.coalesce_motion_events = False
+        canvas._events = deque([], maxlen=1)
+
+        def _boom(_dropped: int, _total: int) -> None:
+            raise RuntimeError('overflow callback boom')
+
+        canvas.set_overflow_handler(_boom, strict=True)
+        first = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1})
+        second = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1})
+
+        self.assertTrue(canvas.handle_event(first, None))
+        with self.assertRaises(GuiError):
+            canvas.handle_event(second, None)
+
+    def test_reject_new_overflow_mode_preserves_existing_queue(self) -> None:
+        canvas = self._build_canvas_stub()
+        canvas.get_collide = lambda _window=None: True
+        canvas.coalesce_motion_events = False
+        canvas.set_overflow_mode('reject_new')
+        canvas._events = deque([], maxlen=1)
+
+        first = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1})
+        second = pygame.event.Event(MOUSEBUTTONUP, {'button': 1})
+
+        self.assertTrue(canvas.handle_event(first, None))
+        queued_before = canvas._events[0]
+        self.assertTrue(canvas.handle_event(second, None))
+        self.assertEqual(len(canvas._events), 1)
+        self.assertIs(canvas._events[0], queued_before)
+        self.assertEqual(canvas.dropped_events, 1)
 
     def test_draw_auto_restore_branch_and_focus_else(self) -> None:
         canvas = self._build_canvas_stub()
