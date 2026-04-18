@@ -107,6 +107,38 @@ class StateManagerLifecycleTests(unittest.TestCase):
         self.assertTrue(any('context "fail"' in message for message in captured.output))
         self.assertTrue(any('shutdown failed' in message for message in captured.output))
 
+    def test_repeated_enter_exit_cycles_keep_shutdown_stable(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui_ok = GuiStubFactory.build(fail_shutdown=False)
+        gui_fail = GuiStubFactory.build(fail_shutdown=True)
+
+        manager.register_context("ok", gui_ok)
+        manager.register_context("fail", gui_fail)
+
+        for _ in range(3):
+            manager.__enter__()
+            self.assertTrue(manager.is_running)
+            with self.assertLogs("gui.utility.statemanager", level="WARNING") as captured:
+                manager.__exit__(None, None, None)
+            self.assertFalse(manager.is_running)
+            self.assertTrue(any('context "fail"' in message for message in captured.output))
+            self.assertTrue(any('shutdown failed' in message for message in captured.output))
+
+        self.assertEqual(gui_ok._scheduler.shutdown_calls, 3)
+        self.assertEqual(gui_fail._scheduler.shutdown_calls, 3)
+
+    def test_enter_restores_running_state_after_exit(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui_ok = GuiStubFactory.build(fail_shutdown=False)
+
+        manager.register_context("ok", gui_ok)
+        manager.__exit__(None, None, None)
+        self.assertFalse(manager.is_running)
+
+        manager.__enter__()
+
+        self.assertTrue(manager.is_running)
+
 
 if __name__ == "__main__":
     unittest.main()
