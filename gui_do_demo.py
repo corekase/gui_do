@@ -276,6 +276,7 @@ class Demo:
             2,
             True,
         )
+        self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
         g1.label((zoom_label_x, slider_y + 6), 'Zoom', True)
         # -----------------------
         # make the mandelbrot window
@@ -441,10 +442,14 @@ class Demo:
             self.life_reset()
 
     def life_window_preamble(self):
+        slider_value = int(self.life_zoom_slider.value)
+        if slider_value == self._life_zoom_slider_last_value:
+            return
+        self._life_zoom_slider_last_value = slider_value
         old_size = self.cell_size
         if old_size <= 0:
             return
-        zoom_value = int(self.life_zoom_slider.value) + 1
+        zoom_value = slider_value + 1
         if zoom_value < 1:
             zoom_value = 1
         elif zoom_value > 12:
@@ -652,6 +657,8 @@ class Demo:
                         self.origin_x = mouse_x - ((mouse_x - self.origin_x) / old_size) * new_size
                         self.origin_y = mouse_y - ((mouse_y - self.origin_y) / old_size) * new_size
                         self.cell_size = new_size
+                        self.life_zoom_slider.value = (new_size // 2) - 1
+                        self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
 
     def generate(self):
         def population(cell):
@@ -685,6 +692,7 @@ class Demo:
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
         self.cell_size = 6
         self.life_zoom_slider.value = 2
+        self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
         self.toggle_life.pushed = False
         # the starting configuration of the Life grid
         self.life = set({(0, 0), (0, -1), (1, -1), (-1, 0), (0, 1)})
