@@ -41,13 +41,29 @@ TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 class GuiEvent(BaseEvent):
     def __init__(self, event_type: Event, **kwargs: object) -> None:
         super().__init__(event_type)
-        self.key: Optional[int] = cast(Optional[int], kwargs.get('key'))
-        self.pos: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('pos'))
-        self.rel: Optional[Tuple[int, int]] = cast(Optional[Tuple[int, int]], kwargs.get('rel'))
-        self.button: Optional[int] = cast(Optional[int], kwargs.get('button'))
-        self.widget_id: Optional[str] = cast(Optional[str], kwargs.get('widget_id'))
-        self.group: Optional[str] = cast(Optional[str], kwargs.get('group'))
-        self.window: Optional[gWindow] = cast(Optional[gWindow], kwargs.get('window'))
+        # Normalize optional payloads defensively so malformed external event data
+        # cannot corrupt GUI event routing.
+        self.key: Optional[int] = self._as_optional_int(kwargs.get('key'))
+        self.pos: Optional[Tuple[int, int]] = self._as_optional_int_pair(kwargs.get('pos'))
+        self.rel: Optional[Tuple[int, int]] = self._as_optional_int_pair(kwargs.get('rel'))
+        self.button: Optional[int] = self._as_optional_int(kwargs.get('button'))
+        self.widget_id: Optional[str] = kwargs.get('widget_id') if isinstance(kwargs.get('widget_id'), str) else None
+        self.group: Optional[str] = kwargs.get('group') if isinstance(kwargs.get('group'), str) else None
+        self.window: Optional[gWindow] = kwargs.get('window') if isinstance(kwargs.get('window'), gWindow) else None
+
+    @staticmethod
+    def _as_optional_int(value: object) -> Optional[int]:
+        if type(value) is int:
+            return value
+        return None
+
+    @staticmethod
+    def _as_optional_int_pair(value: object) -> Optional[Tuple[int, int]]:
+        if not isinstance(value, tuple) or len(value) != 2:
+            return None
+        if type(value[0]) is not int or type(value[1]) is not int:
+            return None
+        return (value[0], value[1])
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
@@ -443,7 +459,9 @@ class GuiManager:
         if task_owner is not None:
             task_owner.handle_event(event)
             return
-        event_window = cast(Optional[gWindow], getattr(event, 'window', None))
+        event_window = getattr(event, 'window', None)
+        if not isinstance(event_window, gWindow):
+            event_window = None
         if event_window is not None and event_window in self.windows and event_window.visible:
             event_window.handle_event(event)
             return
@@ -574,6 +592,10 @@ class GuiManager:
             return None
         task_id = cast(Optional[Hashable], getattr(event, 'id', None))
         if task_id is None:
+            return None
+        try:
+            hash(task_id)
+        except TypeError:
             return None
         owner = self._task_owner_by_id.get(task_id)
         if owner is None:
