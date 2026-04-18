@@ -36,6 +36,27 @@ class GuiObjectRegistry:
         if gui_object in self.gui.widgets:
             self.gui.widgets.remove(gui_object)
 
+    def _reset_widget_registration(self, gui_object: Widget, active_window: Optional[gWindow], added_to_task_panel: bool) -> None:
+        self._detach_widget_from_current_container(gui_object, active_window, added_to_task_panel)
+        gui_object.window = None
+        gui_object.surface = None
+
+    def _attach_widget_to_container(self, gui_object: Widget, active_window: Optional[gWindow]) -> bool:
+        if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
+            gui_object.window = cast(Any, self.gui.task_panel)
+            gui_object.surface = self.gui.task_panel.surface
+            self.gui.task_panel.widgets.append(gui_object)
+            return True
+        if active_window is not None:
+            gui_object.window = active_window
+            gui_object.surface = active_window.surface
+            active_window.widgets.append(gui_object)
+            return False
+        gui_object.window = None
+        gui_object.surface = self.gui.surface
+        self.gui.widgets.append(gui_object)
+        return False
+
     def register(self, gui_object: TGuiObject) -> TGuiObject:
         if gui_object is None:
             raise GuiError('gui_object cannot be None')
@@ -62,29 +83,14 @@ class GuiObjectRegistry:
                 f'on {self.describe_widget_container(conflict)}'
             )
         active_window = self.resolve_active_object()
-        added_to_task_panel = False
-        if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
-            gui_object.window = cast(Any, self.gui.task_panel)
-            gui_object.surface = self.gui.task_panel.surface
-            self.gui.task_panel.widgets.append(gui_object)
-            added_to_task_panel = True
-        elif active_window is not None:
-            gui_object.window = active_window
-            gui_object.surface = active_window.surface
-            active_window.widgets.append(gui_object)
-        else:
-            gui_object.window = None
-            gui_object.surface = self.gui.surface
-            self.gui.widgets.append(gui_object)
+        added_to_task_panel = self._attach_widget_to_container(gui_object, active_window)
 
         post_add = getattr(gui_object, '_on_added_to_gui', None)
         if callable(post_add):
             try:
                 post_add()
             except Exception:
-                self._detach_widget_from_current_container(gui_object, active_window, added_to_task_panel)
-                gui_object.window = None
-                gui_object.surface = None
+                self._reset_widget_registration(gui_object, active_window, added_to_task_panel)
                 raise
         return gui_object
 

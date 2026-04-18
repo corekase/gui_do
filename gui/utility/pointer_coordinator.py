@@ -66,6 +66,16 @@ class PointerCoordinator:
     def _build_cursor_placement(anchor: Tuple[int, int], hotspot: Tuple[int, int], size: Tuple[int, int]) -> _CursorPlacement:
         return _CursorPlacement(anchor=anchor, hotspot=hotspot, size=size)
 
+    @staticmethod
+    def _validate_point(point: Tuple[int, int], label: str) -> None:
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise GuiError(f'{label} must be a tuple of (x, y), got: {point}')
+
+    def _normalize_window(self, window: Optional[Any]) -> Optional[Any]:
+        if window is not None and window not in self.gui.windows and window is not self.gui.task_panel:
+            return None
+        return window
+
     def set_cursor(self, name: str) -> None:
         if not isinstance(name, str) or name == '':
             raise GuiError('cursor name must be a non-empty string')
@@ -80,10 +90,8 @@ class PointerCoordinator:
         self.gui.cursor_rect = placement.build_rect()
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.gui.windows and window is not self.gui.task_panel:
-            window = None
+        self._validate_point(point, 'point')
+        window = self._normalize_window(window)
         if window is not None:
             x, y = point
             wx, wy = window.x, window.y
@@ -91,10 +99,8 @@ class PointerCoordinator:
         return self.gui.lock_area(point)
 
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.gui.windows and window is not self.gui.task_panel:
-            window = None
+        self._validate_point(point, 'point')
+        window = self._normalize_window(window)
         if window is not None:
             x, y = self.gui.lock_area(point)
             wx, wy = window.x, window.y

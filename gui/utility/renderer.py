@@ -20,11 +20,21 @@ class Renderer:
             return
         self._bitmaps.append((self.gui.copy_graphic_area(self.gui.surface, rect), rect))
 
-    def _draw_root_widgets(self) -> None:
-        for widget in tuple(self.gui.widgets):
+    @staticmethod
+    def _iter_visible_widgets(widgets):
+        for widget in tuple(widgets):
             if widget.visible:
-                self._capture_bitmap(Rect(widget.draw_rect))
-                widget.draw()
+                yield widget
+
+    def _resolve_cursor_pos(self) -> Tuple[int, int]:
+        if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
+            return self.gui.lock_point_pos
+        return self.gui.mouse_pos
+
+    def _draw_root_widgets(self) -> None:
+        for widget in self._iter_visible_widgets(self.gui.widgets):
+            self._capture_bitmap(Rect(widget.draw_rect))
+            widget.draw()
 
     def _draw_windows(self) -> None:
         windows_snapshot = tuple(self.gui.windows)
@@ -37,9 +47,8 @@ class Renderer:
                 else:
                     window.draw_title_bar_inactive()
                 window.draw_window()
-                for widget in tuple(window.widgets):
-                    if widget.visible:
-                        widget.draw()
+                for widget in self._iter_visible_widgets(window.widgets):
+                    widget.draw()
                 self.gui.surface.blit(window.surface, (window.x, window.y))
 
     def _draw_task_panel(self) -> None:
@@ -49,9 +58,8 @@ class Renderer:
         panel_rect = task_panel.get_rect()
         self._capture_bitmap(panel_rect)
         task_panel.draw_background()
-        for widget in tuple(task_panel.widgets):
-            if widget.visible:
-                widget.draw()
+        for widget in self._iter_visible_widgets(task_panel.widgets):
+            widget.draw()
         self.gui.surface.blit(task_panel.surface, (task_panel.x, task_panel.y))
 
     def _draw_cursor(self) -> None:
@@ -61,10 +69,7 @@ class Renderer:
             return
         if self.gui.cursor_rect is None:
             self.gui.cursor_rect = self.gui.cursor_image.get_rect()
-        if self.gui.mouse_point_locked and self.gui.lock_point_pos is not None:
-            cursor_pos = self.gui.lock_point_pos
-        else:
-            cursor_pos = self.gui.mouse_pos
+        cursor_pos = self._resolve_cursor_pos()
         cursor_rect = Rect(
             cursor_pos[0] - self.gui.cursor_hotspot[0],
             cursor_pos[1] - self.gui.cursor_hotspot[1],
