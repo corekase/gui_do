@@ -16,6 +16,7 @@ from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator
 from .object_registry import GuiObjectRegistry
+from .pointer_coordinator import PointerCoordinator
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
@@ -363,6 +364,7 @@ class GuiManager:
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
+        self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self._screen_preamble: Callable[[], None] = _noop
@@ -486,7 +488,7 @@ class GuiManager:
         return self.workspace.read_task_panel_settings()
 
     def get_mouse_pos(self) -> Tuple[int, int]:
-        return self.lock_area(self.mouse_pos)
+        return self.pointer.get_mouse_pos()
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Register a window or widget and attach container-specific state."""
@@ -512,20 +514,7 @@ class GuiManager:
 
     def set_cursor(self, name: str) -> None:
         """Set custom cursor from a named cursor loaded via BitmapFactory.load_cursor."""
-        if not isinstance(name, str) or name == '':
-            raise GuiError('cursor name must be a non-empty string')
-        hotspot_position = self.lock_point_pos if (self.mouse_point_locked and self.lock_point_pos is not None) else self.mouse_pos
-        if self.cursor_rect is not None and self.cursor_hotspot is not None:
-            hotspot_position = (
-                self.cursor_rect.x + self.cursor_hotspot[0],
-                self.cursor_rect.y + self.cursor_hotspot[1],
-            )
-        self.cursor_image, self.cursor_hotspot = self.bitmap_factory.get_cursor(name)
-        self.cursor_rect = self.cursor_image.get_rect()
-        self.cursor_rect.topleft = (
-            hotspot_position[0] - self.cursor_hotspot[0],
-            hotspot_position[1] - self.cursor_hotspot[1],
-        )
+        self.pointer.set_cursor(name)
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
         """Configure grid cell sizing used by gridded."""
@@ -551,11 +540,7 @@ class GuiManager:
         self.lock_state.set_point(locking_object, point)
 
     def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
-        if not isinstance(pos, tuple) or len(pos) != 2:
-            raise GuiError(f'pos must be a tuple of (x, y), got: {pos}')
-        self.mouse_pos = self.lock_area(pos)
-        if update_physical_coords:
-            self._set_physical_mouse_pos(self.mouse_pos)
+        self.pointer.set_mouse_pos(pos, update_physical_coords)
 
     def set_pristine(self, image: str, obj: Optional[_PristineContainer] = None) -> None:
         """Load a backdrop image, scale it to target surface, and cache pristine copy."""
@@ -637,26 +622,10 @@ class GuiManager:
         self.renderer.undraw()
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows and window is not self.task_panel:
-            window = None
-        if window is not None:
-            x, y = point
-            wx, wy = window.x, window.y
-            return self.lock_area((x + wx, y + wy))
-        return self.lock_area(point)
+        return self.pointer.convert_to_screen(point, window)
 
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        if window is not None and window not in self.windows and window is not self.task_panel:
-            window = None
-        if window is not None:
-            x, y = self.lock_area(point)
-            wx, wy = window.x, window.y
-            return (x - wx, y - wy)
-        return self.lock_area(point)
+        return self.pointer.convert_to_window(point, window)
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         return self.layout_manager.get_cell(x, y)
