@@ -49,7 +49,7 @@ class InputRouter:
         if not self._is_registered_widget(lock_obj):
             self.gui.set_lock_area(None)
             return InputAction.pass_event()
-        window = lock_obj.window if hasattr(lock_obj, 'window') else None
+        window = lock_obj.window
         if self.gui.handle_widget(lock_obj, event, window):
             widget_id = getattr(lock_obj, 'id', None)
             return InputAction.emit(Event.Widget, widget_id=widget_id, window=window)

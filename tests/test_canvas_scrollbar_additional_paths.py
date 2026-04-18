@@ -363,6 +363,57 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         self.assertTrue(scrollbar._dragging)
         self.assertEqual(scrollbar._last_mouse_pos, 7)
 
+    def test_drag_cancels_when_screen_scrollbar_enters_window_overlay(self) -> None:
+        lock_calls = []
+        scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
+        scrollbar._hit = False
+        scrollbar._dragging = True
+        scrollbar._last_mouse_pos = 3
+        scrollbar._horizontal = Orientation.Horizontal
+        scrollbar._graphic_rect = Rect(0, 0, 100, 12)
+        scrollbar._total_range = 100
+        scrollbar._bar_size = 20
+        scrollbar._start_pos = 5
+        scrollbar.state = InteractiveState.Hover
+        overlay = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(10, 0, 60, 30))
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(20, 6),
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+            extras={"windows": [overlay]},
+        )
+
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+        self.assertFalse(scrollbar._dragging)
+        self.assertEqual(scrollbar.state, InteractiveState.Idle)
+        self.assertEqual(lock_calls, [(None, None)])
+
+    def test_drag_cancels_when_window_scrollbar_enters_higher_window_overlay(self) -> None:
+        lock_calls = []
+        owner_window = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(0, 0, 200, 80))
+        overlay_window = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(30, 0, 80, 80))
+        scrollbar = Scrollbar.__new__(Scrollbar)
+        scrollbar._disabled = False
+        scrollbar._hit = False
+        scrollbar._dragging = True
+        scrollbar._last_mouse_pos = 4
+        scrollbar._horizontal = Orientation.Horizontal
+        scrollbar._graphic_rect = Rect(0, 0, 100, 12)
+        scrollbar._total_range = 100
+        scrollbar._bar_size = 20
+        scrollbar._start_pos = 5
+        scrollbar.state = InteractiveState.Hover
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(40, 6),
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+            extras={"windows": [owner_window, overlay_window]},
+        )
+
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {}), owner_window))
+        self.assertFalse(scrollbar._dragging)
+        self.assertEqual(scrollbar.state, InteractiveState.Idle)
+        self.assertEqual(lock_calls, [(None, None)])
+
 
 if __name__ == "__main__":
     unittest.main()

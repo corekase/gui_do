@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 import pygame
 from pygame import Rect, SRCALPHA
@@ -159,6 +160,42 @@ class SliderWidgetContractTests(unittest.TestCase):
         self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
         expected = slider.pixel_to_total(slider.total_to_pixel(20.0, slider._total_range) + 7, slider._total_range)
         self.assertAlmostEqual(slider.value, expected, delta=1.0)
+
+    def test_drag_cancels_when_screen_slider_enters_window_overlay(self) -> None:
+        slider = self._build_slider(total_range=100, position=20.0)
+        handle = slider._handle_area()
+        down_point = (handle.centerx, handle.centery)
+        slider.gui.windows = []
+
+        slider.gui.set_mouse_pos(down_point)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None))
+        self.assertTrue(slider._dragging)
+
+        overlay = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(handle.centerx + 10, 0, 60, 40))
+        slider.gui.windows = [overlay]
+        slider.gui.set_mouse_pos((handle.centerx + 15, handle.centery))
+
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+        self.assertFalse(slider._dragging)
+        self.assertEqual(slider.state, InteractiveState.Idle)
+        self.assertIn((None, None), slider._lock_calls)  # type: ignore[attr-defined]
+
+    def test_drag_cancels_when_window_slider_enters_higher_window_overlay(self) -> None:
+        slider = self._build_slider(total_range=100, position=20.0)
+        handle = slider._handle_area()
+        owner_window = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(0, 0, 200, 80))
+        overlay_window = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(handle.centerx + 8, 0, 80, 80))
+        slider.gui.windows = [owner_window, overlay_window]
+
+        slider.gui.set_mouse_pos((handle.centerx, handle.centery))
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), owner_window))
+        self.assertTrue(slider._dragging)
+
+        slider.gui.set_mouse_pos((handle.centerx + 12, handle.centery))
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), owner_window))
+        self.assertFalse(slider._dragging)
+        self.assertEqual(slider.state, InteractiveState.Idle)
+        self.assertIn((None, None), slider._lock_calls)  # type: ignore[attr-defined]
 
     def test_notch_points_default_to_every_five_percent(self) -> None:
         slider = self._build_slider(total_range=200, notch_interval_percent=5.0)

@@ -143,8 +143,8 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_helper_resolvers_cover_positive_paths(self) -> None:
         gui = self._build_manager_stub()
 
-        # _is_registered_button_group false path when attached and not found.
-        button = SimpleNamespace(surface=object())
+        # Button group registration is now strict: detached widgets are not treated as registered.
+        button = SimpleNamespace(surface=None)
         self.assertFalse(gui.object_registry.is_registered_button_group(button))
 
         # _resolve_active_object returns active when present.
@@ -519,7 +519,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
     def test_registered_button_group_true_paths(self) -> None:
         gui = self._build_manager_stub()
         button = Widget.__new__(Widget)
-        button.surface = object()
+        button.surface = None
 
         gui.widgets = [button]
         self.assertTrue(gui.object_registry.is_registered_button_group(button))
@@ -655,7 +655,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
     def test_registered_helpers_cover_false_loop_paths(self) -> None:
         gui = self._build_manager_stub()
-        button = SimpleNamespace(surface=object())
+        button = SimpleNamespace(surface=None)
         gui.windows = [SimpleNamespace(widgets=[object()])]
         self.assertFalse(gui.object_registry.is_registered_button_group(button))
 

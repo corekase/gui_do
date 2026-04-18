@@ -16,6 +16,7 @@ def build_mouse_gui_stub(
     gui.set_mouse_pos = lambda pos: state.__setitem__("mouse_pos", pos)
     gui.convert_to_window = lambda point, _window: point
     gui.convert_to_screen = lambda point, _window: point
+    gui.windows = []
 
     if set_lock_area is not None:
         gui.set_lock_area = set_lock_area

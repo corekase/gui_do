@@ -152,11 +152,8 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         conflict = gui.object_registry.find_widget_id_conflict("dup", candidate)
         self.assertIs(conflict, window_widget)
 
-    def test_is_registered_button_group_and_object_paths(self) -> None:
+    def test_is_registered_object_paths(self) -> None:
         gui = self._build_manager_stub()
-        button = SimpleNamespace(surface=None)
-
-        self.assertTrue(gui.object_registry.is_registered_button_group(button))
 
         screen_widget = Widget.__new__(Widget)
         panel_widget = Widget.__new__(Widget)

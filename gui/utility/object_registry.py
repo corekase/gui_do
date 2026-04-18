@@ -140,9 +140,7 @@ class GuiObjectRegistry:
         return None
 
     def is_registered_button_group(self, button) -> bool:
-        """Return button-group registration status with legacy detached fallback."""
-        if button.surface is None:
-            return True
+        """Return button-group registration status."""
         return self.is_registered_object(button)
 
     def is_registered_object(self, gui_object: TGuiObject) -> bool:

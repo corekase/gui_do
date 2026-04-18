@@ -116,6 +116,8 @@ class Demo:
         b1.set_font('normal')
         g1.label((slider_x - 210, h_float_y + 12), 'H Slider Float', True)
         g1.label((slider_x - 210, h_int_y + 12), 'H Slider Integer Snap', True)
+        self.h_slider_float_value = g1.label((slider_x + slider_width + 12, h_float_y + 12), '0.00', True)
+        self.h_slider_int_value = g1.label((slider_x + slider_width + 12, h_int_y + 12), '0', True)
 
         v_slider_width = 48
         v_slider_height = 260
@@ -140,6 +142,8 @@ class Demo:
         )
         g1.label((v_float_x - 10, v_slider_y - 20), 'V Float', True)
         g1.label((v_int_x - 14, v_slider_y + v_slider_height), 'V Int Snap', True)
+        self.v_slider_float_value = g1.label((v_float_x - 14, v_slider_y + v_slider_height + 20), '0.00', True)
+        self.v_slider_int_value = g1.label((v_int_x - 8, v_slider_y + v_slider_height + 20), '0', True)
         # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------
@@ -390,7 +394,14 @@ class Demo:
             self.state_manager.set_running(False)
 
     def gui1_screen_postamble(self):
+        self.update_slider_labels()
         self.update_gui_do_label()
+
+    def update_slider_labels(self):
+        self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')
+        self.h_slider_int_value.set_label(f'{int(round(self.h_slider_int.value))}')
+        self.v_slider_float_value.set_label(f'{self.v_slider_float.value:.2f}')
+        self.v_slider_int_value.set_label(f'{int(round(self.v_slider_int.value))}')
 
     def buttons_window_event_handler(self, event):
         if event.type != Event.Group:

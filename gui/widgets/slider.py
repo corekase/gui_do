@@ -155,6 +155,37 @@ class Slider(Widget, AxisRangeMixin):
             return Rect(self._graphic_rect.x + pixel_point, self._graphic_rect.y, self._handle_size, self._handle_size)
         return Rect(self._graphic_rect.x, self._graphic_rect.y + pixel_point, self._handle_size, self._handle_size)
 
+    def _topmost_window_at_mouse(self) -> Optional["Window"]:
+        """Return the topmost visible window currently under the mouse position."""
+        mouse_pos = self.gui.get_mouse_pos()
+        for candidate in tuple(self.gui.windows)[::-1]:
+            if not candidate.visible:
+                continue
+            if candidate.get_window_rect().collidepoint(mouse_pos):
+                return candidate
+        return None
+
+    def _drag_blocked_by_overlay(self, owner_window: Optional["Window"]) -> bool:
+        """Return True when drag enters a region occluded by another window."""
+        topmost_window = self._topmost_window_at_mouse()
+        if owner_window is None:
+            return topmost_window is not None
+        return topmost_window is not None and topmost_window is not owner_window
+
+    def _cancel_drag_for_overlay_contact(self, owner_window: Optional["Window"]) -> bool:
+        """Cancel drag when pointer enters an overlaid window region.
+
+        Returning True allows the coordinator to emit a widget event or invoke
+        on_activate callback, matching existing activation semantics.
+        """
+        if not self._dragging:
+            return False
+        if not self._drag_blocked_by_overlay(owner_window):
+            return False
+        self._reset_drag()
+        self.state = InteractiveState.Idle
+        return True
+
     def leave(self) -> None:
         """Reset hover state when focus leaves this widget."""
         if self._dragging:
@@ -170,6 +201,9 @@ class Slider(Widget, AxisRangeMixin):
             return False
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP):
             return False
+        if event.type in (MOUSEMOTION, MOUSEBUTTONUP):
+            if self._cancel_drag_for_overlay_contact(window):
+                return True
 
         mouse_point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
         if event.type == MOUSEBUTTONDOWN:

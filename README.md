@@ -73,7 +73,7 @@ Resource loading resolves from the repository `data/` folder, so it is independe
 ```python
 import pygame
 from pygame import Rect
-from gui import GuiManager, Engine, StateManager, Event, ButtonStyle
+from gui import GuiManager, Engine, StateManager, Event, ButtonStyle, Orientation
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
@@ -90,7 +90,6 @@ def on_button():
     print("Clicked")
 
 gui.button("hello", Rect(20, 20, 120, 28), ButtonStyle.Round, "Hello", on_activate=on_button)
-gui.slider("gain", Rect(20, 60, 300, 36), Orientation.Horizontal, total_range=100, position=37.5, integer_type=False)
 
 def on_screen_event(event):
     if event.type == Event.Quit:
