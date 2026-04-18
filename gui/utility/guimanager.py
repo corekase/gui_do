@@ -418,6 +418,7 @@ class GuiManager:
         if existing_widgets:
             panel.widgets = existing_widgets
             for widget in panel.widgets:
+                widget.window = cast(Any, panel)
                 widget.surface = panel.surface
         if old_panel is not None:
             panel.set_visible(existing_visible)
@@ -539,7 +540,7 @@ class GuiManager:
             active_window = self._resolve_active_object()
             added_to_task_panel = False
             if self._task_panel_capture and self.task_panel is not None:
-                gui_object.window = None
+                gui_object.window = cast(Any, self.task_panel)
                 gui_object.surface = self.task_panel.surface
                 self.task_panel.widgets.append(gui_object)
                 added_to_task_panel = True
