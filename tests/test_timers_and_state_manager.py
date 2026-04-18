@@ -1,4 +1,6 @@
 import unittest
+from concurrent.futures import Future
+from threading import Event
 
 from gui.utility.scheduler import Scheduler, Task, Timers
 from gui.utility.statemanager import StateManager
@@ -298,6 +300,286 @@ class StateManagerLifecycleTests(unittest.TestCase):
         self.assertTrue(any('shutdown failed' in message for message in captured.output))
         self.assertFalse(scheduler.tasks_active())
         self.assertFalse(scheduler.tasks_busy())
+
+    def test_exit_clears_throttled_scheduler_queued_counts(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        manager.register_context("throttled", gui)
+
+        scheduler = gui._scheduler
+        scheduler.tasks["task"] = Task(
+            id="task",
+            run_callable=lambda: None,
+            message_method=lambda _payload: None,
+            generation=1,
+        )
+        scheduler._task_generation["task"] = 1
+        scheduler.set_message_ingest_limit(1)
+        scheduler.set_message_dispatch_limit(1)
+        scheduler.set_max_queued_messages_per_task(32)
+
+        for index in range(8):
+            scheduler.send_message("task", index)
+
+        scheduler._drain_incoming_task_messages()
+        scheduler._dispatch_task_messages()
+
+        self.assertGreater(scheduler._task_message_counts.get("task", 0), 0)
+
+        manager.__exit__(None, None, None)
+
+        self.assertFalse(scheduler.tasks_busy())
+        self.assertEqual(scheduler._task_message_counts, {})
+        self.assertEqual(len(scheduler._task_messages), 0)
+
+    def test_exit_clears_throttled_pending_and_queued_across_contexts(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui_a = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        gui_b = GuiStubFactory.build_with_real_scheduler(mouse_pos=(2, 2))
+        manager.register_context("a", gui_a)
+        manager.register_context("b", gui_b)
+
+        for scheduler in (gui_a._scheduler, gui_b._scheduler):
+            scheduler.tasks["task"] = Task(
+                id="task",
+                run_callable=lambda: None,
+                message_method=lambda _payload: None,
+                generation=1,
+            )
+            scheduler._task_generation["task"] = 1
+            scheduler._pending.append("task")
+            scheduler._pending_set.add("task")
+            scheduler.set_message_ingest_limit(1)
+            scheduler.set_message_dispatch_limit(1)
+
+            scheduler.send_message("task", "m1")
+            scheduler.send_message("task", "m2")
+            scheduler._drain_incoming_task_messages()
+
+            self.assertTrue(scheduler.tasks_busy())
+            self.assertTrue(scheduler.tasks_active())
+
+        manager.__exit__(None, None, None)
+
+        for scheduler in (gui_a._scheduler, gui_b._scheduler):
+            self.assertFalse(scheduler.tasks_active())
+            self.assertFalse(scheduler.tasks_busy())
+            self.assertEqual(scheduler._task_message_counts, {})
+            self.assertEqual(len(scheduler._task_messages), 0)
+
+    def test_exit_cleans_scheduler_state_with_inflight_running_task(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        manager.register_context("inflight", gui)
+
+        scheduler = gui._scheduler
+        started = Event()
+        release = Event()
+
+        def blocking_logic(_task_id):
+            started.set()
+            release.wait(timeout=2.0)
+            return "done"
+
+        scheduler.add_task("run", blocking_logic)
+        scheduler.update()
+        self.assertTrue(started.wait(timeout=1.0))
+        self.assertTrue(scheduler.tasks_active_match_any("run"))
+
+        try:
+            manager.__exit__(None, None, None)
+
+            self.assertFalse(manager.is_running)
+            self.assertFalse(scheduler.tasks_active())
+            self.assertFalse(scheduler.tasks_busy())
+            self.assertEqual(scheduler.tasks, {})
+            self.assertEqual(scheduler._running, set())
+        finally:
+            release.set()
+
+    def test_stale_completion_queued_around_exit_is_ignored(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        manager.register_context("ctx", gui)
+
+        scheduler = gui._scheduler
+        future: Future[object] = Future()
+        future.set_result("done")
+
+        scheduler.tasks["task"] = Task(
+            id="task",
+            run_callable=lambda: None,
+            message_method=None,
+            future=future,
+            generation=1,
+        )
+        scheduler._task_generation["task"] = 1
+        scheduler._running.add("task")
+        scheduler._enqueue_task_completion("task", 1, future)
+
+        manager.__exit__(None, None, None)
+
+        scheduler._collect_finished_tasks()
+
+        self.assertEqual(scheduler.get_finished_tasks(), [])
+        self.assertIsNone(scheduler.pop_result("task", default=None))
+        self.assertEqual(scheduler.tasks, {})
+        self.assertFalse(scheduler.tasks_busy())
+
+    def test_stale_failure_queued_around_exit_is_ignored(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        manager.register_context("ctx", gui)
+
+        scheduler = gui._scheduler
+        scheduler.tasks["task"] = Task(
+            id="task",
+            run_callable=lambda: None,
+            message_method=None,
+            generation=1,
+        )
+        scheduler._task_generation["task"] = 1
+        scheduler._enqueue_task_failure("task", 1, "late failure")
+
+        manager.__exit__(None, None, None)
+
+        scheduler._drain_incoming_task_failures()
+
+        self.assertEqual(scheduler.get_failed_tasks(), [])
+        self.assertEqual(scheduler.tasks, {})
+        self.assertFalse(scheduler.tasks_busy())
+
+    def test_exit_clears_suspended_task_bookkeeping(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        manager.register_context("ctx", gui)
+
+        scheduler = gui._scheduler
+        scheduler.add_task("a", lambda task_id: task_id)
+        scheduler.add_task("b", lambda task_id: task_id)
+        scheduler.add_task("c", lambda task_id: task_id)
+        scheduler.suspend_tasks("b", "c")
+
+        self.assertEqual(scheduler.read_suspended(), ["b", "c"])
+        self.assertTrue(scheduler.tasks_active())
+
+        manager.__exit__(None, None, None)
+
+        self.assertFalse(manager.is_running)
+        self.assertEqual(scheduler.read_suspended(), [])
+        self.assertEqual(scheduler.read_suspended_len(), 0)
+        self.assertEqual(scheduler._suspended_set, set())
+        self.assertEqual(list(scheduler._pending), [])
+        self.assertEqual(scheduler._pending_set, set())
+        self.assertFalse(scheduler.tasks_active())
+        self.assertFalse(scheduler.tasks_busy())
+
+    def test_exit_clears_mixed_pending_suspended_and_queued_states(self) -> None:
+        manager = StateManager(mouse_pos_provider=lambda: (0, 0))
+        gui_a = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+        gui_b = GuiStubFactory.build_with_real_scheduler(mouse_pos=(2, 2))
+        manager.register_context("a", gui_a)
+        manager.register_context("b", gui_b)
+
+        scheduler_a = gui_a._scheduler
+        scheduler_b = gui_b._scheduler
+
+        scheduler_a.add_task("a1", lambda task_id: task_id)
+        scheduler_a.add_task("a2", lambda task_id: task_id)
+        scheduler_a.suspend_tasks("a2")
+
+        scheduler_b.tasks["b1"] = Task(
+            id="b1",
+            run_callable=lambda: None,
+            message_method=lambda _payload: None,
+            generation=1,
+        )
+        scheduler_b._task_generation["b1"] = 1
+        scheduler_b._pending.append("b1")
+        scheduler_b._pending_set.add("b1")
+        scheduler_b.send_message("b1", "msg")
+        scheduler_b._drain_incoming_task_messages()
+
+        self.assertTrue(scheduler_a.read_suspended_len() > 0)
+        self.assertTrue(scheduler_a.tasks_active())
+        self.assertTrue(scheduler_b.tasks_busy())
+
+        manager.__exit__(None, None, None)
+
+        for scheduler in (scheduler_a, scheduler_b):
+            self.assertEqual(scheduler.read_suspended(), [])
+            self.assertEqual(scheduler.read_suspended_len(), 0)
+            self.assertEqual(scheduler._suspended_set, set())
+            self.assertEqual(list(scheduler._pending), [])
+            self.assertEqual(scheduler._pending_set, set())
+            self.assertEqual(scheduler._task_message_counts, {})
+            self.assertEqual(len(scheduler._task_messages), 0)
+            self.assertFalse(scheduler.tasks_active())
+            self.assertFalse(scheduler.tasks_busy())
+
+    def test_bounded_multi_cycle_rapid_switch_and_exit_leaves_no_state_leak(self) -> None:
+        for cycle in range(6):
+            manager = StateManager(mouse_pos_provider=lambda: (10 + cycle, 20 + cycle))
+            gui_a = GuiStubFactory.build_with_real_scheduler(mouse_pos=(1, 1))
+            gui_b = GuiStubFactory.build_with_real_scheduler(mouse_pos=(2, 2))
+            gui_c = GuiStubFactory.build_with_real_scheduler(mouse_pos=(3, 3))
+            manager.register_context("a", gui_a)
+            manager.register_context("b", gui_b)
+            manager.register_context("c", gui_c)
+
+            manager.switch_context("a")
+            gui_a._mouse_pos = (100 + cycle, 200 + cycle)
+            manager.switch_context("b")
+            gui_b._mouse_pos = (110 + cycle, 210 + cycle)
+            manager.switch_context("c")
+
+            scheduler_a = gui_a._scheduler
+            scheduler_a.add_task("sa1", lambda task_id: task_id)
+            scheduler_a.add_task("sa2", lambda task_id: task_id)
+            scheduler_a.suspend_tasks("sa2")
+
+            scheduler_b = gui_b._scheduler
+            scheduler_b.tasks["sb1"] = Task(
+                id="sb1",
+                run_callable=lambda: None,
+                message_method=lambda _payload: None,
+                generation=1,
+            )
+            scheduler_b._task_generation["sb1"] = 1
+            scheduler_b._pending.append("sb1")
+            scheduler_b._pending_set.add("sb1")
+            scheduler_b.set_message_ingest_limit(1)
+            scheduler_b.set_message_dispatch_limit(1)
+            scheduler_b.send_message("sb1", "m1")
+            scheduler_b.send_message("sb1", "m2")
+            scheduler_b._drain_incoming_task_messages()
+
+            scheduler_c = gui_c._scheduler
+            scheduler_c.tasks["sc1"] = Task(
+                id="sc1",
+                run_callable=lambda: None,
+                message_method=lambda _payload: None,
+                generation=1,
+            )
+            scheduler_c._task_generation["sc1"] = 1
+            scheduler_c.send_message("sc1", "msg")
+
+            self.assertTrue(scheduler_a.read_suspended_len() > 0)
+            self.assertTrue(scheduler_b.tasks_busy())
+            self.assertTrue(scheduler_c.tasks_busy())
+
+            manager.__exit__(None, None, None)
+
+            for scheduler in (scheduler_a, scheduler_b, scheduler_c):
+                self.assertEqual(scheduler.read_suspended(), [])
+                self.assertEqual(scheduler.read_suspended_len(), 0)
+                self.assertEqual(scheduler._suspended_set, set())
+                self.assertEqual(list(scheduler._pending), [])
+                self.assertEqual(scheduler._pending_set, set())
+                self.assertEqual(scheduler._task_message_counts, {})
+                self.assertEqual(len(scheduler._task_messages), 0)
+                self.assertFalse(scheduler.tasks_active())
+                self.assertFalse(scheduler.tasks_busy())
 
 
 if __name__ == "__main__":
