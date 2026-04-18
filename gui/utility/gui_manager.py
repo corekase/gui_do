@@ -128,11 +128,17 @@ class GuiManager:
 
     @property
     def current_widget(self):
-        return self.focus_state.resolve_current_widget()
+        focus_controller = getattr(self, 'focus', None)
+        if focus_controller is None:
+            focus_controller = self.focus_state
+        return focus_controller.current_widget
 
     @current_widget.setter
     def current_widget(self, value):
-        self.focus_state.set_current_widget(value)
+        focus_controller = getattr(self, 'focus', None)
+        if focus_controller is None:
+            focus_controller = self.focus_state
+        focus_controller.current_widget = value
 
     @property
     def scheduler(self):
@@ -299,6 +305,7 @@ class GuiManager:
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.focus_state: FocusStateController = FocusStateController(self)
+        self.focus: FocusStateController = self.focus_state
         self.lock_state: LockStateController = LockStateController(self)
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
@@ -521,10 +528,16 @@ class GuiManager:
         self.graphics.restore_pristine(area, obj)
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
-        self.focus_state.update_focus(new_hover)
+        focus_controller = getattr(self, 'focus', None)
+        if focus_controller is None:
+            focus_controller = self.focus_state
+        focus_controller.update_focus(new_hover)
 
     def update_active_window(self) -> None:
-        self.focus_state.update_active_window()
+        focus_controller = getattr(self, 'focus', None)
+        if focus_controller is None:
+            focus_controller = self.focus_state
+        focus_controller.update_active_window()
 
     def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
         if coverage <= 0.0 or coverage > 1.0:

@@ -16,7 +16,7 @@ class InputRouter:
         self.gui: "GuiManager" = gui_manager
         self.targets: InputTargetResolver = InputTargetResolver(gui_manager)
 
-    def handle(self, event: PygameEvent) -> InputAction:
+    def route(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
@@ -39,6 +39,10 @@ class InputRouter:
         if self.gui.active_window:
             return self._process_window_widgets(event)
         return self._process_screen_widgets(event)
+
+    def handle(self, event: PygameEvent) -> InputAction:
+        """Compatibility alias for route()."""
+        return self.route(event)
 
     def _handle_locked_object(self, event: PygameEvent) -> InputAction:
         lock_obj = self.gui.locking_object

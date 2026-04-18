@@ -10,6 +10,7 @@ from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from ..events import colours, GuiError, ButtonStyle
 from ..resource_error import DataResourceErrorHandler
+from .button_style_strategies import build_default_button_style_strategies
 from .cursor_asset import CursorAsset
 from .interactive_visuals import InteractiveVisuals
 from .window_chrome_visuals import WindowChromeVisuals
@@ -27,6 +28,7 @@ class WidgetGraphicsFactory:
         self._current_font_name: Optional[str] = None
         self._last_font_name: Optional[str] = None
         self._fonts: Dict[str, pygame.font.Font] = {}
+        self._style_strategies = build_default_button_style_strategies()
 
     def get_current_font_name(self) -> Optional[str]:
         return self._current_font_name
@@ -76,18 +78,10 @@ class WidgetGraphicsFactory:
         )
 
     def get_styled_bitmaps(self, style: ButtonStyle, text: Optional[str], rect: Rect) -> Tuple[Tuple[Surface, Surface, Surface], Rect]:
-        if style == ButtonStyle.Box:
-            return self._draw_box_style_bitmaps(text, rect)
-        elif style == ButtonStyle.Round:
-            return self._draw_rounded_style_bitmaps(text, rect)
-        elif style == ButtonStyle.Angle:
-            return self._draw_angle_style_bitmaps(text, rect)
-        elif style == ButtonStyle.Radio:
-            return self._draw_radio_style_bitmaps(text, rect)
-        elif style == ButtonStyle.Check:
-            return self._draw_check_style_bitmaps(text, rect)
-        else:
+        strategy = self._style_strategies.get(style)
+        if strategy is None:
             raise GuiError('style not implemented')
+        return strategy.render(self, text, rect)
 
     def set_font(self, name: str) -> None:
         if name not in self._fonts:

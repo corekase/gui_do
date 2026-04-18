@@ -1,11 +1,19 @@
 from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
 from .events import Event
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
+
+
+@dataclass(frozen=True)
+class InputTargetMeta:
+    widget: Any
+    collides: bool
+    outside_collision: bool
 
 
 class InputTargetResolver:
@@ -24,18 +32,6 @@ class InputTargetResolver:
     def _build_widget_action(widget: Any, window: Optional[Any]) -> InputAction:
         return InputAction.from_builder(lambda w=widget, win=window: w.build_gui_event(win))
 
-    @staticmethod
-    def _meta_widget(meta: Any) -> Any:
-        return meta[0]
-
-    @staticmethod
-    def _meta_collides(meta: Any) -> bool:
-        return bool(meta[1])
-
-    @staticmethod
-    def _meta_outside_collision(meta: Any) -> bool:
-        return bool(meta[2])
-
     def _dispatch_widget_layer(self, event: PygameEvent, container: Any, emit_task_panel: bool = False):
         hit_any = False
         focus_target = None
@@ -45,35 +41,35 @@ class InputTargetResolver:
             if not widget.visible:
                 continue
             target_meta = self._window_hit_meta(widget, container)
-            if self._meta_collides(target_meta):
+            if target_meta.collides:
                 hit_any = True
-                focus_target = self._meta_widget(target_meta)
-                if self.gui.handle_widget(self._meta_widget(target_meta), event, container):
+                focus_target = target_meta.widget
+                if self.gui.handle_widget(target_meta.widget, event, container):
                     if focus_target is not None and self.is_registered_widget(focus_target):
                         self.gui.update_focus(focus_target)
                     if emit_task_panel:
-                        return InputAction.emit(Event.Widget, widget_id=self._meta_widget(target_meta).id, task_panel=True)
-                    return self._build_widget_action(self._meta_widget(target_meta), container)
-            elif self._meta_outside_collision(target_meta):
-                if self.gui.handle_widget(self._meta_widget(target_meta), event, container):
+                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
+                    return self._build_widget_action(target_meta.widget, container)
+            elif target_meta.outside_collision:
+                if self.gui.handle_widget(target_meta.widget, event, container):
                     if focus_target is not None and self.is_registered_widget(focus_target):
                         self.gui.update_focus(focus_target)
                     if emit_task_panel:
-                        return InputAction.emit(Event.Widget, widget_id=self._meta_widget(target_meta).id, task_panel=True)
-                    return self._build_widget_action(self._meta_widget(target_meta), container)
+                        return InputAction.emit(Event.Widget, widget_id=target_meta.widget.id, task_panel=True)
+                    return self._build_widget_action(target_meta.widget, container)
         return hit_any, focus_target
 
     @staticmethod
-    def _screen_hit_meta(widget: Any, mouse_pos, convert_to_window) -> Any:
+    def _screen_hit_meta(widget: Any, mouse_pos, convert_to_window) -> InputTargetMeta:
         hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
         collides = bool(hit_rect.collidepoint(convert_to_window(mouse_pos, None)))
-        return (widget, collides, False)
+        return InputTargetMeta(widget=widget, collides=collides, outside_collision=False)
 
     @staticmethod
-    def _window_hit_meta(widget: Any, window: Any) -> Any:
+    def _window_hit_meta(widget: Any, window: Any) -> InputTargetMeta:
         collides = bool(widget.get_collide(window))
         outside_collision = bool(widget.should_handle_outside_collision()) if not collides else False
-        return (widget, collides, outside_collision)
+        return InputTargetMeta(widget=widget, collides=collides, outside_collision=outside_collision)
 
     @staticmethod
     def _resolve_topmost_window_at_pos(windows, mouse_pos) -> Optional[Any]:
@@ -102,13 +98,13 @@ class InputTargetResolver:
                 continue
             if widget.visible:
                 target_meta = self._screen_hit_meta(widget, context['mouse_pos'], self.gui.convert_to_window)
-                if self._meta_collides(target_meta):
+                if target_meta.collides:
                     hit_any = True
-                    focus_target = self._meta_widget(target_meta)
-                    if self.gui.handle_widget(self._meta_widget(target_meta), event):
+                    focus_target = target_meta.widget
+                    if self.gui.handle_widget(target_meta.widget, event):
                         if focus_target is not None and self.is_registered_widget(focus_target):
                             self.gui.update_focus(focus_target)
-                        return self._build_widget_action(self._meta_widget(target_meta), None)
+                        return self._build_widget_action(target_meta.widget, None)
         if not hit_any:
             self.gui.update_focus(None)
             return self._handle_base_mouse_events(event)

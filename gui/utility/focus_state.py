@@ -19,6 +19,14 @@ class FocusStateController:
             return bool(registry.is_registered_object(value))
         return False
 
+    @property
+    def current_widget(self) -> Optional[Widget]:
+        return self.resolve_current_widget()
+
+    @current_widget.setter
+    def current_widget(self, value: Optional[Widget]) -> None:
+        self.set_current_widget(value)
+
     def set_current_widget(self, value: Optional[Widget]) -> None:
         if value is not None:
             if not isinstance(value, Widget) or not self._is_registered_object(value):
@@ -27,15 +35,16 @@ class FocusStateController:
         if current != value:
             if current is not None:
                 current.leave()
-            self.gui.focus_state_data.current_widget = value
+            self.gui.focus_state_data.set_current_widget(value)
 
     def resolve_current_widget(self) -> Optional[Widget]:
-        if self.gui.focus_state_data.current_widget is None:
+        current = self.gui.focus_state_data.read_current_widget()
+        if current is None:
             return None
-        if not self._is_registered_object(self.gui.focus_state_data.current_widget):
-            self.gui.focus_state_data.current_widget = None
+        if not self._is_registered_object(current):
+            self.gui.focus_state_data.clear_current_widget()
             return None
-        return self.gui.focus_state_data.current_widget
+        return current
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         self.set_current_widget(new_hover)

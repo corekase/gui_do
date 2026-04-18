@@ -34,13 +34,16 @@ class DragStateController:
         )
 
     def _set_drag_from_active_window(self) -> None:
+        active_window = self.gui.active_window
+        if active_window is None:
+            return
+        mouse_delta = (
+            active_window.x - self.gui.mouse_pos[0],
+            active_window.y - self.gui.mouse_pos[1],
+        )
+
         def _mutation(state: DragState) -> None:
-            state.dragging = True
-            state.dragging_window = self.gui.active_window
-            state.mouse_delta = (
-                state.dragging_window.x - self.gui.mouse_pos[0],
-                state.dragging_window.y - self.gui.mouse_pos[1],
-            )
+            state.begin_drag(active_window, mouse_delta)
 
         self._commit_drag_mutation(_mutation)
 
@@ -55,20 +58,10 @@ class DragStateController:
             )
         )
 
-        def _mutation(state: DragState) -> None:
-            state.dragging = False
-            state.dragging_window = None
-            state.mouse_delta = None
-
-        self._commit_drag_mutation(_mutation)
+        self._commit_drag_mutation(lambda state: state.clear_drag())
 
     def reset(self) -> None:
-        def _mutation(state: DragState) -> None:
-            state.dragging = False
-            state.dragging_window = None
-            state.mouse_delta = None
-
-        self._commit_drag_mutation(_mutation)
+        self._commit_drag_mutation(lambda state: state.clear_drag())
 
     def start_if_possible(self, event: PygameEvent) -> None:
         event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())

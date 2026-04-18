@@ -16,4 +16,10 @@ class EventDispatcher:
         self.emitter: InputEventEmitter = gui_manager.input_emitter
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
-        return self.emitter.emit_action(self.router.handle(event))
+        return self._emit_action(self._route_action(event))
+
+    def _route_action(self, event: PygameEvent):
+        return self.router.route(event)
+
+    def _emit_action(self, action):
+        return self.emitter.emit_action(action)

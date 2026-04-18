@@ -3,18 +3,13 @@ from pygame import Rect
 from pygame.surface import Surface
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 from ..utility.events import colours, GuiError, InteractiveState
+from ..utility.lifecycle.lifecycle_callbacks import LifecycleCallbacks
 from .frame import Frame
 
 if TYPE_CHECKING:
     from ..utility.events import BaseEvent
     from ..utility.gui_manager import GuiManager
     from ..utility.widget import Widget
-
-def _noop() -> None:
-    pass
-
-def _noop_event(_: "BaseEvent") -> None:
-    pass
 
 class Window:
     """Top-level container with title bar, child widgets, and lifecycle hooks."""
@@ -86,9 +81,10 @@ class Window:
         self.title_bar_rect: Rect = self.title_bar_active_bitmap.get_rect()
         self.window_widget_lower_bitmap: Surface = chrome.lower_widget
         self._visible: bool = True
-        self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
-        self._event_handler: Callable[["BaseEvent"], None] = event_handler if callable(event_handler) else _noop_event
-        self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
+        callbacks = LifecycleCallbacks.from_optionals(preamble, event_handler, postamble)
+        self._preamble: Callable[[], None] = callbacks.preamble
+        self._event_handler: Callable[["BaseEvent"], None] = callbacks.event_handler
+        self._postamble: Callable[[], None] = callbacks.postamble
 
     def run_postamble(self) -> None:
         self._postamble()

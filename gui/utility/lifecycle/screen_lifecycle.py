@@ -1,23 +1,17 @@
 from typing import Callable, Optional
 
 from ..events import BaseEvent
-
-
-def _noop() -> None:
-    pass
-
-
-def _noop_event(_: BaseEvent) -> None:
-    pass
+from .lifecycle_callbacks import LifecycleCallbacks
 
 
 class ScreenLifecycle:
     """Owns screen-level lifecycle callbacks and event handler."""
 
     def __init__(self) -> None:
-        self.preamble: Callable[[], None] = _noop
-        self.event_handler: Callable[[BaseEvent], None] = _noop_event
-        self.postamble: Callable[[], None] = _noop
+        callbacks = LifecycleCallbacks()
+        self.preamble: Callable[[], None] = callbacks.preamble
+        self.event_handler: Callable[[BaseEvent], None] = callbacks.event_handler
+        self.postamble: Callable[[], None] = callbacks.postamble
 
     def set_lifecycle(
         self,
@@ -25,9 +19,10 @@ class ScreenLifecycle:
         event_handler: Optional[Callable[[BaseEvent], None]],
         postamble: Optional[Callable[[], None]],
     ) -> None:
-        self.preamble = preamble if preamble is not None else _noop
-        self.event_handler = event_handler if event_handler is not None else _noop_event
-        self.postamble = postamble if postamble is not None else _noop
+        callbacks = LifecycleCallbacks.from_optionals(preamble, event_handler, postamble)
+        self.preamble = callbacks.preamble
+        self.event_handler = callbacks.event_handler
+        self.postamble = callbacks.postamble
 
     def run_preamble(self) -> None:
         self.preamble()

@@ -30,27 +30,13 @@ class LockStateController:
         return False
 
     def _assign_area_lock(self, locking_object: Widget) -> None:
-        def _mutation(state: LockState) -> None:
-            state.locking_object = locking_object
-            state.mouse_locked = True
-            state.mouse_point_locked = False
-            state.lock_point_pos = None
-            state.lock_point_recenter_pending = False
-            state.lock_point_tolerance_rect = None
-
-        self._commit_lock_mutation(_mutation)
+        area = self.state.lock_area_rect
+        if area is None:
+            raise GuiError('lock area must be set before assigning area lock')
+        self._commit_lock_mutation(lambda state: state.apply_area_lock(locking_object, area))
 
     def _assign_point_lock(self, locking_object: Widget, point: Tuple[int, int]) -> None:
-        def _mutation(state: LockState) -> None:
-            state.locking_object = locking_object
-            state.mouse_locked = True
-            state.mouse_point_locked = True
-            state.lock_area_rect = None
-            state.lock_point_pos = point
-            state.lock_point_tolerance_rect = None
-            state.lock_point_recenter_pending = False
-
-        self._commit_lock_mutation(_mutation)
+        self._commit_lock_mutation(lambda state: state.apply_point_lock(locking_object, point))
 
     def _restore_physical_mouse_on_unlock(self) -> None:
         if not self.state.mouse_locked:
@@ -73,11 +59,11 @@ class LockStateController:
                 raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
                 raise GuiError('lock area dimensions must be positive')
+            self._commit_lock_mutation(lambda state: setattr(state, 'lock_area_rect', area))
             self._assign_area_lock(locking_object)
         else:
             self._restore_physical_mouse_on_unlock()
             self.clear()
-        self._commit_lock_mutation(lambda state: setattr(state, 'lock_area_rect', area))
 
     def set_point(self, locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None:
         if locking_object is None:
@@ -146,13 +132,4 @@ class LockStateController:
             self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', True))
 
     def clear(self) -> None:
-        def _mutation(state: LockState) -> None:
-            state.locking_object = None
-            state.mouse_locked = False
-            state.mouse_point_locked = False
-            state.lock_area_rect = None
-            state.lock_point_pos = None
-            state.lock_point_recenter_pending = False
-            state.lock_point_tolerance_rect = None
-
-        self._commit_lock_mutation(_mutation)
+        self._commit_lock_mutation(lambda state: state.clear_lock())

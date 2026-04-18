@@ -11,3 +11,13 @@ class DragState:
     dragging: bool = False
     dragging_window: Optional[Window] = None
     mouse_delta: Optional[Tuple[int, int]] = None
+
+    def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
+        self.dragging = True
+        self.dragging_window = window
+        self.mouse_delta = mouse_delta
+
+    def clear_drag(self) -> None:
+        self.dragging = False
+        self.dragging_window = None
+        self.mouse_delta = None
