@@ -6,6 +6,7 @@ from pygame import Rect
 
 from gui.utility.constants import ArrowPosition, ButtonStyle, GuiError, Orientation
 from gui.utility.object_registry import GuiObjectRegistry
+from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget import Widget
 from gui.utility import guimanager as gm
 
@@ -175,20 +176,20 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
 
     def test_widget_factory_wrappers_delegate_to_add(self) -> None:
         gui = gm.GuiManager.__new__(gm.GuiManager)
-        gui._label_sequence = 0
         created = []
         gui.add = lambda obj: created.append(obj) or obj
+        gui.ui_factory = GuiUiFactory(gui)
 
-        with patch("gui.utility.guimanager.gArrowBox", side_effect=lambda *args: SimpleNamespace(kind="arrow", args=args)), patch(
-            "gui.utility.guimanager.gButton", side_effect=lambda *args: SimpleNamespace(kind="button", args=args)
-        ), patch("gui.utility.guimanager.gButtonGroup", side_effect=lambda *args: SimpleNamespace(kind="group", args=args)), patch(
-            "gui.utility.guimanager.gCanvas", side_effect=lambda *args: SimpleNamespace(kind="canvas", args=args)
-        ), patch("gui.utility.guimanager.gFrame", side_effect=lambda *args: SimpleNamespace(kind="frame", args=args)), patch(
-            "gui.utility.guimanager.gImage", side_effect=lambda *args: SimpleNamespace(kind="image", args=args)
-        ), patch("gui.utility.guimanager.gLabel", side_effect=lambda *args: SimpleNamespace(kind="label", args=args)), patch(
-            "gui.utility.guimanager.gScrollbar", side_effect=lambda *args: SimpleNamespace(kind="scrollbar", args=args)
-        ), patch("gui.utility.guimanager.gToggle", side_effect=lambda *args: SimpleNamespace(kind="toggle", args=args)), patch(
-            "gui.utility.guimanager.gWindow", side_effect=lambda *args: SimpleNamespace(kind="window", args=args)
+        with patch("gui.utility.ui_factory.gArrowBox", side_effect=lambda *args: SimpleNamespace(kind="arrow", args=args)), patch(
+            "gui.utility.ui_factory.gButton", side_effect=lambda *args: SimpleNamespace(kind="button", args=args)
+        ), patch("gui.utility.ui_factory.gButtonGroup", side_effect=lambda *args: SimpleNamespace(kind="group", args=args)), patch(
+            "gui.utility.ui_factory.gCanvas", side_effect=lambda *args: SimpleNamespace(kind="canvas", args=args)
+        ), patch("gui.utility.ui_factory.gFrame", side_effect=lambda *args: SimpleNamespace(kind="frame", args=args)), patch(
+            "gui.utility.ui_factory.gImage", side_effect=lambda *args: SimpleNamespace(kind="image", args=args)
+        ), patch("gui.utility.ui_factory.gLabel", side_effect=lambda *args: SimpleNamespace(kind="label", args=args)), patch(
+            "gui.utility.ui_factory.gScrollbar", side_effect=lambda *args: SimpleNamespace(kind="scrollbar", args=args)
+        ), patch("gui.utility.ui_factory.gToggle", side_effect=lambda *args: SimpleNamespace(kind="toggle", args=args)), patch(
+            "gui.utility.ui_factory.gWindow", side_effect=lambda *args: SimpleNamespace(kind="window", args=args)
         ):
             gm.GuiManager.ArrowBox(gui, "a", Rect(0, 0, 1, 1), 90)
             gm.GuiManager.Button(gui, "b", Rect(0, 0, 1, 1), ButtonStyle.Box, None)

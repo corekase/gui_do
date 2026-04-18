@@ -4,10 +4,12 @@ from types import SimpleNamespace
 from pygame import Rect
 
 from gui.utility.constants import GuiError
+from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
 
@@ -26,6 +28,8 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.event_delivery = EventDeliveryCoordinator(gui)
+        gui.lifecycle = LifecycleCoordinator(gui)
         return gui
 
     def _build_widget_stub(self, visible=True):

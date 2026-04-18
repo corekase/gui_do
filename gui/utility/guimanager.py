@@ -14,9 +14,11 @@ from .focus_state import FocusStateController
 from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
+from .lifecycle import LifecycleCoordinator
 from .object_registry import GuiObjectRegistry
 from .resource_error import DataResourceErrorHandler
 from .renderer import Renderer
+from .ui_factory import GuiUiFactory
 from .widget import Widget
 from ..widgets.window import Window as gWindow
 from ..widgets.button import Button as gButton
@@ -245,35 +247,31 @@ class GuiManager:
 
     # widgets
     def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
-        return self.add(gArrowBox(self, id, rect, direction, on_activate))
+        return self.ui_factory.ArrowBox(id, rect, direction, on_activate)
 
     def Button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> gButton:
-        safe_text = '' if text is None else text
-        return self.add(gButton(self, id, rect, style, safe_text, on_activate))
+        return self.ui_factory.Button(id, rect, style, text, on_activate)
 
     def ButtonGroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> gButtonGroup:
-        return self.add(gButtonGroup(self, group, id, rect, style, text))
+        return self.ui_factory.ButtonGroup(group, id, rect, style, text)
 
     def Canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> gCanvas:
-        return self.add(gCanvas(self, id, rect, backdrop, on_activate, automatic_pristine))
+        return self.ui_factory.Canvas(id, rect, backdrop, on_activate, automatic_pristine)
 
     def Frame(self, id: str, rect: Rect) -> gFrame:
-        return self.add(gFrame(self, id, rect))
+        return self.ui_factory.Frame(id, rect)
 
     def Image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> gImage:
-        return self.add(gImage(self, id, rect, image, automatic_pristine, scale))
+        return self.ui_factory.Image(id, rect, image, automatic_pristine, scale)
 
     def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> gLabel:
-        if id is None:
-            self._label_sequence += 1
-            id = f'label_{self._label_sequence}'
-        return self.add(gLabel(self, id, position, text, shadow))
+        return self.ui_factory.Label(position, text, shadow, id)
 
     def Scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> gScrollbar:
-        return self.add(gScrollbar(self, id, overall_rect, horizontal, style, params))
+        return self.ui_factory.Scrollbar(id, overall_rect, horizontal, style, params)
 
     def Toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> gToggle:
-        return self.add(gToggle(self, id, rect, style, pushed, pressed_text, raised_text))
+        return self.ui_factory.Toggle(id, rect, style, pushed, pressed_text, raised_text)
 
     def Window(
         self,
@@ -285,7 +283,7 @@ class GuiManager:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> gWindow:
-        return self.add(gWindow(self, title, pos, size, backdrop, preamble, event_handler, postamble))
+        return self.ui_factory.Window(title, pos, size, backdrop, preamble, event_handler, postamble)
 
     def __init__(
         self,
@@ -360,10 +358,11 @@ class GuiManager:
         self._buffered: bool = False
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
+        self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
+        self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
-        self._label_sequence: int = 0
         self._screen_preamble: Callable[[], None] = _noop
         self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
         self._screen_postamble: Callable[[], None] = _noop
@@ -447,20 +446,10 @@ class GuiManager:
         self.task_panel = panel
 
     def run_postamble(self) -> None:
-        for window in self.windows:
-            if window.visible:
-                window.run_postamble()
-        if self.task_panel is not None and self.task_panel.visible:
-            self.task_panel.run_postamble()
-        self._screen_postamble()
+        self.lifecycle.run_postamble()
 
     def run_preamble(self) -> None:
-        self._screen_preamble()
-        for window in self.windows:
-            if window.visible:
-                window.run_preamble()
-        if self.task_panel is not None and self.task_panel.visible:
-            self.task_panel.run_preamble()
+        self.lifecycle.run_preamble()
 
     def begin_task_panel(self) -> None:
         if self.task_panel is None:
@@ -477,17 +466,7 @@ class GuiManager:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        if preamble is not None and not callable(preamble):
-            raise GuiError('task panel preamble must be callable or None')
-        if event_handler is not None and not callable(event_handler):
-            raise GuiError('task panel event_handler must be callable or None')
-        if postamble is not None and not callable(postamble):
-            raise GuiError('task panel postamble must be callable or None')
-        self.task_panel._preamble = preamble if preamble is not None else _noop
-        self.task_panel._event_handler = event_handler if event_handler is not None else _noop_event
-        self.task_panel._postamble = postamble if postamble is not None else _noop
+        self.lifecycle.set_task_panel_lifecycle(preamble, event_handler, postamble)
 
     def set_task_panel_enabled(self, enabled: bool) -> None:
         if self.task_panel is None:
@@ -540,11 +519,7 @@ class GuiManager:
         self.button_group_mediator.clear()
 
     def clear_task_owners_for_window(self, window: gWindow) -> None:
-        if window not in self.windows:
-            return
-        stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
-        for task_id in stale_ids:
-            del self._task_owner_by_id[task_id]
+        self.event_delivery.clear_task_owners_for_window(window)
 
     def hide_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:
@@ -646,31 +621,13 @@ class GuiManager:
         event_handler: Optional[Callable[[BaseEvent], None]] = None,
         postamble: Optional[Callable[[], None]] = None,
     ) -> None:
-        if preamble is not None and not callable(preamble):
-            raise GuiError('screen preamble must be callable or None')
-        if event_handler is not None and not callable(event_handler):
-            raise GuiError('screen event_handler must be callable or None')
-        if postamble is not None and not callable(postamble):
-            raise GuiError('screen postamble must be callable or None')
-        self._screen_preamble = preamble if preamble is not None else _noop
-        self._screen_event_handler = event_handler if event_handler is not None else _noop_event
-        self._screen_postamble = postamble if postamble is not None else _noop
+        self.lifecycle.set_screen_lifecycle(preamble, event_handler, postamble)
 
     def set_task_owner(self, task_id: Hashable, window: Optional[gWindow]) -> None:
-        try:
-            hash(task_id)
-        except TypeError as exc:
-            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
-        if window is None:
-            self._task_owner_by_id.pop(task_id, None)
-            return
-        if window not in self.windows:
-            raise GuiError('task owner window must be registered')
-        self._task_owner_by_id[task_id] = window
+        self.event_delivery.set_task_owner(task_id, window)
 
     def set_task_owners(self, window: Optional[gWindow], *task_ids: Hashable) -> None:
-        for task_id in task_ids:
-            self.set_task_owner(task_id, window)
+        self.event_delivery.set_task_owners(window, *task_ids)
 
     def show_widgets(self, *widgets: Widget) -> None:
         for widget in widgets:

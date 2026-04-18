@@ -9,7 +9,9 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
+from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.widget import Widget
 from gui.widgets.window import Window
 
@@ -50,7 +52,9 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.drag_state = DragStateController(gui)
         gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
+        gui.ui_factory = GuiUiFactory(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.lifecycle = LifecycleCoordinator(gui)
         return gui
 
     def test_module_noop_helpers_are_callable(self) -> None:
@@ -425,15 +429,14 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         import gui.utility.guimanager as gm
 
         gui = self._build_manager_stub()
-        gui._label_sequence = 0
         added = []
         gui.add = lambda obj: added.append(obj) or obj
 
-        with patch("gui.utility.guimanager.gLabel", side_effect=lambda *_args: SimpleNamespace(args=_args)):
+        with patch("gui.utility.ui_factory.gLabel", side_effect=lambda *_args: SimpleNamespace(args=_args)):
             gm.GuiManager.Label(gui, (1, 2), "text", id="explicit")
 
         self.assertEqual(added[0].args[1], "explicit")
-        self.assertEqual(gui._label_sequence, 0)
+        self.assertEqual(gui.ui_factory._label_sequence, 0)
 
     def test_configure_task_panel_without_old_panel_path(self) -> None:
         gui = self._build_manager_stub()

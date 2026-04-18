@@ -1,6 +1,6 @@
 from typing import Hashable, Optional, TYPE_CHECKING, cast
 
-from .constants import Event
+from .constants import Event, GuiError
 from ..widgets.window import Window as gWindow
 
 if TYPE_CHECKING:
@@ -46,3 +46,26 @@ class EventDeliveryCoordinator:
         if owner not in self.gui.windows or not owner.visible:
             return None
         return owner
+
+    def clear_task_owners_for_window(self, window: gWindow) -> None:
+        if window not in self.gui.windows:
+            return
+        stale_ids = [task_id for task_id, owner in self.gui._task_owner_by_id.items() if owner is window]
+        for task_id in stale_ids:
+            del self.gui._task_owner_by_id[task_id]
+
+    def set_task_owner(self, task_id: Hashable, window: Optional[gWindow]) -> None:
+        try:
+            hash(task_id)
+        except TypeError as exc:
+            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
+        if window is None:
+            self.gui._task_owner_by_id.pop(task_id, None)
+            return
+        if window not in self.gui.windows:
+            raise GuiError('task owner window must be registered')
+        self.gui._task_owner_by_id[task_id] = window
+
+    def set_task_owners(self, window: Optional[gWindow], *task_ids: Hashable) -> None:
+        for task_id in task_ids:
+            self.set_task_owner(task_id, window)
