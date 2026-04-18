@@ -7,6 +7,7 @@ from pygame.locals import MOUSEBUTTONUP
 
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.widget import Widget
+from state_model_backed_stub import StateModelBackedStub
 
 
 class _WindowStub:
@@ -29,8 +30,9 @@ class _WindowStub:
         return Rect(500, 500, 10, 10)
 
 
-class _GuiStub:
+class _GuiStub(StateModelBackedStub):
     def __init__(self) -> None:
+        self._init_state_models()
         self.locking_object = None
         self.mouse_locked = False
         self.mouse_point_locked = False
@@ -66,19 +68,19 @@ class _GuiStub:
 
 
 class InputStateSyncContractsTests(unittest.TestCase):
-    def test_lock_set_area_keeps_legacy_and_model_in_sync(self) -> None:
+    def test_lock_set_area_updates_lock_state_model(self) -> None:
         gui = _GuiStub()
         controller = LockStateController(gui)
         locking_object = Widget.__new__(Widget)
 
         controller.set_area(locking_object, Rect(1, 2, 5, 6))
 
-        self.assertIs(gui.lock_state_data.locking_object, gui.locking_object)
-        self.assertEqual(gui.lock_state_data.lock_area_rect, gui.lock_area_rect)
-        self.assertEqual(gui.lock_state_data.mouse_locked, gui.mouse_locked)
-        self.assertEqual(gui.lock_state_data.mouse_point_locked, gui.mouse_point_locked)
+        self.assertIs(gui._lock_state.locking_object, gui.locking_object)
+        self.assertEqual(gui._lock_state.lock_area_rect, gui.lock_area_rect)
+        self.assertEqual(gui._lock_state.mouse_locked, gui.mouse_locked)
+        self.assertEqual(gui._lock_state.mouse_point_locked, gui.mouse_point_locked)
 
-    def test_lock_release_keeps_legacy_and_model_in_sync(self) -> None:
+    def test_lock_release_resets_lock_state_model(self) -> None:
         gui = _GuiStub()
         controller = LockStateController(gui)
         locking_object = Widget.__new__(Widget)
@@ -86,12 +88,12 @@ class InputStateSyncContractsTests(unittest.TestCase):
 
         controller.set_area(None)
 
-        self.assertIsNone(gui.lock_state_data.locking_object)
+        self.assertIsNone(gui._lock_state.locking_object)
         self.assertIsNone(gui.locking_object)
-        self.assertEqual(gui.lock_state_data.mouse_locked, gui.mouse_locked)
-        self.assertEqual(gui.lock_state_data.lock_point_pos, gui.lock_point_pos)
+        self.assertEqual(gui._lock_state.mouse_locked, gui.mouse_locked)
+        self.assertEqual(gui._lock_state.lock_point_pos, gui.lock_point_pos)
 
-    def test_drag_start_syncs_legacy_and_model(self) -> None:
+    def test_drag_start_updates_drag_state_model(self) -> None:
         gui = _GuiStub()
         controller = DragStateController(gui)
         window = _WindowStub(100, 120)
@@ -102,11 +104,11 @@ class InputStateSyncContractsTests(unittest.TestCase):
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': (10, 10)})
         controller.start_if_possible(event)
 
-        self.assertEqual(gui.drag_state_data.dragging, gui.dragging)
-        self.assertIs(gui.drag_state_data.dragging_window, gui.dragging_window)
-        self.assertEqual(gui.drag_state_data.mouse_delta, gui.mouse_delta)
+        self.assertEqual(gui._drag_state.dragging, gui.dragging)
+        self.assertIs(gui._drag_state.dragging_window, gui.dragging_window)
+        self.assertEqual(gui._drag_state.mouse_delta, gui.mouse_delta)
 
-    def test_drag_release_syncs_legacy_and_model(self) -> None:
+    def test_drag_release_updates_drag_state_model(self) -> None:
         gui = _GuiStub()
         controller = DragStateController(gui)
         window = _WindowStub(30, 40)
@@ -118,9 +120,9 @@ class InputStateSyncContractsTests(unittest.TestCase):
         event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1})
         controller.handle_drag_event(event)
 
-        self.assertEqual(gui.drag_state_data.dragging, gui.dragging)
-        self.assertIs(gui.drag_state_data.dragging_window, gui.dragging_window)
-        self.assertEqual(gui.drag_state_data.mouse_delta, gui.mouse_delta)
+        self.assertEqual(gui._drag_state.dragging, gui.dragging)
+        self.assertIs(gui._drag_state.dragging_window, gui.dragging_window)
+        self.assertEqual(gui._drag_state.mouse_delta, gui.mouse_delta)
 
 
 if __name__ == '__main__':

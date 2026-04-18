@@ -60,20 +60,6 @@ TGuiObject = TypeVar("TGuiObject", gWindow, Widget)
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
-    def _ensure_drag_state_data(self) -> DragState:
-        state = getattr(self, 'drag_state_data', None)
-        if state is None:
-            state = DragState()
-            self.drag_state_data = state
-        return state
-
-    def _ensure_lock_state_data(self) -> LockState:
-        state = getattr(self, 'lock_state_data', None)
-        if state is None:
-            state = LockState()
-            self.lock_state_data = state
-        return state
-
     @property
     def bitmap_factory(self):
         return self._bitmap_factory
@@ -102,83 +88,83 @@ class GuiManager:
 
     @property
     def dragging(self) -> bool:
-        return self._ensure_drag_state_data().dragging
+        return self._drag_state.dragging
 
     @dragging.setter
     def dragging(self, value: bool) -> None:
-        self._ensure_drag_state_data().dragging = value
+        self._drag_state.dragging = value
 
     @property
     def dragging_window(self) -> Optional[gWindow]:
-        return self._ensure_drag_state_data().dragging_window
+        return self._drag_state.dragging_window
 
     @dragging_window.setter
     def dragging_window(self, value: Optional[gWindow]) -> None:
-        self._ensure_drag_state_data().dragging_window = value
+        self._drag_state.dragging_window = value
 
     @property
     def mouse_delta(self) -> Optional[Tuple[int, int]]:
-        return self._ensure_drag_state_data().mouse_delta
+        return self._drag_state.mouse_delta
 
     @mouse_delta.setter
     def mouse_delta(self, value: Optional[Tuple[int, int]]) -> None:
-        self._ensure_drag_state_data().mouse_delta = value
+        self._drag_state.mouse_delta = value
 
     @property
     def locking_object(self) -> Optional[Widget]:
-        return self._ensure_lock_state_data().locking_object
+        return self._lock_state.locking_object
 
     @locking_object.setter
     def locking_object(self, value: Optional[Widget]) -> None:
-        self._ensure_lock_state_data().locking_object = value
+        self._lock_state.locking_object = value
 
     @property
     def mouse_locked(self) -> bool:
-        return self._ensure_lock_state_data().mouse_locked
+        return self._lock_state.mouse_locked
 
     @mouse_locked.setter
     def mouse_locked(self, value: bool) -> None:
-        self._ensure_lock_state_data().mouse_locked = value
+        self._lock_state.mouse_locked = value
 
     @property
     def mouse_point_locked(self) -> bool:
-        return self._ensure_lock_state_data().mouse_point_locked
+        return self._lock_state.mouse_point_locked
 
     @mouse_point_locked.setter
     def mouse_point_locked(self, value: bool) -> None:
-        self._ensure_lock_state_data().mouse_point_locked = value
+        self._lock_state.mouse_point_locked = value
 
     @property
     def lock_area_rect(self) -> Optional[Rect]:
-        return self._ensure_lock_state_data().lock_area_rect
+        return self._lock_state.lock_area_rect
 
     @lock_area_rect.setter
     def lock_area_rect(self, value: Optional[Rect]) -> None:
-        self._ensure_lock_state_data().lock_area_rect = value
+        self._lock_state.lock_area_rect = value
 
     @property
     def lock_point_pos(self) -> Optional[Tuple[int, int]]:
-        return self._ensure_lock_state_data().lock_point_pos
+        return self._lock_state.lock_point_pos
 
     @lock_point_pos.setter
     def lock_point_pos(self, value: Optional[Tuple[int, int]]) -> None:
-        self._ensure_lock_state_data().lock_point_pos = value
+        self._lock_state.lock_point_pos = value
 
     @property
     def lock_point_recenter_pending(self) -> bool:
-        return self._ensure_lock_state_data().lock_point_recenter_pending
+        return self._lock_state.lock_point_recenter_pending
 
     @lock_point_recenter_pending.setter
     def lock_point_recenter_pending(self, value: bool) -> None:
-        self._ensure_lock_state_data().lock_point_recenter_pending = value
+        self._lock_state.lock_point_recenter_pending = value
 
     @property
     def lock_point_tolerance_rect(self) -> Optional[Rect]:
-        return self._ensure_lock_state_data().lock_point_tolerance_rect
+        return self._lock_state.lock_point_tolerance_rect
 
     @lock_point_tolerance_rect.setter
     def lock_point_tolerance_rect(self, value: Optional[Rect]) -> None:
-        self._ensure_lock_state_data().lock_point_tolerance_rect = value
+        self._lock_state.lock_point_tolerance_rect = value
 
     # widgets
     def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> gArrowBox:
@@ -265,6 +251,8 @@ class GuiManager:
             resolved_mouse_set_pos,
             resolved_mouse_set_visible,
         )
+        self._drag_state: DragState = DragState()
+        self._lock_state: LockState = LockState()
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
         self.focus_state: FocusStateController = FocusStateController(self)
@@ -279,9 +267,7 @@ class GuiManager:
         self.widgets: List[Widget] = []
         self.workspace_state: WorkspaceState = WorkspaceState()
         self.windows: List[gWindow] = []
-        self.drag_state_data: DragState = DragState()
         self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
-        self.lock_state_data: LockState = LockState()
         self.cursor_image: Optional[Surface] = None
         self.cursor_hotspot: Optional[Tuple[int, int]] = None
         self.cursor_rect: Optional[Rect] = None

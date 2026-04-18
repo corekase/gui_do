@@ -20,36 +20,10 @@ class LockStateController:
 
     @property
     def state(self):
-        ensure_state = getattr(self.gui, '_ensure_lock_state_data', None)
-        if callable(ensure_state):
-            return ensure_state()
-        state = getattr(self.gui, 'lock_state_data', None)
-        if state is None:
-            state = LockState(
-                locking_object=getattr(self.gui, 'locking_object', None),
-                mouse_locked=bool(getattr(self.gui, 'mouse_locked', False)),
-                mouse_point_locked=bool(getattr(self.gui, 'mouse_point_locked', False)),
-                lock_area_rect=getattr(self.gui, 'lock_area_rect', None),
-                lock_point_pos=getattr(self.gui, 'lock_point_pos', None),
-                lock_point_recenter_pending=bool(getattr(self.gui, 'lock_point_recenter_pending', False)),
-                lock_point_tolerance_rect=getattr(self.gui, 'lock_point_tolerance_rect', None),
-            )
-            setattr(self.gui, 'lock_state_data', state)
-        return state
-
-    def _sync_legacy_lock_fields(self) -> None:
-        state = self.state
-        self.gui.locking_object = state.locking_object
-        self.gui.mouse_locked = state.mouse_locked
-        self.gui.mouse_point_locked = state.mouse_point_locked
-        self.gui.lock_area_rect = state.lock_area_rect
-        self.gui.lock_point_pos = state.lock_point_pos
-        self.gui.lock_point_recenter_pending = state.lock_point_recenter_pending
-        self.gui.lock_point_tolerance_rect = state.lock_point_tolerance_rect
+        return self.gui._lock_state
 
     def _commit_lock_mutation(self, mutation) -> None:
         mutation(self.state)
-        self._sync_legacy_lock_fields()
 
     def _is_registered_object(self, value: Widget) -> bool:
         registry = getattr(self.gui, 'object_registry', None)
@@ -194,31 +168,13 @@ class DragStateController:
 
     @property
     def state(self) -> DragState:
-        ensure_state = getattr(self.gui, '_ensure_drag_state_data', None)
-        if callable(ensure_state):
-            return ensure_state()
-        state = getattr(self.gui, 'drag_state_data', None)
-        if state is None:
-            state = DragState(
-                dragging=bool(getattr(self.gui, 'dragging', False)),
-                dragging_window=getattr(self.gui, 'dragging_window', None),
-                mouse_delta=getattr(self.gui, 'mouse_delta', None),
-            )
-            setattr(self.gui, 'drag_state_data', state)
-        return state
+        return self.gui._drag_state
 
     def _pass_event(self) -> InputAction:
         return InputAction.pass_event()
 
-    def _sync_legacy_drag_fields(self) -> None:
-        state = self.state
-        self.gui.dragging = state.dragging
-        self.gui.dragging_window = state.dragging_window
-        self.gui.mouse_delta = state.mouse_delta
-
     def _commit_drag_mutation(self, mutation) -> None:
         mutation(self.state)
-        self._sync_legacy_drag_fields()
 
     def _has_valid_drag_context(self) -> bool:
         return (

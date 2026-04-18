@@ -11,11 +11,13 @@ from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_providers import InputProviders
+from gui.utility.drag_state_model import DragState
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.layout_coordinator import LayoutCoordinator
 from gui.utility.lifecycle import LifecycleCoordinator, ScreenLifecycle
 from gui.utility.lock_flow_coordinator import LockFlowCoordinator
+from gui.utility.lock_state_model import LockState
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
 from gui.utility.render_coordinator import RenderCoordinator
@@ -84,6 +86,9 @@ def build_gui_manager_stub(
     gui.windows = []
     gui.task_panel = None
     gui.workspace_state = WorkspaceState()
+
+    gui._drag_state = DragState()
+    gui._lock_state = LockState()
 
     gui.dragging = False
     gui.dragging_window = None

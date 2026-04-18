@@ -9,6 +9,7 @@ from gui.utility.event_dispatcher import EventDispatcher
 from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
+from state_model_backed_stub import StateModelBackedStub
 
 
 class WidgetStub:
@@ -56,8 +57,9 @@ class TaskPanelStub:
         return Rect(0, 0, 100, 100)
 
 
-class ContentionGuiStub:
+class ContentionGuiStub(StateModelBackedStub):
     def __init__(self) -> None:
+        self._init_state_models()
         self.dragging = False
         self.dragging_window = None
         self.mouse_delta = None
