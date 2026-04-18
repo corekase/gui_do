@@ -34,7 +34,7 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
         gui = build_gui_manager_stub(preset="routing")
 
         self.assertEqual(gui._screen_events, [])
-        gui._screen_event_handler("evt")
+        gui.screen_lifecycle.handle_event("evt")
         self.assertEqual(gui._screen_events, ["evt"])
         self.assertEqual(gui.lock_area((1, 2)), (1, 2))
 

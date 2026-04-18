@@ -12,7 +12,7 @@ from gui.utility.input_event_coordinator import InputEventCoordinator
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.layout_coordinator import LayoutCoordinator
-from gui.utility.lifecycle import LifecycleCoordinator
+from gui.utility.lifecycle import LifecycleCoordinator, ScreenLifecycle
 from gui.utility.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
@@ -36,7 +36,7 @@ def _apply_preset(gui: GuiManager, preset: StubPreset) -> None:
 
     if preset == "routing":
         gui._screen_events = []
-        gui._screen_event_handler = lambda event: gui._screen_events.append(event)
+        gui.screen_lifecycle.set_lifecycle(None, lambda event: gui._screen_events.append(event), None)
         gui.lock_area = lambda point: point
         return
 
@@ -103,9 +103,7 @@ def build_gui_manager_stub(
     gui.pristine = None
     gui.locking_object = None
 
-    gui._screen_preamble = None
-    gui._screen_event_handler = lambda _event: None
-    gui._screen_postamble = None
+    gui.screen_lifecycle = ScreenLifecycle()
 
     gui._event_getter = lambda: []
     gui._mouse_get_pos = lambda: (0, 0)

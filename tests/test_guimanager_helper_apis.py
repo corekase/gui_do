@@ -84,9 +84,9 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         post = lambda: None
         GuiManager.set_screen_lifecycle(gui, preamble=pre, event_handler=ev, postamble=post)
 
-        self.assertIs(gui._screen_preamble, pre)
-        self.assertIs(gui._screen_event_handler, ev)
-        self.assertIs(gui._screen_postamble, post)
+        self.assertIs(gui.screen_lifecycle.preamble, pre)
+        self.assertIs(gui.screen_lifecycle.event_handler, ev)
+        self.assertIs(gui.screen_lifecycle.postamble, post)
 
     def test_set_task_panel_lifecycle_requires_existing_task_panel(self) -> None:
         gui = self._build_manager_stub()
@@ -270,8 +270,11 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         panel = SimpleNamespace(visible=True, run_preamble=lambda: calls.append("pp"), run_postamble=lambda: calls.append("po"))
         gui.windows = [visible_window, hidden_window]
         gui.task_panel = panel
-        gui._screen_preamble = lambda: calls.append("sp")
-        gui._screen_postamble = lambda: calls.append("so")
+        gui.screen_lifecycle.set_lifecycle(
+            lambda: calls.append("sp"),
+            gui.screen_lifecycle.event_handler,
+            lambda: calls.append("so"),
+        )
 
         GuiManager.run_preamble(gui)
         GuiManager.run_postamble(gui)

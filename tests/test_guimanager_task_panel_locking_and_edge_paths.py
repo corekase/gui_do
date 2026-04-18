@@ -603,8 +603,11 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         hidden_window = SimpleNamespace(visible=False, run_preamble=lambda: calls.append("wp"), run_postamble=lambda: calls.append("wo"))
         gui.windows = [hidden_window]
         gui.task_panel = SimpleNamespace(visible=False, run_preamble=lambda: calls.append("pp"), run_postamble=lambda: calls.append("po"))
-        gui._screen_preamble = lambda: calls.append("sp")
-        gui._screen_postamble = lambda: calls.append("so")
+        gui.screen_lifecycle.set_lifecycle(
+            lambda: calls.append("sp"),
+            gui.screen_lifecycle.event_handler,
+            lambda: calls.append("so"),
+        )
 
         GuiManager.run_preamble(gui)
         GuiManager.run_postamble(gui)

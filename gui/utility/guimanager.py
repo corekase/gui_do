@@ -18,7 +18,7 @@ from .input_event_coordinator import InputEventCoordinator
 from .input_state import DragStateController, LockStateController
 from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
-from .lifecycle import LifecycleCoordinator
+from .lifecycle import LifecycleCoordinator, ScreenLifecycle
 from .lock_flow_coordinator import LockFlowCoordinator
 from .object_registry import GuiObjectRegistry
 from .pointer_coordinator import PointerCoordinator
@@ -215,9 +215,7 @@ class GuiManager:
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
-        self._screen_preamble: Callable[[], None] = _noop
-        self._screen_event_handler: Callable[[BaseEvent], None] = _noop_event
-        self._screen_postamble: Callable[[], None] = _noop
+        self.screen_lifecycle: ScreenLifecycle = ScreenLifecycle()
         self._task_owner_by_id: Dict[Hashable, gWindow] = {}
         self._task_panel_capture: bool = False
         self.task_panel: Optional["_ManagedTaskPanel"] = None

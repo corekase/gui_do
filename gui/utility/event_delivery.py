@@ -28,7 +28,7 @@ class EventDeliveryCoordinator:
         if event_window is not None and event_window in self.gui.windows and event_window.visible:
             event_window.handle_event(event)
             return
-        self.gui._screen_event_handler(event)
+        self.gui.screen_lifecycle.handle_event(event)
 
     def resolve_task_event_owner(self, event: "BaseEvent") -> Optional[gWindow]:
         if getattr(event, 'type', None) != Event.Task:
