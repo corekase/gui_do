@@ -12,6 +12,7 @@ from ..widgets.canvas import Canvas
 from ..widgets.frame import Frame
 from ..widgets.image import Image
 from ..widgets.label import Label
+from ..widgets.slider import Slider
 from ..widgets.scrollbar import Scrollbar
 from ..widgets.toggle import Toggle
 from ..widgets.window import Window
@@ -63,6 +64,19 @@ class GuiUiFactory:
     def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
         """Create and register a `Scrollbar` widget."""
         return self.gui.add(Scrollbar(self.gui, id, overall_rect, horizontal, style, params))
+
+    def slider(
+        self,
+        id: str,
+        rect: Rect,
+        horizontal: Orientation,
+        total_range: int,
+        position: float = 0.0,
+        integer_type: bool = False,
+        notch_interval_percent: float = 5.0,
+    ) -> Slider:
+        """Create and register a `Slider` widget."""
+        return self.gui.add(Slider(self.gui, id, rect, horizontal, total_range, position, integer_type, notch_interval_percent))
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         """Create and register a `Toggle` widget."""

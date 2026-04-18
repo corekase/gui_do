@@ -88,6 +88,59 @@ class Demo:
         self.mandel_toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
         g1.end_task_panel()
         # -----------------------
+        # screen sliders (float vs integer snapping)
+        # -----------------------
+        slider_range = 200
+        integer_slider_range = 24
+        slider_width = 520
+        slider_height = 48
+        slider_x = self.screen_rect.width - slider_width - 220
+        h_float_y = 70
+        h_int_y = 130
+        self.h_slider_float = g1.slider(
+            'screen_h_slider_float',
+            Rect(slider_x, h_float_y, slider_width, slider_height),
+            Orientation.Horizontal,
+            slider_range,
+            73.5,
+            False,
+        )
+        self.h_slider_int = g1.slider(
+            'screen_h_slider_int',
+            Rect(slider_x, h_int_y, slider_width, slider_height),
+            Orientation.Horizontal,
+            integer_slider_range,
+            7.5,
+            True,
+        )
+        b1.set_font('normal')
+        g1.label((slider_x - 210, h_float_y + 12), 'H Slider Float', True)
+        g1.label((slider_x - 210, h_int_y + 12), 'H Slider Integer Snap', True)
+
+        v_slider_width = 48
+        v_slider_height = 260
+        v_slider_y = 220
+        v_float_x = self.screen_rect.width - 180
+        v_int_x = self.screen_rect.width - 110
+        self.v_slider_float = g1.slider(
+            'screen_v_slider_float',
+            Rect(v_float_x, v_slider_y, v_slider_width, v_slider_height),
+            Orientation.Vertical,
+            slider_range,
+            112.25,
+            False,
+        )
+        self.v_slider_int = g1.slider(
+            'screen_v_slider_int',
+            Rect(v_int_x, v_slider_y, v_slider_width, v_slider_height),
+            Orientation.Vertical,
+            integer_slider_range,
+            12.25,
+            True,
+        )
+        g1.label((v_float_x - 10, v_slider_y - 20), 'V Float', True)
+        g1.label((v_int_x - 14, v_slider_y + v_slider_height), 'V Int Snap', True)
+        # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------
         x_pos, y_pos = 50, 150

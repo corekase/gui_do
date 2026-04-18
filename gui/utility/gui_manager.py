@@ -42,6 +42,7 @@ from ..widgets.button import Button
 from ..widgets.label import Label
 from ..widgets.canvas import Canvas
 from ..widgets.image import Image
+from ..widgets.slider import Slider
 from ..widgets.scrollbar import Scrollbar
 from ..widgets.toggle import Toggle
 from ..widgets.arrowbox import ArrowBox
@@ -280,6 +281,19 @@ class GuiManager:
     def scrollbar(self, id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int]) -> Scrollbar:
         """Scrollbar."""
         return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params)
+
+    def slider(
+        self,
+        id: str,
+        rect: Rect,
+        horizontal: Orientation,
+        total_range: int,
+        position: float = 0.0,
+        integer_type: bool = False,
+        notch_interval_percent: float = 5.0,
+    ) -> Slider:
+        """Slider."""
+        return self.ui_factory.slider(id, rect, horizontal, total_range, position, integer_type, notch_interval_percent)
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         """Toggle."""

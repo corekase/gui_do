@@ -14,7 +14,7 @@ Each release includes a link to a video demonstration as it was at the time.
 - Multiple GUI contexts (`StateManager`) so you can switch between complete interfaces.
 - A central manager (`GuiManager`) that creates widgets and routes events.
 - Windowed and screen-level widgets.
-- Common controls: buttons, toggles, button groups, scrollbars, labels, images, frames, arrow boxes, canvases, and bottom task panels.
+- Common controls: buttons, toggles, button groups, sliders, scrollbars, labels, images, frames, arrow boxes, canvases, and bottom task panels.
 - A task scheduler for background computation with UI-thread progress callbacks.
 
 ## Quick Start
@@ -90,6 +90,7 @@ def on_button():
     print("Clicked")
 
 gui.button("hello", Rect(20, 20, 120, 28), ButtonStyle.Round, "Hello", on_activate=on_button)
+gui.slider("gain", Rect(20, 60, 300, 36), Orientation.Horizontal, total_range=100, position=37.5, integer_type=False)
 
 def on_screen_event(event):
     if event.type == Event.Quit:
@@ -181,6 +182,7 @@ All of these both create and register the widget:
 - `gui.frame(id, rect)`
 - `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
 - `gui.label(position, text, shadow=False, id=None)`
+- `gui.slider(id, rect, orientation, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0)`
 - `gui.scrollbar(id, overall_rect, orientation, arrow_position, params)`
 - `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`

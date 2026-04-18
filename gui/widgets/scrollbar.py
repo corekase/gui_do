@@ -7,6 +7,7 @@ from pygame.draw import rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP
 from .arrowbox import ArrowBox
 from .frame import Frame
+from ..utility.axis_range import AxisRangeMixin
 from ..utility.widget import Widget
 from ..utility.events import colours, GuiError, Orientation, ArrowPosition, InteractiveState
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager
     from .window import Window
 
-class Scrollbar(Frame):
+class Scrollbar(Frame, AxisRangeMixin):
     """Draggable range selector with optional increment/decrement arrow boxes."""
 
     @property
@@ -68,7 +69,7 @@ class Scrollbar(Frame):
         self._registered: List[ArrowBox] = []
         self._subwidgets_bound: bool = False
         self._style: ArrowPosition = style
-        self._horizontal: Orientation = horizontal
+        self._set_orientation(horizontal)
         self._overall_rect: Rect = Rect(overall_rect)
         self._increment_rect: Optional[Rect] = None
         self._decrement_rect: Optional[Rect] = None
@@ -133,7 +134,7 @@ class Scrollbar(Frame):
         self._graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
         total, start, size, inc = params
         self.set(total, start, size, inc)
-        self._horizontal: Orientation = horizontal
+        self._set_orientation(horizontal)
         self._dragging: bool = False
         self._last_mouse_pos: Optional[int] = None
         self._hit: bool = False
@@ -240,17 +241,11 @@ class Scrollbar(Frame):
 
     def _graphical_range(self) -> int:
         """Graphical range."""
-        if self._horizontal == Orientation.Horizontal:
-            return self._graphic_rect.width
-        else:
-            return self._graphic_rect.height
+        return AxisRangeMixin._graphical_range(self)
 
     def _graphical_to_total(self, point: int) -> int:
         """Graphical to total."""
-        graphical = self._graphical_range()
-        if graphical <= 0:
-            return 0
-        return int((point * self._total_range) / graphical)
+        return int(self.pixel_to_total(point, self._total_range))
 
     def _on_added_to_gui(self) -> None:
         """On added to gui."""
@@ -287,6 +282,4 @@ class Scrollbar(Frame):
 
     def _total_to_graphical(self, point: int) -> int:
         """Total to graphical."""
-        if self._total_range <= 0:
-            return 0
-        return int((point * self._graphical_range()) / self._total_range)
+        return self.total_to_pixel(point, self._total_range)
