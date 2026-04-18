@@ -24,10 +24,7 @@ class TaskPanelStub:
 
 class GuiManagerRoutingIntegrationTests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = build_gui_manager_stub()
-        gui.screen_events = []
-        gui._screen_event_handler = lambda event: gui.screen_events.append(event)
-        return gui
+        return build_gui_manager_stub(preset="routing")
 
     def _build_window_stub(self):
         window = Window.__new__(Window)
@@ -46,7 +43,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         GuiManager.dispatch_event(gui, event)
 
         self.assertEqual(owner.events, [event])
-        self.assertEqual(gui.screen_events, [])
+        self.assertEqual(gui._screen_events, [])
 
     def test_task_panel_event_routes_to_task_panel_handler(self) -> None:
         gui = self._build_manager_stub()
@@ -57,7 +54,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         GuiManager.dispatch_event(gui, event)
 
         self.assertEqual(panel.events, [event])
-        self.assertEqual(gui.screen_events, [])
+        self.assertEqual(gui._screen_events, [])
 
     def test_window_scoped_event_routes_to_window_handler(self) -> None:
         gui = self._build_manager_stub()
@@ -68,7 +65,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         GuiManager.dispatch_event(gui, event)
 
         self.assertEqual(window.events, [event])
-        self.assertEqual(gui.screen_events, [])
+        self.assertEqual(gui._screen_events, [])
 
     def test_unowned_event_falls_back_to_screen_handler(self) -> None:
         gui = self._build_manager_stub()
@@ -76,7 +73,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
 
         GuiManager.dispatch_event(gui, event)
 
-        self.assertEqual(gui.screen_events, [event])
+        self.assertEqual(gui._screen_events, [event])
 
 
 if __name__ == "__main__":

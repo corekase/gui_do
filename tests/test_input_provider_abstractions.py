@@ -21,9 +21,7 @@ class DummyScheduler:
 def make_minimal_gui_stub(mouse_position=(0, 0)):
     gui = build_gui_manager_stub(preset="state_manager")
     gui._scheduler = DummyScheduler()
-    gui._mouse = mouse_position
-    gui.get_mouse_pos = lambda: gui._mouse
-    gui.set_mouse_pos = lambda pos, update_physical_coords=True: setattr(gui, "_mouse", pos)
+    gui._mouse_pos = mouse_position
     return gui
 
 
@@ -48,7 +46,7 @@ class InputProviderAbstractionTests(unittest.TestCase):
         state.switch_context("new")
 
         self.assertEqual(provider_calls, [True, True])
-        self.assertEqual(new_gui._mouse, (9, 7))
+        self.assertEqual(new_gui._mouse_pos, (9, 7))
 
     def test_gui_manager_uses_injected_input_providers(self) -> None:
         visible_calls = []

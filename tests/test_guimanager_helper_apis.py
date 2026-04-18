@@ -11,12 +11,7 @@ from gui.utility.widget import Widget
 
 class GuiManagerHelperApiTests(unittest.TestCase):
     def _build_manager_stub(self):
-        gui = build_gui_manager_stub()
-        gui.lock_area = lambda point: point
-        gui._screen_preamble = None
-        gui._screen_event_handler = None
-        gui._screen_postamble = None
-        return gui
+        return build_gui_manager_stub()
 
     def _build_widget_stub(self, visible=True):
         widget = Widget.__new__(Widget)
