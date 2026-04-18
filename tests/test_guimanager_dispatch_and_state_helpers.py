@@ -92,8 +92,12 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
 
     def test_lock_area_clamps_to_bounds(self) -> None:
         gui = self._build_manager_stub()
-        gui._resolve_locking_state = lambda: None
+        locker = Widget.__new__(Widget)
+        gui.locking_object = locker
+        gui.mouse_locked = True
+        gui.lock_point_pos = None
         gui.lock_area_rect = Rect(10, 20, 5, 4)
+        gui._is_registered_object = lambda obj: obj is locker
 
         self.assertEqual(GuiManager.lock_area(gui, (0, 0)), (10, 20))
         self.assertEqual(GuiManager.lock_area(gui, (99, 99)), (14, 23))

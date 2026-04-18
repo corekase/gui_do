@@ -826,23 +826,7 @@ class GuiManager:
             _logger.debug('mouse_set_pos failed: %s: %s', type(exc).__name__, exc)
 
     def lock_area(self, position: Tuple[int, int]) -> Tuple[int, int]:
-        if not isinstance(position, tuple) or len(position) != 2:
-            raise GuiError(f'position must be a tuple of (x, y), got: {position}')
-        self._resolve_locking_state()
-        if self.lock_area_rect is not None:
-            x, y = position
-            max_x = self.lock_area_rect.right - 1
-            max_y = self.lock_area_rect.bottom - 1
-            if x < self.lock_area_rect.left:
-                x = self.lock_area_rect.left
-            elif x > max_x:
-                x = max_x
-            if y < self.lock_area_rect.top:
-                y = self.lock_area_rect.top
-            elif y > max_y:
-                y = max_y
-            return (x, y)
-        return position
+        return self.lock_state.clamp_position(position)
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional[_PristineContainer] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""
