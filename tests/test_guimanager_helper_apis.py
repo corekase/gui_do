@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from pygame import Rect
 
 from gui.utility.constants import GuiError
+from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
@@ -22,6 +23,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui._screen_postamble = None
         gui.input_emitter = InputEventEmitter(gui)
         gui.drag_state = DragStateController(gui)
+        gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
         return gui

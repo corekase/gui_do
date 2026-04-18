@@ -5,6 +5,7 @@ from pygame import Rect
 from pygame.locals import MOUSEBUTTONDOWN
 
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 
@@ -48,6 +49,7 @@ class DragStartGuiStub:
         self.lock_area_calls = []
         self.input_emitter = InputEventEmitter(self)
         self.drag_state = DragStateController(self)
+        self.focus_state = FocusStateController(self)
         self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):

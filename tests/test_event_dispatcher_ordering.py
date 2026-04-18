@@ -6,6 +6,7 @@ from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, 
 
 from gui.utility.constants import Event
 from gui.utility.event_dispatcher import EventDispatcher
+from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 
@@ -73,6 +74,7 @@ class OrderingGuiStub:
         self.lock_point_tolerance_rect = None
         self.input_emitter = InputEventEmitter(self)
         self.drag_state = DragStateController(self)
+        self.focus_state = FocusStateController(self)
         self.lock_state = LockStateController(self)
 
     def _resolve_locking_state(self):
@@ -92,6 +94,9 @@ class OrderingGuiStub:
 
     def update_focus(self, _widget):
         return None
+
+    def update_active_window(self):
+        self.focus_state.update_active_window()
 
     def convert_to_window(self, point, _window):
         return point

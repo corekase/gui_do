@@ -15,12 +15,7 @@ class InputTargetResolver:
         self.gui: "GuiManager" = gui_manager
 
     def update_active_window(self) -> None:
-        top_window = None
-        for window in self.gui.windows[::-1]:
-            if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
-                top_window = window
-                break
-        self.gui.active_window = top_window
+        self.gui.update_active_window()
 
     def process_screen_widgets(self, event: PygameEvent) -> InputAction:
         hit_any = False

@@ -1,6 +1,7 @@
 import unittest
 
 from gui.utility.constants import GuiError
+from gui.utility.focus_state import FocusStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.widget import Widget
@@ -16,6 +17,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
         gui.task_panel = None
         gui._task_panel_capture = False
         gui._active_object = None
+        gui.focus_state = FocusStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
         return gui
 

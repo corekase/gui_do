@@ -9,6 +9,7 @@ from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, O
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
 from .event_dispatcher import EventDispatcher
+from .focus_state import FocusStateController
 from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
 from .layout_manager import LayoutManager
@@ -231,18 +232,11 @@ class GuiManager:
 
     @property
     def current_widget(self):
-        return self._resolve_current_widget()
+        return self.focus_state.resolve_current_widget()
 
     @current_widget.setter
     def current_widget(self, value):
-        if value is not None:
-            if not isinstance(value, Widget) or not self._is_registered_object(value):
-                value = None
-        current = self._resolve_current_widget()
-        if current != value:
-            if current is not None:
-                current.leave()
-            self._current_widget = value
+        self.focus_state.set_current_widget(value)
 
     @property
     def scheduler(self):
@@ -333,6 +327,7 @@ class GuiManager:
             raise GuiError('mouse_set_visible must be callable')
         self.input_emitter: InputEventEmitter = InputEventEmitter(self)
         self.drag_state: DragStateController = DragStateController(self)
+        self.focus_state: FocusStateController = FocusStateController(self)
         self.lock_state: LockStateController = LockStateController(self)
         self.event_dispatcher: EventDispatcher = EventDispatcher(self)
         self.layout_manager: LayoutManager = LayoutManager()
@@ -787,7 +782,10 @@ class GuiManager:
         obj.surface.blit(obj.pristine, (x, y), area)
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
-        self.current_widget = new_hover
+        self.focus_state.update_focus(new_hover)
+
+    def update_active_window(self) -> None:
+        self.focus_state.update_active_window()
 
     def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[gWindow]:
         if getattr(event, 'type', None) != Event.Task:
@@ -845,12 +843,7 @@ class GuiManager:
         return self.object_registry.resolve_active_object()
 
     def _resolve_current_widget(self) -> Optional[Widget]:
-        if self._current_widget is None:
-            return None
-        if not self._is_registered_object(self._current_widget):
-            self._current_widget = None
-            return None
-        return self._current_widget
+        return self.focus_state.resolve_current_widget()
 
     def _resolve_locking_state(self) -> Optional[Widget]:
         return self.lock_state.resolve()
