@@ -10,6 +10,7 @@ from gui.utility.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
 from gui.utility.guimanager import GuiManager
+from gui.utility.layout_coordinator import LayoutCoordinator
 from gui.utility.lifecycle import LifecycleCoordinator
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.pointer_coordinator import PointerCoordinator
@@ -34,6 +35,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.object_registry = GuiObjectRegistry(gui)
         gui.event_delivery = EventDeliveryCoordinator(gui)
         gui.graphics = GraphicsCoordinator(gui)
+        gui.layout = LayoutCoordinator(gui)
         gui.lifecycle = LifecycleCoordinator(gui)
         gui.pointer = PointerCoordinator(gui)
         gui.widget_state = WidgetStateCoordinator(gui)

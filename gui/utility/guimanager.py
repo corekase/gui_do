@@ -14,6 +14,7 @@ from .focus_state import FocusStateController
 from .graphics_coordinator import GraphicsCoordinator
 from .input_emitter import InputEventEmitter
 from .input_state import DragStateController, LockStateController
+from .layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator
 from .object_registry import GuiObjectRegistry
@@ -365,6 +366,7 @@ class GuiManager:
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
+        self.layout: LayoutCoordinator = LayoutCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
@@ -518,15 +520,7 @@ class GuiManager:
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
         """Configure grid cell sizing used by gridded."""
-        if width <= 0:
-            raise GuiError(f'grid width must be positive, got: {width}')
-        if height <= 0:
-            raise GuiError(f'grid height must be positive, got: {height}')
-        if spacing < 0:
-            raise GuiError(f'grid spacing cannot be negative, got: {spacing}')
-        if not isinstance(anchor, tuple) or len(anchor) != 2:
-            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
-        self.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
+        self.layout.set_grid_properties(anchor, width, height, spacing, use_rect)
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
@@ -598,7 +592,7 @@ class GuiManager:
         return self.pointer.convert_to_window(point, window)
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
-        return self.layout_manager.get_cell(x, y)
+        return self.layout.gridded(x, y)
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""
