@@ -2,6 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from gui.utility.constants import Event, GuiError
+from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.guimanager import GuiManager
 
 
@@ -10,6 +11,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui = GuiManager.__new__(GuiManager)
         gui.windows = []
         gui._task_owner_by_id = {}
+        gui.event_delivery = EventDeliveryCoordinator(gui)
         return gui
 
     def test_set_task_owner_rejects_unhashable_task_id(self) -> None:

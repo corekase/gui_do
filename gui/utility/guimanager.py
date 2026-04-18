@@ -8,6 +8,7 @@ from .scheduler import Timers, Scheduler
 from .constants import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation, InteractiveState
 from .bitmapfactory import BitmapFactory
 from .buttongroup_mediator import ButtonGroupMediator
+from .event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
 from .input_emitter import InputEventEmitter
@@ -360,6 +361,7 @@ class GuiManager:
         self._scheduler: Scheduler = Scheduler(self)
         self.timers: Timers = Timers()
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
+        self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self._label_sequence: int = 0
         self._screen_preamble: Callable[[], None] = _noop
@@ -677,21 +679,7 @@ class GuiManager:
             widget.visible = True
 
     def dispatch_event(self, event: BaseEvent) -> None:
-        task_owner = self._resolve_task_event_owner(event)
-        if task_owner is not None:
-            task_owner.handle_event(event)
-            return
-        if getattr(event, 'task_panel', False):
-            if self.task_panel is not None and self.task_panel.visible:
-                self.task_panel.handle_event(event)
-                return
-        event_window = getattr(event, 'window', None)
-        if not isinstance(event_window, gWindow):
-            event_window = None
-        if event_window is not None and event_window in self.windows and event_window.visible:
-            event_window.handle_event(event)
-            return
-        self._screen_event_handler(event)
+        self.event_delivery.dispatch_event(event)
 
     def event(self, event_type: Event, **kwargs: object) -> GuiEvent:
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
@@ -788,21 +776,7 @@ class GuiManager:
         self.focus_state.update_active_window()
 
     def _resolve_task_event_owner(self, event: BaseEvent) -> Optional[gWindow]:
-        if getattr(event, 'type', None) != Event.Task:
-            return None
-        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
-        if task_id is None:
-            return None
-        try:
-            hash(task_id)
-        except TypeError:
-            return None
-        owner = self._task_owner_by_id.get(task_id)
-        if owner is None:
-            return None
-        if owner not in self.windows or not owner.visible:
-            return None
-        return owner
+        return self.event_delivery.resolve_task_event_owner(event)
 
     def _build_centered_recenter_rect(self, coverage: float = 0.8) -> Rect:
         if coverage <= 0.0 or coverage > 1.0:

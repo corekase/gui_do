@@ -1,6 +1,7 @@
 import unittest
 
 from gui.utility.constants import Event
+from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
 from gui.utility.guimanager import GuiManager
 from gui.utility.object_registry import GuiObjectRegistry
@@ -33,6 +34,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         gui._screen_event_handler = lambda event: gui.screen_events.append(event)
         gui.focus_state = FocusStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.event_delivery = EventDeliveryCoordinator(gui)
         return gui
 
     def _build_window_stub(self):

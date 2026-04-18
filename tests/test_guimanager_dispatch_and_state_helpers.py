@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from pygame import Rect
 
 from gui.utility.constants import Event
+from gui.utility.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
 from gui.utility.input_emitter import InputEventEmitter
 from gui.utility.input_state import DragStateController, LockStateController
@@ -28,6 +29,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui.focus_state = FocusStateController(gui)
         gui.lock_state = LockStateController(gui)
         gui.object_registry = GuiObjectRegistry(gui)
+        gui.event_delivery = EventDeliveryCoordinator(gui)
         return gui
 
     def test_dispatch_event_task_panel_hidden_falls_back_to_screen(self) -> None:
