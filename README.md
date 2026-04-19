@@ -158,6 +158,21 @@ From `gui` package import:
 - `ArrowPosition`
 - `ButtonStyle`
 
+## Colours
+
+Importing `colours` is optional. You only need it if you want direct access to the GUI color dictionary values.
+
+Dictionary keys and values:
+
+- `colours['full']`: `(255, 255, 255)`
+- `colours['light']`: `(0, 200, 200)`
+- `colours['medium']`: `(0, 150, 150)`
+- `colours['dark']`: `(0, 100, 100)`
+- `colours['none']`: `(0, 0, 0)`
+- `colours['text']`: `(255, 255, 255)`
+- `colours['highlight']`: `(238, 230, 0)`
+- `colours['background']`: `(0, 60, 60)`
+
 ## Creating UI: Practical Pattern
 
 The demo follows this sequence, which is a solid default:
