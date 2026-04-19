@@ -85,300 +85,14 @@ class Demo:
         self.mandel_toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
         g1.end_task_panel()
         # -----------------------
-        # screen sliders (float vs integer snapping)
+        # screen widget layout demos (enabled and disabled)
         # -----------------------
-        slider_range = 200
-        integer_slider_range = 24
         top_section_x = 70
         top_section_y = 70
         half_height = self.screen_rect.height // 2
         bottom_section_y = half_height + 30
-        slider_width = 420
-        slider_height = 48
-        slider_x = top_section_x
-        h_float_y = top_section_y + 282
-        h_int_y = top_section_y + 340
-        self.h_slider_float = g1.slider(
-            'screen_h_slider_float',
-            Rect(slider_x, h_float_y, slider_width, slider_height),
-            Orientation.Horizontal,
-            slider_range,
-            0.0,
-            False,
-        )
-        self.h_slider_int = g1.slider(
-            'screen_h_slider_int',
-            Rect(slider_x, h_int_y, slider_width, slider_height),
-            Orientation.Horizontal,
-            integer_slider_range,
-            0,
-            True,
-        )
-        b1.set_font('normal')
-        g1.label((slider_x, h_float_y - 20), 'H Slider Float', True)
-        g1.label((slider_x, h_int_y - 20), 'H Slider Integer Snap', True)
-        self.h_slider_float_value = g1.label((slider_x + slider_width + 12, h_float_y + 12), '0.00', True)
-        self.h_slider_int_value = g1.label((slider_x + slider_width + 12, h_int_y + 12), '0', True)
-
-        v_slider_width = 48
-        v_slider_height = 220
-        v_slider_y = top_section_y + 64
-        v_float_x = top_section_x + 510
-        v_int_x = top_section_x + 632
-        self.v_slider_float = g1.slider(
-            'screen_v_slider_float',
-            Rect(v_float_x, v_slider_y, v_slider_width, v_slider_height),
-            Orientation.Vertical,
-            slider_range,
-            0.0,
-            False,
-        )
-        self.v_slider_int = g1.slider(
-            'screen_v_slider_int',
-            Rect(v_int_x, v_slider_y, v_slider_width, v_slider_height),
-            Orientation.Vertical,
-            integer_slider_range,
-            0,
-            True,
-        )
-        g1.label((v_float_x - 8, v_slider_y - 42), 'V Float', True)
-        g1.label((v_int_x - 12, v_slider_y - 42), 'V Int Snap', True)
-        self.v_slider_float_value = g1.label((v_float_x - 6, v_slider_y + v_slider_height + 8), '0.00', True)
-        self.v_slider_int_value = g1.label((v_int_x + 8, v_slider_y + v_slider_height + 8), '0', True)
-        # -----------------------
-        # screen demo widgets
-        # -----------------------
-        screen_demo_x = top_section_x
-        screen_demo_y = top_section_y
-        g1.label((screen_demo_x, screen_demo_y), 'Screen Widget Demos', True)
-        g1.button(
-            'screen_demo_button',
-            Rect(screen_demo_x, screen_demo_y + 34, 138, widget_height),
-            ButtonStyle.Round,
-            'Button',
-        )
-        g1.toggle(
-            'screen_demo_toggle',
-            Rect(screen_demo_x + 148, screen_demo_y + 34, 146, widget_height),
-            ButtonStyle.Box,
-            False,
-            'Toggle On',
-            'Toggle Off',
-        )
-        g1.image(
-            'screen_demo_image',
-            Rect(screen_demo_x + 316, screen_demo_y + 34, 96, 96),
-            'realize.png',
-            False,
-        )
-        g1.label((screen_demo_x, screen_demo_y + 74), 'Group One', True)
-        g1.button_group(
-            'screen_demo_group_a',
-            'screen_demo_group_a1',
-            Rect(screen_demo_x, screen_demo_y + 96, 132, widget_height),
-            ButtonStyle.Radio,
-            'One A',
-        )
-        g1.button_group(
-            'screen_demo_group_a',
-            'screen_demo_group_a2',
-            Rect(screen_demo_x, screen_demo_y + 130, 132, widget_height),
-            ButtonStyle.Radio,
-            'One B',
-        )
-        g1.button_group(
-            'screen_demo_group_a',
-            'screen_demo_group_a3',
-            Rect(screen_demo_x, screen_demo_y + 164, 132, widget_height),
-            ButtonStyle.Radio,
-            'One C',
-        )
-        g1.label((screen_demo_x + 150, screen_demo_y + 74), 'Group Two', True)
-        g1.button_group(
-            'screen_demo_group_b',
-            'screen_demo_group_b1',
-            Rect(screen_demo_x + 150, screen_demo_y + 96, 132, widget_height),
-            ButtonStyle.Check,
-            'Two A',
-        )
-        g1.button_group(
-            'screen_demo_group_b',
-            'screen_demo_group_b2',
-            Rect(screen_demo_x + 150, screen_demo_y + 130, 132, widget_height),
-            ButtonStyle.Check,
-            'Two B',
-        )
-        g1.button_group(
-            'screen_demo_group_b',
-            'screen_demo_group_b3',
-            Rect(screen_demo_x + 150, screen_demo_y + 164, 132, widget_height),
-            ButtonStyle.Check,
-            'Two C',
-        )
-        g1.scrollbar(
-            'screen_demo_scroll_h',
-            Rect(screen_demo_x, screen_demo_y + 220, 342, 20),
-            Orientation.Horizontal,
-            ArrowPosition.Split,
-            (100, 0, 30, 10),
-        )
-        g1.scrollbar(
-            'screen_demo_scroll_v',
-            Rect(screen_demo_x + 450, screen_demo_y + 34, 20, 180),
-            Orientation.Vertical,
-            ArrowPosition.Split,
-            (100, 0, 30, 10),
-        )
-        # -----------------------
-        # disabled widget showcase
-        # -----------------------
-        disabled_x = top_section_x
-        disabled_y = bottom_section_y
-        disabled_offset_y = disabled_y - screen_demo_y
-        g1.label((disabled_x, disabled_y), 'Disabled Widgets', True)
-        disabled_button = g1.button(
-            'disabled_demo_button',
-            Rect(screen_demo_x, screen_demo_y + 34 + disabled_offset_y, 138, widget_height),
-            ButtonStyle.Round,
-            'Button',
-        )
-        disabled_button.disabled = True
-        disabled_toggle = g1.toggle(
-            'disabled_demo_toggle',
-            Rect(screen_demo_x + 148, screen_demo_y + 34 + disabled_offset_y, 146, widget_height),
-            ButtonStyle.Box,
-            False,
-            'Toggle On',
-            'Toggle Off',
-        )
-        disabled_toggle.disabled = True
-        disabled_image = g1.image(
-            'disabled_demo_image',
-            Rect(screen_demo_x + 316, screen_demo_y + 34 + disabled_offset_y, 96, 96),
-            'realize.png',
-            False,
-        )
-        disabled_image.disabled = True
-        disabled_group_one_label = g1.label((screen_demo_x, screen_demo_y + 74 + disabled_offset_y), 'Group One', True)
-        disabled_group_one_label.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_a',
-            'disabled_demo_group_a1',
-            Rect(screen_demo_x, screen_demo_y + 96 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Radio,
-            'One A',
-        )
-        disabled_group.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_a',
-            'disabled_demo_group_a2',
-            Rect(screen_demo_x, screen_demo_y + 130 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Radio,
-            'One B',
-        )
-        disabled_group.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_a',
-            'disabled_demo_group_a3',
-            Rect(screen_demo_x, screen_demo_y + 164 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Radio,
-            'One C',
-        )
-        disabled_group.disabled = True
-        disabled_group_two_label = g1.label((screen_demo_x + 150, screen_demo_y + 74 + disabled_offset_y), 'Group Two', True)
-        disabled_group_two_label.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_b',
-            'disabled_demo_group_b1',
-            Rect(screen_demo_x + 150, screen_demo_y + 96 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Check,
-            'Two A',
-        )
-        disabled_group.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_b',
-            'disabled_demo_group_b2',
-            Rect(screen_demo_x + 150, screen_demo_y + 130 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Check,
-            'Two B',
-        )
-        disabled_group.disabled = True
-        disabled_group = g1.button_group(
-            'disabled_demo_group_b',
-            'disabled_demo_group_b3',
-            Rect(screen_demo_x + 150, screen_demo_y + 164 + disabled_offset_y, 132, widget_height),
-            ButtonStyle.Check,
-            'Two C',
-        )
-        disabled_group.disabled = True
-        disabled_slider = g1.slider(
-            'disabled_h_slider_float',
-            Rect(slider_x, h_float_y + disabled_offset_y, slider_width, slider_height),
-            Orientation.Horizontal,
-            slider_range,
-            0.0,
-            False,
-        )
-        disabled_slider.disabled = True
-        disabled_h_slider_float_label = g1.label((slider_x, h_float_y - 20 + disabled_offset_y), 'H Slider Float', True)
-        disabled_h_slider_float_label.disabled = True
-        disabled_h_slider_float_value = g1.label((slider_x + slider_width + 12, h_float_y + 12 + disabled_offset_y), '0.00', True)
-        disabled_h_slider_float_value.disabled = True
-        disabled_slider = g1.slider(
-            'disabled_h_slider_int',
-            Rect(slider_x, h_int_y + disabled_offset_y, slider_width, slider_height),
-            Orientation.Horizontal,
-            integer_slider_range,
-            0,
-            True,
-        )
-        disabled_slider.disabled = True
-        disabled_h_slider_int_label = g1.label((slider_x, h_int_y - 20 + disabled_offset_y), 'H Slider Integer Snap', True)
-        disabled_h_slider_int_label.disabled = True
-        disabled_h_slider_int_value = g1.label((slider_x + slider_width + 12, h_int_y + 12 + disabled_offset_y), '0', True)
-        disabled_h_slider_int_value.disabled = True
-        disabled_scrollbar = g1.scrollbar(
-            'disabled_demo_scrollbar',
-            Rect(screen_demo_x + 450, screen_demo_y + 34 + disabled_offset_y, 20, 180),
-            Orientation.Vertical,
-            ArrowPosition.Split,
-            (100, 0, 30, 10),
-        )
-        disabled_scrollbar.disabled = True
-        disabled_scrollbar = g1.scrollbar(
-            'disabled_demo_scroll_h',
-            Rect(screen_demo_x, screen_demo_y + 220 + disabled_offset_y, 342, 20),
-            Orientation.Horizontal,
-            ArrowPosition.Split,
-            (100, 0, 30, 10),
-        )
-        disabled_scrollbar.disabled = True
-        disabled_slider = g1.slider(
-            'disabled_v_slider_float',
-            Rect(v_float_x, v_slider_y + disabled_offset_y, v_slider_width, v_slider_height),
-            Orientation.Vertical,
-            slider_range,
-            0.0,
-            False,
-        )
-        disabled_slider.disabled = True
-        disabled_v_float_label = g1.label((v_float_x - 8, v_slider_y - 42 + disabled_offset_y), 'V Float', True)
-        disabled_v_float_label.disabled = True
-        disabled_v_float_value = g1.label((v_float_x - 6, v_slider_y + v_slider_height + 8 + disabled_offset_y), '0.00', True)
-        disabled_v_float_value.disabled = True
-        disabled_slider = g1.slider(
-            'disabled_v_slider_int',
-            Rect(v_int_x, v_slider_y + disabled_offset_y, v_slider_width, v_slider_height),
-            Orientation.Vertical,
-            integer_slider_range,
-            0,
-            True,
-        )
-        disabled_slider.disabled = True
-        disabled_v_int_label = g1.label((v_int_x - 12, v_slider_y - 42 + disabled_offset_y), 'V Int Snap', True)
-        disabled_v_int_label.disabled = True
-        disabled_v_int_value = g1.label((v_int_x + 8, v_slider_y + v_slider_height + 8 + disabled_offset_y), '0', True)
-        disabled_v_int_value.disabled = True
+        self._create_gui1_screen_widgets_layout(g1, top_section_x, top_section_y)
+        self._create_gui1_screen_widgets_layout(g1, top_section_x, bottom_section_y, disabled=True)
         # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------
@@ -759,6 +473,183 @@ class Demo:
         self.engine.run()
 
     # gui1 and shared screen helpers
+    def _create_gui1_screen_widgets_layout(self, gui, base_x, base_y, disabled=False):
+        widget_height = 28
+        slider_range = 200
+        integer_slider_range = 24
+        slider_width = 420
+        slider_height = 48
+        v_slider_width = 48
+        v_slider_height = 220
+        id_prefix = 'disabled' if disabled else 'screen'
+        title = 'Disabled Widgets' if disabled else 'Widget Demos'
+        screen_widgets_area_height = 340 + slider_height
+        screen_widgets_right_edge = base_x + 680
+        demo_canvas_size = screen_widgets_area_height
+        demo_canvas_x = screen_widgets_right_edge + 72
+        demo_canvas_y = base_y
+        frame_rect = Rect(base_x + 316, base_y + 136, 132, 76)
+        demo_canvas_rect = Rect(demo_canvas_x, demo_canvas_y, demo_canvas_size, demo_canvas_size)
+
+        def maybe_disable(widget, disable_widget=True):
+            if disabled and disable_widget:
+                widget.disabled = True
+            return widget
+
+        # heading and basic widget samples
+        gui.label((base_x, base_y), title, True)
+        maybe_disable(
+            gui.button(
+                f'{id_prefix}_demo_button',
+                Rect(base_x, base_y + 34, 138, widget_height),
+                ButtonStyle.Round,
+                'Button',
+            )
+        )
+        maybe_disable(
+            gui.toggle(
+                f'{id_prefix}_demo_toggle',
+                Rect(base_x + 148, base_y + 34, 146, widget_height),
+                ButtonStyle.Box,
+                False,
+                'Toggle On',
+                'Toggle Off',
+            )
+        )
+        maybe_disable(
+            gui.image(
+                f'{id_prefix}_demo_image',
+                Rect(base_x + 316, base_y + 34, 96, 96),
+                'realize.png',
+                False,
+            )
+        )
+        maybe_disable(
+            gui.frame(
+                f'{id_prefix}_demo_frame',
+                frame_rect,
+            )
+        )
+        maybe_disable(gui.label((frame_rect.x + 10, frame_rect.y + 8), 'Frame', True))
+        maybe_disable(
+            gui.canvas(
+                f'{id_prefix}_demo_canvas',
+                demo_canvas_rect,
+            )
+        )
+        maybe_disable(gui.label((demo_canvas_rect.x + 10, demo_canvas_rect.y + 8), 'Canvas', True))
+        # grouped button samples
+        maybe_disable(gui.label((base_x, base_y + 74), 'Group One', True))
+        for index, label in enumerate(('One A', 'One B', 'One C')):
+            maybe_disable(
+                gui.button_group(
+                    f'{id_prefix}_demo_group_a',
+                    f'{id_prefix}_demo_group_a{index + 1}',
+                    Rect(base_x, base_y + 96 + (34 * index), 132, widget_height),
+                    ButtonStyle.Radio,
+                    label,
+                )
+            )
+        maybe_disable(gui.label((base_x + 150, base_y + 74), 'Group Two', True))
+        for index, label in enumerate(('Two A', 'Two B', 'Two C')):
+            maybe_disable(
+                gui.button_group(
+                    f'{id_prefix}_demo_group_b',
+                    f'{id_prefix}_demo_group_b{index + 1}',
+                    Rect(base_x + 150, base_y + 96 + (34 * index), 132, widget_height),
+                    ButtonStyle.Check,
+                    label,
+                )
+            )
+
+        maybe_disable(
+            gui.scrollbar(
+                f'{id_prefix}_demo_scroll_h',
+                Rect(base_x, base_y + 220, 342, 20),
+                Orientation.Horizontal,
+                ArrowPosition.Split,
+                (100, 0, 30, 10),
+            )
+        )
+        vertical_scrollbar_id = f'{id_prefix}_demo_scroll_v'
+        if disabled:
+            vertical_scrollbar_id = 'disabled_demo_scrollbar'
+        maybe_disable(
+            gui.scrollbar(
+                vertical_scrollbar_id,
+                Rect(base_x + 450, base_y + 34, 20, 180),
+                Orientation.Vertical,
+                ArrowPosition.Split,
+                (100, 0, 30, 10),
+            )
+        )
+
+        # slider samples
+        h_float_y = base_y + 282
+        h_int_y = base_y + 340
+        h_slider_float = maybe_disable(
+            gui.slider(
+                f'{id_prefix}_h_slider_float',
+                Rect(base_x, h_float_y, slider_width, slider_height),
+                Orientation.Horizontal,
+                slider_range,
+                0.0,
+                False,
+            )
+        )
+        h_slider_int = maybe_disable(
+            gui.slider(
+                f'{id_prefix}_h_slider_int',
+                Rect(base_x, h_int_y, slider_width, slider_height),
+                Orientation.Horizontal,
+                integer_slider_range,
+                0,
+                True,
+            )
+        )
+        maybe_disable(gui.label((base_x, h_float_y - 20), 'H Slider Float', True))
+        maybe_disable(gui.label((base_x, h_int_y - 20), 'H Slider Integer Snap', True))
+        h_slider_float_value = maybe_disable(gui.label((base_x + slider_width + 12, h_float_y + 12), '0.00', True))
+        h_slider_int_value = maybe_disable(gui.label((base_x + slider_width + 12, h_int_y + 12), '0', True))
+
+        v_slider_y = base_y + 64
+        v_float_x = base_x + 510
+        v_int_x = base_x + 632
+        v_slider_float = maybe_disable(
+            gui.slider(
+                f'{id_prefix}_v_slider_float',
+                Rect(v_float_x, v_slider_y, v_slider_width, v_slider_height),
+                Orientation.Vertical,
+                slider_range,
+                0.0,
+                False,
+            )
+        )
+        v_slider_int = maybe_disable(
+            gui.slider(
+                f'{id_prefix}_v_slider_int',
+                Rect(v_int_x, v_slider_y, v_slider_width, v_slider_height),
+                Orientation.Vertical,
+                integer_slider_range,
+                0,
+                True,
+            )
+        )
+        maybe_disable(gui.label((v_float_x - 8, v_slider_y - 42), 'V Float', True))
+        maybe_disable(gui.label((v_int_x - 12, v_slider_y - 42), 'V Int Snap', True))
+        v_slider_float_value = maybe_disable(gui.label((v_float_x - 6, v_slider_y + v_slider_height + 8), '0.00', True))
+        v_slider_int_value = maybe_disable(gui.label((v_int_x + 8, v_slider_y + v_slider_height + 8), '0', True))
+
+        if not disabled:
+            self.h_slider_float = h_slider_float
+            self.h_slider_int = h_slider_int
+            self.h_slider_float_value = h_slider_float_value
+            self.h_slider_int_value = h_slider_int_value
+            self.v_slider_float = v_slider_float
+            self.v_slider_int = v_slider_int
+            self.v_slider_float_value = v_slider_float_value
+            self.v_slider_int_value = v_slider_int_value
+
     def _update_gui1_window_visibility(self):
         self.button_group_win.visible = self.buttons_toggle.pushed
         self.scrollbar_win.visible = self.scrollbars_toggle.pushed
