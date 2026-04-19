@@ -5,7 +5,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from ..utility.events import GuiError
-from ..utility.resource_error import DataResourceErrorHandler
+from ..utility.gui_utils.resource_error import DataResourceErrorHandler
 from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:

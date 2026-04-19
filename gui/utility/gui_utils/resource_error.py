@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from .events import GuiError
+from ..events import GuiError
 
 
 class DataResourceErrorHandler:

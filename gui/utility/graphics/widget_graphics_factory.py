@@ -11,7 +11,7 @@ from pygame.draw import rect, line, polygon, circle
 from pygame.transform import rotate, smoothscale
 from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 from ..events import colours, GuiError, ButtonStyle
-from ..resource_error import DataResourceErrorHandler
+from ..gui_utils.resource_error import DataResourceErrorHandler
 from .button_style_strategies import build_default_button_style_strategies
 from .cursor_asset import CursorAsset
 from .interactive_visuals import InteractiveVisuals

@@ -8,7 +8,7 @@ from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEMOTION
 from gui.utility.events import Event
 from gui.utility.event_dispatcher import EventDispatcher
 from gui.utility.focus_state import FocusStateController
-from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
 from gui.utility.scheduler import Scheduler, Task

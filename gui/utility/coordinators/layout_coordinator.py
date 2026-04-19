@@ -28,7 +28,3 @@ class LayoutCoordinator:
         if not isinstance(anchor, tuple) or len(anchor) != 2:
             raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
         self.gui.layout_manager.set_properties(anchor, width, height, spacing, use_rect)
-
-    def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
-        """Gridded."""
-        return self.gui.layout_manager.get_cell(x, y)

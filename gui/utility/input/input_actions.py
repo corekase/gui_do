@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Dict, Optional
-from .events import Event
+from ..events import Event
 
 if TYPE_CHECKING:
-    from .gui_utils.gui_event import GuiEvent
+    from ..gui_utils.gui_event import GuiEvent
 
 
 @dataclass

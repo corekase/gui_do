@@ -5,8 +5,8 @@ from pygame import Rect
 from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 
 from gui.utility.events import Event
-from gui.utility.input_actions import InputAction
-from gui.utility.input_targets import InputTargetResolver
+from gui.utility.input.input_actions import InputAction
+from gui.utility.input.input_targets import InputTargetResolver
 
 
 class _GuiEventStub:

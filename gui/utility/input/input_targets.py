@@ -4,11 +4,11 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
-from .events import Event
+from ..events import Event
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 @dataclass(frozen=True)

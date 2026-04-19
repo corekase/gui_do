@@ -4,8 +4,8 @@ import pygame
 from pygame.locals import KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, QUIT
 
 from gui.utility.events import Event
-from gui.utility.input_actions import InputAction
-from gui.utility.input_emitter import InputEventEmitter
+from gui.utility.input.input_actions import InputAction
+from gui.utility.input.input_emitter import InputEventEmitter
 
 
 class _GuiEventStub:

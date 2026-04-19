@@ -7,20 +7,11 @@ from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 
 from ..events import BaseEvent, GuiError, InteractiveState
 from ..intermediates.widget import Widget
+from ..lifecycle.lifecycle_callbacks import _noop, _noop_event
 from ...widgets.frame import Frame as Frame
 
 if TYPE_CHECKING:
     from ..gui_manager import GuiManager
-
-
-def _noop() -> None:
-    """Default no-op callback used when lifecycle handlers are omitted."""
-    pass
-
-
-def _noop_event(_: BaseEvent) -> None:
-    """Default no-op event callback used when no handler is supplied."""
-    pass
 
 
 class _ManagedTaskPanel:

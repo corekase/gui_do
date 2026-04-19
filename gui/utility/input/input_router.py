@@ -3,12 +3,12 @@ from __future__ import annotations
 from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEMOTION
 from typing import TYPE_CHECKING
-from .events import Event
+from ..events import Event
 from .input_actions import InputAction
 from .input_targets import InputTargetResolver
 
 if TYPE_CHECKING:
-    from .gui_manager import GuiManager
+    from ..gui_manager import GuiManager
 
 
 class InputRouter:

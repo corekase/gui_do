@@ -6,7 +6,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 
 from ..gui_utils.drag_state_model import DragState
-from ..input_actions import InputAction
+from .input_actions import InputAction
 
 if TYPE_CHECKING:
     from ..gui_manager import GuiManager
@@ -23,10 +23,6 @@ class DragStateController:
     def state(self) -> DragState:
         """Return mutable drag-state model."""
         return self.gui._drag_state
-
-    def _pass_event(self) -> InputAction:
-        """Return a no-op dispatcher action."""
-        return InputAction.pass_event()
 
     def _commit_drag_mutation(self, mutation) -> None:
         """Apply a mutation callback to drag-state model."""
@@ -88,7 +84,7 @@ class DragStateController:
         """Handle drag release/motion events and update window position."""
         if not self._has_valid_drag_context():
             self.reset()
-            return self._pass_event()
+            return InputAction.pass_event()
         if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
             self._release_drag()
         elif event.type == MOUSEMOTION and self.state.dragging:
@@ -97,4 +93,4 @@ class DragStateController:
             y = self.state.dragging_window.y + rel[1]
             self.gui.set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
             self._commit_drag_mutation(lambda state: setattr(state.dragging_window, 'position', (x, y)))
-        return self._pass_event()
+        return InputAction.pass_event()

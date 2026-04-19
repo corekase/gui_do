@@ -3,7 +3,7 @@ import unittest
 
 from gui.utility.graphics.widget_graphics_factory import WidgetGraphicsFactory
 from gui.utility.events import GuiError
-from gui.utility.resource_error import DataResourceErrorHandler
+from gui.utility.gui_utils.resource_error import DataResourceErrorHandler
 
 
 class ResourcePathHardeningTests(unittest.TestCase):

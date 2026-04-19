@@ -10,7 +10,6 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
 
         required_attrs = [
             "object_registry",
-            "dispatch_bridge",
             "event_delivery",
             "event_input",
             "graphics",

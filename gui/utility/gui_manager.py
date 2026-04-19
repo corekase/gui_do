@@ -10,14 +10,13 @@ from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .graphics.widget_graphics_factory import WidgetGraphicsFactory
 from .intermediates.buttongroup_mediator import ButtonGroupMediator
-from .coordinators.dispatch_bridge_coordinator import DispatchBridgeCoordinator
 from .coordinators.event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
 from .gui_utils.focus_state_model import FocusState
 from .gui_utils.drag_state_model import DragState
 from .coordinators.graphics_coordinator import GraphicsCoordinator
-from .input_emitter import InputEventEmitter
+from .input.input_emitter import InputEventEmitter
 from .coordinators.input_event_coordinator import InputEventCoordinator
 from .gui_utils.input_providers import InputProviders
 from .input.drag_state_controller import DragStateController
@@ -396,7 +395,6 @@ class GuiManager:
         self.timers: Timers = Timers()
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
-        self.dispatch_bridge: DispatchBridgeCoordinator = DispatchBridgeCoordinator(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
         self.event_input: InputEventCoordinator = InputEventCoordinator(self)
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
@@ -585,7 +583,7 @@ class GuiManager:
 
     def handle_event(self, event: PygameEvent) -> "GuiEvent":
         """Handle event."""
-        return self.dispatch_bridge.handle_event(event)
+        return self.event_dispatcher.handle(event)
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
@@ -609,7 +607,7 @@ class GuiManager:
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         """Gridded."""
-        return self.layout.gridded(x, y)
+        return self.layout_manager.get_cell(x, y)
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""

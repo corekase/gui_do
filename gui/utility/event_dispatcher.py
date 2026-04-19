@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pygame.event import Event as PygameEvent
 from typing import TYPE_CHECKING
-from .input_emitter import InputEventEmitter
-from .input_router import InputRouter
+from .input.input_emitter import InputEventEmitter
+from .input.input_router import InputRouter
 
 if TYPE_CHECKING:
     from .gui_utils.gui_event import GuiEvent
@@ -20,12 +20,5 @@ class EventDispatcher:
 
     def handle(self, event: PygameEvent) -> "GuiEvent":
         """Handle."""
-        return self._emit_action(self._route_action(event))
-
-    def _route_action(self, event: PygameEvent):
-        """Route action."""
-        return self.router.route(event)
-
-    def _emit_action(self, action):
-        """Emit action."""
+        action = self.router.route(event)
         return self.emitter.emit_action(action)
