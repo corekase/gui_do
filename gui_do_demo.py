@@ -146,7 +146,7 @@ class Demo:
         self.v_slider_float_value = g1.label((v_float_x - 6, v_slider_y + v_slider_height + 8), '0.00', True)
         self.v_slider_int_value = g1.label((v_int_x + 8, v_slider_y + v_slider_height + 8), '0', True)
         # -----------------------
-        # screen demo widgets (from non-life/mandelbrot windows)
+        # screen demo widgets
         # -----------------------
         screen_demo_x = top_section_x
         screen_demo_y = top_section_y
