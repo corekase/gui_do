@@ -201,6 +201,7 @@ class Demo:
         )
         self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
+        self.canvas.set_overflow_handler(self.handle_canvas_overflow)
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.draw_rect
         # a set to hold cell coordinates as tuples of x and y
@@ -712,6 +713,10 @@ class Demo:
         self.gui_do_pos_x = x
         self.gui_do_pos_y = y
         self.gui_do_label.position = (int(round(x)), int(round(y)))
+
+    def handle_canvas_overflow(self, _dropped_now, _dropped_total):
+        while self.canvas.read_event() is not None:
+            pass
 
     # life methods
     def handle_Canvas(self):
