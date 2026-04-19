@@ -38,6 +38,7 @@ class Label(Widget):
             self.gui.graphics_factory.set_last_font()
         else:
             self._render(text)
+        self.draw_rect.size = self._text_bitmap.get_rect().size
         self._disabled_text_bitmap = self._build_disabled_surface(self._text_bitmap)
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:

@@ -46,7 +46,7 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
 
         def render_text(text, *_args):
             calls.append(("render", text))
-            return _FakeBitmap(8, 6)
+            return _FakeBitmap(len(text) + 3, len(text) + 1)
 
         factory = SimpleNamespace(
             get_current_font_name=lambda: "main",
@@ -62,11 +62,15 @@ class LabelToggleRoiBatch8Tests(unittest.TestCase):
         label._font = "main"
         label.set_label("next")
         self.assertEqual(calls, [("set_font", "main"), ("render", "next"), ("set_last_font", None)])
+        self.assertEqual(label.draw_rect.topleft, (0, 0))
+        self.assertEqual(label.draw_rect.size, (7, 5))
 
         calls.clear()
         label._font = None
         label.set_label("raw")
         self.assertEqual(calls, [("render", "raw")])
+        self.assertEqual(label.draw_rect.topleft, (0, 0))
+        self.assertEqual(label.draw_rect.size, (6, 4))
 
     def test_label_draw_and_handle_event_paths(self) -> None:
         factory = SimpleNamespace(
