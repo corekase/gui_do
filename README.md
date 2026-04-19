@@ -70,6 +70,8 @@ Resource loading resolves from the repository `data/` folder, so it is independe
 
 ## 3. Minimal runnable setup
 
+When calling `gui.configure_fonts()`, you must provide both `titlebar` and `normal` font entries because the GUI uses those names internally.
+
 ```python
 import pygame
 from pygame import Rect
