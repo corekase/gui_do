@@ -107,7 +107,7 @@ class _GuiStub:
         self.raised_windows = []
         self.updated_active_window = 0
         self.handle_return_by_id = {}
-        self.object_registry = None
+        self.object_registry = _RegistryStub(registered=True)
 
     def update_active_window(self) -> None:
         self.updated_active_window += 1
@@ -184,20 +184,13 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.assertTrue(hit_any)
         self.assertIs(focus_target, widget)
 
-    def test_registry_resolution_handles_missing_and_exceptions(self) -> None:
+    def test_registry_resolution_uses_registry_result(self) -> None:
         widget = _WidgetStub("w")
 
-        self.gui.object_registry = None
-        self.assertIsNone(self.resolver._is_registered_via_registry(widget))
-
-        class _NoMethodRegistry:
-            pass
-
-        self.gui.object_registry = _NoMethodRegistry()
-        self.assertIsNone(self.resolver._is_registered_via_registry(widget))
-
-        self.gui.object_registry = _RegistryStub(raise_error=True)
-        self.assertIsNone(self.resolver._is_registered_via_registry(widget))
+        self.gui.object_registry = _RegistryStub(registered=False)
+        self.assertFalse(self.resolver.is_registered_widget(widget))
+        self.gui.object_registry = _RegistryStub(registered=True)
+        self.assertTrue(self.resolver.is_registered_widget(widget))
 
     def test_process_screen_widgets_hit_but_not_handled_focuses_and_passes(self) -> None:
         widget = _WidgetStub("screen", collides=True)
@@ -300,27 +293,16 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.assertEqual(pass_action.event_type, Event.Pass)
         self.assertIs(self.gui.focus_updates[-1], panel_widget2)
 
-    def test_is_registered_widget_fallback_paths(self) -> None:
+    def test_is_registered_widget_requires_registry_contract(self) -> None:
         widget = _WidgetStub("registered")
-        other = _WidgetStub("other")
 
         self.assertFalse(self.resolver.is_registered_widget(None))
 
         self.gui.object_registry = _RegistryStub(registered=True)
         self.assertTrue(self.resolver.is_registered_widget(widget))
 
-        self.gui.object_registry = _RegistryStub(raise_error=True)
-        self.gui.widgets = [widget]
-        self.assertTrue(self.resolver.is_registered_widget(widget))
-
-        self.gui.widgets = []
-        self.gui.task_panel = _TaskPanelStub([widget])
-        self.assertTrue(self.resolver.is_registered_widget(widget))
-
-        self.gui.task_panel = _TaskPanelStub([])
-        self.gui.windows = [_WindowStub([widget])]
-        self.assertTrue(self.resolver.is_registered_widget(widget))
-        self.assertFalse(self.resolver.is_registered_widget(other))
+        self.gui.object_registry = _RegistryStub(registered=False)
+        self.assertFalse(self.resolver.is_registered_widget(widget))
 
 
 if __name__ == "__main__":

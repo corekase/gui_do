@@ -28,7 +28,6 @@ from .coordinators.lock_flow_coordinator import LockFlowCoordinator
 from .gui_utils.lock_state_model import LockState
 from .object_registry import GuiObjectRegistry
 from .coordinators.pointer_coordinator import PointerCoordinator
-from .coordinators.render_coordinator import RenderCoordinator
 from .renderer import Renderer
 from .coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
@@ -402,7 +401,6 @@ class GuiManager:
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
-        self.render_flow: RenderCoordinator = RenderCoordinator(self)
         self.task_panel_config: TaskPanelConfigCoordinator = TaskPanelConfigCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
@@ -591,11 +589,11 @@ class GuiManager:
 
     def draw_gui(self) -> None:
         """Draw gui."""
-        self.render_flow.draw_gui()
+        self.renderer.draw()
 
     def undraw_gui(self) -> None:
         """Undraw gui."""
-        self.render_flow.undraw_gui()
+        self.renderer.undraw()
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         """Convert to screen."""

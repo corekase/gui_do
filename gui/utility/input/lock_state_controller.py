@@ -30,10 +30,7 @@ class LockStateController:
 
     def _is_registered_object(self, value: Widget) -> bool:
         """Return registration status via object registry when available."""
-        registry = getattr(self.gui, 'object_registry', None)
-        if registry is not None and hasattr(registry, 'is_registered_object'):
-            return bool(registry.is_registered_object(value))
-        return False
+        return bool(self.gui.object_registry.is_registered_object(value))
 
     def _assign_area_lock(self, locking_object: Widget) -> None:
         """Assign area lock using current lock-area rectangle."""

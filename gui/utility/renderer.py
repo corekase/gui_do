@@ -50,7 +50,15 @@ class Renderer:
     def _draw_windows(self) -> None:
         """Draw windows."""
         windows_snapshot = tuple(self.gui.windows)
-        top_window = windows_snapshot[-1] if windows_snapshot else None
+        active_window = getattr(self.gui, 'active_window', None)
+        if active_window in windows_snapshot and active_window.visible:
+            top_window = active_window
+        else:
+            top_window = None
+            for window in reversed(windows_snapshot):
+                if window.visible:
+                    top_window = window
+                    break
         for window in windows_snapshot:
             if window.visible:
                 self._capture_bitmap(window.get_window_rect())

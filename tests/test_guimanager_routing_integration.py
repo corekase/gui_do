@@ -28,7 +28,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
 
     def _build_window_stub(self):
         window = Window.__new__(Window)
-        window.visible = True
+        window._visible = True
         window.events = []
         window.handle_event = lambda event: window.events.append(event)
         return window
@@ -73,6 +73,47 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
 
         GuiManager.dispatch_event(gui, event)
 
+        self.assertEqual(gui._screen_events, [event])
+
+    def test_key_events_route_to_active_window(self) -> None:
+        gui = self._build_manager_stub()
+        active = self._build_window_stub()
+        other = self._build_window_stub()
+        gui.windows.extend([other, active])
+        gui.active_window = active
+
+        key_down = SimpleEvent(Event.KeyDown, key=27)
+        key_up = SimpleEvent(Event.KeyUp, key=27)
+
+        GuiManager.dispatch_event(gui, key_down)
+        GuiManager.dispatch_event(gui, key_up)
+
+        self.assertEqual(active.events, [key_down, key_up])
+        self.assertEqual(other.events, [])
+        self.assertEqual(gui._screen_events, [])
+
+    def test_key_events_fall_back_to_screen_when_active_window_is_not_registered(self) -> None:
+        gui = self._build_manager_stub()
+        stale_active = self._build_window_stub()
+        gui.active_window = stale_active
+        event = SimpleEvent(Event.KeyDown, key=11)
+
+        GuiManager.dispatch_event(gui, event)
+
+        self.assertEqual(stale_active.events, [])
+        self.assertEqual(gui._screen_events, [event])
+
+    def test_key_events_fall_back_to_screen_when_active_window_is_hidden(self) -> None:
+        gui = self._build_manager_stub()
+        hidden_active = self._build_window_stub()
+        hidden_active._visible = False
+        gui.windows.append(hidden_active)
+        gui.active_window = hidden_active
+        event = SimpleEvent(Event.KeyUp, key=99)
+
+        GuiManager.dispatch_event(gui, event)
+
+        self.assertEqual(hidden_active.events, [])
         self.assertEqual(gui._screen_events, [event])
 
 

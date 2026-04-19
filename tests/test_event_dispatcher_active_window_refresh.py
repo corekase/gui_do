@@ -105,16 +105,26 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         self.assertIs(self.gui.active_window, visible)
 
-    def test_update_active_window_clears_when_mouse_not_over_any_window(self) -> None:
-        old_active = WindowStub(0, 0, 100, 100, visible=True)
+    def test_update_active_window_keeps_current_when_mouse_not_over_any_window(self) -> None:
+        active = WindowStub(0, 0, 100, 100, visible=True)
+        self.gui.windows = [active]
+        self.gui.active_window = active
+        self.gui.mouse_pos = (150, 150)
+
+        self.dispatcher.router._update_active_window()
+
+        self.assertIs(self.gui.active_window, active)
+
+    def test_update_active_window_falls_back_to_top_visible_when_current_is_invalid(self) -> None:
+        stale_active = WindowStub(0, 0, 100, 100, visible=True)
         other = WindowStub(200, 200, 50, 50, visible=True)
         self.gui.windows = [other]
-        self.gui.active_window = old_active
+        self.gui.active_window = stale_active
         self.gui.mouse_pos = (10, 10)
 
         self.dispatcher.router._update_active_window()
 
-        self.assertIsNone(self.gui.active_window)
+        self.assertIs(self.gui.active_window, other)
 
 
 if __name__ == "__main__":

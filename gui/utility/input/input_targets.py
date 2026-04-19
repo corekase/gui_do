@@ -93,16 +93,6 @@ class InputTargetResolver:
                 return window
         return None
 
-    def _is_registered_via_registry(self, widget: Any) -> Optional[bool]:
-        """Try registration checks through object registry when available."""
-        registry = getattr(self.gui, 'object_registry', None)
-        if registry is None or not hasattr(registry, 'is_registered_object'):
-            return None
-        try:
-            return bool(registry.is_registered_object(widget))
-        except Exception:
-            return None
-
     def process_screen_widgets(self, event: PygameEvent) -> InputAction:
         """Route an event through root-screen widgets and base mouse fallbacks."""
         hit_any = False
@@ -169,17 +159,7 @@ class InputTargetResolver:
         """Return whether the widget is currently registered in any GUI container."""
         if widget is None:
             return False
-        registry_result = self._is_registered_via_registry(widget)
-        if registry_result is not None:
-            return registry_result
-        if widget in self.gui.widgets:
-            return True
-        if self.gui.task_panel is not None and widget in self.gui.task_panel.widgets:
-            return True
-        for window in self.gui.windows:
-            if widget in window.widgets:
-                return True
-        return False
+        return bool(self.gui.object_registry.is_registered_object(widget))
 
     def _handle_base_mouse_events(self, event: PygameEvent) -> InputAction:
         """Map raw mouse pygame events into base GUI input actions."""

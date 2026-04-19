@@ -23,6 +23,13 @@ class EventDeliveryCoordinator:
         if task_owner is not None:
             task_owner.handle_event(event)
             return
+        if getattr(event, 'type', None) in (Event.KeyDown, Event.KeyUp):
+            active_window = self.gui.active_window
+            if active_window is not None and active_window in self.gui.windows and active_window.visible:
+                active_window.handle_event(event)
+                return
+            self.gui.screen_lifecycle.handle_event(event)
+            return
         if getattr(event, 'task_panel', False):
             if self.gui.task_panel is not None and self.gui.task_panel.visible:
                 self.gui.task_panel.handle_event(event)

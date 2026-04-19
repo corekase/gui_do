@@ -26,7 +26,36 @@ class Window:
         """Visible."""
         if not isinstance(value, bool):
             raise GuiError('window visible must be a bool')
+        previous_visible = self._visible
         self._visible = value
+        if previous_visible == value:
+            return
+        gui = self.gui
+        windows = gui.windows
+        if self not in windows:
+            return
+        if value:
+            gui.raise_window(self)
+            gui.active_window = self
+            gui.workspace_state.active_object = self
+            return
+        current_active = gui.active_window
+        current_is_valid = (
+            current_active is not None
+            and current_active in windows
+            and current_active.visible
+        )
+        if current_active is not self and current_is_valid:
+            return
+        next_active = None
+        for window in windows[::-1]:
+            if window is self:
+                continue
+            if window.visible:
+                next_active = window
+                break
+        gui.active_window = next_active
+        gui.workspace_state.active_object = next_active
 
     @property
     def position(self) -> Tuple[int, int]:

@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 import pygame
 from pygame.locals import KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, QUIT
@@ -34,6 +35,7 @@ class MappingGuiStub:
         self.lock_point_pos = None
         self.lock_point_recenter_pending = False
         self.lock_point_tolerance_rect = None
+        self.object_registry = SimpleNamespace(is_registered_object=lambda _obj: True)
         self.input_emitter = InputEventEmitter(self)
         self.drag_state = DragStateController(self)
         self.focus_state = FocusStateController(self)

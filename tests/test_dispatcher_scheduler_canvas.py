@@ -1,5 +1,6 @@
 import unittest
 from collections import deque
+from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
@@ -38,6 +39,7 @@ class EventDispatcherGuiStub:
         self.lock_point_pos = None
         self.lock_point_recenter_pending = False
         self.lock_point_tolerance_rect = None
+        self.object_registry = SimpleNamespace(is_registered_object=lambda _obj: True)
         self._focus = None
         self.input_emitter = InputEventEmitter(self)
         self.drag_state = DragStateController(self)

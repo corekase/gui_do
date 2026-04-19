@@ -73,6 +73,7 @@ class RendererAdditionalPathTests(unittest.TestCase):
         gui.buffered = True
         gui.widgets = []
         gui.windows = []
+        gui.active_window = None
         gui.task_panel = None
         gui.mouse_locked = False
         gui.mouse_pos = (0, 0)
@@ -122,6 +123,21 @@ class RendererAdditionalPathTests(unittest.TestCase):
         renderer.draw()
 
         self.assertEqual(gui.copy_graphic_area_calls, [])
+
+    def test_draw_uses_active_window_when_top_stack_entry_is_hidden(self) -> None:
+        gui = self._base_gui()
+        visible = _WindowStub("visible", Rect(5, 5, 20, 20), visible=True)
+        hidden_top = _WindowStub("hidden", Rect(7, 7, 20, 20), visible=False)
+        gui.windows = [visible, hidden_top]
+        gui.active_window = visible
+
+        renderer = Renderer(gui)
+        renderer.draw()
+
+        self.assertEqual(visible.active_calls, 1)
+        self.assertEqual(visible.inactive_calls, 0)
+        self.assertEqual(hidden_top.active_calls, 0)
+        self.assertEqual(hidden_top.inactive_calls, 0)
 
     def test_draw_mouse_locked_updates_mouse_pos_via_lock_area(self) -> None:
         gui = self._base_gui()

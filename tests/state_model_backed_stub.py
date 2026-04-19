@@ -1,5 +1,6 @@
 from gui.utility.gui_utils.drag_state_model import DragState
 from gui.utility.gui_utils.lock_state_model import LockState
+from types import SimpleNamespace
 
 
 class StateModelBackedStub:
@@ -8,6 +9,7 @@ class StateModelBackedStub:
     def _init_state_models(self) -> None:
         self._drag_state = DragState()
         self._lock_state = LockState()
+        self.object_registry = SimpleNamespace(is_registered_object=lambda _obj: True)
 
     @property
     def dragging(self):

@@ -18,10 +18,7 @@ class FocusStateController:
 
     def _is_registered_object(self, value: Widget) -> bool:
         """Is registered object."""
-        registry = getattr(self.gui, 'object_registry', None)
-        if registry is not None and hasattr(registry, 'is_registered_object'):
-            return bool(registry.is_registered_object(value))
-        return False
+        return bool(self.gui.object_registry.is_registered_object(value))
 
     @property
     def current_widget(self) -> Optional[Widget]:
@@ -60,9 +57,21 @@ class FocusStateController:
 
     def update_active_window(self) -> None:
         """Update active window."""
-        top_window: Optional["Window"] = None
+        hovered_window: Optional["Window"] = None
+        top_visible_window: Optional["Window"] = None
+        mouse_pos = self.gui.get_mouse_pos()
         for window in self.gui.windows[::-1]:
-            if window.visible and window.get_window_rect().collidepoint(self.gui.get_mouse_pos()):
-                top_window = window
+            if not window.visible:
+                continue
+            if top_visible_window is None:
+                top_visible_window = window
+            if window.get_window_rect().collidepoint(mouse_pos):
+                hovered_window = window
                 break
-        self.gui.active_window = top_window
+        if hovered_window is not None:
+            self.gui.active_window = hovered_window
+            return
+        current = self.gui.active_window
+        if current is not None and current in self.gui.windows and current.visible:
+            return
+        self.gui.active_window = top_visible_window
