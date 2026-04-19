@@ -46,7 +46,7 @@ class InputRouter:
     def _handle_locked_object(self, event: PygameEvent) -> InputAction:
         """Handle locked object."""
         lock_obj = self.gui.locking_object
-        if not self._is_registered_widget(lock_obj):
+        if not self._is_active_lock_widget(lock_obj):
             self.gui.set_lock_area(None)
             return InputAction.pass_event()
         window = lock_obj.window
@@ -54,6 +54,24 @@ class InputRouter:
             widget_id = getattr(lock_obj, 'id', None)
             return InputAction.emit(Event.Widget, widget_id=widget_id, window=window)
         return InputAction.pass_event()
+
+    def _is_active_lock_widget(self, widget) -> bool:
+        """Return whether lock widget is both registered and still container-attached."""
+        if not self._is_registered_widget(widget):
+            return False
+        for screen_widget in self.gui.widgets:
+            if screen_widget is widget:
+                return True
+        task_panel = self.gui.task_panel
+        if task_panel is not None:
+            for panel_widget in task_panel.widgets:
+                if panel_widget is widget:
+                    return True
+        for window in self.gui.windows:
+            for window_widget in window.widgets:
+                if window_widget is widget:
+                    return True
+        return False
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         """Handle mouse motion."""
