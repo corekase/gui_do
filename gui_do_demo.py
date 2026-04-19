@@ -64,7 +64,7 @@ class Demo:
         # general widget height
         widget_height = 28
         # -----------------------
-        # screen widgets in a bottom task panel
+        # widgets in a bottom task panel
         # -----------------------
         g1.begin_task_panel()
         # exit button
