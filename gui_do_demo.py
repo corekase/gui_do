@@ -72,17 +72,11 @@ class Demo:
         # setup for the togglebuttons
         g1.set_grid_properties((85, 5), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_button = g1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'GUI 2')
+        self.gui2_button = g1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'Apps')
         # control whether the background circles are drawn
-        self.circles_toggle = g1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Circles')
+        self.circles_toggle = g1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Drawing')
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Buttons')
-        # control whether the scrollbar window is visible
-        self.scrollbars_toggle = g1.toggle('Scrollbar_Window', g1.gridded(3, 0), ButtonStyle.Round, False, 'Scrollbars')
-        # control whether the life window is visible
-        self.life_toggle = g1.toggle('life_Window', g1.gridded(4, 0), ButtonStyle.Round, False, 'Life')
-        # control whether the Mandelbrot window is visible
-        self.mandel_toggle = g1.toggle('mandel_Window', g1.gridded(5, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        self.buttons_toggle = g1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Styles')
         g1.end_task_panel()
         # -----------------------
         # screen widget layout demos (enabled and disabled)
@@ -97,10 +91,12 @@ class Demo:
         # -----------------------
         # make the button groups, buttons, and toggles window
         # -----------------------
-        x_pos, y_pos = 50, 150
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
+        button_group_window_size = (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom)
+        x_pos = (self.screen_rect.width - button_group_window_size[0]) // 2
+        y_pos = (self.screen_rect.height - button_group_window_size[1]) // 2
         self.button_group_win = g1.window('Button Groups, Buttons, and Toggles',
-                                          (x_pos, y_pos), (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom),
+                          (x_pos, y_pos), button_group_window_size,
                                           event_handler=self.buttons_window_event_handler,
                                           )
         g1.label(g1.gridded(0, 0), 'G1 Boxed', True)
@@ -164,114 +160,6 @@ class Demo:
         self._remember_slider_label_center(self.label4, self.label4.draw_rect.center)
         self._remember_slider_label_center(self.label5, self.label5.draw_rect.center)
         self._remember_slider_label_center(self.label6, self.label6.draw_rect.center)
-        # -----------------------
-        # make the scrollbar window
-        # -----------------------
-        y_pos += 248
-        self.scrollbar_win = g1.window(
-            'Scrollbars',
-            (x_pos, y_pos),
-            (320, 362)
-        )
-        x = y = 10
-        g1.scrollbar('Scrollbar_a', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Skip, (100, 0, 30, 10))
-        y += 22
-        g1.scrollbar('Scrollbar_b', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Split, (100, 0, 30, 10))
-        y += 22
-        g1.scrollbar('Scrollbar_c', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Near, (100, 0, 30, 10))
-        y += 22
-        g1.scrollbar('Scrollbar_d', Rect(x, y, 300, 20), Orientation.Horizontal, ArrowPosition.Far, (100, 0, 30, 10))
-        y += 24
-        g1.scrollbar('Scrollbar_e', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Skip, (100, 0, 30, 10))
-        x += 22
-        g1.scrollbar('Scrollbar_f', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Split, (100, 0, 30, 10))
-        x += 22
-        g1.scrollbar('Scrollbar_g', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Near, (100, 0, 30, 10))
-        x += 22
-        g1.scrollbar('Scrollbar_h', Rect(x, y, 20, 250), Orientation.Vertical, ArrowPosition.Far, (100, 0, 30, 10))
-        g1.image('realize', Rect(x + 25, y, 210, 210), 'realize.png', False)
-        b1.set_font('scroll')
-        g1.label((x + 30, y + 215), 'Scrollbars!', True)
-        b1.set_font('normal')
-        # -----------------------
-        # make the Conway's Game of Life window
-        # -----------------------
-        x_pos += 327
-        width, height = 600, 600
-        self.life_win = g1.window(
-            'Conway\'s Game of Life',
-            (x_pos, y_pos),
-            (width, height),
-            preamble=self.life_window_preamble,
-            event_handler=self.life_window_event_handler,
-            postamble=self.life_window_postamble
-        )
-        self.canvas = g1.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
-        self.canvas.set_event_queue_limit(256)
-        self.canvas.set_overflow_handler(self.handle_canvas_overflow)
-        self.canvas_surface = self.canvas.get_canvas_surface()
-        self.canvas_rect = self.canvas.draw_rect
-        # a set to hold cell coordinates as tuples of x and y
-        self.life = set()
-        g1.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
-        # resets the life simulation to a default state, uses a callback function
-        g1.button('life_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
-        # toggle whether or not the simulation is processing
-        self.toggle_life = g1.toggle('run', g1.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
-        zoom_label_bitmap = b1.render_text('Zoom', colours['text'], True)
-        zoom_label_padding = 8
-        slider_padding = 12
-        slider_y = height - widget_height - 10
-        zoom_label_x = self.canvas_rect.right - zoom_label_bitmap.get_width()
-        slider_left = self.toggle_life.draw_rect.right + slider_padding
-        slider_right = zoom_label_x - zoom_label_padding
-        self.life_zoom_slider = g1.slider(
-            'life_zoom_slider',
-            Rect(slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
-            Orientation.Horizontal,
-            11,
-            0,
-            True,
-        )
-        self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
-        g1.label((zoom_label_x, slider_y + 6), 'Zoom', True)
-        # -----------------------
-        # make the mandelbrot window
-        # -----------------------
-        width, height = 600, 600
-        pos = x_pos + 607, y_pos
-        mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
-        self.mandel_win = g1.window(
-            'Mandelbrot',
-            pos,
-            (width, height),
-            event_handler=self.mandel_window_event_handler
-        )
-        g1.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
-        self.mandel_canvas = g1.canvas('mandel', mandel_overall)
-        g1.hide_widgets(self.mandel_canvas)
-        self.mandel_canvas_rect = self.mandel_canvas.draw_rect
-        _, _, cwidth, cheight = self.mandel_canvas.draw_rect
-        chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
-        self.canvas1 = g1.canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10))
-        self.canvas2 = g1.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
-        self.canvas3 = g1.canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
-        self.canvas4 = g1.canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
-        g1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-        self.clear_mandel_surfaces()
-        g1.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        g1.button('mandel_reset', g1.gridded(0, 0), ButtonStyle.Angle, 'Reset')
-        self.mandel_iterative_button = g1.button('iterative', g1.gridded(1, 0), ButtonStyle.Round, 'Iterative')
-        self.mandel_recursive_button = g1.button('recursive', g1.gridded(2, 0), ButtonStyle.Round, 'Recursive')
-        self.mandel_one_split_button = g1.button('1split', g1.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
-        self.mandel_four_split_button = g1.button('4split', g1.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
-        self.mandel_task_buttons = (
-            self.mandel_iterative_button,
-            self.mandel_recursive_button,
-            self.mandel_one_split_button,
-            self.mandel_four_split_button,
-        )
-        self.set_mandel_task_buttons_disabled(False)
         # set cursor image
         g1.set_cursor('normal')
         self.gui1 = g1
@@ -292,12 +180,93 @@ class Demo:
         g2.set_pristine('backdrop.jpg')
         g2.begin_task_panel()
         g2.button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
+        g2.set_grid_properties((85, 5), 138, widget_height, 6)
+        self.gui2_life_window_toggle = g2.toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life')
+        self.gui2_mandel_window_toggle = g2.toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot')
         g2.end_task_panel()
-        g2.window(
-            'GUI 2',
-            (50, 150),
-            (300, 300)
+
+        # -----------------------
+        # make the Conway's Game of Life window (gui2)
+        # -----------------------
+        width, height = 600, 600
+        self.life_win = g2.window(
+            'Conway\'s Game of Life',
+            (0, 0),
+            (width, height),
+            preamble=self.life_window_preamble,
+            event_handler=self.life_window_event_handler,
+            postamble=self.life_window_postamble
         )
+        self.canvas = g2.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
+        self.canvas.set_event_queue_limit(256)
+        self.canvas.set_overflow_handler(self.handle_canvas_overflow)
+        self.canvas_surface = self.canvas.get_canvas_surface()
+        self.canvas_rect = self.canvas.draw_rect
+        # a set to hold cell coordinates as tuples of x and y
+        self.life = set()
+        g2.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        # resets the life simulation to a default state, uses a callback function
+        g2.button('life_reset', g2.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        # toggle whether or not the simulation is processing
+        self.toggle_life = g2.toggle('run', g2.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        b2 = g2.graphics_factory
+        zoom_label_bitmap = b2.render_text('Zoom', colours['text'], True)
+        zoom_label_padding = 8
+        slider_padding = 12
+        slider_y = height - widget_height - 10
+        zoom_label_x = self.canvas_rect.right - zoom_label_bitmap.get_width()
+        slider_left = self.toggle_life.draw_rect.right + slider_padding
+        slider_right = zoom_label_x - zoom_label_padding
+        self.life_zoom_slider = g2.slider(
+            'life_zoom_slider',
+            Rect(slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
+            Orientation.Horizontal,
+            11,
+            0,
+            True,
+        )
+        self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
+        g2.label((zoom_label_x, slider_y + 6), 'Zoom', True)
+
+        # -----------------------
+        # make the mandelbrot window (gui2)
+        # -----------------------
+        width, height = 600, 600
+        mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
+        self.mandel_win = g2.window(
+            'Mandelbrot',
+            (0, 0),
+            (width, height),
+            event_handler=self.mandel_window_event_handler
+        )
+        g2.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
+        self.mandel_canvas = g2.canvas('mandel', mandel_overall)
+        g2.hide_widgets(self.mandel_canvas)
+        self.mandel_canvas_rect = self.mandel_canvas.draw_rect
+        _, _, cwidth, cheight = self.mandel_canvas.draw_rect
+        chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
+        self.canvas1 = g2.canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10))
+        self.canvas2 = g2.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
+        self.canvas3 = g2.canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
+        self.canvas4 = g2.canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
+        g2.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.clear_mandel_surfaces()
+        g2.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
+        g2.button('mandel_reset', g2.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        self.mandel_iterative_button = g2.button('iterative', g2.gridded(1, 0), ButtonStyle.Round, 'Iterative')
+        self.mandel_recursive_button = g2.button('recursive', g2.gridded(2, 0), ButtonStyle.Round, 'Recursive')
+        self.mandel_one_split_button = g2.button('1split', g2.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
+        self.mandel_four_split_button = g2.button('4split', g2.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        self.mandel_task_buttons = (
+            self.mandel_iterative_button,
+            self.mandel_recursive_button,
+            self.mandel_one_split_button,
+            self.mandel_four_split_button,
+        )
+        self.set_mandel_task_buttons_disabled(False)
+        self.life_win.visible = False
+        self.mandel_win.visible = False
+        self._layout_gui2_sim_windows()
         # set cursor for gui2
         g2.set_cursor('normal')
         self.gui2 = g2
@@ -349,9 +318,6 @@ class Demo:
     # preambles, event handlers, and postambles in window definition order
     def gui1_screen_preamble(self):
         self.gui1.restore_pristine()
-        if not self.dragging and self.gui1.locking_object is self.canvas:
-            self.gui1.set_lock_point(None)
-        self.set_mandel_task_buttons_disabled(self.s1.tasks_busy_match_any(*Demo.mandel_task_ids))
         if self.circles_toggle.pushed:
             self.update_circles(self.size)
         self._update_gui1_window_visibility()
@@ -420,11 +386,11 @@ class Demo:
             return
         widget_id = event.widget_id
         if widget_id == 'mandel_reset':
-            self.s1.remove_tasks(*Demo.mandel_task_ids)
+            self.s2.remove_tasks(*Demo.mandel_task_ids)
             self._show_single_mandel_canvas()
             self.set_mandel_task_buttons_disabled(False)
             return
-        if self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+        if self.s2.tasks_busy_match_any(*Demo.mandel_task_ids):
             # Ignore new launch requests while any Mandelbrot job is running.
             return
         if widget_id == 'iterative':
@@ -432,7 +398,7 @@ class Demo:
             self._prepare_mandel_single_canvas_run()
             _, _, w, h = self.mandel_canvas_rect
             self.mandel_setup(w, h)
-            self.s1.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
+            self.s2.add_task('iter', self.mandel_iterative, message_method=self.make_mandel_progress_handler('iter'))
         elif widget_id == 'recursive':
             # One full-canvas task using adaptive recursive subdivision.
             self._prepare_mandel_single_canvas_run()
@@ -462,6 +428,12 @@ class Demo:
 
     def gui2_screen_preamble(self):
         self.gui2.restore_pristine()
+        if not self.dragging and self.gui2.locking_object is self.canvas:
+            self.gui2.set_lock_point(None)
+        layout_needed = self._update_gui2_window_visibility()
+        if layout_needed:
+            self._layout_gui2_sim_windows()
+        self.set_mandel_task_buttons_disabled(self.s2.tasks_busy_match_any(*Demo.mandel_task_ids))
 
     def gui2_panel_event_handler(self, event):
         if event.type == Event.Widget:
@@ -792,9 +764,37 @@ class Demo:
 
     def _update_gui1_window_visibility(self):
         self.button_group_win.visible = self.buttons_toggle.pushed
-        self.scrollbar_win.visible = self.scrollbars_toggle.pushed
-        self.life_win.visible = self.life_toggle.pushed
-        self.mandel_win.visible = self.mandel_toggle.pushed
+
+    def _update_gui2_window_visibility(self):
+        life_visible = self.gui2_life_window_toggle.pushed
+        mandel_visible = self.gui2_mandel_window_toggle.pushed
+        layout_needed = False
+        if self.life_win.visible != life_visible:
+            self.life_win.visible = life_visible
+            layout_needed = True
+        if self.mandel_win.visible != mandel_visible:
+            self.mandel_win.visible = mandel_visible
+            layout_needed = True
+        return layout_needed
+
+    def _layout_gui2_sim_windows(self):
+        life_visible = self.life_win.visible
+        mandel_visible = self.mandel_win.visible
+        if not life_visible and not mandel_visible:
+            return
+        gap = 16
+        y_pos = (self.screen_rect.height - self.life_win.height) // 2
+        if life_visible and mandel_visible:
+            total_width = self.life_win.width + gap + self.mandel_win.width
+            left_x = (self.screen_rect.width - total_width) // 2
+            self.life_win.position = (left_x, y_pos)
+            self.mandel_win.position = (left_x + self.life_win.width + gap, y_pos)
+            return
+        centered_x = (self.screen_rect.width - self.life_win.width) // 2
+        if life_visible:
+            self.life_win.position = (centered_x, y_pos)
+        if mandel_visible:
+            self.mandel_win.position = (centered_x, y_pos)
 
     def update_slider_labels(self):
         self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')
@@ -881,14 +881,14 @@ class Demo:
                 # right-mouse button pressed, enter dragging state
                 if c_event.button == 3:
                     self.dragging = True
-                    self.gui1.set_cursor('hand')
-                    self.gui1.set_lock_point(self.canvas)
+                    self.gui2.set_cursor('hand')
+                    self.gui2.set_lock_point(self.canvas)
             elif c_event.type == CanvasEvent.MouseButtonUp:
                 # right-mouse button released, exit dragging state
                 if c_event.button == 3:
                     self.dragging = False
-                    self.gui1.set_cursor('normal')
-                    self.gui1.set_lock_point(None)
+                    self.gui2.set_cursor('normal')
+                    self.gui2.set_lock_point(None)
             elif c_event.type == CanvasEvent.MouseMotion:
                 # if dragging then track relative position
                 if self.dragging and c_event.rel is not None:
@@ -901,9 +901,9 @@ class Demo:
                     old_size = self.cell_size
                     new_size = max(2, min(24, old_size + (c_event.y * 2)))
                     if new_size != old_size:
-                        if self.gui1.mouse_point_locked and self.gui1.lock_point_pos is not None:
+                        if self.gui2.mouse_point_locked and self.gui2.lock_point_pos is not None:
                             # During point-lock dragging, anchor zoom to the rendered (locked) cursor.
-                            lock_x, lock_y = self.gui1.convert_to_window(self.gui1.lock_point_pos, self.canvas.window)
+                            lock_x, lock_y = self.gui2.convert_to_window(self.gui2.lock_point_pos, self.canvas.window)
                             mouse_x = lock_x - self.canvas_rect.x
                             mouse_y = lock_y - self.canvas_rect.y
                         else:
@@ -1005,8 +1005,8 @@ class Demo:
 
     def _show_single_mandel_canvas(self):
         # Show the primary Mandelbrot canvas and hide split panes.
-        self.gui1.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
-        self.gui1.show_widgets(self.mandel_canvas)
+        self.gui2.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.gui2.show_widgets(self.mandel_canvas)
         self.clear_mandel_surfaces()
 
     def _prepare_mandel_single_canvas_run(self):
@@ -1017,13 +1017,13 @@ class Demo:
     def _prepare_mandel_split_canvas_run(self):
         # Switch to split-pane view for per-canvas rendering tasks.
         self.set_mandel_task_buttons_disabled(True)
-        self.gui1.hide_widgets(self.mandel_canvas)
-        self.gui1.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
+        self.gui2.hide_widgets(self.mandel_canvas)
+        self.gui2.show_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
 
     def _queue_mandel_recursive_task(self, task_id, rect):
         # Route task progress through a per-task callback that draws incremental updates.
-        self.s1.add_task(task_id, self.mandel_recursive, rect,
+        self.s2.add_task(task_id, self.mandel_recursive, rect,
                          message_method=self.make_mandel_progress_handler(task_id))
 
     def mandel_setup(self, width, height):
@@ -1043,8 +1043,8 @@ class Demo:
             print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
         if task_id in Demo.mandel_task_ids:
             # Consume buffered result payloads for finished/updated tasks.
-            self.s1.pop_result(task_id)
-            if not self.s1.tasks_busy_match_any(*Demo.mandel_task_ids):
+            self.s2.pop_result(task_id)
+            if not self.s2.tasks_busy_match_any(*Demo.mandel_task_ids):
                 # Re-enable controls only when all Mandelbrot tasks have drained.
                 self.set_mandel_task_buttons_disabled(False)
 
@@ -1131,12 +1131,12 @@ class Demo:
                 row_values.append(self.pixel(x_pos, y_pos))
             rows_in_chunk = ((y_pos - chunk_start_y) + 1)
             if rows_in_chunk >= chunk_rows:
-                self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
+                self.s2.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
                 chunk_start_y = y_pos + 1
                 row_values = []
         if row_values:
             rows_in_chunk = y + h - chunk_start_y
-            self.s1.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
+            self.s2.send_message(task_id, (x, chunk_start_y, w, rows_in_chunk, row_values))
         return None
 
     def mandel_recursive(self, task_id, item):
@@ -1196,11 +1196,11 @@ class Demo:
 
     def fill_region(self, task_id, x_pos, y_pos, width, height, value):
         # Send a compact fill payload so the GUI thread can draw this block with one fill call.
-        self.s1.send_message(task_id, (x_pos, y_pos, width, height, value))
+        self.s2.send_message(task_id, (x_pos, y_pos, width, height, value))
 
     def publish_pixel_block(self, task_id, x_pos, y_pos, width, height, block_values):
         # Small explicit block payload for base-case non-uniform regions.
-        self.s1.send_message(task_id, (x_pos, y_pos, width, height, block_values))
+        self.s2.send_message(task_id, (x_pos, y_pos, width, height, block_values))
 
     def pixel(self, x, y):
         # Convert screen-space pixel to complex-plane point and iterate z = z^2 + c.
