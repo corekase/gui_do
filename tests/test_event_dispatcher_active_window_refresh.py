@@ -1,6 +1,8 @@
 import unittest
+import pygame
 
 from pygame import Rect
+from pygame.locals import MOUSEBUTTONDOWN
 
 from gui.utility.event_dispatcher import EventDispatcher
 from gui.utility.focus_state import FocusStateController
@@ -138,6 +140,20 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.task_panel = TaskPanelStub(0, 120, 300, 40, visible=True)
         self.gui.mouse_pos = (10, 130)
 
+        self.gui.focus_state.activate_window_at_pointer()
+
+        self.assertIs(self.gui.active_window, active)
+
+    def test_button_down_uses_event_pos_for_task_panel_hit_when_mouse_pos_is_stale(self) -> None:
+        active = WindowStub(0, 0, 100, 100, visible=True)
+        self.gui.windows = [active]
+        self.gui.active_window = active
+        self.gui.task_panel = TaskPanelStub(0, 120, 300, 40, visible=True)
+        # Stale logical pointer is outside panel and windows.
+        self.gui.mouse_pos = (400, 20)
+
+        event = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1, 'pos': (10, 130)})
+        self.dispatcher.router._sync_pointer_from_button_event(event)
         self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIs(self.gui.active_window, active)

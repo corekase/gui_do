@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pygame.event import Event as PygameEvent
-from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEMOTION
+from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import TYPE_CHECKING
 from ..events import Event
 from .input_actions import InputAction
@@ -21,6 +21,7 @@ class InputRouter:
 
     def route(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
+        self._sync_pointer_from_button_event(event)
         is_left_mouse_down = event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
@@ -129,3 +130,12 @@ class InputRouter:
     def _update_active_window(self) -> None:
         """Update active window."""
         self.targets.update_active_window()
+
+    def _sync_pointer_from_button_event(self, event: PygameEvent) -> None:
+        """Sync logical pointer from button event ``pos`` before click hit-testing."""
+        if event.type not in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            return
+        event_pos = getattr(event, 'pos', None)
+        if not isinstance(event_pos, tuple) or len(event_pos) != 2:
+            return
+        self.gui.mouse_pos = event_pos
