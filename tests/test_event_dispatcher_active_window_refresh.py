@@ -85,25 +85,36 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui = ActiveWindowGuiStub()
         self.dispatcher = EventDispatcher(self.gui)
 
-    def test_update_active_window_chooses_topmost_visible_colliding_window(self) -> None:
+    def test_activate_window_at_pointer_chooses_topmost_visible_colliding_window(self) -> None:
         back = WindowStub(0, 0, 100, 100, visible=True)
         front = WindowStub(0, 0, 100, 100, visible=True)
         self.gui.windows = [back, front]
         self.gui.mouse_pos = (10, 10)
 
-        self.dispatcher.router._update_active_window()
+        self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIs(self.gui.active_window, front)
 
-    def test_update_active_window_skips_invisible_colliding_window(self) -> None:
+    def test_activate_window_at_pointer_skips_invisible_colliding_window(self) -> None:
         visible = WindowStub(0, 0, 100, 100, visible=True)
         hidden_top = WindowStub(0, 0, 100, 100, visible=False)
         self.gui.windows = [visible, hidden_top]
         self.gui.mouse_pos = (5, 5)
 
-        self.dispatcher.router._update_active_window()
+        self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIs(self.gui.active_window, visible)
+
+    def test_update_active_window_does_not_switch_when_mouse_moves_over_other_window(self) -> None:
+        active = WindowStub(0, 0, 100, 100, visible=True)
+        hovered = WindowStub(120, 0, 100, 100, visible=True)
+        self.gui.windows = [active, hovered]
+        self.gui.active_window = active
+        self.gui.mouse_pos = (130, 10)
+
+        self.dispatcher.router._update_active_window()
+
+        self.assertIs(self.gui.active_window, active)
 
     def test_update_active_window_keeps_current_when_mouse_not_over_any_window(self) -> None:
         active = WindowStub(0, 0, 100, 100, visible=True)

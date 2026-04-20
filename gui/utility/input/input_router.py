@@ -24,6 +24,8 @@ class InputRouter:
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
+        if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+            self.gui.focus_state.activate_window_at_pointer()
         if event.type in (QUIT, KEYUP, KEYDOWN):
             return self._handle_system_event(event)
         self._update_active_window()
