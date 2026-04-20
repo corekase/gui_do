@@ -96,6 +96,16 @@ class InputStateSyncContractsTests(unittest.TestCase):
         self.assertEqual(gui._lock_state.mouse_locked, gui.mouse_locked)
         self.assertEqual(gui._lock_state.lock_point_pos, gui.lock_point_pos)
 
+    def test_lock_release_from_area_lock_aligns_physical_cursor_to_logical_position(self) -> None:
+        gui = _GuiStub()
+        controller = LockStateController(gui)
+        locking_object = Widget.__new__(Widget)
+        controller.set_area(locking_object, Rect(1, 2, 5, 6))
+
+        controller.set_area(None)
+
+        self.assertEqual(gui.pointer_calls, [(10, 10)])
+
     def test_drag_start_updates_drag_state_model(self) -> None:
         gui = _GuiStub()
         controller = DragStateController(gui)

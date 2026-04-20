@@ -547,7 +547,9 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_set_grid_properties_validates_and_forwards(self) -> None:
         gui = self._build_manager_stub()
         forwarded = []
-        gui.layout_manager = SimpleNamespace(set_properties=lambda a, w, h, s, r: forwarded.append((a, w, h, s, r)))
+        gui.layout_manager = SimpleNamespace(
+            grid=SimpleNamespace(set_properties=lambda a, w, h, s, r: forwarded.append((a, w, h, s, r)))
+        )
 
         with self.assertRaises(GuiError):
             GuiManager.set_grid_properties(gui, (0, 0), 0, 10, 1)
@@ -564,9 +566,78 @@ class GuiManagerHelperApiTests(unittest.TestCase):
 
     def test_gridded_delegates_to_layout_manager(self) -> None:
         gui = self._build_manager_stub()
-        gui.layout_manager = SimpleNamespace(get_cell=lambda x, y: (x + 10, y + 20))
+        gui.layout_manager = SimpleNamespace(grid=SimpleNamespace(get_cell=lambda x, y: (x + 10, y + 20)))
 
         self.assertEqual(GuiManager.gridded(gui, 1, 2), (11, 22))
+
+    def test_set_linear_properties_validates_and_forwards(self) -> None:
+        gui = self._build_manager_stub()
+        forwarded = []
+        gui.layout_manager = SimpleNamespace(
+            set_linear_properties=lambda a, w, h, s, horizontal, wrap_count, use_rect: forwarded.append(
+                (a, w, h, s, horizontal, wrap_count, use_rect)
+            )
+        )
+
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0, 0), 0, 10, 1)
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0, 0), 10, 0, 1)
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0, 0), 10, 10, -1)
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0, 0), 10, 10, 1, horizontal=1)  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0, 0), 10, 10, 1, wrap_count=-1)
+        with self.assertRaises(GuiError):
+            GuiManager.set_linear_properties(gui, (0,), 10, 10, 1)  # type: ignore[arg-type]
+
+        GuiManager.set_linear_properties(gui, (2, 3), 11, 12, 4, horizontal=False, wrap_count=5, use_rect=False)
+
+        self.assertEqual(forwarded, [((2, 3), 11, 12, 4, False, 5, False)])
+
+    def test_linear_anchor_and_place_helpers_delegate(self) -> None:
+        gui = self._build_manager_stub()
+        reset_calls = []
+        gui.layout_manager = SimpleNamespace(
+            linear_item=lambda index: (index + 1, index + 2),
+            next_linear_item=lambda: (20, 30),
+            reset_linear_cursor=lambda: reset_calls.append(True),
+            anchored=lambda size, anchor, margin, use_rect: Rect(7, 8, size[0], size[1]),
+        )
+        placed = []
+        gui.layout = SimpleNamespace(
+            place_gui_object=lambda gui_object, geometry: placed.append((gui_object, geometry)),
+            set_grid_properties=gui.layout.set_grid_properties,
+            set_linear_properties=gui.layout.set_linear_properties,
+            set_anchor_bounds=gui.layout.set_anchor_bounds,
+        )
+
+        self.assertEqual(GuiManager.linear(gui, 2), (3, 4))
+        self.assertEqual(GuiManager.next_linear(gui), (20, 30))
+        GuiManager.reset_linear_cursor(gui)
+        self.assertEqual(reset_calls, [True])
+
+        anchored = GuiManager.anchored(gui, (40, 50), anchor='top_left', margin=(2, 3), use_rect=True)
+        self.assertEqual(anchored, Rect(7, 8, 40, 50))
+
+        widget = Widget.__new__(Widget)
+        returned = GuiManager.place_gui_object(gui, widget, Rect(1, 2, 3, 4))
+        self.assertIs(returned, widget)
+        self.assertEqual(placed, [(widget, Rect(1, 2, 3, 4))])
+
+    def test_set_anchor_bounds_validates_and_forwards(self) -> None:
+        gui = self._build_manager_stub()
+        forwarded = []
+        gui.layout_manager = SimpleNamespace(set_anchor_bounds=lambda bounds: forwarded.append(bounds))
+
+        with self.assertRaises(GuiError):
+            GuiManager.set_anchor_bounds(gui, (0, 0, 10, 10))  # type: ignore[arg-type]
+
+        rect = Rect(1, 2, 30, 40)
+        GuiManager.set_anchor_bounds(gui, rect)
+
+        self.assertEqual(forwarded, [rect])
 
     def test_restore_pristine_requires_initialized_snapshot(self) -> None:
         gui = self._build_manager_stub()

@@ -23,6 +23,14 @@ class Demo:
     # public scrollbar style flags accepted by gui.scrollbar(..., style=...)
     scrollbar_styles = ('skip', 'split', 'near', 'far')
 
+    @staticmethod
+    def _anchor_point(gui, x, y):
+        return gui.anchored((1, 1), anchor='top_left', margin=(x, y), use_rect=False)
+
+    @staticmethod
+    def _anchor_rect(gui, x, y, w, h):
+        return gui.anchored((w, h), anchor='top_left', margin=(x, y), use_rect=True)
+
     def __init__(self):
         # initialize pygame
         pygame.init()
@@ -53,9 +61,10 @@ class Demo:
         b1.register_cursor(name='hand', filename='hand.png', hotspot=(12, 12))
         # load an image that will be used for a backdrop, display it on-screen and save it for restore_pristine
         g1.set_pristine('backdrop.jpg')
+        g1.set_anchor_bounds(self.screen_rect)
         # screen label
         b1.set_font('gui_do')
-        self.gui_do_label = g1.label((50, 30), 'gui_do', True)
+        self.gui_do_label = g1.label(self._anchor_point(g1, 50, 30), 'gui_do', True)
         b1.set_font('normal')
         # variables for moving the label around the screen
         self.gui_do_pos_x = float(self.gui_do_label.draw_rect.x)
@@ -69,7 +78,8 @@ class Demo:
         # widgets in a bottom task panel
         # -----------------------
         # exit button
-        g1.task_panel.button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
+        g1.set_linear_properties((10, 5), 70, widget_height, 0, horizontal=True)
+        g1.task_panel.button('exit', g1.linear(0), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
         g1.set_grid_properties((85, 5), 120, widget_height, 4)
         # switch to gui2 button
@@ -93,10 +103,10 @@ class Demo:
         # -----------------------
         g1.set_grid_properties((10, 10), 120, widget_height, 2)
         button_group_window_size = (g1.gridded(7, 0).right + 10, g1.gridded(0, 6).bottom)
-        x_pos = (self.screen_rect.width - button_group_window_size[0]) // 2
-        y_pos = (self.screen_rect.height - button_group_window_size[1]) // 2
+        g1.set_anchor_bounds(self.screen_rect)
+        anchored_window_rect = g1.anchored(button_group_window_size, anchor='center')
         self.button_group_win = g1.window('Button Groups, Buttons, and Toggles',
-                          (x_pos, y_pos), button_group_window_size,
+                  anchored_window_rect.topleft, button_group_window_size,
                                           event_handler=self.buttons_window_event_handler,
                                           )
         g1.label(g1.gridded(0, 0), 'G1 Boxed', True)
@@ -178,10 +188,12 @@ class Demo:
         )
         g2.graphics_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
-        g2.task_panel.button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
-        g2.set_grid_properties((85, 5), 138, widget_height, 6)
-        self.gui2_life_window_toggle = g2.task_panel.toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life')
-        self.gui2_mandel_window_toggle = g2.task_panel.toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        g2.set_anchor_bounds(self.screen_rect)
+        g2.set_linear_properties((10, 5), 70, widget_height, 0, horizontal=True)
+        g2.task_panel.button('back', g2.linear(0), ButtonStyle.Angle, 'Back')
+        g2.set_linear_properties((85, 5), 138, widget_height, 6, horizontal=True)
+        self.gui2_life_window_toggle = g2.task_panel.toggle('gui2_life_window', g2.linear(0), ButtonStyle.Round, False, 'Life')
+        self.gui2_mandel_window_toggle = g2.task_panel.toggle('gui2_mandel_window', g2.linear(1), ButtonStyle.Round, False, 'Mandelbrot')
 
         # -----------------------
         # make the Conway's Game of Life window (gui2)
@@ -189,23 +201,23 @@ class Demo:
         width, height = 600, 600
         self.life_win = g2.window(
             'Conway\'s Game of Life',
-            (0, 0),
+            self._anchor_point(g2, 0, 0),
             (width, height),
             preamble=self.life_window_preamble,
             event_handler=self.life_window_event_handler,
             postamble=self.life_window_postamble
         )
-        self.canvas = g2.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
+        self.canvas = g2.canvas('life', self._anchor_rect(g2, 10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.draw_rect
         # a set to hold cell coordinates as tuples of x and y
         self.life = set()
-        g2.set_grid_properties((10, height - widget_height - 10), 100, widget_height, 2)
+        g2.set_linear_properties((10, height - widget_height - 10), 100, widget_height, 2, horizontal=True)
         # resets the life simulation to a default state, uses a callback function
-        g2.button('life_reset', g2.gridded(0, 0), ButtonStyle.Angle, 'Reset')
+        g2.button('life_reset', g2.linear(0), ButtonStyle.Angle, 'Reset')
         # toggle whether or not the simulation is processing
-        self.toggle_life = g2.toggle('run', g2.gridded(1, 0), ButtonStyle.Round, False, 'Stop', 'Start')
+        self.toggle_life = g2.toggle('run', g2.linear(1), ButtonStyle.Round, False, 'Stop', 'Start')
         b2 = g2.graphics_factory
         zoom_label_bitmap = b2.render_text('Zoom', colours['text'], True)
         zoom_label_padding = 8
@@ -216,44 +228,43 @@ class Demo:
         slider_right = zoom_label_x - zoom_label_padding
         self.life_zoom_slider = g2.slider(
             'life_zoom_slider',
-            Rect(slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
+            self._anchor_rect(g2, slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
             True,
             11,
             0,
             True,
         )
         self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
-        g2.label((zoom_label_x, slider_y + 6), 'Zoom', True)
+        g2.label(self._anchor_point(g2, zoom_label_x, slider_y + 6), 'Zoom', True)
 
         # -----------------------
         # make the mandelbrot window (gui2)
         # -----------------------
         width, height = 600, 600
-        mandel_overall = Rect(10, 10, width - 20, height - (widget_height * 2))
         self.mandel_win = g2.window(
             'Mandelbrot',
-            (0, 0),
+            self._anchor_point(g2, 0, 0),
             (width, height),
             event_handler=self.mandel_window_event_handler
         )
         g2.set_task_owners(self.mandel_win, *Demo.mandel_task_ids)
-        self.mandel_canvas = g2.canvas('mandel', mandel_overall)
+        self.mandel_canvas = g2.canvas('mandel', self._anchor_rect(g2, 10, 10, width - 20, height - (widget_height * 2)))
         g2.hide_widgets(self.mandel_canvas)
         self.mandel_canvas_rect = self.mandel_canvas.draw_rect
         _, _, cwidth, cheight = self.mandel_canvas.draw_rect
         chalfx, chalfy = (cwidth - 20) // 2, (cheight - 20) // 2
-        self.canvas1 = g2.canvas('can1', Rect(10, 10, chalfx + 10, chalfy + 10))
-        self.canvas2 = g2.canvas('can2', Rect(13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
-        self.canvas3 = g2.canvas('can3', Rect(10, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
-        self.canvas4 = g2.canvas('can4', Rect(13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
+        self.canvas1 = g2.canvas('can1', self._anchor_rect(g2, 10, 10, chalfx + 10, chalfy + 10))
+        self.canvas2 = g2.canvas('can2', self._anchor_rect(g2, 13 + chalfx + 5, 10, chalfx + 10, chalfy + 10))
+        self.canvas3 = g2.canvas('can3', self._anchor_rect(g2, 10, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
+        self.canvas4 = g2.canvas('can4', self._anchor_rect(g2, 13 + chalfx + 5, 13 + chalfy + 5, chalfx + 10, chalfy + 10))
         g2.hide_widgets(self.canvas1, self.canvas2, self.canvas3, self.canvas4)
         self.clear_mandel_surfaces()
-        g2.set_grid_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2)
-        g2.button('mandel_reset', g2.gridded(0, 0), ButtonStyle.Angle, 'Reset')
-        self.mandel_iterative_button = g2.button('iterative', g2.gridded(1, 0), ButtonStyle.Round, 'Iterative')
-        self.mandel_recursive_button = g2.button('recursive', g2.gridded(2, 0), ButtonStyle.Round, 'Recursive')
-        self.mandel_one_split_button = g2.button('1split', g2.gridded(3, 0), ButtonStyle.Round, '1M 4 Tasks')
-        self.mandel_four_split_button = g2.button('4split', g2.gridded(4, 0), ButtonStyle.Round, '4M 4 Tasks')
+        g2.set_linear_properties((10, height - widget_height - 10), int((600 - 30) / 5), widget_height, 2, horizontal=True)
+        g2.button('mandel_reset', g2.linear(0), ButtonStyle.Angle, 'Reset')
+        self.mandel_iterative_button = g2.button('iterative', g2.linear(1), ButtonStyle.Round, 'Iterative')
+        self.mandel_recursive_button = g2.button('recursive', g2.linear(2), ButtonStyle.Round, 'Recursive')
+        self.mandel_one_split_button = g2.button('1split', g2.linear(3), ButtonStyle.Round, '1M 4 Tasks')
+        self.mandel_four_split_button = g2.button('4split', g2.linear(4), ButtonStyle.Round, '4M 4 Tasks')
         self.mandel_task_buttons = (
             self.mandel_iterative_button,
             self.mandel_recursive_button,
@@ -466,8 +477,9 @@ class Demo:
         demo_canvas_size = screen_widgets_area_height
         demo_canvas_x = screen_widgets_right_edge + 40
         demo_canvas_y = base_y + 34
-        frame_rect = Rect(base_x + 316, base_y + 136, 132, 76)
-        demo_canvas_rect = Rect(demo_canvas_x, demo_canvas_y, demo_canvas_size, demo_canvas_size)
+        gui.set_anchor_bounds(self.screen_rect)
+        frame_rect = self._anchor_rect(gui, base_x + 316, base_y + 136, 132, 76)
+        demo_canvas_rect = self._anchor_rect(gui, demo_canvas_x, demo_canvas_y, demo_canvas_size, demo_canvas_size)
 
         def maybe_disable(widget, disable_widget=True):
             if disabled and disable_widget:
@@ -475,11 +487,12 @@ class Demo:
             return widget
 
         # heading and basic widget samples
-        gui.label((base_x, base_y), title, True)
+        gui.label(self._anchor_point(gui, base_x, base_y), title, True)
+        gui.set_linear_properties((base_x, base_y + 34), 138, widget_height, 10, horizontal=True)
         maybe_disable(
             gui.button(
                 f'{id_prefix}_demo_button',
-                Rect(base_x, base_y + 34, 138, widget_height),
+                gui.linear(0),
                 ButtonStyle.Round,
                 'Button',
             )
@@ -487,7 +500,7 @@ class Demo:
         maybe_disable(
             gui.toggle(
                 f'{id_prefix}_demo_toggle',
-                Rect(base_x + 148, base_y + 34, 146, widget_height),
+                self._anchor_rect(gui, base_x + 148, base_y + 34, 146, widget_height),
                 ButtonStyle.Box,
                 False,
                 'Toggle On',
@@ -497,7 +510,7 @@ class Demo:
         maybe_disable(
             gui.image(
                 f'{id_prefix}_demo_image',
-                Rect(base_x + 316, base_y + 34, 96, 96),
+                self._anchor_rect(gui, base_x + 316, base_y + 34, 96, 96),
                 'realize.png',
                 False,
             )
@@ -508,14 +521,14 @@ class Demo:
                 frame_rect,
             )
         )
-        maybe_disable(gui.label((frame_rect.x + 10, frame_rect.y + 8), 'Frame', True))
+        maybe_disable(gui.label(self._anchor_point(gui, frame_rect.x + 10, frame_rect.y + 8), 'Frame', True))
         maybe_disable(
             gui.canvas(
                 f'{id_prefix}_demo_canvas',
                 demo_canvas_rect,
             )
         )
-        maybe_disable(gui.label((demo_canvas_rect.x + 10, demo_canvas_rect.y + 8), 'Canvas', True))
+        maybe_disable(gui.label(self._anchor_point(gui, demo_canvas_rect.x + 10, demo_canvas_rect.y + 8), 'Canvas', True))
 
         # Mini style showcase to the right of the canvas.
         style_showcase_x = demo_canvas_rect.right + 24
@@ -524,7 +537,7 @@ class Demo:
         style_label_w = 96
         style_widget_w = 108
         style_widget_gap = 8
-        maybe_disable(gui.label((style_showcase_x, style_showcase_y - 24), 'Styles', True), disable_widget=False)
+        maybe_disable(gui.label(self._anchor_point(gui, style_showcase_x, style_showcase_y - 24), 'Styles', True), disable_widget=False)
         style_rows = (
             ('Box', ButtonStyle.Box),
             ('Round', ButtonStyle.Round),
@@ -535,7 +548,7 @@ class Demo:
         for row, (style_name, style_kind) in enumerate(style_rows):
             row_y = style_showcase_y + (row * style_row_height)
             style_key = style_name.lower()
-            maybe_disable(gui.label((style_showcase_x, row_y + 6), style_name, True))
+            maybe_disable(gui.label(self._anchor_point(gui, style_showcase_x, row_y + 6), style_name, True))
             group_x = style_showcase_x + style_label_w
             button_x = group_x + style_widget_w + style_widget_gap
             toggle_x = button_x + style_widget_w + style_widget_gap
@@ -543,7 +556,7 @@ class Demo:
                 gui.button_group(
                     f'{id_prefix}_style_group_{style_key}',
                     f'{id_prefix}_style_group_{style_key}_a',
-                    Rect(group_x, row_y, style_widget_w, widget_height),
+                    self._anchor_rect(gui, group_x, row_y, style_widget_w, widget_height),
                     style_kind,
                     'Group',
                 )
@@ -551,7 +564,7 @@ class Demo:
             maybe_disable(
                 gui.button(
                     f'{id_prefix}_style_button_{style_key}',
-                    Rect(button_x, row_y, style_widget_w, widget_height),
+                    self._anchor_rect(gui, button_x, row_y, style_widget_w, widget_height),
                     style_kind,
                     'Button',
                 )
@@ -559,7 +572,7 @@ class Demo:
             maybe_disable(
                 gui.toggle(
                     f'{id_prefix}_style_toggle_{style_key}',
-                    Rect(toggle_x, row_y, style_widget_w, widget_height),
+                    self._anchor_rect(gui, toggle_x, row_y, style_widget_w, widget_height),
                     style_kind,
                     False,
                     'Toggle',
@@ -568,24 +581,26 @@ class Demo:
             )
 
         # grouped button samples
-        maybe_disable(gui.label((base_x, base_y + 74), 'Group One', True))
+        maybe_disable(gui.label(self._anchor_point(gui, base_x, base_y + 74), 'Group One', True))
+        gui.set_linear_properties((base_x, base_y + 96), 132, widget_height, 0, horizontal=False)
         for index, label in enumerate(('One A', 'One B', 'One C')):
             maybe_disable(
                 gui.button_group(
                     f'{id_prefix}_demo_group_a',
                     f'{id_prefix}_demo_group_a{index + 1}',
-                    Rect(base_x, base_y + 96 + (34 * index), 132, widget_height),
+                    gui.linear(index),
                     ButtonStyle.Radio,
                     label,
                 )
             )
-        maybe_disable(gui.label((base_x + 150, base_y + 74), 'Group Two', True))
+        maybe_disable(gui.label(self._anchor_point(gui, base_x + 150, base_y + 74), 'Group Two', True))
+        gui.set_linear_properties((base_x + 150, base_y + 96), 132, widget_height, 0, horizontal=False)
         for index, label in enumerate(('Two A', 'Two B', 'Two C')):
             maybe_disable(
                 gui.button_group(
                     f'{id_prefix}_demo_group_b',
                     f'{id_prefix}_demo_group_b{index + 1}',
-                    Rect(base_x + 150, base_y + 96 + (34 * index), 132, widget_height),
+                    gui.linear(index),
                     ButtonStyle.Check,
                     label,
                 )
@@ -603,11 +618,13 @@ class Demo:
                 return 'disabled_demo_scrollbar'
             return f'{id_prefix}_demo_scroll_{axis}'
 
+        gui.set_linear_properties((v_scroll_x, v_scroll_y), v_scroll_width, v_scroll_height, v_scroll_gap, horizontal=True)
+
         for index, style_name in enumerate(Demo.scrollbar_styles):
             maybe_disable(
                 gui.scrollbar(
                     _demo_scrollbar_id('v', style_name),
-                    Rect(v_scroll_x + (index * (v_scroll_width + v_scroll_gap)), v_scroll_y, v_scroll_width, v_scroll_height),
+                    gui.linear(index),
                     False,
                     style_name,
                     100,
@@ -624,11 +641,12 @@ class Demo:
         h_scroll_right_x = v_scroll_x + ((h_scroll_count - 1) * (v_scroll_width + v_scroll_gap)) + v_scroll_width
         h_scroll_total_width = h_scroll_right_x - h_scroll_start_x
         h_scroll_width = (h_scroll_total_width - ((h_scroll_count - 1) * h_scroll_gap)) // h_scroll_count
+        gui.set_linear_properties((h_scroll_start_x, h_scroll_y), h_scroll_width, 20, h_scroll_gap, horizontal=True)
         for index, style_name in enumerate(Demo.scrollbar_styles):
             maybe_disable(
                 gui.scrollbar(
                     _demo_scrollbar_id('h', style_name),
-                    Rect(h_scroll_start_x + (index * (h_scroll_width + h_scroll_gap)), h_scroll_y, h_scroll_width, 20),
+                    gui.linear(index),
                     True,
                     style_name,
                     100,
@@ -644,7 +662,7 @@ class Demo:
         h_slider_float = maybe_disable(
             gui.slider(
                 f'{id_prefix}_h_slider_float',
-                Rect(base_x, h_float_y, slider_width, slider_height),
+                self._anchor_rect(gui, base_x, h_float_y, slider_width, slider_height),
                 True,
                 slider_range,
                 0.0,
@@ -654,31 +672,31 @@ class Demo:
         h_slider_int = maybe_disable(
             gui.slider(
                 f'{id_prefix}_h_slider_int',
-                Rect(base_x, h_int_y, slider_width, slider_height),
+                self._anchor_rect(gui, base_x, h_int_y, slider_width, slider_height),
                 True,
                 integer_slider_range,
                 0,
                 True,
             )
         )
-        maybe_disable(gui.label((base_x, h_float_y - 18), 'H Slider Float', True))
-        maybe_disable(gui.label((base_x, h_int_y - 18), 'H Slider Integer Snap', True))
-        h_slider_float_value = maybe_disable(gui.label((base_x + slider_width + 12, h_float_y + 12), '0.00', True))
-        h_slider_int_value = maybe_disable(gui.label((base_x + slider_width + 12, h_int_y + 12), '0', True))
+        maybe_disable(gui.label(self._anchor_point(gui, base_x, h_float_y - 18), 'H Slider Float', True))
+        maybe_disable(gui.label(self._anchor_point(gui, base_x, h_int_y - 18), 'H Slider Integer Snap', True))
+        h_slider_float_value = maybe_disable(gui.label(self._anchor_point(gui, base_x + slider_width + 12, h_float_y + 12), '0.00', True))
+        h_slider_int_value = maybe_disable(gui.label(self._anchor_point(gui, base_x + slider_width + 12, h_int_y + 12), '0', True))
 
         v_title_top = v_scroll_y
         v_slider_label_gap = 2
         v_float_x = base_x + 580
         v_slider_column_gap = 32
         v_int_x = v_float_x + v_slider_width + v_slider_column_gap
-        v_title_float = maybe_disable(gui.label((v_float_x - 8, v_title_top), 'V Float', True))
-        v_title_int = maybe_disable(gui.label((v_int_x - 12, v_title_top), 'V Int Snap', True))
+        v_title_float = maybe_disable(gui.label(self._anchor_point(gui, v_float_x - 8, v_title_top), 'V Float', True))
+        v_title_int = maybe_disable(gui.label(self._anchor_point(gui, v_int_x - 12, v_title_top), 'V Int Snap', True))
         v_title_bottom = max(v_title_float.draw_rect.bottom, v_title_int.draw_rect.bottom)
         v_slider_y = v_title_bottom + v_slider_label_gap
         v_slider_bottom_gap = 1
         lower_h_slider_bottom = h_slider_int.draw_rect.bottom - 10
-        v_slider_float_value = maybe_disable(gui.label((v_float_x - 6, 0), '0.00', True))
-        v_slider_int_value = maybe_disable(gui.label((v_int_x + 8, 0), '0', True))
+        v_slider_float_value = maybe_disable(gui.label(self._anchor_point(gui, v_float_x - 6, 0), '0.00', True))
+        v_slider_int_value = maybe_disable(gui.label(self._anchor_point(gui, v_int_x + 8, 0), '0', True))
         v_slider_float_value.position = (
             v_float_x + ((v_slider_width - v_slider_float_value.draw_rect.width) // 2),
             lower_h_slider_bottom - v_slider_float_value.draw_rect.height,
@@ -692,7 +710,7 @@ class Demo:
         v_slider_float = maybe_disable(
             gui.slider(
                 f'{id_prefix}_v_slider_float',
-                Rect(v_float_x, v_slider_y, v_slider_width, v_slider_height),
+                self._anchor_rect(gui, v_float_x, v_slider_y, v_slider_width, v_slider_height),
                 False,
                 slider_range,
                 0.0,
@@ -702,7 +720,7 @@ class Demo:
         v_slider_int = maybe_disable(
             gui.slider(
                 f'{id_prefix}_v_slider_int',
-                Rect(v_int_x, v_slider_y, v_slider_width, v_slider_height),
+                self._anchor_rect(gui, v_int_x, v_slider_y, v_slider_width, v_slider_height),
                 False,
                 integer_slider_range,
                 0,

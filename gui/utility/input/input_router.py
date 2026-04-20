@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pygame.event import Event as PygameEvent
-from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 from typing import TYPE_CHECKING
 from ..events import Event
 from .input_actions import InputAction
@@ -21,7 +21,7 @@ class InputRouter:
 
     def route(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
-        self._sync_pointer_from_button_event(event)
+        self._sync_pointer_from_mouse_event(event)
         is_left_mouse_down = event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
@@ -131,11 +131,20 @@ class InputRouter:
         """Update active window."""
         self.targets.update_active_window()
 
-    def _sync_pointer_from_button_event(self, event: PygameEvent) -> None:
-        """Sync logical pointer from button event ``pos`` before click hit-testing."""
-        if event.type not in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+    def _sync_pointer_from_mouse_event(self, event: PygameEvent) -> None:
+        """Sync logical pointer from mouse events before hit-testing/widget routing."""
+        if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
+            event_pos = getattr(event, 'pos', None)
+            if isinstance(event_pos, tuple) and len(event_pos) == 2:
+                self.gui.mouse_pos = self.gui.lock_state.clamp_position(event_pos)
             return
-        event_pos = getattr(event, 'pos', None)
-        if not isinstance(event_pos, tuple) or len(event_pos) != 2:
+        if event.type != MOUSEWHEEL:
             return
-        self.gui.mouse_pos = event_pos
+        input_providers = getattr(self.gui, 'input_providers', None)
+        mouse_get_pos = getattr(input_providers, 'mouse_get_pos', None)
+        if not callable(mouse_get_pos):
+            return
+        physical_pos = mouse_get_pos()
+        if not isinstance(physical_pos, tuple) or len(physical_pos) != 2:
+            return
+        self.gui.mouse_pos = self.gui.lock_state.clamp_position(physical_pos)

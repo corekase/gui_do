@@ -11,6 +11,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.gui_utils.lock_state_model import LockState
 
 
 class LockWidgetStub:
@@ -30,6 +31,7 @@ class LockWidgetStub:
 
 class LockTransitionGuiStub:
     def __init__(self) -> None:
+        self._lock_state = LockState()
         self.dragging = False
         self.dragging_window = None
         self.mouse_delta = None

@@ -149,7 +149,7 @@ It owns:
 - Event routing.
 - Renderer.
 - Scheduler (`gui.scheduler`) and timers (`gui.timers`).
-- Layout helper (`set_grid_properties` and `gridded`).
+- Layout system (`grid`, `linear`, and `anchor` helpers).
 
 ## 4. Window vs screen widgets
 
@@ -350,7 +350,6 @@ The sections above focus on practical usage. This section provides complete call
 
 ## GuiManager Advanced Methods
 
-- `gui.build_font_registry(**fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]`
 - `gui.load_fonts(fonts: Iterable[Tuple[str, str, int]]) -> None`
 - `gui.hide_widgets(*widgets: Widget) -> None`
 - `gui.show_widgets(*widgets: Widget) -> None`
@@ -540,6 +539,34 @@ gui.set_cursor("hand")
 
 The demo uses this repeatedly for dense control layouts.
 
+## Layout managers and geometry patterns
+
+The package now includes a small layout system with three practical managers based on common GUI patterns:
+
+- Grid layout for dense control matrices with stable row/column semantics.
+- Linear layout for toolbar/button rows or columns, with optional wrapping.
+- Anchor layout for edge/center alignment inside a bounded area.
+
+Runtime API:
+
+- `gui.set_grid_properties(anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None`
+- `gui.gridded(x: int, y: int) -> Union[Rect, Tuple[int, int]]`
+- `gui.set_linear_properties(anchor: Tuple[int, int], item_width: int, item_height: int, spacing: int, horizontal: bool = True, wrap_count: int = 0, use_rect: bool = True) -> None`
+- `gui.linear(index: int) -> Union[Rect, Tuple[int, int]]`
+- `gui.next_linear() -> Union[Rect, Tuple[int, int]]`
+- `gui.reset_linear_cursor() -> None`
+- `gui.set_anchor_bounds(bounds: Rect) -> None`
+- `gui.anchored(size: Tuple[int, int], anchor: str = "center", margin: Tuple[int, int] = (0, 0), use_rect: bool = True) -> Union[Rect, Tuple[int, int]]`
+- `gui.place_gui_object(gui_object: Union[Window, Widget], geometry: Union[Rect, Tuple[int, int]]) -> Union[Window, Widget]`
+
+Best-practice mapping to this package's geometry model:
+
+- Use grid layout when widgets share one canonical size and `Rect` geometry is directly passed into widget constructors.
+- Use linear layout when ordering matters more than row/column coordinates, for example task-panel button strips and bottom action rows.
+- Use anchor layout when a geometry target must be aligned to container bounds (for example centering a window footprint in screen coordinates).
+- Use `place_gui_object` for post-construction layout passes: it maps `Rect` to `position` by `.topleft` and preserves widget/window sizes.
+- Keep a single layout strategy per region (for example one linear strip per task panel row) to reduce hidden geometry coupling.
+
 ## Demo Walkthrough: What To Learn From It
 
 `gui_do_demo.py` demonstrates several production-use patterns:
@@ -557,7 +584,6 @@ If you are new to this package, reading and modifying the demo is the fastest wa
 
 These are the most useful caveats to know up front:
 
-- No advanced layout engine yet (only simple grid helper).
 - No built-in theming system; palette and style are mostly fixed.
 - Window resizing is not implemented.
 - Widget IDs must be unique across screen and all windows.

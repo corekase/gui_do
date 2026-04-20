@@ -47,11 +47,15 @@ class LockStateController:
         """Restore hardware pointer when releasing an active mouse lock."""
         if not self.state.mouse_locked:
             return
-        if self.state.mouse_point_locked and self.state.lock_point_pos is not None:
-            self.gui.pointer.set_physical_mouse_pos(self.state.lock_point_pos)
-            self.gui.mouse_pos = self.state.lock_point_pos
+        if not self.state.mouse_point_locked:
+            # Align hardware cursor with the current logical edge position so
+            # the next motion event continues smoothly after area-lock release.
+            self.gui.pointer.set_physical_mouse_pos(self.gui.mouse_pos)
             return
-        self.gui.pointer.set_physical_mouse_pos(self.gui.mouse_pos)
+        if self.state.lock_point_pos is None:
+            return
+        self.gui.pointer.set_physical_mouse_pos(self.state.lock_point_pos)
+        self.gui.mouse_pos = self.state.lock_point_pos
 
     def set_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Set or clear area lock for a registered widget."""

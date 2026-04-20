@@ -4,7 +4,6 @@ import pygame
 from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
-import logging
 from typing import Any, Callable, Dict, Hashable, Iterable, List, Literal, Optional, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
@@ -49,8 +48,6 @@ from ..widgets.arrowbox import ArrowBox
 from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
 
-_logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from .gui_utils.gui_event import GuiEvent
     from .gui_utils.task_panel import _ManagedTaskPanel
@@ -91,14 +88,10 @@ class GuiManager:
             GuiManager._validate_font_entry(name, filename, size)
         return registry
 
-    def build_font_registry(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
-        """Build a validated font registry from keyword entries.
+    def configure_fonts(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
+        """Build and load a font registry in one call.
 
-        Example:
-            gui.build_font_registry(
-                titlebar=('Ubuntu-B.ttf', 14),
-                normal=('Gimbot.ttf', 16),
-            )
+        Returns the normalized registry as ``(name, filename, size)`` tuples.
         """
         if not fonts:
             raise GuiError('fonts registry cannot be empty')
@@ -109,14 +102,6 @@ class GuiManager:
             filename, size = font_def
             self._validate_font_entry(name, filename, size)
             registry.append((name, filename, size))
-        return registry
-
-    def configure_fonts(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
-        """Build and load a font registry in one call.
-
-        Returns the normalized registry as ``(name, filename, size)`` tuples.
-        """
-        registry = self.build_font_registry(**fonts)
         self.load_fonts(registry)
         return registry
 
@@ -730,6 +715,31 @@ class GuiManager:
         """Configure grid cell sizing used by gridded."""
         self.layout.set_grid_properties(anchor, width, height, spacing, use_rect)
 
+    def set_linear_properties(
+        self,
+        anchor: Tuple[int, int],
+        item_width: int,
+        item_height: int,
+        spacing: int,
+        horizontal: bool = True,
+        wrap_count: int = 0,
+        use_rect: bool = True,
+    ) -> None:
+        """Configure linear layout sizing used by linear and next_linear."""
+        self.layout.set_linear_properties(
+            anchor,
+            item_width,
+            item_height,
+            spacing,
+            horizontal,
+            wrap_count,
+            use_rect,
+        )
+
+    def set_anchor_bounds(self, bounds: Rect) -> None:
+        """Configure anchor layout bounds used by anchored."""
+        self.layout.set_anchor_bounds(bounds)
+
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
         self.lock_flow.set_lock_area(locking_object, area)
@@ -805,7 +815,34 @@ class GuiManager:
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:
         """Gridded."""
-        return self.layout_manager.get_cell(x, y)
+        return self.layout_manager.grid.get_cell(x, y)
+
+    def linear(self, index: int) -> Union[Rect, Tuple[int, int]]:
+        """Return one geometry slot from the active linear layout by index."""
+        return self.layout_manager.linear_item(index)
+
+    def next_linear(self) -> Union[Rect, Tuple[int, int]]:
+        """Return next geometry slot from the active linear layout."""
+        return self.layout_manager.next_linear_item()
+
+    def reset_linear_cursor(self) -> None:
+        """Reset the linear layout cursor used by next_linear."""
+        self.layout_manager.reset_linear_cursor()
+
+    def anchored(
+        self,
+        size: Tuple[int, int],
+        anchor: str = 'center',
+        margin: Tuple[int, int] = (0, 0),
+        use_rect: bool = True,
+    ) -> Union[Rect, Tuple[int, int]]:
+        """Return anchored geometry inside the configured anchor bounds."""
+        return self.layout_manager.anchored(size, anchor, margin, use_rect)
+
+    def place_gui_object(self, gui_object: TGuiObject, geometry: Union[Rect, Tuple[int, int]]) -> TGuiObject:
+        """Apply layout geometry to an existing widget/window position."""
+        self.layout.place_gui_object(gui_object, geometry)
+        return gui_object
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""

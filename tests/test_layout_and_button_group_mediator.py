@@ -16,17 +16,17 @@ class ButtonStub:
 class LayoutManagerTests(unittest.TestCase):
     def test_get_cell_returns_rect_with_expected_geometry(self) -> None:
         layout = LayoutManager()
-        layout.set_properties(anchor=(10, 20), width=30, height=40, spacing=5, use_rect=True)
+        layout.grid.set_properties(anchor=(10, 20), width=30, height=40, spacing=5, use_rect=True)
 
-        cell = layout.get_cell(2, 3)
+        cell = layout.grid.get_cell(2, 3)
 
         self.assertEqual(cell, Rect(80, 155, 30, 40))
 
     def test_get_cell_returns_point_when_use_rect_is_false(self) -> None:
         layout = LayoutManager()
-        layout.set_properties(anchor=(3, 4), width=10, height=8, spacing=2, use_rect=False)
+        layout.grid.set_properties(anchor=(3, 4), width=10, height=8, spacing=2, use_rect=False)
 
-        cell = layout.get_cell(1, 2)
+        cell = layout.grid.get_cell(1, 2)
 
         self.assertEqual(cell, (15, 24))
 
@@ -34,13 +34,13 @@ class LayoutManagerTests(unittest.TestCase):
         layout = LayoutManager()
 
         with self.assertRaises(ValueError):
-            layout.set_properties(anchor=(0, 0), width=0, height=10, spacing=1)
+            layout.grid.set_properties(anchor=(0, 0), width=0, height=10, spacing=1)
         with self.assertRaises(ValueError):
-            layout.set_properties(anchor=(0, 0), width=10, height=-1, spacing=1)
+            layout.grid.set_properties(anchor=(0, 0), width=10, height=-1, spacing=1)
         with self.assertRaises(ValueError):
-            layout.set_properties(anchor=(0, 0), width=10, height=10, spacing=-1)
+            layout.grid.set_properties(anchor=(0, 0), width=10, height=10, spacing=-1)
         with self.assertRaises(ValueError):
-            layout.set_properties(anchor=(0,), width=10, height=10, spacing=0)
+            layout.grid.set_properties(anchor=(0,), width=10, height=10, spacing=0)
 
 
 class ButtonGroupMediatorTests(unittest.TestCase):
