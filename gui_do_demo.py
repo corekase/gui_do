@@ -806,9 +806,10 @@ class Demo:
         self.life = new_life
 
     def life_reset(self):
+        default_zoom = 6
         self.origin_x, self.origin_y = self.canvas_rect.centerx, self.canvas_rect.centery
-        self.cell_size = 2
-        self.life_zoom_slider.value = 0
+        self.cell_size = default_zoom * 2
+        self.life_zoom_slider.value = default_zoom - 1
         self._life_zoom_slider_last_value = int(self.life_zoom_slider.value)
         self.toggle_life.pushed = False
         # the starting configuration of the Life grid

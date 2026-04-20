@@ -266,6 +266,37 @@ class CanvasRoiBatch5Tests(unittest.TestCase):
         canvas.gui.set_mouse_pos((999, 999))
         self.assertFalse(canvas.focused())
 
+    def test_disabled_draw_dims_live_canvas_contents_not_cached_bitmap(self) -> None:
+        canvas = self._build_canvas_stub()
+        blit_calls = []
+        overlay_seen_sources = []
+
+        canvas.surface = SimpleNamespace(blit=lambda src, dst: blit_calls.append((src, dst)))
+        canvas._disabled = True
+
+        def _fake_overlay():
+            overlay_seen_sources.append(blit_calls[-1][0] if blit_calls else None)
+
+        canvas._blit_disabled_overlay = _fake_overlay
+
+        canvas.draw()
+        self.assertEqual(len(blit_calls), 1)
+        self.assertIs(blit_calls[0][0], canvas.canvas)
+        self.assertEqual(blit_calls[0][1], canvas.draw_rect)
+        self.assertEqual(overlay_seen_sources, [canvas.canvas])
+
+        # A subsequent draw must still dim whatever canvas surface is current.
+        updated_canvas_surface = _CanvasSurface((20, 20))
+        canvas.canvas = updated_canvas_surface
+        blit_calls.clear()
+        overlay_seen_sources.clear()
+
+        canvas.draw()
+        self.assertEqual(len(blit_calls), 1)
+        self.assertIs(blit_calls[0][0], updated_canvas_surface)
+        self.assertEqual(blit_calls[0][1], canvas.draw_rect)
+        self.assertEqual(overlay_seen_sources, [updated_canvas_surface])
+
 
 class ScrollbarRoiBatch5Tests(unittest.TestCase):
     def _fake_frame_init(self, instance, gui, sid, rect):
