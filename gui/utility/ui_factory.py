@@ -67,11 +67,27 @@ class GuiUiFactory:
         overall_rect: Rect,
         horizontal: Orientation,
         style: ArrowPosition,
-        params: Tuple[int, int, int, int],
+        total_range: int,
+        start_pos: int,
+        bar_size: int,
+        inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
         """Create and register a `Scrollbar` widget."""
-        return self.gui.add(Scrollbar(self.gui, id, overall_rect, horizontal, style, params, wheel_positive_to_max))
+        return self.gui.add(
+            Scrollbar(
+                self.gui,
+                id,
+                overall_rect,
+                horizontal,
+                style,
+                total_range,
+                start_pos,
+                bar_size,
+                inc_size,
+                wheel_positive_to_max,
+            )
+        )
 
     def slider(
         self,

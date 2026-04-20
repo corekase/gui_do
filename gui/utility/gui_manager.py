@@ -285,13 +285,26 @@ class GuiManager:
         overall_rect: Rect,
         horizontal: bool,
         style: ScrollbarStyle,
-        params: Tuple[int, int, int, int],
+        total_range: int,
+        start_pos: int,
+        bar_size: int,
+        inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
         """Scrollbar."""
         orientation = self._resolve_orientation(horizontal)
         arrow_style = self._resolve_scrollbar_style(style)
-        return self.ui_factory.scrollbar(id, overall_rect, orientation, arrow_style, params, wheel_positive_to_max)
+        return self.ui_factory.scrollbar(
+            id,
+            overall_rect,
+            orientation,
+            arrow_style,
+            total_range,
+            start_pos,
+            bar_size,
+            inc_size,
+            wheel_positive_to_max,
+        )
 
     def slider(
         self,
@@ -408,7 +421,10 @@ class GuiManager:
         overall_rect: Rect,
         horizontal: bool,
         style: ScrollbarStyle,
-        params: Tuple[int, int, int, int],
+        total_range: int,
+        start_pos: int,
+        bar_size: int,
+        inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
         orientation = self._resolve_orientation(horizontal)
@@ -416,7 +432,17 @@ class GuiManager:
         return cast(
             Scrollbar,
             self._task_panel_add_created_widget(
-                lambda: self.ui_factory.scrollbar(id, overall_rect, orientation, arrow_style, params, wheel_positive_to_max)
+                lambda: self.ui_factory.scrollbar(
+                    id,
+                    overall_rect,
+                    orientation,
+                    arrow_style,
+                    total_range,
+                    start_pos,
+                    bar_size,
+                    inc_size,
+                    wheel_positive_to_max,
+                )
             ),
         )
 

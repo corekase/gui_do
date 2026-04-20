@@ -298,7 +298,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
             gm.GuiManager.frame(gui, "f", Rect(0, 0, 1, 1))
             gm.GuiManager.image(gui, "i", Rect(0, 0, 1, 1), "img.png")
             gm.GuiManager.label(gui, (1, 2), "lbl")
-            gm.GuiManager.scrollbar(gui, "s", Rect(0, 0, 20, 6), True, "skip", (10, 0, 5, 1))
+            gm.GuiManager.scrollbar(gui, "s", Rect(0, 0, 20, 6), True, "skip", 10, 0, 5, 1)
             gm.GuiManager.toggle(gui, "t", Rect(0, 0, 1, 1), ButtonStyle.Box, False, "p")
             gm.GuiManager.window(gui, "w", (0, 0), (10, 10))
 

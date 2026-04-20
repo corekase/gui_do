@@ -609,7 +609,10 @@ class Demo:
                     Rect(v_scroll_x + (index * (v_scroll_width + v_scroll_gap)), v_scroll_y, v_scroll_width, v_scroll_height),
                     False,
                     style_name,
-                    (100, 0, 30, 10),
+                    100,
+                    0,
+                    30,
+                    10,
                 )
             )
 
@@ -627,7 +630,10 @@ class Demo:
                     Rect(h_scroll_start_x + (index * (h_scroll_width + h_scroll_gap)), h_scroll_y, h_scroll_width, 20),
                     True,
                     style_name,
-                    (100, 0, 30, 10),
+                    100,
+                    0,
+                    30,
+                    10,
                 )
             )
 

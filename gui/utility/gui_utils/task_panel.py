@@ -137,10 +137,23 @@ class _ManagedTaskPanel:
         overall_rect: Rect,
         horizontal: bool,
         style: ScrollbarStyle,
-        params: Tuple[int, int, int, int],
+        total_range: int,
+        start_pos: int,
+        bar_size: int,
+        inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
-        return self.gui._task_panel_scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max)
+        return self.gui._task_panel_scrollbar(
+            id,
+            overall_rect,
+            horizontal,
+            style,
+            total_range,
+            start_pos,
+            bar_size,
+            inc_size,
+            wheel_positive_to_max,
+        )
 
     def slider(
         self,

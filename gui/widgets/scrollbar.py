@@ -71,7 +71,10 @@ class Scrollbar(Frame, AxisRangeMixin):
         overall_rect: Rect,
         horizontal: Orientation,
         style: ArrowPosition,
-        params: Tuple[int, int, int, int],
+        total_range: int,
+        start_pos: int,
+        bar_size: int,
+        inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> None:
         """Create Scrollbar."""
@@ -144,8 +147,7 @@ class Scrollbar(Frame, AxisRangeMixin):
         self._inc_size: int = 0
         super().__init__(gui, id, scroll_area_rect)
         self._graphic_rect: Rect = Rect(self.draw_rect.left + 4, self.draw_rect.top + 4, self.draw_rect.width - 8, self.draw_rect.height - 8)
-        total, start, size, inc = params
-        self.set(total, start, size, inc)
+        self.set(total_range, start_pos, bar_size, inc_size)
         self._set_orientation(horizontal)
         self._dragging: bool = False
         self._last_mouse_pos: Optional[int] = None

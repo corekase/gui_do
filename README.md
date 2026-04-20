@@ -213,11 +213,38 @@ All of these both create and register the widget:
 - `gui.image(id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image`
 - `gui.label(position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label`
 - `gui.slider(id: str, rect: Rect, horizontal: bool, total_range: int, position: float = 0.0, integer_type: bool = False, notch_interval_percent: float = 5.0, wheel_positive_to_max: bool = False, wheel_step: Optional[float] = None) -> Slider`
-- `gui.scrollbar(id: str, overall_rect: Rect, horizontal: bool, style: Literal["skip", "split", "near", "far"], params: Tuple[int, int, int, int], wheel_positive_to_max: bool = False) -> Scrollbar`
+- `gui.scrollbar(id: str, overall_rect: Rect, horizontal: bool, style: Literal["skip", "split", "near", "far"], total_range: int, start_pos: int, bar_size: int, inc_size: int, wheel_positive_to_max: bool = False) -> Scrollbar`
 - `gui.toggle(id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle`
 - `gui.window(title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None, preamble: Optional[Callable[[], None]] = None, event_handler: Optional[Callable[[BaseEvent], None]] = None, postamble: Optional[Callable[[], None]] = None) -> Window`
 
 Task panel behavior is manager-owned (not a separate widget factory).
+
+Scrollbar range arguments map directly to `Scrollbar.set(total_range, start_pos, bar_size, inc_size)` semantics:
+
+- `total_range`: full logical range; must be `> 0`.
+- `start_pos`: current logical start offset; must be in `0..(total_range - bar_size)`.
+- `bar_size`: visible logical window size; must be in `1..total_range`.
+- `inc_size`: step size used by arrows and wheel movement; must be `> 0`.
+
+Example:
+
+```python
+total_range = 100
+start_pos = 0
+bar_size = 30
+inc_size = 10
+
+gui.scrollbar(
+    "demo_scroll_h",
+    Rect(40, 220, 180, 20),
+    True,
+    "split",
+    total_range,
+    start_pos,
+    bar_size,
+    inc_size,
+)
+```
 
 Constructor takes one task panel switch:
 

@@ -314,23 +314,23 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
             autospec=True,
             side_effect=lambda s, g, i, r: self._fake_frame_init(s, g, i, r),
         ):
-            skip = Scrollbar(gui, "skip", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Skip, (20, 0, 10, 1))
+            skip = Scrollbar(gui, "skip", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Skip, 20, 0, 10, 1)
             self.assertIsNone(skip._increment_rect)
             self.assertIsNone(skip._decrement_rect)
 
-            near_h = Scrollbar(gui, "near_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Near, (20, 0, 10, 1))
+            near_h = Scrollbar(gui, "near_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Near, 20, 0, 10, 1)
             self.assertEqual(near_h._inc_degree, 0)
             self.assertEqual(near_h._dec_degree, 180)
 
-            near_v = Scrollbar(gui, "near_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Near, (20, 0, 10, 1))
+            near_v = Scrollbar(gui, "near_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Near, 20, 0, 10, 1)
             self.assertEqual(near_v._inc_degree, 270)
             self.assertEqual(near_v._dec_degree, 90)
 
-            far_h = Scrollbar(gui, "far_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Far, (20, 0, 10, 1))
+            far_h = Scrollbar(gui, "far_h", Rect(0, 0, 80, 20), Orientation.Horizontal, ArrowPosition.Far, 20, 0, 10, 1)
             self.assertIsNotNone(far_h._increment_rect)
             self.assertIsNotNone(far_h._decrement_rect)
 
-            split_v = Scrollbar(gui, "split_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Split, (20, 0, 10, 1))
+            split_v = Scrollbar(gui, "split_v", Rect(0, 0, 20, 80), Orientation.Vertical, ArrowPosition.Split, 20, 0, 10, 1)
             self.assertIsNotNone(split_v._increment_rect)
             self.assertIsNotNone(split_v._decrement_rect)
 

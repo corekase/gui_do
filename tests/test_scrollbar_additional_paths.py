@@ -286,7 +286,10 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
                 Rect(0, 0, 100, 20),
                 Orientation.Horizontal,
                 "bad-style",  # type: ignore[arg-type]
-                (10, 0, 5, 1),
+                10,
+                0,
+                5,
+                1,
             )
 
     def test_constructor_validates_wheel_positive_to_max_type(self) -> None:
@@ -297,7 +300,10 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
                 Rect(0, 0, 100, 20),
                 Orientation.Horizontal,
                 ArrowPosition.Skip,
-                (10, 0, 5, 1),
+                10,
+                0,
+                5,
+                1,
                 wheel_positive_to_max=1,  # type: ignore[arg-type]
             )
 
