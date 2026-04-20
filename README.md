@@ -17,6 +17,18 @@ Each release includes a link to a video demonstration as it was at the time.
 - Common controls: buttons, toggles, button groups, sliders, scrollbars, labels, images, frames, arrow boxes, canvases, and bottom task panels.
 - A task scheduler for background computation with UI-thread progress callbacks.
 
+## Type Signature Legend
+
+The method signatures in this README use standard Python typing forms:
+
+- `Optional[T]`: value is either `T` or `None`.
+- `Union[A, B]`: value may be either `A` or `B`.
+- `Tuple[A, B, ...]`: fixed-size ordered tuple with typed positions.
+- `List[T]`: mutable list of `T` values.
+- `Callable[[A, B], R]`: callable taking `A` and `B`, returning `R`.
+- `Hashable`: any value usable as a dictionary key (for example `str`, `int`, `tuple`).
+- `Rect`: `pygame.Rect`.
+
 ## Quick Start
 
 ## 1. Install dependencies
@@ -70,7 +82,7 @@ Resource loading resolves from the repository `data/` folder, so it is independe
 
 ## 3. Minimal runnable setup
 
-When calling `gui.configure_fonts()`, you must provide both `titlebar` and `normal` font entries because the GUI uses those names internally.
+When calling `gui.configure_fonts(**fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]`, you must provide both `titlebar` and `normal` font entries because the GUI uses those names internally.
 
 ```python
 import pygame
@@ -111,7 +123,7 @@ If you understand these 4 parts, the rest of the package makes sense.
 
 ## 1. Engine: frame orchestration
 
-`Engine.run()` performs the frame cycle:
+`Engine.run() -> None` performs the frame cycle:
 
 1. Screen/window preamble callbacks.
 2. Input polling and dispatch.
@@ -194,17 +206,17 @@ The demo follows this sequence, which is a solid default:
 
 All of these both create and register the widget:
 
-- `gui.arrow_box(id, rect, direction, on_activate=None)`
-- `gui.button(id, rect, style, text, on_activate=None)`
-- `gui.button_group(group, id, rect, style, text)`
-- `gui.canvas(id, rect, backdrop=None, on_activate=None, automatic_pristine=False)`
-- `gui.frame(id, rect)`
-- `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
-- `gui.label(position, text, shadow=False, id=None)`
-- `gui.slider(id, rect, horizontal, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0, wheel_positive_to_max=False, wheel_step=None)`
-- `gui.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max=False)`
-- `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
-- `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+- `gui.arrow_box(id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox`
+- `gui.button(id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button`
+- `gui.button_group(group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup`
+- `gui.canvas(id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas`
+- `gui.frame(id: str, rect: Rect) -> Frame`
+- `gui.image(id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image`
+- `gui.label(position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label`
+- `gui.slider(id: str, rect: Rect, horizontal: Orientation, total_range: int, position: float = 0.0, integer_type: bool = False, notch_interval_percent: float = 5.0, wheel_positive_to_max: bool = False, wheel_step: Optional[float] = None) -> Slider`
+- `gui.scrollbar(id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int], wheel_positive_to_max: bool = False) -> Scrollbar`
+- `gui.toggle(id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle`
+- `gui.window(title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None, preamble: Optional[Callable[[], None]] = None, event_handler: Optional[Callable[[BaseEvent], None]] = None, postamble: Optional[Callable[[], None]] = None) -> Window`
 
 Task panel behavior is manager-owned (not a separate widget factory).
 
@@ -282,7 +294,7 @@ def gui1_screen_event_handler(self, event):
 ## Widget callback signatures
 
 - `on_activate` callbacks are zero-arg callables: `def callback() -> None`.
-- For canvases, `on_activate` should drain queued canvas events via `canvas.read_event()`.
+- For canvases, `on_activate` should drain queued canvas events via `canvas.read_event() -> Optional[CanvasEventPacket]`.
 
 ## Canvas usage (from Life window in demo)
 
@@ -290,16 +302,16 @@ def gui1_screen_event_handler(self, event):
 
 Key methods:
 
-- `canvas.get_canvas_surface()`
-- `canvas.read_event()` returns `CanvasEventPacket` or `None`
-- `canvas.set_event_queue_limit(max_events)`
-- `canvas.set_overflow_handler(callback, strict=False)`
-- `canvas.set_overflow_mode('drop_oldest' | 'reject_new')`
-- `canvas.set_motion_coalescing(enabled)`
+- `canvas.get_canvas_surface() -> Surface`
+- `canvas.read_event() -> Optional[CanvasEventPacket]`
+- `canvas.set_event_queue_limit(max_events: int) -> None`
+- `canvas.set_overflow_handler(callback: Optional[Callable[[int, int], None]], *, strict: bool = False) -> None`
+- `canvas.set_overflow_mode(mode: str) -> None` where `mode` is `'drop_oldest'` or `'reject_new'`
+- `canvas.set_motion_coalescing(enabled: bool) -> None`
 
 Overflow callback signature:
 
-- `callback(dropped_now, total_dropped)`
+- `callback(dropped_now: int, total_dropped: int) -> None`
 
 The demo uses canvas events for:
 
@@ -314,10 +326,10 @@ Important: if you do not consume events fast enough, older events are dropped wh
 
 Use `gui.scheduler` for background work.
 
-- `add_task(task_id, logic, parameters=None, message_method=None)`
-- `send_message(task_id, parameters)` from inside the task function
-- `pop_result(task_id, default=None)` after completion
-- `remove_tasks(*ids)`, `tasks_busy_match_any(*ids)`
+- `add_task(task_id: Hashable, logic: Callable[..., object], parameters: Optional[object] = None, message_method: Optional[Callable[[object], None]] = None) -> None`
+- `send_message(task_id: Hashable, parameters: object) -> None` from inside the task function
+- `pop_result(task_id: Hashable, default: Optional[object] = None) -> Optional[object]` after completion
+- `remove_tasks(*ids: Hashable) -> None`, `tasks_busy_match_any(*ids: Hashable) -> bool`
 
 The Mandelbrot demo uses this heavily:
 
@@ -332,13 +344,13 @@ Current Python builds still have the GIL, but scheduler worker tasks should be t
 
 - Only mutate widget/window/screen state from main-thread callbacks (screen/window lifecycle, widget handlers, scheduler message callbacks, and `Event.Task` handling).
 - Worker task logic should not directly touch `GuiManager`, widgets, windows, renderer objects, or pygame surfaces.
-- Worker tasks should communicate with the UI only through `scheduler.send_message(...)` and by returning a result consumed through task completion.
-- Task messages, completion notifications, and task failures are queued and then applied on the frame thread during `scheduler.update()`.
+- Worker tasks should communicate with the UI only through `scheduler.send_message(task_id: Hashable, parameters: object) -> None` and by returning a result consumed through task completion.
+- Task messages, completion notifications, and task failures are queued and then applied on the frame thread during `scheduler.update() -> List[Hashable]`.
 - Removing/re-adding the same task id is generation-protected: stale worker messages/completions/failures from earlier generations are discarded.
 
 ## Timers
 
-`gui.timers.add_timer(id, duration_ms, callback)` lets you run periodic callbacks from the frame loop.
+`gui.timers.add_timer(id: Hashable, duration: float, callback: Callable[[], None]) -> None` lets you run periodic callbacks from the frame loop.
 
 The arrow box implementation uses timers internally for repeat activation behavior while held.
 
@@ -346,9 +358,9 @@ The arrow box implementation uses timers internally for repeat activation behavi
 
 ## Pristine background restoration
 
-`set_pristine(image)` captures a clean background snapshot.
+`gui.set_pristine(image: str, obj: Optional[Any] = None) -> None` captures a clean background snapshot.
 
-You can then call `restore_pristine()` each frame (as the demo does) before drawing dynamic content. This is the primary erase/redraw pattern used in `gui_do`.
+You can then call `gui.restore_pristine(area: Optional[Rect] = None, obj: Optional[Any] = None) -> None` each frame (as the demo does) before drawing dynamic content. This is the primary erase/redraw pattern used in `gui_do`.
 
 ## Buffered drawing
 
@@ -370,19 +382,19 @@ These APIs are useful when building drag tools, RTS-style camera controls, or cu
 
 ## Lock mouse to a rectangle
 
-`gui.set_lock_area(locking_object, area)` clamps the pointer position to a `Rect` until released.
+`gui.set_lock_area(locking_object: Optional[Widget], area: Optional[Rect] = None) -> None` clamps the pointer position to a `Rect` until released.
 
 - `locking_object` must be a registered widget.
 - `area` must be a valid `Rect` with positive width/height.
-- Call `gui.set_lock_area(None)` to release.
+- Call `gui.set_lock_area(locking_object=None, area=None)` to release.
 
 ## Lock to a point (relative input mode)
 
-`gui.set_lock_point(locking_object, point=None)` enables point-lock mode.
+`gui.set_lock_point(locking_object: Optional[Widget], point: Optional[Tuple[int, int]] = None) -> None` enables point-lock mode.
 
 - Input remains active through the locked widget while the hardware pointer is recentred only when it exits a broad center region.
 - If `point` is omitted, the current mouse position is used.
-- Call `gui.set_lock_point(None)` to release.
+- Call `gui.set_lock_point(locking_object=None, point=None)` to release.
 
 The demo uses this mode on the Life canvas while right-dragging.
 
@@ -390,8 +402,8 @@ The demo uses this mode on the Life canvas while right-dragging.
 
 Cursor images are loaded through `WidgetGraphicsFactory` and selected by name in `GuiManager`.
 
-- `gui.graphics_factory.register_cursor(name=..., filename=..., hotspot=(x, y))`
-- `gui.set_cursor(cursor_name)`
+- `gui.graphics_factory.register_cursor(*, name: str, filename: str, hotspot: Tuple[int, int]) -> CursorAsset`
+- `gui.set_cursor(name: str) -> None`
 
 Notes:
 
@@ -413,7 +425,7 @@ gui.set_cursor("hand")
 
 ## Layout helper
 
-`set_grid_properties(anchor, width, height, spacing, use_rect=True)` plus `gridded(x, y)` gives a simple uniform grid positioning workflow.
+`gui.set_grid_properties(anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None` plus `gui.gridded(x: int, y: int) -> Union[Rect, Tuple[int, int]]` gives a simple uniform grid positioning workflow.
 
 The demo uses this repeatedly for dense control layouts.
 
@@ -462,7 +474,7 @@ If assets are missing or not found, verify the `data/` directory contains the fi
 
 The earlier sections are enough to build and ship applications. This part exists for developing programmers who want a complete mental model of how to use the GUI APIs in more advanced patterns.
 
-## Life example: how `generate()` uses the delta table
+## Life example: how `generate(self) -> None` uses the delta table
 
 In the demo, live cells are stored as a `set` of grid coordinates, for example `(x, y)`.
 
@@ -472,9 +484,9 @@ The class-level `neighbours` tuple is a delta table:
 - `(-1,  0)`, `(.., ..)`, `( 1,  0)`
 - `(-1,  1)`, `( 0,  1)`, `( 1,  1)`
 
-`generate()` works in two stages:
+`generate(self) -> None` works in two stages:
 
-1. It computes local population with a helper (`population(cell)`):
+1. It computes local population with a helper (`population(cell: Tuple[int, int]) -> int`):
     for each delta in `neighbours`, it adds the delta to the current cell to get a neighbor coordinate, then checks membership in `self.life`.
 2. It builds a new set (`new_life`) by testing both:
     - each currently live cell (survival checks)
@@ -495,7 +507,7 @@ The Mandelbrot tasks use `gui.scheduler` and intentionally avoid touching pygame
 Worker side (background task):
 
 - Computes iteration counts (numbers) for pixels or rectangular regions.
-- Sends payloads with `scheduler.send_message(task_id, payload)`.
+- Sends payloads with `scheduler.send_message(task_id: Hashable, parameters: object) -> None`.
 - Payloads are numeric data like `(x, y, w, h, value)` or `(x, y, w, h, values)` where `values` is a list of iteration counts.
 
 Important rule demonstrated by the demo:
@@ -506,8 +518,8 @@ Important rule demonstrated by the demo:
 UI side (main thread callback):
 
 - The scheduler message handler receives those numeric payloads.
-- `apply_mandel_result(...)` chooses the target canvas by `task_id`.
-- Iteration counts are converted to RGB via `col(...)`.
+- `apply_mandel_result(task_id: Hashable, result: Tuple[int, int, int, int, Union[int, List[int]]]) -> None` chooses the target canvas by `task_id`.
+- Iteration counts are converted to RGB via `col(k: int) -> Tuple[int, int, int]`.
 - The callback performs actual drawing (`fill` for region blocks or per-pixel writes).
 
 Why this matters for API usage:
