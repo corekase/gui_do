@@ -92,7 +92,7 @@ from gui import GuiManager, Engine, StateManager, Event, ButtonStyle, Orientatio
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 
-gui = GuiManager(screen)
+gui = GuiManager(screen, task_panel_enabled=False)
 gui.configure_fonts(
     normal=("Gimbot.ttf", 16),
     titlebar=("Ubuntu-B.ttf", 14),
