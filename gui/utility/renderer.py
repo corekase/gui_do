@@ -79,7 +79,7 @@ class Renderer:
         self._capture_bitmap(panel_rect)
         task_panel.draw_background()
         self._draw_widget_collection(task_panel.widgets)
-        self.gui.surface.blit(task_panel.surface, (task_panel.x, task_panel.y))
+        self.gui.surface.blit(task_panel.surface, (task_panel.left, task_panel.y))
 
     def _draw_cursor(self) -> None:
         """Draw cursor."""

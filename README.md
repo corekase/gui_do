@@ -155,6 +155,7 @@ From `gui` package import:
 - `GuiManager`
 - `Engine`
 - `StateManager`
+- `TaskPanelSettings`
 - `colours`
 - `Event`
 - `CanvasEvent`
@@ -205,41 +206,58 @@ All of these both create and register the widget:
 - `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
-For object-style construction (unregistered instance), `GuiManager` also provides constructor-style helpers such as `gui.Button(...)`, `gui.Toggle(...)`, and related widget types. These are mainly useful with `gui.task_panel_add(...)`.
-
 Task panel behavior is manager-owned (not a separate widget factory).
 
 Constructor takes one task panel switch:
 
 - `task_panel_enabled=True`
 
-When enabled, optional customization is done through:
+For fully object-oriented control, configure with an immutable settings object:
 
-- `gui.configure_task_panel(height=38, x=0, reveal_pixels=4, auto_hide=True, timer_interval=16.0, movement_step=4, backdrop=None, preamble=None, event_handler=None, postamble=None)`
+```python
+from gui import TaskPanelSettings
 
-You can call `configure_task_panel(...)` with any subset of keyword arguments to override defaults.
+gui.set_task_panel_settings(
+    TaskPanelSettings(
+        panel_height=42,
+        left=12,
+        width=320,
+        hidden_peek_pixels=6,
+        auto_hide=True,
+        animation_interval_ms=12.0,
+        animation_step_px=5,
+        backdrop_image="taskpanel.png",
+    )
+)
+```
 
 Recommended task panel creation pattern:
 
-- Build an unregistered widget instance with the constructor-style helper (for example, `gui.Button(...)` or `gui.Toggle(...)`).
-- Add it to the task panel with `gui.task_panel_add(widget)`.
+- Preferred for modern tooling/IntelliSense: use the typed builder returned by `gui.task_panel_widgets()`.
+- Lower-level alternative: `gui.task_panel_add_widget(...)` with regular widget constructors.
 
 Example:
 
 ```python
-gui.task_panel_add(gui.Button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit"))
-apps_button = gui.task_panel_add(gui.Button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps"))
-drawing_toggle = gui.task_panel_add(gui.Toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing"))
+task_panel = gui.task_panel_widgets()
+task_panel.button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
+apps_button = task_panel.button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps")
+drawing_toggle = task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing")
+
+# still supported when you need constructor indirection
+gui.task_panel_add_widget(gui.button, "exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
 ```
 
 Runtime task panel helpers on `GuiManager`:
 
-- `gui.task_panel_add(widget)`
+- `gui.task_panel_widgets()`
+- `gui.task_panel_add_widget(widget_constructor, *args, **kwargs)`
 - `gui.set_task_panel_enabled(enabled)`
 - `gui.set_task_panel_auto_hide(auto_hide)`
-- `gui.set_task_panel_reveal_pixels(reveal_pixels)`
-- `gui.set_task_panel_movement_step(movement_step)`
-- `gui.set_task_panel_timer_interval(timer_interval)`
+- `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels)`
+- `gui.set_task_panel_animation_step_px(animation_step_px)`
+- `gui.set_task_panel_animation_interval_ms(animation_interval_ms)`
+- `gui.set_task_panel_settings(settings)`
 - `gui.read_task_panel_settings()`
 
 ## Events and Callbacks

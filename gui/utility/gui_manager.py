@@ -30,10 +30,12 @@ from .object_registry import GuiObjectRegistry
 from .coordinators.pointer_coordinator import PointerCoordinator
 from .renderer import Renderer
 from .coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
+from .task_panel_widget_builder import TaskPanelWidgetBuilder
 from .ui_factory import GuiUiFactory
 from .coordinators.widget_state_coordinator import WidgetStateCoordinator
 from .coordinators.workspace_coordinator import WorkspaceCoordinator
 from .gui_utils.workspace_state import WorkspaceState
+from .gui_utils.task_panel_settings import TaskPanelSettings
 from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
@@ -268,81 +270,6 @@ class GuiManager:
         """Frame."""
         return self.ui_factory.frame(id, rect)
 
-    # object-style widget constructors (unregistered)
-    def ArrowBox(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
-        """Create an unregistered ArrowBox widget instance."""
-        return ArrowBox(self, id, rect, direction, on_activate)
-
-    def Button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
-        """Create an unregistered Button widget instance."""
-        safe_text = '' if text is None else text
-        return Button(self, id, rect, style, safe_text, on_activate)
-
-    def ButtonGroup(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
-        """Create an unregistered ButtonGroup widget instance."""
-        return ButtonGroup(self, group, id, rect, style, text)
-
-    def Canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        """Create an unregistered Canvas widget instance."""
-        return Canvas(self, id, rect, backdrop, on_activate, automatic_pristine)
-
-    def Frame(self, id: str, rect: Rect) -> Frame:
-        """Create an unregistered Frame widget instance."""
-        return Frame(self, id, rect)
-
-    def Image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
-        """Create an unregistered Image widget instance."""
-        return Image(self, id, rect, image, automatic_pristine, scale)
-
-    def Label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
-        """Create an unregistered Label widget instance."""
-        if id is None:
-            self.ui_factory._label_sequence += 1
-            id = f'label_{self.ui_factory._label_sequence}'
-        return Label(self, id, position, text, shadow)
-
-    def Scrollbar(
-        self,
-        id: str,
-        overall_rect: Rect,
-        horizontal: Orientation,
-        style: ArrowPosition,
-        params: Tuple[int, int, int, int],
-        wheel_positive_to_max: bool = False,
-    ) -> Scrollbar:
-        """Create an unregistered Scrollbar widget instance."""
-        return Scrollbar(self, id, overall_rect, horizontal, style, params, wheel_positive_to_max)
-
-    def Slider(
-        self,
-        id: str,
-        rect: Rect,
-        horizontal: Orientation,
-        total_range: int,
-        position: float = 0.0,
-        integer_type: bool = False,
-        notch_interval_percent: float = 5.0,
-        wheel_positive_to_max: bool = False,
-        wheel_step: Optional[float] = None,
-    ) -> Slider:
-        """Create an unregistered Slider widget instance."""
-        return Slider(
-            self,
-            id,
-            rect,
-            horizontal,
-            total_range,
-            position,
-            integer_type,
-            notch_interval_percent,
-            wheel_positive_to_max,
-            wheel_step,
-        )
-
-    def Toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
-        """Create an unregistered Toggle widget instance."""
-        return Toggle(self, id, rect, style, pushed, pressed_text, raised_text)
-
     def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
         """Image."""
         return self.ui_factory.image(id, rect, image, automatic_pristine, scale)
@@ -490,35 +417,19 @@ class GuiManager:
         if not isinstance(task_panel_enabled, bool):
             raise GuiError('task_panel_enabled must be a bool')
         if task_panel_enabled:
-            self.configure_task_panel()
+            self.set_task_panel_settings(TaskPanelSettings())
 
-    def configure_task_panel(
-        self,
-        *,
-        height: int = 38,
-        x: int = 0,
-        reveal_pixels: int = 4,
-        auto_hide: bool = True,
-        timer_interval: float = 16.0,
-        movement_step: int = 4,
-        backdrop: Optional[str] = None,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> None:
-        """Configure task panel."""
-        self.task_panel_config.configure_task_panel(
-            height=height,
-            x=x,
-            reveal_pixels=reveal_pixels,
-            auto_hide=auto_hide,
-            timer_interval=timer_interval,
-            movement_step=movement_step,
-            backdrop=backdrop,
-            preamble=preamble,
-            event_handler=event_handler,
-            postamble=postamble,
-        )
+    def task_panel_widgets(self) -> TaskPanelWidgetBuilder:
+        """Return an IntelliSense-friendly OOP builder for task panel widget creation."""
+        builder = getattr(self, '_task_panel_widget_builder', None)
+        if builder is None:
+            builder = TaskPanelWidgetBuilder(self)
+            self._task_panel_widget_builder = builder
+        return builder
+
+    def set_task_panel_settings(self, settings: TaskPanelSettings) -> None:
+        """Configure task panel using an immutable settings object."""
+        self.task_panel_config.set_task_panel_settings(settings)
 
     def run_postamble(self) -> None:
         """Run postamble."""
@@ -528,30 +439,23 @@ class GuiManager:
         """Run preamble."""
         self.lifecycle.run_preamble()
 
-    def begin_task_panel(self) -> None:
-        """Begin task panel."""
-        self.workspace.begin_task_panel()
-
-    def end_task_panel(self) -> None:
-        """End task panel."""
-        self.workspace.end_task_panel()
-
-    def task_panel_add(self, widget: Widget) -> Widget:
-        """Register one widget into the task panel without capture-mode blocks."""
+    def task_panel_add_widget(self, widget_constructor: Callable[..., Widget], *args: object, **kwargs: object) -> Widget:
+        """Create/register a widget in the task panel using a regular widget constructor."""
         if self.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
-        if widget is None:
-            raise GuiError('widget cannot be None')
-        if isinstance(widget, Window):
-            raise GuiError('task_panel_add only supports Widget instances; windows are not supported')
-        if not isinstance(widget, Widget):
-            raise GuiError('task_panel_add expects a Widget instance')
+        if not callable(widget_constructor):
+            raise GuiError('task_panel_add_widget expects a callable widget constructor')
         previous_capture = self.workspace_state.task_panel_capture
         previous_active_object = self.workspace_state.active_object
         self.workspace_state.task_panel_capture = True
         self.workspace_state.active_object = None
         try:
-            return cast(Widget, self.add(widget))
+            widget = widget_constructor(*args, **kwargs)
+            if isinstance(widget, Window):
+                raise GuiError('task panel only supports widgets; windows are not supported')
+            if not isinstance(widget, Widget):
+                raise GuiError('task_panel_add_widget constructor must return a Widget instance')
+            return widget
         finally:
             self.workspace_state.task_panel_capture = previous_capture
             self.workspace_state.active_object = previous_active_object
@@ -573,17 +477,17 @@ class GuiManager:
         """Set task panel auto hide."""
         self.workspace.set_task_panel_auto_hide(auto_hide)
 
-    def set_task_panel_reveal_pixels(self, reveal_pixels: int) -> None:
-        """Set task panel reveal pixels."""
-        self.workspace.set_task_panel_reveal_pixels(reveal_pixels)
+    def set_task_panel_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
+        """Set task panel hidden peek pixels."""
+        self.workspace.set_task_panel_hidden_peek_pixels(hidden_peek_pixels)
 
-    def set_task_panel_movement_step(self, movement_step: int) -> None:
-        """Set task panel movement step."""
-        self.workspace.set_task_panel_movement_step(movement_step)
+    def set_task_panel_animation_step_px(self, animation_step_px: int) -> None:
+        """Set task panel animation step in pixels."""
+        self.workspace.set_task_panel_animation_step_px(animation_step_px)
 
-    def set_task_panel_timer_interval(self, timer_interval: float) -> None:
-        """Set task panel timer interval."""
-        self.workspace.set_task_panel_timer_interval(timer_interval)
+    def set_task_panel_animation_interval_ms(self, animation_interval_ms: float) -> None:
+        """Set task panel animation interval in milliseconds."""
+        self.workspace.set_task_panel_animation_interval_ms(animation_interval_ms)
 
     def read_task_panel_settings(self) -> Dict[str, object]:
         """Read task panel settings."""

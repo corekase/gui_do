@@ -35,21 +35,21 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         gui = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80)))
 
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 0, 0, 1, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 0, 0, None, 1, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, "x", 1, True, 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
+            _ManagedTaskPanel(gui, 20, "x", None, 1, True, 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 0, 0, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, None, 0, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 0, 1, "yes", 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
+            _ManagedTaskPanel(gui, 20, 0, None, 1, "yes", 1.0, 1, None, None, None, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 0, 1, True, 1.0, 0, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, None, 1, True, 1.0, 0, None, None, None, None)
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 0, 1, True, 0.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, None, 1, True, 0.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 100, 1, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 100, None, 1, True, 1.0, 1, None, None, None, None)
         with self.assertRaises(GuiError):
-            _ManagedTaskPanel(gui, 20, 0, 20, True, 1.0, 1, None, None, None, None)
+            _ManagedTaskPanel(gui, 20, 0, None, 20, True, 1.0, 1, None, None, None, None)
 
     def test_managed_task_panel_constructor_without_backdrop_builds_pristine(self) -> None:
         timer_calls = []
@@ -80,13 +80,14 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         ):
             panel = _ManagedTaskPanel(
                 gui,
-                height=20,
-                x=10,
-                reveal_pixels=4,
+                panel_height=20,
+                left=10,
+                width=None,
+                hidden_peek_pixels=4,
                 auto_hide=True,
-                timer_interval=3.0,
-                movement_step=2,
-                backdrop=None,
+                animation_interval_ms=3.0,
+                animation_step_px=2,
+                backdrop_image=None,
                 preamble=lambda: pre_calls.append(True),
                 event_handler=lambda event: evt_calls.append(event),
                 postamble=lambda: post_calls.append(True),
@@ -117,7 +118,7 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         )
 
         with patch("gui.utility.gui_utils.task_panel.pygame.surface.Surface", side_effect=lambda size: _PanelSurface(size)):
-            panel = _ManagedTaskPanel(gui, 20, 0, 4, True, 1.0, 1, "panel.png", None, None, None)
+            panel = _ManagedTaskPanel(gui, 20, 0, None, 4, True, 1.0, 1, "panel.png", None, None, None)
 
         self.assertEqual(len(set_pristine_calls), 1)
         self.assertEqual(set_pristine_calls[0][0], "panel.png")

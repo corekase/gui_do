@@ -73,7 +73,7 @@ class GuiObjectRegistry:
             raise GuiError(f'gui_object is already registered: {self.describe_gui_object(gui_object)}')
         if isinstance(gui_object, Window):
             if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
-                raise GuiError('window nesting inside task panel is not supported; call end_task_panel() before creating a window')
+                raise GuiError('window nesting inside task panel is not supported')
             self.gui.windows.append(gui_object)
             self.gui.workspace_state.active_object = gui_object
             return gui_object

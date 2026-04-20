@@ -71,7 +71,8 @@ class PointerCoordinator:
     def _apply_window_offset(point: Tuple[int, int], window: Any, to_window: bool) -> Tuple[int, int]:
         """Convert coordinates between screen and container-local spaces."""
         x, y = point
-        wx, wy = window.x, window.y
+        wx = window.x if hasattr(window, 'x') else window.left
+        wy = window.y
         if to_window:
             return (x - wx, y - wy)
         return (x + wx, y + wy)

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Callable, List, Optional, TYPE_CHECKING, cast
+from typing import Any, List, TYPE_CHECKING, cast
 
-from ..events import BaseEvent, GuiError
+from ..events import GuiError
+from ..gui_utils.task_panel_settings import TaskPanelSettings
 from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
@@ -16,37 +17,41 @@ class TaskPanelConfigCoordinator:
         """Create TaskPanelConfigCoordinator."""
         self.gui: "GuiManager" = gui_manager
 
-    def configure_task_panel(
-        self,
-        *,
-        height: int = 38,
-        x: int = 0,
-        reveal_pixels: int = 4,
-        auto_hide: bool = True,
-        timer_interval: float = 16.0,
-        movement_step: int = 4,
-        backdrop: Optional[str] = None,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[BaseEvent], None]] = None,
-        postamble: Optional[Callable[[], None]] = None,
-    ) -> None:
-        """Configure task panel."""
+    def set_task_panel_settings(self, settings: TaskPanelSettings) -> None:
+        """Apply task panel settings."""
         from ..gui_utils.task_panel import _ManagedTaskPanel
 
-        if type(height) is not int or height <= 0:
-            raise GuiError(f'task_panel_height must be a positive int, got: {height}')
-        if type(x) is not int:
-            raise GuiError(f'task_panel_x must be an int, got: {x}')
-        if type(reveal_pixels) is not int or reveal_pixels < 1:
-            raise GuiError(f'task_panel_reveal_pixels must be >= 1, got: {reveal_pixels}')
+        if not isinstance(settings, TaskPanelSettings):
+            raise GuiError('task panel settings must be a TaskPanelSettings instance')
+
+        panel_height = settings.panel_height
+        left = settings.left
+        width = settings.width
+        hidden_peek_pixels = settings.hidden_peek_pixels
+        auto_hide = settings.auto_hide
+        animation_interval_ms = settings.animation_interval_ms
+        animation_step_px = settings.animation_step_px
+        backdrop_image = settings.backdrop_image
+        preamble = settings.preamble
+        event_handler = settings.event_handler
+        postamble = settings.postamble
+
+        if type(panel_height) is not int or panel_height <= 0:
+            raise GuiError(f'task_panel_panel_height must be a positive int, got: {panel_height}')
+        if type(left) is not int:
+            raise GuiError(f'task_panel_left must be an int, got: {left}')
+        if width is not None and type(width) is not int:
+            raise GuiError(f'task_panel_width must be an int or None, got: {width}')
+        if type(hidden_peek_pixels) is not int or hidden_peek_pixels < 1:
+            raise GuiError(f'task_panel_hidden_peek_pixels must be >= 1, got: {hidden_peek_pixels}')
         if type(auto_hide) is not bool:
             raise GuiError('task_panel_auto_hide must be a bool')
-        if type(movement_step) is not int or movement_step <= 0:
-            raise GuiError(f'task_panel_movement_step must be > 0, got: {movement_step}')
-        if isinstance(timer_interval, bool) or not isinstance(timer_interval, (int, float)) or timer_interval <= 0:
-            raise GuiError(f'task_panel_timer_interval must be > 0, got: {timer_interval}')
-        if backdrop is not None and (not isinstance(backdrop, str) or backdrop == ''):
-            raise GuiError(f'task_panel_backdrop must be a non-empty string or None, got: {backdrop!r}')
+        if type(animation_step_px) is not int or animation_step_px <= 0:
+            raise GuiError(f'task_panel_animation_step_px must be > 0, got: {animation_step_px}')
+        if isinstance(animation_interval_ms, bool) or not isinstance(animation_interval_ms, (int, float)) or animation_interval_ms <= 0:
+            raise GuiError(f'task_panel_animation_interval_ms must be > 0, got: {animation_interval_ms}')
+        if backdrop_image is not None and (not isinstance(backdrop_image, str) or backdrop_image == ''):
+            raise GuiError(f'task_panel_backdrop_image must be a non-empty string or None, got: {backdrop_image!r}')
         if preamble is not None and not callable(preamble):
             raise GuiError('task panel preamble must be callable or None')
         if event_handler is not None and not callable(event_handler):
@@ -63,13 +68,14 @@ class TaskPanelConfigCoordinator:
 
         panel = _ManagedTaskPanel(
             self.gui,
-            height,
-            x,
-            reveal_pixels,
+            panel_height,
+            left,
+            width,
+            hidden_peek_pixels,
             auto_hide,
-            timer_interval,
-            movement_step,
-            backdrop,
+            animation_interval_ms,
+            animation_step_px,
+            backdrop_image,
             preamble,
             event_handler,
             postamble,

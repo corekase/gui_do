@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from pygame import Rect
 
+from gui import TaskPanelSettings
 from event_mouse_fixtures import build_mouse_gui_stub
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
@@ -37,23 +38,23 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         )
         return gui
 
-    def test_configure_task_panel_validates_remaining_inputs(self) -> None:
+    def test_set_task_panel_settings_validates_remaining_inputs(self) -> None:
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, timer_interval=True)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(animation_interval_ms=True))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, backdrop=1)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(backdrop_image=1))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, backdrop="")
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(backdrop_image=""))
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, preamble=1)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(preamble=1))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, event_handler=1)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(event_handler=1))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, postamble=1)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(postamble=1))  # type: ignore[arg-type]
 
-    def test_configure_task_panel_preserves_visible_true_state(self) -> None:
+    def test_set_task_panel_settings_preserves_visible_true_state(self) -> None:
         gui = self._build_manager_stub()
         old_panel = _PanelStub(visible=True)
         widget = Widget.__new__(Widget)
@@ -64,7 +65,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
         created = _PanelStub(visible=True)
         with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", return_value=created):
-            GuiManager.configure_task_panel(gui)
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings())
 
         self.assertIs(gui.task_panel, created)
         self.assertEqual(created.set_visible_calls, [True])
@@ -188,11 +189,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         panel._preamble = lambda: pre_calls.append(True)
         panel._event_handler = lambda event: event_calls.append(event)
         panel._postamble = lambda: post_calls.append(True)
-        panel.x = 10
+        panel.left = 10
         panel.y = 50
         panel.width = 110
-        panel.height = 18
-        panel.reveal_pixels = 4
+        panel.panel_height = 18
+        panel.hidden_peek_pixels = 4
+        panel.animation_interval_ms = 1.0
+        panel.animation_step_px = 3
         panel.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 110, 18))
         panel.pristine = object()
 
@@ -214,19 +217,19 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         panel.draw_background()
         self.assertEqual(len(restore_calls), 1)
 
-    def test_configure_task_panel_validates_primary_numeric_types(self) -> None:
+    def test_set_task_panel_settings_validates_primary_numeric_types(self) -> None:
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, height=0)
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(panel_height=0))
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, x="bad")  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(left="bad"))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, reveal_pixels=0)
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(hidden_peek_pixels=0))
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, auto_hide=1)  # type: ignore[arg-type]
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(auto_hide=1))  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.configure_task_panel(gui, movement_step=0)
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings(animation_step_px=0))
 
     def test_add_widget_task_panel_capture_success_and_guards(self) -> None:
         gui = self._build_manager_stub()
@@ -377,7 +380,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         panel._shown_y = 10
         panel._hidden_y = 20
         panel.y = 20
-        panel.movement_step = 3
+        panel.animation_step_px = 3
 
         panel.set_visible(False)
         panel.set_auto_hide(True)
@@ -414,12 +417,12 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         self.assertEqual(added[0].args[1], "explicit")
         self.assertEqual(gui.ui_factory._label_sequence, 0)
 
-    def test_configure_task_panel_without_old_panel_path(self) -> None:
+    def test_set_task_panel_settings_without_old_panel_path(self) -> None:
         gui = self._build_manager_stub()
         created = _PanelStub(visible=True)
 
         with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", return_value=created):
-            GuiManager.configure_task_panel(gui)
+            GuiManager.set_task_panel_settings(gui, TaskPanelSettings())
 
         self.assertIs(gui.task_panel, created)
         self.assertEqual(created.set_visible_calls, [])
@@ -575,7 +578,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         panel._shown_y = 10
         panel._hidden_y = 20
         panel.y = 20
-        panel.movement_step = 3
+        panel.animation_step_px = 3
         panel.refresh_targets = lambda: None
 
         panel.animate()
@@ -710,7 +713,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
         ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
             "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
-        ), patch.object(gm.GuiManager, "configure_task_panel", return_value=None) as configure_task_panel:
+        ), patch.object(gm.GuiManager, "set_task_panel_settings", return_value=None) as set_task_panel_settings:
             gm.GuiManager(
                 surface,
                 [("main", "a.ttf", 12)],
@@ -722,7 +725,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
                 mouse_set_visible=lambda _visible: None,
             )
 
-        configure_task_panel.assert_called_once()
+        set_task_panel_settings.assert_called_once()
 
     def test_add_window_success_arc_to_return(self) -> None:
         gui = self._build_manager_stub()

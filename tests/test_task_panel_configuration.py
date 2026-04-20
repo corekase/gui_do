@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from pygame import Rect
 
+from gui import TaskPanelSettings
 from gui.utility.events import GuiError
 from gui.utility.gui_utils.task_panel import _ManagedTaskPanel
 from gui.utility.coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
@@ -42,25 +43,25 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         gui.task_panel_config = TaskPanelConfigCoordinator(gui)
         return gui
 
-    def test_configure_task_panel_rejects_invalid_auto_hide_type(self) -> None:
+    def test_set_task_panel_settings_rejects_invalid_auto_hide_type(self) -> None:
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            gm.GuiManager.configure_task_panel(gui, auto_hide="yes")  # type: ignore[arg-type]
+            gm.GuiManager.set_task_panel_settings(gui, TaskPanelSettings(auto_hide="yes"))  # type: ignore[arg-type]
 
-    def test_configure_task_panel_is_atomic_when_new_panel_creation_fails(self) -> None:
+    def test_set_task_panel_settings_is_atomic_when_new_panel_creation_fails(self) -> None:
         gui = self._build_manager_stub()
         old_panel = OldPanelStub(widgets=[SimpleNamespace(window=None, surface=None)], visible=True)
         gui.task_panel = old_panel
 
         with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", side_effect=GuiError("panel create failed")):
             with self.assertRaises(GuiError):
-                gm.GuiManager.configure_task_panel(gui, height=40)
+                gm.GuiManager.set_task_panel_settings(gui, TaskPanelSettings(panel_height=40))
 
         self.assertIs(gui.task_panel, old_panel)
         self.assertEqual(old_panel.dispose_calls, 0)
 
-    def test_configure_task_panel_reuses_widgets_and_visibility_on_success(self) -> None:
+    def test_set_task_panel_settings_reuses_widgets_and_visibility_on_success(self) -> None:
         gui = self._build_manager_stub()
         w1 = SimpleNamespace(window=None, surface=None)
         w2 = SimpleNamespace(window=None, surface=None)
@@ -75,7 +76,7 @@ class TaskPanelConfigurationTests(unittest.TestCase):
             return panel
 
         with patch("gui.utility.gui_utils.task_panel._ManagedTaskPanel", side_effect=create_panel):
-            gm.GuiManager.configure_task_panel(gui, height=40)
+            gm.GuiManager.set_task_panel_settings(gui, TaskPanelSettings(panel_height=40))
 
         self.assertEqual(old_panel.dispose_calls, 1)
         self.assertEqual(len(created_panels), 1)
@@ -122,37 +123,37 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         self.assertEqual(panel.y, 12)
         self.assertEqual(refresh_calls, [True])
 
-    def test_set_reveal_pixels_and_movement_step_validate_inputs(self) -> None:
+    def test_set_hidden_peek_pixels_and_animation_step_validate_inputs(self) -> None:
         panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
-        panel.height = 20
-        panel.reveal_pixels = 4
-        panel.movement_step = 2
+        panel.panel_height = 20
+        panel.hidden_peek_pixels = 4
+        panel.animation_step_px = 2
         refresh_calls = []
         panel.refresh_targets = lambda: refresh_calls.append(True)
 
         with self.assertRaises(GuiError):
-            panel.set_reveal_pixels("x")  # type: ignore[arg-type]
+            panel.set_hidden_peek_pixels("x")  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            panel.set_reveal_pixels(0)
+            panel.set_hidden_peek_pixels(0)
         with self.assertRaises(GuiError):
-            panel.set_reveal_pixels(20)
+            panel.set_hidden_peek_pixels(20)
 
-        panel.set_reveal_pixels(5)
-        self.assertEqual(panel.reveal_pixels, 5)
+        panel.set_hidden_peek_pixels(5)
+        self.assertEqual(panel.hidden_peek_pixels, 5)
         self.assertEqual(refresh_calls, [True])
 
         with self.assertRaises(GuiError):
-            panel.set_movement_step("x")  # type: ignore[arg-type]
+            panel.set_animation_step_px("x")  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            panel.set_movement_step(0)
+            panel.set_animation_step_px(0)
 
-        panel.set_movement_step(7)
-        self.assertEqual(panel.movement_step, 7)
+        panel.set_animation_step_px(7)
+        self.assertEqual(panel.animation_step_px, 7)
 
-    def test_set_timer_interval_replaces_timer_registration(self) -> None:
+    def test_set_animation_interval_ms_replaces_timer_registration(self) -> None:
         panel = _ManagedTaskPanel.__new__(_ManagedTaskPanel)
         panel._timer_id = ("task-panel-motion", 123)
-        panel.timer_interval = 10.0
+        panel.animation_interval_ms = 10.0
         panel.animate = lambda: None
         timer_calls = []
         panel.gui = SimpleNamespace(
@@ -163,11 +164,11 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         )
 
         with self.assertRaises(GuiError):
-            panel.set_timer_interval(0)
+            panel.set_animation_interval_ms(0)
 
-        panel.set_timer_interval(3.5)
+        panel.set_animation_interval_ms(3.5)
 
-        self.assertEqual(panel.timer_interval, 3.5)
+        self.assertEqual(panel.animation_interval_ms, 3.5)
         self.assertEqual(timer_calls[0], ("remove", panel._timer_id))
         self.assertEqual(timer_calls[1][0:3], ("add", panel._timer_id, 3.5))
 
@@ -179,7 +180,7 @@ class ManagedTaskPanelMethodTests(unittest.TestCase):
         panel._shown_y = 10
         panel._hidden_y = 30
         panel.y = 15
-        panel.movement_step = 4
+        panel.animation_step_px = 4
         panel.refresh_targets = lambda: None
 
         panel.animate()

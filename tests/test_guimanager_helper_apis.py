@@ -3,9 +3,11 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
+from gui import TaskPanelSettings
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
 from gui.utility.gui_manager import GuiManager
+from gui.utility.task_panel_widget_builder import TaskPanelWidgetBuilder
 from gui.utility.intermediates.widget import Widget
 from gui.widgets.window import Window
 
@@ -157,44 +159,47 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         panel = SimpleNamespace(
             visible=True,
             auto_hide=True,
-            reveal_pixels=4,
-            movement_step=5,
-            timer_interval=12.5,
+            panel_height=18,
+            left=2,
+            width=10,
+            hidden_peek_pixels=4,
+            animation_step_px=5,
+            animation_interval_ms=12.5,
+            backdrop_image=None,
             get_rect=lambda: Rect(1, 2, 10, 20),
             set_visible=lambda enabled: set_visible_calls.append(enabled),
             set_auto_hide=lambda value: set_visible_calls.append(("auto", value)),
-            set_reveal_pixels=lambda value: set_visible_calls.append(("reveal", value)),
-            set_movement_step=lambda value: set_visible_calls.append(("step", value)),
-            set_timer_interval=lambda value: set_visible_calls.append(("interval", value)),
+            set_hidden_peek_pixels=lambda value: set_visible_calls.append(("peek", value)),
+            set_animation_step_px=lambda value: set_visible_calls.append(("step", value)),
+            set_animation_interval_ms=lambda value: set_visible_calls.append(("interval", value)),
         )
         gui.task_panel = panel
         gui.workspace_state.task_panel_capture = True
         gui.workspace_state.active_object = object()
-
-        GuiManager.begin_task_panel(gui)
-        self.assertTrue(gui.workspace_state.task_panel_capture)
-        self.assertIsNone(gui.workspace_state.active_object)
 
         GuiManager.set_task_panel_enabled(gui, False)
         self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertEqual(set_visible_calls[0], False)
 
         GuiManager.set_task_panel_auto_hide(gui, False)
-        GuiManager.set_task_panel_reveal_pixels(gui, 3)
-        GuiManager.set_task_panel_movement_step(gui, 2)
-        GuiManager.set_task_panel_timer_interval(gui, 6.0)
+        GuiManager.set_task_panel_hidden_peek_pixels(gui, 3)
+        GuiManager.set_task_panel_animation_step_px(gui, 2)
+        GuiManager.set_task_panel_animation_interval_ms(gui, 6.0)
         settings = GuiManager.read_task_panel_settings(gui)
-        GuiManager.end_task_panel(gui)
 
         self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertEqual(settings["enabled"], panel.visible)
         self.assertEqual(settings["auto_hide"], panel.auto_hide)
-        self.assertEqual(settings["reveal_pixels"], panel.reveal_pixels)
-        self.assertEqual(settings["movement_step"], panel.movement_step)
-        self.assertEqual(settings["timer_interval"], panel.timer_interval)
+        self.assertEqual(settings["panel_height"], panel.panel_height)
+        self.assertEqual(settings["left"], panel.left)
+        self.assertEqual(settings["width"], panel.width)
+        self.assertEqual(settings["hidden_peek_pixels"], panel.hidden_peek_pixels)
+        self.assertEqual(settings["animation_step_px"], panel.animation_step_px)
+        self.assertEqual(settings["animation_interval_ms"], panel.animation_interval_ms)
+        self.assertEqual(settings["backdrop_image"], panel.backdrop_image)
         self.assertEqual(settings["rect"], Rect(1, 2, 10, 20))
         self.assertIn(("auto", False), set_visible_calls)
-        self.assertIn(("reveal", 3), set_visible_calls)
+        self.assertIn(("peek", 3), set_visible_calls)
         self.assertIn(("step", 2), set_visible_calls)
         self.assertIn(("interval", 6.0), set_visible_calls)
 
@@ -202,59 +207,101 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            GuiManager.begin_task_panel(gui)
-        with self.assertRaises(GuiError):
             GuiManager.set_task_panel_enabled(gui, True)
         with self.assertRaises(GuiError):
             GuiManager.set_task_panel_auto_hide(gui, True)
         with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_reveal_pixels(gui, 4)
+            GuiManager.set_task_panel_hidden_peek_pixels(gui, 4)
         with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_movement_step(gui, 1)
+            GuiManager.set_task_panel_animation_step_px(gui, 1)
         with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_timer_interval(gui, 1.0)
+            GuiManager.set_task_panel_animation_interval_ms(gui, 1.0)
         with self.assertRaises(GuiError):
             GuiManager.read_task_panel_settings(gui)
 
-    def test_task_panel_add_registers_widget_and_restores_workspace_state(self) -> None:
+    def test_set_task_panel_settings_delegates_settings_object(self) -> None:
+        gui = self._build_manager_stub()
+        captured = []
+        gui.task_panel_config = SimpleNamespace(set_task_panel_settings=lambda settings: captured.append(settings))
+
+        GuiManager.set_task_panel_settings(gui, TaskPanelSettings(left=8, width=120))
+
+        self.assertEqual(len(captured), 1)
+        self.assertIsInstance(captured[0], TaskPanelSettings)
+        self.assertEqual(captured[0].left, 8)
+        self.assertEqual(captured[0].width, 120)
+
+    def test_task_panel_widgets_builder_lazy_initializes_and_caches(self) -> None:
+        gui = self._build_manager_stub()
+
+        first = GuiManager.task_panel_widgets(gui)
+        second = GuiManager.task_panel_widgets(gui)
+
+        self.assertIsInstance(first, TaskPanelWidgetBuilder)
+        self.assertIs(first, second)
+
+    def test_task_panel_widgets_button_routes_through_task_panel_add_widget(self) -> None:
+        gui = self._build_manager_stub()
+        recorded = []
+        expected_widget = Widget.__new__(Widget)
+
+        def _task_panel_add_widget(constructor, *args, **kwargs):
+            recorded.append((constructor, args, kwargs))
+            return expected_widget
+
+        gui.task_panel_add_widget = _task_panel_add_widget
+
+        out = GuiManager.task_panel_widgets(gui).button("exit", Rect(10, 5, 70, 28), "style", "Exit")  # type: ignore[arg-type]
+
+        self.assertIs(out, expected_widget)
+        self.assertEqual(len(recorded), 1)
+        self.assertEqual(getattr(recorded[0][0], "__name__", None), "button")
+        self.assertEqual(recorded[0][1][0], "exit")
+
+    def test_task_panel_add_widget_registers_widget_and_restores_workspace_state(self) -> None:
         gui = self._build_manager_stub()
         panel = SimpleNamespace(surface=object(), widgets=[])
         gui.task_panel = panel
         sentinel = object()
         gui.workspace_state.task_panel_capture = False
         gui.workspace_state.active_object = sentinel
+        constructor_calls = []
         widget = Widget.__new__(Widget)
         widget.id = 'task_widget'
         widget.window = None
         widget.surface = None
 
-        added = GuiManager.task_panel_add(gui, widget)
+        def constructor():
+            constructor_calls.append((gui.workspace_state.task_panel_capture, gui.workspace_state.active_object))
+            return GuiManager.add(gui, widget)
+
+        added = GuiManager.task_panel_add_widget(gui, constructor)
 
         self.assertIs(added, widget)
         self.assertIn(widget, panel.widgets)
+        self.assertEqual(constructor_calls, [(True, None)])
         self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertIs(gui.workspace_state.active_object, sentinel)
 
-    def test_task_panel_add_validates_widget_and_panel_requirements(self) -> None:
+    def test_task_panel_add_widget_validates_requirements(self) -> None:
         gui = self._build_manager_stub()
-        widget = Widget.__new__(Widget)
-        widget.id = 'task_widget'
-        widget.window = None
-        widget.surface = None
 
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add(gui, widget)
+            GuiManager.task_panel_add_widget(gui, lambda: Widget.__new__(Widget))
 
         gui.task_panel = SimpleNamespace(surface=object(), widgets=[])
 
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add(gui, None)  # type: ignore[arg-type]
+            GuiManager.task_panel_add_widget(gui, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add(gui, object())  # type: ignore[arg-type]
+            GuiManager.task_panel_add_widget(gui, object())  # type: ignore[arg-type]
+
+        with self.assertRaises(GuiError):
+            GuiManager.task_panel_add_widget(gui, lambda: object())  # type: ignore[arg-type]
 
         fake_window = Window.__new__(Window)
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add(gui, fake_window)  # type: ignore[arg-type]
+            GuiManager.task_panel_add_widget(gui, lambda: fake_window)  # type: ignore[arg-type]
 
     def test_resolve_locking_state_clears_invalid_and_orphaned_states(self) -> None:
         gui = self._build_manager_stub()

@@ -20,70 +20,80 @@ class _ManagedTaskPanel:
     def __init__(
         self,
         gui: "GuiManager",
-        height: int,
-        x: int,
-        reveal_pixels: int,
+        panel_height: int,
+        left: int,
+        width: Optional[int],
+        hidden_peek_pixels: int,
         auto_hide: bool,
-        timer_interval: float,
-        movement_step: int,
-        backdrop: Optional[str],
+        animation_interval_ms: float,
+        animation_step_px: int,
+        backdrop_image: Optional[str],
         preamble: Optional[Callable[[], None]],
         event_handler: Optional[Callable[[BaseEvent], None]],
         postamble: Optional[Callable[[], None]],
     ) -> None:
         """Validate configuration, allocate panel surfaces, and start animation timer."""
         # Validate all config up front so partial panel construction never leaks.
-        if not isinstance(height, int) or height <= 0:
-            raise GuiError(f'task_panel_height must be a positive int, got: {height}')
-        if not isinstance(x, int):
-            raise GuiError(f'task_panel_x must be an int, got: {x}')
-        if not isinstance(reveal_pixels, int) or reveal_pixels < 1:
-            raise GuiError(f'task_panel_reveal_pixels must be >= 1, got: {reveal_pixels}')
+        if not isinstance(panel_height, int) or panel_height <= 0:
+            raise GuiError(f'task_panel_panel_height must be a positive int, got: {panel_height}')
+        if not isinstance(left, int):
+            raise GuiError(f'task_panel_left must be an int, got: {left}')
+        if width is not None and not isinstance(width, int):
+            raise GuiError(f'task_panel_width must be an int or None, got: {width}')
+        if not isinstance(hidden_peek_pixels, int) or hidden_peek_pixels < 1:
+            raise GuiError(f'task_panel_hidden_peek_pixels must be >= 1, got: {hidden_peek_pixels}')
         if not isinstance(auto_hide, bool):
             raise GuiError('task_panel_auto_hide must be a bool')
-        if not isinstance(movement_step, int) or movement_step <= 0:
-            raise GuiError(f'task_panel_movement_step must be > 0, got: {movement_step}')
-        if timer_interval <= 0:
-            raise GuiError(f'task_panel_timer_interval must be > 0, got: {timer_interval}')
+        if not isinstance(animation_step_px, int) or animation_step_px <= 0:
+            raise GuiError(f'task_panel_animation_step_px must be > 0, got: {animation_step_px}')
+        if animation_interval_ms <= 0:
+            raise GuiError(f'task_panel_animation_interval_ms must be > 0, got: {animation_interval_ms}')
         screen_rect = gui.surface.get_rect()
-        if x < 0 or x >= screen_rect.width:
-            raise GuiError(f'task_panel_x must be in range [0, {screen_rect.width - 1}], got: {x}')
-        width = screen_rect.width - x
-        if reveal_pixels >= height:
-            raise GuiError(f'task_panel_reveal_pixels must be < panel height ({height}), got: {reveal_pixels}')
+        if left < 0 or left >= screen_rect.width:
+            raise GuiError(f'task_panel_left must be in range [0, {screen_rect.width - 1}], got: {left}')
+        panel_width = (screen_rect.width - left) if width is None else width
+        if panel_width <= 0:
+            raise GuiError(f'task_panel_width must be > 0, got: {panel_width}')
+        if left + panel_width > screen_rect.width:
+            raise GuiError(
+                f'task_panel_left + task_panel_width must be <= screen width ({screen_rect.width}), '
+                f'got: left={left}, width={panel_width}'
+            )
+        if hidden_peek_pixels >= panel_height:
+            raise GuiError(f'task_panel_hidden_peek_pixels must be < panel height ({panel_height}), got: {hidden_peek_pixels}')
         # Persist layout/state fields used by animation and rendering paths.
         self.gui: "GuiManager" = gui
-        self.x: int = x
-        self.width: int = width
-        self.height: int = height
+        self.left: int = left
+        self.width: int = panel_width
+        self.panel_height: int = panel_height
         self.visible: bool = True
         self.widgets: List[Widget] = []
-        self.surface: Surface = pygame.surface.Surface((self.width, self.height)).convert()
+        self.surface: Surface = pygame.surface.Surface((self.width, self.panel_height)).convert()
         self.pristine: Optional[Surface] = None
-        self.reveal_pixels: int = reveal_pixels
+        self.hidden_peek_pixels: int = hidden_peek_pixels
         self.auto_hide: bool = auto_hide
-        self.timer_interval: float = timer_interval
-        self.movement_step: int = movement_step
-        self._shown_y: int = screen_rect.height - self.height
-        self._hidden_y: int = screen_rect.height - self.reveal_pixels
+        self.animation_interval_ms: float = animation_interval_ms
+        self.animation_step_px: int = animation_step_px
+        self._shown_y: int = screen_rect.height - self.panel_height
+        self._hidden_y: int = screen_rect.height - self.hidden_peek_pixels
         self.y: int = self._hidden_y if self.auto_hide else self._shown_y
         self._hovered: bool = False
         self._timer_id: Tuple[str, int] = ('task-panel-motion', id(self))
         self._preamble: Callable[[], None] = preamble if callable(preamble) else _noop
         self._event_handler: Callable[[BaseEvent], None] = event_handler if callable(event_handler) else _noop_event
         self._postamble: Callable[[], None] = postamble if callable(postamble) else _noop
-        self.backdrop: Optional[str] = backdrop
+        self.backdrop_image: Optional[str] = backdrop_image
         # Build pristine background either from default frame or supplied backdrop.
-        if backdrop is None:
-            frame = Frame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.height))
+        if backdrop_image is None:
+            frame = Frame(gui, 'task_panel_frame', Rect(0, 0, self.width, self.panel_height))
             frame.state = InteractiveState.Idle
             frame.surface = self.surface
             frame.draw()
             self.pristine = gui.copy_graphic_area(self.surface, self.surface.get_rect()).convert()
         else:
-            gui.set_pristine(backdrop, self)
+            gui.set_pristine(backdrop_image, self)
         # Drive smooth reveal/hide behavior with a recurring timer callback.
-        gui.timers.add_timer(self._timer_id, self.timer_interval, self.animate)
+        gui.timers.add_timer(self._timer_id, self.animation_interval_ms, self.animate)
 
     def dispose(self) -> None:
         """Release timer resources owned by the panel."""
@@ -114,13 +124,13 @@ class _ManagedTaskPanel:
 
     def get_rect(self) -> Rect:
         """Return current screen-space panel bounds."""
-        return Rect(self.x, self.y, self.width, self.height)
+        return Rect(self.left, self.y, self.width, self.panel_height)
 
     def refresh_targets(self) -> None:
         """Recompute shown/hidden y targets and hover status from current screen state."""
         screen_rect = self.gui.surface.get_rect()
-        self._shown_y = screen_rect.height - self.height
-        self._hidden_y = screen_rect.height - self.reveal_pixels
+        self._shown_y = screen_rect.height - self.panel_height
+        self._hidden_y = screen_rect.height - self.hidden_peek_pixels
         self._hovered = self.get_rect().collidepoint(self.gui.get_mouse_pos())
 
     def draw_background(self) -> None:
@@ -140,9 +150,9 @@ class _ManagedTaskPanel:
             target_y = self._shown_y
         # Step movement gradually to avoid abrupt panel jumps.
         if self.y < target_y:
-            self.y = min(target_y, self.y + self.movement_step)
+            self.y = min(target_y, self.y + self.animation_step_px)
         elif self.y > target_y:
-            self.y = max(target_y, self.y - self.movement_step)
+            self.y = max(target_y, self.y - self.animation_step_px)
 
     def set_visible(self, visible: bool) -> None:
         """Enable or disable panel visibility and refresh targets when shown."""
@@ -161,30 +171,30 @@ class _ManagedTaskPanel:
             self.refresh_targets()
             self.y = self._shown_y
 
-    def set_reveal_pixels(self, reveal_pixels: int) -> None:
+    def set_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
         """Configure how many panel pixels remain visible while hidden."""
-        if not isinstance(reveal_pixels, int):
-            raise GuiError(f'task panel reveal_pixels must be an int, got: {reveal_pixels}')
-        if reveal_pixels < 1:
-            raise GuiError(f'task panel reveal_pixels must be >= 1, got: {reveal_pixels}')
-        if reveal_pixels >= self.height:
-            raise GuiError(f'task panel reveal_pixels must be < panel height ({self.height}), got: {reveal_pixels}')
-        self.reveal_pixels = reveal_pixels
+        if not isinstance(hidden_peek_pixels, int):
+            raise GuiError(f'task panel hidden_peek_pixels must be an int, got: {hidden_peek_pixels}')
+        if hidden_peek_pixels < 1:
+            raise GuiError(f'task panel hidden_peek_pixels must be >= 1, got: {hidden_peek_pixels}')
+        if hidden_peek_pixels >= self.panel_height:
+            raise GuiError(f'task panel hidden_peek_pixels must be < panel height ({self.panel_height}), got: {hidden_peek_pixels}')
+        self.hidden_peek_pixels = hidden_peek_pixels
         self.refresh_targets()
 
-    def set_movement_step(self, movement_step: int) -> None:
+    def set_animation_step_px(self, animation_step_px: int) -> None:
         """Configure per-animation-step vertical movement magnitude."""
-        if not isinstance(movement_step, int):
-            raise GuiError(f'task panel movement_step must be an int, got: {movement_step}')
-        if movement_step <= 0:
-            raise GuiError(f'task panel movement_step must be > 0, got: {movement_step}')
-        self.movement_step = movement_step
+        if not isinstance(animation_step_px, int):
+            raise GuiError(f'task panel animation_step_px must be an int, got: {animation_step_px}')
+        if animation_step_px <= 0:
+            raise GuiError(f'task panel animation_step_px must be > 0, got: {animation_step_px}')
+        self.animation_step_px = animation_step_px
 
-    def set_timer_interval(self, timer_interval: float) -> None:
+    def set_animation_interval_ms(self, animation_interval_ms: float) -> None:
         """Update animation timer interval and re-register timer callback."""
-        if timer_interval <= 0:
-            raise GuiError(f'task panel timer_interval must be > 0, got: {timer_interval}')
-        self.timer_interval = timer_interval
+        if animation_interval_ms <= 0:
+            raise GuiError(f'task panel animation_interval_ms must be > 0, got: {animation_interval_ms}')
+        self.animation_interval_ms = animation_interval_ms
         # Rebind timer so the new interval takes effect immediately.
         self.gui.timers.remove_timer(self._timer_id)
-        self.gui.timers.add_timer(self._timer_id, self.timer_interval, self.animate)
+        self.gui.timers.add_timer(self._timer_id, self.animation_interval_ms, self.animate)

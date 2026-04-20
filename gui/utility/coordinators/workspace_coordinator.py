@@ -16,17 +16,6 @@ class WorkspaceCoordinator:
         """Bind workspace orchestration to a GUI manager."""
         self.gui: "GuiManager" = gui_manager
 
-    def begin_task_panel(self) -> None:
-        """Route subsequent widget creation into the task panel container."""
-        if self.gui.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        self.gui.workspace_state.task_panel_capture = True
-        self.gui.workspace_state.active_object = None
-
-    def end_task_panel(self) -> None:
-        """Stop routing new widgets into task panel capture mode."""
-        self.gui.workspace_state.task_panel_capture = False
-
     def set_task_panel_enabled(self, enabled: bool) -> None:
         """Set task-panel visibility and disable capture when hidden."""
         if self.gui.task_panel is None:
@@ -41,23 +30,23 @@ class WorkspaceCoordinator:
             raise GuiError('task panel is disabled for this gui manager')
         self.gui.task_panel.set_auto_hide(auto_hide)
 
-    def set_task_panel_reveal_pixels(self, reveal_pixels: int) -> None:
-        """Set number of reveal pixels shown while panel is hidden."""
+    def set_task_panel_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
+        """Set number of panel pixels shown while hidden."""
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
-        self.gui.task_panel.set_reveal_pixels(reveal_pixels)
+        self.gui.task_panel.set_hidden_peek_pixels(hidden_peek_pixels)
 
-    def set_task_panel_movement_step(self, movement_step: int) -> None:
-        """Set vertical animation step for task-panel reveal/hide."""
+    def set_task_panel_animation_step_px(self, animation_step_px: int) -> None:
+        """Set vertical animation step in pixels for task-panel motion."""
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
-        self.gui.task_panel.set_movement_step(movement_step)
+        self.gui.task_panel.set_animation_step_px(animation_step_px)
 
-    def set_task_panel_timer_interval(self, timer_interval: float) -> None:
-        """Set task-panel animation timer interval."""
+    def set_task_panel_animation_interval_ms(self, animation_interval_ms: float) -> None:
+        """Set task-panel animation timer interval in milliseconds."""
         if self.gui.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
-        self.gui.task_panel.set_timer_interval(timer_interval)
+        self.gui.task_panel.set_animation_interval_ms(animation_interval_ms)
 
     def read_task_panel_settings(self) -> Dict[str, object]:
         """Return current task-panel behavior and geometry settings."""
@@ -67,9 +56,13 @@ class WorkspaceCoordinator:
         return {
             'enabled': panel.visible,
             'auto_hide': panel.auto_hide,
-            'reveal_pixels': panel.reveal_pixels,
-            'movement_step': panel.movement_step,
-            'timer_interval': panel.timer_interval,
+            'panel_height': panel.panel_height,
+            'left': panel.left,
+            'width': panel.width,
+            'hidden_peek_pixels': panel.hidden_peek_pixels,
+            'animation_step_px': panel.animation_step_px,
+            'animation_interval_ms': panel.animation_interval_ms,
+            'backdrop_image': panel.backdrop_image,
             'rect': panel.get_rect(),
         }
 

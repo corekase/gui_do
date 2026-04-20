@@ -4,7 +4,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import colours, GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager
+from gui import colours, GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager, TaskPanelSettings
 
 class Demo:
     # Coordinates around a cell, given as a delta table for Conway's Game of Life
@@ -39,7 +39,7 @@ class Demo:
             normal=('Gimbot.ttf', 16),
             gui_do=('Gimbot.ttf', 72),
         )
-        g1.configure_task_panel(event_handler=self.gui1_panel_event_handler)
+        g1.set_task_panel_settings(TaskPanelSettings(event_handler=self.gui1_panel_event_handler))
         g1.set_screen_lifecycle(
             preamble=self.gui1_screen_preamble,
             event_handler=self.gui1_panel_event_handler,
@@ -65,16 +65,17 @@ class Demo:
         # -----------------------
         # widgets in a bottom task panel
         # -----------------------
+        tp1 = g1.task_panel_widgets()
         # exit button
-        g1.task_panel_add(g1.Button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit'))
+        tp1.button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
         g1.set_grid_properties((85, 5), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_button = g1.task_panel_add(g1.Button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'Apps'))
+        self.gui2_button = tp1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'Apps')
         # control whether the background circles are drawn
-        self.circles_toggle = g1.task_panel_add(g1.Toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Drawing'))
+        self.circles_toggle = tp1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Drawing')
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = g1.task_panel_add(g1.Toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Styles'))
+        self.buttons_toggle = tp1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Styles')
         # -----------------------
         # screen widget layout demos (enabled and disabled)
         # -----------------------
@@ -168,17 +169,18 @@ class Demo:
             titlebar=('Ubuntu-B.ttf', 14),
             normal=('Gimbot.ttf', 16),
         )
-        g2.configure_task_panel(event_handler=self.gui2_panel_event_handler)
+        g2.set_task_panel_settings(TaskPanelSettings(event_handler=self.gui2_panel_event_handler))
         g2.set_screen_lifecycle(
             preamble=self.gui2_screen_preamble,
             event_handler=self.gui2_panel_event_handler
         )
         g2.graphics_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
-        g2.task_panel_add(g2.Button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back'))
+        tp2 = g2.task_panel_widgets()
+        tp2.button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
         g2.set_grid_properties((85, 5), 138, widget_height, 6)
-        self.gui2_life_window_toggle = g2.task_panel_add(g2.Toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life'))
-        self.gui2_mandel_window_toggle = g2.task_panel_add(g2.Toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot'))
+        self.gui2_life_window_toggle = tp2.toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life')
+        self.gui2_mandel_window_toggle = tp2.toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot')
 
         # -----------------------
         # make the Conway's Game of Life window (gui2)
