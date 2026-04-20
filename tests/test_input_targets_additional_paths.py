@@ -261,6 +261,25 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.assertEqual(pass_action.event_type, Event.Pass)
         self.assertIs(self.gui.focus_updates[-1], win_pass_widget)
 
+    def test_process_window_widgets_falls_back_to_screen_widgets_when_pointer_not_in_window(self) -> None:
+        event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        screen_widget = _WidgetStub("screen-hit", collides=True)
+        offscreen_window = _WindowStub([], rect=Rect(100, 100, 80, 80))
+        self.gui.windows = [offscreen_window]
+        self.gui.active_window = offscreen_window
+        self.gui.widgets = [screen_widget]
+        self.gui._mouse_pos = (15, 15)
+        self.gui.handle_return_by_id["screen-hit"] = True
+        self.gui.object_registry = _RegistryStub(registered=True)
+
+        action = self.resolver.process_window_widgets(event)
+
+        self.assertIsNotNone(action.builder)
+        built_event = action.builder()
+        self.assertEqual(built_event.type, Event.Widget)
+        self.assertEqual(built_event.widget_id, "screen-hit")
+        self.assertEqual(self.gui.handled_ids, ["screen-hit"])
+
     def test_process_task_panel_widget_paths(self) -> None:
         event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
 

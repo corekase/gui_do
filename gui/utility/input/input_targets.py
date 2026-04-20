@@ -125,8 +125,9 @@ class InputTargetResolver:
         context = self._build_context()
         window = self._resolve_topmost_window_at_pos(self.gui.windows, context['mouse_pos'])
         if window is None:
-            self.gui.update_focus(None)
-            return self._handle_base_mouse_events(event)
+            # When no window is under the pointer, continue with root-screen
+            # widget routing instead of dropping to base mouse events.
+            return self.process_screen_widgets(event)
         layer_result = self._dispatch_widget_layer(event, window)
         if isinstance(layer_result, InputAction):
             return layer_result

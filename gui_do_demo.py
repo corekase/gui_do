@@ -37,7 +37,6 @@ class Demo:
         g1.configure_fonts(
             titlebar=('Ubuntu-B.ttf', 14),
             normal=('Gimbot.ttf', 16),
-            scroll=('Gimbot.ttf', 32),
             gui_do=('Gimbot.ttf', 72),
         )
         g1.configure_task_panel(event_handler=self.gui1_panel_event_handler)
@@ -277,11 +276,9 @@ class Demo:
         # Register contexts with StateManager
         self.state_manager.register_context('gui1', self.gui1)
         self.state_manager.register_context('gui2', self.gui2)
-        # references to the schedulers
-        self.s1 = self.gui1.scheduler
+        # reference to gui2 scheduler
         self.s2 = self.gui2.scheduler
         # Keep per-frame callback work bounded so bursty task progress updates do not hitch rendering.
-        self.s1.set_message_dispatch_limit(256)
         self.s2.set_message_dispatch_limit(256)
         # Set initial context to gui1
         self.state_manager.switch_context('gui1')
@@ -294,7 +291,6 @@ class Demo:
         self.life_reset()
         # whether or not dragging with the right-mouse button over the canvas is active
         self.dragging = False
-        self._life_canvas_last_drop_count = 0
         self.canvas.set_overflow_mode('drop_oldest')
         self.canvas.set_overflow_handler(self.handle_canvas_overflow)
         # number of circles
@@ -527,7 +523,7 @@ class Demo:
         style_label_w = 96
         style_widget_w = 108
         style_widget_gap = 8
-        maybe_disable(gui.label((style_showcase_x, style_showcase_y - 24), 'Styles', True))
+        maybe_disable(gui.label((style_showcase_x, style_showcase_y - 24), 'Styles', True), disable_widget=False)
         style_rows = (
             ('Box', ButtonStyle.Box),
             ('Round', ButtonStyle.Round),
@@ -728,7 +724,6 @@ class Demo:
             self.v_slider_int = v_slider_int
             self.v_slider_float_value = v_slider_float_value
             self.v_slider_int_value = v_slider_int_value
-            self._v_slider_value_label_bottom = self.h_slider_int.draw_rect.bottom
             self._remember_slider_label_center(
                 self.h_slider_float_value,
                 self.h_slider_float_value.draw_rect.center,
