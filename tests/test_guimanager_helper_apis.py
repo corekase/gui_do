@@ -240,16 +240,16 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertIsInstance(first, TaskPanelWidgetBuilder)
         self.assertIs(first, second)
 
-    def test_task_panel_widgets_button_routes_through_task_panel_add_widget(self) -> None:
+    def test_task_panel_widgets_button_routes_through_private_task_panel_helper(self) -> None:
         gui = self._build_manager_stub()
         recorded = []
         expected_widget = Widget.__new__(Widget)
 
-        def _task_panel_add_widget(constructor, *args, **kwargs):
+        def _private_task_panel_add_widget(constructor, *args, **kwargs):
             recorded.append((constructor, args, kwargs))
             return expected_widget
 
-        gui.task_panel_add_widget = _task_panel_add_widget
+        gui._task_panel_add_widget = _private_task_panel_add_widget
 
         out = GuiManager.task_panel_widgets(gui).button("exit", Rect(10, 5, 70, 28), "style", "Exit")  # type: ignore[arg-type]
 
@@ -258,7 +258,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertEqual(getattr(recorded[0][0], "__name__", None), "button")
         self.assertEqual(recorded[0][1][0], "exit")
 
-    def test_task_panel_add_widget_registers_widget_and_restores_workspace_state(self) -> None:
+    def test_private_task_panel_add_widget_registers_widget_and_restores_workspace_state(self) -> None:
         gui = self._build_manager_stub()
         panel = SimpleNamespace(surface=object(), widgets=[])
         gui.task_panel = panel
@@ -275,7 +275,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
             constructor_calls.append((gui.workspace_state.task_panel_capture, gui.workspace_state.active_object))
             return GuiManager.add(gui, widget)
 
-        added = GuiManager.task_panel_add_widget(gui, constructor)
+        added = GuiManager._task_panel_add_widget(gui, constructor)
 
         self.assertIs(added, widget)
         self.assertIn(widget, panel.widgets)
@@ -283,25 +283,25 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertIs(gui.workspace_state.active_object, sentinel)
 
-    def test_task_panel_add_widget_validates_requirements(self) -> None:
+    def test_private_task_panel_add_widget_validates_requirements(self) -> None:
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add_widget(gui, lambda: Widget.__new__(Widget))
+            GuiManager._task_panel_add_widget(gui, lambda: Widget.__new__(Widget))
 
         gui.task_panel = SimpleNamespace(surface=object(), widgets=[])
 
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add_widget(gui, None)  # type: ignore[arg-type]
+            GuiManager._task_panel_add_widget(gui, None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add_widget(gui, object())  # type: ignore[arg-type]
+            GuiManager._task_panel_add_widget(gui, object())  # type: ignore[arg-type]
 
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add_widget(gui, lambda: object())  # type: ignore[arg-type]
+            GuiManager._task_panel_add_widget(gui, lambda: object())  # type: ignore[arg-type]
 
         fake_window = Window.__new__(Window)
         with self.assertRaises(GuiError):
-            GuiManager.task_panel_add_widget(gui, lambda: fake_window)  # type: ignore[arg-type]
+            GuiManager._task_panel_add_widget(gui, lambda: fake_window)  # type: ignore[arg-type]
 
     def test_resolve_locking_state_clears_invalid_and_orphaned_states(self) -> None:
         gui = self._build_manager_stub()

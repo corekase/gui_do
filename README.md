@@ -242,15 +242,14 @@ drawing_toggle = task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Rou
 
 Runtime task panel helpers on `GuiManager`:
 
-- `gui.task_panel_widgets()`
-- `gui.task_panel_add_widget(widget_constructor, *args, **kwargs)`
-- `gui.set_task_panel_enabled(enabled)`
-- `gui.set_task_panel_auto_hide(auto_hide)`
-- `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels)`
-- `gui.set_task_panel_animation_step_px(animation_step_px)`
-- `gui.set_task_panel_animation_interval_ms(animation_interval_ms)`
-- `gui.set_task_panel_settings(settings: TaskPanelSettings)`
-- `gui.read_task_panel_settings()`
+- `gui.task_panel_widgets() -> TaskPanelWidgetBuilder`
+- `gui.set_task_panel_enabled(enabled: bool) -> None`
+- `gui.set_task_panel_auto_hide(auto_hide: bool) -> None`
+- `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels: int) -> None`
+- `gui.set_task_panel_animation_step_px(animation_step_px: int) -> None`
+- `gui.set_task_panel_animation_interval_ms(animation_interval_ms: float) -> None`
+- `gui.set_task_panel_settings(settings: TaskPanelSettings) -> None`
+- `gui.read_task_panel_settings() -> Dict[str, object]`
 
 ## Events and Callbacks
 

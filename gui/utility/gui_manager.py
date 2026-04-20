@@ -439,12 +439,12 @@ class GuiManager:
         """Run preamble."""
         self.lifecycle.run_preamble()
 
-    def task_panel_add_widget(self, widget_constructor: Callable[..., Widget], *args: object, **kwargs: object) -> Widget:
+    def _task_panel_add_widget(self, widget_constructor: Callable[..., Widget], *args: object, **kwargs: object) -> Widget:
         """Create/register a widget in the task panel using a regular widget constructor."""
         if self.task_panel is None:
             raise GuiError('task panel is disabled for this gui manager')
         if not callable(widget_constructor):
-            raise GuiError('task_panel_add_widget expects a callable widget constructor')
+            raise GuiError('_task_panel_add_widget expects a callable widget constructor')
         previous_capture = self.workspace_state.task_panel_capture
         previous_active_object = self.workspace_state.active_object
         self.workspace_state.task_panel_capture = True
@@ -454,7 +454,7 @@ class GuiManager:
             if isinstance(widget, Window):
                 raise GuiError('task panel only supports widgets; windows are not supported')
             if not isinstance(widget, Widget):
-                raise GuiError('task_panel_add_widget constructor must return a Widget instance')
+                raise GuiError('_task_panel_add_widget constructor must return a Widget instance')
             return widget
         finally:
             self.workspace_state.task_panel_capture = previous_capture
