@@ -91,6 +91,7 @@ class Demo:
         top_section_y = 70
         half_height = self.screen_rect.height // 2
         bottom_section_y = half_height + 30
+        self._slider_label_centers = {}
         self._create_gui1_screen_widgets_layout(g1, top_section_x, top_section_y)
         self._create_gui1_screen_widgets_layout(g1, top_section_x, bottom_section_y, disabled=True)
         # -----------------------
@@ -157,6 +158,12 @@ class Demo:
         self.label4 = g1.label(g1.gridded(3, 0), f'ID: {lbg4.button_id}', True)
         self.label5 = g1.label(g1.gridded(4, 0), f'ID: {lbg5.button_id}', True)
         self.label6 = g1.label(g1.gridded(5, 0), f'ID: {lbg6.button_id}', True)
+        self._remember_slider_label_center(self.label1, self.label1.draw_rect.center)
+        self._remember_slider_label_center(self.label2, self.label2.draw_rect.center)
+        self._remember_slider_label_center(self.label3, self.label3.draw_rect.center)
+        self._remember_slider_label_center(self.label4, self.label4.draw_rect.center)
+        self._remember_slider_label_center(self.label5, self.label5.draw_rect.center)
+        self._remember_slider_label_center(self.label6, self.label6.draw_rect.center)
         # -----------------------
         # make the scrollbar window
         # -----------------------
@@ -376,6 +383,7 @@ class Demo:
         label = label_by_group.get(event.group)
         if label is not None:
             label.set_label(f'ID: {event.widget_id}')
+            self._center_slider_label(label)
 
     def life_window_preamble(self):
         slider_value = int(self.life_zoom_slider.value)
@@ -485,7 +493,7 @@ class Demo:
         id_prefix = 'disabled' if disabled else 'screen'
         title = 'Disabled Widgets' if disabled else 'Widget Demos'
         screen_widgets_area_height = 340 + slider_height
-        screen_widgets_right_edge = base_x + 680
+        screen_widgets_right_edge = base_x + 780
         demo_canvas_size = screen_widgets_area_height
         demo_canvas_x = screen_widgets_right_edge + 72
         demo_canvas_y = base_y
@@ -563,27 +571,59 @@ class Demo:
                 )
             )
 
-        maybe_disable(
-            gui.scrollbar(
-                f'{id_prefix}_demo_scroll_h',
-                Rect(base_x, base_y + 220, 342, 20),
-                Orientation.Horizontal,
-                ArrowPosition.Split,
-                (100, 0, 30, 10),
-            )
+        v_scroll_x = base_x + 460
+        v_scroll_y = base_y + 34
+        v_scroll_width = 20
+        v_scroll_height = 180
+        v_scroll_gap = 8
+        v_scroll_styles = (
+            ('skip', ArrowPosition.Skip),
+            ('split', ArrowPosition.Split),
+            ('near', ArrowPosition.Near),
+            ('far', ArrowPosition.Far),
         )
-        vertical_scrollbar_id = f'{id_prefix}_demo_scroll_v'
-        if disabled:
-            vertical_scrollbar_id = 'disabled_demo_scrollbar'
-        maybe_disable(
-            gui.scrollbar(
-                vertical_scrollbar_id,
-                Rect(base_x + 450, base_y + 34, 20, 180),
-                Orientation.Vertical,
-                ArrowPosition.Split,
-                (100, 0, 30, 10),
+        for index, (style_name, arrow_position) in enumerate(v_scroll_styles):
+            scrollbar_id = f'{id_prefix}_demo_scroll_v_{style_name}'
+            if arrow_position == ArrowPosition.Split:
+                scrollbar_id = f'{id_prefix}_demo_scroll_v'
+                if disabled:
+                    scrollbar_id = 'disabled_demo_scrollbar'
+            maybe_disable(
+                gui.scrollbar(
+                    scrollbar_id,
+                    Rect(v_scroll_x + (index * (v_scroll_width + v_scroll_gap)), v_scroll_y, v_scroll_width, v_scroll_height),
+                    Orientation.Vertical,
+                    arrow_position,
+                    (100, 0, 30, 10),
+                )
             )
+
+        h_scroll_y = base_y + 220
+        h_scroll_gap = 8
+        h_scroll_styles = (
+            ('skip', ArrowPosition.Skip),
+            ('split', ArrowPosition.Split),
+            ('near', ArrowPosition.Near),
+            ('far', ArrowPosition.Far),
         )
+        h_scroll_count = len(h_scroll_styles)
+        h_scroll_start_x = base_x
+        h_scroll_right_x = v_scroll_x + ((h_scroll_count - 1) * (v_scroll_width + v_scroll_gap)) + v_scroll_width
+        h_scroll_total_width = h_scroll_right_x - h_scroll_start_x
+        h_scroll_width = (h_scroll_total_width - ((h_scroll_count - 1) * h_scroll_gap)) // h_scroll_count
+        for index, (style_name, arrow_position) in enumerate(h_scroll_styles):
+            scrollbar_id = f'{id_prefix}_demo_scroll_h_{style_name}'
+            if arrow_position == ArrowPosition.Split:
+                scrollbar_id = f'{id_prefix}_demo_scroll_h'
+            maybe_disable(
+                gui.scrollbar(
+                    scrollbar_id,
+                    Rect(h_scroll_start_x + (index * (h_scroll_width + h_scroll_gap)), h_scroll_y, h_scroll_width, 20),
+                    Orientation.Horizontal,
+                    arrow_position,
+                    (100, 0, 30, 10),
+                )
+            )
 
         # slider samples
         h_float_y = base_y + 282
@@ -614,8 +654,8 @@ class Demo:
         h_slider_int_value = maybe_disable(gui.label((base_x + slider_width + 12, h_int_y + 12), '0', True))
 
         v_slider_y = base_y + 64
-        v_float_x = base_x + 510
-        v_int_x = base_x + 632
+        v_float_x = base_x + 580
+        v_int_x = base_x + 702
         v_slider_float = maybe_disable(
             gui.slider(
                 f'{id_prefix}_v_slider_float',
@@ -650,6 +690,38 @@ class Demo:
             self.v_slider_int = v_slider_int
             self.v_slider_float_value = v_slider_float_value
             self.v_slider_int_value = v_slider_int_value
+            self._remember_slider_label_center(
+                self.h_slider_float_value,
+                self.h_slider_float_value.draw_rect.center,
+            )
+            self._remember_slider_label_center(
+                self.h_slider_int_value,
+                self.h_slider_int_value.draw_rect.center,
+            )
+            self._remember_slider_label_center(
+                self.v_slider_float_value,
+                (self.v_slider_float.draw_rect.centerx, self.v_slider_float_value.draw_rect.centery),
+            )
+            self._remember_slider_label_center(
+                self.v_slider_int_value,
+                (self.v_slider_int.draw_rect.centerx, self.v_slider_int_value.draw_rect.centery),
+            )
+
+    def _center_label_to_point(self, label, center_point):
+        center_x, center_y = center_point
+        label.position = (
+            int(round(center_x - (label.draw_rect.width / 2))),
+            int(round(center_y - (label.draw_rect.height / 2))),
+        )
+
+    def _remember_slider_label_center(self, label, center_point):
+        self._slider_label_centers[label] = center_point
+        self._center_label_to_point(label, center_point)
+
+    def _center_slider_label(self, label):
+        center_point = self._slider_label_centers.get(label)
+        if center_point is not None:
+            self._center_label_to_point(label, center_point)
 
     def _update_gui1_window_visibility(self):
         self.button_group_win.visible = self.buttons_toggle.pushed
@@ -662,6 +734,10 @@ class Demo:
         self.h_slider_int_value.set_label(f'{int(round(self.h_slider_int.value))}')
         self.v_slider_float_value.set_label(f'{self.v_slider_float.value:.2f}')
         self.v_slider_int_value.set_label(f'{int(round(self.v_slider_int.value))}')
+        self._center_slider_label(self.h_slider_float_value)
+        self._center_slider_label(self.h_slider_int_value)
+        self._center_slider_label(self.v_slider_float_value)
+        self._center_slider_label(self.v_slider_int_value)
 
     def update_circles(self, size):
         new_positions = []
