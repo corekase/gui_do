@@ -13,8 +13,6 @@ class PackageInitBehaviorTests(unittest.TestCase):
         self.assertTrue(hasattr(gui, "StateManager"))
         self.assertTrue(hasattr(gui, "Event"))
         self.assertTrue(hasattr(gui, "CanvasEvent"))
-        self.assertTrue(hasattr(gui, "Orientation"))
-        self.assertTrue(hasattr(gui, "ArrowPosition"))
         self.assertTrue(hasattr(gui, "ButtonStyle"))
         self.assertTrue(hasattr(gui, "colours"))
 

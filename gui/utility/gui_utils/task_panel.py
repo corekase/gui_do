@@ -8,7 +8,7 @@ from typing import Callable, List, Optional, Tuple, Union, TYPE_CHECKING
 from ..events import BaseEvent, GuiError, InteractiveState
 from ..intermediates.widget import Widget
 from ..lifecycle.lifecycle_callbacks import _noop, _noop_event
-from ..events import ArrowPosition, ButtonStyle, Orientation
+from ..events import ButtonStyle
 from ...widgets.frame import Frame
 from ...widgets.arrowbox import ArrowBox
 from ...widgets.button import Button
@@ -21,7 +21,7 @@ from ...widgets.slider import Slider
 from ...widgets.toggle import Toggle
 
 if TYPE_CHECKING:
-    from ..gui_manager import GuiManager
+    from ..gui_manager import GuiManager, ScrollbarStyle
 
 
 class _ManagedTaskPanel:
@@ -135,8 +135,8 @@ class _ManagedTaskPanel:
         self,
         id: str,
         overall_rect: Rect,
-        horizontal: Orientation,
-        style: ArrowPosition,
+        horizontal: bool,
+        style: ScrollbarStyle,
         params: Tuple[int, int, int, int],
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
@@ -146,7 +146,7 @@ class _ManagedTaskPanel:
         self,
         id: str,
         rect: Rect,
-        horizontal: Orientation,
+        horizontal: bool,
         total_range: int,
         position: float = 0.0,
         integer_type: bool = False,

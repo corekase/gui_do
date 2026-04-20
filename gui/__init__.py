@@ -5,7 +5,7 @@ import os
 from .utility.gui_manager import GuiManager
 from .utility.engine import Engine
 from .utility.state_manager import StateManager
-from .utility.events import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
+from .utility.events import colours, Event, CanvasEvent, ButtonStyle
 from .utility.gui_utils.task_panel_settings import TaskPanelSettings
 from .utility.gui_utils.mouse_input_state import MouseInputState
 

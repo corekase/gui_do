@@ -4,7 +4,7 @@ import pygame
 from random import randrange, choice
 from pygame import Rect, FULLSCREEN, SCALED
 from pygame.locals import K_ESCAPE
-from gui import colours, GuiManager, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle, Engine, StateManager, TaskPanelSettings
+from gui import colours, GuiManager, Event, CanvasEvent, ButtonStyle, Engine, StateManager, TaskPanelSettings
 
 class Demo:
     # Coordinates around a cell, given as a delta table for Conway's Game of Life
@@ -19,6 +19,9 @@ class Demo:
             (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
             (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
             (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3))
+
+    # public scrollbar style flags accepted by gui.scrollbar(..., style=...)
+    scrollbar_styles = ('skip', 'split', 'near', 'far')
 
     def __init__(self):
         # initialize pygame
@@ -194,7 +197,6 @@ class Demo:
         )
         self.canvas = g2.canvas('life', Rect(10, 10, width - 20, height - (widget_height * 2)), on_activate=self.handle_Canvas, automatic_pristine=True)
         self.canvas.set_event_queue_limit(256)
-        self.canvas.set_overflow_handler(self.handle_canvas_overflow)
         self.canvas_surface = self.canvas.get_canvas_surface()
         self.canvas_rect = self.canvas.draw_rect
         # a set to hold cell coordinates as tuples of x and y
@@ -215,7 +217,7 @@ class Demo:
         self.life_zoom_slider = g2.slider(
             'life_zoom_slider',
             Rect(slider_left, slider_y, max(80, slider_right - slider_left), widget_height),
-            Orientation.Horizontal,
+            True,
             11,
             0,
             True,
@@ -593,51 +595,38 @@ class Demo:
         v_scroll_width = 20
         v_scroll_height = 180
         v_scroll_gap = 8
-        v_scroll_styles = (
-            ('skip', ArrowPosition.Skip),
-            ('split', ArrowPosition.Split),
-            ('near', ArrowPosition.Near),
-            ('far', ArrowPosition.Far),
-        )
-        for index, (style_name, arrow_position) in enumerate(v_scroll_styles):
-            scrollbar_id = f'{id_prefix}_demo_scroll_v_{style_name}'
-            if arrow_position == ArrowPosition.Split:
-                scrollbar_id = f'{id_prefix}_demo_scroll_v'
-                if disabled:
-                    scrollbar_id = 'disabled_demo_scrollbar'
+        def _demo_scrollbar_id(axis: str, style_name: str) -> str:
+            if style_name != 'split':
+                return f'{id_prefix}_demo_scroll_{axis}_{style_name}'
+            if axis == 'v' and disabled:
+                return 'disabled_demo_scrollbar'
+            return f'{id_prefix}_demo_scroll_{axis}'
+
+        for index, style_name in enumerate(Demo.scrollbar_styles):
             maybe_disable(
                 gui.scrollbar(
-                    scrollbar_id,
+                    _demo_scrollbar_id('v', style_name),
                     Rect(v_scroll_x + (index * (v_scroll_width + v_scroll_gap)), v_scroll_y, v_scroll_width, v_scroll_height),
-                    Orientation.Vertical,
-                    arrow_position,
+                    False,
+                    style_name,
                     (100, 0, 30, 10),
                 )
             )
 
         h_scroll_y = base_y + 220
         h_scroll_gap = 8
-        h_scroll_styles = (
-            ('skip', ArrowPosition.Skip),
-            ('split', ArrowPosition.Split),
-            ('near', ArrowPosition.Near),
-            ('far', ArrowPosition.Far),
-        )
-        h_scroll_count = len(h_scroll_styles)
+        h_scroll_count = len(Demo.scrollbar_styles)
         h_scroll_start_x = base_x
         h_scroll_right_x = v_scroll_x + ((h_scroll_count - 1) * (v_scroll_width + v_scroll_gap)) + v_scroll_width
         h_scroll_total_width = h_scroll_right_x - h_scroll_start_x
         h_scroll_width = (h_scroll_total_width - ((h_scroll_count - 1) * h_scroll_gap)) // h_scroll_count
-        for index, (style_name, arrow_position) in enumerate(h_scroll_styles):
-            scrollbar_id = f'{id_prefix}_demo_scroll_h_{style_name}'
-            if arrow_position == ArrowPosition.Split:
-                scrollbar_id = f'{id_prefix}_demo_scroll_h'
+        for index, style_name in enumerate(Demo.scrollbar_styles):
             maybe_disable(
                 gui.scrollbar(
-                    scrollbar_id,
+                    _demo_scrollbar_id('h', style_name),
                     Rect(h_scroll_start_x + (index * (h_scroll_width + h_scroll_gap)), h_scroll_y, h_scroll_width, 20),
-                    Orientation.Horizontal,
-                    arrow_position,
+                    True,
+                    style_name,
                     (100, 0, 30, 10),
                 )
             )
@@ -649,7 +638,7 @@ class Demo:
             gui.slider(
                 f'{id_prefix}_h_slider_float',
                 Rect(base_x, h_float_y, slider_width, slider_height),
-                Orientation.Horizontal,
+                True,
                 slider_range,
                 0.0,
                 False,
@@ -659,7 +648,7 @@ class Demo:
             gui.slider(
                 f'{id_prefix}_h_slider_int',
                 Rect(base_x, h_int_y, slider_width, slider_height),
-                Orientation.Horizontal,
+                True,
                 integer_slider_range,
                 0,
                 True,
@@ -697,7 +686,7 @@ class Demo:
             gui.slider(
                 f'{id_prefix}_v_slider_float',
                 Rect(v_float_x, v_slider_y, v_slider_width, v_slider_height),
-                Orientation.Vertical,
+                False,
                 slider_range,
                 0.0,
                 False,
@@ -707,7 +696,7 @@ class Demo:
             gui.slider(
                 f'{id_prefix}_v_slider_int',
                 Rect(v_int_x, v_slider_y, v_slider_width, v_slider_height),
-                Orientation.Vertical,
+                False,
                 integer_slider_range,
                 0,
                 True,

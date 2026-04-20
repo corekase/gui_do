@@ -87,7 +87,7 @@ When calling `gui.configure_fonts(**fonts: Tuple[str, int]) -> List[Tuple[str, s
 ```python
 import pygame
 from pygame import Rect
-from gui import GuiManager, Engine, StateManager, Event, ButtonStyle, Orientation
+from gui import GuiManager, Engine, StateManager, Event, ButtonStyle
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
@@ -172,8 +172,6 @@ From `gui` package import:
 - `colours`
 - `Event`
 - `CanvasEvent`
-- `Orientation`
-- `ArrowPosition`
 - `ButtonStyle`
 
 ## Colours
@@ -214,8 +212,8 @@ All of these both create and register the widget:
 - `gui.frame(id: str, rect: Rect) -> Frame`
 - `gui.image(id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image`
 - `gui.label(position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label`
-- `gui.slider(id: str, rect: Rect, horizontal: Orientation, total_range: int, position: float = 0.0, integer_type: bool = False, notch_interval_percent: float = 5.0, wheel_positive_to_max: bool = False, wheel_step: Optional[float] = None) -> Slider`
-- `gui.scrollbar(id: str, overall_rect: Rect, horizontal: Orientation, style: ArrowPosition, params: Tuple[int, int, int, int], wheel_positive_to_max: bool = False) -> Scrollbar`
+- `gui.slider(id: str, rect: Rect, horizontal: bool, total_range: int, position: float = 0.0, integer_type: bool = False, notch_interval_percent: float = 5.0, wheel_positive_to_max: bool = False, wheel_step: Optional[float] = None) -> Slider`
+- `gui.scrollbar(id: str, overall_rect: Rect, horizontal: bool, style: Literal["skip", "split", "near", "far"], params: Tuple[int, int, int, int], wheel_positive_to_max: bool = False) -> Scrollbar`
 - `gui.toggle(id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle`
 - `gui.window(title: str, pos: Tuple[int, int], size: Tuple[int, int], backdrop: Optional[str] = None, preamble: Optional[Callable[[], None]] = None, event_handler: Optional[Callable[[BaseEvent], None]] = None, postamble: Optional[Callable[[], None]] = None) -> Window`
 

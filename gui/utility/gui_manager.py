@@ -5,7 +5,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 import logging
-from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Literal, Optional, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .graphics.widget_graphics_factory import WidgetGraphicsFactory
@@ -56,6 +56,7 @@ if TYPE_CHECKING:
     from .gui_utils.task_panel import _ManagedTaskPanel
 
 TGuiObject = TypeVar("TGuiObject", Window, Widget)
+ScrollbarStyle = Literal['skip', 'split', 'near', 'far']
 
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
@@ -282,19 +283,21 @@ class GuiManager:
         self,
         id: str,
         overall_rect: Rect,
-        horizontal: Orientation,
-        style: ArrowPosition,
+        horizontal: bool,
+        style: ScrollbarStyle,
         params: Tuple[int, int, int, int],
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
         """Scrollbar."""
-        return self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max)
+        orientation = self._resolve_orientation(horizontal)
+        arrow_style = self._resolve_scrollbar_style(style)
+        return self.ui_factory.scrollbar(id, overall_rect, orientation, arrow_style, params, wheel_positive_to_max)
 
     def slider(
         self,
         id: str,
         rect: Rect,
-        horizontal: Orientation,
+        horizontal: bool,
         total_range: int,
         position: float = 0.0,
         integer_type: bool = False,
@@ -303,10 +306,11 @@ class GuiManager:
         wheel_step: Optional[float] = None,
     ) -> Slider:
         """Slider."""
+        orientation = self._resolve_orientation(horizontal)
         return self.ui_factory.slider(
             id,
             rect,
-            horizontal,
+            orientation,
             total_range,
             position,
             integer_type,
@@ -314,6 +318,32 @@ class GuiManager:
             wheel_positive_to_max,
             wheel_step,
         )
+
+    @staticmethod
+    def _resolve_orientation(horizontal: bool) -> Orientation:
+        """Resolve public boolean horizontal flag to internal orientation enum."""
+        if not isinstance(horizontal, bool):
+            raise GuiError(f'horizontal must be a bool, got: {horizontal}')
+        if horizontal:
+            return Orientation.Horizontal
+        return Orientation.Vertical
+
+    @staticmethod
+    def _resolve_scrollbar_style(style: ScrollbarStyle) -> ArrowPosition:
+        """Resolve public scrollbar style string flag to internal enum."""
+        if not isinstance(style, str):
+            raise GuiError(f'style must be a str, got: {style}')
+        normalized = style.strip().lower()
+        style_map = {
+            'skip': ArrowPosition.Skip,
+            'split': ArrowPosition.Split,
+            'near': ArrowPosition.Near,
+            'far': ArrowPosition.Far,
+        }
+        resolved = style_map.get(normalized)
+        if resolved is None:
+            raise GuiError(f'style must be one of skip/split/near/far, got: {style}')
+        return resolved
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         """Toggle."""
@@ -376,15 +406,17 @@ class GuiManager:
         self,
         id: str,
         overall_rect: Rect,
-        horizontal: Orientation,
-        style: ArrowPosition,
+        horizontal: bool,
+        style: ScrollbarStyle,
         params: Tuple[int, int, int, int],
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
+        orientation = self._resolve_orientation(horizontal)
+        arrow_style = self._resolve_scrollbar_style(style)
         return cast(
             Scrollbar,
             self._task_panel_add_created_widget(
-                lambda: self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max)
+                lambda: self.ui_factory.scrollbar(id, overall_rect, orientation, arrow_style, params, wheel_positive_to_max)
             ),
         )
 
@@ -392,7 +424,7 @@ class GuiManager:
         self,
         id: str,
         rect: Rect,
-        horizontal: Orientation,
+        horizontal: bool,
         total_range: int,
         position: float = 0.0,
         integer_type: bool = False,
@@ -400,13 +432,14 @@ class GuiManager:
         wheel_positive_to_max: bool = False,
         wheel_step: Optional[float] = None,
     ) -> Slider:
+        orientation = self._resolve_orientation(horizontal)
         return cast(
             Slider,
             self._task_panel_add_created_widget(
                 lambda: self.ui_factory.slider(
                     id,
                     rect,
-                    horizontal,
+                    orientation,
                     total_range,
                     position,
                     integer_type,
