@@ -47,7 +47,8 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
                 "graphics_factory": SimpleNamespace(
                     build_interactive_visuals=lambda _style, _text, rect: SimpleNamespace(
                         idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
-                    )
+                    ),
+                    build_disabled_bitmap=lambda bitmap: bitmap,
                 ),
                 "button_group_mediator": _MediatorStub(),
             },
@@ -196,6 +197,57 @@ class InteractiveAndButtonGroupAdditionalTests(unittest.TestCase):
         self.assertEqual(event.group, "grp")
         self.assertEqual(event.widget_id, "id")
         self.assertIs(event.window, window)
+
+    def test_buttongroup_disabled_selected_draw_uses_disabled_armed_graphic(self) -> None:
+        gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
+            extras={
+                "restore_pristine": lambda *_args, **_kwargs: None,
+                "event": lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs),
+                "graphics_factory": SimpleNamespace(
+                    build_interactive_visuals=lambda _style, _text, rect: SimpleNamespace(
+                        idle="idle", hover="hover", armed="armed", disabled="disabled_idle", hit_rect=Rect(rect)
+                    ),
+                    build_disabled_bitmap=lambda bitmap: f"disabled_{bitmap}",
+                ),
+                "button_group_mediator": _MediatorStub(),
+            },
+        )
+        button = ButtonGroup(gui, "grp", "id", Rect(0, 0, 10, 10), ButtonStyle.Box, "x")
+        gui.button_group_mediator._selection["grp"] = button
+        button.surface = _SurfaceSpy()
+        button.auto_restore_pristine = False
+        button.disabled = True
+
+        button.draw()
+
+        self.assertEqual(button.surface.blit_calls[-1][0], "disabled_armed")
+
+    def test_buttongroup_disabled_unselected_draw_uses_disabled_idle_graphic(self) -> None:
+        gui = build_mouse_gui_stub(
+            mouse_pos=(0, 0),
+            extras={
+                "restore_pristine": lambda *_args, **_kwargs: None,
+                "event": lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs),
+                "graphics_factory": SimpleNamespace(
+                    build_interactive_visuals=lambda _style, _text, rect: SimpleNamespace(
+                        idle="idle", hover="hover", armed="armed", disabled="disabled_idle", hit_rect=Rect(rect)
+                    ),
+                    build_disabled_bitmap=lambda bitmap: f"disabled_{bitmap}",
+                ),
+                "button_group_mediator": _MediatorStub(),
+            },
+        )
+        first = ButtonGroup(gui, "grp", "a", Rect(0, 0, 10, 10), ButtonStyle.Box, "A")
+        second = ButtonGroup(gui, "grp", "b", Rect(0, 0, 10, 10), ButtonStyle.Box, "B")
+        second.select()
+        first.surface = _SurfaceSpy()
+        first.auto_restore_pristine = False
+        first.disabled = True
+
+        first.draw()
+
+        self.assertEqual(first.surface.blit_calls[-1][0], "disabled_idle")
 
 
 if __name__ == "__main__":

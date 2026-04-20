@@ -6,6 +6,7 @@ from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
 from ..utility.events import Event, GuiError, ButtonStyle
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
+from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..utility.gui_utils.gui_event import GuiEvent
@@ -44,11 +45,17 @@ class ButtonGroup(BaseInteractive):
         self.hover = visuals.hover
         self.armed = visuals.armed
         self.disabled_graphic = visuals.disabled
+        self.disabled_armed_graphic = self.gui.graphics_factory.build_disabled_bitmap(self.armed)
         self.hit_rect = visuals.hit_rect
         selected_before_register = self.gui.button_group_mediator.get_selection(group)
         self.gui.button_group_mediator.register(group, self)
         if selected_before_register is None:
             self.state = InteractiveState.Armed
+
+    def _is_selected(self) -> bool:
+        """Return True when this button is the mediator-selected member for its group."""
+        selection = self.gui.button_group_mediator.get_selection(self.group)
+        return selection is self
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
         """Handle event."""
@@ -73,6 +80,18 @@ class ButtonGroup(BaseInteractive):
     def should_handle_outside_collision(self) -> bool:
         """Keep receiving events while selected so state can transition correctly."""
         return self.state == InteractiveState.Armed
+
+    def draw(self) -> None:
+        """Draw selected groups as selected even while disabled."""
+        if self.disabled:
+            Widget.draw(self)
+            if self._is_selected() and self.disabled_armed_graphic is not None:
+                self.surface.blit(self.disabled_armed_graphic, (self.draw_rect.x, self.draw_rect.y))
+                return
+            if self.disabled_graphic is not None:
+                self.surface.blit(self.disabled_graphic, (self.draw_rect.x, self.draw_rect.y))
+                return
+        super().draw()
 
     def select(self) -> None:
         """Mark this button selected and clear the previous group selection."""
