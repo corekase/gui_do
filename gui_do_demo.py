@@ -917,13 +917,6 @@ class Demo:
                 self.canvas_surface.fill(colours['full'], Rect(xpos, ypos, size_x - trim, size_y - trim))
         self.canvas_surface.set_clip(None)
 
-    def _handle_life_canvas_overflow(self, _dropped: int, total_dropped: int) -> None:
-        # Throttle logging so sustained pressure does not flood stderr.
-        if total_dropped == 1 or (total_dropped - self._life_canvas_last_drop_count) >= 16:
-            delta = total_dropped - self._life_canvas_last_drop_count
-            self._life_canvas_last_drop_count = total_dropped
-            print(f'Canvas event overflow: dropped {delta} events (total={total_dropped})', file=sys.stderr)
-
     # mandelbrot methods
     def clear_mandel_surfaces(self):
         self.mandel_canvas.canvas.fill(colours['medium'])
