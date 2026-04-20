@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
-from gui import TaskPanelSettings, MouseInputState
+from gui import MouseInputState
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
 from gui.utility.gui_manager import GuiManager
@@ -218,19 +218,13 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.read_task_panel_settings(gui)
 
-    def test_set_task_panel_settings_delegates_settings_object(self) -> None:
+    def test_set_task_panel_settings_requires_settings_object(self) -> None:
         gui = self._build_manager_stub()
-        captured = []
-        gui.task_panel_config = SimpleNamespace(set_task_panel_settings=lambda settings: captured.append(settings))
 
-        GuiManager.set_task_panel_settings(gui, TaskPanelSettings(left=8, width=120))
+        with self.assertRaises(GuiError):
+            GuiManager.set_task_panel_settings(gui, object())  # type: ignore[arg-type]
 
-        self.assertEqual(len(captured), 1)
-        self.assertIsInstance(captured[0], TaskPanelSettings)
-        self.assertEqual(captured[0].left, 8)
-        self.assertEqual(captured[0].width, 120)
-
-    def test_task_panel_button_routes_through_private_task_panel_helper(self) -> None:
+    def test_task_panel_widget_dispatcher_routes_through_private_task_panel_helper(self) -> None:
         gui = self._build_manager_stub()
         recorded = []
         expected_widget = Widget.__new__(Widget)
@@ -244,7 +238,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
             button=lambda id, rect, style, text, on_activate=None: (id, rect, style, text, on_activate)
         )
 
-        out = GuiManager._task_panel_button(gui, "exit", Rect(10, 5, 70, 28), "style", "Exit")  # type: ignore[arg-type]
+        out = GuiManager._task_panel_widget(gui, "button", "exit", Rect(10, 5, 70, 28), "style", "Exit")  # type: ignore[arg-type]
 
         self.assertIs(out, expected_widget)
         self.assertEqual(len(recorded), 1)

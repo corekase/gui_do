@@ -84,7 +84,6 @@ class Scrollbar(Frame, AxisRangeMixin):
         self._subwidgets_bound: bool = False
         self._wheel_positive_to_max: bool = wheel_positive_to_max
         self._style: ArrowPosition = style
-        self._set_orientation(horizontal)
         self._overall_rect: Rect = Rect(overall_rect)
         self._increment_rect: Optional[Rect] = None
         self._decrement_rect: Optional[Rect] = None

@@ -29,7 +29,6 @@ from .gui_utils.lock_state_model import LockState
 from .object_registry import GuiObjectRegistry
 from .coordinators.pointer_coordinator import PointerCoordinator
 from .renderer import Renderer
-from .coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from .ui_factory import GuiUiFactory
 from .coordinators.widget_state_coordinator import WidgetStateCoordinator
 from .coordinators.workspace_coordinator import WorkspaceCoordinator
@@ -61,6 +60,23 @@ ScrollbarStyle = Literal['skip', 'split', 'near', 'far']
 class GuiManager:
     """Owns widgets/windows, input routing, and rendering for one GUI context."""
 
+    _SCROLLBAR_STYLE_MAP = {
+        'skip': ArrowPosition.Skip,
+        'split': ArrowPosition.Split,
+        'near': ArrowPosition.Near,
+        'far': ArrowPosition.Far,
+    }
+
+    @staticmethod
+    def _validate_font_entry(name: str, filename: str, size: int) -> None:
+        """Validate one normalized ``(name, filename, size)`` font entry."""
+        if not isinstance(name, str) or not name:
+            raise GuiError(f'font name must be a non-empty string, got: {name}')
+        if not isinstance(filename, str) or not filename:
+            raise GuiError(f'font filename must be a non-empty string, got: {filename}')
+        if not isinstance(size, int) or size <= 0:
+            raise GuiError(f'font size must be a positive integer, got: {size}')
+
     @staticmethod
     def _normalize_font_registry(fonts: Iterable[Tuple[str, str, int]]) -> List[Tuple[str, str, int]]:
         """Normalize font registry."""
@@ -71,12 +87,7 @@ class GuiManager:
             if not isinstance(font_entry, tuple) or len(font_entry) != 3:
                 raise GuiError('each font entry must be a tuple of (name, filename, size)')
             name, filename, size = font_entry
-            if not isinstance(name, str) or not name:
-                raise GuiError(f'font name must be a non-empty string, got: {name}')
-            if not isinstance(filename, str) or not filename:
-                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
-            if not isinstance(size, int) or size <= 0:
-                raise GuiError(f'font size must be a positive integer, got: {size}')
+            GuiManager._validate_font_entry(name, filename, size)
         return registry
 
     def build_font_registry(self, **fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]:
@@ -92,15 +103,10 @@ class GuiManager:
             raise GuiError('fonts registry cannot be empty')
         registry: List[Tuple[str, str, int]] = []
         for name, font_def in fonts.items():
-            if not isinstance(name, str) or not name:
-                raise GuiError(f'font name must be a non-empty string, got: {name}')
             if not isinstance(font_def, tuple) or len(font_def) != 2:
                 raise GuiError(f'font entry for {name} must be a tuple of (filename, size)')
             filename, size = font_def
-            if not isinstance(filename, str) or not filename:
-                raise GuiError(f'font filename must be a non-empty string, got: {filename}')
-            if not isinstance(size, int) or size <= 0:
-                raise GuiError(f'font size must be a positive integer, got: {size}')
+            self._validate_font_entry(name, filename, size)
             registry.append((name, filename, size))
         return registry
 
@@ -347,13 +353,7 @@ class GuiManager:
         if not isinstance(style, str):
             raise GuiError(f'style must be a str, got: {style}')
         normalized = style.strip().lower()
-        style_map = {
-            'skip': ArrowPosition.Skip,
-            'split': ArrowPosition.Split,
-            'near': ArrowPosition.Near,
-            'far': ArrowPosition.Far,
-        }
-        resolved = style_map.get(normalized)
+        resolved = GuiManager._SCROLLBAR_STYLE_MAP.get(normalized)
         if resolved is None:
             raise GuiError(f'style must be one of skip/split/near/far, got: {style}')
         return resolved
@@ -394,90 +394,20 @@ class GuiManager:
             self.workspace_state.task_panel_capture = previous_capture
             self.workspace_state.active_object = previous_active_object
 
-    def _task_panel_arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
-        return cast(ArrowBox, self._task_panel_add_created_widget(lambda: self.ui_factory.arrow_box(id, rect, direction, on_activate)))
+    def _task_panel_widget(self, widget_type: str, *args: Any, **kwargs: Any) -> Widget:
+        """Create one task-panel widget through the UI factory with shared argument shaping."""
+        factory_method = getattr(self.ui_factory, widget_type, None)
+        if not callable(factory_method):
+            raise GuiError(f'unknown task panel widget type: {widget_type}')
 
-    def _task_panel_button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
-        return cast(Button, self._task_panel_add_created_widget(lambda: self.ui_factory.button(id, rect, style, text, on_activate)))
+        call_args = list(args)
+        if widget_type == 'slider':
+            call_args[2] = self._resolve_orientation(call_args[2])
+        elif widget_type == 'scrollbar':
+            call_args[2] = self._resolve_orientation(call_args[2])
+            call_args[3] = self._resolve_scrollbar_style(call_args[3])
 
-    def _task_panel_button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
-        return cast(ButtonGroup, self._task_panel_add_created_widget(lambda: self.ui_factory.button_group(group, id, rect, style, text)))
-
-    def _task_panel_canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        return cast(Canvas, self._task_panel_add_created_widget(lambda: self.ui_factory.canvas(id, rect, backdrop, on_activate, automatic_pristine)))
-
-    def _task_panel_frame(self, id: str, rect: Rect) -> Frame:
-        return cast(Frame, self._task_panel_add_created_widget(lambda: self.ui_factory.frame(id, rect)))
-
-    def _task_panel_image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
-        return cast(Image, self._task_panel_add_created_widget(lambda: self.ui_factory.image(id, rect, image, automatic_pristine, scale)))
-
-    def _task_panel_label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
-        return cast(Label, self._task_panel_add_created_widget(lambda: self.ui_factory.label(position, text, shadow, id)))
-
-    def _task_panel_scrollbar(
-        self,
-        id: str,
-        overall_rect: Rect,
-        horizontal: bool,
-        style: ScrollbarStyle,
-        total_range: int,
-        start_pos: int,
-        bar_size: int,
-        inc_size: int,
-        wheel_positive_to_max: bool = False,
-    ) -> Scrollbar:
-        orientation = self._resolve_orientation(horizontal)
-        arrow_style = self._resolve_scrollbar_style(style)
-        return cast(
-            Scrollbar,
-            self._task_panel_add_created_widget(
-                lambda: self.ui_factory.scrollbar(
-                    id,
-                    overall_rect,
-                    orientation,
-                    arrow_style,
-                    total_range,
-                    start_pos,
-                    bar_size,
-                    inc_size,
-                    wheel_positive_to_max,
-                )
-            ),
-        )
-
-    def _task_panel_slider(
-        self,
-        id: str,
-        rect: Rect,
-        horizontal: bool,
-        total_range: int,
-        position: float = 0.0,
-        integer_type: bool = False,
-        notch_interval_percent: float = 5.0,
-        wheel_positive_to_max: bool = False,
-        wheel_step: Optional[float] = None,
-    ) -> Slider:
-        orientation = self._resolve_orientation(horizontal)
-        return cast(
-            Slider,
-            self._task_panel_add_created_widget(
-                lambda: self.ui_factory.slider(
-                    id,
-                    rect,
-                    orientation,
-                    total_range,
-                    position,
-                    integer_type,
-                    notch_interval_percent,
-                    wheel_positive_to_max,
-                    wheel_step,
-                )
-            ),
-        )
-
-    def _task_panel_toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
-        return cast(Toggle, self._task_panel_add_created_widget(lambda: self.ui_factory.toggle(id, rect, style, pushed, pressed_text, raised_text)))
+        return self._task_panel_add_created_widget(lambda: factory_method(*call_args, **kwargs))
 
     def __init__(
         self,
@@ -555,7 +485,6 @@ class GuiManager:
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
-        self.task_panel_config: TaskPanelConfigCoordinator = TaskPanelConfigCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
@@ -573,7 +502,83 @@ class GuiManager:
 
     def set_task_panel_settings(self, settings: TaskPanelSettings) -> None:
         """Configure task panel using an immutable settings object."""
-        self.task_panel_config.set_task_panel_settings(settings)
+        from .gui_utils.task_panel import _ManagedTaskPanel
+
+        if not isinstance(settings, TaskPanelSettings):
+            raise GuiError('task panel settings must be a TaskPanelSettings instance')
+
+        panel_height = settings.panel_height
+        left = settings.left
+        width = settings.width
+        hidden_peek_pixels = settings.hidden_peek_pixels
+        auto_hide = settings.auto_hide
+        animation_interval_ms = settings.animation_interval_ms
+        animation_step_px = settings.animation_step_px
+        backdrop_image = settings.backdrop_image
+        preamble = settings.preamble
+        event_handler = settings.event_handler
+        postamble = settings.postamble
+
+        if type(panel_height) is not int or panel_height <= 0:
+            raise GuiError(f'task_panel_panel_height must be a positive int, got: {panel_height}')
+        if type(left) is not int:
+            raise GuiError(f'task_panel_left must be an int, got: {left}')
+        if width is not None and type(width) is not int:
+            raise GuiError(f'task_panel_width must be an int or None, got: {width}')
+        if type(hidden_peek_pixels) is not int or hidden_peek_pixels < 1:
+            raise GuiError(f'task_panel_hidden_peek_pixels must be >= 1, got: {hidden_peek_pixels}')
+        if type(auto_hide) is not bool:
+            raise GuiError('task_panel_auto_hide must be a bool')
+        if type(animation_step_px) is not int or animation_step_px <= 0:
+            raise GuiError(f'task_panel_animation_step_px must be > 0, got: {animation_step_px}')
+        if isinstance(animation_interval_ms, bool) or not isinstance(animation_interval_ms, (int, float)) or animation_interval_ms <= 0:
+            raise GuiError(f'task_panel_animation_interval_ms must be > 0, got: {animation_interval_ms}')
+        if backdrop_image is not None and (not isinstance(backdrop_image, str) or backdrop_image == ''):
+            raise GuiError(f'task_panel_backdrop_image must be a non-empty string or None, got: {backdrop_image!r}')
+        if preamble is not None and not callable(preamble):
+            raise GuiError('task panel preamble must be callable or None')
+        if event_handler is not None and not callable(event_handler):
+            raise GuiError('task panel event_handler must be callable or None')
+        if postamble is not None and not callable(postamble):
+            raise GuiError('task panel postamble must be callable or None')
+
+        old_panel = self.task_panel
+        existing_widgets: List[Widget] = []
+        existing_visible = True
+        if old_panel is not None:
+            existing_widgets = list(old_panel.widgets)
+            existing_visible = old_panel.visible
+
+        panel = _ManagedTaskPanel(
+            self,
+            panel_height,
+            left,
+            width,
+            hidden_peek_pixels,
+            auto_hide,
+            animation_interval_ms,
+            animation_step_px,
+            backdrop_image,
+            preamble,
+            event_handler,
+            postamble,
+        )
+
+        if old_panel is not None:
+            old_panel.dispose()
+
+        if existing_widgets:
+            panel.widgets = existing_widgets
+            for widget in panel.widgets:
+                widget.window = cast(Any, panel)
+                widget.surface = panel.surface
+
+        if old_panel is not None:
+            panel.set_visible(existing_visible)
+            if not existing_visible:
+                self.workspace_state.task_panel_capture = False
+
+        self.task_panel = panel
 
     def run_postamble(self) -> None:
         """Run postamble."""
@@ -594,27 +599,49 @@ class GuiManager:
 
     def set_task_panel_enabled(self, enabled: bool) -> None:
         """Set task panel enabled."""
-        self.workspace.set_task_panel_enabled(enabled)
+        panel = self._require_task_panel()
+        panel.set_visible(enabled)
+        if not enabled:
+            self.workspace_state.task_panel_capture = False
 
     def set_task_panel_auto_hide(self, auto_hide: bool) -> None:
         """Set task panel auto hide."""
-        self.workspace.set_task_panel_auto_hide(auto_hide)
+        self._require_task_panel().set_auto_hide(auto_hide)
 
     def set_task_panel_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
         """Set task panel hidden peek pixels."""
-        self.workspace.set_task_panel_hidden_peek_pixels(hidden_peek_pixels)
+        self._require_task_panel().set_hidden_peek_pixels(hidden_peek_pixels)
 
     def set_task_panel_animation_step_px(self, animation_step_px: int) -> None:
         """Set task panel animation step in pixels."""
-        self.workspace.set_task_panel_animation_step_px(animation_step_px)
+        self._require_task_panel().set_animation_step_px(animation_step_px)
 
     def set_task_panel_animation_interval_ms(self, animation_interval_ms: float) -> None:
         """Set task panel animation interval in milliseconds."""
-        self.workspace.set_task_panel_animation_interval_ms(animation_interval_ms)
+        self._require_task_panel().set_animation_interval_ms(animation_interval_ms)
 
     def read_task_panel_settings(self) -> Dict[str, object]:
         """Read task panel settings."""
-        return self.workspace.read_task_panel_settings()
+        panel = self._require_task_panel()
+        return {
+            'enabled': panel.visible,
+            'auto_hide': panel.auto_hide,
+            'panel_height': panel.panel_height,
+            'left': panel.left,
+            'width': panel.width,
+            'hidden_peek_pixels': panel.hidden_peek_pixels,
+            'animation_step_px': panel.animation_step_px,
+            'animation_interval_ms': panel.animation_interval_ms,
+            'backdrop_image': panel.backdrop_image,
+            'rect': panel.get_rect(),
+        }
+
+    def _require_task_panel(self) -> "_ManagedTaskPanel":
+        """Return task panel or raise when task-panel support is disabled."""
+        panel = self.task_panel
+        if panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        return panel
 
     def _get_mouse_pos(self) -> Tuple[int, int]:
         """Get logical mouse position for internal routing paths."""

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pygame
 from pygame import Rect
 from pygame.surface import Surface
-from typing import Callable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Callable, List, Optional, Tuple, Union, cast, TYPE_CHECKING
 
 from ..events import BaseEvent, GuiError, InteractiveState
 from ..intermediates.widget import Widget
@@ -111,25 +111,25 @@ class _ManagedTaskPanel:
 
     # Widget construction API mirrors GuiManager signatures for IDE IntelliSense parity.
     def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
-        return self.gui._task_panel_arrow_box(id, rect, direction, on_activate)
+        return cast(ArrowBox, self.gui._task_panel_widget('arrow_box', id, rect, direction, on_activate))
 
     def button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
-        return self.gui._task_panel_button(id, rect, style, text, on_activate)
+        return cast(Button, self.gui._task_panel_widget('button', id, rect, style, text, on_activate))
 
     def button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
-        return self.gui._task_panel_button_group(group, id, rect, style, text)
+        return cast(ButtonGroup, self.gui._task_panel_widget('button_group', group, id, rect, style, text))
 
     def canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
-        return self.gui._task_panel_canvas(id, rect, backdrop, on_activate, automatic_pristine)
+        return cast(Canvas, self.gui._task_panel_widget('canvas', id, rect, backdrop, on_activate, automatic_pristine))
 
     def frame(self, id: str, rect: Rect) -> Frame:
-        return self.gui._task_panel_frame(id, rect)
+        return cast(Frame, self.gui._task_panel_widget('frame', id, rect))
 
     def image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
-        return self.gui._task_panel_image(id, rect, image, automatic_pristine, scale)
+        return cast(Image, self.gui._task_panel_widget('image', id, rect, image, automatic_pristine, scale))
 
     def label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
-        return self.gui._task_panel_label(position, text, shadow, id)
+        return cast(Label, self.gui._task_panel_widget('label', position, text, shadow, id))
 
     def scrollbar(
         self,
@@ -143,7 +143,8 @@ class _ManagedTaskPanel:
         inc_size: int,
         wheel_positive_to_max: bool = False,
     ) -> Scrollbar:
-        return self.gui._task_panel_scrollbar(
+        return cast(Scrollbar, self.gui._task_panel_widget(
+            'scrollbar',
             id,
             overall_rect,
             horizontal,
@@ -153,7 +154,7 @@ class _ManagedTaskPanel:
             bar_size,
             inc_size,
             wheel_positive_to_max,
-        )
+        ))
 
     def slider(
         self,
@@ -167,7 +168,8 @@ class _ManagedTaskPanel:
         wheel_positive_to_max: bool = False,
         wheel_step: Optional[float] = None,
     ) -> Slider:
-        return self.gui._task_panel_slider(
+        return cast(Slider, self.gui._task_panel_widget(
+            'slider',
             id,
             rect,
             horizontal,
@@ -177,10 +179,10 @@ class _ManagedTaskPanel:
             notch_interval_percent,
             wheel_positive_to_max,
             wheel_step,
-        )
+        ))
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
-        return self.gui._task_panel_toggle(id, rect, style, pushed, pressed_text, raised_text)
+        return cast(Toggle, self.gui._task_panel_widget('toggle', id, rect, style, pushed, pressed_text, raised_text))
 
     def run_preamble(self) -> None:
         """Invoke panel preamble lifecycle callback."""

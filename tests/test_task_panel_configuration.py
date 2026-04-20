@@ -7,7 +7,6 @@ from pygame import Rect
 from gui import TaskPanelSettings
 from gui.utility.events import GuiError
 from gui.utility.gui_utils.task_panel import _ManagedTaskPanel
-from gui.utility.coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
 from gui.utility.gui_utils.workspace_state import WorkspaceState
 import gui.utility.gui_manager as gm
 
@@ -40,7 +39,6 @@ class TaskPanelConfigurationTests(unittest.TestCase):
         gui.task_panel = None
         gui.workspace_state = WorkspaceState()
         gui.workspace_state.task_panel_capture = True
-        gui.task_panel_config = TaskPanelConfigCoordinator(gui)
         return gui
 
     def test_set_task_panel_settings_rejects_invalid_auto_hide_type(self) -> None:
