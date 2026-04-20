@@ -205,6 +205,8 @@ All of these both create and register the widget:
 - `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
+For object-style construction (unregistered instance), `GuiManager` also provides constructor-style helpers such as `gui.Button(...)`, `gui.Toggle(...)`, and related widget types. These are mainly useful with `gui.task_panel_add(...)`.
+
 Task panel behavior is manager-owned (not a separate widget factory).
 
 Constructor takes one task panel switch:
@@ -217,13 +219,22 @@ When enabled, optional customization is done through:
 
 You can call `configure_task_panel(...)` with any subset of keyword arguments to override defaults.
 
-To parent newly created widgets into the task panel container, bracket creation with:
+Recommended task panel creation pattern:
 
-- `gui.begin_task_panel()`
-- `gui.end_task_panel()`
+- Build an unregistered widget instance with the constructor-style helper (for example, `gui.Button(...)` or `gui.Toggle(...)`).
+- Add it to the task panel with `gui.task_panel_add(widget)`.
+
+Example:
+
+```python
+gui.task_panel_add(gui.Button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit"))
+apps_button = gui.task_panel_add(gui.Button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps"))
+drawing_toggle = gui.task_panel_add(gui.Toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing"))
+```
 
 Runtime task panel helpers on `GuiManager`:
 
+- `gui.task_panel_add(widget)`
 - `gui.set_task_panel_enabled(enabled)`
 - `gui.set_task_panel_auto_hide(auto_hide)`
 - `gui.set_task_panel_reveal_pixels(reveal_pixels)`
