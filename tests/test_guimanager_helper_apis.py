@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from pygame import Rect
 
-from gui import TaskPanelSettings
+from gui import TaskPanelSettings, MouseInputState
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import GuiError
 from gui.utility.gui_manager import GuiManager
@@ -42,34 +42,34 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.show_widgets(gui, object())  # type: ignore[arg-type]
 
-    def test_convert_to_screen_and_window_apply_window_offsets(self) -> None:
+    def test_internal_convert_to_screen_and_window_apply_window_offsets(self) -> None:
         gui = self._build_manager_stub()
         window = SimpleNamespace(x=100, y=50)
         gui.windows = [window]
 
-        screen_point = GuiManager.convert_to_screen(gui, (5, 7), window)
-        window_point = GuiManager.convert_to_window(gui, (105, 57), window)
+        screen_point = GuiManager._convert_to_screen(gui, (5, 7), window)
+        window_point = GuiManager._convert_to_window(gui, (105, 57), window)
 
         self.assertEqual(screen_point, (105, 57))
         self.assertEqual(window_point, (5, 7))
 
-    def test_convert_helpers_fallback_when_window_unregistered(self) -> None:
+    def test_internal_convert_helpers_fallback_when_window_unregistered(self) -> None:
         gui = self._build_manager_stub()
         window = SimpleNamespace(x=100, y=50)
 
-        screen_point = GuiManager.convert_to_screen(gui, (5, 7), window)
-        window_point = GuiManager.convert_to_window(gui, (105, 57), window)
+        screen_point = GuiManager._convert_to_screen(gui, (5, 7), window)
+        window_point = GuiManager._convert_to_window(gui, (105, 57), window)
 
         self.assertEqual(screen_point, (5, 7))
         self.assertEqual(window_point, (105, 57))
 
-    def test_convert_helpers_validate_point_shape(self) -> None:
+    def test_internal_convert_helpers_validate_point_shape(self) -> None:
         gui = self._build_manager_stub()
 
         with self.assertRaises(GuiError):
-            GuiManager.convert_to_screen(gui, (1,), None)  # type: ignore[arg-type]
+            GuiManager._convert_to_screen(gui, (1,), None)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
-            GuiManager.convert_to_window(gui, "bad", None)  # type: ignore[arg-type]
+            GuiManager._convert_to_window(gui, "bad", None)  # type: ignore[arg-type]
 
     def test_set_screen_lifecycle_validates_callables(self) -> None:
         gui = self._build_manager_stub()
@@ -437,21 +437,39 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, widget, area=Rect(0, 0, 0, 2))
 
-    def test_set_mouse_pos_respects_update_physical_flag(self) -> None:
+    def test_internal_set_mouse_pos_respects_update_physical_flag(self) -> None:
         gui = self._build_manager_stub()
         set_calls = []
         gui.pointer.set_physical_mouse_pos = lambda pos: set_calls.append(pos)
 
-        GuiManager.set_mouse_pos(gui, (5, 6), update_physical_coords=False)
+        GuiManager._set_mouse_pos(gui, (5, 6), update_physical_coords=False)
         self.assertEqual(gui.mouse_pos, (5, 6))
         self.assertEqual(set_calls, [])
 
-        GuiManager.set_mouse_pos(gui, (7, 8), update_physical_coords=True)
+        GuiManager._set_mouse_pos(gui, (7, 8), update_physical_coords=True)
         self.assertEqual(gui.mouse_pos, (7, 8))
         self.assertEqual(set_calls, [(7, 8)])
 
         with self.assertRaises(GuiError):
-            GuiManager.set_mouse_pos(gui, (1,), update_physical_coords=True)  # type: ignore[arg-type]
+            GuiManager._set_mouse_pos(gui, (1,), update_physical_coords=True)  # type: ignore[arg-type]
+
+    def test_get_mouse_input_state_returns_position_and_buttons(self) -> None:
+        gui = self._build_manager_stub()
+        gui.mouse_pos = (11, 12)
+        gui.input_providers.mouse_get_pressed = lambda: (1, 0, 1)
+
+        state = GuiManager.get_mouse_input_state(gui)
+
+        self.assertIsInstance(state, MouseInputState)
+        self.assertEqual(state.position, (11, 12))
+        self.assertEqual(state.buttons, (True, False, True))
+
+    def test_get_mouse_input_state_rejects_short_button_tuple(self) -> None:
+        gui = self._build_manager_stub()
+        gui.input_providers.mouse_get_pressed = lambda: (True, False)
+
+        with self.assertRaises(GuiError):
+            GuiManager.get_mouse_input_state(gui)
 
     def test_clear_task_owners_for_window_is_noop_when_window_unregistered(self) -> None:
         gui = self._build_manager_stub()

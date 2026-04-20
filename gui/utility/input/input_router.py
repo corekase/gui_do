@@ -79,7 +79,7 @@ class InputRouter:
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         """Handle mouse motion."""
         rel = getattr(event, 'rel', (0, 0))
-        pos = getattr(event, 'pos', self.gui.get_mouse_pos())
+        pos = getattr(event, 'pos', self.gui._get_mouse_pos())
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = rel

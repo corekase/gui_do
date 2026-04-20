@@ -149,7 +149,7 @@ class Canvas(Widget):
             return False
         locked_owner = (self.gui.locking_object is self) and self.gui.mouse_locked
         if self.get_collide(window) or locked_owner:
-            canvas_x, canvas_y = self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)
+            canvas_x, canvas_y = self.gui._convert_to_window(self.gui._get_mouse_pos(), self.window)
             packet = CanvasEventPacket()
             packet.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
             if event.type == MOUSEWHEEL:
@@ -210,7 +210,7 @@ class Canvas(Widget):
 
     def focused(self) -> bool:
         """Return True when mouse is inside this canvas."""
-        if self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), self.window)):
+        if self.draw_rect.collidepoint(self.gui._convert_to_window(self.gui._get_mouse_pos(), self.window)):
             return True
         else:
             return False

@@ -59,7 +59,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
 
     def test_event_injects_mouse_pos_for_mouse_events_only(self) -> None:
         gui = self._build_manager_stub()
-        gui.get_mouse_pos = lambda: (7, 8)
+        gui._get_mouse_pos = lambda: (7, 8)
 
         mouse_event = GuiManager.event(gui, Event.MouseMotion, rel=(1, 2))
         key_event = GuiManager.event(gui, Event.KeyDown, key=65)

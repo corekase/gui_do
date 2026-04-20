@@ -57,7 +57,7 @@ class FocusStateController:
 
     def _resolve_hovered_window(self) -> Optional["Window"]:
         """Resolve the topmost visible window under the current pointer."""
-        mouse_pos = self.gui.get_mouse_pos()
+        mouse_pos = self.gui._get_mouse_pos()
         for window in self.gui.windows[::-1]:
             if not window.visible:
                 continue
@@ -65,11 +65,21 @@ class FocusStateController:
                 return window
         return None
 
+    def _is_pointer_over_task_panel(self) -> bool:
+        """Return whether pointer is currently over a visible task panel."""
+        task_panel = getattr(self.gui, 'task_panel', None)
+        if task_panel is None or not getattr(task_panel, 'visible', False):
+            return False
+        mouse_pos = self.gui._get_mouse_pos()
+        return bool(task_panel.get_rect().collidepoint(mouse_pos))
+
     def activate_window_at_pointer(self) -> None:
         """Activate hovered window, or clear active window when clicking outside all windows."""
         hovered_window = self._resolve_hovered_window()
         if hovered_window is not None:
             self.gui.active_window = hovered_window
+            return
+        if self._is_pointer_over_task_panel():
             return
         if self.gui.active_window is not None:
             self.gui.active_window = None

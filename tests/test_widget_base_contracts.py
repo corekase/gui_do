@@ -16,7 +16,9 @@ class WidgetBaseContractTests(unittest.TestCase):
     def _build_gui(self):
         gui = SimpleNamespace()
         gui.convert_to_window = lambda point, _window: point
+        gui._convert_to_window = lambda point, _window: point
         gui.get_mouse_pos = lambda: (5, 5)
+        gui._get_mouse_pos = lambda: (5, 5)
         gui.event = lambda event_type, **kwargs: SimpleNamespace(type=event_type, **kwargs)
         gui.restore_calls = []
         gui.restore_pristine = lambda draw_rect, _window: gui.restore_calls.append((draw_rect.x, draw_rect.y))
@@ -45,8 +47,10 @@ class WidgetBaseContractTests(unittest.TestCase):
             widget.position = (10,)  # type: ignore[assignment]
 
         widget.gui.get_mouse_pos = lambda: (13, 23)
+        widget.gui._get_mouse_pos = widget.gui.get_mouse_pos
         self.assertTrue(widget.get_collide())
         widget.gui.get_mouse_pos = lambda: (100, 100)
+        widget.gui._get_mouse_pos = widget.gui.get_mouse_pos
         self.assertFalse(widget.get_collide())
 
     def test_build_event_and_draw_guard(self) -> None:
@@ -74,6 +78,7 @@ class WidgetBaseContractTests(unittest.TestCase):
 
         self.assertFalse(widget.get_collide())
         widget.gui.get_mouse_pos = lambda: (1, 1)
+        widget.gui._get_mouse_pos = widget.gui.get_mouse_pos
         self.assertTrue(widget.get_collide())
 
 

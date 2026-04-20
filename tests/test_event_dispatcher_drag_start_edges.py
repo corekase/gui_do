@@ -61,6 +61,9 @@ class DragStartGuiStub(StateModelBackedStub):
     def get_mouse_pos(self):
         return self.mouse_pos
 
+    def _get_mouse_pos(self):
+        return self.mouse_pos
+
     def lock_area(self, pos):
         self.lock_area_calls.append(pos)
         return pos
@@ -75,6 +78,9 @@ class DragStartGuiStub(StateModelBackedStub):
         return None
 
     def convert_to_window(self, point, _window):
+        return point
+
+    def _convert_to_window(self, point, _window):
         return point
 
     def handle_widget(self, _widget, _event, _window=None):

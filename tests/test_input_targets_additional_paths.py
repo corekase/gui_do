@@ -115,7 +115,13 @@ class _GuiStub:
     def get_mouse_pos(self):
         return self._mouse_pos
 
+    def _get_mouse_pos(self):
+        return self._mouse_pos
+
     def convert_to_window(self, point, _window):
+        return point
+
+    def _convert_to_window(self, point, _window):
         return point
 
     def handle_widget(self, widget, _event, _window=None):

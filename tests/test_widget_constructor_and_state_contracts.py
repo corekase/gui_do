@@ -36,7 +36,9 @@ class SurfaceSpy:
 def build_interactive_gui_stub():
     gui = SimpleNamespace()
     gui.get_mouse_pos = lambda: (5, 5)
+    gui._get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
+    gui._convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
     gui.graphics_factory = SimpleNamespace(
         build_arrow_visuals=lambda rect, _direction: SimpleNamespace(

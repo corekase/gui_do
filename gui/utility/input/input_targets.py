@@ -33,7 +33,11 @@ class InputTargetResolver:
 
     def _build_context(self) -> Any:
         """Build lightweight per-dispatch context values."""
-        return {'mouse_pos': self.gui.get_mouse_pos()}
+        return {'mouse_pos': self.gui._get_mouse_pos()}
+
+    def _convert_to_window_point(self, point, window):
+        """Convert points using manager coordinate helpers."""
+        return self.gui._convert_to_window(point, window)
 
     @staticmethod
     def _build_widget_action(widget: Any, window: Optional[Any]) -> InputAction:
@@ -102,7 +106,7 @@ class InputTargetResolver:
             if widget not in self.gui.widgets:
                 continue
             if widget.visible:
-                target_meta = self._screen_hit_meta(widget, context['mouse_pos'], self.gui.convert_to_window)
+                target_meta = self._screen_hit_meta(widget, context['mouse_pos'], self._convert_to_window_point)
                 if target_meta.collides:
                     hit_any = True
                     focus_target = target_meta.widget

@@ -204,7 +204,7 @@ class Slider(Widget, AxisRangeMixin):
 
     def _topmost_window_at_mouse(self) -> Optional["Window"]:
         """Return the topmost visible window currently under the mouse position."""
-        mouse_pos = self.gui.get_mouse_pos()
+        mouse_pos = self.gui._get_mouse_pos()
         for candidate in tuple(self.gui.windows)[::-1]:
             if not candidate.visible:
                 continue
@@ -250,7 +250,7 @@ class Slider(Widget, AxisRangeMixin):
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP, MOUSEWHEEL):
             return False
         if event.type == MOUSEWHEEL:
-            mouse_point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
+            mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
             if self._dragging or not self._wheel_hit_area().collidepoint(mouse_point):
                 return False
             wheel_delta = int(getattr(event, 'y', 0))
@@ -267,7 +267,7 @@ class Slider(Widget, AxisRangeMixin):
             if self._cancel_drag_for_overlay_contact(window):
                 return True
 
-        mouse_point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
+        mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
         if event.type == MOUSEBUTTONDOWN:
             if getattr(event, 'button', None) != 1:
                 return False
@@ -286,7 +286,7 @@ class Slider(Widget, AxisRangeMixin):
                 lock_y = self._graphic_rect.y + self._drag_anchor_offset
                 lock_w = 1
                 lock_h = self._graphic_rect.height + 1
-            screen_x, screen_y = self.gui.convert_to_screen((lock_x, lock_y), window)
+            screen_x, screen_y = self.gui._convert_to_screen((lock_x, lock_y), window)
             lock_rect = Rect(screen_x, screen_y, lock_w, lock_h)
             self.gui.set_lock_area(self, lock_rect)
             self._dragging = True

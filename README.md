@@ -168,6 +168,7 @@ From `gui` package import:
 - `Engine`
 - `StateManager`
 - `TaskPanelSettings`
+- `MouseInputState`
 - `colours`
 - `Event`
 - `CanvasEvent`
@@ -317,11 +318,21 @@ The sections above focus on practical usage. This section provides complete call
 - `gui.set_task_owners(window: Optional[Window], *task_ids: Hashable) -> None`
 - `gui.draw_gui() -> None`
 - `gui.undraw_gui() -> None`
-- `gui.get_mouse_pos() -> Tuple[int, int]`
-- `gui.set_mouse_pos(pos: Tuple[int, int], update_physical_coords: bool = True) -> None`
-- `gui.convert_to_screen(point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int>`
-- `gui.convert_to_window(point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int>`
+- `gui.get_mouse_input_state() -> MouseInputState`
 - `gui.copy_graphic_area(surface: Surface, rect: Rect, flags: int = 0) -> Surface`
+
+Mouse input state format:
+
+- `state.position: Tuple[int, int]`
+- `state.buttons: Tuple[bool, bool, bool]` in `(left, middle, right)` order
+
+Example:
+
+```python
+mouse = gui.get_mouse_input_state()
+x, y = mouse.position
+left, middle, right = mouse.buttons
+```
 
 ## Events and Callbacks
 

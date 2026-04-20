@@ -52,7 +52,7 @@ class GuiEventAndLockGuardTests(unittest.TestCase):
 
     def test_guimanager_event_injects_mouse_position_for_mouse_events(self) -> None:
         gui = build_gui_manager_stub()
-        gui.get_mouse_pos = lambda: (7, 8)
+        gui._get_mouse_pos = lambda: (7, 8)
 
         event = GuiManager.event(gui, Event.MouseButtonDown, button=1)
 

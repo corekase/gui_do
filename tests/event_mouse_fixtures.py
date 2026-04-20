@@ -12,10 +12,14 @@ def build_mouse_gui_stub(
     state: Dict[str, Tuple[int, int]] = {"mouse_pos": mouse_pos}
 
     gui = SimpleNamespace()
-    gui.get_mouse_pos = lambda: state["mouse_pos"]
-    gui.set_mouse_pos = lambda pos: state.__setitem__("mouse_pos", pos)
-    gui.convert_to_window = lambda point, _window: point
-    gui.convert_to_screen = lambda point, _window: point
+    gui._get_mouse_pos = lambda: state["mouse_pos"]
+    gui._set_mouse_pos = lambda pos, _update_physical_coords=True: state.__setitem__("mouse_pos", pos)
+    gui._convert_to_window = lambda point, _window: point
+    gui._convert_to_screen = lambda point, _window: point
+    gui.get_mouse_pos = gui._get_mouse_pos
+    gui.set_mouse_pos = lambda pos: gui._set_mouse_pos(pos, True)
+    gui.convert_to_window = gui._convert_to_window
+    gui.convert_to_screen = gui._convert_to_screen
     gui.windows = []
 
     if set_lock_area is not None:

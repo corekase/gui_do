@@ -57,7 +57,7 @@ class DragStateController:
         dragging_window = self.state.dragging_window
         mouse_delta = self.state.mouse_delta
         dragging_window.position = (dragging_window.x, dragging_window.y)
-        self.gui.set_mouse_pos(
+        self.gui._set_mouse_pos(
             (
                 dragging_window.x - mouse_delta[0],
                 dragging_window.y - mouse_delta[1],
@@ -72,7 +72,7 @@ class DragStateController:
 
     def start_if_possible(self, event: PygameEvent) -> None:
         """Start dragging active window when titlebar hit rules are satisfied."""
-        event_pos = getattr(event, 'pos', self.gui.get_mouse_pos())
+        event_pos = getattr(event, 'pos', self.gui._get_mouse_pos())
         if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
             if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
                 self.gui.lower_window(self.gui.active_window)
@@ -91,6 +91,6 @@ class DragStateController:
             rel = getattr(event, 'rel', (0, 0))
             x = self.state.dragging_window.x + rel[0]
             y = self.state.dragging_window.y + rel[1]
-            self.gui.set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
+            self.gui._set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
             self._commit_drag_mutation(lambda state: setattr(state.dragging_window, 'position', (x, y)))
         return InputAction.pass_event()

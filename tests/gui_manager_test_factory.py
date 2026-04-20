@@ -58,15 +58,15 @@ def _apply_preset(gui: GuiManager, preset: StubPreset) -> None:
     if preset == "state_manager":
         gui._mouse_pos = (0, 0)
 
-        def get_mouse_pos() -> Any:
+        def _get_mouse_pos() -> Any:
             return gui._mouse_pos
 
-        def set_mouse_pos(pos: Any, update_physical_coords: bool = True) -> None:
+        def _set_mouse_pos(pos: Any, update_physical_coords: bool = True) -> None:
             _ = update_physical_coords
             gui._mouse_pos = pos
 
-        gui.get_mouse_pos = get_mouse_pos
-        gui.set_mouse_pos = set_mouse_pos
+        gui._get_mouse_pos = _get_mouse_pos
+        gui._set_mouse_pos = _set_mouse_pos
         return
 
     raise ValueError(f"unknown stub preset: {preset}")
@@ -113,9 +113,13 @@ def build_gui_manager_stub(
     gui.input_providers = InputProviders(
         lambda: [],
         lambda: (0, 0),
+        lambda: (False, False, False),
         lambda _pos: None,
         lambda _visible: None,
     )
+
+    gui._get_mouse_pos = lambda: gui.pointer.get_mouse_pos()
+    gui._set_mouse_pos = lambda pos, update_physical_coords=True: gui.pointer.set_mouse_pos(pos, update_physical_coords)
 
     gui.input_emitter = InputEventEmitter(gui)
     gui.drag_state = DragStateController(gui)
@@ -172,7 +176,7 @@ def build_state_manager_stub(
             gui._mouse_pos = pos
             gui.set_calls.append((pos, update_physical_coords))
 
-        gui.set_mouse_pos = set_mouse_pos
+        gui._set_mouse_pos = set_mouse_pos
 
     if scheduler is not None:
         gui._scheduler = scheduler

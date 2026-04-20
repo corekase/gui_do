@@ -35,7 +35,9 @@ class FailingTimersSpy(TimersSpy):
 def build_interactive_gui_stub():
     gui = SimpleNamespace()
     gui.get_mouse_pos = lambda: (5, 5)
+    gui._get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
+    gui._convert_to_window = lambda point, _window: point
     gui.timers = TimersSpy()
     gui.graphics_factory = SimpleNamespace(
         build_arrow_visuals=lambda rect, _direction: SimpleNamespace(
@@ -52,7 +54,9 @@ def build_interactive_gui_stub():
 def build_interactive_gui_stub_with_failing_timers():
     gui = SimpleNamespace()
     gui.get_mouse_pos = lambda: (5, 5)
+    gui._get_mouse_pos = lambda: (5, 5)
     gui.convert_to_window = lambda point, _window: point
+    gui._convert_to_window = lambda point, _window: point
     gui.timers = FailingTimersSpy()
     gui.graphics_factory = SimpleNamespace(
         build_arrow_visuals=lambda rect, _direction: SimpleNamespace(
@@ -118,6 +122,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
         self.assertEqual(arrow.state, InteractiveState.Armed)
 
         gui.get_mouse_pos = lambda: (50, 50)
+        gui._get_mouse_pos = gui.get_mouse_pos
         motion = pygame.event.Event(MOUSEMOTION, {"rel": (1, 1)})
         self.assertFalse(arrow.handle_event(motion, None))
         self.assertIsNone(arrow._timer_id)
@@ -197,6 +202,7 @@ class WidgetInteractionsBatch3Tests(unittest.TestCase):
             idle=object(), hover=object(), armed=object(), disabled=object(), hit_rect=Rect(rect)
         )
         gui.get_mouse_pos = lambda: (50, 50)
+        gui._get_mouse_pos = gui.get_mouse_pos
         button = Button(gui, "b", Rect(0, 0, 20, 10), ButtonStyle.Box, "txt", on_activate=None)
 
         down = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})

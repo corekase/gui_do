@@ -7,6 +7,7 @@ from .utility.engine import Engine
 from .utility.state_manager import StateManager
 from .utility.events import colours, Event, CanvasEvent, Orientation, ArrowPosition, ButtonStyle
 from .utility.gui_utils.task_panel_settings import TaskPanelSettings
+from .utility.gui_utils.mouse_input_state import MouseInputState
 
 
 def _enable_windows_dpi_awareness() -> None:

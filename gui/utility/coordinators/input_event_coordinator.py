@@ -19,7 +19,7 @@ class InputEventCoordinator:
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
         """Event."""
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
-            kwargs.setdefault('pos', self.gui.get_mouse_pos())
+            kwargs.setdefault('pos', self.gui._get_mouse_pos())
         return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable["GuiEvent"]:

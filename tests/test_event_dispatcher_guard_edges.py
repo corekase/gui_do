@@ -75,6 +75,9 @@ class GuardGuiStub(StateModelBackedStub):
     def get_mouse_pos(self):
         return self.mouse_pos
 
+    def _get_mouse_pos(self):
+        return self.mouse_pos
+
     def lock_area(self, pos):
         return pos
 
@@ -91,6 +94,9 @@ class GuardGuiStub(StateModelBackedStub):
         self.focus_state.update_active_window()
 
     def convert_to_window(self, point, _window):
+        return point
+
+    def _convert_to_window(self, point, _window):
         return point
 
     def handle_widget(self, _widget, _event, _window=None):

@@ -102,8 +102,8 @@ class Widget:
     def get_collide(self, window: Optional["Window"] = None) -> bool:
         """Return True when the current mouse position is inside this widget."""
         if self.hit_rect is None:
-            return self.draw_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
-        return self.hit_rect.collidepoint(self.gui.convert_to_window(self.gui.get_mouse_pos(), window))
+            return self.draw_rect.collidepoint(self.gui._convert_to_window(self.gui._get_mouse_pos(), window))
+        return self.hit_rect.collidepoint(self.gui._convert_to_window(self.gui._get_mouse_pos(), window))
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """Handle an input event. Subclasses return True on activation."""

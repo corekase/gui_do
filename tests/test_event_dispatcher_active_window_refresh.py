@@ -19,6 +19,15 @@ class WindowStub:
         return self._rect
 
 
+class TaskPanelStub:
+    def __init__(self, x: int, y: int, w: int, h: int, visible: bool = True) -> None:
+        self.visible = visible
+        self._rect = Rect(x, y, w, h)
+
+    def get_rect(self):
+        return self._rect
+
+
 class ActiveWindowGuiStub:
     def __init__(self) -> None:
         self.dragging = False
@@ -46,6 +55,9 @@ class ActiveWindowGuiStub:
     def get_mouse_pos(self):
         return self.mouse_pos
 
+    def _get_mouse_pos(self):
+        return self.mouse_pos
+
     def lock_area(self, pos):
         return pos
 
@@ -62,6 +74,9 @@ class ActiveWindowGuiStub:
         self.focus_state.update_active_window()
 
     def convert_to_window(self, point, _window):
+        return point
+
+    def _convert_to_window(self, point, _window):
         return point
 
     def handle_widget(self, _widget, _event, _window=None):
@@ -115,6 +130,17 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIsNone(self.gui.active_window)
+
+    def test_activate_window_at_pointer_keeps_active_when_click_is_on_task_panel(self) -> None:
+        active = WindowStub(0, 0, 100, 100, visible=True)
+        self.gui.windows = [active]
+        self.gui.active_window = active
+        self.gui.task_panel = TaskPanelStub(0, 120, 300, 40, visible=True)
+        self.gui.mouse_pos = (10, 130)
+
+        self.gui.focus_state.activate_window_at_pointer()
+
+        self.assertIs(self.gui.active_window, active)
 
     def test_update_active_window_does_not_switch_when_mouse_moves_over_other_window(self) -> None:
         active = WindowStub(0, 0, 100, 100, visible=True)

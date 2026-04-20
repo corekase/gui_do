@@ -51,13 +51,13 @@ class StateManager:
             return
         old_gui: Optional[GuiManager] = self.get_active_gui()
         if old_gui is not None:
-            mouse_pos: Tuple[int, int] = old_gui.get_mouse_pos()
+            mouse_pos: Tuple[int, int] = old_gui._get_mouse_pos()
         else:
             mouse_pos = self._mouse_pos_provider()
         self._active_context_name = name
         new_gui: Optional[GuiManager] = self.get_active_gui()
         if new_gui:
-            new_gui.set_mouse_pos(mouse_pos, True)
+            new_gui._set_mouse_pos(mouse_pos, True)
 
     def __enter__(self) -> 'StateManager':
         """Enter running state for engine loop usage."""

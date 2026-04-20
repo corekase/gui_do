@@ -201,7 +201,7 @@ class _ManagedTaskPanel:
         screen_rect = self.gui.surface.get_rect()
         self._shown_y = screen_rect.height - self.panel_height
         self._hidden_y = screen_rect.height - self.hidden_peek_pixels
-        self._hovered = self.get_rect().collidepoint(self.gui.get_mouse_pos())
+        self._hovered = self.get_rect().collidepoint(self.gui._get_mouse_pos())
 
     def draw_background(self) -> None:
         """Restore panel background from pristine snapshot before drawing children."""

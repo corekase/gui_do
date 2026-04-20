@@ -5,7 +5,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 import logging
-from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Tuple, TypeVar, Union, cast, TYPE_CHECKING
+from typing import Any, Callable, Dict, Hashable, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING
 from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .graphics.widget_graphics_factory import WidgetGraphicsFactory
@@ -35,6 +35,7 @@ from .coordinators.widget_state_coordinator import WidgetStateCoordinator
 from .coordinators.workspace_coordinator import WorkspaceCoordinator
 from .gui_utils.workspace_state import WorkspaceState
 from .gui_utils.task_panel_settings import TaskPanelSettings
+from .gui_utils.mouse_input_state import MouseInputState
 from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
@@ -427,6 +428,7 @@ class GuiManager:
         task_panel_enabled: bool = True,
         event_getter: Optional[Callable[[], Iterable[PygameEvent]]] = None,
         mouse_get_pos: Optional[Callable[[], Tuple[int, int]]] = None,
+        mouse_get_pressed: Optional[Callable[[], Sequence[bool]]] = None,
         mouse_set_pos: Optional[Callable[[Tuple[int, int]], None]] = None,
         mouse_set_visible: Optional[Callable[[bool], None]] = None,
     ) -> None:
@@ -439,12 +441,15 @@ class GuiManager:
         self._graphics_factory: WidgetGraphicsFactory = graphics_factory or WidgetGraphicsFactory()
         resolved_event_getter = event_getter or pygame.event.get
         resolved_mouse_get_pos = mouse_get_pos or pygame.mouse.get_pos
+        resolved_mouse_get_pressed = mouse_get_pressed or pygame.mouse.get_pressed
         resolved_mouse_set_pos = mouse_set_pos or pygame.mouse.set_pos
         resolved_mouse_set_visible = mouse_set_visible or pygame.mouse.set_visible
         if not callable(resolved_event_getter):
             raise GuiError('event_getter must be callable')
         if not callable(resolved_mouse_get_pos):
             raise GuiError('mouse_get_pos must be callable')
+        if not callable(resolved_mouse_get_pressed):
+            raise GuiError('mouse_get_pressed must be callable')
         if not callable(resolved_mouse_set_pos):
             raise GuiError('mouse_set_pos must be callable')
         if not callable(resolved_mouse_set_visible):
@@ -452,6 +457,7 @@ class GuiManager:
         self.input_providers: InputProviders = InputProviders(
             resolved_event_getter,
             resolved_mouse_get_pos,
+            resolved_mouse_get_pressed,
             resolved_mouse_set_pos,
             resolved_mouse_set_visible,
         )
@@ -551,9 +557,26 @@ class GuiManager:
         """Read task panel settings."""
         return self.workspace.read_task_panel_settings()
 
-    def get_mouse_pos(self) -> Tuple[int, int]:
-        """Get mouse pos."""
+    def _get_mouse_pos(self) -> Tuple[int, int]:
+        """Get logical mouse position for internal routing paths."""
         return self.pointer.get_mouse_pos()
+
+    @staticmethod
+    def _normalize_mouse_buttons(buttons: Sequence[bool]) -> Tuple[bool, bool, bool]:
+        """Normalize backend button tuples to left/middle/right booleans."""
+        if isinstance(buttons, tuple):
+            raw = buttons
+        else:
+            raw = tuple(buttons)
+        if len(raw) < 3:
+            raise GuiError('mouse_get_pressed must return at least three button states')
+        return (bool(raw[0]), bool(raw[1]), bool(raw[2]))
+
+    def get_mouse_input_state(self) -> MouseInputState:
+        """Return a snapshot of logical pointer position and primary button states."""
+        position = self._get_mouse_pos()
+        buttons = self._normalize_mouse_buttons(self.input_providers.mouse_get_pressed())
+        return MouseInputState(position=position, buttons=buttons)
 
     def add(self, gui_object: TGuiObject) -> TGuiObject:
         """Register a window or widget and attach container-specific state."""
@@ -595,8 +618,8 @@ class GuiManager:
         """Lock mouse-relative input and recenter hardware pointer when it leaves a broad center area."""
         self.lock_flow.set_lock_point(locking_object, point)
 
-    def set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
-        """Set mouse pos."""
+    def _set_mouse_pos(self, pos: Tuple[int, int], update_physical_coords: bool = True) -> None:
+        """Set logical pointer position for internal flows."""
         self.pointer.set_mouse_pos(pos, update_physical_coords)
 
     def set_pristine(self, image: str, obj: Optional[Any] = None) -> None:
@@ -652,12 +675,12 @@ class GuiManager:
         """Undraw gui."""
         self.renderer.undraw()
 
-    def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        """Convert to screen."""
+    def _convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
+        """Convert container coordinates to screen coordinates for internal flows."""
         return self.pointer.convert_to_screen(point, window)
 
-    def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
-        """Convert to window."""
+    def _convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
+        """Convert screen coordinates to container-local coordinates for internal flows."""
         return self.pointer.convert_to_window(point, window)
 
     def gridded(self, x: int, y: int) -> Union[Rect, Tuple[int, int]]:

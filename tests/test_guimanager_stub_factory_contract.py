@@ -47,9 +47,9 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
     def test_state_manager_preset_sets_mouse_shims(self) -> None:
         gui = build_gui_manager_stub(preset="state_manager")
 
-        self.assertEqual(gui.get_mouse_pos(), (0, 0))
-        gui.set_mouse_pos((8, 9), True)
-        self.assertEqual(gui.get_mouse_pos(), (8, 9))
+        self.assertEqual(gui._get_mouse_pos(), (0, 0))
+        gui._set_mouse_pos((8, 9), True)
+        self.assertEqual(gui._get_mouse_pos(), (8, 9))
 
     def test_unknown_preset_raises(self) -> None:
         with self.assertRaises(ValueError):
@@ -62,7 +62,7 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
 
         self.assertEqual(routing.lock_area((3, 4)), (3, 4))
         self.assertTrue(locking.mouse_locked)
-        self.assertEqual(state_manager.get_mouse_pos(), (0, 0))
+        self.assertEqual(state_manager._get_mouse_pos(), (0, 0))
 
     def test_convenience_helpers_forward_common_options(self) -> None:
         surface = SimpleNamespace(tag="surface")
@@ -83,8 +83,8 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
         gui = build_state_manager_stub(mouse_pos=(4, 5), scheduler=scheduler, track_set_calls=True)
 
         self.assertIs(gui._scheduler, scheduler)
-        self.assertEqual(gui.get_mouse_pos(), (4, 5))
-        gui.set_mouse_pos((7, 8), False)
+        self.assertEqual(gui._get_mouse_pos(), (4, 5))
+        gui._set_mouse_pos((7, 8), False)
         self.assertEqual(gui.set_calls[-1], ((7, 8), False))
 
     def test_state_manager_helper_supports_scheduler_factory(self) -> None:

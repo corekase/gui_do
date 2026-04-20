@@ -21,7 +21,9 @@ class ToggleWidgetTests(unittest.TestCase):
         toggle.hit_rect = None
         gui = SimpleNamespace()
         gui.get_mouse_pos = lambda: (5, 5)
+        gui._get_mouse_pos = lambda: (5, 5)
         gui.convert_to_window = lambda point, _window: point
+        gui._convert_to_window = lambda point, _window: point
         toggle.gui = gui
         return toggle
 
@@ -119,7 +121,9 @@ class CanvasFocusedTests(unittest.TestCase):
         gui = SimpleNamespace()
         mouse = {"pos": (5, 5)}
         gui.get_mouse_pos = lambda: mouse["pos"]
+        gui._get_mouse_pos = lambda: mouse["pos"]
         gui.convert_to_window = lambda point, _window: point
+        gui._convert_to_window = lambda point, _window: point
         canvas.gui = gui
 
         self.assertTrue(Canvas.focused(canvas))

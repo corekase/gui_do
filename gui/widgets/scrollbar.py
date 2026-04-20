@@ -196,17 +196,17 @@ class Scrollbar(Frame, AxisRangeMixin):
                 self._start_pos = max_start_pos
             self.state = InteractiveState.Hover
             return True
-        point = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
+        point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self._handle_area().collidepoint(point):
             if getattr(event, 'button', None) == 1:
-                x, y = self.gui.convert_to_screen((self._graphic_rect[0], self._graphic_rect[1]), window)
+                x, y = self.gui._convert_to_screen((self._graphic_rect[0], self._graphic_rect[1]), window)
                 lock_rect = Rect(x, y, self._graphic_rect.width, self._graphic_rect.height)
                 self.gui.set_lock_area(self, lock_rect)
                 self.state = InteractiveState.Hover
                 self._dragging = True
                 return False
         if (event.type == MOUSEMOTION) and self._dragging:
-            x, y = self.gui.convert_to_window(self.gui.get_mouse_pos(), window)
+            x, y = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
             x, y = (x - self._graphic_rect.x, y - self._graphic_rect.y)
             if self._horizontal == Orientation.Horizontal:
                 point = self._graphical_to_total(x)
@@ -243,7 +243,7 @@ class Scrollbar(Frame, AxisRangeMixin):
 
     def _topmost_window_at_mouse(self) -> Optional["Window"]:
         """Return the topmost visible window currently under the mouse position."""
-        mouse_pos = self.gui.get_mouse_pos()
+        mouse_pos = self.gui._get_mouse_pos()
         for candidate in tuple(self.gui.windows)[::-1]:
             if not candidate.visible:
                 continue

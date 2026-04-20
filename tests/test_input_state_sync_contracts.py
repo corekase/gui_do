@@ -59,6 +59,7 @@ class _GuiStub(StateModelBackedStub):
         self.lock_area = lambda pos: pos
         self.lower_window = lambda window: self.lowered.append(window)
         self.get_mouse_pos = lambda: self.mouse_pos
+        self._get_mouse_pos = lambda: self.mouse_pos
         self.set_mouse_pos_calls = []
 
         def _set_mouse_pos(pos, update_physical_coords=True):
@@ -66,6 +67,7 @@ class _GuiStub(StateModelBackedStub):
             self.set_mouse_pos_calls.append((pos, update_physical_coords))
 
         self.set_mouse_pos = _set_mouse_pos
+        self._set_mouse_pos = _set_mouse_pos
 
 
 class InputStateSyncContractsTests(unittest.TestCase):
