@@ -493,10 +493,10 @@ class Demo:
         id_prefix = 'disabled' if disabled else 'screen'
         title = 'Disabled Widgets' if disabled else 'Widget Demos'
         screen_widgets_area_height = 340 + slider_height
-        screen_widgets_right_edge = base_x + 780
+        screen_widgets_right_edge = base_x + 718
         demo_canvas_size = screen_widgets_area_height
-        demo_canvas_x = screen_widgets_right_edge + 72
-        demo_canvas_y = base_y
+        demo_canvas_x = screen_widgets_right_edge + 40
+        demo_canvas_y = base_y + 34
         frame_rect = Rect(base_x + 316, base_y + 136, 132, 76)
         demo_canvas_rect = Rect(demo_canvas_x, demo_canvas_y, demo_canvas_size, demo_canvas_size)
 
@@ -547,6 +547,57 @@ class Demo:
             )
         )
         maybe_disable(gui.label((demo_canvas_rect.x + 10, demo_canvas_rect.y + 8), 'Canvas', True))
+
+        # Mini style showcase to the right of the canvas.
+        style_showcase_x = demo_canvas_rect.right + 24
+        style_showcase_y = base_y + 34
+        style_row_height = 34
+        style_label_w = 96
+        style_widget_w = 108
+        style_widget_gap = 8
+        maybe_disable(gui.label((style_showcase_x, style_showcase_y - 24), 'Styles', True))
+        style_rows = (
+            ('Box', ButtonStyle.Box),
+            ('Round', ButtonStyle.Round),
+            ('Angle', ButtonStyle.Angle),
+            ('Radio', ButtonStyle.Radio),
+            ('Check', ButtonStyle.Check),
+        )
+        for row, (style_name, style_kind) in enumerate(style_rows):
+            row_y = style_showcase_y + (row * style_row_height)
+            style_key = style_name.lower()
+            maybe_disable(gui.label((style_showcase_x, row_y + 6), style_name, True))
+            group_x = style_showcase_x + style_label_w
+            button_x = group_x + style_widget_w + style_widget_gap
+            toggle_x = button_x + style_widget_w + style_widget_gap
+            maybe_disable(
+                gui.button_group(
+                    f'{id_prefix}_style_group_{style_key}',
+                    f'{id_prefix}_style_group_{style_key}_a',
+                    Rect(group_x, row_y, style_widget_w, widget_height),
+                    style_kind,
+                    'Group',
+                )
+            )
+            maybe_disable(
+                gui.button(
+                    f'{id_prefix}_style_button_{style_key}',
+                    Rect(button_x, row_y, style_widget_w, widget_height),
+                    style_kind,
+                    'Button',
+                )
+            )
+            maybe_disable(
+                gui.toggle(
+                    f'{id_prefix}_style_toggle_{style_key}',
+                    Rect(toggle_x, row_y, style_widget_w, widget_height),
+                    style_kind,
+                    False,
+                    'Toggle',
+                    'Toggle',
+                )
+            )
+
         # grouped button samples
         maybe_disable(gui.label((base_x, base_y + 74), 'Group One', True))
         for index, label in enumerate(('One A', 'One B', 'One C')):
@@ -656,7 +707,8 @@ class Demo:
         v_title_top = v_scroll_y
         v_slider_label_gap = 6
         v_float_x = base_x + 580
-        v_int_x = base_x + 702
+        v_slider_column_gap = 32
+        v_int_x = v_float_x + v_slider_width + v_slider_column_gap
         v_title_float = maybe_disable(gui.label((v_float_x - 8, v_title_top), 'V Float', True))
         v_title_int = maybe_disable(gui.label((v_int_x - 12, v_title_top), 'V Int Snap', True))
         v_title_bottom = max(v_title_float.draw_rect.bottom, v_title_int.draw_rect.bottom)
