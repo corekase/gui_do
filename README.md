@@ -232,8 +232,8 @@ from gui import TaskPanelSettings
 gui.set_task_panel_settings(
     TaskPanelSettings(
         panel_height=42,
-        left=12,
-        width=320,
+        left=0,
+        width=None,
         hidden_peek_pixels=6,
         auto_hide=True,
         animation_interval_ms=12.0,
@@ -259,6 +259,7 @@ drawing_toggle = gui.task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle
 
 Runtime task panel helpers on `GuiManager`:
 
+- `gui.set_task_panel_lifecycle(preamble: Optional[Callable[[], None]] = None, event_handler: Optional[Callable[[BaseEvent], None]] = None, postamble: Optional[Callable[[], None]] = None) -> None`
 - `gui.set_task_panel_enabled(enabled: bool) -> None`
 - `gui.set_task_panel_auto_hide(auto_hide: bool) -> None`
 - `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels: int) -> None`
@@ -266,6 +267,61 @@ Runtime task panel helpers on `GuiManager`:
 - `gui.set_task_panel_animation_interval_ms(animation_interval_ms: float) -> None`
 - `gui.set_task_panel_settings(settings: TaskPanelSettings) -> None`
 - `gui.read_task_panel_settings() -> Dict[str, object]`
+
+Task panel widget API surface:
+
+- `gui.task_panel.arrow_box(...)`
+- `gui.task_panel.button(...)`
+- `gui.task_panel.button_group(...)`
+- `gui.task_panel.canvas(...)`
+- `gui.task_panel.frame(...)`
+- `gui.task_panel.image(...)`
+- `gui.task_panel.label(...)`
+- `gui.task_panel.scrollbar(...)`
+- `gui.task_panel.slider(...)`
+- `gui.task_panel.toggle(...)`
+
+The task panel widget API intentionally mirrors `GuiManager` widget constructors and intentionally excludes `window(...)`.
+
+## Core Runtime API Reference
+
+The sections above focus on practical usage. This section provides complete callable coverage for the core runtime classes.
+
+## Engine API
+
+- `Engine(state_manager: StateManager)`
+- `engine.run() -> None`
+
+## StateManager API
+
+- `state.register_context(name: str, gui: GuiManager, replace: bool = False) -> GuiManager`
+- `state.switch_context(name: str) -> GuiManager`
+- `state.get_active_gui() -> Optional[GuiManager]`
+- `state.set_running(running: bool) -> None`
+
+## GuiManager Properties
+
+- `gui.graphics_factory` (property)
+- `gui.scheduler` (property)
+- `gui.buffered` (read/write bool property)
+
+## GuiManager Advanced Methods
+
+- `gui.build_font_registry(**fonts: Tuple[str, int]) -> List[Tuple[str, str, int]]`
+- `gui.load_fonts(fonts: Iterable[Tuple[str, str, int]]) -> None`
+- `gui.hide_widgets(*widgets: Widget) -> None`
+- `gui.show_widgets(*widgets: Widget) -> None`
+- `gui.lower_window(window: Window) -> None`
+- `gui.raise_window(window: Window) -> None`
+- `gui.set_task_owner(task_id: Hashable, window: Optional[Window]) -> None`
+- `gui.set_task_owners(window: Optional[Window], *task_ids: Hashable) -> None`
+- `gui.draw_gui() -> None`
+- `gui.undraw_gui() -> None`
+- `gui.get_mouse_pos() -> Tuple[int, int]`
+- `gui.set_mouse_pos(pos: Tuple[int, int], update_physical_coords: bool = True) -> None`
+- `gui.convert_to_screen(point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int>`
+- `gui.convert_to_window(point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int>`
+- `gui.copy_graphic_area(surface: Surface, rect: Rect, flags: int = 0) -> Surface`
 
 ## Events and Callbacks
 
