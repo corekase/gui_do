@@ -45,6 +45,7 @@ class Slider(Widget, AxisRangeMixin):
         """Create Slider."""
         super().__init__(gui, id, rect)
         self._set_orientation(horizontal)
+        layout_rect = Rect(self.draw_rect)
         if not isinstance(total_range, int) or total_range <= 0:
             raise GuiError(f'total_range must be a positive int, got: {total_range}')
         if not isinstance(integer_type, bool):
@@ -71,7 +72,7 @@ class Slider(Widget, AxisRangeMixin):
         self._dragging: bool = False
         self._drag_anchor_offset: int = 0
 
-        base_handle_size = max(6, min(self.draw_rect.width, self.draw_rect.height) - 4)
+        base_handle_size = max(6, min(layout_rect.width, layout_rect.height) - 4)
         reduced_handle_size = max(6, int(round(base_handle_size * 0.8)))
         # Keep handle dimensions even to avoid half-pixel visual drift after scaling.
         if reduced_handle_size % 2 != 0:
@@ -79,22 +80,31 @@ class Slider(Widget, AxisRangeMixin):
             if reduced_handle_size < 6:
                 reduced_handle_size = 6
         self._handle_size = reduced_handle_size
-        track_thickness = max(2, min(6, min(self.draw_rect.width, self.draw_rect.height) // 3))
+        track_thickness = max(2, min(6, min(layout_rect.width, layout_rect.height) // 3))
 
         if self._horizontal == Orientation.Horizontal:
-            track_w = max(1, self.draw_rect.width)
-            track_y = self.draw_rect.y + self.gui.graphics_factory.centre(self.draw_rect.height, track_thickness)
-            self._track_rect = Rect(self.draw_rect.x, track_y, track_w, track_thickness)
-            travel = max(1, self.draw_rect.width - self._handle_size)
+            track_w = max(1, layout_rect.width)
+            track_y = layout_rect.y + self.gui.graphics_factory.centre(layout_rect.height, track_thickness)
+            self._track_rect = Rect(layout_rect.x, track_y, track_w, track_thickness)
+            travel = max(1, layout_rect.width - self._handle_size)
             handle_y = int(round(self._track_rect.centery - (self._handle_size / 2.0)))
-            self._graphic_rect = Rect(self.draw_rect.x, handle_y, travel, self._handle_size)
+            self._graphic_rect = Rect(layout_rect.x, handle_y, travel, self._handle_size)
         else:
-            track_h = max(1, self.draw_rect.height)
-            track_x = self.draw_rect.x + self.gui.graphics_factory.centre(self.draw_rect.width, track_thickness)
-            self._track_rect = Rect(track_x, self.draw_rect.y, track_thickness, track_h)
-            travel = max(1, self.draw_rect.height - self._handle_size)
+            track_h = max(1, layout_rect.height)
+            track_x = layout_rect.x + self.gui.graphics_factory.centre(layout_rect.width, track_thickness)
+            self._track_rect = Rect(track_x, layout_rect.y, track_thickness, track_h)
+            travel = max(1, layout_rect.height - self._handle_size)
             handle_x = int(round(self._track_rect.centerx - (self._handle_size / 2.0)))
-            self._graphic_rect = Rect(handle_x, self.draw_rect.y, self._handle_size, travel)
+            self._graphic_rect = Rect(handle_x, layout_rect.y, self._handle_size, travel)
+
+        # draw_rect should match the actual rendered footprint:
+        # track + handle at both logical range extremes.
+        min_handle = Rect(self._graphic_rect.x, self._graphic_rect.y, self._handle_size, self._handle_size)
+        if self._horizontal == Orientation.Horizontal:
+            max_handle = Rect(self._graphic_rect.x + self._graphic_rect.width, self._graphic_rect.y, self._handle_size, self._handle_size)
+        else:
+            max_handle = Rect(self._graphic_rect.x, self._graphic_rect.y + self._graphic_rect.height, self._handle_size, self._handle_size)
+        self.draw_rect = self._track_rect.union(min_handle).union(max_handle)
 
         self._track_bitmap = self._build_track_bitmap()
         self._disabled_track_bitmap = self.gui.graphics_factory.build_disabled_bitmap(self._track_bitmap)

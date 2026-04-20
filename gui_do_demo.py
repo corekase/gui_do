@@ -653,9 +653,27 @@ class Demo:
         h_slider_float_value = maybe_disable(gui.label((base_x + slider_width + 12, h_float_y + 12), '0.00', True))
         h_slider_int_value = maybe_disable(gui.label((base_x + slider_width + 12, h_int_y + 12), '0', True))
 
-        v_slider_y = base_y + 64
+        v_title_top = v_scroll_y
+        v_slider_label_gap = 6
         v_float_x = base_x + 580
         v_int_x = base_x + 702
+        v_title_float = maybe_disable(gui.label((v_float_x - 8, v_title_top), 'V Float', True))
+        v_title_int = maybe_disable(gui.label((v_int_x - 12, v_title_top), 'V Int Snap', True))
+        v_title_bottom = max(v_title_float.draw_rect.bottom, v_title_int.draw_rect.bottom)
+        v_slider_y = v_title_bottom + v_slider_label_gap
+        lower_h_slider_bottom = h_slider_int.draw_rect.bottom
+        v_slider_float_value = maybe_disable(gui.label((v_float_x - 6, 0), '0.00', True))
+        v_slider_int_value = maybe_disable(gui.label((v_int_x + 8, 0), '0', True))
+        v_slider_float_value.position = (
+            v_float_x + ((v_slider_width - v_slider_float_value.draw_rect.width) // 2),
+            lower_h_slider_bottom - v_slider_float_value.draw_rect.height,
+        )
+        v_slider_int_value.position = (
+            v_int_x + ((v_slider_width - v_slider_int_value.draw_rect.width) // 2),
+            lower_h_slider_bottom - v_slider_int_value.draw_rect.height,
+        )
+        v_value_top = min(v_slider_float_value.draw_rect.top, v_slider_int_value.draw_rect.top)
+        v_slider_height = max(80, v_value_top - v_slider_label_gap - v_slider_y)
         v_slider_float = maybe_disable(
             gui.slider(
                 f'{id_prefix}_v_slider_float',
@@ -676,10 +694,6 @@ class Demo:
                 True,
             )
         )
-        maybe_disable(gui.label((v_float_x - 8, v_slider_y - 42), 'V Float', True))
-        maybe_disable(gui.label((v_int_x - 12, v_slider_y - 42), 'V Int Snap', True))
-        v_slider_float_value = maybe_disable(gui.label((v_float_x - 6, v_slider_y + v_slider_height + 8), '0.00', True))
-        v_slider_int_value = maybe_disable(gui.label((v_int_x + 8, v_slider_y + v_slider_height + 8), '0', True))
 
         if not disabled:
             self.h_slider_float = h_slider_float
@@ -690,6 +704,7 @@ class Demo:
             self.v_slider_int = v_slider_int
             self.v_slider_float_value = v_slider_float_value
             self.v_slider_int_value = v_slider_int_value
+            self._v_slider_value_label_bottom = self.h_slider_int.draw_rect.bottom
             self._remember_slider_label_center(
                 self.h_slider_float_value,
                 self.h_slider_float_value.draw_rect.center,
@@ -736,8 +751,15 @@ class Demo:
         self.v_slider_int_value.set_label(f'{int(round(self.v_slider_int.value))}')
         self._center_slider_label(self.h_slider_float_value)
         self._center_slider_label(self.h_slider_int_value)
-        self._center_slider_label(self.v_slider_float_value)
-        self._center_slider_label(self.v_slider_int_value)
+        v_bottom = self.h_slider_int.draw_rect.bottom
+        self.v_slider_float_value.position = (
+            self.v_slider_float.draw_rect.centerx - (self.v_slider_float_value.draw_rect.width // 2),
+            v_bottom - self.v_slider_float_value.draw_rect.height,
+        )
+        self.v_slider_int_value.position = (
+            self.v_slider_int.draw_rect.centerx - (self.v_slider_int_value.draw_rect.width // 2),
+            v_bottom - self.v_slider_int_value.draw_rect.height,
+        )
 
     def update_circles(self, size):
         new_positions = []

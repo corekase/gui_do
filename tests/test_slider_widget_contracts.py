@@ -169,7 +169,7 @@ class SliderWidgetContractTests(unittest.TestCase):
     def test_mousewheel_activation_persists_until_cursor_leaves_hit_corridor(self) -> None:
         slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
         in_corridor = (slider._wheel_hit_area().left + 1, slider._wheel_hit_area().centery)
-        out_of_corridor = (slider.draw_rect.left + 1, slider.draw_rect.top + 1)
+        out_of_corridor = (slider._wheel_hit_area().right + 2, slider._wheel_hit_area().centery)
         self.assertTrue(slider._wheel_hit_area().collidepoint(in_corridor))
         self.assertFalse(slider._wheel_hit_area().collidepoint(out_of_corridor))
 
@@ -194,12 +194,12 @@ class SliderWidgetContractTests(unittest.TestCase):
         self.assertFalse(handled)
         self.assertEqual(slider.value, 5.0)
 
-    def test_mousewheel_ignores_points_inside_slider_but_outside_wheel_hit_corridor(self) -> None:
+    def test_mousewheel_ignores_points_outside_slider_and_wheel_hit_corridor(self) -> None:
         slider = self._build_slider(total_range=10, position=5.0, wheel_positive_to_max=True)
-        inside_widget_outside_handle = (slider.draw_rect.left + 1, slider.draw_rect.top + 1)
-        self.assertTrue(slider.draw_rect.collidepoint(inside_widget_outside_handle))
-        self.assertFalse(slider._wheel_hit_area().collidepoint(inside_widget_outside_handle))
-        slider.gui.set_mouse_pos(inside_widget_outside_handle)
+        outside_widget = (slider.draw_rect.right + 4, slider.draw_rect.centery)
+        self.assertFalse(slider.draw_rect.collidepoint(outside_widget))
+        self.assertFalse(slider._wheel_hit_area().collidepoint(outside_widget))
+        slider.gui.set_mouse_pos(outside_widget)
 
         handled = slider.handle_event(pygame.event.Event(MOUSEWHEEL, {"y": 1}), None)
 
@@ -366,6 +366,28 @@ class SliderWidgetContractTests(unittest.TestCase):
 
         self.assertEqual(min_handle.top, slider.draw_rect.top)
         self.assertEqual(max_handle.bottom, slider.draw_rect.bottom)
+
+    def test_horizontal_draw_rect_matches_track_and_endpoint_handle_union(self) -> None:
+        slider = self._build_slider(orientation=Orientation.Horizontal, total_range=100)
+
+        slider.value = 0.0
+        min_handle = slider._handle_area()
+        slider.value = 100.0
+        max_handle = slider._handle_area()
+        expected = slider._track_rect.union(min_handle).union(max_handle)
+
+        self.assertEqual(slider.draw_rect, expected)
+
+    def test_vertical_draw_rect_matches_track_and_endpoint_handle_union(self) -> None:
+        slider = self._build_slider(orientation=Orientation.Vertical, total_range=100)
+
+        slider.value = 0.0
+        min_handle = slider._handle_area()
+        slider.value = 100.0
+        max_handle = slider._handle_area()
+        expected = slider._track_rect.union(min_handle).union(max_handle)
+
+        self.assertEqual(slider.draw_rect, expected)
 
     def test_handle_graphical_position_matches_expected_float_output(self) -> None:
         slider = self._build_slider(orientation=Orientation.Horizontal, total_range=100, integer_type=False)
