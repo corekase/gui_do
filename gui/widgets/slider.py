@@ -9,6 +9,7 @@ from typing import Optional, TYPE_CHECKING
 
 from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.events import colours, GuiError, InteractiveState, Orientation
+from ..utility.input.overlay_drag_guard import cancel_drag_for_overlay_contact
 from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
@@ -71,6 +72,8 @@ class Slider(Widget, AxisRangeMixin):
         self._wheel_active: bool = False
         self._dragging: bool = False
         self._drag_anchor_offset: int = 0
+        self._drag_left_widget_bounds: bool = False
+        self._last_in_bounds_screen_pos: Optional[tuple[int, int]] = None
 
         base_handle_size = max(6, min(layout_rect.width, layout_rect.height) - 4)
         reduced_handle_size = max(6, int(round(base_handle_size * 0.8)))
@@ -202,37 +205,6 @@ class Slider(Widget, AxisRangeMixin):
             return default_step
         return self._wheel_step
 
-    def _topmost_window_at_mouse(self) -> Optional["Window"]:
-        """Return the topmost visible window currently under the mouse position."""
-        mouse_pos = self.gui._get_mouse_pos()
-        for candidate in tuple(self.gui.windows)[::-1]:
-            if not candidate.visible:
-                continue
-            if candidate.get_window_rect().collidepoint(mouse_pos):
-                return candidate
-        return None
-
-    def _drag_blocked_by_overlay(self, owner_window: Optional["Window"]) -> bool:
-        """Return True when drag enters a region occluded by another window."""
-        topmost_window = self._topmost_window_at_mouse()
-        if owner_window is None:
-            return topmost_window is not None
-        return topmost_window is not None and topmost_window is not owner_window
-
-    def _cancel_drag_for_overlay_contact(self, owner_window: Optional["Window"]) -> bool:
-        """Cancel drag when pointer enters an overlaid window region.
-
-        Returning True allows the coordinator to emit a widget event or invoke
-        on_activate callback, matching existing activation semantics.
-        """
-        if not self._dragging:
-            return False
-        if not self._drag_blocked_by_overlay(owner_window):
-            return False
-        self._reset_drag()
-        self.state = InteractiveState.Idle
-        return True
-
     def leave(self) -> None:
         """Reset hover state when focus leaves this widget."""
         if self._dragging:
@@ -264,7 +236,13 @@ class Slider(Widget, AxisRangeMixin):
             self.state = InteractiveState.Armed
             return True
         if event.type in (MOUSEMOTION, MOUSEBUTTONUP):
-            if self._cancel_drag_for_overlay_contact(window):
+            if cancel_drag_for_overlay_contact(
+                self.gui,
+                self._dragging,
+                window,
+                self._reset_drag,
+                lambda: setattr(self, 'state', InteractiveState.Idle),
+            ):
                 return True
 
         mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
@@ -274,6 +252,10 @@ class Slider(Widget, AxisRangeMixin):
             handle_area = self._handle_area()
             if not handle_area.collidepoint(mouse_point):
                 return False
+            self._drag_left_widget_bounds = False
+            down_pos = getattr(event, 'pos', None)
+            if isinstance(down_pos, tuple) and len(down_pos) == 2:
+                self._last_in_bounds_screen_pos = down_pos
             if self._horizontal == Orientation.Horizontal:
                 self._drag_anchor_offset = mouse_point[0] - handle_area.x
                 lock_x = self._graphic_rect.x + self._drag_anchor_offset
@@ -304,6 +286,17 @@ class Slider(Widget, AxisRangeMixin):
                 else:
                     self.state = InteractiveState.Idle
                 return False
+            motion_pos = getattr(event, 'pos', None)
+            motion_point = None
+            if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
+                motion_point = self.gui._convert_to_window(motion_pos, window)
+                draw_rect = getattr(self, 'draw_rect', None)
+                if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(motion_point):
+                    self._last_in_bounds_screen_pos = motion_pos
+            draw_rect = getattr(self, 'draw_rect', None)
+            leave_check_point = motion_point if motion_point is not None else mouse_point
+            if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and not draw_rect.collidepoint(leave_check_point):
+                self._drag_left_widget_bounds = True
             if self._horizontal == Orientation.Horizontal:
                 axis_pixel = mouse_point[0] - self._graphic_rect.x - self._drag_anchor_offset
             else:
@@ -314,7 +307,22 @@ class Slider(Widget, AxisRangeMixin):
 
         if getattr(event, 'button', None) != 1 or not self._dragging:
             return False
+        resolved_release_pos = None
+        release_pos = getattr(event, 'pos', None)
+        if isinstance(release_pos, tuple) and len(release_pos) == 2:
+            release_point = self.gui._convert_to_window(release_pos, window)
+            draw_rect = getattr(self, 'draw_rect', None)
+            if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(release_point):
+                resolved_release_pos = release_pos
+        if resolved_release_pos is None and getattr(self, '_drag_left_widget_bounds', False):
+            resolved_release_pos = self._last_in_bounds_screen_pos
         self._reset_drag()
+        if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
+            self.gui._release_pointer_hint = resolved_release_pos
+            if callable(getattr(self.gui, '_set_mouse_pos', None)):
+                self.gui._set_mouse_pos(resolved_release_pos, False)
+            else:
+                self.gui.mouse_pos = resolved_release_pos
         if self._wheel_active and self._wheel_hit_area().collidepoint(mouse_point):
             self.state = InteractiveState.Armed
         elif self._handle_area().collidepoint(mouse_point):
@@ -328,6 +336,8 @@ class Slider(Widget, AxisRangeMixin):
         self.gui.set_lock_area(None)
         self._dragging = False
         self._drag_anchor_offset = 0
+        self._drag_left_widget_bounds = False
+        self._last_in_bounds_screen_pos = None
 
     def draw(self) -> None:
         """Draw slider track and handle in the current interaction state."""

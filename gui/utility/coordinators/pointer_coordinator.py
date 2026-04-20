@@ -4,6 +4,7 @@ import logging
 from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 from ..events import GuiError
+from ..geometry import to_screen as geom_to_screen, to_window as geom_to_window, validate_point
 from ..input.cursor_placement import CursorPlacement
 
 if TYPE_CHECKING:
@@ -58,8 +59,10 @@ class PointerCoordinator:
     @staticmethod
     def _validate_point(point: Tuple[int, int], label: str) -> None:
         """Validate point tuple contract for coordinate-conversion APIs."""
-        if not isinstance(point, tuple) or len(point) != 2:
-            raise GuiError(f'{label} must be a tuple of (x, y), got: {point}')
+        try:
+            validate_point(point, label)
+        except ValueError as exc:
+            raise GuiError(str(exc)) from exc
 
     def _normalize_window(self, window: Optional[Any]) -> Optional[Any]:
         """Normalize window-like argument to known containers or `None`."""
@@ -68,14 +71,11 @@ class PointerCoordinator:
         return window
 
     @staticmethod
-    def _apply_window_offset(point: Tuple[int, int], window: Any, to_window: bool) -> Tuple[int, int]:
+    def _apply_window_offset(point: Tuple[int, int], window: Any, as_window_coords: bool) -> Tuple[int, int]:
         """Convert coordinates between screen and container-local spaces."""
-        x, y = point
-        wx = window.x if hasattr(window, 'x') else window.left
-        wy = window.y
-        if to_window:
-            return (x - wx, y - wy)
-        return (x + wx, y + wy)
+        if as_window_coords:
+            return geom_to_window(point, window)
+        return geom_to_screen(point, window)
 
     def set_cursor(self, name: str) -> None:
         """Activate registered cursor asset and preserve anchor position."""
@@ -98,7 +98,7 @@ class PointerCoordinator:
         self._validate_point(point, 'point')
         window = self._normalize_window(window)
         if window is not None:
-            return self.gui.lock_area(self._apply_window_offset(point, window, to_window=False))
+            return self.gui.lock_area(self._apply_window_offset(point, window, as_window_coords=False))
         return self.gui.lock_area(point)
 
     def convert_to_window(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
@@ -107,5 +107,5 @@ class PointerCoordinator:
         window = self._normalize_window(window)
         if window is not None:
             locked_point = self.gui.lock_area(point)
-            return self._apply_window_offset(locked_point, window, to_window=True)
+            return self._apply_window_offset(locked_point, window, as_window_coords=True)
         return self.gui.lock_area(point)

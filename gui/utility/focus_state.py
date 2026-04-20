@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
+from .geometry import point_in_rect
 from .intermediates.widget import Widget
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class FocusStateController:
         for window in self.gui.windows[::-1]:
             if not window.visible:
                 continue
-            if window.get_window_rect().collidepoint(mouse_pos):
+            if point_in_rect(mouse_pos, window.get_window_rect()):
                 return window
         return None
 
@@ -71,7 +72,7 @@ class FocusStateController:
         if task_panel is None or not getattr(task_panel, 'visible', False):
             return False
         mouse_pos = self.gui._get_mouse_pos()
-        return bool(task_panel.get_rect().collidepoint(mouse_pos))
+        return point_in_rect(mouse_pos, task_panel.get_rect())
 
     def activate_window_at_pointer(self) -> None:
         """Activate hovered window, or clear active window when clicking outside all windows."""

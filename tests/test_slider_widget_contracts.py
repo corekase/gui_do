@@ -91,6 +91,40 @@ class SliderWidgetContractTests(unittest.TestCase):
         self.assertTrue(any(call[0] is slider for call in lock_calls))
         self.assertIn((None, None), lock_calls)
 
+    def test_release_after_leaving_bounds_and_reentering_preserves_release_position(self) -> None:
+        slider = self._build_slider()
+        start = slider._handle_area().center
+        slider.gui.set_mouse_pos(start)
+
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None))
+
+        slider.gui.set_mouse_pos((slider.draw_rect.right + 50, slider.draw_rect.centery))
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+
+        # Keep logical pointer outside; release event reports an in-bounds point.
+        release_pos = (slider.draw_rect.centerx, slider.draw_rect.centery)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_pos}), None))
+        self.assertEqual(slider.gui._get_mouse_pos(), release_pos)
+
+    def test_release_uses_last_in_bounds_motion_when_release_pos_is_outside(self) -> None:
+        slider = self._build_slider()
+        start = slider._handle_area().center
+        slider.gui.set_mouse_pos(start)
+
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": start}), None))
+
+        inside_pos = (slider.draw_rect.centerx, slider.draw_rect.centery)
+        slider.gui.set_mouse_pos(inside_pos)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": inside_pos}), None))
+
+        outside_pos = (slider.draw_rect.right + 60, slider.draw_rect.centery)
+        slider.gui.set_mouse_pos(outside_pos)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": outside_pos}), None))
+
+        release_outside = (slider.draw_rect.right + 80, slider.draw_rect.centery)
+        self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_outside}), None))
+        self.assertEqual(slider.gui._get_mouse_pos(), inside_pos)
+
     def test_horizontal_drag_locks_to_anchor_adjusted_travel_corridor(self) -> None:
         slider = self._build_slider(orientation=Orientation.Horizontal, total_range=100, position=20.0)
         handle = slider._handle_area()

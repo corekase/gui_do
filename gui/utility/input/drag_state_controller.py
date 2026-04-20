@@ -6,6 +6,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 
 from ..gui_utils.drag_state_model import DragState
+from ..geometry import point_in_rect
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -24,16 +25,12 @@ class DragStateController:
         """Return mutable drag-state model."""
         return self.gui._drag_state
 
-    def _commit_drag_mutation(self, mutation) -> None:
-        """Apply a mutation callback to drag-state model."""
-        mutation(self.state)
-
     def _has_valid_drag_context(self) -> bool:
         """Return whether drag state still references valid window and delta."""
         return (
-            self.state.dragging_window is not None
+            self.state.has_context()
+            and self.state.dragging_window is not None
             and self.state.dragging_window in self.gui.windows
-            and self.state.mouse_delta is not None
         )
 
     def _set_drag_from_active_window(self) -> None:
@@ -41,40 +38,57 @@ class DragStateController:
         active_window = self.gui.active_window
         if active_window is None:
             return
+        wx, wy = self._window_position(active_window)
         mouse_delta = (
-            active_window.x - self.gui.mouse_pos[0],
-            active_window.y - self.gui.mouse_pos[1],
+            wx - self.gui.mouse_pos[0],
+            wy - self.gui.mouse_pos[1],
         )
 
-        def _mutation(state: DragState) -> None:
-            """Mutation."""
-            state.begin_drag(active_window, mouse_delta)
+        self.state.start_drag(active_window, mouse_delta)
 
-        self._commit_drag_mutation(_mutation)
+    @staticmethod
+    def _window_position(window) -> tuple[int, int]:
+        """Return current window position from structural x/y contract."""
+        wx = getattr(window, 'x', None)
+        wy = getattr(window, 'y', None)
+        if not isinstance(wx, int) or not isinstance(wy, int):
+            raise ValueError(f'window must provide integer x/y, got: {window}')
+        return (wx, wy)
+
+    @staticmethod
+    def _set_window_position(window, x: int, y: int) -> None:
+        """Update window position via property setter when present, else x/y attrs."""
+        if hasattr(type(window), 'position'):
+            window.position = (x, y)
+            return
+        window.x = x
+        window.y = y
 
     def _release_drag(self) -> None:
         """Finalize drag, sync pointer position, and clear drag state."""
         dragging_window = self.state.dragging_window
         mouse_delta = self.state.mouse_delta
-        dragging_window.position = (dragging_window.x, dragging_window.y)
+        wx, wy = self._window_position(dragging_window)
+        self._set_window_position(dragging_window, wx, wy)
         self.gui._set_mouse_pos(
             (
-                dragging_window.x - mouse_delta[0],
-                dragging_window.y - mouse_delta[1],
+                wx - mouse_delta[0],
+                wy - mouse_delta[1],
             )
         )
-
-        self._commit_drag_mutation(lambda state: state.clear_drag())
+        self.state.stop_drag()
 
     def reset(self) -> None:
         """Clear drag state without additional side effects."""
-        self._commit_drag_mutation(lambda state: state.clear_drag())
+        self.state.stop_drag()
 
     def start_if_possible(self, event: PygameEvent) -> None:
         """Start dragging active window when titlebar hit rules are satisfied."""
         event_pos = getattr(event, 'pos', self.gui._get_mouse_pos())
-        if self.gui.active_window and self.gui.active_window.get_title_bar_rect().collidepoint(self.gui.lock_area(event_pos)):
-            if self.gui.active_window.get_widget_rect().collidepoint(self.gui.lock_area(event_pos)):
+        titlebar_pos = self.gui.lock_area(event_pos)
+        if self.gui.active_window and point_in_rect(titlebar_pos, self.gui.active_window.get_title_bar_rect()):
+            widget_pos = self.gui.lock_area(event_pos)
+            if point_in_rect(widget_pos, self.gui.active_window.get_widget_rect()):
                 self.gui.lower_window(self.gui.active_window)
                 self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
             else:
@@ -89,8 +103,9 @@ class DragStateController:
             self._release_drag()
         elif event.type == MOUSEMOTION and self.state.dragging:
             rel = getattr(event, 'rel', (0, 0))
-            x = self.state.dragging_window.x + rel[0]
-            y = self.state.dragging_window.y + rel[1]
+            wx, wy = self._window_position(self.state.dragging_window)
+            x = wx + rel[0]
+            y = wy + rel[1]
             self.gui._set_mouse_pos((x - self.state.mouse_delta[0], y - self.state.mouse_delta[1]), False)
-            self._commit_drag_mutation(lambda state: setattr(state.dragging_window, 'position', (x, y)))
+            self._set_window_position(self.state.dragging_window, x, y)
         return InputAction.pass_event()

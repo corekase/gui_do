@@ -5,6 +5,7 @@ from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
 from ..events import Event
+from ..geometry import point_in_rect
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -77,7 +78,7 @@ class InputTargetResolver:
     def _screen_hit_meta(widget: Any, mouse_pos, convert_to_window) -> InputTargetMeta:
         """Compute hit metadata for root-screen widgets."""
         hit_rect = widget.hit_rect if widget.hit_rect else widget.draw_rect
-        collides = bool(hit_rect.collidepoint(convert_to_window(mouse_pos, None)))
+        collides = point_in_rect(convert_to_window(mouse_pos, None), hit_rect)
         return InputTargetMeta(widget=widget, collides=collides, outside_collision=False)
 
     @staticmethod
@@ -93,7 +94,7 @@ class InputTargetResolver:
         for window in tuple(windows)[::-1]:
             if window not in windows:
                 continue
-            if window.visible and window.get_window_rect().collidepoint(mouse_pos):
+            if window.visible and point_in_rect(mouse_pos, window.get_window_rect()):
                 return window
         return None
 
@@ -148,7 +149,7 @@ class InputTargetResolver:
         task_panel = self.gui.task_panel
         if task_panel is None or not task_panel.visible:
             return None
-        if not task_panel.get_rect().collidepoint(context['mouse_pos']):
+        if not point_in_rect(context['mouse_pos'], task_panel.get_rect()):
             return None
         layer_result = self._dispatch_widget_layer(event, task_panel, emit_task_panel=True)
         if isinstance(layer_result, InputAction):

@@ -96,7 +96,7 @@ class InputStateSyncContractsTests(unittest.TestCase):
         self.assertEqual(gui._lock_state.mouse_locked, gui.mouse_locked)
         self.assertEqual(gui._lock_state.lock_point_pos, gui.lock_point_pos)
 
-    def test_lock_release_from_area_lock_aligns_physical_cursor_to_logical_position(self) -> None:
+    def test_lock_release_from_area_lock_does_not_warp_physical_cursor_directly(self) -> None:
         gui = _GuiStub()
         controller = LockStateController(gui)
         locking_object = Widget.__new__(Widget)
@@ -104,7 +104,35 @@ class InputStateSyncContractsTests(unittest.TestCase):
 
         controller.set_area(None)
 
-        self.assertEqual(gui.pointer_calls, [(10, 10)])
+        self.assertEqual(gui.pointer_calls, [])
+
+    def test_lock_release_from_area_lock_does_not_warp_when_physical_inside_lock(self) -> None:
+        gui = _GuiStub()
+        controller = LockStateController(gui)
+        locking_object = Widget.__new__(Widget)
+        gui.mouse_pos = (3, 4)
+        gui.input_providers.mouse_get_pos = lambda: (3, 4)
+        controller.set_area(locking_object, Rect(1, 2, 5, 6))
+
+        controller.set_area(None)
+
+        self.assertEqual(gui.pointer_calls, [])
+
+    def test_lock_release_does_not_warp_when_physical_inside_lock_owner_draw_rect(self) -> None:
+        gui = _GuiStub()
+        controller = LockStateController(gui)
+        locking_object = Widget.__new__(Widget)
+        locking_object.draw_rect = Rect(10, 10, 20, 20)
+        locking_object.window = None
+        gui.mouse_pos = (3, 4)
+        # Outside narrow lock corridor, but still inside locking widget draw rect.
+        gui.input_providers.mouse_get_pos = lambda: (15, 15)
+        controller.set_area(locking_object, Rect(1, 2, 5, 6))
+
+        controller.set_area(None)
+
+        self.assertEqual(gui.pointer_calls, [])
+        self.assertEqual(gui.mouse_pos, (3, 4))
 
     def test_drag_start_updates_drag_state_model(self) -> None:
         gui = _GuiStub()

@@ -176,6 +176,45 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         self.assertEqual(scrollbar.state, InteractiveState.Idle)
         self.assertEqual(lock_calls, [(None, None)])
 
+    def test_release_after_leaving_bounds_and_reentering_preserves_release_position(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        lock_calls = []
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(25, 15),
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+        )
+
+        self.assertFalse(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None))
+
+        scrollbar.gui.set_mouse_pos((scrollbar.draw_rect.right + 60, scrollbar.draw_rect.centery))
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+
+        release_pos = (scrollbar.draw_rect.centerx, scrollbar.draw_rect.centery)
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_pos}), None))
+        self.assertEqual(scrollbar.gui._get_mouse_pos(), release_pos)
+
+    def test_release_uses_last_in_bounds_motion_when_release_pos_is_outside(self) -> None:
+        scrollbar = self._build_scrollbar_stub()
+        lock_calls = []
+        scrollbar.gui = build_mouse_gui_stub(
+            mouse_pos=(25, 15),
+            set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
+        )
+
+        self.assertFalse(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (25, 15)}), None))
+
+        inside_pos = (scrollbar.draw_rect.centerx, scrollbar.draw_rect.centery)
+        scrollbar.gui.set_mouse_pos(inside_pos)
+        self.assertFalse(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": inside_pos}), None))
+
+        outside_pos = (scrollbar.draw_rect.right + 80, scrollbar.draw_rect.centery)
+        scrollbar.gui.set_mouse_pos(outside_pos)
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": outside_pos}), None))
+
+        release_outside = (scrollbar.draw_rect.right + 100, scrollbar.draw_rect.centery)
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_outside}), None))
+        self.assertEqual(scrollbar.gui._get_mouse_pos(), inside_pos)
+
     def test_mousewheel_on_hover_decrements_towards_zero_by_default(self) -> None:
         scrollbar = self._build_scrollbar_stub()
         scrollbar._start_pos = 10

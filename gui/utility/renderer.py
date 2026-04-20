@@ -77,7 +77,12 @@ class Renderer:
     def _draw_cursor(self) -> None:
         """Draw cursor."""
         if self.gui.mouse_locked:
-            self.gui.mouse_pos = self.gui.lock_area(self.gui.mouse_pos)
+            clamped_pos = self.gui.lock_area(self.gui.mouse_pos)
+            set_mouse = getattr(self.gui, '_set_mouse_pos', None)
+            if callable(set_mouse):
+                set_mouse(clamped_pos, False)
+            else:
+                self.gui.mouse_pos = clamped_pos
         if self.gui.cursor_image is None or self.gui.cursor_hotspot is None:
             return
         if self.gui.cursor_rect is None:

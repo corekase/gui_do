@@ -5,6 +5,7 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from pygame import Rect
 
 from ..events import GuiError
+from ..geometry import clamp_point_to_rect
 from ..gui_utils.lock_state_model import LockState
 from ..intermediates.widget import Widget
 
@@ -24,38 +25,22 @@ class LockStateController:
         """Return the mutable lock-state model owned by the manager."""
         return self.gui._lock_state
 
-    def _commit_lock_mutation(self, mutation) -> None:
-        """Apply a mutation callback to the shared lock-state model."""
-        mutation(self.state)
-
     def _is_registered_object(self, value: Widget) -> bool:
         """Return registration status via object registry when available."""
         return bool(self.gui.object_registry.is_registered_object(value))
-
-    def _assign_area_lock(self, locking_object: Widget) -> None:
-        """Assign area lock using current lock-area rectangle."""
-        area = self.state.lock_area_rect
-        if area is None:
-            raise GuiError('lock area must be set before assigning area lock')
-        self._commit_lock_mutation(lambda state: state.apply_area_lock(locking_object, area))
-
-    def _assign_point_lock(self, locking_object: Widget, point: Tuple[int, int]) -> None:
-        """Assign point lock to a specific widget and lock anchor."""
-        self._commit_lock_mutation(lambda state: state.apply_point_lock(locking_object, point))
 
     def _restore_physical_mouse_on_unlock(self) -> None:
         """Restore hardware pointer when releasing an active mouse lock."""
         if not self.state.mouse_locked:
             return
         if not self.state.mouse_point_locked:
-            # Align hardware cursor with the current logical edge position so
-            # the next motion event continues smoothly after area-lock release.
-            self.gui.pointer.set_physical_mouse_pos(self.gui.mouse_pos)
+            # Area-lock release pointer reconciliation is handled by InputRouter
+            # using the release event position and pre-release lock context.
             return
         if self.state.lock_point_pos is None:
             return
         self.gui.pointer.set_physical_mouse_pos(self.state.lock_point_pos)
-        self.gui.mouse_pos = self.state.lock_point_pos
+        self.gui._set_mouse_pos(self.state.lock_point_pos, False)
 
     def set_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Set or clear area lock for a registered widget."""
@@ -70,8 +55,7 @@ class LockStateController:
                 raise GuiError('locking_object must be a registered widget')
             if area.width <= 0 or area.height <= 0:
                 raise GuiError('lock area dimensions must be positive')
-            self._commit_lock_mutation(lambda state: setattr(state, 'lock_area_rect', area))
-            self._assign_area_lock(locking_object)
+            self.state.apply_area_lock(locking_object, area)
         else:
             # Clearing lock restores pointer before wiping lock-state fields.
             self._restore_physical_mouse_on_unlock()
@@ -90,7 +74,7 @@ class LockStateController:
             point = self.gui.input_providers.mouse_get_pos()
         if not isinstance(point, tuple) or len(point) != 2:
             raise GuiError(f'point must be a tuple of (x, y), got: {point}')
-        self._assign_point_lock(locking_object, point)
+        self.state.apply_point_lock(locking_object, point)
 
     def resolve(self) -> Optional[Widget]:
         """Return valid locking widget, clearing stale/invalid lock state as needed."""
@@ -118,35 +102,24 @@ class LockStateController:
         lock_area_rect = self.state.lock_area_rect
         if lock_area_rect is None:
             return position
-        x, y = position
-        max_x = lock_area_rect.right - 1
-        max_y = lock_area_rect.bottom - 1
-        if x < lock_area_rect.left:
-            x = lock_area_rect.left
-        elif x > max_x:
-            x = max_x
-        if y < lock_area_rect.top:
-            y = lock_area_rect.top
-        elif y > max_y:
-            y = max_y
-        return (x, y)
+        return clamp_point_to_rect(position, lock_area_rect)
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenter hardware pointer when point-lock recenter constraints are violated."""
         if self.state.lock_point_pos is None:
-            self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', False))
+            self.state.set_recenter_pending(False)
             return
         if not isinstance(hardware_position, tuple) or len(hardware_position) != 2:
             raise GuiError(f'hardware_position must be a tuple of (x, y), got: {hardware_position}')
         in_recenter_rect = self.gui.point_lock_recenter_rect.collidepoint(hardware_position)
         if self.state.lock_point_recenter_pending:
             if in_recenter_rect:
-                self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', False))
+                self.state.set_recenter_pending(False)
             return
         if not in_recenter_rect:
             self.gui.pointer.set_physical_mouse_pos(self.gui.point_lock_recenter_rect.center)
-            self._commit_lock_mutation(lambda state: setattr(state, 'lock_point_recenter_pending', True))
+            self.state.set_recenter_pending(True)
 
     def clear(self) -> None:
         """Clear all active lock-state fields."""
-        self._commit_lock_mutation(lambda state: state.clear_lock())
+        self.state.clear_lock()

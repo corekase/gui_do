@@ -318,7 +318,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.mouse_locked = True
         gui.mouse_point_locked = False
         GuiManager.set_lock_area(gui, None)
-        self.assertEqual(set_calls, [(9, 8)])
+        self.assertEqual(set_calls, [])
         self.assertEqual(gui.mouse_pos, (9, 8))
 
     def test_set_lock_point_defaults_and_invalid_point(self) -> None:

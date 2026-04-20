@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 
 from ...widgets.window import Window
 
@@ -14,14 +14,48 @@ class DragState:
     dragging_window: Optional[Window] = None
     mouse_delta: Optional[Tuple[int, int]] = None
 
-    def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
-        """Begin drag."""
+    @staticmethod
+    def _is_window_like(window: Any) -> bool:
+        """Return whether object satisfies the minimal drag-window contract."""
+        if window is None:
+            return False
+        has_x = isinstance(getattr(window, 'x', None), int)
+        has_y = isinstance(getattr(window, 'y', None), int)
+        return has_x and has_y
+
+    @staticmethod
+    def _validate_drag_context(window: Window, mouse_delta: Tuple[int, int]) -> None:
+        """Validate drag context values before state transitions."""
+        if not DragState._is_window_like(window):
+            raise ValueError(f'window must satisfy drag-window contract, got: {window}')
+        if not isinstance(mouse_delta, tuple) or len(mouse_delta) != 2:
+            raise ValueError(f'mouse_delta must be a tuple of (x, y), got: {mouse_delta}')
+        dx, dy = mouse_delta
+        if not isinstance(dx, int) or not isinstance(dy, int):
+            raise ValueError(f'mouse_delta values must be ints, got: {mouse_delta}')
+
+    def has_context(self) -> bool:
+        """Return whether current drag state has a complete drag context."""
+        return self.dragging_window is not None and self.mouse_delta is not None
+
+    def start_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
+        """Enter active drag state with a validated window/delta context."""
+        self._validate_drag_context(window, mouse_delta)
         self.dragging = True
         self.dragging_window = window
         self.mouse_delta = mouse_delta
 
-    def clear_drag(self) -> None:
-        """Clear drag."""
+    def stop_drag(self) -> None:
+        """Return to idle drag state and clear all drag context."""
         self.dragging = False
         self.dragging_window = None
         self.mouse_delta = None
+
+    # Backward-compatible wrappers used by existing controllers/tests.
+    def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
+        """Backward-compatible alias for start_drag."""
+        self.start_drag(window, mouse_delta)
+
+    def clear_drag(self) -> None:
+        """Backward-compatible alias for stop_drag."""
+        self.stop_drag()

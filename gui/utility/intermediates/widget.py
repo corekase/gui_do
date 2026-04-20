@@ -6,6 +6,7 @@ from pygame.event import Event as PygameEvent
 from pygame.surface import Surface
 from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from ..events import Event, GuiError
+from ..geometry import point_in_rect
 
 if TYPE_CHECKING:
     from ..gui_utils.gui_event import GuiEvent
@@ -101,9 +102,10 @@ class Widget:
 
     def get_collide(self, window: Optional["Window"] = None) -> bool:
         """Return True when the current mouse position is inside this widget."""
+        mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
         if self.hit_rect is None:
-            return self.draw_rect.collidepoint(self.gui._convert_to_window(self.gui._get_mouse_pos(), window))
-        return self.hit_rect.collidepoint(self.gui._convert_to_window(self.gui._get_mouse_pos(), window))
+            return point_in_rect(mouse_point, self.draw_rect)
+        return point_in_rect(mouse_point, self.hit_rect)
 
     def handle_event(self, _: PygameEvent, _a: Optional["Window"]) -> bool:
         """Handle an input event. Subclasses return True on activation."""

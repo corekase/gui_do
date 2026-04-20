@@ -10,6 +10,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.intermediates.widget import Widget
 from gui.utility.gui_utils.lock_state_model import LockState
 
 
@@ -196,6 +197,20 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.dispatcher.router._sync_pointer_from_mouse_event(event)
 
         self.assertEqual(self.gui.mouse_pos, (99, 49))
+
+    def test_button_up_uses_event_pos_when_inside_lock_owner_draw_rect(self) -> None:
+        self.gui.lock_state.clamp_position = lambda pos: (min(max(pos[0], 10), 10), min(max(pos[1], 10), 10))
+        self.gui.mouse_locked = True
+        self.gui.mouse_point_locked = False
+        lock_widget = Widget.__new__(Widget)
+        lock_widget.draw_rect = Rect(0, 0, 100, 40)
+        lock_widget.window = None
+        self.gui.locking_object = lock_widget
+
+        event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (50, 20)})
+        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+
+        self.assertEqual(self.gui.mouse_pos, (50, 20))
 
     def test_first_motion_after_release_is_not_sticky_clamped_after_unlock(self) -> None:
         def clamp_with_optional_lock(position):

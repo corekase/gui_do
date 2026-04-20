@@ -10,6 +10,7 @@ from .frame import Frame
 from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.intermediates.widget import Widget
 from ..utility.events import colours, GuiError, Orientation, ArrowPosition, InteractiveState
+from ..utility.input.overlay_drag_guard import cancel_drag_for_overlay_contact
 
 if TYPE_CHECKING:
     from ..utility.gui_manager import GuiManager
@@ -151,6 +152,8 @@ class Scrollbar(Frame, AxisRangeMixin):
         self._dragging: bool = False
         self._last_mouse_pos: Optional[int] = None
         self._hit: bool = False
+        self._drag_left_widget_bounds: bool = False
+        self._last_in_bounds_screen_pos: Optional[tuple[int, int]] = None
 
     def leave(self) -> None:
         """Leave."""
@@ -173,7 +176,7 @@ class Scrollbar(Frame, AxisRangeMixin):
         if self.disabled:
             return False
         if event.type in (MOUSEMOTION, MOUSEBUTTONUP):
-            if self._cancel_drag_for_overlay_contact(window):
+            if cancel_drag_for_overlay_contact(self.gui, self._dragging, window, self._reset):
                 return True
         if self._hit:
             self._hit = False
@@ -205,8 +208,27 @@ class Scrollbar(Frame, AxisRangeMixin):
                 self.gui.set_lock_area(self, lock_rect)
                 self.state = InteractiveState.Hover
                 self._dragging = True
+                self._drag_left_widget_bounds = False
+                down_pos = getattr(event, 'pos', None)
+                if isinstance(down_pos, tuple) and len(down_pos) == 2:
+                    self._last_in_bounds_screen_pos = down_pos
+                else:
+                    current_pos = self.gui._get_mouse_pos()
+                    if isinstance(current_pos, tuple) and len(current_pos) == 2:
+                        self._last_in_bounds_screen_pos = current_pos
                 return False
         if (event.type == MOUSEMOTION) and self._dragging:
+            motion_pos = getattr(event, 'pos', None)
+            motion_point = None
+            if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
+                motion_point = self.gui._convert_to_window(motion_pos, window)
+                draw_rect = getattr(self, 'draw_rect', None)
+                if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(motion_point):
+                    self._last_in_bounds_screen_pos = motion_pos
+            draw_rect = getattr(self, 'draw_rect', None)
+            leave_check_point = motion_point if motion_point is not None else point
+            if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and not draw_rect.collidepoint(leave_check_point):
+                self._drag_left_widget_bounds = True
             x, y = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
             x, y = (x - self._graphic_rect.x, y - self._graphic_rect.y)
             if self._horizontal == Orientation.Horizontal:
@@ -238,39 +260,24 @@ class Scrollbar(Frame, AxisRangeMixin):
                 return False
         if (event.type == MOUSEBUTTONUP) and self._dragging:
             if getattr(event, 'button', None) == 1:
+                resolved_release_pos = None
+                release_pos = getattr(event, 'pos', None)
+                if isinstance(release_pos, tuple) and len(release_pos) == 2:
+                    release_point = self.gui._convert_to_window(release_pos, window)
+                    draw_rect = getattr(self, 'draw_rect', None)
+                    if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(release_point):
+                        resolved_release_pos = release_pos
+                if resolved_release_pos is None and getattr(self, '_drag_left_widget_bounds', False):
+                    resolved_release_pos = getattr(self, '_last_in_bounds_screen_pos', None)
                 self._reset()
+                if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
+                    self.gui._release_pointer_hint = resolved_release_pos
+                    if callable(getattr(self.gui, '_set_mouse_pos', None)):
+                        self.gui._set_mouse_pos(resolved_release_pos, False)
+                    else:
+                        self.gui.mouse_pos = resolved_release_pos
                 return True
         return False
-
-    def _topmost_window_at_mouse(self) -> Optional["Window"]:
-        """Return the topmost visible window currently under the mouse position."""
-        mouse_pos = self.gui._get_mouse_pos()
-        for candidate in tuple(self.gui.windows)[::-1]:
-            if not candidate.visible:
-                continue
-            if candidate.get_window_rect().collidepoint(mouse_pos):
-                return candidate
-        return None
-
-    def _drag_blocked_by_overlay(self, owner_window: Optional["Window"]) -> bool:
-        """Return True when drag enters a region occluded by another window."""
-        topmost_window = self._topmost_window_at_mouse()
-        if owner_window is None:
-            return topmost_window is not None
-        return topmost_window is not None and topmost_window is not owner_window
-
-    def _cancel_drag_for_overlay_contact(self, owner_window: Optional["Window"]) -> bool:
-        """Cancel drag when pointer enters an overlaid window region.
-
-        Returning True allows the coordinator to emit a widget event or invoke
-        on_activate callback, matching existing activation semantics.
-        """
-        if not self._dragging:
-            return False
-        if not self._drag_blocked_by_overlay(owner_window):
-            return False
-        self._reset()
-        return True
 
     def draw(self) -> None:
         """Draw."""
@@ -342,6 +349,8 @@ class Scrollbar(Frame, AxisRangeMixin):
         self._hit = False
         self._dragging = False
         self._last_mouse_pos = None
+        self._drag_left_widget_bounds = False
+        self._last_in_bounds_screen_pos = None
 
     def _total_to_graphical(self, point: int) -> int:
         """Total to graphical."""
