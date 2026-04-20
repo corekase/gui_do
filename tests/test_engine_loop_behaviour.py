@@ -75,10 +75,10 @@ class DummyGui:
     def run_postamble(self) -> None:
         self.calls.append("gui.run_postamble")
 
-    def draw_gui(self) -> None:
+    def _draw_gui(self) -> None:
         self.calls.append("gui.draw_gui")
 
-    def undraw_gui(self) -> None:
+    def _undraw_gui(self) -> None:
         self.calls.append("gui.undraw_gui")
 
 

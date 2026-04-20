@@ -316,8 +316,6 @@ The sections above focus on practical usage. This section provides complete call
 - `gui.raise_window(window: Window) -> None`
 - `gui.set_task_owner(task_id: Hashable, window: Optional[Window]) -> None`
 - `gui.set_task_owners(window: Optional[Window], *task_ids: Hashable) -> None`
-- `gui.draw_gui() -> None`
-- `gui.undraw_gui() -> None`
 - `gui.get_mouse_input_state() -> MouseInputState`
 - `gui.copy_graphic_area(surface: Surface, rect: Rect, flags: int = 0) -> Surface`
 

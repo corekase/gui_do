@@ -67,10 +67,10 @@ class ScriptedGui:
     def run_postamble(self):
         self.log.append((self.name, "postamble"))
 
-    def draw_gui(self):
+    def _draw_gui(self):
         self.log.append((self.name, "draw"))
 
-    def undraw_gui(self):
+    def _undraw_gui(self):
         self.log.append((self.name, "undraw"))
 
 

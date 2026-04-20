@@ -96,12 +96,12 @@ class IntegrationGuiManagerPipelineTests(unittest.TestCase):
         gui.cursor_hotspot = (1, 1)
         gui.mouse_pos = (20, 30)
 
-        gui.draw_gui()
+        gui._draw_gui()
 
         self.assertIsNotNone(gui.cursor_rect)
         self.assertEqual(gui.cursor_rect.topleft, (19, 29))
 
-        gui.undraw_gui()
+        gui._undraw_gui()
 
 
 if __name__ == "__main__":

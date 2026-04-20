@@ -667,12 +667,12 @@ class GuiManager:
         """Run widget handler and execute activation callbacks when present."""
         return self.widget_state.handle_widget(widget, event, window)
 
-    def draw_gui(self) -> None:
-        """Draw gui."""
+    def _draw_gui(self) -> None:
+        """Render one GUI frame."""
         self.renderer.draw()
 
-    def undraw_gui(self) -> None:
-        """Undraw gui."""
+    def _undraw_gui(self) -> None:
+        """Restore buffered GUI regions after a frame flip."""
         self.renderer.undraw()
 
     def _convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:

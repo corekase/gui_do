@@ -72,10 +72,10 @@ class Engine:
                         task_event = scheduler.event(TaskKind.Failed, task_id, error_message)
                         gui.dispatch_event(task_event)
                     gui.run_postamble()
-                    gui.draw_gui()
+                    gui._draw_gui()
                     self._display_flip()
                     if gui.buffered:
-                        gui.undraw_gui()
+                        gui._undraw_gui()
                     self.clock.tick(self.fps)
         except Exception:
             exit_code = 1
