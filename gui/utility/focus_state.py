@@ -65,22 +65,20 @@ class FocusStateController:
                 return window
         return None
 
-    def _resolve_top_visible_window(self) -> Optional["Window"]:
-        """Resolve current topmost visible window regardless of pointer position."""
-        for window in self.gui.windows[::-1]:
-            if window.visible:
-                return window
-        return None
-
     def activate_window_at_pointer(self) -> None:
-        """Activate the topmost visible window under the pointer, if any."""
+        """Activate hovered window, or clear active window when clicking outside all windows."""
         hovered_window = self._resolve_hovered_window()
         if hovered_window is not None:
             self.gui.active_window = hovered_window
+            return
+        if self.gui.active_window is not None:
+            self.gui.active_window = None
 
     def update_active_window(self) -> None:
-        """Refresh active window validity without changing activation on hover."""
+        """Refresh active window validity without implicit promotion."""
         current = self.gui.active_window
-        if current is not None and current in self.gui.windows and current.visible:
+        if current is None:
             return
-        self.gui.active_window = self._resolve_top_visible_window()
+        if current in self.gui.windows and current.visible:
+            return
+        self.gui.active_window = None

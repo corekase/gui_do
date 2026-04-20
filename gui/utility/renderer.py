@@ -51,18 +51,11 @@ class Renderer:
         """Draw windows."""
         windows_snapshot = tuple(self.gui.windows)
         active_window = getattr(self.gui, 'active_window', None)
-        if active_window in windows_snapshot and active_window.visible:
-            top_window = active_window
-        else:
-            top_window = None
-            for window in reversed(windows_snapshot):
-                if window.visible:
-                    top_window = window
-                    break
+        highlighted_window = active_window if active_window in windows_snapshot and active_window.visible else None
         for window in windows_snapshot:
             if window.visible:
                 self._capture_bitmap(window.get_window_rect())
-                if window is top_window:
+                if window is highlighted_window:
                     window.draw_title_bar_active()
                 else:
                     window.draw_title_bar_inactive()

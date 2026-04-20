@@ -88,7 +88,7 @@ class RendererAdditionalPathTests(unittest.TestCase):
         gui.lock_area = lambda pos: pos
         return gui
 
-    def test_draw_renders_windows_with_active_top_and_task_panel(self) -> None:
+    def test_draw_renders_windows_without_highlight_when_no_active_window(self) -> None:
         gui = self._base_gui()
         w1 = _WindowStub("w1", Rect(10, 20, 30, 10), visible=True)
         w2 = _WindowStub("w2", Rect(15, 25, 40, 12), visible=True)
@@ -103,8 +103,8 @@ class RendererAdditionalPathTests(unittest.TestCase):
 
         self.assertEqual(w1.inactive_calls, 1)
         self.assertEqual(w1.active_calls, 0)
-        self.assertEqual(w2.active_calls, 1)
-        self.assertEqual(w2.inactive_calls, 0)
+        self.assertEqual(w2.active_calls, 0)
+        self.assertEqual(w2.inactive_calls, 1)
         self.assertEqual(w1.draw_window_calls, 1)
         self.assertEqual(w2.draw_window_calls, 1)
         self.assertEqual(panel.background_calls, 1)
@@ -112,6 +112,21 @@ class RendererAdditionalPathTests(unittest.TestCase):
         self.assertEqual(w2.widgets[1].draw_calls, 0)
         self.assertEqual(panel.widgets[0].draw_calls, 1)
         self.assertGreaterEqual(len(gui.copy_graphic_area_calls), 3)
+
+    def test_draw_renders_only_active_window_with_highlight(self) -> None:
+        gui = self._base_gui()
+        w1 = _WindowStub("w1", Rect(10, 20, 30, 10), visible=True)
+        w2 = _WindowStub("w2", Rect(15, 25, 40, 12), visible=True)
+        gui.windows = [w1, w2]
+        gui.active_window = w1
+
+        renderer = Renderer(gui)
+        renderer.draw()
+
+        self.assertEqual(w1.active_calls, 1)
+        self.assertEqual(w1.inactive_calls, 0)
+        self.assertEqual(w2.active_calls, 0)
+        self.assertEqual(w2.inactive_calls, 1)
 
     def test_draw_skips_buffer_snapshots_for_zero_sized_regions(self) -> None:
         gui = self._base_gui()

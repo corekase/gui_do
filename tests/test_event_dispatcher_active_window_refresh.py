@@ -105,6 +105,17 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         self.assertIs(self.gui.active_window, visible)
 
+    def test_activate_window_at_pointer_clears_active_when_pointer_not_over_any_window(self) -> None:
+        active = WindowStub(0, 0, 100, 100, visible=True)
+        other = WindowStub(200, 200, 100, 100, visible=True)
+        self.gui.windows = [active, other]
+        self.gui.active_window = active
+        self.gui.mouse_pos = (150, 150)
+
+        self.gui.focus_state.activate_window_at_pointer()
+
+        self.assertIsNone(self.gui.active_window)
+
     def test_update_active_window_does_not_switch_when_mouse_moves_over_other_window(self) -> None:
         active = WindowStub(0, 0, 100, 100, visible=True)
         hovered = WindowStub(120, 0, 100, 100, visible=True)
@@ -126,7 +137,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         self.assertIs(self.gui.active_window, active)
 
-    def test_update_active_window_falls_back_to_top_visible_when_current_is_invalid(self) -> None:
+    def test_update_active_window_clears_when_current_is_invalid(self) -> None:
         stale_active = WindowStub(0, 0, 100, 100, visible=True)
         other = WindowStub(200, 200, 50, 50, visible=True)
         self.gui.windows = [other]
@@ -135,7 +146,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         self.dispatcher.router._update_active_window()
 
-        self.assertIs(self.gui.active_window, other)
+        self.assertIsNone(self.gui.active_window)
 
 
 if __name__ == "__main__":
