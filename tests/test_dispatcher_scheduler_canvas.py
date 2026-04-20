@@ -36,6 +36,7 @@ class EventDispatcherGuiStub:
         self.windows = []
         self.widgets = []
         self.mouse_locked = False
+        self.mouse_point_locked = False
         self.mouse_pos = (0, 0)
         self.lock_area_rect = None
         self.lock_point_pos = None
@@ -54,6 +55,9 @@ class EventDispatcherGuiStub:
 
     def _get_mouse_pos(self):
         return self.mouse_pos
+
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
 
     def lock_area(self, pos):
         return pos

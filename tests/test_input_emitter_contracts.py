@@ -6,6 +6,7 @@ from pygame.locals import KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEM
 from gui.utility.events import Event
 from gui.utility.input.input_actions import InputAction
 from gui.utility.input.input_emitter import InputEventEmitter
+from gui.utility.input.normalized_event import normalize_input_event
 
 
 class _GuiEventStub:
@@ -50,9 +51,13 @@ class InputEventEmitterContractsTests(unittest.TestCase):
         self.assertTrue(result.task_panel)
 
     def test_base_mouse_event_mappings(self) -> None:
-        up = self.emitter.base_mouse_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 3}))
-        down = self.emitter.base_mouse_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}))
-        motion = self.emitter.base_mouse_event(pygame.event.Event(MOUSEMOTION, {"rel": (4, -2)}))
+        up_event = pygame.event.Event(MOUSEBUTTONUP, {"button": 3})
+        down_event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        motion_event = pygame.event.Event(MOUSEMOTION, {"rel": (4, -2)})
+
+        up = self.emitter.base_mouse_event(up_event, normalize_input_event(up_event))
+        down = self.emitter.base_mouse_event(down_event, normalize_input_event(down_event))
+        motion = self.emitter.base_mouse_event(motion_event, normalize_input_event(motion_event))
 
         self.assertEqual(up.type, Event.MouseButtonUp)
         self.assertEqual(up.button, 3)
@@ -62,10 +67,15 @@ class InputEventEmitterContractsTests(unittest.TestCase):
         self.assertEqual(motion.rel, (4, -2))
 
     def test_base_mouse_event_defaults_and_fallback(self) -> None:
-        default_up = self.emitter.base_mouse_event(pygame.event.Event(MOUSEBUTTONUP, {}))
-        default_down = self.emitter.base_mouse_event(pygame.event.Event(MOUSEBUTTONDOWN, {}))
-        default_motion = self.emitter.base_mouse_event(pygame.event.Event(MOUSEMOTION, {}))
-        fallback = self.emitter.base_mouse_event(pygame.event.Event(KEYDOWN, {"key": 7}))
+        default_up_event = pygame.event.Event(MOUSEBUTTONUP, {})
+        default_down_event = pygame.event.Event(MOUSEBUTTONDOWN, {})
+        default_motion_event = pygame.event.Event(MOUSEMOTION, {})
+        fallback_event = pygame.event.Event(KEYDOWN, {"key": 7})
+
+        default_up = self.emitter.base_mouse_event(default_up_event, normalize_input_event(default_up_event))
+        default_down = self.emitter.base_mouse_event(default_down_event, normalize_input_event(default_down_event))
+        default_motion = self.emitter.base_mouse_event(default_motion_event, normalize_input_event(default_motion_event))
+        fallback = self.emitter.base_mouse_event(fallback_event, normalize_input_event(fallback_event))
 
         self.assertIsNone(default_up.button)
         self.assertIsNone(default_down.button)
@@ -73,9 +83,13 @@ class InputEventEmitterContractsTests(unittest.TestCase):
         self.assertEqual(fallback.type, Event.Pass)
 
     def test_system_event_mappings(self) -> None:
-        quit_event = self.emitter.system_event(pygame.event.Event(QUIT, {}))
-        key_up = self.emitter.system_event(pygame.event.Event(KEYUP, {"key": 42}))
-        key_down = self.emitter.system_event(pygame.event.Event(KEYDOWN, {"key": 84}))
+        quit_raw = pygame.event.Event(QUIT, {})
+        key_up_raw = pygame.event.Event(KEYUP, {"key": 42})
+        key_down_raw = pygame.event.Event(KEYDOWN, {"key": 84})
+
+        quit_event = self.emitter.system_event(quit_raw, normalize_input_event(quit_raw))
+        key_up = self.emitter.system_event(key_up_raw, normalize_input_event(key_up_raw))
+        key_down = self.emitter.system_event(key_down_raw, normalize_input_event(key_down_raw))
 
         self.assertEqual(quit_event.type, Event.Quit)
         self.assertEqual(key_up.type, Event.KeyUp)
@@ -84,9 +98,13 @@ class InputEventEmitterContractsTests(unittest.TestCase):
         self.assertEqual(key_down.key, 84)
 
     def test_system_event_defaults_and_fallback(self) -> None:
-        key_up = self.emitter.system_event(pygame.event.Event(KEYUP, {}))
-        key_down = self.emitter.system_event(pygame.event.Event(KEYDOWN, {}))
-        fallback = self.emitter.system_event(pygame.event.Event(MOUSEMOTION, {}))
+        key_up_raw = pygame.event.Event(KEYUP, {})
+        key_down_raw = pygame.event.Event(KEYDOWN, {})
+        fallback_raw = pygame.event.Event(MOUSEMOTION, {})
+
+        key_up = self.emitter.system_event(key_up_raw, normalize_input_event(key_up_raw))
+        key_down = self.emitter.system_event(key_down_raw, normalize_input_event(key_down_raw))
+        fallback = self.emitter.system_event(fallback_raw, normalize_input_event(fallback_raw))
 
         self.assertIsNone(key_up.key)
         self.assertIsNone(key_down.key)

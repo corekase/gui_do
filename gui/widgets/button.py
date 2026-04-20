@@ -4,7 +4,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.input.event_fields import event_button
+from ..utility.input.normalized_event import normalize_input_event
 from ..utility.events import ButtonStyle
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 
@@ -35,16 +35,17 @@ class Button(BaseInteractive):
         """Advance button state and return True when activation should be emitted."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
+        normalized = normalize_input_event(event)
         if not super().handle_event(event, window):
             return False
         if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN:
-                if event_button(event) == 1:
+                if normalized.is_left_down:
                     self.state = InteractiveState.Armed
                     return False
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
-                if event_button(event) == 1:
+                if normalized.is_left_up:
                     self.state = InteractiveState.Hover
                     if self.on_activate is not None:
                         return False

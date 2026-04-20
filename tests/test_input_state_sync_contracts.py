@@ -7,6 +7,7 @@ from pygame.locals import MOUSEBUTTONUP
 
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.input.normalized_event import normalize_input_event
 from gui.utility.intermediates.widget import Widget
 from state_model_backed_stub import StateModelBackedStub
 
@@ -143,7 +144,7 @@ class InputStateSyncContractsTests(unittest.TestCase):
         gui.mouse_pos = (20, 30)
 
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {'pos': (10, 10)})
-        controller.start_if_possible(event)
+        controller.start_if_possible(event, normalize_input_event(event))
 
         self.assertEqual(gui._drag_state.dragging, gui.dragging)
         self.assertIs(gui._drag_state.dragging_window, gui.dragging_window)
@@ -159,7 +160,7 @@ class InputStateSyncContractsTests(unittest.TestCase):
         gui.mouse_delta = (3, 4)
 
         event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1})
-        controller.handle_drag_event(event)
+        controller.handle_drag_event(event, normalize_input_event(event))
 
         self.assertEqual(gui._drag_state.dragging, gui.dragging)
         self.assertIs(gui._drag_state.dragging_window, gui.dragging_window)

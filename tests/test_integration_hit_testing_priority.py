@@ -131,6 +131,9 @@ class PriorityGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class IntegrationHitTestingPriorityTests(unittest.TestCase):
     def test_task_panel_widgets_take_priority_over_window_widgets(self) -> None:

@@ -10,6 +10,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.input.normalized_event import normalize_input_event
 from gui.utility.gui_utils.lock_state_model import LockState
 
 
@@ -99,9 +100,9 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         keydown_event = pygame.event.Event(KEYDOWN, {"key": 123})
         keyup_event = pygame.event.Event(KEYUP, {"key": 99})
 
-        mapped_quit = self._emit(self.dispatcher.router._handle_system_event(quit_event))
-        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event))
-        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event))
+        mapped_quit = self._emit(self.dispatcher.router._handle_system_event(quit_event, normalize_input_event(quit_event)))
+        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event, normalize_input_event(keydown_event)))
+        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event, normalize_input_event(keyup_event)))
 
         self.assertEqual(mapped_quit.type, Event.Quit)
         self.assertEqual(mapped_down.type, Event.KeyDown)
@@ -113,8 +114,8 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         keydown_event = pygame.event.Event(KEYDOWN, {})
         keyup_event = pygame.event.Event(KEYUP, {})
 
-        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event))
-        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event))
+        mapped_down = self._emit(self.dispatcher.router._handle_system_event(keydown_event, normalize_input_event(keydown_event)))
+        mapped_up = self._emit(self.dispatcher.router._handle_system_event(keyup_event, normalize_input_event(keyup_event)))
 
         self.assertEqual(mapped_down.type, Event.KeyDown)
         self.assertIsNone(mapped_down.key)
@@ -127,10 +128,10 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
         motion_with_rel = pygame.event.Event(MOUSEMOTION, {"rel": (4, -2)})
         motion_without_rel = pygame.event.Event(MOUSEMOTION, {})
 
-        mapped_down = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(down))
-        mapped_up = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(up))
-        mapped_motion = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_with_rel))
-        mapped_motion_default = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_without_rel))
+        mapped_down = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(down, normalize_input_event(down)))
+        mapped_up = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(up, normalize_input_event(up)))
+        mapped_motion = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_with_rel, normalize_input_event(motion_with_rel)))
+        mapped_motion_default = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(motion_without_rel, normalize_input_event(motion_without_rel)))
 
         self.assertEqual(mapped_down.type, Event.MouseButtonDown)
         self.assertEqual(mapped_down.button, 1)
@@ -143,7 +144,7 @@ class EventDispatcherEventMappingTests(unittest.TestCase):
     def test_unhandled_base_event_returns_pass(self) -> None:
         unknown = pygame.event.Event(KEYDOWN, {"key": 1})
 
-        mapped = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(unknown))
+        mapped = self._emit(self.dispatcher.router.targets._handle_base_mouse_events(unknown, normalize_input_event(unknown)))
 
         self.assertEqual(mapped.type, Event.Pass)
 

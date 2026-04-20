@@ -137,6 +137,9 @@ class FocusGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherFocusTransitionsBatch4Tests(unittest.TestCase):
     def test_task_panel_collision_with_no_widget_hit_short_circuits_to_pass(self) -> None:

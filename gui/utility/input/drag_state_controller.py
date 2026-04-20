@@ -7,7 +7,7 @@ from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 
 from ..gui_utils.drag_state_model import DragState
 from ..geometry import point_in_rect
-from .event_fields import event_button, event_pos as event_position, event_rel
+from .normalized_event import NormalizedInputEvent
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -83,9 +83,13 @@ class DragStateController:
         """Clear drag state without additional side effects."""
         self.state.stop_drag()
 
-    def start_if_possible(self, event: PygameEvent) -> None:
+    def start_if_possible(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> None:
         """Start dragging active window when titlebar hit rules are satisfied."""
-        event_point = event_position(event) or self.gui._get_mouse_pos()
+        event_point = normalized.pos or self.gui._get_mouse_pos()
         titlebar_pos = self.gui.lock_area(event_point)
         if self.gui.active_window and point_in_rect(titlebar_pos, self.gui.active_window.get_title_bar_rect()):
             widget_pos = self.gui.lock_area(event_point)
@@ -95,15 +99,19 @@ class DragStateController:
             else:
                 self._set_drag_from_active_window()
 
-    def handle_drag_event(self, event: PygameEvent) -> InputAction:
+    def handle_drag_event(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Handle drag release/motion events and update window position."""
         if not self._has_valid_drag_context():
             self.reset()
             return InputAction.pass_event()
-        if event.type == MOUSEBUTTONUP and event_button(event) == 1:
+        if event.type == MOUSEBUTTONUP and normalized.is_left_up:
             self._release_drag()
         elif event.type == MOUSEMOTION and self.state.dragging:
-            rel = event_rel(event)
+            rel = normalized.rel
             wx, wy = self._window_position(self.state.dragging_window)
             x = wx + rel[0]
             y = wy + rel[1]

@@ -87,6 +87,9 @@ class MouseLockGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherMouseLockBatch10Tests(unittest.TestCase):
     def test_mouse_motion_unlocked_uses_event_position_only(self) -> None:

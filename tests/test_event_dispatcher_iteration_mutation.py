@@ -146,6 +146,9 @@ class MutationGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherIterationMutationBatch8Tests(unittest.TestCase):
     def test_screen_iteration_skips_widget_removed_mid_loop(self) -> None:

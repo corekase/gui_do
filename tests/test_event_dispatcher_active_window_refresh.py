@@ -10,6 +10,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.input.normalized_event import normalize_input_event
 from gui.utility.intermediates.widget import Widget
 from gui.utility.gui_utils.lock_state_model import LockState
 
@@ -102,6 +103,9 @@ class ActiveWindowGuiStub:
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
     def setUp(self) -> None:
@@ -159,7 +163,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.mouse_pos = (400, 20)
 
         event = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1, 'pos': (10, 130)})
-        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+        self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
         self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIs(self.gui.active_window, active)
@@ -175,7 +179,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.input_providers = SimpleNamespace(mouse_get_pos=lambda: (10, 130))
 
         event = pygame.event.Event(MOUSEWHEEL, {'y': 1})
-        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+        self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
         self.gui.focus_state.activate_window_at_pointer()
 
         self.assertIs(self.gui.active_window, active)
@@ -185,7 +189,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.mouse_pos = (10, 10)
 
         event = pygame.event.Event(MOUSEBUTTONDOWN, {'button': 1, 'pos': (140, 80)})
-        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+        self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
 
         self.assertEqual(self.gui.mouse_pos, (99, 49))
 
@@ -194,7 +198,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.mouse_pos = (10, 10)
 
         event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (140, 80)})
-        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+        self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
 
         self.assertEqual(self.gui.mouse_pos, (99, 49))
 
@@ -208,7 +212,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.locking_object = lock_widget
 
         event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (50, 20)})
-        self.dispatcher.router._sync_pointer_from_mouse_event(event)
+        self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
 
         self.assertEqual(self.gui.mouse_pos, (50, 20))
 
@@ -226,14 +230,14 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
         self.gui.mouse_pos = (20, 20)
 
         release = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (140, 80)})
-        self.dispatcher.router._sync_pointer_from_mouse_event(release)
+        self.dispatcher.router._sync_pointer_from_mouse_event(release, normalize_input_event(release))
         self.assertEqual(self.gui.mouse_pos, (99, 49))
 
         self.gui.mouse_locked = False
         self.gui.lock_area_rect = None
 
         motion = pygame.event.Event(MOUSEMOTION, {'pos': (140, 80), 'rel': (0, 0)})
-        self.dispatcher.router._handle_mouse_motion(motion)
+        self.dispatcher.router._handle_mouse_motion(motion, normalize_input_event(motion))
         self.assertEqual(self.gui.mouse_pos, (140, 80))
 
     def test_update_active_window_does_not_switch_when_mouse_moves_over_other_window(self) -> None:

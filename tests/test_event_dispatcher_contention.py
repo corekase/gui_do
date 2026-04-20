@@ -141,6 +141,9 @@ class ContentionGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherContentionBatch2Tests(unittest.TestCase):
     def test_registered_locking_object_overrides_panel_window_and_screen(self) -> None:

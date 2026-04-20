@@ -4,7 +4,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, TYPE_CHECKING
 from ..events import Event
-from .event_fields import event_button, event_key, event_rel
+from .normalized_event import NormalizedInputEvent
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -27,24 +27,24 @@ class InputEventEmitter:
             return self.gui.event(Event.Pass)
         return self.gui.event(action.event_type, **action.kwargs)
 
-    def base_mouse_event(self, event: PygameEvent) -> "GuiEvent":
+    def base_mouse_event(self, event: PygameEvent, normalized: NormalizedInputEvent) -> "GuiEvent":
         """Base mouse event."""
         if event.type == MOUSEBUTTONUP:
-            return self.gui.event(Event.MouseButtonUp, button=event_button(event))
+            return self.gui.event(Event.MouseButtonUp, button=normalized.button)
         if event.type == MOUSEBUTTONDOWN:
-            return self.gui.event(Event.MouseButtonDown, button=event_button(event))
+            return self.gui.event(Event.MouseButtonDown, button=normalized.button)
         if event.type == MOUSEMOTION:
-            return self.gui.event(Event.MouseMotion, rel=event_rel(event))
+            return self.gui.event(Event.MouseMotion, rel=normalized.rel)
         return self.pass_event()
 
-    def system_event(self, event: PygameEvent) -> "GuiEvent":
+    def system_event(self, event: PygameEvent, normalized: NormalizedInputEvent) -> "GuiEvent":
         """System event."""
         if event.type == QUIT:
             return self.gui.event(Event.Quit)
         if event.type == KEYUP:
-            return self.gui.event(Event.KeyUp, key=event_key(event))
+            return self.gui.event(Event.KeyUp, key=normalized.key)
         if event.type == KEYDOWN:
-            return self.gui.event(Event.KeyDown, key=event_key(event))
+            return self.gui.event(Event.KeyDown, key=normalized.key)
         return self.pass_event()
 
     def widget_event(self, widget_id: Optional[str] = None, *, window=None, task_panel: bool = False) -> "GuiEvent":

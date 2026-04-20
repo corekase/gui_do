@@ -9,6 +9,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.input.normalized_event import normalize_input_event
 from state_model_backed_stub import StateModelBackedStub
 
 
@@ -106,7 +107,8 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui = DragStartGuiStub()
         dispatcher = EventDispatcher(gui)
 
-        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
+        first = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)})
+        dispatcher.router._check_window_drag_start(first, normalize_input_event(first))
 
         self.assertFalse(gui.dragging)
         self.assertIsNone(gui.dragging_window)
@@ -126,7 +128,8 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui.windows = [window]
         dispatcher = EventDispatcher(gui)
 
-        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}))
+        second = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        dispatcher.router._check_window_drag_start(second, normalize_input_event(second))
 
         self.assertTrue(gui.dragging)
         self.assertIs(gui.dragging_window, window)
@@ -146,7 +149,8 @@ class EventDispatcherDragStartEdgesBatch11Tests(unittest.TestCase):
         gui.windows = [window]
         dispatcher = EventDispatcher(gui)
 
-        dispatcher.router._check_window_drag_start(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)}))
+        third = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 10)})
+        dispatcher.router._check_window_drag_start(third, normalize_input_event(third))
 
         self.assertEqual(gui.lowered, [window])
         self.assertEqual(gui.windows, [])

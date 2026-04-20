@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
 from ..events import Event
 from ..geometry import point_in_rect
-from .event_fields import event_button, event_rel
+from .normalized_event import NormalizedInputEvent
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -33,9 +33,9 @@ class InputTargetResolver:
         """Refresh active-window selection from current pointer position."""
         self.gui.update_active_window()
 
-    def _build_context(self) -> Any:
-        """Build lightweight per-dispatch context values."""
-        return {'mouse_pos': self.gui._get_mouse_pos()}
+    def _current_mouse_pos(self) -> tuple[int, int]:
+        """Return current logical mouse position."""
+        return self.gui._get_mouse_pos()
 
     def _convert_to_window_point(self, point, window):
         """Convert points using manager coordinate helpers."""
@@ -99,16 +99,20 @@ class InputTargetResolver:
                 return window
         return None
 
-    def process_screen_widgets(self, event: PygameEvent) -> InputAction:
+    def process_screen_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Route an event through root-screen widgets and base mouse fallbacks."""
         hit_any = False
         focus_target = None
-        context = self._build_context()
+        mouse_pos = self._current_mouse_pos()
         for widget in tuple(self.gui.widgets)[::-1]:
             if widget not in self.gui.widgets:
                 continue
             if widget.visible:
-                target_meta = self._screen_hit_meta(widget, context['mouse_pos'], self._convert_to_window_point)
+                target_meta = self._screen_hit_meta(widget, mouse_pos, self._convert_to_window_point)
                 if target_meta.collides:
                     hit_any = True
                     focus_target = target_meta.widget
@@ -118,22 +122,26 @@ class InputTargetResolver:
                         return self._build_widget_action(target_meta.widget, None)
         if not hit_any:
             self.gui.update_focus(None)
-            return self._handle_base_mouse_events(event)
+            return self._handle_base_mouse_events(event, normalized)
         if focus_target is not None and self.is_registered_widget(focus_target):
             self.gui.update_focus(focus_target)
         return InputAction.pass_event()
 
-    def process_window_widgets(self, event: PygameEvent) -> InputAction:
+    def process_window_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Route an event through topmost window widgets at current pointer position."""
-        if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
+        if event.type == MOUSEBUTTONDOWN and normalized.is_left_down:
             if self.gui.active_window is not None and self.gui.active_window in self.gui.windows:
                 self.gui.raise_window(self.gui.active_window)
-        context = self._build_context()
-        window = self._resolve_topmost_window_at_pos(self.gui.windows, context['mouse_pos'])
+        mouse_pos = self._current_mouse_pos()
+        window = self._resolve_topmost_window_at_pos(self.gui.windows, mouse_pos)
         if window is None:
             # When no window is under the pointer, continue with root-screen
             # widget routing instead of dropping to base mouse events.
-            return self.process_screen_widgets(event)
+            return self.process_screen_widgets(event, normalized)
         layer_result = self._dispatch_widget_layer(event, window)
         if isinstance(layer_result, InputAction):
             return layer_result
@@ -144,13 +152,17 @@ class InputTargetResolver:
             self.gui.update_focus(None)
         return InputAction.pass_event()
 
-    def process_task_panel_widgets(self, event: PygameEvent):
+    def process_task_panel_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ):
         """Route an event through task-panel widgets when pointer is over panel."""
-        context = self._build_context()
+        mouse_pos = self._current_mouse_pos()
         task_panel = self.gui.task_panel
         if task_panel is None or not task_panel.visible:
             return None
-        if not point_in_rect(context['mouse_pos'], task_panel.get_rect()):
+        if not point_in_rect(mouse_pos, task_panel.get_rect()):
             return None
         layer_result = self._dispatch_widget_layer(event, task_panel, emit_task_panel=True)
         if isinstance(layer_result, InputAction):
@@ -168,12 +180,16 @@ class InputTargetResolver:
             return False
         return bool(self.gui.object_registry.is_registered_object(widget))
 
-    def _handle_base_mouse_events(self, event: PygameEvent) -> InputAction:
+    def _handle_base_mouse_events(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Map raw mouse pygame events into base GUI input actions."""
         if event.type == MOUSEBUTTONUP:
-            return InputAction.emit(Event.MouseButtonUp, button=event_button(event))
+            return InputAction.emit(Event.MouseButtonUp, button=normalized.button)
         if event.type == MOUSEBUTTONDOWN:
-            return InputAction.emit(Event.MouseButtonDown, button=event_button(event))
+            return InputAction.emit(Event.MouseButtonDown, button=normalized.button)
         if event.type == MOUSEMOTION:
-            return InputAction.emit(Event.MouseMotion, rel=event_rel(event))
+            return InputAction.emit(Event.MouseMotion, rel=normalized.rel)
         return InputAction.pass_event()

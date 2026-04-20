@@ -125,6 +125,9 @@ class OrderingGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherOrderingBatch3Tests(unittest.TestCase):
     def test_system_event_has_priority_even_when_dragging_active(self) -> None:

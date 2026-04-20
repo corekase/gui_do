@@ -10,6 +10,7 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
+from gui.utility.input.normalized_event import normalize_input_event
 from state_model_backed_stub import StateModelBackedStub
 
 
@@ -133,7 +134,7 @@ class EventDispatcherDraggingTests(unittest.TestCase):
         dispatcher = EventDispatcher(gui)
         raw = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (100, 105)})
 
-        dispatcher.router._check_window_drag_start(raw)
+        dispatcher.router._check_window_drag_start(raw, normalize_input_event(raw))
 
         self.assertEqual(gui.lowered, [window])
         self.assertFalse(gui.dragging)
@@ -153,7 +154,7 @@ class EventDispatcherDraggingTests(unittest.TestCase):
         dispatcher = EventDispatcher(gui)
         raw = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1, "pos": (100, 105)})
 
-        dispatcher.router._check_window_drag_start(raw)
+        dispatcher.router._check_window_drag_start(raw, normalize_input_event(raw))
 
         self.assertTrue(gui.dragging)
         self.assertIs(gui.dragging_window, window)
@@ -175,7 +176,7 @@ class EventDispatcherDraggingTests(unittest.TestCase):
         dispatcher = EventDispatcher(gui)
         raw = pygame.event.Event(MOUSEMOTION, {"rel": (5, -2)})
 
-        result = dispatcher.emitter.emit_action(dispatcher.router._handle_window_dragging(raw))
+        result = dispatcher.emitter.emit_action(dispatcher.router._handle_window_dragging(raw, normalize_input_event(raw)))
 
         self.assertEqual(result.type, Event.Pass)
         self.assertEqual(window.position, (15, 13))
@@ -197,7 +198,7 @@ class EventDispatcherDraggingTests(unittest.TestCase):
         dispatcher = EventDispatcher(gui)
         raw = pygame.event.Event(MOUSEBUTTONUP, {"button": 1})
 
-        result = dispatcher.emitter.emit_action(dispatcher.router._handle_window_dragging(raw))
+        result = dispatcher.emitter.emit_action(dispatcher.router._handle_window_dragging(raw, normalize_input_event(raw)))
 
         self.assertEqual(result.type, Event.Pass)
         self.assertFalse(gui.dragging)

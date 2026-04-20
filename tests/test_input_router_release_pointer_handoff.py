@@ -47,10 +47,14 @@ class _ReleaseRouterGuiStub:
         self.object_registry = SimpleNamespace(is_registered_object=lambda _obj: True)
         self.focus_state = SimpleNamespace(activate_window_at_pointer=lambda: None)
         self.drag_state = SimpleNamespace(
-            start_if_possible=lambda _event: None,
-            handle_drag_event=lambda _event: SimpleNamespace(builder=None),
+            start_if_possible=lambda _event, _normalized: None,
+            handle_drag_event=lambda _event, _normalized: SimpleNamespace(builder=None),
             reset=lambda: None,
         )
+        self._lock_state = SimpleNamespace(release_pointer_hint=None)
+        self._lock_state.set_release_pointer_hint = lambda pos: setattr(self._lock_state, 'release_pointer_hint', pos)
+        self._lock_state.consume_release_pointer_hint = lambda: self._consume_lock_state_hint()
+        self.lock_flow = SimpleNamespace(consume_release_pointer_hint=lambda: self._consume_lock_state_hint())
         self._physical_calls = []
         self.pointer = SimpleNamespace(set_physical_mouse_pos=lambda pos: self._physical_calls.append(pos))
         self.input_providers = SimpleNamespace(mouse_get_pos=lambda: self.mouse_pos)
@@ -59,6 +63,19 @@ class _ReleaseRouterGuiStub:
             clamp_position=self._clamp_position,
             enforce_point_lock=lambda _pos: None,
         )
+
+    @property
+    def release_pointer_hint(self):
+        return self._lock_state.release_pointer_hint
+
+    @release_pointer_hint.setter
+    def release_pointer_hint(self, pos) -> None:
+        self._lock_state.set_release_pointer_hint(pos)
+
+    def _consume_lock_state_hint(self):
+        hint_pos = self._lock_state.release_pointer_hint
+        self._lock_state.release_pointer_hint = None
+        return hint_pos
 
     def _clamp_position(self, pos):
         if not self.mouse_locked or self.lock_area_rect is None:

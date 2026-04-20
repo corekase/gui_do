@@ -9,7 +9,7 @@ from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING, Union
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.events import GuiError, InteractiveState, CanvasEvent
-from ..utility.input.event_fields import event_button, event_rel, event_wheel_delta
+from ..utility.input.normalized_event import normalize_input_event
 from ..utility.intermediates.widget import Widget
 from .frame import Frame
 from .events.canvas_event_packet import CanvasEventPacket
@@ -148,6 +148,7 @@ class Canvas(Widget):
             return False
         if event.type not in (MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
+        normalized = normalize_input_event(event)
         locked_owner = (self.gui.locking_object is self) and self.gui.mouse_locked
         if self.get_collide(window) or locked_owner:
             canvas_x, canvas_y = self.gui._convert_to_window(self.gui._get_mouse_pos(), self.window)
@@ -155,16 +156,16 @@ class Canvas(Widget):
             packet.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
             if event.type == MOUSEWHEEL:
                 packet.type = CanvasEvent.MouseWheel
-                packet.y = event_wheel_delta(event)
+                packet.y = normalized.wheel_delta
             elif event.type == MOUSEMOTION:
                 packet.type = CanvasEvent.MouseMotion
-                packet.rel = event_rel(event)
+                packet.rel = normalized.rel
             elif event.type == MOUSEBUTTONDOWN:
                 packet.type = CanvasEvent.MouseButtonDown
-                packet.button = event_button(event)
+                packet.button = normalized.button
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
-                packet.button = event_button(event)
+                packet.button = normalized.button
             # Coalescing keeps motion floods from starving click/wheel processing.
             if (
                 self.coalesce_motion_events

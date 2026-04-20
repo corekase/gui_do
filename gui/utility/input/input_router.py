@@ -5,7 +5,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from typing import TYPE_CHECKING
 from ..events import Event
 from ..geometry import clamp_point_to_rect, to_window
-from .event_fields import event_button, event_key, event_pos as event_position, event_rel
+from .normalized_event import NormalizedInputEvent, normalize_input_event
 from .input_actions import InputAction
 from .input_targets import InputTargetResolver
 
@@ -23,20 +23,21 @@ class InputRouter:
 
     def route(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
-        pre_locking_object = getattr(self.gui, 'locking_object', None)
-        pre_mouse_locked = bool(getattr(self.gui, 'mouse_locked', False))
-        pre_mouse_point_locked = bool(getattr(self.gui, 'mouse_point_locked', False))
-        pre_lock_area_rect = getattr(self.gui, 'lock_area_rect', None)
-        self._sync_pointer_from_mouse_event(event)
-        is_left_mouse_down = event.type == MOUSEBUTTONDOWN and event_button(event) == 1
+        normalized = normalize_input_event(event)
+        pre_locking_object = self.gui.locking_object
+        pre_mouse_locked = bool(self.gui.mouse_locked)
+        pre_mouse_point_locked = bool(self.gui.mouse_point_locked)
+        pre_lock_area_rect = self.gui.lock_area_rect
+        self._sync_pointer_from_mouse_event(event, normalized)
+        is_left_mouse_down = normalized.is_left_down
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
-            self._handle_mouse_motion(event)
+            self._handle_mouse_motion(event, normalized)
         if is_left_mouse_down:
             self.gui.focus_state.activate_window_at_pointer()
         action: InputAction
         if event.type in (QUIT, KEYUP, KEYDOWN):
-            action = self._handle_system_event(event)
+            action = self._handle_system_event(event, normalized)
         else:
             self._update_active_window()
             if self.gui.dragging:
@@ -44,22 +45,23 @@ class InputRouter:
                     self._reset_window_drag_state()
                     action = InputAction.pass_event()
                 else:
-                    action = self._handle_window_dragging(event)
+                    action = self._handle_window_dragging(event, normalized)
             elif self.gui.locking_object:
                 action = self._handle_locked_object(event)
             else:
-                task_panel_event = self._process_task_panel_widgets(event)
+                task_panel_event = self._process_task_panel_widgets(event, normalized)
                 if task_panel_event is not None:
                     action = task_panel_event
                 else:
                     if is_left_mouse_down and not self.gui.dragging:
-                        self._check_window_drag_start(event)
+                        self._check_window_drag_start(event, normalized)
                     if self.gui.active_window:
-                        action = self._process_window_widgets(event)
+                        action = self._process_window_widgets(event, normalized)
                     else:
-                        action = self._process_screen_widgets(event)
+                        action = self._process_screen_widgets(event, normalized)
         self._finalize_left_release_pointer(
             event,
+            normalized,
             pre_locking_object,
             pre_mouse_locked,
             pre_mouse_point_locked,
@@ -97,10 +99,14 @@ class InputRouter:
                     return True
         return False
 
-    def _handle_mouse_motion(self, event: PygameEvent) -> None:
+    def _handle_mouse_motion(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> None:
         """Handle mouse motion."""
-        rel = event_rel(event)
-        pos = event_position(event) or self.gui._get_mouse_pos()
+        rel = normalized.rel
+        pos = normalized.pos or self.gui._get_mouse_pos()
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = rel
@@ -109,35 +115,59 @@ class InputRouter:
         else:
             self._set_logical_mouse_pos(self.gui.lock_state.clamp_position(pos))
 
-    def _handle_system_event(self, event: PygameEvent) -> InputAction:
+    def _handle_system_event(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Handle system event."""
         if event.type == QUIT:
             return InputAction.emit(Event.Quit)
         if event.type == KEYUP:
-            return InputAction.emit(Event.KeyUp, key=event_key(event))
+            return InputAction.emit(Event.KeyUp, key=normalized.key)
         if event.type == KEYDOWN:
-            return InputAction.emit(Event.KeyDown, key=event_key(event))
+            return InputAction.emit(Event.KeyDown, key=normalized.key)
         return InputAction.pass_event()
 
-    def _handle_window_dragging(self, event: PygameEvent) -> InputAction:
+    def _handle_window_dragging(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Handle window dragging."""
-        return self.gui.drag_state.handle_drag_event(event)
+        return self.gui.drag_state.handle_drag_event(event, normalized)
 
-    def _process_screen_widgets(self, event: PygameEvent) -> InputAction:
+    def _process_screen_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Process screen widgets."""
-        return self.targets.process_screen_widgets(event)
+        return self.targets.process_screen_widgets(event, normalized)
 
-    def _process_window_widgets(self, event: PygameEvent) -> InputAction:
+    def _process_window_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> InputAction:
         """Process window widgets."""
-        return self.targets.process_window_widgets(event)
+        return self.targets.process_window_widgets(event, normalized)
 
-    def _process_task_panel_widgets(self, event: PygameEvent):
+    def _process_task_panel_widgets(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ):
         """Process task panel widgets."""
-        return self.targets.process_task_panel_widgets(event)
+        return self.targets.process_task_panel_widgets(event, normalized)
 
-    def _check_window_drag_start(self, event: PygameEvent) -> None:
+    def _check_window_drag_start(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> None:
         """Check window drag start."""
-        self.gui.drag_state.start_if_possible(event)
+        self.gui.drag_state.start_if_possible(event, normalized)
 
     def _is_registered_widget(self, widget) -> bool:
         """Is registered widget."""
@@ -153,7 +183,7 @@ class InputRouter:
 
     def _event_pos_inside_lock_owner(self, event_pos) -> bool:
         """Return whether a screen-space event position is inside lock owner draw rect."""
-        lock_obj = getattr(self.gui, 'locking_object', None)
+        lock_obj = self.gui.locking_object
         return self._event_pos_inside_specific_lock_owner(lock_obj, event_pos)
 
     @staticmethod
@@ -181,6 +211,7 @@ class InputRouter:
     def _finalize_left_release_pointer(
         self,
         event: PygameEvent,
+        normalized: NormalizedInputEvent,
         pre_locking_object,
         pre_mouse_locked,
         pre_mouse_point_locked,
@@ -188,7 +219,7 @@ class InputRouter:
     ) -> None:
         """Resolve logical/physical cursor position once after left-button release from area-lock drag."""
         hint_pos = self._consume_release_pointer_hint()
-        if event.type != MOUSEBUTTONUP or event_button(event) != 1:
+        if event.type != MOUSEBUTTONUP or not normalized.is_left_up:
             return
         if isinstance(hint_pos, tuple) and len(hint_pos) == 2:
             desired_pos = hint_pos
@@ -202,11 +233,11 @@ class InputRouter:
             return
         if not pre_mouse_locked or pre_mouse_point_locked:
             return
-        event_pos = event_position(event)
+        event_pos = normalized.pos
         if not isinstance(event_pos, tuple) or len(event_pos) != 2:
             return
 
-        current_pos = getattr(self.gui, 'mouse_pos', event_pos)
+        current_pos = self.gui.mouse_pos
         desired_pos = event_pos
         if (
             not self._event_pos_inside_specific_lock_owner(pre_locking_object, event_pos)
@@ -234,14 +265,18 @@ class InputRouter:
         if callable(set_physical):
             set_physical(desired_pos)
 
-    def _sync_pointer_from_mouse_event(self, event: PygameEvent) -> None:
+    def _sync_pointer_from_mouse_event(
+        self,
+        event: PygameEvent,
+        normalized: NormalizedInputEvent,
+    ) -> None:
         """Sync logical pointer from mouse events before hit-testing/widget routing."""
         if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
-            event_pos = event_position(event)
+            event_pos = normalized.pos
             if isinstance(event_pos, tuple) and len(event_pos) == 2:
                 if (
                     event.type == MOUSEBUTTONUP
-                    and event_button(event) == 1
+                    and normalized.is_left_up
                     and self.gui.mouse_locked
                     and not self.gui.mouse_point_locked
                     and self._event_pos_inside_lock_owner(event_pos)
@@ -263,19 +298,16 @@ class InputRouter:
 
     def _set_logical_mouse_pos(self, pos) -> None:
         """Set logical pointer position through manager helper when available."""
-        set_mouse = getattr(self.gui, '_set_mouse_pos', None)
-        if callable(set_mouse):
-            set_mouse(pos, False)
-        else:
-            self.gui.mouse_pos = pos
+        self.gui._set_mouse_pos(pos, False)
 
     def _consume_release_pointer_hint(self):
         """Consume one-shot widget-provided release pointer override when present."""
+        lock_flow = getattr(self.gui, 'lock_flow', None)
+        consume_from_flow = getattr(lock_flow, 'consume_release_pointer_hint', None)
+        if callable(consume_from_flow):
+            return consume_from_flow()
         lock_state = getattr(self.gui, '_lock_state', None)
-        consume = getattr(lock_state, 'consume_release_pointer_hint', None)
-        if callable(consume):
-            return consume()
-        hint_pos = getattr(self.gui, 'release_pointer_hint', None)
-        if hasattr(self.gui, 'release_pointer_hint'):
-            self.gui.release_pointer_hint = None
-        return hint_pos
+        consume_from_state = getattr(lock_state, 'consume_release_pointer_hint', None)
+        if callable(consume_from_state):
+            return consume_from_state()
+        return None

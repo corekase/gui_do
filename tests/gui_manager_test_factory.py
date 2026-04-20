@@ -89,16 +89,17 @@ def build_gui_manager_stub(
     gui._drag_state = DragState()
     gui._lock_state = LockState()
 
-    gui.dragging = False
-    gui.dragging_window = None
-    gui.mouse_delta = None
+    gui._drag_state.dragging = False
+    gui._drag_state.dragging_window = None
+    gui._drag_state.mouse_delta = None
     gui.mouse_pos = (0, 0)
-    gui.mouse_locked = False
-    gui.mouse_point_locked = False
-    gui.lock_area_rect = None
-    gui.lock_point_pos = None
-    gui.lock_point_recenter_pending = False
-    gui.lock_point_tolerance_rect = None
+    gui._lock_state.mouse_locked = False
+    gui._lock_state.mouse_point_locked = False
+    gui._lock_state.lock_area_rect = None
+    gui._lock_state.lock_point_pos = None
+    gui._lock_state.lock_point_recenter_pending = False
+    gui._lock_state.lock_point_tolerance_rect = None
+    gui._lock_state.release_pointer_hint = None
 
     gui.cursor_image = None
     gui.cursor_hotspot = None
@@ -106,7 +107,7 @@ def build_gui_manager_stub(
     gui.active_window = None
     gui.focus_state_data = FocusState()
     gui.pristine = None
-    gui.locking_object = None
+    gui._lock_state.locking_object = None
 
     gui.screen_lifecycle = ScreenLifecycle()
 

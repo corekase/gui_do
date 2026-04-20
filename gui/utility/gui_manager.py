@@ -187,7 +187,7 @@ class GuiManager:
     @locking_object.setter
     def locking_object(self, value: Optional[Widget]) -> None:
         """Locking object."""
-        self._lock_state.locking_object = value
+        self.lock_flow.set_locking_object(value)
 
     @property
     def mouse_locked(self) -> bool:
@@ -197,9 +197,7 @@ class GuiManager:
     @mouse_locked.setter
     def mouse_locked(self, value: bool) -> None:
         """Mouse locked."""
-        if not isinstance(value, bool):
-            raise GuiError('mouse_locked must be a bool')
-        self._lock_state.mouse_locked = value
+        self.lock_flow.set_mouse_locked(value)
 
     @property
     def mouse_point_locked(self) -> bool:
@@ -209,9 +207,7 @@ class GuiManager:
     @mouse_point_locked.setter
     def mouse_point_locked(self, value: bool) -> None:
         """Mouse point locked."""
-        if not isinstance(value, bool):
-            raise GuiError('mouse_point_locked must be a bool')
-        self._lock_state.mouse_point_locked = value
+        self.lock_flow.set_mouse_point_locked(value)
 
     @property
     def lock_area_rect(self) -> Optional[Rect]:
@@ -221,12 +217,7 @@ class GuiManager:
     @lock_area_rect.setter
     def lock_area_rect(self, value: Optional[Rect]) -> None:
         """Lock area rect."""
-        if value is not None:
-            if not isinstance(value, Rect):
-                raise GuiError(f'lock_area_rect must be a Rect or None, got: {value}')
-            if value.width <= 0 or value.height <= 0:
-                raise GuiError(f'lock_area_rect dimensions must be positive, got: {value}')
-        self._lock_state.lock_area_rect = value
+        self.lock_flow.set_lock_area_rect(value)
 
     @property
     def lock_point_pos(self) -> Optional[Tuple[int, int]]:
@@ -236,8 +227,7 @@ class GuiManager:
     @lock_point_pos.setter
     def lock_point_pos(self, value: Optional[Tuple[int, int]]) -> None:
         """Lock point pos."""
-        self._validate_int_point_or_none(value, 'lock_point_pos')
-        self._lock_state.lock_point_pos = value
+        self.lock_flow.set_lock_point_pos(value)
 
     @property
     def lock_point_recenter_pending(self) -> bool:
@@ -247,9 +237,7 @@ class GuiManager:
     @lock_point_recenter_pending.setter
     def lock_point_recenter_pending(self, value: bool) -> None:
         """Lock point recenter pending."""
-        if not isinstance(value, bool):
-            raise GuiError('lock_point_recenter_pending must be a bool')
-        self._lock_state.lock_point_recenter_pending = value
+        self.lock_flow.set_lock_point_recenter_pending(value)
 
     @property
     def lock_point_tolerance_rect(self) -> Optional[Rect]:
@@ -259,12 +247,7 @@ class GuiManager:
     @lock_point_tolerance_rect.setter
     def lock_point_tolerance_rect(self, value: Optional[Rect]) -> None:
         """Lock point tolerance rect."""
-        if value is not None:
-            if not isinstance(value, Rect):
-                raise GuiError(f'lock_point_tolerance_rect must be a Rect or None, got: {value}')
-            if value.width <= 0 or value.height <= 0:
-                raise GuiError(f'lock_point_tolerance_rect dimensions must be positive, got: {value}')
-        self._lock_state.lock_point_tolerance_rect = value
+        self.lock_flow.set_lock_point_tolerance_rect(value)
 
     @property
     def release_pointer_hint(self) -> Optional[Tuple[int, int]]:
@@ -274,8 +257,7 @@ class GuiManager:
     @release_pointer_hint.setter
     def release_pointer_hint(self, value: Optional[Tuple[int, int]]) -> None:
         """One-shot pointer hint consumed by release finalization."""
-        self._validate_int_point_or_none(value, 'release_pointer_hint')
-        self._lock_state.release_pointer_hint = value
+        self.lock_flow.set_release_pointer_hint(value)
 
     # widgets
     def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:

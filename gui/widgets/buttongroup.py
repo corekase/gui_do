@@ -4,7 +4,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
-from ..utility.input.event_fields import event_button
+from ..utility.input.normalized_event import normalize_input_event
 from ..utility.events import Event, GuiError, ButtonStyle
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 from ..utility.intermediates.widget import Widget
@@ -64,12 +64,13 @@ class ButtonGroup(BaseInteractive):
             return False
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN):
             return False
+        normalized = normalize_input_event(event)
         collision = self.get_collide(window)
         if collision:
             if self.state == InteractiveState.Idle:
                 self.state = InteractiveState.Hover
             if self.state == InteractiveState.Hover:
-                if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
+                if event.type == MOUSEBUTTONDOWN and normalized.is_left_down:
                     self.select()
                     return True
         return False

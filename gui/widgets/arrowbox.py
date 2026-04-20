@@ -5,7 +5,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
-from ..utility.input.event_fields import event_button
+from ..utility.input.normalized_event import normalize_input_event
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 from ..utility.events import GuiError
 
@@ -51,11 +51,12 @@ class ArrowBox(BaseInteractive):
         """Emit once on press and continue firing while held via timer."""
         if event.type not in (MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP):
             return False
+        normalized = normalize_input_event(event)
         if not super().handle_event(event, window):
             self._clear_timer()
             return False
         if self.state == InteractiveState.Hover:
-            if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
+            if event.type == MOUSEBUTTONDOWN and normalized.is_left_down:
                 self.state = InteractiveState.Armed
                 if self.on_activate is not None and self._timer_id is None:
                     timer_id = f'{self.id}.timer'
@@ -63,7 +64,7 @@ class ArrowBox(BaseInteractive):
                     self._timer_id = timer_id
                 return True
         if self.state == InteractiveState.Armed:
-            if event.type == MOUSEBUTTONUP and event_button(event) == 1:
+            if event.type == MOUSEBUTTONUP and normalized.is_left_up:
                 self._clear_timer()
                 self.state = InteractiveState.Hover
                 if self.on_activate is not None:

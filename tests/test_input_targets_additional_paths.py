@@ -7,6 +7,7 @@ from pygame.locals import KEYDOWN, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from gui.utility.events import Event
 from gui.utility.input.input_actions import InputAction
 from gui.utility.input.input_targets import InputTargetResolver
+from gui.utility.input.normalized_event import normalize_input_event
 
 
 class _GuiEventStub:
@@ -204,9 +205,8 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.gui._mouse_pos = (15, 15)
         self.gui.object_registry = _RegistryStub(registered=True)
 
-        action = self.resolver.process_screen_widgets(
-            pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
-        )
+        event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1})
+        action = self.resolver.process_screen_widgets(event, normalize_input_event(event))
 
         self.assertEqual(action.event_type, Event.Pass)
         self.assertEqual(self.gui.focus_updates, [widget])
@@ -215,18 +215,15 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         widget = _WidgetStub("screen", collides=False)
         self.gui.widgets = [widget]
 
-        down_action = self.resolver.process_screen_widgets(
-            pygame.event.Event(MOUSEBUTTONDOWN, {"button": 2})
-        )
-        up_action = self.resolver.process_screen_widgets(
-            pygame.event.Event(MOUSEBUTTONUP, {"button": 3})
-        )
-        motion_action = self.resolver.process_screen_widgets(
-            pygame.event.Event(MOUSEMOTION, {"rel": (1, 2)})
-        )
-        fallback_action = self.resolver.process_screen_widgets(
-            pygame.event.Event(KEYDOWN, {"key": 1})
-        )
+        down_event = pygame.event.Event(MOUSEBUTTONDOWN, {"button": 2})
+        up_event = pygame.event.Event(MOUSEBUTTONUP, {"button": 3})
+        motion_event = pygame.event.Event(MOUSEMOTION, {"rel": (1, 2)})
+        fallback_event = pygame.event.Event(KEYDOWN, {"key": 1})
+
+        down_action = self.resolver.process_screen_widgets(down_event, normalize_input_event(down_event))
+        up_action = self.resolver.process_screen_widgets(up_event, normalize_input_event(up_event))
+        motion_action = self.resolver.process_screen_widgets(motion_event, normalize_input_event(motion_event))
+        fallback_action = self.resolver.process_screen_widgets(fallback_event, normalize_input_event(fallback_event))
 
         self.assertEqual(down_action.event_type, Event.MouseButtonDown)
         self.assertEqual(down_action.kwargs["button"], 2)
@@ -242,7 +239,7 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
 
         # No window under mouse falls through to base mapping.
         self.gui.windows = []
-        no_window_action = self.resolver.process_window_widgets(event)
+        no_window_action = self.resolver.process_window_widgets(event, normalize_input_event(event))
         self.assertEqual(no_window_action.event_type, Event.MouseButtonDown)
 
         # Layer returns InputAction directly.
@@ -252,7 +249,7 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.gui.object_registry = _RegistryStub(registered=True)
         self.gui.handle_return_by_id["win-action"] = True
 
-        direct_action = self.resolver.process_window_widgets(event)
+        direct_action = self.resolver.process_window_widgets(event, normalize_input_event(event))
         self.assertIsNotNone(direct_action.builder)
         built_event = direct_action.builder()
         self.assertEqual(built_event.type, Event.Widget)
@@ -263,7 +260,7 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         win_pass_widget = _WidgetStub("win-pass", collides=True)
         self.gui.windows = [_WindowStub([win_pass_widget], rect=Rect(0, 0, 100, 100))]
         self.gui.handle_return_by_id["win-pass"] = False
-        pass_action = self.resolver.process_window_widgets(event)
+        pass_action = self.resolver.process_window_widgets(event, normalize_input_event(event))
         self.assertEqual(pass_action.event_type, Event.Pass)
         self.assertIs(self.gui.focus_updates[-1], win_pass_widget)
 
@@ -278,7 +275,7 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         self.gui.handle_return_by_id["screen-hit"] = True
         self.gui.object_registry = _RegistryStub(registered=True)
 
-        action = self.resolver.process_window_widgets(event)
+        action = self.resolver.process_window_widgets(event, normalize_input_event(event))
 
         self.assertIsNotNone(action.builder)
         built_event = action.builder()
@@ -291,21 +288,21 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
 
         # No panel or hidden panel returns None.
         self.gui.task_panel = None
-        self.assertIsNone(self.resolver.process_task_panel_widgets(event))
+        self.assertIsNone(self.resolver.process_task_panel_widgets(event, normalize_input_event(event)))
 
         self.gui.task_panel = _TaskPanelStub([], visible=False)
-        self.assertIsNone(self.resolver.process_task_panel_widgets(event))
+        self.assertIsNone(self.resolver.process_task_panel_widgets(event, normalize_input_event(event)))
 
         # Panel miss returns None.
         self.gui.task_panel = _TaskPanelStub([], visible=True, rect=Rect(100, 100, 10, 10))
-        self.assertIsNone(self.resolver.process_task_panel_widgets(event))
+        self.assertIsNone(self.resolver.process_task_panel_widgets(event, normalize_input_event(event)))
 
         # Panel handled path returns widget action with task_panel marker.
         panel_widget = _WidgetStub("panel-hit", collides=True)
         self.gui.task_panel = _TaskPanelStub([panel_widget], visible=True, rect=Rect(0, 0, 100, 100))
         self.gui.handle_return_by_id["panel-hit"] = True
         self.gui.object_registry = _RegistryStub(registered=True)
-        handled_action = self.resolver.process_task_panel_widgets(event)
+        handled_action = self.resolver.process_task_panel_widgets(event, normalize_input_event(event))
         self.assertEqual(handled_action.event_type, Event.Widget)
         self.assertEqual(handled_action.kwargs["widget_id"], "panel-hit")
         self.assertTrue(handled_action.kwargs["task_panel"])
@@ -314,7 +311,7 @@ class InputTargetResolverAdditionalPathTests(unittest.TestCase):
         panel_widget2 = _WidgetStub("panel-pass", collides=True)
         self.gui.task_panel = _TaskPanelStub([panel_widget2], visible=True, rect=Rect(0, 0, 100, 100))
         self.gui.handle_return_by_id["panel-pass"] = False
-        pass_action = self.resolver.process_task_panel_widgets(event)
+        pass_action = self.resolver.process_task_panel_widgets(event, normalize_input_event(event))
         self.assertEqual(pass_action.event_type, Event.Pass)
         self.assertIs(self.gui.focus_updates[-1], panel_widget2)
 

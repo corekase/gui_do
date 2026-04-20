@@ -126,6 +126,9 @@ class WindowMutationGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherWindowMutationBatch9Tests(unittest.TestCase):
     def test_removed_window_during_raise_is_skipped_and_next_window_handles(self) -> None:

@@ -137,6 +137,9 @@ class OutsideCollisionGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherOutsideCollisionBatch7Tests(unittest.TestCase):
     def test_window_widget_with_outside_collision_can_handle(self) -> None:

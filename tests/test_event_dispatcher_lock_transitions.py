@@ -41,6 +41,7 @@ class LockTransitionGuiStub:
         self.windows = []
         self.widgets = []
         self.mouse_locked = False
+        self.mouse_point_locked = False
         self.mouse_pos = (5, 5)
         self.lock_area_rect = None
         self.lock_point_pos = None
@@ -107,6 +108,9 @@ class LockTransitionGuiStub:
         self.lock_clear_calls += 1
 
     def set_mouse_pos(self, pos, _update_physical_coords=True):
+        self.mouse_pos = pos
+
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
         self.mouse_pos = pos
 
 

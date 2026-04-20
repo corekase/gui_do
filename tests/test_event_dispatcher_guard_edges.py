@@ -115,6 +115,9 @@ class GuardGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherGuardEdgeTests(unittest.TestCase):
     def test_unregistered_locking_object_is_cleared_and_passed(self) -> None:

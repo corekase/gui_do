@@ -139,6 +139,9 @@ class StreamGuiStub(StateModelBackedStub):
     def set_mouse_pos(self, pos, _update_physical_coords=True):
         self.mouse_pos = pos
 
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
+
 
 class EventDispatcherStreamStressTests(unittest.TestCase):
     def test_high_volume_screen_stream_routes_clicks_and_focuses_widget(self) -> None:

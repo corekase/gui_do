@@ -30,6 +30,9 @@ class _RouterGuiStub:
         self.dragging_window = None
         self.mouse_delta = None
         self.locking_object = None
+        self.mouse_locked = False
+        self.mouse_point_locked = False
+        self.lock_area_rect = None
         self.task_panel = None
         self.active_window = None
         self.windows = []
@@ -43,6 +46,11 @@ class _RouterGuiStub:
             enforce_point_lock=lambda _pos: None,
         )
         self.focus_state = SimpleNamespace(activate_window_at_pointer=lambda: None)
+        self._lock_state = SimpleNamespace(consume_release_pointer_hint=lambda: None)
+        self.lock_flow = SimpleNamespace(consume_release_pointer_hint=lambda: None)
+
+    def _set_mouse_pos(self, pos, _update_physical_coords=False):
+        self.mouse_pos = pos
 
     def _get_mouse_pos(self):
         return self.mouse_pos
