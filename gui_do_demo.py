@@ -332,6 +332,7 @@ class Demo:
         self.update_gui_do_label()
 
     def buttons_window_event_handler(self, event):
+        self._handle_common_exit_events(event)
         if event.type != Event.Group:
             return
         label_by_group = {
@@ -436,7 +437,8 @@ class Demo:
             if event.widget_id == 'back':
                 self.state_manager.switch_context('gui1')
             return
-        self._handle_common_exit_events(event)
+        if event.type == Event.Quit:
+            self.state_manager.set_running(False)
 
     def _handle_common_exit_events(self, event):
         if event.type == Event.KeyDown and event.key == K_ESCAPE:
