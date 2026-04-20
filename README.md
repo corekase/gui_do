@@ -201,8 +201,8 @@ All of these both create and register the widget:
 - `gui.frame(id, rect)`
 - `gui.image(id, rect, image, automatic_pristine=False, scale=True)`
 - `gui.label(position, text, shadow=False, id=None)`
-- `gui.slider(id, rect, orientation, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0, wheel_positive_to_max=False, wheel_step=None)`
-- `gui.scrollbar(id, overall_rect, orientation, arrow_position, params, wheel_positive_to_max=False)`
+- `gui.slider(id, rect, horizontal, total_range, position=0.0, integer_type=False, notch_interval_percent=5.0, wheel_positive_to_max=False, wheel_step=None)`
+- `gui.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max=False)`
 - `gui.toggle(id, rect, style, pushed, pressed_text, raised_text=None)`
 - `gui.window(title, pos, size, backdrop=None, preamble=None, event_handler=None, postamble=None)`
 
@@ -231,11 +231,6 @@ gui.set_task_panel_settings(
 )
 ```
 
-Recommended task panel creation pattern:
-
-- Preferred for modern tooling/IntelliSense: use the typed builder returned by `gui.task_panel_widgets()`.
-- Lower-level alternative: `gui.task_panel_add_widget(...)` with regular widget constructors.
-
 Example:
 
 ```python
@@ -243,9 +238,6 @@ task_panel = gui.task_panel_widgets()
 task_panel.button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
 apps_button = task_panel.button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps")
 drawing_toggle = task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing")
-
-# still supported when you need constructor indirection
-gui.task_panel_add_widget(gui.button, "exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
 ```
 
 Runtime task panel helpers on `GuiManager`:
@@ -257,7 +249,7 @@ Runtime task panel helpers on `GuiManager`:
 - `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels)`
 - `gui.set_task_panel_animation_step_px(animation_step_px)`
 - `gui.set_task_panel_animation_interval_ms(animation_interval_ms)`
-- `gui.set_task_panel_settings(settings)`
+- `gui.set_task_panel_settings(settings: TaskPanelSettings)`
 - `gui.read_task_panel_settings()`
 
 ## Events and Callbacks
@@ -324,8 +316,8 @@ Important: if you do not consume events fast enough, older events are dropped wh
 Use `gui.scheduler` for background work.
 
 - `add_task(task_id, logic, parameters=None, message_method=None)`
-- `send_message(task_id, payload)` from inside the task function
-- `pop_result(task_id)` after completion
+- `send_message(task_id, parameters)` from inside the task function
+- `pop_result(task_id, default=None)` after completion
 - `remove_tasks(*ids)`, `tasks_busy_match_any(*ids)`
 
 The Mandelbrot demo uses this heavily:
