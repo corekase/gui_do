@@ -56,7 +56,7 @@ class _TaskPanelStub:
         self.visible = visible
         self.widgets = []
         self.surface = object()
-        self.x = rect.x
+        self.left = rect.x
         self.y = rect.y
         self.background_calls = 0
 
