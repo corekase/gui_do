@@ -65,17 +65,16 @@ class Demo:
         # -----------------------
         # widgets in a bottom task panel
         # -----------------------
-        tp1 = g1.task_panel_widgets()
         # exit button
-        tp1.button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
+        g1.task_panel.button('exit', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Exit')
         # setup for the togglebuttons
         g1.set_grid_properties((85, 5), 120, widget_height, 4)
         # switch to gui2 button
-        self.gui2_button = tp1.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'Apps')
+        self.gui2_button = g1.task_panel.button('gui2', g1.gridded(0, 0), ButtonStyle.Round, 'Apps')
         # control whether the background circles are drawn
-        self.circles_toggle = tp1.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Drawing')
+        self.circles_toggle = g1.task_panel.toggle('circles', g1.gridded(1, 0), ButtonStyle.Round, False, 'Drawing')
         # control whether the buttons and toggles window is visible
-        self.buttons_toggle = tp1.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Styles')
+        self.buttons_toggle = g1.task_panel.toggle('Buttons_Window', g1.gridded(2, 0), ButtonStyle.Round, False, 'Styles')
         # -----------------------
         # screen widget layout demos (enabled and disabled)
         # -----------------------
@@ -176,11 +175,10 @@ class Demo:
         )
         g2.graphics_factory.set_font('normal')
         g2.set_pristine('backdrop.jpg')
-        tp2 = g2.task_panel_widgets()
-        tp2.button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
+        g2.task_panel.button('back', Rect(10, 5, 70, widget_height), ButtonStyle.Angle, 'Back')
         g2.set_grid_properties((85, 5), 138, widget_height, 6)
-        self.gui2_life_window_toggle = tp2.toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life')
-        self.gui2_mandel_window_toggle = tp2.toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot')
+        self.gui2_life_window_toggle = g2.task_panel.toggle('gui2_life_window', g2.gridded(0, 0), ButtonStyle.Round, False, 'Life')
+        self.gui2_mandel_window_toggle = g2.task_panel.toggle('gui2_mandel_window', g2.gridded(1, 0), ButtonStyle.Round, False, 'Mandelbrot')
 
         # -----------------------
         # make the Conway's Game of Life window (gui2)

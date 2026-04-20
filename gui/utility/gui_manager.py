@@ -30,7 +30,6 @@ from .object_registry import GuiObjectRegistry
 from .coordinators.pointer_coordinator import PointerCoordinator
 from .renderer import Renderer
 from .coordinators.task_panel_config_coordinator import TaskPanelConfigCoordinator
-from .task_panel_widget_builder import TaskPanelWidgetBuilder
 from .ui_factory import GuiUiFactory
 from .coordinators.widget_state_coordinator import WidgetStateCoordinator
 from .coordinators.workspace_coordinator import WorkspaceCoordinator
@@ -332,6 +331,94 @@ class GuiManager:
         """Window."""
         return self.ui_factory.window(title, pos, size, backdrop, preamble, event_handler, postamble)
 
+    def _task_panel_add_created_widget(self, create_widget: Callable[[], Widget]) -> Widget:
+        """Create/register one widget in the task panel capture context."""
+        if self.task_panel is None:
+            raise GuiError('task panel is disabled for this gui manager')
+        previous_capture = self.workspace_state.task_panel_capture
+        previous_active_object = self.workspace_state.active_object
+        self.workspace_state.task_panel_capture = True
+        self.workspace_state.active_object = None
+        try:
+            widget = create_widget()
+            if isinstance(widget, Window):
+                raise GuiError('task panel only supports widgets; windows are not supported')
+            if not isinstance(widget, Widget):
+                raise GuiError('task panel constructor must return a Widget instance')
+            return widget
+        finally:
+            self.workspace_state.task_panel_capture = previous_capture
+            self.workspace_state.active_object = previous_active_object
+
+    def _task_panel_arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
+        return cast(ArrowBox, self._task_panel_add_created_widget(lambda: self.ui_factory.arrow_box(id, rect, direction, on_activate)))
+
+    def _task_panel_button(self, id: str, rect: Rect, style: ButtonStyle, text: Optional[str], on_activate: Optional[Callable[[], None]] = None) -> Button:
+        return cast(Button, self._task_panel_add_created_widget(lambda: self.ui_factory.button(id, rect, style, text, on_activate)))
+
+    def _task_panel_button_group(self, group: str, id: str, rect: Rect, style: ButtonStyle, text: str) -> ButtonGroup:
+        return cast(ButtonGroup, self._task_panel_add_created_widget(lambda: self.ui_factory.button_group(group, id, rect, style, text)))
+
+    def _task_panel_canvas(self, id: str, rect: Rect, backdrop: Optional[str] = None, on_activate: Optional[Callable[[], None]] = None, automatic_pristine: bool = False) -> Canvas:
+        return cast(Canvas, self._task_panel_add_created_widget(lambda: self.ui_factory.canvas(id, rect, backdrop, on_activate, automatic_pristine)))
+
+    def _task_panel_frame(self, id: str, rect: Rect) -> Frame:
+        return cast(Frame, self._task_panel_add_created_widget(lambda: self.ui_factory.frame(id, rect)))
+
+    def _task_panel_image(self, id: str, rect: Rect, image: str, automatic_pristine: bool = False, scale: bool = True) -> Image:
+        return cast(Image, self._task_panel_add_created_widget(lambda: self.ui_factory.image(id, rect, image, automatic_pristine, scale)))
+
+    def _task_panel_label(self, position: Union[Tuple[int, int], Tuple[int, int, int, int]], text: str, shadow: bool = False, id: Optional[str] = None) -> Label:
+        return cast(Label, self._task_panel_add_created_widget(lambda: self.ui_factory.label(position, text, shadow, id)))
+
+    def _task_panel_scrollbar(
+        self,
+        id: str,
+        overall_rect: Rect,
+        horizontal: Orientation,
+        style: ArrowPosition,
+        params: Tuple[int, int, int, int],
+        wheel_positive_to_max: bool = False,
+    ) -> Scrollbar:
+        return cast(
+            Scrollbar,
+            self._task_panel_add_created_widget(
+                lambda: self.ui_factory.scrollbar(id, overall_rect, horizontal, style, params, wheel_positive_to_max)
+            ),
+        )
+
+    def _task_panel_slider(
+        self,
+        id: str,
+        rect: Rect,
+        horizontal: Orientation,
+        total_range: int,
+        position: float = 0.0,
+        integer_type: bool = False,
+        notch_interval_percent: float = 5.0,
+        wheel_positive_to_max: bool = False,
+        wheel_step: Optional[float] = None,
+    ) -> Slider:
+        return cast(
+            Slider,
+            self._task_panel_add_created_widget(
+                lambda: self.ui_factory.slider(
+                    id,
+                    rect,
+                    horizontal,
+                    total_range,
+                    position,
+                    integer_type,
+                    notch_interval_percent,
+                    wheel_positive_to_max,
+                    wheel_step,
+                )
+            ),
+        )
+
+    def _task_panel_toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
+        return cast(Toggle, self._task_panel_add_created_widget(lambda: self.ui_factory.toggle(id, rect, style, pushed, pressed_text, raised_text)))
+
     def __init__(
         self,
         surface: Surface,
@@ -419,14 +506,6 @@ class GuiManager:
         if task_panel_enabled:
             self.set_task_panel_settings(TaskPanelSettings())
 
-    def task_panel_widgets(self) -> TaskPanelWidgetBuilder:
-        """Return an IntelliSense-friendly OOP builder for task panel widget creation."""
-        builder = getattr(self, '_task_panel_widget_builder', None)
-        if builder is None:
-            builder = TaskPanelWidgetBuilder(self)
-            self._task_panel_widget_builder = builder
-        return builder
-
     def set_task_panel_settings(self, settings: TaskPanelSettings) -> None:
         """Configure task panel using an immutable settings object."""
         self.task_panel_config.set_task_panel_settings(settings)
@@ -438,27 +517,6 @@ class GuiManager:
     def run_preamble(self) -> None:
         """Run preamble."""
         self.lifecycle.run_preamble()
-
-    def _task_panel_add_widget(self, widget_constructor: Callable[..., Widget], *args: object, **kwargs: object) -> Widget:
-        """Create/register a widget in the task panel using a regular widget constructor."""
-        if self.task_panel is None:
-            raise GuiError('task panel is disabled for this gui manager')
-        if not callable(widget_constructor):
-            raise GuiError('_task_panel_add_widget expects a callable widget constructor')
-        previous_capture = self.workspace_state.task_panel_capture
-        previous_active_object = self.workspace_state.active_object
-        self.workspace_state.task_panel_capture = True
-        self.workspace_state.active_object = None
-        try:
-            widget = widget_constructor(*args, **kwargs)
-            if isinstance(widget, Window):
-                raise GuiError('task panel only supports widgets; windows are not supported')
-            if not isinstance(widget, Widget):
-                raise GuiError('_task_panel_add_widget constructor must return a Widget instance')
-            return widget
-        finally:
-            self.workspace_state.task_panel_capture = previous_capture
-            self.workspace_state.active_object = previous_active_object
 
     def set_task_panel_lifecycle(
         self,

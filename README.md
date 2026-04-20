@@ -246,15 +246,13 @@ gui.set_task_panel_settings(
 Example:
 
 ```python
-task_panel = gui.task_panel_widgets()
-task_panel.button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
-apps_button = task_panel.button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps")
-drawing_toggle = task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing")
+gui.task_panel.button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
+apps_button = gui.task_panel.button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps")
+drawing_toggle = gui.task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing")
 ```
 
 Runtime task panel helpers on `GuiManager`:
 
-- `gui.task_panel_widgets() -> TaskPanelWidgetBuilder`
 - `gui.set_task_panel_enabled(enabled: bool) -> None`
 - `gui.set_task_panel_auto_hide(auto_hide: bool) -> None`
 - `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels: int) -> None`
