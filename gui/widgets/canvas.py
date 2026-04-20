@@ -9,6 +9,7 @@ from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING, Union
 from pygame import Rect
 from pygame.locals import MOUSEWHEEL, MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
 from ..utility.events import GuiError, InteractiveState, CanvasEvent
+from ..utility.input.event_fields import event_button, event_rel, event_wheel_delta
 from ..utility.intermediates.widget import Widget
 from .frame import Frame
 from .events.canvas_event_packet import CanvasEventPacket
@@ -154,16 +155,16 @@ class Canvas(Widget):
             packet.pos = (canvas_x - self.draw_rect.x, canvas_y - self.draw_rect.y)
             if event.type == MOUSEWHEEL:
                 packet.type = CanvasEvent.MouseWheel
-                packet.y = getattr(event, 'y', None)
+                packet.y = event_wheel_delta(event)
             elif event.type == MOUSEMOTION:
                 packet.type = CanvasEvent.MouseMotion
-                packet.rel = getattr(event, 'rel', None)
+                packet.rel = event_rel(event)
             elif event.type == MOUSEBUTTONDOWN:
                 packet.type = CanvasEvent.MouseButtonDown
-                packet.button = getattr(event, 'button', None)
+                packet.button = event_button(event)
             elif event.type == MOUSEBUTTONUP:
                 packet.type = CanvasEvent.MouseButtonUp
-                packet.button = getattr(event, 'button', None)
+                packet.button = event_button(event)
             # Coalescing keeps motion floods from starving click/wheel processing.
             if (
                 self.coalesce_motion_events

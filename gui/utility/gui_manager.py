@@ -150,7 +150,12 @@ class GuiManager:
     @dragging.setter
     def dragging(self, value: bool) -> None:
         """Dragging."""
-        self._drag_state.dragging = value
+        if not isinstance(value, bool):
+            raise GuiError('dragging must be a bool')
+        if not value:
+            self._drag_state.stop_drag()
+            return
+        self._drag_state.dragging = True
 
     @property
     def dragging_window(self) -> Optional[Window]:
@@ -160,6 +165,7 @@ class GuiManager:
     @dragging_window.setter
     def dragging_window(self, value: Optional[Window]) -> None:
         """Dragging window."""
+        self._validate_window_like(value, 'dragging_window')
         self._drag_state.dragging_window = value
 
     @property
@@ -170,6 +176,7 @@ class GuiManager:
     @mouse_delta.setter
     def mouse_delta(self, value: Optional[Tuple[int, int]]) -> None:
         """Mouse delta."""
+        self._validate_int_point_or_none(value, 'mouse_delta')
         self._drag_state.mouse_delta = value
 
     @property
@@ -190,6 +197,8 @@ class GuiManager:
     @mouse_locked.setter
     def mouse_locked(self, value: bool) -> None:
         """Mouse locked."""
+        if not isinstance(value, bool):
+            raise GuiError('mouse_locked must be a bool')
         self._lock_state.mouse_locked = value
 
     @property
@@ -200,6 +209,8 @@ class GuiManager:
     @mouse_point_locked.setter
     def mouse_point_locked(self, value: bool) -> None:
         """Mouse point locked."""
+        if not isinstance(value, bool):
+            raise GuiError('mouse_point_locked must be a bool')
         self._lock_state.mouse_point_locked = value
 
     @property
@@ -210,6 +221,11 @@ class GuiManager:
     @lock_area_rect.setter
     def lock_area_rect(self, value: Optional[Rect]) -> None:
         """Lock area rect."""
+        if value is not None:
+            if not isinstance(value, Rect):
+                raise GuiError(f'lock_area_rect must be a Rect or None, got: {value}')
+            if value.width <= 0 or value.height <= 0:
+                raise GuiError(f'lock_area_rect dimensions must be positive, got: {value}')
         self._lock_state.lock_area_rect = value
 
     @property
@@ -220,6 +236,7 @@ class GuiManager:
     @lock_point_pos.setter
     def lock_point_pos(self, value: Optional[Tuple[int, int]]) -> None:
         """Lock point pos."""
+        self._validate_int_point_or_none(value, 'lock_point_pos')
         self._lock_state.lock_point_pos = value
 
     @property
@@ -230,6 +247,8 @@ class GuiManager:
     @lock_point_recenter_pending.setter
     def lock_point_recenter_pending(self, value: bool) -> None:
         """Lock point recenter pending."""
+        if not isinstance(value, bool):
+            raise GuiError('lock_point_recenter_pending must be a bool')
         self._lock_state.lock_point_recenter_pending = value
 
     @property
@@ -240,7 +259,23 @@ class GuiManager:
     @lock_point_tolerance_rect.setter
     def lock_point_tolerance_rect(self, value: Optional[Rect]) -> None:
         """Lock point tolerance rect."""
+        if value is not None:
+            if not isinstance(value, Rect):
+                raise GuiError(f'lock_point_tolerance_rect must be a Rect or None, got: {value}')
+            if value.width <= 0 or value.height <= 0:
+                raise GuiError(f'lock_point_tolerance_rect dimensions must be positive, got: {value}')
         self._lock_state.lock_point_tolerance_rect = value
+
+    @property
+    def release_pointer_hint(self) -> Optional[Tuple[int, int]]:
+        """One-shot pointer hint consumed by release finalization."""
+        return self._lock_state.release_pointer_hint
+
+    @release_pointer_hint.setter
+    def release_pointer_hint(self, value: Optional[Tuple[int, int]]) -> None:
+        """One-shot pointer hint consumed by release finalization."""
+        self._validate_int_point_or_none(value, 'release_pointer_hint')
+        self._lock_state.release_pointer_hint = value
 
     # widgets
     def arrow_box(self, id: str, rect: Rect, direction: float, on_activate: Optional[Callable[[], None]] = None) -> ArrowBox:
@@ -343,6 +378,27 @@ class GuiManager:
         if resolved is None:
             raise GuiError(f'style must be one of skip/split/near/far, got: {style}')
         return resolved
+
+    @staticmethod
+    def _validate_window_like(value: object, label: str) -> None:
+        """Validate a minimal window-like contract for drag state integration."""
+        if value is None:
+            return
+        vx = getattr(value, 'x', None)
+        vy = getattr(value, 'y', None)
+        if not isinstance(vx, int) or not isinstance(vy, int):
+            raise GuiError(f'{label} must provide integer x/y, got: {value}')
+
+    @staticmethod
+    def _validate_int_point_or_none(value: Optional[Tuple[int, int]], label: str) -> None:
+        """Validate optional tuple[int, int] values."""
+        if value is None:
+            return
+        if not isinstance(value, tuple) or len(value) != 2:
+            raise GuiError(f'{label} must be a tuple of (x, y) or None, got: {value}')
+        px, py = value
+        if not isinstance(px, int) or not isinstance(py, int):
+            raise GuiError(f'{label} values must be ints, got: {value}')
 
     def toggle(self, id: str, rect: Rect, style: ButtonStyle, pushed: bool, pressed_text: str, raised_text: Optional[str] = None) -> Toggle:
         """Toggle."""

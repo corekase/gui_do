@@ -5,6 +5,7 @@ from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, 
 from typing import TYPE_CHECKING
 from ..events import Event
 from ..geometry import clamp_point_to_rect, to_window
+from .event_fields import event_button, event_key, event_pos as event_position, event_rel
 from .input_actions import InputAction
 from .input_targets import InputTargetResolver
 
@@ -27,7 +28,7 @@ class InputRouter:
         pre_mouse_point_locked = bool(getattr(self.gui, 'mouse_point_locked', False))
         pre_lock_area_rect = getattr(self.gui, 'lock_area_rect', None)
         self._sync_pointer_from_mouse_event(event)
-        is_left_mouse_down = event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1
+        is_left_mouse_down = event.type == MOUSEBUTTONDOWN and event_button(event) == 1
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
@@ -98,8 +99,8 @@ class InputRouter:
 
     def _handle_mouse_motion(self, event: PygameEvent) -> None:
         """Handle mouse motion."""
-        rel = getattr(event, 'rel', (0, 0))
-        pos = getattr(event, 'pos', self.gui._get_mouse_pos())
+        rel = event_rel(event)
+        pos = event_position(event) or self.gui._get_mouse_pos()
         if self.gui.mouse_locked:
             x, y = self.gui.mouse_pos
             dx, dy = rel
@@ -113,9 +114,9 @@ class InputRouter:
         if event.type == QUIT:
             return InputAction.emit(Event.Quit)
         if event.type == KEYUP:
-            return InputAction.emit(Event.KeyUp, key=getattr(event, 'key', None))
+            return InputAction.emit(Event.KeyUp, key=event_key(event))
         if event.type == KEYDOWN:
-            return InputAction.emit(Event.KeyDown, key=getattr(event, 'key', None))
+            return InputAction.emit(Event.KeyDown, key=event_key(event))
         return InputAction.pass_event()
 
     def _handle_window_dragging(self, event: PygameEvent) -> InputAction:
@@ -187,7 +188,7 @@ class InputRouter:
     ) -> None:
         """Resolve logical/physical cursor position once after left-button release from area-lock drag."""
         hint_pos = self._consume_release_pointer_hint()
-        if event.type != MOUSEBUTTONUP or getattr(event, 'button', None) != 1:
+        if event.type != MOUSEBUTTONUP or event_button(event) != 1:
             return
         if isinstance(hint_pos, tuple) and len(hint_pos) == 2:
             desired_pos = hint_pos
@@ -201,7 +202,7 @@ class InputRouter:
             return
         if not pre_mouse_locked or pre_mouse_point_locked:
             return
-        event_pos = getattr(event, 'pos', None)
+        event_pos = event_position(event)
         if not isinstance(event_pos, tuple) or len(event_pos) != 2:
             return
 
@@ -236,11 +237,11 @@ class InputRouter:
     def _sync_pointer_from_mouse_event(self, event: PygameEvent) -> None:
         """Sync logical pointer from mouse events before hit-testing/widget routing."""
         if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP):
-            event_pos = getattr(event, 'pos', None)
+            event_pos = event_position(event)
             if isinstance(event_pos, tuple) and len(event_pos) == 2:
                 if (
                     event.type == MOUSEBUTTONUP
-                    and getattr(event, 'button', None) == 1
+                    and event_button(event) == 1
                     and self.gui.mouse_locked
                     and not self.gui.mouse_point_locked
                     and self._event_pos_inside_lock_owner(event_pos)
@@ -270,7 +271,11 @@ class InputRouter:
 
     def _consume_release_pointer_hint(self):
         """Consume one-shot widget-provided release pointer override when present."""
-        hint_pos = getattr(self.gui, '_release_pointer_hint', None)
-        if hasattr(self.gui, '_release_pointer_hint'):
-            self.gui._release_pointer_hint = None
+        lock_state = getattr(self.gui, '_lock_state', None)
+        consume = getattr(lock_state, 'consume_release_pointer_hint', None)
+        if callable(consume):
+            return consume()
+        hint_pos = getattr(self.gui, 'release_pointer_hint', None)
+        if hasattr(self.gui, 'release_pointer_hint'):
+            self.gui.release_pointer_hint = None
         return hint_pos

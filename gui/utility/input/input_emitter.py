@@ -4,6 +4,7 @@ from pygame.event import Event as PygameEvent
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from typing import Optional, TYPE_CHECKING
 from ..events import Event
+from .event_fields import event_button, event_key, event_rel
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -29,11 +30,11 @@ class InputEventEmitter:
     def base_mouse_event(self, event: PygameEvent) -> "GuiEvent":
         """Base mouse event."""
         if event.type == MOUSEBUTTONUP:
-            return self.gui.event(Event.MouseButtonUp, button=getattr(event, 'button', None))
+            return self.gui.event(Event.MouseButtonUp, button=event_button(event))
         if event.type == MOUSEBUTTONDOWN:
-            return self.gui.event(Event.MouseButtonDown, button=getattr(event, 'button', None))
+            return self.gui.event(Event.MouseButtonDown, button=event_button(event))
         if event.type == MOUSEMOTION:
-            return self.gui.event(Event.MouseMotion, rel=getattr(event, 'rel', (0, 0)))
+            return self.gui.event(Event.MouseMotion, rel=event_rel(event))
         return self.pass_event()
 
     def system_event(self, event: PygameEvent) -> "GuiEvent":
@@ -41,9 +42,9 @@ class InputEventEmitter:
         if event.type == QUIT:
             return self.gui.event(Event.Quit)
         if event.type == KEYUP:
-            return self.gui.event(Event.KeyUp, key=getattr(event, 'key', None))
+            return self.gui.event(Event.KeyUp, key=event_key(event))
         if event.type == KEYDOWN:
-            return self.gui.event(Event.KeyDown, key=getattr(event, 'key', None))
+            return self.gui.event(Event.KeyDown, key=event_key(event))
         return self.pass_event()
 
     def widget_event(self, widget_id: Optional[str] = None, *, window=None, task_panel: bool = False) -> "GuiEvent":

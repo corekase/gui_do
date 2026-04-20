@@ -5,6 +5,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from ..utility.input.event_fields import event_button
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 from ..utility.events import GuiError
 
@@ -54,7 +55,7 @@ class ArrowBox(BaseInteractive):
             self._clear_timer()
             return False
         if self.state == InteractiveState.Hover:
-            if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+            if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
                 self.state = InteractiveState.Armed
                 if self.on_activate is not None and self._timer_id is None:
                     timer_id = f'{self.id}.timer'
@@ -62,7 +63,7 @@ class ArrowBox(BaseInteractive):
                     self._timer_id = timer_id
                 return True
         if self.state == InteractiveState.Armed:
-            if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
+            if event.type == MOUSEBUTTONUP and event_button(event) == 1:
                 self._clear_timer()
                 self.state = InteractiveState.Hover
                 if self.on_activate is not None:

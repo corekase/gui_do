@@ -19,6 +19,7 @@ class LockState:
     lock_point_pos: Optional[Tuple[int, int]] = None
     lock_point_recenter_pending: bool = False
     lock_point_tolerance_rect: Optional[Rect] = None
+    release_pointer_hint: Optional[Tuple[int, int]] = None
 
     @staticmethod
     def _validate_lock_owner(locking_object: Widget) -> None:
@@ -80,9 +81,24 @@ class LockState:
         self.lock_point_pos = None
         self.lock_point_recenter_pending = False
         self.lock_point_tolerance_rect = None
+        self.release_pointer_hint = None
 
     def set_recenter_pending(self, pending: bool) -> None:
         """Set point-lock recenter pending flag with strict bool validation."""
         if not isinstance(pending, bool):
             raise ValueError(f'pending must be a bool, got: {pending}')
         self.lock_point_recenter_pending = pending
+
+    def set_release_pointer_hint(self, point: Optional[Tuple[int, int]]) -> None:
+        """Set optional post-release pointer hint used by InputRouter finalization."""
+        if point is None:
+            self.release_pointer_hint = None
+            return
+        self._validate_point(point, 'release_pointer_hint')
+        self.release_pointer_hint = point
+
+    def consume_release_pointer_hint(self) -> Optional[Tuple[int, int]]:
+        """Return and clear one-shot release pointer hint."""
+        point = self.release_pointer_hint
+        self.release_pointer_hint = None
+        return point

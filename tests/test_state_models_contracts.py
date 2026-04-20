@@ -57,6 +57,18 @@ class LockStateContractsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             state.set_recenter_pending(1)  # type: ignore[arg-type]
 
+    def test_release_pointer_hint_round_trip_and_consume(self) -> None:
+        state = LockState()
+        state.set_release_pointer_hint((7, 8))
+        self.assertEqual(state.release_pointer_hint, (7, 8))
+        self.assertEqual(state.consume_release_pointer_hint(), (7, 8))
+        self.assertIsNone(state.release_pointer_hint)
+
+    def test_release_pointer_hint_rejects_non_int_tuple(self) -> None:
+        state = LockState()
+        with self.assertRaises(ValueError):
+            state.set_release_pointer_hint((1.5, 2))  # type: ignore[arg-type]
+
 
 if __name__ == "__main__":
     unittest.main()

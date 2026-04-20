@@ -10,6 +10,7 @@ from .frame import Frame
 from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.intermediates.widget import Widget
 from ..utility.events import colours, GuiError, Orientation, ArrowPosition, InteractiveState
+from ..utility.input.event_fields import event_button, event_pos, event_wheel_delta
 from ..utility.input.overlay_drag_guard import cancel_drag_for_overlay_contact
 
 if TYPE_CHECKING:
@@ -186,7 +187,7 @@ class Scrollbar(Frame, AxisRangeMixin):
         if event.type == MOUSEWHEEL:
             if self._dragging or not self.get_collide(window):
                 return False
-            wheel_delta = int(getattr(event, 'y', 0))
+            wheel_delta = event_wheel_delta(event)
             if wheel_delta == 0:
                 return False
             direction = 1 if wheel_delta > 0 else -1
@@ -202,14 +203,14 @@ class Scrollbar(Frame, AxisRangeMixin):
             return True
         point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
         if (event.type == MOUSEBUTTONDOWN) and self._handle_area().collidepoint(point):
-            if getattr(event, 'button', None) == 1:
+            if event_button(event) == 1:
                 x, y = self.gui._convert_to_screen((self._graphic_rect[0], self._graphic_rect[1]), window)
                 lock_rect = Rect(x, y, self._graphic_rect.width, self._graphic_rect.height)
                 self.gui.set_lock_area(self, lock_rect)
                 self.state = InteractiveState.Hover
                 self._dragging = True
                 self._drag_left_widget_bounds = False
-                down_pos = getattr(event, 'pos', None)
+                down_pos = event_pos(event)
                 if isinstance(down_pos, tuple) and len(down_pos) == 2:
                     self._last_in_bounds_screen_pos = down_pos
                 else:
@@ -218,7 +219,7 @@ class Scrollbar(Frame, AxisRangeMixin):
                         self._last_in_bounds_screen_pos = current_pos
                 return False
         if (event.type == MOUSEMOTION) and self._dragging:
-            motion_pos = getattr(event, 'pos', None)
+            motion_pos = event_pos(event)
             motion_point = None
             if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
                 motion_point = self.gui._convert_to_window(motion_pos, window)
@@ -259,9 +260,9 @@ class Scrollbar(Frame, AxisRangeMixin):
                 self._last_mouse_pos = point
                 return False
         if (event.type == MOUSEBUTTONUP) and self._dragging:
-            if getattr(event, 'button', None) == 1:
+            if event_button(event) == 1:
                 resolved_release_pos = None
-                release_pos = getattr(event, 'pos', None)
+                release_pos = event_pos(event)
                 if isinstance(release_pos, tuple) and len(release_pos) == 2:
                     release_point = self.gui._convert_to_window(release_pos, window)
                     draw_rect = getattr(self, 'draw_rect', None)
@@ -271,7 +272,7 @@ class Scrollbar(Frame, AxisRangeMixin):
                     resolved_release_pos = getattr(self, '_last_in_bounds_screen_pos', None)
                 self._reset()
                 if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
-                    self.gui._release_pointer_hint = resolved_release_pos
+                    self.gui.release_pointer_hint = resolved_release_pos
                     if callable(getattr(self.gui, '_set_mouse_pos', None)):
                         self.gui._set_mouse_pos(resolved_release_pos, False)
                     else:

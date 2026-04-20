@@ -17,6 +17,21 @@ Each release includes a link to a video demonstration as it was at the time.
 - Common controls: buttons, toggles, button groups, sliders, scrollbars, labels, images, frames, arrow boxes, canvases, and bottom task panels.
 - A task scheduler for background computation with UI-thread progress callbacks.
 
+## Core Contracts (Rebase Standard)
+
+The project now enforces two internal contracts across runtime paths. These are important when extending widgets or input behavior.
+
+1. Geometry contract
+- Rect clamping uses inclusive pixel bounds: `[left, right-1] x [top, bottom-1]`.
+- Pointer collision and bounds checks route through canonical helpers in `gui.utility.geometry`.
+- Screen/window coordinate conversion routes through canonical helpers (`to_screen`, `to_window`) instead of ad-hoc offset math.
+
+2. State-transition contract
+- Drag and lock lifecycles are model-driven and transition-based, not free-form field mutation.
+- `DragState` transitions use `start_drag` / `stop_drag` (legacy aliases remain for compatibility).
+- `LockState` transitions use validated `apply_area_lock` / `apply_point_lock` / `clear_lock`.
+- `GuiManager` proxy setters for drag/lock state enforce strict input validation and preserve model invariants.
+
 ## Type Signature Legend
 
 The method signatures in this README use standard Python typing forms:

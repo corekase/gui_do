@@ -4,6 +4,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Callable, Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN, MOUSEBUTTONUP
+from ..utility.input.event_fields import event_button
 from ..utility.events import ButtonStyle
 from ..utility.intermediates.interactive import BaseInteractive, InteractiveState
 
@@ -38,12 +39,12 @@ class Button(BaseInteractive):
             return False
         if self.state == InteractiveState.Hover:
             if event.type == MOUSEBUTTONDOWN:
-                if getattr(event, 'button', None) == 1:
+                if event_button(event) == 1:
                     self.state = InteractiveState.Armed
                     return False
         if self.state == InteractiveState.Armed:
             if event.type == MOUSEBUTTONUP:
-                if getattr(event, 'button', None) == 1:
+                if event_button(event) == 1:
                     self.state = InteractiveState.Hover
                     if self.on_activate is not None:
                         return False

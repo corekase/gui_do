@@ -7,6 +7,7 @@ from pygame.locals import MOUSEBUTTONUP, MOUSEMOTION
 
 from ..gui_utils.drag_state_model import DragState
 from ..geometry import point_in_rect
+from .event_fields import event_button, event_pos as event_position, event_rel
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -84,10 +85,10 @@ class DragStateController:
 
     def start_if_possible(self, event: PygameEvent) -> None:
         """Start dragging active window when titlebar hit rules are satisfied."""
-        event_pos = getattr(event, 'pos', self.gui._get_mouse_pos())
-        titlebar_pos = self.gui.lock_area(event_pos)
+        event_point = event_position(event) or self.gui._get_mouse_pos()
+        titlebar_pos = self.gui.lock_area(event_point)
         if self.gui.active_window and point_in_rect(titlebar_pos, self.gui.active_window.get_title_bar_rect()):
-            widget_pos = self.gui.lock_area(event_pos)
+            widget_pos = self.gui.lock_area(event_point)
             if point_in_rect(widget_pos, self.gui.active_window.get_widget_rect()):
                 self.gui.lower_window(self.gui.active_window)
                 self.gui.active_window = self.gui.windows[-1] if self.gui.windows else None
@@ -99,10 +100,10 @@ class DragStateController:
         if not self._has_valid_drag_context():
             self.reset()
             return InputAction.pass_event()
-        if event.type == MOUSEBUTTONUP and getattr(event, 'button', None) == 1:
+        if event.type == MOUSEBUTTONUP and event_button(event) == 1:
             self._release_drag()
         elif event.type == MOUSEMOTION and self.state.dragging:
-            rel = getattr(event, 'rel', (0, 0))
+            rel = event_rel(event)
             wx, wy = self._window_position(self.state.dragging_window)
             x = wx + rel[0]
             y = wy + rel[1]

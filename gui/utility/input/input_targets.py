@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
 from ..events import Event
 from ..geometry import point_in_rect
+from .event_fields import event_button, event_rel
 from .input_actions import InputAction
 
 if TYPE_CHECKING:
@@ -124,7 +125,7 @@ class InputTargetResolver:
 
     def process_window_widgets(self, event: PygameEvent) -> InputAction:
         """Route an event through topmost window widgets at current pointer position."""
-        if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+        if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
             if self.gui.active_window is not None and self.gui.active_window in self.gui.windows:
                 self.gui.raise_window(self.gui.active_window)
         context = self._build_context()
@@ -170,9 +171,9 @@ class InputTargetResolver:
     def _handle_base_mouse_events(self, event: PygameEvent) -> InputAction:
         """Map raw mouse pygame events into base GUI input actions."""
         if event.type == MOUSEBUTTONUP:
-            return InputAction.emit(Event.MouseButtonUp, button=getattr(event, 'button', None))
+            return InputAction.emit(Event.MouseButtonUp, button=event_button(event))
         if event.type == MOUSEBUTTONDOWN:
-            return InputAction.emit(Event.MouseButtonDown, button=getattr(event, 'button', None))
+            return InputAction.emit(Event.MouseButtonDown, button=event_button(event))
         if event.type == MOUSEMOTION:
-            return InputAction.emit(Event.MouseMotion, rel=getattr(event, 'rel', (0, 0)))
+            return InputAction.emit(Event.MouseMotion, rel=event_rel(event))
         return InputAction.pass_event()

@@ -4,6 +4,7 @@ from pygame import Rect
 from pygame.event import Event as PygameEvent
 from typing import Optional, TYPE_CHECKING
 from pygame.locals import MOUSEMOTION, MOUSEBUTTONDOWN
+from ..utility.input.event_fields import event_button
 from ..utility.events import ButtonStyle, InteractiveState
 from ..utility.intermediates.interactive import BaseInteractive
 from ..utility.intermediates.widget import Widget
@@ -45,7 +46,7 @@ class Toggle(BaseInteractive):
         if not super().handle_event(event, window):
             return False
         if self.state == InteractiveState.Hover:
-            if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+            if event.type == MOUSEBUTTONDOWN and event_button(event) == 1:
                 self.pushed = not self.pushed
                 return True
         return False

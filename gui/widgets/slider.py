@@ -9,6 +9,7 @@ from typing import Optional, TYPE_CHECKING
 
 from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.events import colours, GuiError, InteractiveState, Orientation
+from ..utility.input.event_fields import event_button, event_pos, event_wheel_delta
 from ..utility.input.overlay_drag_guard import cancel_drag_for_overlay_contact
 from ..utility.intermediates.widget import Widget
 
@@ -225,7 +226,7 @@ class Slider(Widget, AxisRangeMixin):
             mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
             if self._dragging or not self._wheel_hit_area().collidepoint(mouse_point):
                 return False
-            wheel_delta = int(getattr(event, 'y', 0))
+            wheel_delta = event_wheel_delta(event)
             if wheel_delta == 0:
                 return False
             direction = 1 if wheel_delta > 0 else -1
@@ -247,13 +248,13 @@ class Slider(Widget, AxisRangeMixin):
 
         mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
         if event.type == MOUSEBUTTONDOWN:
-            if getattr(event, 'button', None) != 1:
+            if event_button(event) != 1:
                 return False
             handle_area = self._handle_area()
             if not handle_area.collidepoint(mouse_point):
                 return False
             self._drag_left_widget_bounds = False
-            down_pos = getattr(event, 'pos', None)
+            down_pos = event_pos(event)
             if isinstance(down_pos, tuple) and len(down_pos) == 2:
                 self._last_in_bounds_screen_pos = down_pos
             if self._horizontal == Orientation.Horizontal:
@@ -286,7 +287,7 @@ class Slider(Widget, AxisRangeMixin):
                 else:
                     self.state = InteractiveState.Idle
                 return False
-            motion_pos = getattr(event, 'pos', None)
+            motion_pos = event_pos(event)
             motion_point = None
             if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
                 motion_point = self.gui._convert_to_window(motion_pos, window)
@@ -305,10 +306,10 @@ class Slider(Widget, AxisRangeMixin):
             self.state = InteractiveState.Armed
             return True
 
-        if getattr(event, 'button', None) != 1 or not self._dragging:
+        if event_button(event) != 1 or not self._dragging:
             return False
         resolved_release_pos = None
-        release_pos = getattr(event, 'pos', None)
+        release_pos = event_pos(event)
         if isinstance(release_pos, tuple) and len(release_pos) == 2:
             release_point = self.gui._convert_to_window(release_pos, window)
             draw_rect = getattr(self, 'draw_rect', None)
@@ -318,7 +319,7 @@ class Slider(Widget, AxisRangeMixin):
             resolved_release_pos = self._last_in_bounds_screen_pos
         self._reset_drag()
         if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
-            self.gui._release_pointer_hint = resolved_release_pos
+            self.gui.release_pointer_hint = resolved_release_pos
             if callable(getattr(self.gui, '_set_mouse_pos', None)):
                 self.gui._set_mouse_pos(resolved_release_pos, False)
             else:

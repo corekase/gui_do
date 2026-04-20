@@ -483,6 +483,51 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.set_lock_area(gui, widget, area=Rect(0, 0, 0, 2))
 
+    def test_drag_and_lock_proxy_setters_validate_input_types(self) -> None:
+        gui = self._build_manager_stub()
+
+        with self.assertRaises(GuiError):
+            GuiManager.dragging.fset(gui, 1)  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.mouse_locked.fset(gui, "yes")  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.mouse_point_locked.fset(gui, 1)  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.lock_point_recenter_pending.fset(gui, 0)  # type: ignore[arg-type]
+
+        with self.assertRaises(GuiError):
+            GuiManager.mouse_delta.fset(gui, (1.5, 2))  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.lock_point_pos.fset(gui, (1.5, 2))  # type: ignore[arg-type]
+        with self.assertRaises(GuiError):
+            GuiManager.dragging_window.fset(gui, object())  # type: ignore[arg-type]
+
+        with self.assertRaises(GuiError):
+            GuiManager.lock_area_rect.fset(gui, Rect(0, 0, 0, 5))
+        with self.assertRaises(GuiError):
+            GuiManager.lock_point_tolerance_rect.fset(gui, Rect(0, 0, 5, 0))
+
+    def test_dragging_false_clears_drag_context(self) -> None:
+        gui = self._build_manager_stub()
+        gui._drag_state.dragging = True
+        gui._drag_state.dragging_window = SimpleNamespace(x=1, y=2)
+        gui._drag_state.mouse_delta = (3, 4)
+
+        GuiManager.dragging.fset(gui, False)
+
+        self.assertFalse(gui._drag_state.dragging)
+        self.assertIsNone(gui._drag_state.dragging_window)
+        self.assertIsNone(gui._drag_state.mouse_delta)
+
+    def test_release_pointer_hint_proxy_validates_and_sets_state(self) -> None:
+        gui = self._build_manager_stub()
+
+        GuiManager.release_pointer_hint.fset(gui, (9, 10))
+        self.assertEqual(gui._lock_state.release_pointer_hint, (9, 10))
+
+        with self.assertRaises(GuiError):
+            GuiManager.release_pointer_hint.fset(gui, (1.5, 2))  # type: ignore[arg-type]
+
     def test_internal_set_mouse_pos_respects_update_physical_flag(self) -> None:
         gui = self._build_manager_stub()
         set_calls = []
