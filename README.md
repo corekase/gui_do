@@ -144,6 +144,7 @@ It owns:
 - If there is no active window, created widgets become screen-level widgets.
 - After creating a window, subsequent widgets are parented to that active window.
 - Toggling `window.visible` also updates active-window state: setting `True` makes that window active, setting `False` removes it from active selection.
+- Keyboard input follows active-window focus: key events go to the active window handler, and if no window is active they go to the screen lifecycle event handler.
 
 This is a key behavior used by the demo when building each window section.
 
@@ -235,7 +236,7 @@ Runtime task panel helpers on `GuiManager`:
 ## GUI events
 
 Your screen/window event handler receives framework events (`Event` enum), not raw pygame events.
-Keyboard events (`Event.KeyDown` / `Event.KeyUp`) are routed to the current active window handler when one is active.
+Keyboard events (`Event.KeyDown` / `Event.KeyUp`) are routed to the current active window handler when one is active; if no window is active, they are routed to the screen lifecycle event handler.
 
 Common ones:
 
