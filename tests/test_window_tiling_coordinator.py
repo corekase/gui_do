@@ -33,12 +33,18 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
             windows=[],
         )
 
+    @staticmethod
+    def _register_windows(tiler: WindowTilingCoordinator, *windows: WindowStub) -> None:
+        for window in windows:
+            tiler.record_window_registration(window)
+
     def test_arrange_windows_tiles_non_overlapping_when_capacity_allows(self) -> None:
         gui = self._build_gui_stub()
         w1 = WindowStub(100, 100, 260, 220)
         w2 = WindowStub(150, 140, 260, 220)
         gui.windows = [w1, w2]
         tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, w1, w2)
 
         tiler.set_enabled(True)
         r1 = Rect(w1.x, w1.y - w1.titlebar_size, w1.width, w1.height + w1.titlebar_size)
@@ -51,6 +57,7 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
         w1 = WindowStub(40, 80, 260, 220)
         gui.windows = [w1]
         tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, w1)
 
         tiler.set_enabled(True)
 
@@ -64,6 +71,7 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
         w2 = WindowStub(400, 200, 220, 180)
         gui.windows = [w1, w2]
         tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, w1, w2)
 
         tiler.set_enabled(True)
         before_dx = w2.x - w1.x
@@ -71,7 +79,8 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
 
         w3 = WindowStub(500, 200, 220, 180)
         gui.windows.append(w3)
-        tiler.on_window_registered(w3)
+        self._register_windows(tiler, w3)
+        tiler.arrange_windows(newly_visible=[w3])
 
         after_dx = w2.x - w1.x
         after_dy = w2.y - w1.y
@@ -91,12 +100,13 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
         w2 = WindowStub(20, 35, 140, 120)
         gui.windows = [w1, w2]
         tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, w1, w2)
         tiler.padding = 16
         tiler.gap = 16
 
         tiler.set_enabled(True, relayout=False)
         before_w1 = w1.position
-        tiler.on_window_visibility_changed(w2, True)
+        tiler.arrange_windows(newly_visible=[w2])
 
         self.assertEqual(w1.position, before_w1)
         centered_rect = Rect(0, 0, w2.width, w2.height + w2.titlebar_size)
@@ -109,14 +119,62 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
         w2 = WindowStub(410, 120, 220, 180)
         gui.windows = [w1, w2]
         tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, w1, w2)
 
         tiler.set_enabled(True)
         w2.visible = False
-        tiler.on_window_visibility_changed(w2, False)
+        tiler.arrange_windows(newly_visible=[])
 
         centered = Rect(0, 0, w1.width, w1.height + w1.titlebar_size)
         centered.center = gui.surface.get_rect().center
         self.assertEqual(w1.position, (centered.x, centered.y + w1.titlebar_size))
+
+    def test_final_layout_is_creation_order_stable_across_visibility_event_order(self) -> None:
+        gui = self._build_gui_stub()
+        life = WindowStub(0, 0, 220, 180, visible=False)
+        mandel = WindowStub(0, 0, 220, 180, visible=False)
+        gui.windows = [life, mandel]
+        tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, life, mandel)
+
+        tiler.set_enabled(True, relayout=False)
+
+        life.visible = True
+        tiler.arrange_windows(newly_visible=[life])
+        mandel.visible = True
+        tiler.arrange_windows(newly_visible=[mandel])
+        first_positions = {life: life.position, mandel: mandel.position}
+        self.assertLess(life.x, mandel.x)
+
+        life.visible = False
+        tiler.arrange_windows(newly_visible=[])
+        mandel.visible = False
+        tiler.arrange_windows(newly_visible=[])
+
+        mandel.visible = True
+        tiler.arrange_windows(newly_visible=[mandel])
+        life.visible = True
+        tiler.arrange_windows(newly_visible=[life])
+        second_positions = {life: life.position, mandel: mandel.position}
+
+        self.assertLess(life.x, mandel.x)
+        self.assertEqual(second_positions, first_positions)
+
+    def test_arrange_windows_uses_registration_order_over_current_list_order(self) -> None:
+        gui = self._build_gui_stub()
+        life = WindowStub(0, 0, 220, 180, visible=True)
+        mandel = WindowStub(0, 0, 220, 180, visible=True)
+        gui.windows = [life, mandel]
+        tiler = WindowTilingCoordinator(gui)
+        self._register_windows(tiler, life, mandel)
+        tiler.set_enabled(True)
+        self.assertLess(life.x, mandel.x)
+
+        # Simulate z-order mutation caused by raise_window during visibility toggles.
+        gui.windows = [mandel, life]
+        tiler.arrange_windows()
+
+        self.assertLess(life.x, mandel.x)
 
     def test_configure_validates_runtime_values(self) -> None:
         gui = self._build_gui_stub()
@@ -130,6 +188,17 @@ class WindowTilingCoordinatorTests(unittest.TestCase):
             tiler.configure(avoid_task_panel=1)  # type: ignore[arg-type]
         with self.assertRaises(GuiError):
             tiler.configure(center_on_failure=1)  # type: ignore[arg-type]
+
+    def test_arrange_windows_requires_registered_windows_for_deterministic_order(self) -> None:
+        gui = self._build_gui_stub()
+        w1 = WindowStub(30, 120, 220, 180)
+        w2 = WindowStub(410, 120, 220, 180)
+        gui.windows = [w1, w2]
+        tiler = WindowTilingCoordinator(gui)
+
+        tiler.set_enabled(True, relayout=False)
+        with self.assertRaises(KeyError):
+            tiler.arrange_windows()
 
 
 if __name__ == "__main__":

@@ -722,14 +722,6 @@ class GuiManager:
         """Read current runtime window-tiling settings."""
         return self.window_tiling.read_settings()
 
-    def _on_window_registered(self, window: Window) -> None:
-        """Notify internal tiling controller when a window is registered."""
-        self.window_tiling.on_window_registered(window)
-
-    def _on_window_visibility_changed(self, window: Window, became_visible: bool) -> None:
-        """Notify internal tiling controller when window visibility changes."""
-        self.window_tiling.on_window_visibility_changed(window, became_visible)
-
     def set_cursor(self, name: str) -> None:
         """Set custom cursor from a named cursor loaded via WidgetGraphicsFactory.register_cursor."""
         self.pointer.set_cursor(name)

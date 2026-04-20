@@ -263,6 +263,10 @@ class Demo:
         self.set_mandel_task_buttons_disabled(False)
         self.life_win.visible = False
         self.mandel_win.visible = False
+        self._gui2_visibility_bindings = (
+            (self.gui2_life_window_toggle, self.life_win),
+            (self.gui2_mandel_window_toggle, self.mandel_win),
+        )
         # set cursor for gui2
         g2.set_cursor('normal')
         self.gui2 = g2
@@ -753,12 +757,10 @@ class Demo:
         self.button_group_win.visible = self.buttons_toggle.pushed
 
     def _update_gui2_window_visibility(self):
-        life_visible = self.gui2_life_window_toggle.pushed
-        mandel_visible = self.gui2_mandel_window_toggle.pushed
-        if self.life_win.visible != life_visible:
-            self.life_win.visible = life_visible
-        if self.mandel_win.visible != mandel_visible:
-            self.mandel_win.visible = mandel_visible
+        for toggle, window in self._gui2_visibility_bindings:
+            visible = toggle.pushed
+            if window.visible != visible:
+                window.visible = visible
 
     def update_slider_labels(self):
         self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')

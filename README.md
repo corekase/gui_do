@@ -305,7 +305,10 @@ Runtime window tiling helpers on `GuiManager`:
 Tiling behavior summary:
 
 - While enabled, visible windows are packed into a non-overlapping centered grid when capacity allows.
-- Existing windows preserve previous slots whenever possible to reduce movement during relayout.
+- Any window visibility change triggers a fresh tiling pass.
+- If exactly one tiled window is visible, it is centered in the screen.
+- Slot placement order is deterministic by window registration/creation order.
+- Visibility event ordering does not change final left-to-right slot placement for the same visible set.
 - If all visible windows cannot fit non-overlapping, newly shown windows are centered as fallback.
 
 Task panel widget API surface:

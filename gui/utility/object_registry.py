@@ -75,10 +75,9 @@ class GuiObjectRegistry:
             if self.gui.workspace_state.task_panel_capture and self.gui.task_panel is not None:
                 raise GuiError('window nesting inside task panel is not supported')
             self.gui.windows.append(gui_object)
+            self.gui.window_tiling.record_window_registration(gui_object)
             self.gui.workspace_state.active_object = gui_object
-            on_registered = getattr(self.gui, '_on_window_registered', None)
-            if callable(on_registered):
-                on_registered(gui_object)
+            self.gui.window_tiling.arrange_windows(newly_visible=[gui_object])
             return gui_object
 
         # Widgets require unique, non-empty ids within all registered containers.

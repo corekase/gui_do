@@ -408,23 +408,18 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         with self.assertRaises(GuiError):
             GuiManager.configure_window_tiling(gui, gap=-1)
 
-    def test_window_tiling_internal_hooks_delegate(self) -> None:
+    def test_window_tiling_manual_relayout_wrapper_delegates(self) -> None:
         gui = self._build_manager_stub()
         calls = []
         gui.window_tiling = SimpleNamespace(
-            on_window_registered=lambda window: calls.append(("registered", window)),
-            on_window_visibility_changed=lambda window, visible: calls.append(("visibility", window, visible)),
             set_enabled=lambda enabled, relayout=True: None,
             configure=lambda **_kwargs: None,
-            arrange_windows=lambda *_args, **_kwargs: None,
+            arrange_windows=lambda *_args, **kwargs: calls.append(kwargs),
             read_settings=lambda: {},
         )
-        window = Window.__new__(Window)
+        GuiManager.tile_windows(gui)
 
-        GuiManager._on_window_registered(gui, window)
-        GuiManager._on_window_visibility_changed(gui, window, True)
-
-        self.assertEqual(calls, [("registered", window), ("visibility", window, True)])
+        self.assertEqual(calls, [{}])
 
     def test_handle_widget_executes_callback_paths_and_validates_callable(self) -> None:
         gui = self._build_manager_stub()

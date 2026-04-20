@@ -22,8 +22,20 @@ class WindowTilingCoordinator:
         self.padding: int = 16
         self.avoid_task_panel: bool = True
         self.center_on_failure: bool = True
-        self._slot_index_by_window: Dict["Window", int] = {}
+        self._registration_order_by_window: Dict["Window", int] = {}
+        self._next_registration_order: int = 0
         self._last_column_count: Optional[int] = None
+
+    def _ensure_registration_order(self, window: "Window") -> None:
+        """Assign immutable registration order used for deterministic tiling order."""
+        if window in self._registration_order_by_window:
+            return
+        self._registration_order_by_window[window] = self._next_registration_order
+        self._next_registration_order += 1
+
+    def record_window_registration(self, window: "Window") -> None:
+        """Record a new window registration for later ordering decisions."""
+        self._ensure_registration_order(window)
 
     @staticmethod
     def _window_rect(window: "Window") -> Rect:
@@ -32,12 +44,8 @@ class WindowTilingCoordinator:
 
     @staticmethod
     def _is_window_visible(window: "Window") -> bool:
-        """Return visibility while tolerating lightweight test stubs."""
-        try:
-            return bool(window.visible)
-        except Exception:
-            raw_visible = getattr(window, '_visible', None)
-            return bool(raw_visible) if isinstance(raw_visible, bool) else False
+        """Return current window visibility."""
+        return bool(window.visible)
 
     @staticmethod
     def _is_tile_eligible(window: "Window") -> bool:
@@ -46,7 +54,7 @@ class WindowTilingCoordinator:
         return all(hasattr(window, name) for name in required_attrs)
 
     def _visible_windows(self) -> List["Window"]:
-        """Return currently visible registered windows in z-order."""
+        """Return currently visible registered windows."""
         return [window for window in self.gui.windows if self._is_tile_eligible(window) and self._is_window_visible(window)]
 
     def _work_area_rect(self) -> Rect:
@@ -134,52 +142,21 @@ class WindowTilingCoordinator:
         full_rect.center = self.gui.surface.get_rect().center
         window.position = (full_rect.x, full_rect.y + window.titlebar_size)
 
-    @staticmethod
-    def _distance_squared(a: tuple[int, int], b: tuple[int, int]) -> int:
-        """Return squared Euclidean distance for deterministic nearest-slot comparisons."""
-        dx = a[0] - b[0]
-        dy = a[1] - b[1]
-        return (dx * dx) + (dy * dy)
-
     def _assign_slots(self, windows: List["Window"], slots: List[Rect]) -> Dict["Window", int]:
-        """Assign slots while preserving previous slot indexes when possible."""
+        """Assign slots deterministically by registration order of visible windows."""
         assignments: Dict["Window", int] = {}
-        used: Set[int] = set()
-
-        for window in windows:
-            slot_index = self._slot_index_by_window.get(window)
-            if slot_index is None or slot_index >= len(slots) or slot_index in used:
-                continue
+        for slot_index, window in enumerate(windows):
+            if slot_index >= len(slots):
+                break
             assignments[window] = slot_index
-            used.add(slot_index)
-
-        for window in windows:
-            if window in assignments:
-                continue
-            full_rect = self._window_rect(window)
-            anchor = full_rect.center
-            nearest_slot = None
-            nearest_distance = None
-            for slot_index, slot_rect in enumerate(slots):
-                if slot_index in used:
-                    continue
-                distance = self._distance_squared(anchor, slot_rect.center)
-                if nearest_distance is None or distance < nearest_distance:
-                    nearest_distance = distance
-                    nearest_slot = slot_index
-            if nearest_slot is None:
-                continue
-            assignments[window] = nearest_slot
-            used.add(nearest_slot)
-
         return assignments
 
     def _prune_removed_windows(self) -> None:
-        """Drop cached slot state for windows no longer registered."""
+        """Drop cached registration state for windows no longer registered."""
         registered = set(self.gui.windows)
-        self._slot_index_by_window = {
-            window: slot_index
-            for window, slot_index in self._slot_index_by_window.items()
+        self._registration_order_by_window = {
+            window: order
+            for window, order in self._registration_order_by_window.items()
             if window in registered
         }
 
@@ -187,6 +164,7 @@ class WindowTilingCoordinator:
         """Apply tiling to visible windows or center newly visible windows on failure."""
         self._prune_removed_windows()
         visible_windows = self._visible_windows()
+        visible_windows.sort(key=lambda window: self._registration_order_by_window[window])
         visible_set = set(visible_windows)
         if not self.enabled:
             return
@@ -196,7 +174,6 @@ class WindowTilingCoordinator:
         if len(visible_windows) == 1:
             only_window = visible_windows[0]
             self._center_window(only_window)
-            self._slot_index_by_window[only_window] = 0
             self._last_column_count = 1
             return
 
@@ -222,17 +199,6 @@ class WindowTilingCoordinator:
                 continue
             slot = slots[slot_index]
             window.position = (slot.x, slot.y + window.titlebar_size)
-            self._slot_index_by_window[window] = slot_index
-
-    def on_window_registered(self, window: "Window") -> None:
-        """Handle new registered window additions for optional auto-tiling."""
-        if self._is_tile_eligible(window) and self._is_window_visible(window):
-            self.arrange_windows(newly_visible=[window])
-
-    def on_window_visibility_changed(self, window: "Window", became_visible: bool) -> None:
-        """Handle visibility flips for optional auto-tiling behavior."""
-        newly_visible = [window] if became_visible else []
-        self.arrange_windows(newly_visible=newly_visible)
 
     def set_enabled(self, enabled: bool, relayout: bool = True) -> None:
         """Enable or disable window tiling and optionally apply immediately."""

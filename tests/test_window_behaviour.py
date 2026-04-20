@@ -21,6 +21,7 @@ class WindowBehaviourTests(unittest.TestCase):
             active_window=window,
             workspace_state=SimpleNamespace(active_object=window),
             raise_window=lambda _window: None,
+            window_tiling=SimpleNamespace(arrange_windows=lambda **_kwargs: None),
         )
         window.window_widget_lower_bitmap = type("BitmapStub", (), {"get_rect": lambda self: Rect(0, 0, 16, 16)})()
         return window
@@ -89,6 +90,7 @@ class WindowBehaviourTests(unittest.TestCase):
         gui.windows = [window, other]
         gui.active_window = other
         gui.workspace_state = SimpleNamespace(active_object=other)
+        gui.window_tiling = SimpleNamespace(arrange_windows=lambda **_kwargs: None)
 
         def _raise_window(target):
             gui.windows.remove(target)
@@ -116,6 +118,7 @@ class WindowBehaviourTests(unittest.TestCase):
         gui.active_window = window
         gui.workspace_state = SimpleNamespace(active_object=window)
         gui.raise_window = lambda _target: None
+        gui.window_tiling = SimpleNamespace(arrange_windows=lambda **_kwargs: None)
         window.gui = gui
 
         Window.visible.fset(window, False)
@@ -134,6 +137,7 @@ class WindowBehaviourTests(unittest.TestCase):
         gui.active_window = None
         gui.workspace_state = SimpleNamespace(active_object=None)
         gui.raise_window = lambda _target: None
+        gui.window_tiling = SimpleNamespace(arrange_windows=lambda **_kwargs: None)
         window.gui = gui
 
         Window.visible.fset(window, False)
