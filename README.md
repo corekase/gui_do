@@ -224,7 +224,7 @@ Constructor takes one task panel switch:
 
 - `task_panel_enabled=True`
 
-For fully object-oriented control, configure with an immutable settings object:
+Configure the task panel with an immutable settings object:
 
 ```python
 from gui import TaskPanelSettings
@@ -246,6 +246,12 @@ gui.set_task_panel_settings(
 Example:
 
 ```python
+gui.set_task_panel_settings(
+    TaskPanelSettings(
+        auto_hide=False,
+    )
+)
+
 gui.task_panel.button("exit", Rect(10, 5, 70, 28), ButtonStyle.Angle, "Exit")
 apps_button = gui.task_panel.button("gui2", gui.gridded(0, 0), ButtonStyle.Round, "Apps")
 drawing_toggle = gui.task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle.Round, False, "Drawing")
