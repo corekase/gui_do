@@ -28,6 +28,7 @@ from .coordinators.lock_flow_coordinator import LockFlowCoordinator
 from .gui_utils.lock_state_model import LockState
 from .object_registry import GuiObjectRegistry
 from .coordinators.pointer_coordinator import PointerCoordinator
+from .coordinators.window_tiling_coordinator import WindowTilingCoordinator
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
 from .coordinators.widget_state_coordinator import WidgetStateCoordinator
@@ -420,6 +421,7 @@ class GuiManager:
         mouse_get_pressed: Optional[Callable[[], Sequence[bool]]] = None,
         mouse_set_pos: Optional[Callable[[Tuple[int, int]], None]] = None,
         mouse_set_visible: Optional[Callable[[bool], None]] = None,
+        window_tiling_enabled: bool = False,
     ) -> None:
         """Create a GUI manager bound to a target surface and font registry."""
         if surface is None:
@@ -485,6 +487,7 @@ class GuiManager:
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
+        self.window_tiling: WindowTilingCoordinator = WindowTilingCoordinator(self)
         self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
         self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
@@ -499,6 +502,7 @@ class GuiManager:
             raise GuiError('task_panel_enabled must be a bool')
         if task_panel_enabled:
             self.set_task_panel_settings(TaskPanelSettings())
+        self.set_window_tiling_enabled(window_tiling_enabled, relayout=False)
 
     def set_task_panel_settings(self, settings: TaskPanelSettings) -> None:
         """Configure task panel using an immutable settings object."""
@@ -687,6 +691,44 @@ class GuiManager:
     def raise_window(self, window: Window) -> None:
         """Raise window."""
         self.workspace.raise_window(window)
+
+    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
+        """Enable or disable automatic non-overlapping window tiling."""
+        self.window_tiling.set_enabled(enabled, relayout)
+
+    def configure_window_tiling(
+        self,
+        *,
+        gap: Optional[int] = None,
+        padding: Optional[int] = None,
+        avoid_task_panel: Optional[bool] = None,
+        center_on_failure: Optional[bool] = None,
+        relayout: bool = True,
+    ) -> None:
+        """Configure runtime window-tiling behavior and optionally apply immediately."""
+        self.window_tiling.configure(
+            gap=gap,
+            padding=padding,
+            avoid_task_panel=avoid_task_panel,
+            center_on_failure=center_on_failure,
+            relayout=relayout,
+        )
+
+    def tile_windows(self) -> None:
+        """Run one tiling pass for currently visible windows using current settings."""
+        self.window_tiling.arrange_windows()
+
+    def read_window_tiling_settings(self) -> Dict[str, object]:
+        """Read current runtime window-tiling settings."""
+        return self.window_tiling.read_settings()
+
+    def _on_window_registered(self, window: Window) -> None:
+        """Notify internal tiling controller when a window is registered."""
+        self.window_tiling.on_window_registered(window)
+
+    def _on_window_visibility_changed(self, window: Window, became_visible: bool) -> None:
+        """Notify internal tiling controller when window visibility changes."""
+        self.window_tiling.on_window_visibility_changed(window, became_visible)
 
     def set_cursor(self, name: str) -> None:
         """Set custom cursor from a named cursor loaded via WidgetGraphicsFactory.register_cursor."""

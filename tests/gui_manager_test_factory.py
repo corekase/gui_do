@@ -20,6 +20,7 @@ from gui.utility.coordinators.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.gui_utils.lock_state_model import LockState
 from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.coordinators.pointer_coordinator import PointerCoordinator
+from gui.utility.coordinators.window_tiling_coordinator import WindowTilingCoordinator
 from gui.utility.ui_factory import GuiUiFactory
 from gui.utility.coordinators.widget_state_coordinator import WidgetStateCoordinator
 from gui.utility.coordinators.workspace_coordinator import WorkspaceCoordinator
@@ -133,6 +134,7 @@ def build_gui_manager_stub(
     gui.lifecycle = LifecycleCoordinator(gui)
     gui.lock_flow = LockFlowCoordinator(gui)
     gui.pointer = PointerCoordinator(gui)
+    gui.window_tiling = WindowTilingCoordinator(gui)
     gui.widget_state = WidgetStateCoordinator(gui)
     gui.workspace = WorkspaceCoordinator(gui)
 

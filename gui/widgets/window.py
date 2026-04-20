@@ -34,10 +34,13 @@ class Window:
         windows = gui.windows
         if self not in windows:
             return
+        notify_visibility_change = getattr(gui, '_on_window_visibility_changed', None)
         if value:
             gui.raise_window(self)
             gui.active_window = self
             gui.workspace_state.active_object = self
+            if callable(notify_visibility_change):
+                notify_visibility_change(self, True)
             return
         current_active = gui.active_window
         current_is_valid = (
@@ -46,6 +49,8 @@ class Window:
             and current_active.visible
         )
         if current_active is not self and current_is_valid:
+            if callable(notify_visibility_change):
+                notify_visibility_change(self, False)
             return
         next_active = None
         for window in windows[::-1]:
@@ -56,6 +61,8 @@ class Window:
                 break
         gui.active_window = next_active
         gui.workspace_state.active_object = next_active
+        if callable(notify_visibility_change):
+            notify_visibility_change(self, False)
 
     @property
     def position(self) -> Tuple[int, int]:

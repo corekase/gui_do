@@ -246,9 +246,10 @@ gui.scrollbar(
 )
 ```
 
-Constructor takes one task panel switch:
+Constructor takes these runtime switches:
 
 - `task_panel_enabled=True`
+- `window_tiling_enabled=False`
 
 Configure the task panel with an immutable settings object:
 
@@ -293,6 +294,19 @@ Runtime task panel helpers on `GuiManager`:
 - `gui.set_task_panel_animation_interval_ms(animation_interval_ms: float) -> None`
 - `gui.set_task_panel_settings(settings: TaskPanelSettings) -> None`
 - `gui.read_task_panel_settings() -> Dict[str, object]`
+
+Runtime window tiling helpers on `GuiManager`:
+
+- `gui.set_window_tiling_enabled(enabled: bool, relayout: bool = True) -> None`
+- `gui.configure_window_tiling(*, gap: Optional[int] = None, padding: Optional[int] = None, avoid_task_panel: Optional[bool] = None, center_on_failure: Optional[bool] = None, relayout: bool = True) -> None`
+- `gui.tile_windows() -> None`
+- `gui.read_window_tiling_settings() -> Dict[str, object]`
+
+Tiling behavior summary:
+
+- While enabled, visible windows are packed into a non-overlapping centered grid when capacity allows.
+- Existing windows preserve previous slots whenever possible to reduce movement during relayout.
+- If all visible windows cannot fit non-overlapping, newly shown windows are centered as fallback.
 
 Task panel widget API surface:
 

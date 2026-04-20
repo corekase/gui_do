@@ -369,6 +369,63 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         GuiManager.raise_window(gui, stale)
         self.assertIsNone(gui.workspace_state.active_object)
 
+    def test_window_tiling_runtime_wrappers(self) -> None:
+        gui = self._build_manager_stub()
+
+        settings = GuiManager.read_window_tiling_settings(gui)
+        self.assertEqual(
+            settings,
+            {
+                "enabled": False,
+                "gap": 16,
+                "padding": 16,
+                "avoid_task_panel": True,
+                "center_on_failure": True,
+            },
+        )
+
+        GuiManager.set_window_tiling_enabled(gui, True, relayout=False)
+        GuiManager.configure_window_tiling(
+            gui,
+            gap=8,
+            padding=4,
+            avoid_task_panel=False,
+            center_on_failure=False,
+            relayout=False,
+        )
+        settings = GuiManager.read_window_tiling_settings(gui)
+        self.assertEqual(
+            settings,
+            {
+                "enabled": True,
+                "gap": 8,
+                "padding": 4,
+                "avoid_task_panel": False,
+                "center_on_failure": False,
+            },
+        )
+
+        with self.assertRaises(GuiError):
+            GuiManager.configure_window_tiling(gui, gap=-1)
+
+    def test_window_tiling_internal_hooks_delegate(self) -> None:
+        gui = self._build_manager_stub()
+        calls = []
+        gui.window_tiling = SimpleNamespace(
+            on_window_registered=lambda window: calls.append(("registered", window)),
+            on_window_visibility_changed=lambda window, visible: calls.append(("visibility", window, visible)),
+            set_enabled=lambda enabled, relayout=True: None,
+            configure=lambda **_kwargs: None,
+            arrange_windows=lambda *_args, **_kwargs: None,
+            read_settings=lambda: {},
+        )
+        window = Window.__new__(Window)
+
+        GuiManager._on_window_registered(gui, window)
+        GuiManager._on_window_visibility_changed(gui, window, True)
+
+        self.assertEqual(calls, [("registered", window), ("visibility", window, True)])
+
     def test_handle_widget_executes_callback_paths_and_validates_callable(self) -> None:
         gui = self._build_manager_stub()
         marker = []

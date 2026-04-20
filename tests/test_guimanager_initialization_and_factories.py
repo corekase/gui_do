@@ -242,6 +242,33 @@ class GuiManagerRoiBatch4Tests(unittest.TestCase):
         self.assertEqual(visible_calls, [False])
         self.assertEqual(loaded_fonts, [])
 
+    def test_manager_init_supports_window_tiling_constructor_flag(self) -> None:
+        visible_calls = []
+
+        surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 100, 80))
+        graphics_factory = SimpleNamespace(load_font=lambda *_args: None)
+
+        with patch("gui.utility.gui_manager.EventDispatcher", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.LayoutManager", return_value=SimpleNamespace()
+        ), patch("gui.utility.gui_manager.Renderer", side_effect=lambda gui: SimpleNamespace(gui=gui)), patch(
+            "gui.utility.gui_manager.Scheduler", side_effect=lambda gui: SimpleNamespace(gui=gui)
+        ), patch("gui.utility.gui_manager.Timers", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.ButtonGroupMediator", return_value=SimpleNamespace()
+        ):
+            gui = gm.GuiManager(
+                surface,
+                graphics_factory=graphics_factory,
+                task_panel_enabled=False,
+                window_tiling_enabled=True,
+                event_getter=lambda: [],
+                mouse_get_pos=lambda: (1, 2),
+                mouse_set_pos=lambda _pos: None,
+                mouse_set_visible=lambda visible: visible_calls.append(visible),
+            )
+
+        self.assertEqual(visible_calls, [False])
+        self.assertTrue(gui.read_window_tiling_settings()["enabled"])
+
     def test_manager_init_accepts_fonts_iterable(self) -> None:
         visible_calls = []
         loaded_fonts = []

@@ -17,6 +17,7 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
             "lifecycle",
             "lock_flow",
             "pointer",
+            "window_tiling",
             "widget_state",
             "workspace",
         ]

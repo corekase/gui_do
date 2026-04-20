@@ -166,7 +166,7 @@ class Demo:
         # -----------------------
         # begin gui2
         # -----------------------
-        g2 = GuiManager(self.screen)
+        g2 = GuiManager(self.screen, window_tiling_enabled=True)
         g2.configure_fonts(
             titlebar=('Ubuntu-B.ttf', 14),
             normal=('Gimbot.ttf', 16),
@@ -263,7 +263,6 @@ class Demo:
         self.set_mandel_task_buttons_disabled(False)
         self.life_win.visible = False
         self.mandel_win.visible = False
-        self._layout_gui2_sim_windows()
         # set cursor for gui2
         g2.set_cursor('normal')
         self.gui2 = g2
@@ -425,9 +424,7 @@ class Demo:
         self.gui2.restore_pristine()
         if not self.dragging and self.gui2.locking_object is self.canvas:
             self.gui2.set_lock_point(None)
-        layout_needed = self._update_gui2_window_visibility()
-        if layout_needed:
-            self._layout_gui2_sim_windows()
+        self._update_gui2_window_visibility()
         self.set_mandel_task_buttons_disabled(self.s2.tasks_busy_match_any(*Demo.mandel_task_ids))
 
     def gui2_panel_event_handler(self, event):
@@ -758,33 +755,10 @@ class Demo:
     def _update_gui2_window_visibility(self):
         life_visible = self.gui2_life_window_toggle.pushed
         mandel_visible = self.gui2_mandel_window_toggle.pushed
-        layout_needed = False
         if self.life_win.visible != life_visible:
             self.life_win.visible = life_visible
-            layout_needed = True
         if self.mandel_win.visible != mandel_visible:
             self.mandel_win.visible = mandel_visible
-            layout_needed = True
-        return layout_needed
-
-    def _layout_gui2_sim_windows(self):
-        life_visible = self.life_win.visible
-        mandel_visible = self.mandel_win.visible
-        if not life_visible and not mandel_visible:
-            return
-        gap = 16
-        y_pos = (self.screen_rect.height - self.life_win.height) // 2
-        if life_visible and mandel_visible:
-            total_width = self.life_win.width + gap + self.mandel_win.width
-            left_x = (self.screen_rect.width - total_width) // 2
-            self.life_win.position = (left_x, y_pos)
-            self.mandel_win.position = (left_x + self.life_win.width + gap, y_pos)
-            return
-        centered_x = (self.screen_rect.width - self.life_win.width) // 2
-        if life_visible:
-            self.life_win.position = (centered_x, y_pos)
-        if mandel_visible:
-            self.mandel_win.position = (centered_x, y_pos)
 
     def update_slider_labels(self):
         self.h_slider_float_value.set_label(f'{self.h_slider_float.value:.2f}')
