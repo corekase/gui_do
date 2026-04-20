@@ -8,7 +8,7 @@ from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 from ..events import BaseEvent, GuiError, InteractiveState
 from ..intermediates.widget import Widget
 from ..lifecycle.lifecycle_callbacks import _noop, _noop_event
-from ...widgets.frame import Frame as Frame
+from ...widgets.frame import Frame
 
 if TYPE_CHECKING:
     from ..gui_manager import GuiManager

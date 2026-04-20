@@ -9,7 +9,7 @@ from ..intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from ..gui_manager import GuiManager
-    from ...widgets.window import Window as Window
+    from ...widgets.window import Window
 
 
 class WidgetStateCoordinator:

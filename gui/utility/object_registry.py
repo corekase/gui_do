@@ -4,7 +4,7 @@ from typing import Any, Optional, TYPE_CHECKING, TypeVar, cast
 
 from .events import GuiError
 from .intermediates.widget import Widget
-from ..widgets.window import Window as Window
+from ..widgets.window import Window
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager

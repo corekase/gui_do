@@ -21,10 +21,11 @@ class InputRouter:
 
     def route(self, event: PygameEvent) -> InputAction:
         """Dispatch one pygame event using drag/lock/window/widget priority."""
+        is_left_mouse_down = event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1
         self.gui.lock_state.resolve()
         if event.type == MOUSEMOTION:
             self._handle_mouse_motion(event)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, 'button', None) == 1:
+        if is_left_mouse_down:
             self.gui.focus_state.activate_window_at_pointer()
         if event.type in (QUIT, KEYUP, KEYDOWN):
             return self._handle_system_event(event)
@@ -39,7 +40,7 @@ class InputRouter:
         task_panel_event = self._process_task_panel_widgets(event)
         if task_panel_event is not None:
             return task_panel_event
-        if event.type == MOUSEBUTTONDOWN and not self.gui.dragging and getattr(event, 'button', None) == 1:
+        if is_left_mouse_down and not self.gui.dragging:
             self._check_window_drag_start(event)
         if self.gui.active_window:
             return self._process_window_widgets(event)

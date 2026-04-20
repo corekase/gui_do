@@ -6,7 +6,7 @@ from .intermediates.widget import Widget
 
 if TYPE_CHECKING:
     from .gui_manager import GuiManager
-    from ..widgets.window import Window as Window
+    from ..widgets.window import Window
 
 
 class FocusStateController:
@@ -55,31 +55,32 @@ class FocusStateController:
         """Update focus."""
         self.set_current_widget(new_hover)
 
-    def _resolve_hovered_and_topmost_window(self) -> tuple[Optional["Window"], Optional["Window"]]:
-        """Resolve hovered and topmost visible windows from current pointer position."""
-        hovered_window: Optional["Window"] = None
-        top_visible_window: Optional["Window"] = None
+    def _resolve_hovered_window(self) -> Optional["Window"]:
+        """Resolve the topmost visible window under the current pointer."""
         mouse_pos = self.gui.get_mouse_pos()
         for window in self.gui.windows[::-1]:
             if not window.visible:
                 continue
-            if top_visible_window is None:
-                top_visible_window = window
             if window.get_window_rect().collidepoint(mouse_pos):
-                hovered_window = window
-                break
-        return hovered_window, top_visible_window
+                return window
+        return None
+
+    def _resolve_top_visible_window(self) -> Optional["Window"]:
+        """Resolve current topmost visible window regardless of pointer position."""
+        for window in self.gui.windows[::-1]:
+            if window.visible:
+                return window
+        return None
 
     def activate_window_at_pointer(self) -> None:
         """Activate the topmost visible window under the pointer, if any."""
-        hovered_window, _top_visible_window = self._resolve_hovered_and_topmost_window()
+        hovered_window = self._resolve_hovered_window()
         if hovered_window is not None:
             self.gui.active_window = hovered_window
 
     def update_active_window(self) -> None:
         """Refresh active window validity without changing activation on hover."""
-        _hovered_window, top_visible_window = self._resolve_hovered_and_topmost_window()
         current = self.gui.active_window
         if current is not None and current in self.gui.windows and current.visible:
             return
-        self.gui.active_window = top_visible_window
+        self.gui.active_window = self._resolve_top_visible_window()
