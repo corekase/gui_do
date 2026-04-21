@@ -104,6 +104,8 @@ class CanvasControl(UiNode):
                 if self.on_overflow is not None:
                     self.on_overflow(self._dropped_events, len(self._events))
                 return True
+            if self.on_overflow is not None:
+                self.on_overflow(self._dropped_events, len(self._events))
 
         self._events.append(packet)
         self._dropped_events = 0
