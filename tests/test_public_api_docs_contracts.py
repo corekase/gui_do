@@ -3,17 +3,10 @@ import unittest
 from pathlib import Path
 
 import gui
+from contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 
 
-EXPECTED_PUBLIC_API_CONTRACT_TESTS = {
-    "tests/test_boundary_contracts.py",
-    "tests/test_public_api_exports.py",
-    "tests/test_mandel_event_schema_exports.py",
-    "tests/test_public_api_docs_contracts.py",
-    "tests/test_architecture_boundary_docs_contracts.py",
-    "tests/test_contract_command_parity.py",
-    "tests/test_readme_docs_contracts.py",
-}
+EXPECTED_PUBLIC_API_CONTRACT_TESTS = set(CONTRACT_TEST_FILE_PATHS)
 
 
 class PublicApiDocsContractsTests(unittest.TestCase):

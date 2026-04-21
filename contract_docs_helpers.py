@@ -1,0 +1,53 @@
+"""Shared parsing helpers for contract documentation tests."""
+
+from pathlib import Path
+
+
+def section_body(text: str, heading: str, source_name: str) -> str:
+    start = text.find(heading)
+    if start == -1:
+        raise AssertionError(f"{source_name} missing '{heading}' section")
+    section = text[start + len(heading):]
+    next_heading = section.find("\n## ")
+    if next_heading != -1:
+        section = section[:next_heading]
+    return section
+
+
+def readme_boundary_commands(repo_root: Path) -> list[str]:
+    text = (repo_root / "README.md").read_text(encoding="utf-8")
+    section = section_body(text, "## Run Boundary Contract Tests", "README")
+    fence_start = section.find("```bash")
+    if fence_start == -1:
+        raise AssertionError("README boundary section missing bash code fence")
+    section = section[fence_start + len("```bash"):]
+    fence_end = section.find("```")
+    if fence_end == -1:
+        raise AssertionError("README boundary section missing closing code fence")
+    code_block = section[:fence_end]
+
+    commands = []
+    for raw_line in code_block.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        commands.append(line)
+    return commands
+
+
+def workflow_step_run_command(repo_root: Path, step_name: str) -> str:
+    workflow_text = (repo_root / ".github" / "workflows" / "unittest.yml").read_text(encoding="utf-8")
+    target = f"- name: {step_name}"
+    start = workflow_text.find(target)
+    if start == -1:
+        raise AssertionError(f"workflow missing '{step_name}' step")
+
+    section = workflow_text[start:]
+    run_marker = "run: "
+    run_index = section.find(run_marker)
+    if run_index == -1:
+        raise AssertionError(f"workflow step '{step_name}' missing run command")
+    run_line = section[run_index + len(run_marker):].splitlines()[0].strip()
+    if not run_line:
+        raise AssertionError(f"workflow step '{step_name}' run command is empty")
+    return run_line

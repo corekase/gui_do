@@ -2,17 +2,18 @@ import re
 import unittest
 from pathlib import Path
 
+from contract_docs_helpers import readme_boundary_commands
+from contract_docs_helpers import section_body
+from contract_test_catalog import ARCHITECTURE_DOC_PATHS
+from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
+from contract_test_catalog import CONTRACT_PYTEST_COMMAND
+from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
 
-EXPECTED_ARCHITECTURE_DOCS = {
-    "docs/public_api_spec.md",
-    "docs/event_system_spec.md",
-    "docs/architecture_boundary_spec.md",
-}
-
+EXPECTED_ARCHITECTURE_DOCS = set(ARCHITECTURE_DOC_PATHS)
 EXPECTED_BOUNDARY_COMMANDS = [
-    "python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_docs_contracts -v",
-    "python -m pytest -q tests/test_boundary_contracts.py",
-    "python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_docs_contracts.py",
+    CONTRACT_UNITTEST_COMMAND,
+    BOUNDARY_PYTEST_COMMAND,
+    CONTRACT_PYTEST_COMMAND,
 ]
 
 
@@ -24,30 +25,7 @@ class ReadmeDocsContractsTests(unittest.TestCase):
         return (self._repo_root() / "README.md").read_text(encoding="utf-8")
 
     def _section_body(self, text: str, heading: str) -> str:
-        start = text.find(heading)
-        self.assertNotEqual(start, -1, f"README missing '{heading}' section")
-        section = text[start + len(heading):]
-        next_heading = section.find("\n## ")
-        if next_heading != -1:
-            section = section[:next_heading]
-        return section
-
-    def _boundary_commands(self) -> list[str]:
-        section = self._section_body(self._read_readme(), "## Run Boundary Contract Tests")
-        fence_start = section.find("```bash")
-        self.assertNotEqual(fence_start, -1, "README boundary section missing bash code fence")
-        section = section[fence_start + len("```bash"):]
-        fence_end = section.find("```")
-        self.assertNotEqual(fence_end, -1, "README boundary section missing closing code fence")
-        code_block = section[:fence_end]
-
-        commands = []
-        for raw_line in code_block.splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#"):
-                continue
-            commands.append(line)
-        return commands
+        return section_body(text, heading, "README")
 
     def test_architecture_docs_section_lists_expected_documents(self) -> None:
         section = self._section_body(self._read_readme(), "## Architecture Docs")
@@ -64,7 +42,7 @@ class ReadmeDocsContractsTests(unittest.TestCase):
             self.assertTrue((root / doc_path).exists(), f"documented architecture path does not exist: {doc_path}")
 
     def test_boundary_commands_match_expected_bundle_and_order(self) -> None:
-        self.assertEqual(self._boundary_commands(), EXPECTED_BOUNDARY_COMMANDS)
+        self.assertEqual(readme_boundary_commands(self._repo_root()), EXPECTED_BOUNDARY_COMMANDS)
 
 
 if __name__ == "__main__":
