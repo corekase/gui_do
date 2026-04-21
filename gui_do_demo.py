@@ -16,6 +16,7 @@ from gui import (
     ImageControl,
     LabelControl,
     LayoutAxis,
+    LayoutManager,
     PanelControl,
     ScrollbarControl,
     SliderControl,
@@ -189,24 +190,37 @@ class GuiDoDemo:
     def _build_widget_showcase_window(self) -> None:
         showcase_rect = self.app.layout.anchored((910, 940), anchor="top_left", margin=(28, 92), use_rect=True)
         self.showcase_window = self.root.add(WindowControl("showcase_window", showcase_rect, "Widget Showcase"))
+        left = showcase_rect.left
+        top = showcase_rect.top
+        showcase_layout = LayoutManager()
+
+        def abs_rect(offset_x: int, offset_y: int, width: int, height: int) -> Rect:
+            return Rect(left + offset_x, top + offset_y, width, height)
 
         self._set_text(
             self.showcase_window.add(
-                LabelControl("show_help", Rect(46, 124, 820, 20), "Legacy-equivalent widgets: buttons, toggles, groups, sliders, scrollbars, arrows, canvas, image")
+                LabelControl(
+                    "show_help",
+                    abs_rect(18, 32, 820, 20),
+                    "Legacy-equivalent widgets: buttons, toggles, groups, sliders, scrollbars, arrows, canvas, image",
+                )
             )
         )
 
-        self.showcase_window.add(FrameControl("style_frame", Rect(46, 152, 820, 214), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("style_title", Rect(58, 160, 420, 22), "Styles (box/round/angle/radio/check)")), 18)
+        self.showcase_window.add(FrameControl("style_frame", abs_rect(18, 60, 820, 214), border_width=2))
+        self._set_title(self.showcase_window.add(LabelControl("style_title", abs_rect(30, 68, 420, 22), "Styles (box/round/angle/radio/check)")), 18)
 
         styles = ("box", "round", "angle", "radio", "check")
+        showcase_layout.set_linear_properties(anchor=(left + 30, top + 104), item_width=140, item_height=30, spacing=14, horizontal=True)
         for idx, style in enumerate(styles):
-            x = 58 + (idx * 154)
-            self.showcase_window.add(ButtonControl(f"btn_{style}", Rect(x, 196, 140, 30), f"{style.title()} Btn", style=style))
+            self.showcase_window.add(ButtonControl(f"btn_{style}", showcase_layout.linear_item(idx), f"{style.title()} Btn", style=style))
+
+        showcase_layout.set_linear_properties(anchor=(left + 30, top + 142), item_width=140, item_height=30, spacing=14, horizontal=True)
+        for idx, style in enumerate(styles):
             self.showcase_window.add(
                 ToggleControl(
                     f"tog_{style}",
-                    Rect(x, 234, 140, 30),
+                    showcase_layout.linear_item(idx),
                     f"{style.title()} On",
                     f"{style.title()} Off",
                     pushed=False,
@@ -214,29 +228,37 @@ class GuiDoDemo:
                 )
             )
 
-        self.showcase_window.add(ButtonGroupControl("bg_a", Rect(58, 274, 140, 30), "legacy_group", "Group A", selected=True, style="box"))
-        self.showcase_window.add(ButtonGroupControl("bg_b", Rect(212, 274, 140, 30), "legacy_group", "Group B", selected=False, style="round"))
-        self.showcase_window.add(ButtonGroupControl("bg_c", Rect(366, 274, 140, 30), "legacy_group", "Group C", selected=False, style="angle"))
-        self.showcase_window.add(ButtonGroupControl("bg_d", Rect(520, 274, 140, 30), "legacy_group", "Group D", selected=False, style="radio"))
-        self.showcase_window.add(ButtonGroupControl("bg_e", Rect(674, 274, 140, 30), "legacy_group", "Group E", selected=False, style="check"))
+        group_labels = ("Group A", "Group B", "Group C", "Group D", "Group E")
+        showcase_layout.set_linear_properties(anchor=(left + 30, top + 182), item_width=140, item_height=30, spacing=14, horizontal=True)
+        for idx, style in enumerate(styles):
+            self.showcase_window.add(
+                ButtonGroupControl(
+                    f"bg_{chr(ord('a') + idx)}",
+                    showcase_layout.linear_item(idx),
+                    "legacy_group",
+                    group_labels[idx],
+                    selected=(idx == 0),
+                    style=style,
+                )
+            )
 
-        self.showcase_window.add(FrameControl("axis_frame", Rect(46, 378, 820, 214), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("axis_title", Rect(58, 386, 400, 22), "Sliders and Scrollbars")), 18)
+        self.showcase_window.add(FrameControl("axis_frame", abs_rect(18, 286, 820, 214), border_width=2))
+        self._set_title(self.showcase_window.add(LabelControl("axis_title", abs_rect(30, 294, 400, 22), "Sliders and Scrollbars")), 18)
 
         self.slider_h = self.showcase_window.add(
-            SliderControl("slider_h", Rect(58, 428, 420, 30), LayoutAxis.HORIZONTAL, 0.0, 100.0, 42.0)
+            SliderControl("slider_h", abs_rect(30, 336, 420, 30), LayoutAxis.HORIZONTAL, 0.0, 100.0, 42.0)
         )
-        self.slider_h_label = self._set_text(self.showcase_window.add(LabelControl("slider_h_label", Rect(488, 434, 150, 20), "H: 42.00")))
+        self.slider_h_label = self._set_text(self.showcase_window.add(LabelControl("slider_h_label", abs_rect(460, 342, 150, 20), "H: 42.00")))
 
         self.slider_v = self.showcase_window.add(
-            SliderControl("slider_v", Rect(640, 426, 30, 140), LayoutAxis.VERTICAL, 0.0, 10.0, 5.0)
+            SliderControl("slider_v", abs_rect(612, 334, 30, 140), LayoutAxis.VERTICAL, 0.0, 10.0, 5.0)
         )
-        self.slider_v_label = self._set_text(self.showcase_window.add(LabelControl("slider_v_label", Rect(676, 484, 170, 20), "V: 5.00")))
+        self.slider_v_label = self._set_text(self.showcase_window.add(LabelControl("slider_v_label", abs_rect(648, 392, 170, 20), "V: 5.00")))
 
         self.scroll_h = self.showcase_window.add(
             ScrollbarControl(
                 "scroll_h",
-                Rect(58, 470, 420, 24),
+                abs_rect(30, 378, 420, 24),
                 LayoutAxis.HORIZONTAL,
                 content_size=3000,
                 viewport_size=640,
@@ -244,12 +266,12 @@ class GuiDoDemo:
                 step=64,
             )
         )
-        self.scroll_h_label = self._set_text(self.showcase_window.add(LabelControl("scroll_h_label", Rect(488, 472, 170, 20), "SH: 320")))
+        self.scroll_h_label = self._set_text(self.showcase_window.add(LabelControl("scroll_h_label", abs_rect(460, 380, 170, 20), "SH: 320")))
 
         self.scroll_v = self.showcase_window.add(
             ScrollbarControl(
                 "scroll_v",
-                Rect(710, 426, 24, 140),
+                abs_rect(682, 334, 24, 140),
                 LayoutAxis.VERTICAL,
                 content_size=2200,
                 viewport_size=480,
@@ -257,26 +279,27 @@ class GuiDoDemo:
                 step=48,
             )
         )
-        self.scroll_v_label = self._set_text(self.showcase_window.add(LabelControl("scroll_v_label", Rect(740, 484, 120, 20), "SV: 220")))
+        self.scroll_v_label = self._set_text(self.showcase_window.add(LabelControl("scroll_v_label", abs_rect(712, 392, 120, 20), "SV: 220")))
 
-        self.showcase_window.add(FrameControl("arrow_canvas_frame", Rect(46, 604, 820, 268), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("arrow_title", Rect(58, 612, 300, 22), "Arrow Boxes and Canvas")), 18)
+        self.showcase_window.add(FrameControl("arrow_canvas_frame", abs_rect(18, 512, 820, 268), border_width=2))
+        self._set_title(self.showcase_window.add(LabelControl("arrow_title", abs_rect(30, 520, 300, 22), "Arrow Boxes and Canvas")), 18)
 
-        self.arrow_hits_label = self._set_text(self.showcase_window.add(LabelControl("arrow_hits", Rect(58, 646, 180, 20), "Arrow hits: 0")))
-        self.showcase_window.add(ArrowBoxControl("arrow_left", Rect(58, 676, 36, 36), 180, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_right", Rect(102, 676, 36, 36), 0, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_up", Rect(146, 676, 36, 36), 270, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_down", Rect(190, 676, 36, 36), 90, on_activate=self._arrow_hit))
+        self.arrow_hits_label = self._set_text(self.showcase_window.add(LabelControl("arrow_hits", abs_rect(30, 554, 180, 20), "Arrow hits: 0")))
+        showcase_layout.set_linear_properties(anchor=(left + 30, top + 584), item_width=36, item_height=36, spacing=8, horizontal=True)
+        self.showcase_window.add(ArrowBoxControl("arrow_left", showcase_layout.linear_item(0), 180, on_activate=self._arrow_hit))
+        self.showcase_window.add(ArrowBoxControl("arrow_right", showcase_layout.linear_item(1), 0, on_activate=self._arrow_hit))
+        self.showcase_window.add(ArrowBoxControl("arrow_up", showcase_layout.linear_item(2), 270, on_activate=self._arrow_hit))
+        self.showcase_window.add(ArrowBoxControl("arrow_down", showcase_layout.linear_item(3), 90, on_activate=self._arrow_hit))
 
         self.canvas_status_label = self._set_text(
-            self.showcase_window.add(LabelControl("canvas_status", Rect(256, 646, 590, 20), "Canvas: left click draws, right click clears"))
+            self.showcase_window.add(LabelControl("canvas_status", abs_rect(228, 554, 590, 20), "Canvas: left click draws, right click clears"))
         )
-        self.showcase_canvas = self.showcase_window.add(CanvasControl("showcase_canvas", Rect(256, 676, 594, 184), max_events=128))
+        self.showcase_canvas = self.showcase_window.add(CanvasControl("showcase_canvas", abs_rect(228, 584, 594, 184), max_events=128))
         self.showcase_canvas.canvas.fill((0, 72, 72))
         self.showcase_canvas.set_overflow_mode("drop_oldest")
         self.showcase_canvas.set_overflow_handler(self._on_showcase_canvas_overflow)
 
-        self.showcase_window.add(ImageControl("icon_img", Rect(58, 724, 150, 124), "data/images/realize.png", scale=True))
+        self.showcase_window.add(ImageControl("icon_img", abs_rect(30, 632, 150, 124), "data/images/realize.png", scale=True))
 
     def _build_life_window(self) -> None:
         life_rect = self.app.layout.anchored((932, 460), anchor="top_right", margin=(28, 92), use_rect=True)
