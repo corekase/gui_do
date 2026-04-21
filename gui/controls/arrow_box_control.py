@@ -40,6 +40,13 @@ class ArrowBoxControl(UiNode):
             self.on_activate()
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self.visible or not self.enabled:
+            self._hovered = False
+            if self._pressed:
+                self._pressed = False
+                app.timers.remove_timer(self._timer_id)
+            return False
+
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)

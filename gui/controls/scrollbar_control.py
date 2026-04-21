@@ -38,10 +38,17 @@ class ScrollbarControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_offset()
 
+    def _normalize_geometry(self) -> None:
+        self.content_size = max(1, int(self.content_size))
+        self.viewport_size = max(1, int(self.viewport_size))
+        self.step = max(1, int(self.step))
+
     def _max_offset(self) -> int:
+        self._normalize_geometry()
         return max(0, self.content_size - self.viewport_size)
 
     def _clamp_offset(self) -> None:
+        self._normalize_geometry()
         self.offset = min(max(0, self.offset), self._max_offset())
 
     def _track_rect(self) -> Rect:
@@ -53,10 +60,13 @@ class ScrollbarControl(UiNode):
         track = self._track_rect()
         if self.content_size <= 0:
             return 12
-        ratio = self.viewport_size / float(self.content_size)
+        ratio = min(1.0, self.viewport_size / float(self.content_size))
         if self.axis == LayoutAxis.HORIZONTAL:
-            return max(12, int(round(track.width * ratio)))
-        return max(12, int(round(track.height * ratio)))
+            track_span = max(1, track.width)
+        else:
+            track_span = max(1, track.height)
+        base = int(round(track_span * ratio))
+        return max(1, min(track_span, max(12, base)))
 
     def _offset_to_pixel(self) -> int:
         track = self._track_rect()
@@ -75,6 +85,7 @@ class ScrollbarControl(UiNode):
         return int(round(ratio * max_offset))
 
     def handle_rect(self) -> Rect:
+        self._clamp_offset()
         track = self._track_rect()
         handle_len = self._handle_length()
         pixel = self._offset_to_pixel()
@@ -89,6 +100,12 @@ class ScrollbarControl(UiNode):
         return Rect(pointer_pos[0], track.top, 1, track.height + 1)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self.visible or not self.enabled:
+            if self.dragging and app.pointer_capture.is_owned_by(self.control_id):
+                app.pointer_capture.end(self.control_id)
+            self.dragging = False
+            return False
+
         raw = event.pos
         if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):

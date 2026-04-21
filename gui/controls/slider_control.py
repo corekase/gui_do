@@ -37,7 +37,12 @@ class SliderControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_value()
 
+    def _normalize_range(self) -> None:
+        if self.maximum < self.minimum:
+            self.minimum, self.maximum = self.maximum, self.minimum
+
     def _clamp_value(self) -> None:
+        self._normalize_range()
         self.value = min(max(self.value, self.minimum), self.maximum)
 
     def _travel_rect(self) -> Rect:
@@ -46,6 +51,7 @@ class SliderControl(UiNode):
         return Rect(self.rect.centerx - 4, self.rect.y + 8, 8, max(1, self.rect.height - 16))
 
     def _to_pixel(self, value: float) -> int:
+        self._normalize_range()
         travel = self._travel_rect()
         span = self.maximum - self.minimum
         ratio = 0.0 if span <= 0 else (value - self.minimum) / span
@@ -54,6 +60,7 @@ class SliderControl(UiNode):
         return int(round(travel.top + (ratio * travel.height)))
 
     def _to_value(self, pixel: int) -> float:
+        self._normalize_range()
         travel = self._travel_rect()
         if self.axis == LayoutAxis.HORIZONTAL:
             ratio = 0.0 if travel.width <= 0 else (pixel - travel.left) / float(travel.width)
@@ -63,6 +70,7 @@ class SliderControl(UiNode):
         return self.minimum + ((self.maximum - self.minimum) * ratio)
 
     def handle_rect(self) -> Rect:
+        self._normalize_range()
         pixel = self._to_pixel(self.value)
         if self.axis == LayoutAxis.HORIZONTAL:
             return Rect(pixel - (self.handle_size // 2), self.rect.centery - (self.handle_size // 2), self.handle_size, self.handle_size)
@@ -75,6 +83,12 @@ class SliderControl(UiNode):
         return Rect(pointer_pos[0], travel.top, 1, travel.height + 1)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self.visible or not self.enabled:
+            if self.dragging and app.pointer_capture.is_owned_by(self.control_id):
+                app.pointer_capture.end(self.control_id)
+            self.dragging = False
+            return False
+
         raw = event.pos
         if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):

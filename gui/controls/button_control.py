@@ -26,6 +26,11 @@ class ButtonControl(UiNode):
         self._visual_key = None
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self.visible or not self.enabled:
+            self.hovered = False
+            self.pressed = False
+            return False
+
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
