@@ -82,6 +82,50 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_scene_window_tilers_are_independent(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((900, 700)))
+            app.create_scene("life")
+            app.create_scene("mandel")
+
+            app.switch_scene("life")
+            life_tiler = app.window_tiling
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.configure_window_tiling(gap=11, padding=22, avoid_task_panel=False, center_on_failure=False, relayout=False)
+
+            app.switch_scene("mandel")
+            mandel_tiler = app.window_tiling
+            self.assertIsNot(life_tiler, mandel_tiler)
+
+            settings = app.read_window_tiling_settings()
+            self.assertFalse(settings["enabled"])
+            self.assertEqual(settings["gap"], 16)
+            self.assertEqual(settings["padding"], 16)
+            self.assertTrue(settings["avoid_task_panel"])
+            self.assertTrue(settings["center_on_failure"])
+
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.configure_window_tiling(gap=7, padding=9, avoid_task_panel=True, center_on_failure=True, relayout=False)
+
+            app.switch_scene("life")
+            settings = app.read_window_tiling_settings()
+            self.assertTrue(settings["enabled"])
+            self.assertEqual(settings["gap"], 11)
+            self.assertEqual(settings["padding"], 22)
+            self.assertFalse(settings["avoid_task_panel"])
+            self.assertFalse(settings["center_on_failure"])
+
+            app.switch_scene("mandel")
+            settings = app.read_window_tiling_settings()
+            self.assertTrue(settings["enabled"])
+            self.assertEqual(settings["gap"], 7)
+            self.assertEqual(settings["padding"], 9)
+            self.assertTrue(settings["avoid_task_panel"])
+            self.assertTrue(settings["center_on_failure"])
+        finally:
+            pygame.quit()
+
     def test_timers_repeat_callbacks(self) -> None:
         timers = Timers()
         fired = []

@@ -25,12 +25,15 @@ class GuiApplication:
         default_theme = ColorTheme()
         default_factory = LegacyGraphicsFactory(default_theme)
         default_theme.graphics_factory = default_factory
+        default_scene = Scene()
+        default_window_tiling = WindowTilingManager(self, scene=default_scene)
         self._scenes = {
             "default": {
-                "scene": Scene(),
+                "scene": default_scene,
                 "scheduler": TaskScheduler(),
                 "theme": default_theme,
                 "graphics_factory": default_factory,
+                "window_tiling": default_window_tiling,
             }
         }
         self._active_scene_name = "default"
@@ -40,7 +43,7 @@ class GuiApplication:
         self.scheduler = active_runtime["scheduler"]
         self.timers = Timers()
         self.layout = LayoutManager()
-        self.window_tiling = WindowTilingManager(self)
+        self.window_tiling = active_runtime["window_tiling"]
         self.theme = active_runtime["theme"]
         self.graphics_factory = active_runtime["graphics_factory"]
         self.running = True
@@ -93,6 +96,7 @@ class GuiApplication:
         runtime = self._scenes[name]
         self.scene = runtime["scene"]
         self.scheduler = runtime["scheduler"]
+        self.window_tiling = runtime["window_tiling"]
         self.theme = runtime["theme"]
         self.graphics_factory = runtime["graphics_factory"]
 
@@ -107,14 +111,16 @@ class GuiApplication:
         return self._scene_runtime(name)["graphics_factory"]
 
     def _create_scene_runtime(self):
+        scene = Scene()
         theme = ColorTheme()
         factory = LegacyGraphicsFactory(theme)
         theme.graphics_factory = factory
         return {
-            "scene": Scene(),
+            "scene": scene,
             "scheduler": TaskScheduler(),
             "theme": theme,
             "graphics_factory": factory,
+            "window_tiling": WindowTilingManager(self, scene=scene),
             "screen_pristine": None,
             "screen_pristine_scaled": None,
             "screen_pristine_scaled_size": (0, 0),
@@ -130,6 +136,8 @@ class GuiApplication:
         runtime.setdefault("screen_pristine_scaled", None)
         runtime.setdefault("screen_pristine_scaled_size", (0, 0))
         runtime.setdefault("scene_auto_suspended", set())
+        if "window_tiling" not in runtime:
+            runtime["window_tiling"] = WindowTilingManager(self, scene=runtime["scene"])
         return runtime
 
     def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:

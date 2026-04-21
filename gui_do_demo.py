@@ -53,9 +53,10 @@ class GuiDoDemo:
         self.screen_rect = self.screen.get_rect()
         self.app = GuiApplication(self.screen)
         self.app.layout.set_anchor_bounds(self.screen_rect)
-        self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
         self.app.create_scene("main")
         self.app.switch_scene("main")
+        self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
+        self.app.set_window_tiling_enabled(True, relayout=False)
         self.scene_scheduler = self.app.get_scene_scheduler("main")
         self.life_scheduler = self.scene_scheduler
         self.mandel_scheduler = self.scene_scheduler
@@ -115,6 +116,27 @@ class GuiDoDemo:
                 style="angle",
             )
         )
+        self.life_toggle_window = self.task_panel.add(
+            ToggleControl(
+                "show_life",
+                Rect(146, self.screen_rect.height - 40, 140, 30),
+                "Life On",
+                "Life Off",
+                pushed=True,
+                on_toggle=self._toggle_life_window,
+            )
+        )
+        self.mandel_toggle_window = self.task_panel.add(
+            ToggleControl(
+                "show_mandel",
+                Rect(296, self.screen_rect.height - 40, 170, 30),
+                "Mandelbrot On",
+                "Mandelbrot Off",
+                pushed=True,
+                on_toggle=self._toggle_mandel_window,
+            )
+        )
+        self._tile_visible_windows()
 
     def _set_title(self, label: LabelControl, size: int = 22) -> LabelControl:
         label.title = True
@@ -526,9 +548,8 @@ class GuiDoDemo:
         self.life_window.visible = bool(pushed)
         if pushed:
             self._tile_visible_windows(newly_visible=[self.life_window])
-            self.status_label.text = "Status: life window visible"
         else:
-            self.status_label.text = "Status: life window hidden"
+            self._tile_visible_windows()
 
     def _on_tile_toggle(self, pushed: bool) -> None:
         self.app.set_window_tiling_enabled(bool(pushed), relayout=True)
@@ -539,9 +560,8 @@ class GuiDoDemo:
         self.mandel_window.visible = bool(pushed)
         if pushed:
             self._tile_visible_windows(newly_visible=[self.mandel_window])
-            self.status_label.text = "Status: mandelbrot window visible"
         else:
-            self.status_label.text = "Status: mandelbrot window hidden"
+            self._tile_visible_windows()
 
     def _visible_windows_for_tiling(self):
         windows = []
@@ -552,7 +572,7 @@ class GuiDoDemo:
         return windows
 
     def _tile_visible_windows(self, newly_visible=None) -> None:
-        if not self.tile_toggle.pushed:
+        if not self.app.read_window_tiling_settings().get("enabled", False):
             return
         if newly_visible is None:
             newly_visible = self._visible_windows_for_tiling()

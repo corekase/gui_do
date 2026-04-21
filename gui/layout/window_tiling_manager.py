@@ -8,8 +8,9 @@ from pygame import Rect
 class WindowTilingManager:
     """Non-overlapping window tiling adapted for the rebased scene graph."""
 
-    def __init__(self, app) -> None:
+    def __init__(self, app, scene=None) -> None:
         self.app = app
+        self.scene = scene
         self.enabled = False
         self.gap = 16
         self.padding = 16
@@ -18,9 +19,14 @@ class WindowTilingManager:
         self._registration_order: Dict[object, int] = {}
         self._next_order = 0
 
+    def _bound_scene(self):
+        if self.scene is not None:
+            return self.scene
+        return self.app.scene
+
     def _scene_windows(self) -> List[object]:
         windows: List[object] = []
-        stack = list(self.app.scene.nodes)
+        stack = list(self._bound_scene().nodes)
         while stack:
             node = stack.pop(0)
             children = getattr(node, "children", None)
@@ -52,7 +58,7 @@ class WindowTilingManager:
     def _work_area_rect(self) -> Rect:
         work = Rect(self.app.surface.get_rect())
         if self.avoid_task_panel:
-            stack = list(self.app.scene.nodes)
+            stack = list(self._bound_scene().nodes)
             while stack:
                 node = stack.pop(0)
                 children = getattr(node, "children", None)
