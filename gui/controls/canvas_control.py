@@ -77,6 +77,9 @@ class CanvasControl(UiNode):
         return self._events.popleft()
 
     def handle_event(self, event: GuiEvent, _app) -> bool:
+        if not self.visible or not self.enabled:
+            return False
+
         raw = event.pos
         if not (isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)):
             return False
