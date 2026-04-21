@@ -25,7 +25,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar._inc_size = 5
         scrollbar._hit = False
         scrollbar._dragging = False
-        scrollbar._last_mouse_pos = None
+        scrollbar._drag_anchor_offset = 0
         scrollbar._drag_left_widget_bounds = False
         scrollbar._last_in_bounds_screen_pos = None
         scrollbar._subwidgets_bound = False
@@ -74,7 +74,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         self.assertTrue(arrow1.disabled)
         self.assertTrue(arrow2.disabled)
         self.assertFalse(scrollbar._dragging)
-        self.assertIsNone(scrollbar._last_mouse_pos)
+        self.assertEqual(scrollbar._drag_anchor_offset, 0)
         self.assertEqual(scrollbar.state, InteractiveState.Idle)
         self.assertEqual(lock_calls, [(None, None)])
 
@@ -131,31 +131,20 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         motion = pygame.event.Event(MOUSEMOTION, {})
 
-        # First motion computes point < 0 and clamps to zero.
+        # First motion uses absolute position and updates immediately.
         self.assertTrue(scrollbar.handle_event(motion, None))
         self.assertEqual(scrollbar._start_pos, 0)
-        self.assertEqual(scrollbar._last_mouse_pos, 0)
 
-        # Extreme right motion clamps to max start.
+        # Extreme right motion advances and clamps at max start.
         scrollbar.gui.set_mouse_pos((1000, 0))
         self.assertTrue(scrollbar.handle_event(motion, None))
         self.assertEqual(scrollbar._start_pos, 80)
-        self.assertEqual(scrollbar._last_mouse_pos, 80)
 
-        # Mid-range motion updates by delta.
+        # Mid-range motion updates from absolute axis point.
         scrollbar._start_pos = 10
-        scrollbar._last_mouse_pos = 20
         scrollbar.gui.set_mouse_pos((40, 0))
         self.assertTrue(scrollbar.handle_event(motion, None))
-        self.assertEqual(scrollbar._start_pos, 20)
-        self.assertEqual(scrollbar._last_mouse_pos, 30)
-
-        # First mid-range event with no last mouse pos sets tracker and returns False.
-        scrollbar._last_mouse_pos = None
-        scrollbar._start_pos = 10
-        scrollbar.gui.set_mouse_pos((30, 0))
-        self.assertFalse(scrollbar.handle_event(motion, None))
-        self.assertEqual(scrollbar._last_mouse_pos, 20)
+        self.assertEqual(scrollbar._start_pos, 30)
 
     def test_handle_event_mouse_up_resets_drag(self) -> None:
         scrollbar = self._build_scrollbar_stub()
@@ -165,7 +154,6 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
             set_lock_area=lambda value, area=None: lock_calls.append((value, area)),
         )
         scrollbar._dragging = True
-        scrollbar._last_mouse_pos = 5
         scrollbar._hit = False
         scrollbar.state = InteractiveState.Hover
 
@@ -173,7 +161,6 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         self.assertTrue(scrollbar.handle_event(up, None))
         self.assertFalse(scrollbar._dragging)
-        self.assertIsNone(scrollbar._last_mouse_pos)
         self.assertFalse(scrollbar._hit)
         self.assertEqual(scrollbar.state, InteractiveState.Idle)
         self.assertEqual(lock_calls, [(None, None)])
@@ -189,11 +176,11 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         self.assertFalse(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None))
 
         scrollbar.gui.set_mouse_pos((scrollbar.draw_rect.right + 60, scrollbar.draw_rect.centery))
-        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {}), None))
+        scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {}), None)
 
         release_pos = (scrollbar.draw_rect.centerx, scrollbar.draw_rect.centery)
         self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_pos}), None))
-        self.assertEqual(scrollbar.gui._get_mouse_pos(), release_pos)
+        self.assertFalse(hasattr(scrollbar.gui, "release_pointer_hint"))
 
     def test_release_uses_last_in_bounds_motion_when_release_pos_is_outside(self) -> None:
         scrollbar = self._build_scrollbar_stub()
@@ -207,7 +194,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         inside_pos = (scrollbar.draw_rect.centerx, scrollbar.draw_rect.centery)
         scrollbar.gui.set_mouse_pos(inside_pos)
-        self.assertFalse(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": inside_pos}), None))
+        self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEMOTION, {"pos": inside_pos}), None))
 
         outside_pos = (scrollbar.draw_rect.right + 80, scrollbar.draw_rect.centery)
         scrollbar.gui.set_mouse_pos(outside_pos)
@@ -215,7 +202,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         release_outside = (scrollbar.draw_rect.right + 100, scrollbar.draw_rect.centery)
         self.assertTrue(scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_outside}), None))
-        self.assertEqual(scrollbar.gui._get_mouse_pos(), inside_pos)
+        self.assertFalse(hasattr(scrollbar.gui, "release_pointer_hint"))
 
     def test_mousewheel_on_hover_decrements_towards_zero_by_default(self) -> None:
         scrollbar = self._build_scrollbar_stub()

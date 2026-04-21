@@ -221,41 +221,12 @@ class InputRouter:
             return
         if isinstance(hint_pos, tuple) and len(hint_pos) == 2:
             desired_pos = hint_pos
-            self._set_logical_mouse_pos(desired_pos)
+            self._set_raw_logical_mouse_pos(desired_pos)
             if self.gui.mouse_locked:
                 return
             self.gui.pointer.set_physical_mouse_pos(desired_pos)
             return
-        if not pre_mouse_locked or pre_mouse_point_locked:
-            return
-        event_pos = normalized.pos
-        if not isinstance(event_pos, tuple) or len(event_pos) != 2:
-            return
-
-        current_pos = self.gui.mouse_pos
-        desired_pos = event_pos
-        if (
-            not self._event_pos_inside_specific_lock_owner(pre_locking_object, event_pos)
-            and self._event_pos_inside_specific_lock_owner(pre_locking_object, current_pos)
-        ):
-            desired_pos = current_pos
-        if pre_lock_area_rect is not None:
-            if pre_lock_area_rect.collidepoint(desired_pos):
-                pass
-            elif self._event_pos_inside_specific_lock_owner(pre_locking_object, desired_pos):
-                pass
-            elif pre_lock_area_rect.collidepoint(event_pos):
-                desired_pos = event_pos
-            elif self._event_pos_inside_specific_lock_owner(pre_locking_object, event_pos):
-                desired_pos = event_pos
-            else:
-                desired_pos = self._clamp_to_rect(event_pos, pre_lock_area_rect)
-
-        self._set_logical_mouse_pos(desired_pos)
-
-        if self.gui.mouse_locked:
-            return
-        self.gui.pointer.set_physical_mouse_pos(desired_pos)
+        return
 
     def _sync_pointer_from_mouse_event(
         self,
@@ -271,9 +242,8 @@ class InputRouter:
                     and normalized.is_left_up
                     and self.gui.mouse_locked
                     and not self.gui.mouse_point_locked
-                    and self._event_pos_inside_lock_owner(event_pos)
                 ):
-                    self._set_logical_mouse_pos(event_pos)
+                    self._set_raw_logical_mouse_pos(event_pos)
                 else:
                     self._set_logical_mouse_pos(self.gui.lock_state.clamp_position(event_pos))
             return
@@ -286,7 +256,20 @@ class InputRouter:
 
     def _set_logical_mouse_pos(self, pos) -> None:
         """Set logical pointer position through manager helper when available."""
-        self.gui._set_mouse_pos(pos, False)
+        set_internal = getattr(self.gui, '_set_mouse_pos', None)
+        if callable(set_internal):
+            set_internal(pos, False)
+            return
+        set_public = getattr(self.gui, 'set_mouse_pos', None)
+        if callable(set_public):
+            set_public(pos)
+
+    def _set_raw_logical_mouse_pos(self, pos) -> None:
+        """Set logical pointer position without applying lock-area clamping."""
+        if hasattr(self.gui, 'mouse_pos'):
+            self.gui.mouse_pos = pos
+            return
+        self._set_logical_mouse_pos(pos)
 
     def _consume_release_pointer_hint(self):
         """Consume one-shot widget-provided release pointer override when present."""

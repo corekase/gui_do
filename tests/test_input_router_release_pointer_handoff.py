@@ -134,7 +134,7 @@ class _ReleaseRouterGuiStub:
 
 
 class InputRouterReleasePointerHandoffTests(unittest.TestCase):
-    def test_slider_release_hint_overrides_edge_clamp_during_router_finalize(self) -> None:
+    def test_slider_release_preserves_release_event_position_without_router_reposition(self) -> None:
         gui = _ReleaseRouterGuiStub()
         slider = Slider(
             gui,
@@ -165,9 +165,9 @@ class InputRouterReleasePointerHandoffTests(unittest.TestCase):
         router.route(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_inside}))
 
         self.assertEqual(gui.mouse_pos, release_inside)
-        self.assertEqual(gui._physical_calls[-1], release_inside)
+        self.assertEqual(gui._physical_calls, [])
 
-    def test_scrollbar_release_hint_overrides_edge_clamp_during_router_finalize(self) -> None:
+    def test_scrollbar_release_preserves_release_event_position_without_router_reposition(self) -> None:
         gui = _ReleaseRouterGuiStub(mouse_pos=(25, 15))
         scrollbar = Scrollbar(
             gui,
@@ -198,9 +198,9 @@ class InputRouterReleasePointerHandoffTests(unittest.TestCase):
         router.route(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_inside}))
 
         self.assertEqual(gui.mouse_pos, release_inside)
-        self.assertEqual(gui._physical_calls[-1], release_inside)
+        self.assertEqual(gui._physical_calls, [])
 
-    def test_slider_boundary_touch_release_uses_release_event_position(self) -> None:
+    def test_slider_boundary_touch_release_uses_release_event_position_without_reposition(self) -> None:
         gui = _ReleaseRouterGuiStub()
         slider = Slider(
             gui,
@@ -232,9 +232,9 @@ class InputRouterReleasePointerHandoffTests(unittest.TestCase):
         router.route(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_inside}))
 
         self.assertEqual(gui.mouse_pos, release_inside)
-        self.assertEqual(gui._physical_calls[-1], release_inside)
+        self.assertEqual(gui._physical_calls, [])
 
-    def test_scrollbar_boundary_touch_release_uses_release_event_position(self) -> None:
+    def test_scrollbar_boundary_touch_release_uses_release_event_position_without_reposition(self) -> None:
         gui = _ReleaseRouterGuiStub(mouse_pos=(25, 15))
         scrollbar = Scrollbar(
             gui,
@@ -266,7 +266,7 @@ class InputRouterReleasePointerHandoffTests(unittest.TestCase):
         router.route(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_inside}))
 
         self.assertEqual(gui.mouse_pos, release_inside)
-        self.assertEqual(gui._physical_calls[-1], release_inside)
+        self.assertEqual(gui._physical_calls, [])
 
 
 if __name__ == "__main__":

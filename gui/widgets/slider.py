@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Optional, TYPE_CHECKING
+
 from pygame import Rect, SRCALPHA
 from pygame.draw import line, rect
 from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 from pygame.surface import Surface
-from typing import Optional, TYPE_CHECKING
 
-from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.events import colours, GuiError, InteractiveState, Orientation
 from ..utility.input.normalized_event import normalize_input_event
 from ..utility.input.overlay_drag_guard import cancel_drag_for_overlay_contact
+from ..utility.intermediates.axis_range import AxisRangeMixin
 from ..utility.intermediates.widget import Widget
 
 if TYPE_CHECKING:
@@ -18,8 +20,15 @@ if TYPE_CHECKING:
     from .window import Window
 
 
+@dataclass(frozen=True)
+class _SliderGeometry:
+    track_rect: Rect
+    graphic_rect: Rect
+    draw_rect: Rect
+
+
 class Slider(Widget, AxisRangeMixin):
-    """Single-handle slider supporting optional integer snapping."""
+    """Single-handle slider supporting float and integer logical ranges."""
 
     @property
     def value(self) -> float:
@@ -28,7 +37,7 @@ class Slider(Widget, AxisRangeMixin):
 
     @value.setter
     def value(self, position: float) -> None:
-        """Set slider value with clamping and optional snapping."""
+        """Set slider value with clamping and optional integer snapping."""
         self._position = self.clamp_axis_position(position, self._total_range, self._integer_type)
 
     def __init__(
@@ -47,7 +56,43 @@ class Slider(Widget, AxisRangeMixin):
         """Create Slider."""
         super().__init__(gui, id, rect)
         self._set_orientation(horizontal)
-        layout_rect = Rect(self.draw_rect)
+        self._validate_constructor_args(total_range, integer_type, notch_interval_percent, wheel_positive_to_max, wheel_step)
+
+        self._total_range: int = total_range
+        self._integer_type: bool = integer_type
+        self._notch_interval_percent: float = float(notch_interval_percent)
+        self._wheel_positive_to_max: bool = wheel_positive_to_max
+        self._wheel_step: Optional[float] = None if wheel_step is None else float(wheel_step)
+
+        self.state: InteractiveState = InteractiveState.Idle
+        self._wheel_active: bool = False
+        self._dragging: bool = False
+        self._drag_anchor_offset: int = 0
+
+        self._handle_size: int = self._compute_handle_size(self.draw_rect)
+        geometry = self._build_geometry(self.draw_rect)
+        self._track_rect = geometry.track_rect
+        self._graphic_rect = geometry.graphic_rect
+        self.draw_rect = geometry.draw_rect
+
+        self._track_bitmap = self._build_track_bitmap()
+        self._disabled_track_bitmap = self.gui.graphics_factory.build_disabled_bitmap(self._track_bitmap)
+        self._idle_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['medium'], colours['none'])
+        self._hover_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['highlight'], colours['none'])
+        self._armed_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['highlight'], colours['none'])
+        self._disabled_handle = self.gui.graphics_factory.build_disabled_bitmap(self._idle_handle)
+
+        self.value = position
+
+    def _validate_constructor_args(
+        self,
+        total_range: int,
+        integer_type: bool,
+        notch_interval_percent: float,
+        wheel_positive_to_max: bool,
+        wheel_step: Optional[float],
+    ) -> None:
+        """Validate constructor arguments."""
         if not isinstance(total_range, int) or total_range <= 0:
             raise GuiError(f'total_range must be a positive int, got: {total_range}')
         if not isinstance(integer_type, bool):
@@ -58,68 +103,49 @@ class Slider(Widget, AxisRangeMixin):
             raise GuiError(f'notch_interval_percent must be in (0, 100], got: {notch_interval_percent}')
         if not isinstance(wheel_positive_to_max, bool):
             raise GuiError(f'wheel_positive_to_max must be a bool, got: {wheel_positive_to_max}')
-        if wheel_step is not None:
-            if not isinstance(wheel_step, (int, float)):
-                raise GuiError(f'wheel_step must be None or a number, got: {wheel_step}')
-            if float(wheel_step) <= 0.0:
-                raise GuiError(f'wheel_step must be > 0 when provided, got: {wheel_step}')
+        if wheel_step is None:
+            return
+        if not isinstance(wheel_step, (int, float)):
+            raise GuiError(f'wheel_step must be None or a number, got: {wheel_step}')
+        if float(wheel_step) <= 0.0:
+            raise GuiError(f'wheel_step must be > 0 when provided, got: {wheel_step}')
 
-        self._total_range: int = total_range
-        self._integer_type: bool = integer_type
-        self._notch_interval_percent: float = float(notch_interval_percent)
-        self._wheel_positive_to_max: bool = wheel_positive_to_max
-        self._wheel_step: Optional[float] = None if wheel_step is None else float(wheel_step)
-        self.state: InteractiveState = InteractiveState.Idle
-        self._wheel_active: bool = False
-        self._dragging: bool = False
-        self._drag_anchor_offset: int = 0
-        self._drag_left_widget_bounds: bool = False
-        self._last_in_bounds_screen_pos: Optional[tuple[int, int]] = None
-
+    def _compute_handle_size(self, layout_rect: Rect) -> int:
+        """Compute a visually stable handle size from the layout rect."""
         base_handle_size = max(6, min(layout_rect.width, layout_rect.height) - 4)
         reduced_handle_size = max(6, int(round(base_handle_size * 0.8)))
-        # Keep handle dimensions even to avoid half-pixel visual drift after scaling.
         if reduced_handle_size % 2 != 0:
             reduced_handle_size -= 1
             if reduced_handle_size < 6:
                 reduced_handle_size = 6
-        self._handle_size = reduced_handle_size
-        track_thickness = max(2, min(6, min(layout_rect.width, layout_rect.height) // 3))
+        return reduced_handle_size
 
+    def _build_geometry(self, layout_rect: Rect) -> _SliderGeometry:
+        """Build track, travel, and final draw geometry."""
+        track_thickness = max(2, min(6, min(layout_rect.width, layout_rect.height) // 3))
         if self._horizontal == Orientation.Horizontal:
             track_w = max(1, layout_rect.width)
             track_y = layout_rect.y + self.gui.graphics_factory.centre(layout_rect.height, track_thickness)
-            self._track_rect = Rect(layout_rect.x, track_y, track_w, track_thickness)
+            track_rect = Rect(layout_rect.x, track_y, track_w, track_thickness)
             travel = max(1, layout_rect.width - self._handle_size)
-            handle_y = int(round(self._track_rect.centery - (self._handle_size / 2.0)))
-            self._graphic_rect = Rect(layout_rect.x, handle_y, travel, self._handle_size)
+            handle_y = int(round(track_rect.centery - (self._handle_size / 2.0)))
+            graphic_rect = Rect(layout_rect.x, handle_y, travel, self._handle_size)
+            min_handle = Rect(graphic_rect.x, graphic_rect.y, self._handle_size, self._handle_size)
+            max_handle = Rect(graphic_rect.x + graphic_rect.width, graphic_rect.y, self._handle_size, self._handle_size)
         else:
             track_h = max(1, layout_rect.height)
             track_x = layout_rect.x + self.gui.graphics_factory.centre(layout_rect.width, track_thickness)
-            self._track_rect = Rect(track_x, layout_rect.y, track_thickness, track_h)
+            track_rect = Rect(track_x, layout_rect.y, track_thickness, track_h)
             travel = max(1, layout_rect.height - self._handle_size)
-            handle_x = int(round(self._track_rect.centerx - (self._handle_size / 2.0)))
-            self._graphic_rect = Rect(handle_x, layout_rect.y, self._handle_size, travel)
-
-        # draw_rect should match the actual rendered footprint:
-        # track + handle at both logical range extremes.
-        min_handle = Rect(self._graphic_rect.x, self._graphic_rect.y, self._handle_size, self._handle_size)
-        if self._horizontal == Orientation.Horizontal:
-            max_handle = Rect(self._graphic_rect.x + self._graphic_rect.width, self._graphic_rect.y, self._handle_size, self._handle_size)
-        else:
-            max_handle = Rect(self._graphic_rect.x, self._graphic_rect.y + self._graphic_rect.height, self._handle_size, self._handle_size)
-        self.draw_rect = self._track_rect.union(min_handle).union(max_handle)
-
-        self._track_bitmap = self._build_track_bitmap()
-        self._disabled_track_bitmap = self.gui.graphics_factory.build_disabled_bitmap(self._track_bitmap)
-        self._idle_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['medium'], colours['none'])
-        self._hover_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['highlight'], colours['none'])
-        self._armed_handle = self.gui.graphics_factory.draw_radio_bitmap(self._handle_size, colours['highlight'], colours['none'])
-        self._disabled_handle = self.gui.graphics_factory.build_disabled_bitmap(self._idle_handle)
-        self.value = position
+            handle_x = int(round(track_rect.centerx - (self._handle_size / 2.0)))
+            graphic_rect = Rect(handle_x, layout_rect.y, self._handle_size, travel)
+            min_handle = Rect(graphic_rect.x, graphic_rect.y, self._handle_size, self._handle_size)
+            max_handle = Rect(graphic_rect.x, graphic_rect.y + graphic_rect.height, self._handle_size, self._handle_size)
+        draw_rect = track_rect.union(min_handle).union(max_handle)
+        return _SliderGeometry(track_rect=track_rect, graphic_rect=graphic_rect, draw_rect=draw_rect)
 
     def _on_disabled_changed(self, disabled: bool) -> None:
-        """Keep interaction state and lock semantics in sync with disabled state."""
+        """Synchronize interaction state with disabled transitions."""
         if disabled:
             self._reset_drag()
             self._wheel_active = False
@@ -129,85 +155,85 @@ class Slider(Widget, AxisRangeMixin):
             self.state = InteractiveState.Idle
 
     def _build_track_bitmap(self) -> Surface:
-        """Render transparent range bar with regularly spaced integer ticks."""
+        """Render a transparent track with notch marks."""
         bitmap = Surface((self.draw_rect.width, self.draw_rect.height), SRCALPHA)
         local_track = self._track_rect.move(-self.draw_rect.x, -self.draw_rect.y)
+
         half_handle = self._handle_size // 2
         if self._horizontal == Orientation.Horizontal:
             axis_start = local_track.left + half_handle
             axis_end = local_track.right - half_handle
-            trimmed_width = max(1, axis_end - axis_start)
-            trimmed_track = Rect(axis_start, local_track.top, trimmed_width, local_track.height)
+            trimmed = Rect(axis_start, local_track.top, max(1, axis_end - axis_start), local_track.height)
         else:
             axis_start = local_track.top + half_handle
             axis_end = local_track.bottom - half_handle
-            trimmed_height = max(1, axis_end - axis_start)
-            trimmed_track = Rect(local_track.left, axis_start, local_track.width, trimmed_height)
-        # Use a contrasting fill so the track stays visible on window chrome backgrounds.
-        rect(bitmap, colours['dark'] + (255,), trimmed_track, 0)
+            trimmed = Rect(local_track.left, axis_start, local_track.width, max(1, axis_end - axis_start))
 
-        def notch_pixel(value: float, start: int, span: int) -> int:
-            if self._total_range <= 0 or span <= 0:
-                return start
-            ratio = float(value) / float(self._total_range)
-            return int(round(start + (ratio * span)))
+        rect(bitmap, colours['dark'] + (255,), trimmed, 0)
 
-        for point in self._notch_points():
+        for notch in self._notch_points():
             if self._horizontal == Orientation.Horizontal:
-                centre_x = notch_pixel(point, trimmed_track.left, max(0, trimmed_track.width - 1))
-                notch_extension = 2
-                y1 = local_track.top - notch_extension
-                y2 = (local_track.bottom - 1) + notch_extension
-                line(bitmap, colours['full'] + (200,), (centre_x, y1), (centre_x, y2), 1)
+                center = self._notch_pixel(notch, trimmed.left, max(0, trimmed.width - 1))
+                y1 = trimmed.top - 2
+                y2 = (trimmed.bottom - 1) + 2
+                line(bitmap, colours['full'] + (200,), (center, y1), (center, y2), 1)
             else:
-                centre_y = notch_pixel(point, trimmed_track.top, max(0, trimmed_track.height - 1))
-                notch_extension = 2
-                x1 = local_track.left - notch_extension
-                x2 = (local_track.right - 1) + notch_extension
-                line(bitmap, colours['full'] + (200,), (x1, centre_y), (x2, centre_y), 1)
+                center = self._notch_pixel(notch, trimmed.top, max(0, trimmed.height - 1))
+                x1 = trimmed.left - 2
+                x2 = (trimmed.right - 1) + 2
+                line(bitmap, colours['full'] + (200,), (x1, center), (x2, center), 1)
         return bitmap
 
+    def _notch_pixel(self, value: float, start: int, span: int) -> int:
+        """Map logical notch to a local axis pixel."""
+        if self._total_range <= 0 or span <= 0:
+            return start
+        ratio = float(value) / float(self._total_range)
+        return int(round(start + (ratio * span)))
+
     def _notch_points(self) -> list[float]:
-        """Return logical notch positions along the slider range."""
+        """Return logical notch positions across the slider range."""
         if self._integer_type:
-            return [float(index) for index in range(0, self._total_range + 1)]
+            return [float(i) for i in range(0, self._total_range + 1)]
+
         interval_units = (self._total_range * self._notch_interval_percent) / 100.0
         if interval_units <= 0.0:
             interval_units = 1.0
-        tick_positions: list[float] = []
-        tick = 0.0
-        max_tick = float(self._total_range)
-        while tick <= max_tick:
-            tick_positions.append(tick)
-            tick += interval_units
-        if not tick_positions or tick_positions[-1] != max_tick:
-            tick_positions.append(max_tick)
-        return tick_positions
+
+        points: list[float] = []
+        current = 0.0
+        maximum = float(self._total_range)
+        while current <= maximum:
+            points.append(current)
+            current += interval_units
+        if not points or points[-1] != maximum:
+            points.append(maximum)
+        return points
 
     def _handle_area(self) -> Rect:
-        """Return current slider handle rect in window/screen coordinates."""
-        pixel_point = self.total_to_pixel(self._position, self._total_range)
+        """Return current handle rect in widget coordinates."""
+        axis_pixel = self.total_to_pixel(self._position, self._total_range)
         if self._horizontal == Orientation.Horizontal:
-            return Rect(self._graphic_rect.x + pixel_point, self._graphic_rect.y, self._handle_size, self._handle_size)
-        return Rect(self._graphic_rect.x, self._graphic_rect.y + pixel_point, self._handle_size, self._handle_size)
+            return Rect(self._graphic_rect.x + axis_pixel, self._graphic_rect.y, self._handle_size, self._handle_size)
+        return Rect(self._graphic_rect.x, self._graphic_rect.y + axis_pixel, self._handle_size, self._handle_size)
 
     def _wheel_hit_area(self) -> Rect:
-        """Return wheel-hit corridor matching handle thickness across full bar travel."""
+        """Return wheel interaction corridor covering full handle travel."""
         if self._horizontal == Orientation.Horizontal:
             return Rect(self._graphic_rect.x, self._graphic_rect.y, self._graphic_rect.width + self._handle_size, self._handle_size)
         return Rect(self._graphic_rect.x, self._graphic_rect.y, self._handle_size, self._graphic_rect.height + self._handle_size)
 
     def _resolve_wheel_step(self) -> float:
-        """Return per-notch logical wheel movement for this slider."""
-        if self._wheel_step is None:
-            default_step = float(self._total_range) * 0.1
-            if self._integer_type:
-                return float(round(default_step))
-            return default_step
-        return self._wheel_step
+        """Resolve wheel step size in logical units."""
+        if self._wheel_step is not None:
+            return self._wheel_step
+        default_step = float(self._total_range) * 0.1
+        if self._integer_type:
+            return float(round(default_step))
+        return default_step
 
     def leave(self) -> None:
-        """Reset hover state when focus leaves this widget."""
+        """Reset non-drag hover state when pointer leaves the widget."""
         if self._dragging:
             return
         self._wheel_active = False
@@ -217,12 +243,14 @@ class Slider(Widget, AxisRangeMixin):
             self.state = InteractiveState.Idle
 
     def handle_event(self, event: PygameEvent, window: Optional["Window"]) -> bool:
-        """Handle dragging interactions for slider handle movement."""
+        """Handle wheel/drag interactions for logical value updates."""
         if self.disabled:
             return False
         if event.type not in (MOUSEBUTTONDOWN, MOUSEMOTION, MOUSEBUTTONUP, MOUSEWHEEL):
             return False
+
         normalized = normalize_input_event(event)
+
         if event.type == MOUSEWHEEL:
             mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
             if self._dragging or not self._wheel_hit_area().collidepoint(mouse_point):
@@ -237,6 +265,7 @@ class Slider(Widget, AxisRangeMixin):
             self._wheel_active = True
             self.state = InteractiveState.Armed
             return True
+
         if event.type in (MOUSEMOTION, MOUSEBUTTONUP):
             if cancel_drag_for_overlay_contact(
                 self.gui,
@@ -248,31 +277,29 @@ class Slider(Widget, AxisRangeMixin):
                 return True
 
         mouse_point = self.gui._convert_to_window(self.gui._get_mouse_pos(), window)
+
         if event.type == MOUSEBUTTONDOWN:
             if not normalized.is_left_down:
                 return False
-            handle_area = self._handle_area()
-            if not handle_area.collidepoint(mouse_point):
+            handle_rect = self._handle_area()
+            if not handle_rect.collidepoint(mouse_point):
                 return False
-            self._drag_left_widget_bounds = False
-            down_pos = normalized.pos
-            if isinstance(down_pos, tuple) and len(down_pos) == 2:
-                self._last_in_bounds_screen_pos = down_pos
+
             if self._horizontal == Orientation.Horizontal:
-                self._drag_anchor_offset = mouse_point[0] - handle_area.x
+                self._drag_anchor_offset = mouse_point[0] - handle_rect.x
                 lock_x = self._graphic_rect.x + self._drag_anchor_offset
                 lock_y = mouse_point[1]
                 lock_w = self._graphic_rect.width + 1
                 lock_h = 1
             else:
-                self._drag_anchor_offset = mouse_point[1] - handle_area.y
+                self._drag_anchor_offset = mouse_point[1] - handle_rect.y
                 lock_x = mouse_point[0]
                 lock_y = self._graphic_rect.y + self._drag_anchor_offset
                 lock_w = 1
                 lock_h = self._graphic_rect.height + 1
-            screen_x, screen_y = self.gui._convert_to_screen((lock_x, lock_y), window)
-            lock_rect = Rect(screen_x, screen_y, lock_w, lock_h)
-            self.gui.set_lock_area(self, lock_rect)
+
+            lock_screen_x, lock_screen_y = self.gui._convert_to_screen((lock_x, lock_y), window)
+            self.gui.set_lock_area(self, Rect(lock_screen_x, lock_screen_y, lock_w, lock_h))
             self._dragging = True
             self.state = InteractiveState.Armed
             return True
@@ -288,40 +315,21 @@ class Slider(Widget, AxisRangeMixin):
                 else:
                     self.state = InteractiveState.Idle
                 return False
-            motion_pos = normalized.pos
-            motion_point = None
-            if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
-                motion_point = self.gui._convert_to_window(motion_pos, window)
-                draw_rect = self.draw_rect
-                if draw_rect.collidepoint(motion_point):
-                    self._last_in_bounds_screen_pos = motion_pos
-            draw_rect = self.draw_rect
-            leave_check_point = motion_point if motion_point is not None else mouse_point
-            if not draw_rect.collidepoint(leave_check_point):
-                self._drag_left_widget_bounds = True
+
+            drag_pos = normalized.pos if isinstance(normalized.pos, tuple) and len(normalized.pos) == 2 else self.gui._get_mouse_pos()
+            drag_point = self.gui._convert_to_window(drag_pos, window)
             if self._horizontal == Orientation.Horizontal:
-                axis_pixel = mouse_point[0] - self._graphic_rect.x - self._drag_anchor_offset
+                axis_pixel = drag_point[0] - self._graphic_rect.x - self._drag_anchor_offset
             else:
-                axis_pixel = mouse_point[1] - self._graphic_rect.y - self._drag_anchor_offset
+                axis_pixel = drag_point[1] - self._graphic_rect.y - self._drag_anchor_offset
             self.value = self.pixel_to_total(axis_pixel, self._total_range)
             self.state = InteractiveState.Armed
             return True
 
         if not normalized.is_left_up or not self._dragging:
             return False
-        resolved_release_pos = None
-        release_pos = normalized.pos
-        if isinstance(release_pos, tuple) and len(release_pos) == 2:
-            release_point = self.gui._convert_to_window(release_pos, window)
-            draw_rect = self.draw_rect
-            if draw_rect.collidepoint(release_point):
-                resolved_release_pos = release_pos
-        if resolved_release_pos is None and self._drag_left_widget_bounds:
-            resolved_release_pos = self._last_in_bounds_screen_pos
         self._reset_drag()
-        if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
-            self.gui.release_pointer_hint = resolved_release_pos
-            self.gui._set_mouse_pos(resolved_release_pos, False)
+
         if self._wheel_active and self._wheel_hit_area().collidepoint(mouse_point):
             self.state = InteractiveState.Armed
         elif self._handle_area().collidepoint(mouse_point):
@@ -335,11 +343,9 @@ class Slider(Widget, AxisRangeMixin):
         self.gui.set_lock_area(None)
         self._dragging = False
         self._drag_anchor_offset = 0
-        self._drag_left_widget_bounds = False
-        self._last_in_bounds_screen_pos = None
 
     def draw(self) -> None:
-        """Draw slider track and handle in the current interaction state."""
+        """Draw the slider track and handle."""
         super().draw()
         if self.disabled:
             self.surface.blit(self._disabled_track_bitmap, (self.draw_rect.x, self.draw_rect.y))
@@ -352,5 +358,6 @@ class Slider(Widget, AxisRangeMixin):
                 handle = self._hover_handle
             else:
                 handle = self._idle_handle
+
         handle_rect = self._handle_area()
         self.surface.blit(handle, (handle_rect.x, handle_rect.y))

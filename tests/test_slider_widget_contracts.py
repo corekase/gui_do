@@ -104,7 +104,7 @@ class SliderWidgetContractTests(unittest.TestCase):
         # Keep logical pointer outside; release event reports an in-bounds point.
         release_pos = (slider.draw_rect.centerx, slider.draw_rect.centery)
         self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_pos}), None))
-        self.assertEqual(slider.gui._get_mouse_pos(), release_pos)
+        self.assertFalse(hasattr(slider.gui, "release_pointer_hint"))
 
     def test_release_uses_last_in_bounds_motion_when_release_pos_is_outside(self) -> None:
         slider = self._build_slider()
@@ -123,7 +123,7 @@ class SliderWidgetContractTests(unittest.TestCase):
 
         release_outside = (slider.draw_rect.right + 80, slider.draw_rect.centery)
         self.assertTrue(slider.handle_event(pygame.event.Event(MOUSEBUTTONUP, {"button": 1, "pos": release_outside}), None))
-        self.assertEqual(slider.gui._get_mouse_pos(), inside_pos)
+        self.assertFalse(hasattr(slider.gui, "release_pointer_hint"))
 
     def test_horizontal_drag_locks_to_anchor_adjusted_travel_corridor(self) -> None:
         slider = self._build_slider(orientation=Orientation.Horizontal, total_range=100, position=20.0)

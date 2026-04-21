@@ -367,14 +367,13 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._total_range = 100
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
-        scrollbar._last_mouse_pos = None
         scrollbar._drag_left_widget_bounds = False
         scrollbar._last_in_bounds_screen_pos = None
         scrollbar.gui = build_mouse_gui_stub(mouse_pos=(20, 40))
 
         motion = pygame.event.Event(MOUSEMOTION, {})
-        self.assertFalse(scrollbar.handle_event(motion, None))
-        self.assertEqual(scrollbar._last_mouse_pos, 30)
+        self.assertTrue(scrollbar.handle_event(motion, None))
+        self.assertEqual(scrollbar._start_pos, 30)
         self.assertEqual(Scrollbar._graphical_range(scrollbar), 100)
 
     def test_disabled_scrollbar_does_not_process_input(self) -> None:

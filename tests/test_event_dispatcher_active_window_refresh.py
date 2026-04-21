@@ -195,14 +195,16 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         self.assertEqual(self.gui.mouse_pos, (99, 49))
 
-    def test_button_up_sync_clamps_event_position_when_lock_area_active(self) -> None:
+    def test_button_up_sync_preserves_event_position_when_lock_area_active(self) -> None:
         self.gui.lock_state.clamp_position = lambda pos: (min(max(pos[0], 0), 99), min(max(pos[1], 0), 49))
+        self.gui.mouse_locked = True
+        self.gui.mouse_point_locked = False
         self.gui.mouse_pos = (10, 10)
 
         event = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (140, 80)})
         self.dispatcher.router._sync_pointer_from_mouse_event(event, normalize_input_event(event))
 
-        self.assertEqual(self.gui.mouse_pos, (99, 49))
+        self.assertEqual(self.gui.mouse_pos, (140, 80))
 
     def test_button_up_uses_event_pos_when_inside_lock_owner_draw_rect(self) -> None:
         self.gui.lock_state.clamp_position = lambda pos: (min(max(pos[0], 10), 10), min(max(pos[1], 10), 10))
@@ -233,7 +235,7 @@ class EventDispatcherActiveWindowRefreshBatch5Tests(unittest.TestCase):
 
         release = pygame.event.Event(MOUSEBUTTONUP, {'button': 1, 'pos': (140, 80)})
         self.dispatcher.router._sync_pointer_from_mouse_event(release, normalize_input_event(release))
-        self.assertEqual(self.gui.mouse_pos, (99, 49))
+        self.assertEqual(self.gui.mouse_pos, (140, 80))
 
         self.gui.mouse_locked = False
         self.gui.lock_area_rect = None
