@@ -97,31 +97,35 @@ class GuiEvent:
 
     @classmethod
     def from_pygame(cls, event, pointer_pos: Optional[Tuple[int, int]] = None) -> "GuiEvent":
-        event_type = int(getattr(event, "type", 0))
+        try:
+            event_type = int(event.type)
+            payload = event.dict
+        except AttributeError as exc:
+            raise TypeError("expected pygame event with type and dict fields") from exc
         kind = _PYGAME_KIND_MAP.get(event_type, EventType.PASS)
 
-        pos = getattr(event, "pos", None)
+        pos = payload.get("pos")
         if not (isinstance(pos, tuple) and len(pos) == 2):
             pos = None
 
         if event_type == pygame.MOUSEWHEEL and pos is None and pointer_pos is not None:
             pos = (int(pointer_pos[0]), int(pointer_pos[1]))
 
-        rel = getattr(event, "rel", None)
+        rel = payload.get("rel")
         if not (isinstance(rel, tuple) and len(rel) == 2):
             rel = None
 
-        key = getattr(event, "key", None)
+        key = payload.get("key")
         if key is not None:
             key = int(key)
 
-        button = getattr(event, "button", None)
+        button = payload.get("button")
         if button is not None:
             button = int(button)
 
-        wheel_x = int(getattr(event, "x", 0)) if event_type == pygame.MOUSEWHEEL else 0
-        wheel_y = int(getattr(event, "y", 0)) if event_type == pygame.MOUSEWHEEL else 0
-        text = getattr(event, "text", None)
+        wheel_x = int(payload.get("x", 0)) if event_type == pygame.MOUSEWHEEL else 0
+        wheel_y = int(payload.get("y", 0)) if event_type == pygame.MOUSEWHEEL else 0
+        text = payload.get("text")
 
         return cls(
             kind=kind,

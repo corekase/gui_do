@@ -1,7 +1,11 @@
 from pygame import Rect
-from pygame.draw import rect as draw_rect
+from typing import TYPE_CHECKING
 
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..theme.color_theme import ColorTheme
 
 
 class FrameControl(UiNode):
@@ -13,12 +17,8 @@ class FrameControl(UiNode):
         self._visuals = None
         self._visual_size = None
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.medium, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, self.border_width)
-            return
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
         visual_size = (self.rect.width, self.rect.height)
         if self._visuals is None or self._visual_size != visual_size:
             self._visuals = factory.build_frame_visuals(self.rect)

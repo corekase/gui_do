@@ -1,7 +1,11 @@
 import pygame
+from typing import TYPE_CHECKING
 from pygame import Rect
 
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    from ..theme.color_theme import ColorTheme
 
 
 class ImageControl(UiNode):
@@ -15,5 +19,5 @@ class ImageControl(UiNode):
         if self.scale:
             self._image = pygame.transform.smoothscale(self._image, self.rect.size)
 
-    def draw(self, surface, _theme) -> None:
+    def draw(self, surface: pygame.Surface, _theme: "ColorTheme") -> None:
         surface.blit(self._image, self.rect)

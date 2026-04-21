@@ -1,9 +1,13 @@
-import pygame
-
 from typing import List
+from typing import TYPE_CHECKING
 
-from .gui_event import EventType
+from .gui_event import GuiEvent
 from .ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class Scene:
@@ -21,25 +25,32 @@ class Scene:
             if node.visible:
                 node.update(dt_seconds)
 
-    def _is_window_like(self, node) -> bool:
-        return hasattr(node, "title_bar_rect") and hasattr(node, "lower_widget_rect") and hasattr(node, "move_by")
+    def _is_window_like(self, node: UiNode) -> bool:
+        return node.is_window()
 
-    def _is_task_panel(self, node) -> bool:
-        return getattr(node, "control_id", None) == "task_panel"
+    def _is_task_panel(self, node: UiNode) -> bool:
+        return node.is_task_panel()
+
+    def _walk_nodes(self) -> List[UiNode]:
+        stack = list(self.nodes)
+        ordered: List[UiNode] = []
+        while stack:
+            node = stack.pop(0)
+            ordered.append(node)
+            stack.extend(node.children)
+        return ordered
 
     def _window_nodes(self) -> List[UiNode]:
-        windows: List[UiNode] = []
-        for node in self.nodes:
-            children = getattr(node, "children", None)
-            if not children:
-                continue
-            for child in children:
-                if self._is_window_like(child):
-                    windows.append(child)
-        return windows
+        return [node for node in self._walk_nodes() if self._is_window_like(node)]
+
+    def active_window(self) -> UiNode | None:
+        for window in reversed(self._window_nodes()):
+            if window.active and window.visible and window.enabled:
+                return window
+        return None
 
     def _point_in_task_panel(self, pos) -> bool:
-        for node in self.nodes:
+        for node in self._walk_nodes():
             if self._is_task_panel(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
                 return True
         return False
@@ -52,26 +63,11 @@ class Scene:
 
     def _clear_active_windows(self) -> None:
         for node in self.nodes:
-            clear_method = getattr(node, "_clear_active_windows", None)
-            if callable(clear_method):
-                clear_method()
+            node._clear_active_windows()
 
-    def dispatch(self, event, app) -> bool:
-        is_left_down = False
-        is_mouse_down = getattr(event, "is_mouse_down", None)
-        if callable(is_mouse_down):
-            is_left_down = bool(is_mouse_down(1))
-        else:
-            is_left_down = bool(
-                (
-                    getattr(event, "kind", None) == EventType.MOUSE_BUTTON_DOWN
-                    or getattr(event, "type", None) == pygame.MOUSEBUTTONDOWN
-                )
-                and getattr(event, "button", None) == 1
-            )
-
-        if is_left_down:
-            pos = getattr(event, "pos", None)
+    def dispatch(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if event.is_mouse_down(1):
+            pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
                 if not self._point_in_task_panel(pos) and not self._point_in_window(pos):
                     self._clear_active_windows()
@@ -80,7 +76,7 @@ class Scene:
                 return True
         return False
 
-    def draw(self, surface, theme) -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         for node in self.nodes:
             if node.visible:
                 node.draw(surface, theme)

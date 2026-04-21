@@ -224,7 +224,7 @@ class GuiApplication:
                 self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
                 self.input_state.pointer_pos = self._logical_pointer_pos
                 gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
-        raw_pos = getattr(gui_event, "pos", None)
+        raw_pos = gui_event.pos
         if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
             self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
         if self.lock_area is not None:
@@ -269,10 +269,9 @@ class GuiApplication:
     def _enforce_point_lock(self, event) -> None:
         if self.lock_point_pos is None:
             return
-        event_type = getattr(event, "type", None)
-        if event_type != pygame.MOUSEMOTION:
+        if not event.is_mouse_motion():
             return
-        raw_pos = getattr(event, "pos", None)
+        raw_pos = event.pos
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return
         if self._point_lock_recenter_rect.collidepoint(raw_pos):
@@ -317,11 +316,9 @@ class GuiApplication:
     def get_lock_point_motion_delta(self, event):
         if not self.mouse_point_locked or self.lock_point_pos is None:
             return None
-        if getattr(event, "type", None) != pygame.MOUSEMOTION:
+        if not event.is_mouse_motion():
             return None
-        raw_pos = getattr(event, "raw_pos", None)
-        if raw_pos is None:
-            raw_pos = getattr(event, "pos", None)
+        raw_pos = event.raw_pos
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return None
         raw_pos = (int(raw_pos[0]), int(raw_pos[1]))
@@ -335,9 +332,7 @@ class GuiApplication:
         self._lock_point_last_raw_pos = raw_pos
         if dx != 0 or dy != 0:
             return (dx, dy)
-        rel = getattr(event, "raw_rel", None)
-        if rel is None:
-            rel = getattr(event, "rel", None)
+        rel = event.raw_rel
         if isinstance(rel, tuple) and len(rel) == 2:
             return (int(rel[0]), int(rel[1]))
         return (0, 0)
@@ -347,20 +342,19 @@ class GuiApplication:
         return self._logical_pointer_pos
 
     def _logicalize_pointer_event(self, event):
-        event_type = getattr(event, "type", None)
-        if event_type not in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+        if not event.is_kind(EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):
             return event
-        raw_pos = getattr(event, "pos", None)
+        raw_pos = event.pos
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return event
 
         logical_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
         logical_event = replace(event, raw_pos=raw_pos, pos=logical_pos)
-        if event_type == pygame.MOUSEMOTION:
+        if event.is_mouse_motion():
             prev = self._last_dispatched_pointer_pos
             logical_event = replace(
                 logical_event,
-                raw_rel=getattr(event, "rel", None),
+                raw_rel=event.rel,
                 rel=(logical_pos[0] - prev[0], logical_pos[1] - prev[1]),
             )
         self._last_dispatched_pointer_pos = logical_pos

@@ -1,8 +1,13 @@
 from typing import Dict, Tuple
+from typing import TYPE_CHECKING
 
 from pygame import Rect
 
+from ..core.gui_event import GuiEvent
 from .panel_control import PanelControl
+
+if TYPE_CHECKING:
+    from ..app.gui_application import GuiApplication
 
 
 class TaskPanelControl(PanelControl):
@@ -31,6 +36,9 @@ class TaskPanelControl(PanelControl):
         if self.dock_bottom:
             return int(self._shown_y + self.rect.height - self.hidden_peek_pixels)
         return int(self._shown_y - self.rect.height + self.hidden_peek_pixels)
+
+    def is_task_panel(self) -> bool:
+        return True
 
     def add(self, child):
         added = super().add(child)
@@ -69,9 +77,9 @@ class TaskPanelControl(PanelControl):
         self._sync_children_to_panel_position()
         super().update(0.0)
 
-    def handle_event(self, event, app) -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         self._sync_children_to_panel_position()
-        raw = getattr(event, "pos", None)
+        raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
         return super().handle_event(event, app)

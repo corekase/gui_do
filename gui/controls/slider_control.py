@@ -1,9 +1,15 @@
 from pygame import Rect
-from pygame.draw import rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
+from typing import TYPE_CHECKING
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class SliderControl(UiNode):
@@ -69,9 +75,9 @@ class SliderControl(UiNode):
             return Rect(travel.left, pointer_pos[1], travel.width + 1, 1)
         return Rect(pointer_pos[0], travel.top, 1, travel.height + 1)
 
-    def handle_event(self, event, app) -> bool:
-        raw = getattr(event, "pos", None)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):
                 handle = self.handle_rect()
                 if self.axis == LayoutAxis.HORIZONTAL:
@@ -92,27 +98,21 @@ class SliderControl(UiNode):
             self._clamp_value()
             return True
 
-        if event.type == MOUSEBUTTONUP and getattr(event, "button", None) == 1 and self.dragging:
+        if event.type == MOUSEBUTTONUP and event.button == 1 and self.dragging:
             self.dragging = False
             app.pointer_capture.end(self.control_id)
             return True
 
         if event.type == MOUSEWHEEL and self.rect.collidepoint(app.input_state.pointer_pos):
-            self.value += float(getattr(event, "y", 0)) * ((self.maximum - self.minimum) * 0.05)
+            self.value += float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)
             self._clamp_value()
             return True
         return False
 
-    def draw(self, surface, theme) -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         travel = self._travel_rect()
         handle = self.handle_rect()
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.dark, travel, 0)
-            fill = theme.dark if self.dragging else theme.light
-            draw_rect(surface, fill, handle, 0)
-            draw_rect(surface, theme.dark, handle, 2)
-            return
+        factory = theme.graphics_factory
         travel_size = (travel.width, travel.height)
         handle_size = (handle.width, handle.height)
         if self._track_visuals is None or self._track_visuals_size != travel_size:

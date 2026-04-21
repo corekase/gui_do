@@ -1,9 +1,15 @@
 from pygame import Rect
-from pygame.draw import rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
+from typing import TYPE_CHECKING
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class ScrollbarControl(UiNode):
@@ -83,9 +89,9 @@ class ScrollbarControl(UiNode):
             return Rect(track.left, pointer_pos[1], track.width + 1, 1)
         return Rect(pointer_pos[0], track.top, 1, track.height + 1)
 
-    def handle_event(self, event, app) -> bool:
-        raw = getattr(event, "pos", None)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):
                 handle = self.handle_rect()
                 if self.axis == LayoutAxis.HORIZONTAL:
@@ -107,27 +113,21 @@ class ScrollbarControl(UiNode):
             self._clamp_offset()
             return True
 
-        if event.type == MOUSEBUTTONUP and getattr(event, "button", None) == 1 and self.dragging:
+        if event.type == MOUSEBUTTONUP and event.button == 1 and self.dragging:
             self.dragging = False
             app.pointer_capture.end(self.control_id)
             return True
 
         if event.type == MOUSEWHEEL and self.rect.collidepoint(app.input_state.pointer_pos):
-            self.offset -= int(getattr(event, "y", 0)) * self.step
+            self.offset -= int(event.wheel_delta) * self.step
             self._clamp_offset()
             return True
         return False
 
-    def draw(self, surface, theme) -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         track = self._track_rect()
         handle = self.handle_rect()
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.dark, track, 0)
-            fill = theme.dark if self.dragging else theme.light
-            draw_rect(surface, fill, handle, 0)
-            draw_rect(surface, theme.dark, handle, 2)
-            return
+        factory = theme.graphics_factory
         track_size = (track.width, track.height)
         handle_size = (handle.width, handle.height)
         if self._track_visuals is None or self._track_visuals_size != track_size:

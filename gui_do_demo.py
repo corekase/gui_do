@@ -284,12 +284,8 @@ class GuiDoDemo:
             self._tile_visible_windows()
 
     def _visible_windows_for_tiling(self):
-        windows = []
-        for name in ("life_window", "mandel_window"):
-            window = getattr(self, name, None)
-            if window is not None and window.visible:
-                windows.append(window)
-        return windows
+        windows = [self.life_window, self.mandel_window]
+        return [window for window in windows if window.visible]
 
     def _tile_visible_windows(self, newly_visible=None) -> None:
         if not self.app.read_window_tiling_settings().get("enabled", False):

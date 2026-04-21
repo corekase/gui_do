@@ -244,7 +244,7 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         panel.update(0.016)
         self.assertLess(panel.rect.y, 20)
 
-        event = SimpleNamespace(pos=(15, panel.rect.y + 2))
+        event = GuiEvent(kind=EventType.MOUSE_MOTION, type=pygame.MOUSEMOTION, pos=(15, panel.rect.y + 2))
         panel.handle_event(event, None)
         for _ in range(10):
             panel.update(0.016)

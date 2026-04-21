@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from typing import Callable, Optional
+from typing import TYPE_CHECKING
 
-import pygame
 from pygame import Rect
-from pygame.draw import polygon, rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class ArrowBoxControl(UiNode):
@@ -35,40 +40,26 @@ class ArrowBoxControl(UiNode):
         if self.on_activate is not None:
             self.on_activate()
 
-    def handle_event(self, event, app) -> bool:
-        raw = getattr(event, "pos", None)
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self._pressed = True
                 self._invoke()
                 if self.repeat_interval_seconds > 0:
                     app.timers.add_timer(self._timer_id, self.repeat_interval_seconds, self._invoke)
                 return True
-        if event.type == MOUSEBUTTONUP and getattr(event, "button", None) == 1:
+        if event.type == MOUSEBUTTONUP and event.button == 1:
             if self._pressed:
                 self._pressed = False
                 app.timers.remove_timer(self._timer_id)
                 return True
         return False
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.dark if self._pressed else theme.medium, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-            cx, cy = self.rect.center
-            if self.direction in (90, 270):
-                points = [(cx - 4, cy - 6), (cx + 4, cy - 6), (cx, cy + 6)]
-                if self.direction == 270:
-                    points = [(cx - 4, cy + 6), (cx + 4, cy + 6), (cx, cy - 6)]
-            else:
-                points = [(cx - 6, cy - 4), (cx - 6, cy + 4), (cx + 6, cy)]
-                if self.direction == 180:
-                    points = [(cx + 6, cy - 4), (cx + 6, cy + 4), (cx - 6, cy)]
-            polygon(surface, theme.text, points)
-            return
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
         visual_key = (self.rect.width, self.rect.height, int(self.direction) % 360)
         if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.draw_arrow_visuals(self.rect, self.direction)

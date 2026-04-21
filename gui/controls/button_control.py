@@ -1,12 +1,16 @@
 from typing import Callable, Optional
-
-import pygame
+from typing import TYPE_CHECKING
 
 from pygame import Rect
-from pygame.draw import rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class ButtonControl(UiNode):
@@ -22,15 +26,15 @@ class ButtonControl(UiNode):
         self._visuals = None
         self._visual_key = None
 
-    def handle_event(self, event, app) -> bool:
-        raw = getattr(event, "pos", None)
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self.pressed = True
                 return True
-        if event.type == MOUSEBUTTONUP and getattr(event, "button", None) == 1:
+        if event.type == MOUSEBUTTONUP and event.button == 1:
             was_pressed = self.pressed
             self.pressed = False
             if was_pressed and self.hovered:
@@ -40,19 +44,8 @@ class ButtonControl(UiNode):
             return was_pressed
         return False
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            if self.pressed and self.hovered:
-                fill = theme.dark
-            else:
-                fill = theme.light if self.hovered else theme.medium
-            draw_rect(surface, fill, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-            text_bitmap = theme.render_text(self.text, size=16, title=False, color=theme.text, shadow=True)
-            text_rect = text_bitmap.get_rect(center=self.rect.center)
-            surface.blit(text_bitmap, text_rect)
-            return
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
         visual_key = (self.style, self.text, self.rect.width, self.rect.height)
         if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.build_interactive_visuals(self.style, self.text, self.rect)

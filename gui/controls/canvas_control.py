@@ -1,12 +1,16 @@
 from collections import deque
 from dataclasses import dataclass
 from typing import Callable, Deque, Optional
+from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
-from pygame.draw import rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    from ..theme.color_theme import ColorTheme
 
 
 @dataclass
@@ -57,19 +61,19 @@ class CanvasControl(UiNode):
             return None
         return self._events.popleft()
 
-    def handle_event(self, event, _app) -> bool:
-        raw = getattr(event, "pos", None)
+    def handle_event(self, event: GuiEvent, _app) -> bool:
+        raw = event.pos
         if not (isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)):
             return False
 
         packet = CanvasEventPacket(
             event_type=event.type,
             pos=raw,
-            rel=getattr(event, "rel", None),
-            button=getattr(event, "button", None),
-            wheel_delta=getattr(event, "y", None),
+            rel=event.rel,
+            button=event.button,
+            wheel_delta=event.wheel_delta,
         )
-        if event.type == MOUSEMOTION and self.coalesce_motion_events and self._events:
+        if event.is_mouse_motion() and self.coalesce_motion_events and self._events:
             last = self._events[-1]
             if last.event_type == MOUSEMOTION:
                 self._events[-1] = packet
@@ -85,26 +89,20 @@ class CanvasControl(UiNode):
         self._events.append(packet)
         if self.on_overflow is not None and self._dropped_events > 0:
             self.on_overflow(self._dropped_events, len(self._events))
-        if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL):
-            return True
-        return False
+        return event.is_mouse_down() or event.is_mouse_up() or event.is_mouse_motion() or event.is_mouse_wheel()
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.medium, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-        else:
-            visual_size = (self.rect.width, self.rect.height)
-            if self._visuals is None or self._visual_size != visual_size:
-                self._visuals = factory.build_frame_visuals(self.rect)
-                self._visual_size = visual_size
-            selected = factory.resolve_visual_state(
-                self._visuals,
-                visible=self.visible,
-                enabled=self.enabled,
-                armed=False,
-                hovered=False,
-            )
-            surface.blit(selected, self.rect)
+    def draw(self, surface: Surface, theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
+        visual_size = (self.rect.width, self.rect.height)
+        if self._visuals is None or self._visual_size != visual_size:
+            self._visuals = factory.build_frame_visuals(self.rect)
+            self._visual_size = visual_size
+        selected = factory.resolve_visual_state(
+            self._visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=False,
+            hovered=False,
+        )
+        surface.blit(selected, self.rect)
         surface.blit(self.canvas, self.rect)

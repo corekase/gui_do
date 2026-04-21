@@ -1,10 +1,15 @@
 from typing import List, Optional
+from typing import TYPE_CHECKING
 
-import pygame
 from pygame import Rect
-from pygame.draw import rect as draw_rect
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class PanelControl(UiNode):
@@ -20,7 +25,7 @@ class PanelControl(UiNode):
         self._visual_size = None
 
     def _is_window_like(self, child: UiNode) -> bool:
-        return hasattr(child, "title_bar_rect") and hasattr(child, "lower_widget_rect") and hasattr(child, "move_by")
+        return child.is_window()
 
     def _window_children(self) -> List[UiNode]:
         windows: List[UiNode] = []
@@ -37,10 +42,7 @@ class PanelControl(UiNode):
         return windows
 
     def _set_window_active_state(self, window: UiNode, is_active: bool) -> None:
-        if hasattr(window, "_active"):
-            window._active = bool(is_active)
-            return
-        window.active = bool(is_active)
+        window.set_active(bool(is_active))
 
     def _top_window_at(self, pos) -> Optional[UiNode]:
         for child in reversed(self.children):
@@ -110,13 +112,11 @@ class PanelControl(UiNode):
             if child.visible:
                 child.update(dt_seconds)
 
-    def handle_event(self, event, app) -> bool:
-        event_type = getattr(event, "type", None)
-        raw = getattr(event, "pos", None)
-        button = getattr(event, "button", None)
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
 
-        if event_type == pygame.MOUSEMOTION and self._drag_window is not None:
-            rel = getattr(event, "rel", None)
+        if event.is_mouse_motion() and self._drag_window is not None:
+            rel = event.rel
             if isinstance(rel, tuple) and len(rel) == 2:
                 dx, dy = int(rel[0]), int(rel[1])
             elif isinstance(raw, tuple) and len(raw) == 2 and self._drag_last_pos is not None:
@@ -129,13 +129,13 @@ class PanelControl(UiNode):
                 self._drag_last_pos = raw
             return True
 
-        if event_type == pygame.MOUSEBUTTONUP and button == 1 and self._drag_window is not None:
+        if event.is_mouse_up(1) and self._drag_window is not None:
             app.pointer_capture.end(self._drag_window.control_id)
             self._drag_window = None
             self._drag_last_pos = None
             return True
 
-        if event_type == pygame.MOUSEBUTTONDOWN and button == 1 and isinstance(raw, tuple) and len(raw) == 2:
+        if event.is_mouse_down(1) and isinstance(raw, tuple) and len(raw) == 2:
             window = self._top_window_at(raw)
             if window is not None:
                 self._set_active_window(window)
@@ -159,25 +159,21 @@ class PanelControl(UiNode):
                 return True
         return False
 
-    def draw(self, surface, theme) -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         if self.draw_background:
-            factory = getattr(theme, "graphics_factory", None)
-            if factory is None:
-                draw_rect(surface, theme.medium, self.rect, 0)
-                draw_rect(surface, theme.dark, self.rect, 2)
-            else:
-                visual_size = (self.rect.width, self.rect.height)
-                if self._visuals is None or self._visual_size != visual_size:
-                    self._visuals = factory.build_frame_visuals(self.rect)
-                    self._visual_size = visual_size
-                selected = factory.resolve_visual_state(
-                    self._visuals,
-                    visible=self.visible,
-                    enabled=self.enabled,
-                    armed=False,
-                    hovered=False,
-                )
-                surface.blit(selected, self.rect)
+            factory = theme.graphics_factory
+            visual_size = (self.rect.width, self.rect.height)
+            if self._visuals is None or self._visual_size != visual_size:
+                self._visuals = factory.build_frame_visuals(self.rect)
+                self._visual_size = visual_size
+            selected = factory.resolve_visual_state(
+                self._visuals,
+                visible=self.visible,
+                enabled=self.enabled,
+                armed=False,
+                hovered=False,
+            )
+            surface.blit(selected, self.rect)
         for child in self.children:
             if child.visible:
                 child.draw(surface, theme)

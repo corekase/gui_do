@@ -1,5 +1,4 @@
 from typing import Optional, Tuple
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
 
 class InputState:
@@ -16,18 +15,18 @@ class InputState:
 
     def update_from_event(self, event: object) -> Optional[Tuple[int, int]]:
         """Apply event to input state and return raw event position when present."""
-        raw_pos = getattr(event, "pos", None)
+        raw_pos = event.pos
         if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
             self.pointer_pos = raw_pos
 
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        if event.is_mouse_down(1):
             self.left_down = True
-        elif event.type == MOUSEBUTTONUP and getattr(event, "button", None) == 1:
+        elif event.is_mouse_up(1):
             self.left_down = False
-        elif event.type == MOUSEWHEEL:
-            self.wheel_delta = int(getattr(event, "y", 0))
+        elif event.is_mouse_wheel():
+            self.wheel_delta = int(event.wheel_delta)
 
-        if event.type in (MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION):
+        if event.is_mouse_down() or event.is_mouse_up() or event.is_mouse_motion():
             if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
                 return raw_pos
         return None

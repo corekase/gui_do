@@ -1,11 +1,15 @@
 from typing import Callable, Optional
+from typing import TYPE_CHECKING
 
-import pygame
 from pygame import Rect
-from pygame.draw import rect as draw_rect
 from pygame.locals import MOUSEBUTTONDOWN
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    import pygame
+    from ..theme.color_theme import ColorTheme
 
 
 class ToggleControl(UiNode):
@@ -31,11 +35,11 @@ class ToggleControl(UiNode):
         self._visuals = None
         self._visual_key = None
 
-    def handle_event(self, event, _app) -> bool:
-        raw = getattr(event, "pos", None)
+    def handle_event(self, event: GuiEvent, _app) -> bool:
+        raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self.pushed = not self.pushed
                 if self.on_toggle is not None:
@@ -43,22 +47,8 @@ class ToggleControl(UiNode):
                 return True
         return False
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            if self.pushed:
-                fill = theme.handle_active
-                text = self.text_on
-            else:
-                fill = theme.light if self.hovered else theme.medium
-                text = self.text_off
-            draw_rect(surface, fill, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-            text_bitmap = theme.render_text(text, size=16, color=theme.text, shadow=True)
-            text_rect = text_bitmap.get_rect(center=self.rect.center)
-            surface.blit(text_bitmap, text_rect)
-            return
-
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
         visual_key = (self.style, self.text_on, self.text_off, self.rect.width, self.rect.height)
         if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect)

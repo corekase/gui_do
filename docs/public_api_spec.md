@@ -1,0 +1,85 @@
+# Public API Specification (Compact)
+
+## Scope
+
+This document defines the supported public surface of the rebased `gui` package and the strict contracts expected by runtime components.
+
+## Public Exports
+
+The package exports the following symbols via `gui/__init__.py`:
+
+- `GuiApplication`
+- `UiEngine`
+- `PanelControl`
+- `LabelControl`
+- `ButtonControl`
+- `ArrowBoxControl`
+- `ButtonGroupControl`
+- `CanvasControl`
+- `CanvasEventPacket`
+- `FrameControl`
+- `ImageControl`
+- `SliderControl`
+- `ScrollbarControl`
+- `TaskPanelControl`
+- `ToggleControl`
+- `WindowControl`
+- `LayoutAxis`
+- `LayoutManager`
+- `WindowTilingManager`
+- `EventManager`
+- `EventType`
+- `GuiEvent`
+- `TaskEvent`
+- `TaskScheduler`
+- `Timers`
+- `BuiltInGraphicsFactory`
+- `ColorTheme`
+
+## Event Contract
+
+All event dispatch paths use canonical `GuiEvent` objects.
+
+Required event consumption patterns:
+
+- Semantic checks:
+  - `event.is_key_down(...)`
+  - `event.is_mouse_down(...)`
+  - `event.is_mouse_up(...)`
+  - `event.is_mouse_motion()`
+  - `event.is_mouse_wheel()`
+- Position and motion data:
+  - `event.pos`
+  - `event.rel`
+  - `event.raw_pos`
+  - `event.raw_rel`
+  - `event.wheel_delta`
+
+Raw `pygame` events are normalized only at ingress through `EventManager` and `GuiApplication.process_event`.
+
+## Node Contract
+
+All nodes derive from `UiNode` and follow these role hooks:
+
+- `is_window() -> bool`
+- `is_task_panel() -> bool`
+- `set_active(value: bool) -> None`
+- `_clear_active_windows() -> None`
+
+Container traversal relies on explicit `children` (no duck-typed discovery).
+
+## Theme/Rendering Contract
+
+Control drawing requires a canonical `ColorTheme` with a bound `graphics_factory`.
+
+No fallback render paths are part of the public contract.
+
+## Compatibility Policy
+
+The rebased package is strict by design:
+
+- No compatibility shims.
+- No duck-typed fallback pathways in core dispatch and control rendering.
+- No optional graphics-factory rendering behavior.
+
+New APIs must preserve these strict-contract principles.

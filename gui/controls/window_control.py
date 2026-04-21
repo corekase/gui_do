@@ -1,10 +1,16 @@
 from typing import Callable, List, Optional
+from typing import TYPE_CHECKING
 from pathlib import Path
 import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
+
+if TYPE_CHECKING:
+    from ..app.gui_application import GuiApplication
+    from ..theme.color_theme import ColorTheme
 
 
 class WindowControl(UiNode):
@@ -44,6 +50,12 @@ class WindowControl(UiNode):
         self._event_handler = event_handler
         self._postamble = postamble
 
+    def is_window(self) -> bool:
+        return True
+
+    def set_active(self, value: bool) -> None:
+        self._active = bool(value)
+
     @staticmethod
     def _load_pristine_surface(source):
         if source is None:
@@ -77,30 +89,18 @@ class WindowControl(UiNode):
         return True
 
     def _draw_default_window_background(self, surface, theme, factory) -> None:
-        if factory is not None:
-            visual_size = (self.rect.width, self.rect.height)
-            if self._frame_visuals is None or self._frame_visual_size != visual_size:
-                self._frame_visuals = factory.build_frame_visuals(self.rect)
-                self._frame_visual_size = visual_size
-            selected = factory.resolve_visual_state(
-                self._frame_visuals,
-                visible=self.visible,
-                enabled=self.enabled,
-                armed=False,
-                hovered=False,
-            )
-            surface.blit(selected, self.rect)
-            return
-
-        draw_rect(surface, theme.medium, self.rect, 0)
-        top_left = (self.rect.left, self.rect.top)
-        top_right = (self.rect.right - 1, self.rect.top)
-        bottom_left = (self.rect.left, self.rect.bottom - 1)
-        bottom_right = (self.rect.right - 1, self.rect.bottom - 1)
-        pygame.draw.line(surface, theme.light, top_left, top_right, 1)
-        pygame.draw.line(surface, theme.light, top_left, bottom_left, 1)
-        pygame.draw.line(surface, theme.dark, bottom_left, bottom_right, 1)
-        pygame.draw.line(surface, theme.dark, top_right, bottom_right, 1)
+        visual_size = (self.rect.width, self.rect.height)
+        if self._frame_visuals is None or self._frame_visual_size != visual_size:
+            self._frame_visuals = factory.build_frame_visuals(self.rect)
+            self._frame_visual_size = visual_size
+        selected = factory.resolve_visual_state(
+            self._frame_visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=False,
+            hovered=False,
+        )
+        surface.blit(selected, self.rect)
 
     @property
     def active(self) -> bool:
@@ -113,9 +113,8 @@ class WindowControl(UiNode):
             return
         if is_active:
             parent = self.parent
-            set_active = getattr(parent, "_set_active_window", None) if parent is not None else None
-            if callable(set_active):
-                set_active(self)
+            if parent is not None:
+                parent._set_active_window(self)
                 return
         self._active = is_active
 
@@ -139,20 +138,7 @@ class WindowControl(UiNode):
         parent = self.parent
         if parent is None:
             return
-        visibility_changed = getattr(parent, "_on_window_visibility_changed", None)
-        if callable(visibility_changed):
-            visibility_changed(self, old_visible, new_visible)
-            return
-        if old_visible or not new_visible:
-            return
-        raise_window = getattr(parent, "_raise_window", None)
-        if callable(raise_window):
-            raise_window(self)
-            return
-        children = getattr(parent, "children", None)
-        if isinstance(children, list) and self in children:
-            children.remove(self)
-            children.append(self)
+        parent._on_window_visibility_changed(self, old_visible, new_visible)
 
     def move_by(self, dx: int, dy: int) -> None:
         if dx == 0 and dy == 0:
@@ -177,7 +163,7 @@ class WindowControl(UiNode):
         if self._postamble is not None:
             self._postamble()
 
-    def handle_event(self, event, app) -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         def _owns_node(target) -> bool:
             if target is None:
                 return False
@@ -188,15 +174,13 @@ class WindowControl(UiNode):
                 node = pending.pop()
                 if node is target:
                     return True
-                children = getattr(node, "children", None)
-                if isinstance(children, list) and children:
-                    pending.extend(children)
+                pending.extend(node.children)
             return False
 
-        raw = getattr(event, "pos", None)
+        raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2 and not self.rect.collidepoint(raw):
-            lock_object = getattr(app, "locking_object", None)
-            lock_active = bool(getattr(app, "mouse_point_locked", False) and getattr(app, "lock_point_pos", None) is not None)
+            lock_object = app.locking_object
+            lock_active = bool(app.mouse_point_locked and app.lock_point_pos is not None)
             if not (lock_active and _owns_node(lock_object)):
                 return False
         if self._event_handler is not None and self._event_handler(event):
@@ -206,38 +190,30 @@ class WindowControl(UiNode):
                 return True
         return False
 
-    def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
+    def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        factory = theme.graphics_factory
         if not self.restore_pristine(surface):
             self._draw_default_window_background(surface, theme, factory)
-        if factory is None:
-            title_fill = theme.dark if self.active else theme.medium
-            draw_rect(surface, title_fill, self.title_bar_rect(), 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-            title_color = theme.text if self.active else theme.highlight
-            text_bitmap = theme.render_text(self.title, size=16, title=True, color=title_color, shadow=True)
-            surface.blit(text_bitmap, (self.title_bar_rect().left + 8, self.title_bar_rect().top + 2))
-        else:
-            if self._chrome is None or self._chrome_size != (self.rect.width, self.titlebar_height, self.title):
-                self._chrome = factory.build_window_chrome_visuals(self.rect.width, self.titlebar_height, self.title)
-                chrome_height = self._chrome.title_bar_active.get_height()
-                self.titlebar_height = max(18, chrome_height)
-                self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
-            title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
-            title_rect = self.title_bar_rect()
-            source_rect = Rect(0, 0, title_rect.width, title_rect.height)
-            surface.blit(title_bitmap, title_rect.topleft, source_rect)
-            draw_rect(surface, theme.dark, self.rect, 2)
-            surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)
-            if not self.enabled:
-                overlay_size = (self.rect.width, self.rect.height)
-                if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:
-                    self._disabled_overlay = factory.build_disabled_bitmap(self._chrome.title_bar_inactive)
-                    wash = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-                    wash.fill((50, 50, 50, 120))
-                    self._disabled_overlay = wash
-                    self._disabled_overlay_size = overlay_size
-                surface.blit(self._disabled_overlay, self.rect.topleft)
+        if self._chrome is None or self._chrome_size != (self.rect.width, self.titlebar_height, self.title):
+            self._chrome = factory.build_window_chrome_visuals(self.rect.width, self.titlebar_height, self.title)
+            chrome_height = self._chrome.title_bar_active.get_height()
+            self.titlebar_height = max(18, chrome_height)
+            self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
+        title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
+        title_rect = self.title_bar_rect()
+        source_rect = Rect(0, 0, title_rect.width, title_rect.height)
+        surface.blit(title_bitmap, title_rect.topleft, source_rect)
+        draw_rect(surface, theme.dark, self.rect, 2)
+        surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)
+        if not self.enabled:
+            overlay_size = (self.rect.width, self.rect.height)
+            if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:
+                self._disabled_overlay = factory.build_disabled_bitmap(self._chrome.title_bar_inactive)
+                wash = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+                wash.fill((50, 50, 50, 120))
+                self._disabled_overlay = wash
+                self._disabled_overlay_size = overlay_size
+            surface.blit(self._disabled_overlay, self.rect.topleft)
         for child in self.children:
             if child.visible:
                 child.draw(surface, theme)

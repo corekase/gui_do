@@ -29,16 +29,14 @@ class WindowTilingManager:
         stack = list(self._bound_scene().nodes)
         while stack:
             node = stack.pop(0)
-            children = getattr(node, "children", None)
-            if children:
-                stack.extend(children)
+            stack.extend(node.children)
             if self._is_window_like(node):
                 windows.append(node)
         return windows
 
     @staticmethod
     def _is_window_like(node: object) -> bool:
-        return hasattr(node, "titlebar_height") and hasattr(node, "rect") and hasattr(node, "move_by")
+        return node.is_window()
 
     def _ensure_registration(self, windows: Iterable[object]) -> None:
         current = set(windows)
@@ -51,7 +49,7 @@ class WindowTilingManager:
     def _visible_windows(self) -> List[object]:
         windows = self._scene_windows()
         self._ensure_registration(windows)
-        visible = [w for w in windows if bool(getattr(w, "visible", False))]
+        visible = [w for w in windows if w.visible]
         visible.sort(key=lambda w: self._registration_order[w])
         return visible
 
@@ -61,12 +59,10 @@ class WindowTilingManager:
             stack = list(self._bound_scene().nodes)
             while stack:
                 node = stack.pop(0)
-                children = getattr(node, "children", None)
-                if children:
-                    stack.extend(children)
-                if getattr(node, "control_id", "") == "task_panel" and bool(getattr(node, "visible", False)):
-                    panel_rect = getattr(node, "rect", None)
-                    if panel_rect is not None and panel_rect.top < work.bottom:
+                stack.extend(node.children)
+                if node.is_task_panel() and node.visible:
+                    panel_rect = node.rect
+                    if panel_rect.top < work.bottom:
                         work.height = max(0, panel_rect.top - work.top)
                     break
         work.inflate_ip(-(self.padding * 2), -(self.padding * 2))
@@ -74,7 +70,7 @@ class WindowTilingManager:
 
     @staticmethod
     def _full_window_rect(window: object) -> Rect:
-        rect = Rect(getattr(window, "rect"))
+        rect = Rect(window.rect)
         return Rect(rect.x, rect.y, rect.width, rect.height)
 
     def _center_window(self, window: object, work_area: Optional[Rect] = None) -> None:
@@ -82,7 +78,7 @@ class WindowTilingManager:
         rect = self._full_window_rect(window)
         target = Rect(0, 0, rect.width, rect.height)
         target.center = bounds.center
-        current = Rect(getattr(window, "rect"))
+        current = Rect(window.rect)
         dx = target.x - current.x
         dy = target.y - current.y
         window.move_by(dx, dy)
@@ -160,5 +156,5 @@ class WindowTilingManager:
             col = idx % cols
             target_x = start_x + (col * pitch_x)
             target_y = start_y + (row * pitch_y)
-            current = Rect(getattr(window, "rect"))
+            current = Rect(window.rect)
             window.move_by(target_x - current.x, target_y - current.y)

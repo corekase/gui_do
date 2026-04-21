@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from typing import ClassVar, Dict, Optional
+from typing import TYPE_CHECKING
 
 from pygame import Rect
 
+from ..core.gui_event import GuiEvent
 from .toggle_control import ToggleControl
+
+if TYPE_CHECKING:
+    from ..app.gui_application import GuiApplication
 
 
 class ButtonGroupControl(ToggleControl):
@@ -30,7 +35,7 @@ class ButtonGroupControl(ToggleControl):
     def button_id(self) -> str:
         return ButtonGroupControl._selection_by_group.get(self.group, self.control_id)
 
-    def handle_event(self, event, app) -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         handled = super().handle_event(event, app)
         if not handled or not self.pushed:
             return handled
@@ -46,8 +51,6 @@ class ButtonGroupControl(ToggleControl):
         stack = list(app.scene.nodes)
         while stack:
             node = stack.pop()
-            children = getattr(node, "children", None)
-            if children:
-                stack.extend(children)
+            stack.extend(node.children)
             if isinstance(node, ButtonGroupControl) and node.group == self.group and node.control_id != self.control_id:
                 node.pushed = False
