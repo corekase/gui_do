@@ -231,6 +231,8 @@ class WindowControl(UiNode):
         if not self._accepts_event_scope(event, app):
             return False
         if self._event_handler is not None and self._event_handler(event):
+            event.prevent_default()
+            event.stop_propagation()
             return True
         return self._dispatch_children(event, app, reverse=True)
 

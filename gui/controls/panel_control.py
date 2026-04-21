@@ -164,12 +164,16 @@ class PanelControl(UiNode):
             self._drag_window.move_by(dx, dy)
             if isinstance(raw, tuple) and len(raw) == 2:
                 self._drag_last_pos = raw
+            event.prevent_default()
+            event.stop_propagation()
             return True
 
         if event.is_mouse_up(1) and self._drag_window is not None:
             app.pointer_capture.end(self._drag_window.control_id)
             self._drag_window = None
             self._drag_last_pos = None
+            event.prevent_default()
+            event.stop_propagation()
             return True
 
         if event.is_mouse_down(1) and isinstance(raw, tuple) and len(raw) == 2:
@@ -183,12 +187,16 @@ class PanelControl(UiNode):
                         self._clear_active_windows()
                     else:
                         self._set_active_window(new_top)
+                    event.prevent_default()
+                    event.stop_propagation()
                     return True
                 self._raise_window(window)
                 if window.title_bar_rect().collidepoint(raw):
                     self._drag_window = window
                     self._drag_last_pos = raw
                     app.pointer_capture.begin(window.control_id, app.surface.get_rect())
+                    event.prevent_default()
+                    event.stop_propagation()
                     return True
 
         return self._dispatch_children(event, app, reverse=False)

@@ -70,6 +70,18 @@ class _MiniPresentationModel(PresentationModel):
         self.history = []
 
 
+class _StopCaptureNode(UiNode):
+    def __init__(self, control_id: str, rect: Rect) -> None:
+        super().__init__(control_id, rect)
+        self.capture_count = 0
+
+    def on_event_capture(self, event, _app) -> bool:
+        self.capture_count += 1
+        event.prevent_default()
+        event.stop_propagation()
+        return False
+
+
 class CoreFoundationProgressionTests(unittest.TestCase):
     def test_scene_routed_event_phases_are_applied(self) -> None:
         pygame.init()
@@ -155,6 +167,55 @@ class CoreFoundationProgressionTests(unittest.TestCase):
             self.assertEqual(probe.capture_count, 1)
             self.assertEqual(probe.target_count, 1)
             self.assertEqual(probe.bubble_count, 1)
+        finally:
+            pygame.quit()
+
+    def test_capture_stop_propagation_short_circuits_remaining_phases(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((180, 100)))
+            scene = Scene()
+            stopper = scene.add(_StopCaptureNode("stop", Rect(0, 0, 180, 100)))
+            probe = scene.add(_ProbeNode("probe", Rect(0, 0, 180, 100)))
+            event = GuiEvent(kind=EventType.MOUSE_MOTION, type=pygame.MOUSEMOTION, pos=(10, 10), rel=(1, 0))
+
+            consumed = scene.dispatch(event, app)
+
+            self.assertTrue(consumed)
+            self.assertEqual(stopper.capture_count, 1)
+            self.assertEqual(probe.capture_count, 0)
+            self.assertEqual(probe.target_count, 0)
+            self.assertEqual(probe.bubble_count, 0)
+            self.assertTrue(event.default_prevented)
+            self.assertTrue(event.propagation_stopped)
+        finally:
+            pygame.quit()
+
+    def test_panel_drag_capture_marks_event_prevent_default(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            win = root.add(WindowControl("win", Rect(40, 30, 200, 120), "W"))
+            down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": win.title_bar_rect().center, "button": 1})
+            move = pygame.event.Event(
+                pygame.MOUSEMOTION,
+                {
+                    "pos": (win.title_bar_rect().centerx + 20, win.title_bar_rect().centery + 10),
+                    "rel": (20, 10),
+                    "buttons": (1, 0, 0),
+                },
+            )
+            down_gui = app.event_manager.to_gui_event(down, pointer_pos=app.logical_pointer_pos)
+            move_gui = app.event_manager.to_gui_event(move, pointer_pos=app.logical_pointer_pos)
+
+            root.handle_routed_event(down_gui.with_phase(EventPhase.CAPTURE), app)
+            root.handle_routed_event(move_gui.with_phase(EventPhase.CAPTURE), app)
+
+            self.assertTrue(down_gui.default_prevented)
+            self.assertTrue(down_gui.propagation_stopped)
+            self.assertTrue(move_gui.default_prevented)
+            self.assertTrue(move_gui.propagation_stopped)
         finally:
             pygame.quit()
 
