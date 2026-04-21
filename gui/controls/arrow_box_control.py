@@ -26,6 +26,7 @@ class ArrowBoxControl(UiNode):
         self.on_activate = on_activate
         self.repeat_interval_seconds = float(repeat_interval_seconds)
         self._pressed = False
+        self._hovered = False
         self._timer_id = ("arrow_repeat", self.control_id)
         self._visuals = None
         self._visual_key = None
@@ -36,6 +37,8 @@ class ArrowBoxControl(UiNode):
 
     def handle_event(self, event, app) -> bool:
         raw = getattr(event, "pos", None)
+        if isinstance(raw, tuple) and len(raw) == 2:
+            self._hovered = self.rect.collidepoint(raw)
         if event.type == MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self._pressed = True
@@ -70,7 +73,7 @@ class ArrowBoxControl(UiNode):
         if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.draw_arrow_visuals(self.rect, self.direction)
             self._visual_key = visual_key
-        hovered = self.rect.collidepoint(pygame.mouse.get_pos())
+        hovered = self._hovered
         selected = factory.resolve_visual_state(
             self._visuals,
             visible=self.visible,

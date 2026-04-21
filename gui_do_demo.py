@@ -61,8 +61,9 @@ class GuiDoDemo:
         self._last_brand_ms = pygame.time.get_ticks()
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0, 0]
+        self.life_cell_size = 12
         self.life_dragging = False
-        self._life_zoom_slider_last_value = 12
+        self._life_zoom_slider_last_value = 5
         self.mandel_task_ids: Set[str] = set()
         self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
@@ -357,9 +358,9 @@ class GuiDoDemo:
                 "life_zoom",
                 Rect(slider_left, controls_y, max(80, slider_right - slider_left), widget_height),
                 LayoutAxis.HORIZONTAL,
-                2.0,
-                24.0,
-                12.0,
+                0.0,
+                11.0,
+                5.0,
             )
         )
         self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
@@ -558,7 +559,10 @@ class GuiDoDemo:
     def _life_reset(self) -> None:
         self.life_cells.clear()
         self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
-        self.life_zoom_slider.value = 12.0
+        self.life_origin = [self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0]
+        self.life_cell_size = 12
+        self.life_zoom_slider.value = 5.0
+        self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
         self.life_toggle.pushed = False
 
     def _life_population(self, cell: Tuple[int, int]) -> int:
@@ -581,22 +585,30 @@ class GuiDoDemo:
         self.life_cells = new_life
 
     def _zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
-        old_size = max(2, int(round(self._life_zoom_slider_last_value)))
+        old_size = max(2, int(round(self.life_cell_size)))
         clamped_size = max(2, min(24, int(new_size)))
         if clamped_size == old_size:
             return
         anchor_x, anchor_y = anchor_local
         self.life_origin[0] = anchor_x - ((anchor_x - self.life_origin[0]) / old_size) * clamped_size
         self.life_origin[1] = anchor_y - ((anchor_y - self.life_origin[1]) / old_size) * clamped_size
-        self.life_zoom_slider.value = float(clamped_size)
-        self._life_zoom_slider_last_value = clamped_size
+        self.life_cell_size = clamped_size
+        slider_value = max(0, min(11, (clamped_size // 2) - 1))
+        self.life_zoom_slider.value = float(slider_value)
+        self._life_zoom_slider_last_value = int(slider_value)
 
     def _life_window_preamble(self) -> None:
-        slider_size = max(2, min(24, int(round(self.life_zoom_slider.value))))
-        if slider_size == self._life_zoom_slider_last_value:
+        slider_value = max(0, min(11, int(round(self.life_zoom_slider.value))))
+        if slider_value == self._life_zoom_slider_last_value:
             return
+        old_size = max(2, int(round(self.life_cell_size)))
+        new_size = (slider_value + 1) * 2
+        if new_size == old_size:
+            self._life_zoom_slider_last_value = slider_value
+            return
+        self._life_zoom_slider_last_value = slider_value
         center_local = (self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0)
-        self._zoom_life_view_about(center_local, slider_size)
+        self._zoom_life_view_about(center_local, new_size)
 
     def _life_window_event_handler(self, event) -> bool:
         event_type = getattr(event, "type", None)
@@ -606,12 +618,14 @@ class GuiDoDemo:
         if event_type == pygame.MOUSEBUTTONDOWN and button == 3:
             if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
                 self.life_dragging = True
-                self.app.set_lock_point(self.life_canvas, self.life_canvas.rect.center)
+                self.app.set_cursor("hand")
+                self.app.set_lock_point(self.life_canvas, pos)
                 return True
 
         if event_type == pygame.MOUSEBUTTONUP and button == 3:
             if self.life_dragging:
                 self.life_dragging = False
+                self.app.set_cursor("normal")
                 self.app.set_lock_point(None)
                 return True
 
@@ -631,7 +645,7 @@ class GuiDoDemo:
             if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
                 wheel_step = 1 if button == 4 else -1
                 anchor_local = (pos[0] - self.life_canvas.rect.left, pos[1] - self.life_canvas.rect.top)
-                self._zoom_life_view_about(anchor_local, self._life_zoom_slider_last_value + (wheel_step * 2))
+                self._zoom_life_view_about(anchor_local, self.life_cell_size + (wheel_step * 2))
                 return True
 
         if event_type == pygame.MOUSEWHEEL:
@@ -644,7 +658,7 @@ class GuiDoDemo:
                     anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
                 else:
                     anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
-                self._zoom_life_view_about(anchor_local, self._life_zoom_slider_last_value + (getattr(event, "y", 0) * 2))
+                self._zoom_life_view_about(anchor_local, self.life_cell_size + (getattr(event, "y", 0) * 2))
                 return True
 
         return False
@@ -906,7 +920,7 @@ class GuiDoDemo:
                 continue
             local_x = packet.pos[0] - self.life_canvas.rect.left
             local_y = packet.pos[1] - self.life_canvas.rect.top
-            cell_size = max(2, int(round(self.life_zoom_slider.value)))
+            cell_size = max(2, int(round(self.life_cell_size)))
             cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
             cell = (cell_x, cell_y)
@@ -918,7 +932,7 @@ class GuiDoDemo:
         if self.life_toggle.pushed:
             self._life_step()
 
-        cell_size = max(2, int(round(self.life_zoom_slider.value)))
+        cell_size = max(2, int(round(self.life_cell_size)))
         self.life_canvas.canvas.fill((0, 70, 70))
         trim = 0 if cell_size <= 2 else 1
         for cx, cy in self.life_cells:

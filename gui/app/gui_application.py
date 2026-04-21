@@ -1,4 +1,5 @@
 import pygame
+from pathlib import Path
 from typing import Callable, Optional
 from pygame import Rect
 
@@ -31,14 +32,20 @@ class GuiApplication:
         self.graphics_factory = LegacyGraphicsFactory(self.theme)
         self.theme.graphics_factory = self.graphics_factory
         self.running = True
+        self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
+        self._last_dispatched_pointer_pos = self._logical_pointer_pos
         self.mouse_point_locked = False
         self.lock_point_pos = None
         self.locking_object = None
         self.lock_area = None
         self._point_lock_recenter_rect = self._build_point_lock_recenter_rect()
+        self._lock_point_last_raw_pos = None
+        self._cursor_assets = {}
+        self._active_cursor_name = None
         self._screen_preamble: Optional[Callable[[], None]] = None
         self._screen_event_handler: Optional[Callable[[object], bool]] = None
         self._screen_postamble: Optional[Callable[[], None]] = None
+        self._init_cursor_system()
 
     def add(self, node):
         """Add a root node to the application scene."""
@@ -64,16 +71,25 @@ class GuiApplication:
             self.running = False
             return True
         self.input_state.update_from_event(event)
+        raw_pos = getattr(event, "pos", None)
+        if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+            self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
         if self.lock_area is not None:
-            self.input_state.pointer_pos = self._clamp_to_rect(self.input_state.pointer_pos, self.lock_area)
+            self._logical_pointer_pos = self._clamp_to_rect(self._logical_pointer_pos, self.lock_area)
+            self.input_state.pointer_pos = self._logical_pointer_pos
         if self.pointer_capture.lock_rect is not None:
-            self.input_state.pointer_pos = self.pointer_capture.clamp(self.input_state.pointer_pos)
+            self._logical_pointer_pos = self.pointer_capture.clamp(self._logical_pointer_pos)
+            self.input_state.pointer_pos = self._logical_pointer_pos
         if self.mouse_point_locked and self.lock_point_pos is not None:
             self._enforce_point_lock(event)
-            self.input_state.pointer_pos = self.lock_point_pos
-        if self._screen_event_handler is not None and self._screen_event_handler(event):
+            self._logical_pointer_pos = (int(self.lock_point_pos[0]), int(self.lock_point_pos[1]))
+            self.input_state.pointer_pos = self._logical_pointer_pos
+
+        logical_event = self._logicalize_pointer_event(event)
+
+        if self._screen_event_handler is not None and self._screen_event_handler(logical_event):
             return True
-        return self.scene.dispatch(event, self)
+        return self.scene.dispatch(logical_event, self)
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
         self._screen_preamble = preamble
@@ -98,7 +114,7 @@ class GuiApplication:
         if self.lock_point_pos is None:
             return
         event_type = getattr(event, "type", None)
-        if event_type not in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+        if event_type != pygame.MOUSEMOTION:
             return
         raw_pos = getattr(event, "pos", None)
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
@@ -112,13 +128,17 @@ class GuiApplication:
             self.mouse_point_locked = False
             self.lock_point_pos = None
             self.locking_object = None
+            self._lock_point_last_raw_pos = None
             return
         self.locking_object = locking_object
         self._point_lock_recenter_rect = self._build_point_lock_recenter_rect()
         if point is None:
             point = self._point_lock_recenter_rect.center
-        clamped = self._clamp_to_rect(point, self._point_lock_recenter_rect)
-        self.lock_point_pos = (int(clamped[0]), int(clamped[1]))
+        self.lock_point_pos = (int(point[0]), int(point[1]))
+        self._logical_pointer_pos = self.lock_point_pos
+        self.input_state.pointer_pos = self.lock_point_pos
+        self._last_dispatched_pointer_pos = self.lock_point_pos
+        self._lock_point_last_raw_pos = self.lock_point_pos
         self.mouse_point_locked = True
 
     def set_lock_area(self, lock_rect) -> None:
@@ -137,22 +157,86 @@ class GuiApplication:
             return None
         if getattr(event, "type", None) != pygame.MOUSEMOTION:
             return None
-        raw_pos = getattr(event, "pos", None)
+        raw_pos = getattr(event, "raw_pos", None)
+        if raw_pos is None:
+            raw_pos = getattr(event, "pos", None)
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return None
-        dx = int(raw_pos[0]) - int(self.lock_point_pos[0])
-        dy = int(raw_pos[1]) - int(self.lock_point_pos[1])
+        raw_pos = (int(raw_pos[0]), int(raw_pos[1]))
+        if raw_pos == self.lock_point_pos:
+            self._lock_point_last_raw_pos = raw_pos
+            return (0, 0)
+        if self._lock_point_last_raw_pos is None:
+            self._lock_point_last_raw_pos = raw_pos
+        dx = raw_pos[0] - self._lock_point_last_raw_pos[0]
+        dy = raw_pos[1] - self._lock_point_last_raw_pos[1]
+        self._lock_point_last_raw_pos = raw_pos
         if dx != 0 or dy != 0:
-            pygame.mouse.set_pos(self.lock_point_pos)
             return (dx, dy)
-        rel = getattr(event, "rel", None)
+        rel = getattr(event, "raw_rel", None)
+        if rel is None:
+            rel = getattr(event, "rel", None)
         if isinstance(rel, tuple) and len(rel) == 2:
             return (int(rel[0]), int(rel[1]))
         return (0, 0)
 
+    @property
+    def logical_pointer_pos(self):
+        return self._logical_pointer_pos
+
+    def _logicalize_pointer_event(self, event):
+        event_type = getattr(event, "type", None)
+        if event_type not in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            return event
+        raw_pos = getattr(event, "pos", None)
+        if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
+            return event
+
+        logical_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
+        data = dict(getattr(event, "dict", {}))
+        data["raw_pos"] = raw_pos
+        data["pos"] = logical_pos
+
+        if event_type == pygame.MOUSEMOTION:
+            prev = self._last_dispatched_pointer_pos
+            data["raw_rel"] = getattr(event, "rel", None)
+            data["rel"] = (logical_pos[0] - prev[0], logical_pos[1] - prev[1])
+        self._last_dispatched_pointer_pos = logical_pos
+        return pygame.event.Event(event_type, data)
+
+    def _init_cursor_system(self) -> None:
+        pygame.mouse.set_visible(False)
+        self.register_cursor("normal", "cursor.png", (1, 1))
+        self.register_cursor("hand", "hand.png", (12, 12))
+        if "normal" in self._cursor_assets:
+            self._active_cursor_name = "normal"
+
+    def register_cursor(self, name: str, filename: str, hotspot=(0, 0)) -> None:
+        cursor_surface = None
+        try:
+            root = Path(__file__).resolve().parents[2]
+            path = root / "data" / "cursors" / filename
+            cursor_surface = pygame.image.load(str(path)).convert_alpha()
+        except Exception:
+            cursor_surface = None
+        if cursor_surface is None:
+            cursor_surface = pygame.Surface((12, 12), pygame.SRCALPHA)
+            pygame.draw.line(cursor_surface, self.theme.text, (0, 0), (0, 11), 2)
+            pygame.draw.line(cursor_surface, self.theme.text, (0, 0), (8, 4), 2)
+        self._cursor_assets[name] = (cursor_surface, (int(hotspot[0]), int(hotspot[1])))
+
+    def set_cursor(self, name: str) -> None:
+        if name in self._cursor_assets:
+            self._active_cursor_name = name
+
+    def get_active_cursor(self):
+        if self._active_cursor_name is None:
+            return None
+        return self._cursor_assets.get(self._active_cursor_name)
+
     def draw(self) -> None:
         """Render one frame."""
-        self.renderer.render(self.surface, self.scene, self.theme)
+        self.renderer.render(self.surface, self.scene, self.theme, app=self)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.window_tiling.set_enabled(enabled, relayout=relayout)

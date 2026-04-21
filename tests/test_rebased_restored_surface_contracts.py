@@ -217,6 +217,47 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         self.assertFalse(control.pressed)
         self.assertEqual(fired, [True])
 
+    def test_lock_point_dispatches_logical_pos_and_preserves_raw_pos(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((300, 200)))
+
+            class Probe:
+                def __init__(self):
+                    self.visible = True
+                    self.enabled = True
+                    self.captured = None
+
+                def handle_event(self, event, _app):
+                    if getattr(event, "type", None) == pygame.MOUSEMOTION:
+                        self.captured = {
+                            "pos": getattr(event, "pos", None),
+                            "raw_pos": getattr(event, "raw_pos", None),
+                            "rel": getattr(event, "rel", None),
+                            "raw_rel": getattr(event, "raw_rel", None),
+                        }
+                    return False
+
+                def update(self, _dt):
+                    return None
+
+                def draw(self, _surface, _theme):
+                    return None
+
+            probe = app.add(Probe())
+            lock_point = (120, 90)
+            app.set_lock_point(probe, lock_point)
+
+            app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (240, 160), "rel": (7, -3)}))
+
+            self.assertIsNotNone(probe.captured)
+            self.assertEqual(probe.captured["pos"], lock_point)
+            self.assertEqual(probe.captured["raw_pos"], (240, 160))
+            self.assertEqual(probe.captured["raw_rel"], (7, -3))
+            self.assertEqual(app.input_state.pointer_pos, lock_point)
+        finally:
+            pygame.quit()
+
 
 if __name__ == "__main__":
     unittest.main()
