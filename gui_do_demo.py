@@ -163,7 +163,7 @@ class GuiDoDemo:
         self.bg_canvas.canvas.fill((0, 0, 0, 0))
 
         self._set_title(
-            self.root.add(LabelControl("header", Rect(28, 20, 900, 30), "gui_do legacy widget showcase (rebased OOP demo)")),
+            self.root.add(LabelControl("header", Rect(28, 20, 900, 30), "gui_do built-in widget showcase (rebased OOP demo)")),
             24,
         )
         self._set_text(
@@ -273,7 +273,7 @@ class GuiDoDemo:
                 LabelControl(
                     "show_help",
                     abs_rect(18, 32, 820, 20),
-                    "Legacy-equivalent widgets: buttons, toggles, groups, sliders, scrollbars, arrows, canvas, image",
+                    "Built-in-equivalent widgets: buttons, toggles, groups, sliders, scrollbars, arrows, canvas, image",
                 )
             )
         )
@@ -306,7 +306,7 @@ class GuiDoDemo:
                 ButtonGroupControl(
                     f"bg_{chr(ord('a') + idx)}",
                     showcase_layout.linear_item(idx),
-                    "legacy_group",
+                    "built_in_group",
                     group_labels[idx],
                     selected=(idx == 0),
                     style=style,

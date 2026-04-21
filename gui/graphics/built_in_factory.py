@@ -12,7 +12,7 @@ from pygame.draw import circle, line, polygon, rect as draw_rect
 from pygame.surfarray import blit_array
 from pygame.transform import rotate, smoothscale
 
-from .legacy_definitions import LEGACY_COLOURS, draw_box_bitmap, draw_frame_bitmap
+from .built_in_definitions import BUILT_IN_COLOURS, draw_box_bitmap, draw_frame_bitmap
 
 
 @dataclass
@@ -32,8 +32,8 @@ class WindowChromeVisuals:
     lower_widget: Surface
 
 
-class LegacyGraphicsFactory:
-    """Legacy-faithful bitmap factory adapted to the rebased control API."""
+class BuiltInGraphicsFactory:
+    """Built-in bitmap factory adapted to the rebased control API."""
 
     def __init__(self, theme) -> None:
         self.theme = theme
@@ -127,10 +127,10 @@ class LegacyGraphicsFactory:
             return visuals.hover
         return visuals.idle
 
-    def _draw_legacy_button_surface(self, text: str, rect: Rect, state: str, highlight: bool = False) -> Surface:
+    def _draw_built_in_button_surface(self, text: str, rect: Rect, state: str, highlight: bool = False) -> Surface:
         width, height = rect.size
         surface = Surface((width, height)).convert()
-        draw_box_bitmap(surface, state, Rect(0, 0, width, height), LEGACY_COLOURS)
+        draw_box_bitmap(surface, state, Rect(0, 0, width, height), BUILT_IN_COLOURS)
         text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=highlight)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2 - 1))
         surface.blit(text_bitmap, text_rect)
@@ -138,10 +138,10 @@ class LegacyGraphicsFactory:
 
     def _draw_angle_state(self, size: Tuple[int, int], state: str) -> Surface:
         if state == "hover":
-            return self._draw_angle_style_bitmap(size, LEGACY_COLOURS["light"], LEGACY_COLOURS["light"])
+            return self._draw_angle_style_bitmap(size, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["light"])
         if state == "armed":
-            return self._draw_angle_style_bitmap(size, LEGACY_COLOURS["none"], LEGACY_COLOURS["dark"])
-        return self._draw_angle_style_bitmap(size, LEGACY_COLOURS["light"], LEGACY_COLOURS["medium"])
+            return self._draw_angle_style_bitmap(size, BUILT_IN_COLOURS["none"], BUILT_IN_COLOURS["dark"])
+        return self._draw_angle_style_bitmap(size, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["medium"])
 
     def _draw_angle_style_bitmap(self, size: Tuple[int, int], border, background) -> Surface:
         width, height = size
@@ -165,12 +165,12 @@ class LegacyGraphicsFactory:
 
     def _draw_rounded_state(self, surface: Surface, state: str) -> None:
         if state == "hover":
-            self._draw_round_style_bitmap(surface, LEGACY_COLOURS["light"], LEGACY_COLOURS["light"])
+            self._draw_round_style_bitmap(surface, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["light"])
             return
         if state == "armed":
-            self._draw_round_style_bitmap(surface, LEGACY_COLOURS["none"], LEGACY_COLOURS["dark"])
+            self._draw_round_style_bitmap(surface, BUILT_IN_COLOURS["none"], BUILT_IN_COLOURS["dark"])
             return
-        self._draw_round_style_bitmap(surface, LEGACY_COLOURS["light"], LEGACY_COLOURS["medium"])
+        self._draw_round_style_bitmap(surface, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["medium"])
 
     def _draw_round_style_bitmap(self, surface: Surface, border, background) -> None:
         _, _, width, height = surface.get_rect()
@@ -207,19 +207,19 @@ class LegacyGraphicsFactory:
         offset = self._centre(size, shrink)
         box_bitmap = Surface((shrink, shrink)).convert()
         if state == 2:
-            draw_box_bitmap(box_bitmap, "armed", Rect(0, 0, shrink, shrink), LEGACY_COLOURS)
+            draw_box_bitmap(box_bitmap, "armed", Rect(0, 0, shrink, shrink), BUILT_IN_COLOURS)
         elif state == 1:
-            draw_box_bitmap(box_bitmap, "hover", Rect(0, 0, shrink, shrink), LEGACY_COLOURS)
+            draw_box_bitmap(box_bitmap, "hover", Rect(0, 0, shrink, shrink), BUILT_IN_COLOURS)
         else:
-            draw_box_bitmap(box_bitmap, "idle", Rect(0, 0, shrink, shrink), LEGACY_COLOURS)
+            draw_box_bitmap(box_bitmap, "idle", Rect(0, 0, shrink, shrink), BUILT_IN_COLOURS)
 
         complete = Surface((size, size), pygame.SRCALPHA).convert_alpha()
         complete.blit(box_bitmap, (offset, offset))
         if state in (1, 2):
             glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
             points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
-            polygon(glyph, LEGACY_COLOURS["full"], points, 0)
-            polygon(glyph, LEGACY_COLOURS["none"], points, 20)
+            polygon(glyph, BUILT_IN_COLOURS["full"], points, 0)
+            polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
             complete.blit(smoothscale(glyph, (size, size)), (0, 0))
         return complete
 
@@ -248,9 +248,9 @@ class LegacyGraphicsFactory:
     def build_interactive_visuals(self, style: str, text: str, rect: Rect) -> InteractiveVisuals:
         style_key = (style or "box").lower()
         if style_key == "radio":
-            idle = self._draw_radio_style_surface(text, rect, LEGACY_COLOURS["light"], LEGACY_COLOURS["dark"], highlight=False)
-            hover = self._draw_radio_style_surface(text, rect, LEGACY_COLOURS["full"], LEGACY_COLOURS["none"], highlight=False)
-            armed = self._draw_radio_style_surface(text, rect, LEGACY_COLOURS["highlight"], LEGACY_COLOURS["dark"], highlight=True)
+            idle = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["dark"], highlight=False)
+            hover = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], highlight=False)
+            armed = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["highlight"], BUILT_IN_COLOURS["dark"], highlight=True)
         elif style_key == "round":
             idle = self._draw_round_button_surface(text, rect, "idle", highlight=False)
             hover = self._draw_round_button_surface(text, rect, "hover", highlight=False)
@@ -264,9 +264,9 @@ class LegacyGraphicsFactory:
             hover = self._draw_check_style_surface(text, rect, 1, highlight=False)
             armed = self._draw_check_style_surface(text, rect, 2, highlight=True)
         else:
-            idle = self._draw_legacy_button_surface(text, rect, "idle", highlight=False)
-            hover = self._draw_legacy_button_surface(text, rect, "hover", highlight=False)
-            armed = self._draw_legacy_button_surface(text, rect, "armed", highlight=True)
+            idle = self._draw_built_in_button_surface(text, rect, "idle", highlight=False)
+            hover = self._draw_built_in_button_surface(text, rect, "hover", highlight=False)
+            armed = self._draw_built_in_button_surface(text, rect, "armed", highlight=True)
 
         disabled = self.build_disabled_bitmap(idle)
         hidden = self.build_hidden_bitmap((idle.get_width(), idle.get_height()))
@@ -290,9 +290,9 @@ class LegacyGraphicsFactory:
         idle = Surface((width, height)).convert()
         hover = Surface((width, height)).convert()
         armed = Surface((width, height)).convert()
-        draw_box_bitmap(idle, "idle", Rect(0, 0, width, height), LEGACY_COLOURS)
-        draw_box_bitmap(hover, "hover", Rect(0, 0, width, height), LEGACY_COLOURS)
-        draw_box_bitmap(armed, "armed", Rect(0, 0, width, height), LEGACY_COLOURS)
+        draw_box_bitmap(idle, "idle", Rect(0, 0, width, height), BUILT_IN_COLOURS)
+        draw_box_bitmap(hover, "hover", Rect(0, 0, width, height), BUILT_IN_COLOURS)
+        draw_box_bitmap(armed, "armed", Rect(0, 0, width, height), BUILT_IN_COLOURS)
         disabled = self.build_disabled_bitmap(idle)
         hidden = self.build_hidden_bitmap((width, height))
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, hidden=hidden, hit_rect=Rect(rect))
@@ -312,7 +312,7 @@ class LegacyGraphicsFactory:
 
     def draw_window_lower_widget_bitmap(self, size: int, col1, col2) -> Surface:
         surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
-        draw_box_bitmap(surface, "idle", Rect(0, 0, size, size), LEGACY_COLOURS)
+        draw_box_bitmap(surface, "idle", Rect(0, 0, size, size), BUILT_IN_COLOURS)
         gutter = max(1, int(size * 0.1) // 2)
         panel_size = int(size * 0.45)
         offset = int(size * 0.2)
@@ -321,9 +321,9 @@ class LegacyGraphicsFactory:
         panel1 = Rect(base, base - gutter, panel_size + offset_b, panel_size + gutter + offset_b)
         panel2 = Rect(base + offset, base + gutter + offset_b, panel_size + offset_b, panel_size + gutter + offset_b)
         draw_rect(surface, col1, panel1)
-        draw_rect(surface, LEGACY_COLOURS["none"], panel1, 1)
+        draw_rect(surface, BUILT_IN_COLOURS["none"], panel1, 1)
         draw_rect(surface, col2, panel2)
-        draw_rect(surface, LEGACY_COLOURS["none"], panel2, 1)
+        draw_rect(surface, BUILT_IN_COLOURS["none"], panel2, 1)
         return surface
 
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str) -> WindowChromeVisuals:
@@ -336,20 +336,20 @@ class LegacyGraphicsFactory:
 
         draw_frame_bitmap(
             inactive,
-            LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["dark"],
-            LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["full"],
-            LEGACY_COLOURS["dark"],
+            BUILT_IN_COLOURS["none"],
+            BUILT_IN_COLOURS["dark"],
+            BUILT_IN_COLOURS["none"],
+            BUILT_IN_COLOURS["full"],
+            BUILT_IN_COLOURS["dark"],
             Rect(0, 0, width, chrome_height),
         )
         draw_frame_bitmap(
             active,
-            LEGACY_COLOURS["light"],
-            LEGACY_COLOURS["dark"],
-            LEGACY_COLOURS["full"],
-            LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["dark"],
+            BUILT_IN_COLOURS["light"],
+            BUILT_IN_COLOURS["dark"],
+            BUILT_IN_COLOURS["full"],
+            BUILT_IN_COLOURS["none"],
+            BUILT_IN_COLOURS["dark"],
             Rect(0, 0, width, chrome_height),
         )
 
@@ -367,7 +367,7 @@ class LegacyGraphicsFactory:
         inactive.blit(inactive_text, (5, inactive_y))
         active.blit(active_text, (5, active_y))
 
-        lower = self.draw_window_lower_widget_bitmap(chrome_height, LEGACY_COLOURS["full"], LEGACY_COLOURS["medium"])
+        lower = self.draw_window_lower_widget_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"])
 
         return WindowChromeVisuals(title_bar_inactive=inactive, title_bar_active=active, lower_widget=lower)
 
@@ -376,8 +376,8 @@ class LegacyGraphicsFactory:
         size = min(rect.width, rect.height)
         glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
         points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
-        polygon(glyph, LEGACY_COLOURS["full"], points, 0)
-        polygon(glyph, LEGACY_COLOURS["none"], points, 20)
+        polygon(glyph, BUILT_IN_COLOURS["full"], points, 0)
+        polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
         glyph = rotate(glyph, int(direction) % 360)
         glyph = smoothscale(glyph, (size, size))
         glyph_x = self._centre(rect.width, size)

@@ -7,7 +7,7 @@ from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
 from ..core.scene import Scene
 from ..core.renderer import Renderer
-from ..graphics.legacy_factory import LegacyGraphicsFactory
+from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -23,7 +23,7 @@ class GuiApplication:
         self.input_state = InputState()
         self.pointer_capture = PointerCapture()
         default_theme = ColorTheme()
-        default_factory = LegacyGraphicsFactory(default_theme)
+        default_factory = BuiltInGraphicsFactory(default_theme)
         default_theme.graphics_factory = default_factory
         default_scene = Scene()
         default_window_tiling = WindowTilingManager(self, scene=default_scene)
@@ -107,13 +107,13 @@ class GuiApplication:
     def get_scene_scheduler(self, name: str) -> TaskScheduler:
         return self._scene_runtime(name)["scheduler"]
 
-    def get_scene_graphics_factory(self, name: str) -> LegacyGraphicsFactory:
+    def get_scene_graphics_factory(self, name: str) -> BuiltInGraphicsFactory:
         return self._scene_runtime(name)["graphics_factory"]
 
     def _create_scene_runtime(self):
         scene = Scene()
         theme = ColorTheme()
-        factory = LegacyGraphicsFactory(theme)
+        factory = BuiltInGraphicsFactory(theme)
         theme.graphics_factory = factory
         return {
             "scene": scene,

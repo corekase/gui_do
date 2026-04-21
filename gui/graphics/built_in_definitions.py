@@ -5,8 +5,8 @@ from typing import Dict, Tuple
 from pygame import Rect, Surface
 from pygame.draw import line, rect as draw_rect
 
-# Literal legacy palette from the old widget base.
-LEGACY_COLOURS: Dict[str, Tuple[int, int, int]] = {
+# Literal built-in palette from the original widget base.
+BUILT_IN_COLOURS: Dict[str, Tuple[int, int, int]] = {
     "full": (255, 255, 255),
     "light": (0, 200, 200),
     "medium": (0, 150, 150),
@@ -27,7 +27,7 @@ def draw_frame_bitmap(
     background,
     surface_rect: Rect,
 ) -> None:
-    """Literal frame routine from the legacy bitmap factory."""
+    """Literal frame routine from the built-in bitmap factory."""
     x, y, width, height = surface_rect
     surface.lock()
     draw_rect(surface, background, surface_rect, 0)

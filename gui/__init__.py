@@ -8,7 +8,7 @@ def _enable_windows_dpi_awareness() -> None:
     """Enable process DPI awareness on Windows to avoid scaled client-area padding."""
     if os.name != "nt":
         return
-    # Keep legacy behavior: let platform/ctypes errors surface for visibility.
+    # Keep strict behavior: let platform/ctypes errors surface for visibility.
     ctypes.windll.user32.SetProcessDPIAware()
 
 
@@ -34,7 +34,7 @@ from .layout.layout_manager import LayoutManager
 from .layout.window_tiling_manager import WindowTilingManager
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
-from .graphics.legacy_factory import LegacyGraphicsFactory
+from .graphics.built_in_factory import BuiltInGraphicsFactory
 from .theme.color_theme import ColorTheme
 
 __all__ = [
@@ -60,6 +60,6 @@ __all__ = [
     "TaskEvent",
     "TaskScheduler",
     "Timers",
-    "LegacyGraphicsFactory",
+    "BuiltInGraphicsFactory",
     "ColorTheme",
 ]

@@ -1,9 +1,9 @@
-from .legacy_definitions import LEGACY_COLOURS
-from .legacy_factory import InteractiveVisuals, LegacyGraphicsFactory, WindowChromeVisuals
+from .built_in_definitions import BUILT_IN_COLOURS
+from .built_in_factory import InteractiveVisuals, BuiltInGraphicsFactory, WindowChromeVisuals
 
 __all__ = [
-    "LEGACY_COLOURS",
+    "BUILT_IN_COLOURS",
     "InteractiveVisuals",
-    "LegacyGraphicsFactory",
+    "BuiltInGraphicsFactory",
     "WindowChromeVisuals",
 ]
