@@ -5,10 +5,14 @@ class Renderer:
     """Renderer that draws one scene with one color theme."""
 
     def render(self, surface, scene, theme, app=None) -> None:
-        surface.fill(theme.background)
-        if getattr(theme, "background_bitmap", None) is not None:
-            scaled = pygame.transform.smoothscale(theme.background_bitmap, surface.get_size())
-            surface.blit(scaled, (0, 0))
+        restored = False
+        if app is not None and hasattr(app, "restore_pristine"):
+            restored = bool(app.restore_pristine(surface=surface))
+        if not restored:
+            surface.fill(theme.background)
+            if getattr(theme, "background_bitmap", None) is not None:
+                scaled = pygame.transform.smoothscale(theme.background_bitmap, surface.get_size())
+                surface.blit(scaled, (0, 0))
         scene.draw(surface, theme)
         if app is None:
             return

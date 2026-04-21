@@ -77,6 +77,8 @@ class GuiDoDemo:
 
         self._build_life_context_scene()
         self._build_mandel_context_scene()
+        self.app.set_pristine("backdrop.jpg", scene_name="life")
+        self.app.set_pristine("backdrop.jpg", scene_name="mandel")
         self.app.switch_scene("life")
         self._bind_runtime()
         self.app.set_screen_lifecycle(
@@ -88,37 +90,65 @@ class GuiDoDemo:
         self.app.update = self._update
 
     def _build_life_context_scene(self) -> None:
-        self.root = self.app.add(PanelControl("life_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height)), scene_name="life")
+        self.root = self.app.add(
+            PanelControl("life_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
+            scene_name="life",
+        )
         self._build_life_window()
         self.life_window.visible = True
-        self.life_switch_button = self.root.add(
+        self.life_task_panel = self.app.add(
+            TaskPanelControl(
+                "life_task_panel",
+                Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
+                auto_hide=True,
+                hidden_peek_pixels=6,
+                animation_step_px=8,
+                dock_bottom=True,
+            ),
+            scene_name="life",
+        )
+        self.life_quit_button = self.life_task_panel.add(
+            ButtonControl("life_quit", Rect(16, self.screen_rect.height - 40, 120, 30), "Quit", self._exit_app, style="angle")
+        )
+        self.life_switch_button = self.life_task_panel.add(
             ButtonControl(
                 "life_to_mandel",
-                Rect(self.screen_rect.width - 196, 14, 180, 30),
+                Rect(146, self.screen_rect.height - 40, 180, 30),
                 "Go Mandelbrot",
                 self._switch_to_mandel_context,
                 style="round",
             )
         )
-        self.life_quit_button = self.root.add(
-            ButtonControl("life_quit", Rect(16, 14, 120, 30), "Quit", self._exit_app, style="angle")
-        )
 
     def _build_mandel_context_scene(self) -> None:
-        self.root = self.app.add(PanelControl("mandel_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height)), scene_name="mandel")
+        self.root = self.app.add(
+            PanelControl("mandel_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
+            scene_name="mandel",
+        )
         self._build_mandelbrot_window()
         self.mandel_window.visible = True
-        self.mandel_switch_button = self.root.add(
+        self.mandel_task_panel = self.app.add(
+            TaskPanelControl(
+                "mandel_task_panel",
+                Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
+                auto_hide=True,
+                hidden_peek_pixels=6,
+                animation_step_px=8,
+                dock_bottom=True,
+            ),
+            scene_name="mandel",
+        )
+        self.mandel_quit_button = self.mandel_task_panel.add(
+            ButtonControl("mandel_quit", Rect(16, self.screen_rect.height - 40, 120, 30), "Quit", self._exit_app, style="angle")
+        )
+        self.mandel_switch_button = self.mandel_task_panel.add(
             ButtonControl(
                 "mandel_to_life",
-                Rect(16, 14, 180, 30),
+                Rect(146, self.screen_rect.height - 40, 180, 30),
                 "Go Life",
                 self._switch_to_life_context,
                 style="round",
             )
-        )
-        self.mandel_quit_button = self.root.add(
-            ButtonControl("mandel_quit", Rect(self.screen_rect.width - 136, 14, 120, 30), "Quit", self._exit_app, style="angle")
         )
 
     def _switch_to_life_context(self) -> None:
@@ -1009,7 +1039,10 @@ class GuiDoDemo:
     def _screen_preamble(self) -> None:
         return None
 
-    def _screen_event_handler(self, _event) -> bool:
+    def _screen_event_handler(self, event) -> bool:
+        if getattr(event, "type", None) == pygame.KEYDOWN and getattr(event, "key", None) == pygame.K_ESCAPE:
+            self._exit_app()
+            return True
         return False
 
     def _screen_postamble(self) -> None:

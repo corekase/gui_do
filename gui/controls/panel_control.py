@@ -10,9 +10,10 @@ from ..core.ui_node import UiNode
 class PanelControl(UiNode):
     """Container control that owns child controls."""
 
-    def __init__(self, control_id: str, rect: Rect) -> None:
+    def __init__(self, control_id: str, rect: Rect, draw_background: bool = True) -> None:
         super().__init__(control_id, rect)
         self.children: List[UiNode] = []
+        self.draw_background = bool(draw_background)
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
@@ -159,23 +160,24 @@ class PanelControl(UiNode):
         return False
 
     def draw(self, surface, theme) -> None:
-        factory = getattr(theme, "graphics_factory", None)
-        if factory is None:
-            draw_rect(surface, theme.medium, self.rect, 0)
-            draw_rect(surface, theme.dark, self.rect, 2)
-        else:
-            visual_size = (self.rect.width, self.rect.height)
-            if self._visuals is None or self._visual_size != visual_size:
-                self._visuals = factory.build_frame_visuals(self.rect)
-                self._visual_size = visual_size
-            selected = factory.resolve_visual_state(
-                self._visuals,
-                visible=self.visible,
-                enabled=self.enabled,
-                armed=False,
-                hovered=False,
-            )
-            surface.blit(selected, self.rect)
+        if self.draw_background:
+            factory = getattr(theme, "graphics_factory", None)
+            if factory is None:
+                draw_rect(surface, theme.medium, self.rect, 0)
+                draw_rect(surface, theme.dark, self.rect, 2)
+            else:
+                visual_size = (self.rect.width, self.rect.height)
+                if self._visuals is None or self._visual_size != visual_size:
+                    self._visuals = factory.build_frame_visuals(self.rect)
+                    self._visual_size = visual_size
+                selected = factory.resolve_visual_state(
+                    self._visuals,
+                    visible=self.visible,
+                    enabled=self.enabled,
+                    armed=False,
+                    hovered=False,
+                )
+                surface.blit(selected, self.rect)
         for child in self.children:
             if child.visible:
                 child.draw(surface, theme)

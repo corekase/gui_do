@@ -59,6 +59,20 @@ class GuiApplication:
         self._screen_postamble: Optional[Callable[[], None]] = None
         self._init_cursor_system()
 
+    @staticmethod
+    def _load_pristine_surface(source):
+        if source is None:
+            return None
+        if isinstance(source, pygame.Surface):
+            return source.convert()
+        if isinstance(source, (str, Path)):
+            candidate = Path(source)
+            if not candidate.is_absolute():
+                root = Path(__file__).resolve().parents[2]
+                candidate = root / "data" / "images" / str(source)
+            return pygame.image.load(str(candidate)).convert()
+        raise TypeError("pristine source must be a Surface or path-like string")
+
     def add(self, node, scene_name: Optional[str] = None):
         """Add a root node to the application scene."""
         if scene_name is None:
@@ -99,6 +113,9 @@ class GuiApplication:
             "scheduler": TaskScheduler(),
             "theme": theme,
             "graphics_factory": factory,
+            "screen_pristine": None,
+            "screen_pristine_scaled": None,
+            "screen_pristine_scaled_size": (0, 0),
         }
 
     def _scene_runtime(self, name: str):
@@ -106,7 +123,36 @@ class GuiApplication:
         if runtime is None:
             runtime = self._create_scene_runtime()
             self._scenes[name] = runtime
+        runtime.setdefault("screen_pristine", None)
+        runtime.setdefault("screen_pristine_scaled", None)
+        runtime.setdefault("screen_pristine_scaled_size", (0, 0))
         return runtime
+
+    def set_pristine(self, source, scene_name: Optional[str] = None) -> None:
+        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+        runtime["screen_pristine"] = self._load_pristine_surface(source)
+        runtime["screen_pristine_scaled"] = None
+        runtime["screen_pristine_scaled_size"] = (0, 0)
+
+    def restore_pristine(self, scene_name: Optional[str] = None, surface: Optional[pygame.Surface] = None) -> bool:
+        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+        pristine = runtime.get("screen_pristine")
+        if pristine is None:
+            return False
+
+        target = self.surface if surface is None else surface
+        target_size = target.get_size()
+        bitmap = pristine
+        if pristine.get_size() != target_size:
+            cached = runtime.get("screen_pristine_scaled")
+            cached_size = runtime.get("screen_pristine_scaled_size", (0, 0))
+            if cached is None or cached_size != target_size:
+                cached = pygame.transform.smoothscale(pristine, target_size)
+                runtime["screen_pristine_scaled"] = cached
+                runtime["screen_pristine_scaled_size"] = target_size
+            bitmap = cached
+        target.blit(bitmap, (0, 0))
+        return True
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""

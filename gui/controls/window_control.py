@@ -1,4 +1,5 @@
 from typing import Callable, List, Optional
+from pathlib import Path
 import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
@@ -32,11 +33,74 @@ class WindowControl(UiNode):
         self._preamble = preamble
         self._event_handler = event_handler
         self._postamble = postamble
+        self._pristine = None
+        self._pristine_scaled = None
+        self._pristine_scaled_size = (0, 0)
+        self._frame_visuals = None
+        self._frame_visual_size = (0, 0)
 
     def set_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
         self._preamble = preamble
         self._event_handler = event_handler
         self._postamble = postamble
+
+    @staticmethod
+    def _load_pristine_surface(source):
+        if source is None:
+            return None
+        if isinstance(source, pygame.Surface):
+            return source.convert()
+        if isinstance(source, (str, Path)):
+            candidate = Path(source)
+            if not candidate.is_absolute():
+                root = Path(__file__).resolve().parents[2]
+                candidate = root / "data" / "images" / str(source)
+            return pygame.image.load(str(candidate)).convert()
+        raise TypeError("pristine source must be a Surface or path-like string")
+
+    def set_pristine(self, source) -> None:
+        self._pristine = self._load_pristine_surface(source)
+        self._pristine_scaled = None
+        self._pristine_scaled_size = (0, 0)
+
+    def restore_pristine(self, surface) -> bool:
+        if self._pristine is None:
+            return False
+        target_size = (self.rect.width, self.rect.height)
+        bitmap = self._pristine
+        if bitmap.get_size() != target_size:
+            if self._pristine_scaled is None or self._pristine_scaled_size != target_size:
+                self._pristine_scaled = pygame.transform.smoothscale(bitmap, target_size)
+                self._pristine_scaled_size = target_size
+            bitmap = self._pristine_scaled
+        surface.blit(bitmap, self.rect.topleft)
+        return True
+
+    def _draw_default_window_background(self, surface, theme, factory) -> None:
+        if factory is not None:
+            visual_size = (self.rect.width, self.rect.height)
+            if self._frame_visuals is None or self._frame_visual_size != visual_size:
+                self._frame_visuals = factory.build_frame_visuals(self.rect)
+                self._frame_visual_size = visual_size
+            selected = factory.resolve_visual_state(
+                self._frame_visuals,
+                visible=self.visible,
+                enabled=self.enabled,
+                armed=False,
+                hovered=False,
+            )
+            surface.blit(selected, self.rect)
+            return
+
+        draw_rect(surface, theme.medium, self.rect, 0)
+        top_left = (self.rect.left, self.rect.top)
+        top_right = (self.rect.right - 1, self.rect.top)
+        bottom_left = (self.rect.left, self.rect.bottom - 1)
+        bottom_right = (self.rect.right - 1, self.rect.bottom - 1)
+        pygame.draw.line(surface, theme.light, top_left, top_right, 1)
+        pygame.draw.line(surface, theme.light, top_left, bottom_left, 1)
+        pygame.draw.line(surface, theme.dark, bottom_left, bottom_right, 1)
+        pygame.draw.line(surface, theme.dark, top_right, bottom_right, 1)
 
     @property
     def active(self) -> bool:
@@ -144,8 +208,9 @@ class WindowControl(UiNode):
 
     def draw(self, surface, theme) -> None:
         factory = getattr(theme, "graphics_factory", None)
+        if not self.restore_pristine(surface):
+            self._draw_default_window_background(surface, theme, factory)
         if factory is None:
-            draw_rect(surface, theme.medium, self.rect, 0)
             title_fill = theme.dark if self.active else theme.medium
             draw_rect(surface, title_fill, self.title_bar_rect(), 0)
             draw_rect(surface, theme.dark, self.rect, 2)
@@ -158,7 +223,6 @@ class WindowControl(UiNode):
                 chrome_height = self._chrome.title_bar_active.get_height()
                 self.titlebar_height = max(18, chrome_height)
                 self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
-            draw_rect(surface, theme.medium, self.rect, 0)
             title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
             title_rect = self.title_bar_rect()
             source_rect = Rect(0, 0, title_rect.width, title_rect.height)
