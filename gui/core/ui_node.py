@@ -17,7 +17,7 @@ class UiNode:
     def __init__(self, control_id: str, rect: Rect) -> None:
         self.control_id = control_id
         self.rect = Rect(rect)
-        self.enabled = True
+        self._enabled = True
         self._visible = True
         self._focused = False
         self.parent: Optional["UiNode"] = None
@@ -32,6 +32,17 @@ class UiNode:
     def visible(self) -> bool:
         return self._visible
 
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool) -> None:
+        previous = self._enabled
+        self._enabled = bool(value)
+        if previous != self._enabled:
+            self._on_enabled_changed(previous, self._enabled)
+
     @visible.setter
     def visible(self, value: bool) -> None:
         previous = self._visible
@@ -41,6 +52,10 @@ class UiNode:
 
     def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
         """Hook for controls that need side effects when visibility changes."""
+        self.invalidate()
+
+    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
+        """Hook for controls that need side effects when enabled-state changes."""
         self.invalidate()
 
     @property

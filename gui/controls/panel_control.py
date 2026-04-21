@@ -95,6 +95,31 @@ class PanelControl(UiNode):
             return
         self._set_active_window(next_window)
 
+    def _on_window_enabled_changed(self, window: UiNode, old_enabled: bool, new_enabled: bool) -> None:
+        if old_enabled == new_enabled:
+            return
+        if not window.visible:
+            self._set_window_active_state(window, False)
+            return
+        if not new_enabled:
+            was_active = bool(getattr(window, "active", False))
+            self._set_window_active_state(window, False)
+            if not was_active:
+                return
+            next_window = self._next_top_visible_window(excluding=window)
+            if next_window is None:
+                self._clear_active_windows()
+            else:
+                self._set_active_window(next_window)
+            return
+        active_window = None
+        for child in reversed(self.children):
+            if child.visible and child.enabled and self._is_window_like(child) and getattr(child, "active", False):
+                active_window = child
+                break
+        if active_window is None:
+            self._set_active_window(window)
+
     def _raise_window(self, window: UiNode) -> None:
         if window in self.children:
             self.children.remove(window)

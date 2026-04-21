@@ -140,6 +140,12 @@ class WindowControl(UiNode):
             return
         parent._on_window_visibility_changed(self, old_visible, new_visible)
 
+    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
+        parent = self.parent
+        if parent is None:
+            return
+        parent._on_window_enabled_changed(self, old_enabled, new_enabled)
+
     def move_by(self, dx: int, dy: int) -> None:
         if dx == 0 and dy == 0:
             return
