@@ -1,5 +1,6 @@
 import pygame
 from typing import Callable, Optional
+from pygame import Rect
 
 from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
@@ -30,6 +31,11 @@ class GuiApplication:
         self.graphics_factory = LegacyGraphicsFactory(self.theme)
         self.theme.graphics_factory = self.graphics_factory
         self.running = True
+        self.mouse_point_locked = False
+        self.lock_point_pos = None
+        self.locking_object = None
+        self.lock_area = None
+        self._point_lock_recenter_rect = self._build_point_lock_recenter_rect()
         self._screen_preamble: Optional[Callable[[], None]] = None
         self._screen_event_handler: Optional[Callable[[object], bool]] = None
         self._screen_postamble: Optional[Callable[[], None]] = None
@@ -58,8 +64,13 @@ class GuiApplication:
             self.running = False
             return True
         self.input_state.update_from_event(event)
+        if self.lock_area is not None:
+            self.input_state.pointer_pos = self._clamp_to_rect(self.input_state.pointer_pos, self.lock_area)
         if self.pointer_capture.lock_rect is not None:
             self.input_state.pointer_pos = self.pointer_capture.clamp(self.input_state.pointer_pos)
+        if self.mouse_point_locked and self.lock_point_pos is not None:
+            self._enforce_point_lock(event)
+            self.input_state.pointer_pos = self.lock_point_pos
         if self._screen_event_handler is not None and self._screen_event_handler(event):
             return True
         return self.scene.dispatch(event, self)
@@ -68,6 +79,76 @@ class GuiApplication:
         self._screen_preamble = preamble
         self._screen_event_handler = event_handler
         self._screen_postamble = postamble
+
+    @staticmethod
+    def _clamp_to_rect(pos, rect: Rect):
+        x = min(max(int(pos[0]), rect.left), rect.right - 1)
+        y = min(max(int(pos[1]), rect.top), rect.bottom - 1)
+        return (x, y)
+
+    def _build_point_lock_recenter_rect(self) -> Rect:
+        bounds = self.surface.get_rect()
+        width = max(1, int(bounds.width * 0.8))
+        height = max(1, int(bounds.height * 0.8))
+        rect = Rect(0, 0, width, height)
+        rect.center = bounds.center
+        return rect
+
+    def _enforce_point_lock(self, event) -> None:
+        if self.lock_point_pos is None:
+            return
+        event_type = getattr(event, "type", None)
+        if event_type not in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            return
+        raw_pos = getattr(event, "pos", None)
+        if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
+            return
+        if self._point_lock_recenter_rect.collidepoint(raw_pos):
+            return
+        pygame.mouse.set_pos(self.lock_point_pos)
+
+    def set_lock_point(self, locking_object, point=None) -> None:
+        if locking_object is None:
+            self.mouse_point_locked = False
+            self.lock_point_pos = None
+            self.locking_object = None
+            return
+        self.locking_object = locking_object
+        self._point_lock_recenter_rect = self._build_point_lock_recenter_rect()
+        if point is None:
+            point = self._point_lock_recenter_rect.center
+        clamped = self._clamp_to_rect(point, self._point_lock_recenter_rect)
+        self.lock_point_pos = (int(clamped[0]), int(clamped[1]))
+        self.mouse_point_locked = True
+
+    def set_lock_area(self, lock_rect) -> None:
+        if lock_rect is None:
+            self.lock_area = None
+            return
+        self.lock_area = Rect(lock_rect)
+
+    def convert_to_window(self, point, window):
+        if window is None:
+            return (int(point[0]), int(point[1]))
+        return (int(point[0]) - int(window.rect.left), int(point[1]) - int(window.rect.top))
+
+    def get_lock_point_motion_delta(self, event):
+        if not self.mouse_point_locked or self.lock_point_pos is None:
+            return None
+        if getattr(event, "type", None) != pygame.MOUSEMOTION:
+            return None
+        raw_pos = getattr(event, "pos", None)
+        if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
+            return None
+        dx = int(raw_pos[0]) - int(self.lock_point_pos[0])
+        dy = int(raw_pos[1]) - int(self.lock_point_pos[1])
+        if dx != 0 or dy != 0:
+            pygame.mouse.set_pos(self.lock_point_pos)
+            return (dx, dy)
+        rel = getattr(event, "rel", None)
+        if isinstance(rel, tuple) and len(rel) == 2:
+            return (int(rel[0]), int(rel[1]))
+        return (0, 0)
 
     def draw(self) -> None:
         """Render one frame."""

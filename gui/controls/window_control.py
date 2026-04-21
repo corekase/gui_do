@@ -112,9 +112,27 @@ class WindowControl(UiNode):
             self._postamble()
 
     def handle_event(self, event, app) -> bool:
+        def _owns_node(target) -> bool:
+            if target is None:
+                return False
+            if target is self:
+                return True
+            pending = list(self.children)
+            while pending:
+                node = pending.pop()
+                if node is target:
+                    return True
+                children = getattr(node, "children", None)
+                if isinstance(children, list) and children:
+                    pending.extend(children)
+            return False
+
         raw = getattr(event, "pos", None)
         if isinstance(raw, tuple) and len(raw) == 2 and not self.rect.collidepoint(raw):
-            return False
+            lock_object = getattr(app, "locking_object", None)
+            lock_active = bool(getattr(app, "mouse_point_locked", False) and getattr(app, "lock_point_pos", None) is not None)
+            if not (lock_active and _owns_node(lock_object)):
+                return False
         if self._event_handler is not None and self._event_handler(event):
             return True
         for child in reversed(self.children):

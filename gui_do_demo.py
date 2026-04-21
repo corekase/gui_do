@@ -606,19 +606,26 @@ class GuiDoDemo:
         if event_type == pygame.MOUSEBUTTONDOWN and button == 3:
             if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
                 self.life_dragging = True
+                self.app.set_lock_point(self.life_canvas, self.life_canvas.rect.center)
                 return True
 
         if event_type == pygame.MOUSEBUTTONUP and button == 3:
             if self.life_dragging:
                 self.life_dragging = False
+                self.app.set_lock_point(None)
                 return True
 
         if event_type == pygame.MOUSEMOTION and self.life_dragging:
-            rel = getattr(event, "rel", None)
-            if isinstance(rel, tuple) and len(rel) == 2:
-                self.life_origin[0] -= rel[0]
-                self.life_origin[1] -= rel[1]
-                return True
+            delta = self.app.get_lock_point_motion_delta(event)
+            if delta is None:
+                rel = getattr(event, "rel", None)
+                if isinstance(rel, tuple) and len(rel) == 2:
+                    delta = (rel[0], rel[1])
+                else:
+                    delta = (0, 0)
+            self.life_origin[0] -= delta[0]
+            self.life_origin[1] -= delta[1]
+            return True
 
         if event_type == pygame.MOUSEBUTTONDOWN and button in (4, 5):
             if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
@@ -628,9 +635,15 @@ class GuiDoDemo:
                 return True
 
         if event_type == pygame.MOUSEWHEEL:
-            pointer_pos = self.app.input_state.pointer_pos
-            if self.life_dragging or self.life_canvas.rect.collidepoint(pointer_pos):
-                anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
+            pointer_pos = self.app.lock_point_pos if self.app.mouse_point_locked and self.app.lock_point_pos is not None else pygame.mouse.get_pos()
+            if self.life_canvas.rect.collidepoint(pointer_pos):
+                if self.app.mouse_point_locked and self.app.lock_point_pos is not None:
+                    lock_window_pos = self.app.convert_to_window(self.app.lock_point_pos, self.life_window)
+                    canvas_window_left = self.life_canvas.rect.left - self.life_window.rect.left
+                    canvas_window_top = self.life_canvas.rect.top - self.life_window.rect.top
+                    anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
+                else:
+                    anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
                 self._zoom_life_view_about(anchor_local, self._life_zoom_slider_last_value + (getattr(event, "y", 0) * 2))
                 return True
 
