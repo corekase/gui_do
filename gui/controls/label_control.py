@@ -13,5 +13,15 @@ class LabelControl(UiNode):
         self.text_size = 16
 
     def draw(self, surface, theme) -> None:
-        rendered = theme.render_text(self.text, size=self.text_size, title=self.title, shadow=True)
+        factory = getattr(theme, "graphics_factory", None)
+        if factory is not None:
+            old = factory.get_current_font_name()
+            factory.set_font("titlebar" if self.title else "normal")
+            try:
+                rendered = factory.render_text(self.text, colour=theme.text, shadow=True)
+            finally:
+                while factory.get_current_font_name() != old:
+                    factory.set_last_font()
+        else:
+            rendered = theme.render_text(self.text, size=self.text_size, title=self.title, shadow=True)
         surface.blit(rendered, self.rect.topleft)

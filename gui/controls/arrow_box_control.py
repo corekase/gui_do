@@ -27,6 +27,7 @@ class ArrowBoxControl(UiNode):
         self.repeat_interval_seconds = float(repeat_interval_seconds)
         self._pressed = False
         self._timer_id = ("arrow_repeat", self.control_id)
+        self._visuals = None
 
     def _invoke(self) -> None:
         if self.on_activate is not None:
@@ -49,15 +50,28 @@ class ArrowBoxControl(UiNode):
         return False
 
     def draw(self, surface, theme) -> None:
-        draw_rect(surface, theme.dark if self._pressed else theme.medium, self.rect, 0)
-        draw_rect(surface, theme.dark, self.rect, 2)
-        cx, cy = self.rect.center
-        if self.direction in (90, 270):
-            points = [(cx - 4, cy - 6), (cx + 4, cy - 6), (cx, cy + 6)]
-            if self.direction == 270:
-                points = [(cx - 4, cy + 6), (cx + 4, cy + 6), (cx, cy - 6)]
+        factory = getattr(theme, "graphics_factory", None)
+        if factory is None:
+            draw_rect(surface, theme.dark if self._pressed else theme.medium, self.rect, 0)
+            draw_rect(surface, theme.dark, self.rect, 2)
+            cx, cy = self.rect.center
+            if self.direction in (90, 270):
+                points = [(cx - 4, cy - 6), (cx + 4, cy - 6), (cx, cy + 6)]
+                if self.direction == 270:
+                    points = [(cx - 4, cy + 6), (cx + 4, cy + 6), (cx, cy - 6)]
+            else:
+                points = [(cx - 6, cy - 4), (cx - 6, cy + 4), (cx + 6, cy)]
+                if self.direction == 180:
+                    points = [(cx + 6, cy - 4), (cx + 6, cy + 4), (cx - 6, cy)]
+            polygon(surface, theme.text, points)
+            return
+        if self._visuals is None:
+            self._visuals = factory.draw_arrow_visuals(self.rect, self.direction)
+        if not self.enabled:
+            surface.blit(self._visuals.disabled, self.rect)
+        elif self._pressed:
+            surface.blit(self._visuals.armed, self.rect)
+        elif self.rect.collidepoint(pygame.mouse.get_pos()):
+            surface.blit(self._visuals.hover, self.rect)
         else:
-            points = [(cx - 6, cy - 4), (cx - 6, cy + 4), (cx + 6, cy)]
-            if self.direction == 180:
-                points = [(cx + 6, cy - 4), (cx + 6, cy + 4), (cx - 6, cy)]
-        polygon(surface, theme.text, points)
+            surface.blit(self._visuals.idle, self.rect)

@@ -44,9 +44,10 @@ def main() -> None:
     except TypeError:
         screen = pygame.display.set_mode((1920, 1080), flags=flags)
     pygame.display.set_caption("gui_do demo")
+    screen_rect = screen.get_rect()
 
     app = GuiApplication(screen)
-    root = app.add(PanelControl("root", Rect(14, 14, 1892, 1052)))
+    root = app.add(PanelControl("root", Rect(0, 0, screen_rect.width, screen_rect.height)))
 
     header = _set_title(root.add(LabelControl("header", Rect(34, 24, 900, 30), "gui_do: fullscreen rebased demo")), 24)
     _set_text(
@@ -64,15 +65,15 @@ def main() -> None:
     task_panel = app.add(
         TaskPanelControl(
             "task_panel",
-            Rect(14, 1016, 1892, 50),
+            Rect(0, screen_rect.height - 50, screen_rect.width, 50),
             auto_hide=True,
             hidden_peek_pixels=6,
             animation_step_px=8,
             dock_bottom=True,
         )
     )
-    _set_text(task_panel.add(LabelControl("task_label", Rect(28, 1030, 130, 20), "Task panel")), 16)
-    status_label = _set_text(task_panel.add(LabelControl("task_status", Rect(168, 1030, 460, 20), "Status: idle")), 16)
+    _set_text(task_panel.add(LabelControl("task_label", Rect(18, screen_rect.height - 36, 130, 20), "Task panel")), 16)
+    status_label = _set_text(task_panel.add(LabelControl("task_status", Rect(158, screen_rect.height - 36, 460, 20), "Status: idle")), 16)
 
     # Optional watermark image from original asset set.
     root.add(ImageControl("realize", Rect(1760, 20, 128, 64), "data/images/realize.png", scale=True))
@@ -150,14 +151,14 @@ def main() -> None:
 
         app.scheduler.add_task(task_id, worker_logic, parameters={"total": 16}, message_method=on_worker)
 
-    task_panel.add(ButtonControl("show_life", Rect(646, 1025, 120, 30), "Show Life", show_life))
-    task_panel.add(ButtonControl("show_mandel", Rect(776, 1025, 150, 30), "Show Mandelbrot", show_mandel))
-    task_panel.add(ButtonControl("run_worker", Rect(936, 1025, 120, 30), "Run Worker", run_worker))
+    task_panel.add(ButtonControl("show_life", Rect(636, screen_rect.height - 40, 120, 30), "Show Life", show_life))
+    task_panel.add(ButtonControl("show_mandel", Rect(766, screen_rect.height - 40, 150, 30), "Show Mandelbrot", show_mandel))
+    task_panel.add(ButtonControl("run_worker", Rect(926, screen_rect.height - 40, 120, 30), "Run Worker", run_worker))
 
     def close_app() -> None:
         app.running = False
 
-    task_panel.add(ButtonControl("exit", Rect(1768, 1025, 120, 30), "Exit", close_app))
+    task_panel.add(ButtonControl("exit", Rect(screen_rect.width - 132, screen_rect.height - 40, 120, 30), "Exit", close_app))
 
     # Life state.
     life_cells = {(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)}

@@ -1,5 +1,19 @@
 """Rebased GUI package entry point."""
 
+import ctypes
+import os
+
+
+def _enable_windows_dpi_awareness() -> None:
+    """Enable process DPI awareness on Windows to avoid scaled client-area padding."""
+    if os.name != "nt":
+        return
+    # Keep legacy behavior: let platform/ctypes errors surface for visibility.
+    ctypes.windll.user32.SetProcessDPIAware()
+
+
+_enable_windows_dpi_awareness()
+
 from .app.gui_application import GuiApplication
 from .loop.ui_engine import UiEngine
 from .controls.panel_control import PanelControl
@@ -19,6 +33,7 @@ from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
+from .core.graphics_factory import LegacyGraphicsFactory
 from .theme.color_theme import ColorTheme
 
 __all__ = [
@@ -43,5 +58,6 @@ __all__ = [
     "TaskEvent",
     "TaskScheduler",
     "Timers",
+    "LegacyGraphicsFactory",
     "ColorTheme",
 ]

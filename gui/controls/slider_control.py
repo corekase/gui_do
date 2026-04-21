@@ -26,6 +26,10 @@ class SliderControl(UiNode):
         self.dragging = False
         self.handle_size = 16
         self._drag_anchor_offset = 0
+        self._track_visuals = None
+        self._handle_visuals = None
+        self._track_visuals_size = None
+        self._handle_visuals_size = None
         self._clamp_value()
 
     def _clamp_value(self) -> None:
@@ -101,8 +105,24 @@ class SliderControl(UiNode):
 
     def draw(self, surface, theme) -> None:
         travel = self._travel_rect()
-        draw_rect(surface, theme.dark, travel, 0)
         handle = self.handle_rect()
-        fill = theme.dark if self.dragging else theme.light
-        draw_rect(surface, fill, handle, 0)
-        draw_rect(surface, theme.dark, handle, 2)
+        factory = getattr(theme, "graphics_factory", None)
+        if factory is None:
+            draw_rect(surface, theme.dark, travel, 0)
+            fill = theme.dark if self.dragging else theme.light
+            draw_rect(surface, fill, handle, 0)
+            draw_rect(surface, theme.dark, handle, 2)
+            return
+        travel_size = (travel.width, travel.height)
+        handle_size = (handle.width, handle.height)
+        if self._track_visuals is None or self._track_visuals_size != travel_size:
+            self._track_visuals = factory.build_frame_visuals(travel)
+            self._track_visuals_size = travel_size
+        if self._handle_visuals is None or self._handle_visuals_size != handle_size:
+            self._handle_visuals = factory.build_frame_visuals(handle)
+            self._handle_visuals_size = handle_size
+        surface.blit(self._track_visuals.idle, travel)
+        if self.dragging:
+            surface.blit(self._handle_visuals.armed, handle)
+        else:
+            surface.blit(self._handle_visuals.hover, handle)

@@ -30,6 +30,7 @@ class CanvasControl(UiNode):
         self.overflow_mode = "drop_oldest"
         self.on_overflow: Optional[Callable[[int, int], None]] = None
         self._dropped_events = 0
+        self._visuals = None
 
     def get_canvas_surface(self) -> Surface:
         return self.canvas
@@ -88,6 +89,12 @@ class CanvasControl(UiNode):
         return False
 
     def draw(self, surface, theme) -> None:
-        draw_rect(surface, theme.medium, self.rect, 0)
-        draw_rect(surface, theme.dark, self.rect, 2)
+        factory = getattr(theme, "graphics_factory", None)
+        if factory is None:
+            draw_rect(surface, theme.medium, self.rect, 0)
+            draw_rect(surface, theme.dark, self.rect, 2)
+        else:
+            if self._visuals is None:
+                self._visuals = factory.build_frame_visuals(self.rect)
+            surface.blit(self._visuals.idle, self.rect)
         surface.blit(self.canvas, self.rect)

@@ -12,11 +12,13 @@ from ..core.ui_node import UiNode
 class ButtonControl(UiNode):
     """Clickable push button control."""
 
-    def __init__(self, control_id: str, rect: Rect, text: str, on_click: Optional[Callable[[], None]] = None) -> None:
+    def __init__(self, control_id: str, rect: Rect, text: str, on_click: Optional[Callable[[], None]] = None, style: str = "box") -> None:
         super().__init__(control_id, rect)
         self.text = text
         self.on_click = on_click
+        self.style = style
         self.hovered = False
+        self._visuals = None
 
     def handle_event(self, event, app) -> bool:
         raw = getattr(event, "pos", None)
@@ -30,14 +32,20 @@ class ButtonControl(UiNode):
         return False
 
     def draw(self, surface, theme) -> None:
-        fill = theme.light if self.hovered else theme.medium
-        draw_rect(surface, fill, self.rect, 0, border_radius=0)
-        draw_rect(surface, theme.dark, self.rect, 2, border_radius=0)
-        # Add a simple bevel to mimic classic gui_do chrome.
-        draw_rect(surface, theme.light, Rect(self.rect.left + 1, self.rect.top + 1, self.rect.width - 2, 1), 0)
-        draw_rect(surface, theme.light, Rect(self.rect.left + 1, self.rect.top + 1, 1, self.rect.height - 2), 0)
-        draw_rect(surface, theme.dark, Rect(self.rect.left + 1, self.rect.bottom - 2, self.rect.width - 2, 1), 0)
-        draw_rect(surface, theme.dark, Rect(self.rect.right - 2, self.rect.top + 1, 1, self.rect.height - 2), 0)
-        text_bitmap = theme.render_text(self.text, size=16, title=False, color=theme.text, shadow=True)
-        text_rect = text_bitmap.get_rect(center=self.rect.center)
-        surface.blit(text_bitmap, text_rect)
+        factory = getattr(theme, "graphics_factory", None)
+        if factory is None:
+            fill = theme.light if self.hovered else theme.medium
+            draw_rect(surface, fill, self.rect, 0)
+            draw_rect(surface, theme.dark, self.rect, 2)
+            text_bitmap = theme.render_text(self.text, size=16, title=False, color=theme.text, shadow=True)
+            text_rect = text_bitmap.get_rect(center=self.rect.center)
+            surface.blit(text_bitmap, text_rect)
+            return
+        if self._visuals is None:
+            self._visuals = factory.build_interactive_visuals(self.style, self.text, self.rect)
+        if not self.enabled:
+            surface.blit(self._visuals.disabled, self.rect)
+        elif self.hovered:
+            surface.blit(self._visuals.hover, self.rect)
+        else:
+            surface.blit(self._visuals.idle, self.rect)

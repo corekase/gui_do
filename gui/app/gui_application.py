@@ -4,6 +4,7 @@ from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
 from ..core.scene import Scene
 from ..core.renderer import Renderer
+from ..core.graphics_factory import LegacyGraphicsFactory
 from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -23,6 +24,8 @@ class GuiApplication:
         self.timers = Timers()
         self.layout = LayoutManager()
         self.theme = ColorTheme()
+        self.graphics_factory = LegacyGraphicsFactory(self.theme)
+        self.theme.graphics_factory = self.graphics_factory
         self.running = True
 
     def add(self, node):
