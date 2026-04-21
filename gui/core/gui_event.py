@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Hashable, Optional, Tuple
+
+import pygame
+
+
+class EventType(Enum):
+    PASS = "pass"
+    QUIT = "quit"
+    KEY_DOWN = "key_down"
+    KEY_UP = "key_up"
+    MOUSE_BUTTON_DOWN = "mouse_button_down"
+    MOUSE_BUTTON_UP = "mouse_button_up"
+    MOUSE_MOTION = "mouse_motion"
+    MOUSE_WHEEL = "mouse_wheel"
+    TEXT_INPUT = "text_input"
+    TEXT_EDITING = "text_editing"
+    WIDGET = "widget"
+    GROUP = "group"
+    TASK = "task"
+
+
+_PYGAME_KIND_MAP = {
+    pygame.QUIT: EventType.QUIT,
+    pygame.KEYDOWN: EventType.KEY_DOWN,
+    pygame.KEYUP: EventType.KEY_UP,
+    pygame.MOUSEBUTTONDOWN: EventType.MOUSE_BUTTON_DOWN,
+    pygame.MOUSEBUTTONUP: EventType.MOUSE_BUTTON_UP,
+    pygame.MOUSEMOTION: EventType.MOUSE_MOTION,
+    pygame.MOUSEWHEEL: EventType.MOUSE_WHEEL,
+    pygame.TEXTINPUT: EventType.TEXT_INPUT,
+    pygame.TEXTEDITING: EventType.TEXT_EDITING,
+}
+
+
+@dataclass
+class GuiEvent:
+    """Normalized GUI event shared across the package event pipeline."""
+
+    kind: EventType
+    type: int
+    key: Optional[int] = None
+    pos: Optional[Tuple[int, int]] = None
+    rel: Optional[Tuple[int, int]] = None
+    raw_pos: Optional[Tuple[int, int]] = None
+    raw_rel: Optional[Tuple[int, int]] = None
+    button: Optional[int] = None
+    wheel_x: int = 0
+    wheel_y: int = 0
+    text: Optional[str] = None
+    widget_id: Optional[str] = None
+    group: Optional[str] = None
+    window: Optional[object] = None
+    task_panel: bool = False
+    task_id: Optional[Hashable] = None
+    error: Optional[str] = None
+    source_event: Optional[object] = None
+
+    def is_kind(self, *kinds: EventType) -> bool:
+        return self.kind in kinds
+
+    def is_key_down(self, key: Optional[int] = None) -> bool:
+        if self.kind is not EventType.KEY_DOWN:
+            return False
+        return key is None or self.key == int(key)
+
+    def is_key_up(self, key: Optional[int] = None) -> bool:
+        if self.kind is not EventType.KEY_UP:
+            return False
+        return key is None or self.key == int(key)
+
+    def is_mouse_down(self, button: Optional[int] = None) -> bool:
+        if self.kind is not EventType.MOUSE_BUTTON_DOWN:
+            return False
+        return button is None or self.button == int(button)
+
+    def is_mouse_up(self, button: Optional[int] = None) -> bool:
+        if self.kind is not EventType.MOUSE_BUTTON_UP:
+            return False
+        return button is None or self.button == int(button)
+
+    def is_mouse_motion(self) -> bool:
+        return self.kind is EventType.MOUSE_MOTION
+
+    def is_mouse_wheel(self) -> bool:
+        return self.kind is EventType.MOUSE_WHEEL
+
+    @property
+    def wheel_delta(self) -> int:
+        return int(self.wheel_y)
+
+    def collides(self, rect) -> bool:
+        return self.pos is not None and rect.collidepoint(self.pos)
+
+    @classmethod
+    def from_pygame(cls, event, pointer_pos: Optional[Tuple[int, int]] = None) -> "GuiEvent":
+        event_type = int(getattr(event, "type", 0))
+        kind = _PYGAME_KIND_MAP.get(event_type, EventType.PASS)
+
+        pos = getattr(event, "pos", None)
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            pos = None
+
+        if event_type == pygame.MOUSEWHEEL and pos is None and pointer_pos is not None:
+            pos = (int(pointer_pos[0]), int(pointer_pos[1]))
+
+        rel = getattr(event, "rel", None)
+        if not (isinstance(rel, tuple) and len(rel) == 2):
+            rel = None
+
+        key = getattr(event, "key", None)
+        if key is not None:
+            key = int(key)
+
+        button = getattr(event, "button", None)
+        if button is not None:
+            button = int(button)
+
+        wheel_x = int(getattr(event, "x", 0)) if event_type == pygame.MOUSEWHEEL else 0
+        wheel_y = int(getattr(event, "y", 0)) if event_type == pygame.MOUSEWHEEL else 0
+        text = getattr(event, "text", None)
+
+        return cls(
+            kind=kind,
+            type=event_type,
+            key=key,
+            pos=pos,
+            rel=rel,
+            button=button,
+            wheel_x=wheel_x,
+            wheel_y=wheel_y,
+            text=text,
+            source_event=event,
+        )

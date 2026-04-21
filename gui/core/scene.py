@@ -2,6 +2,7 @@ import pygame
 
 from typing import List
 
+from .gui_event import EventType
 from .ui_node import UiNode
 
 
@@ -56,7 +57,20 @@ class Scene:
                 clear_method()
 
     def dispatch(self, event, app) -> bool:
-        if event.type == pygame.MOUSEBUTTONDOWN and getattr(event, "button", None) == 1:
+        is_left_down = False
+        is_mouse_down = getattr(event, "is_mouse_down", None)
+        if callable(is_mouse_down):
+            is_left_down = bool(is_mouse_down(1))
+        else:
+            is_left_down = bool(
+                (
+                    getattr(event, "kind", None) == EventType.MOUSE_BUTTON_DOWN
+                    or getattr(event, "type", None) == pygame.MOUSEBUTTONDOWN
+                )
+                and getattr(event, "button", None) == 1
+            )
+
+        if is_left_down:
             pos = getattr(event, "pos", None)
             if isinstance(pos, tuple) and len(pos) == 2:
                 if not self._point_in_task_panel(pos) and not self._point_in_window(pos):

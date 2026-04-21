@@ -32,6 +32,8 @@ from .controls.window_control import WindowControl
 from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
 from .layout.window_tiling_manager import WindowTilingManager
+from .core.event_manager import EventManager
+from .core.gui_event import EventType, GuiEvent
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
 from .graphics.built_in_factory import BuiltInGraphicsFactory
@@ -57,6 +59,9 @@ __all__ = [
     "LayoutAxis",
     "LayoutManager",
     "WindowTilingManager",
+    "EventManager",
+    "EventType",
+    "GuiEvent",
     "TaskEvent",
     "TaskScheduler",
     "Timers",

@@ -1,6 +1,4 @@
 from typing import Optional, Tuple
-
-from pygame.event import Event as PygameEvent
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
 
@@ -16,7 +14,7 @@ class InputState:
         """Reset transient frame fields."""
         self.wheel_delta = 0
 
-    def update_from_event(self, event: PygameEvent) -> Optional[Tuple[int, int]]:
+    def update_from_event(self, event: object) -> Optional[Tuple[int, int]]:
         """Apply event to input state and return raw event position when present."""
         raw_pos = getattr(event, "pos", None)
         if isinstance(raw_pos, tuple) and len(raw_pos) == 2:

@@ -4,6 +4,8 @@ from typing import Callable, Optional
 
 import pygame
 
+from .gui_event import EventType
+
 
 class KeyboardManager:
     """Routes key events through focused window-first keyboard dispatch."""
@@ -17,6 +19,9 @@ class KeyboardManager:
 
     @classmethod
     def is_key_event(cls, event) -> bool:
+        event_kind = getattr(event, "kind", None)
+        if event_kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING):
+            return True
         return getattr(event, "type", None) in cls.KEY_EVENT_TYPES
 
     @staticmethod

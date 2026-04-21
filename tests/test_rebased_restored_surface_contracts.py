@@ -11,7 +11,10 @@ from gui import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    EventManager,
+    EventType,
     FrameControl,
+    GuiEvent,
     GuiApplication,
     LayoutManager,
     PanelControl,
@@ -402,6 +405,52 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
             self.assertEqual(seen["screen"], 0)
         finally:
             pygame.quit()
+
+    def test_event_manager_maps_mouse_wheel_kind_and_fallback_position(self) -> None:
+        manager = EventManager()
+        wheel = pygame.event.Event(pygame.MOUSEWHEEL, {"x": -1, "y": 2})
+        event = manager.to_gui_event(wheel, pointer_pos=(50, 75))
+
+        self.assertIsInstance(event, GuiEvent)
+        self.assertEqual(event.kind, EventType.MOUSE_WHEEL)
+        self.assertEqual(event.pos, (50, 75))
+        self.assertEqual(event.wheel_x, -1)
+        self.assertEqual(event.wheel_y, 2)
+
+    def test_process_event_dispatches_normalized_guievent(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            captured = {"screen": None}
+
+            def screen_handler(event) -> bool:
+                captured["screen"] = event
+                return False
+
+            app.set_screen_lifecycle(event_handler=screen_handler)
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (12, 34), "button": 1}))
+
+            self.assertIsInstance(captured["screen"], GuiEvent)
+            self.assertEqual(captured["screen"].kind, EventType.MOUSE_BUTTON_DOWN)
+            self.assertEqual(captured["screen"].pos, (12, 34))
+            self.assertEqual(captured["screen"].button, 1)
+        finally:
+            pygame.quit()
+
+    def test_guievent_helper_predicates_support_semantic_checks(self) -> None:
+        key_event = GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_ESCAPE)
+        self.assertTrue(key_event.is_key_down())
+        self.assertTrue(key_event.is_key_down(pygame.K_ESCAPE))
+        self.assertFalse(key_event.is_key_down(pygame.K_SPACE))
+
+        wheel_event = GuiEvent(kind=EventType.MOUSE_WHEEL, type=pygame.MOUSEWHEEL, pos=(10, 11), wheel_y=-2)
+        self.assertTrue(wheel_event.is_mouse_wheel())
+        self.assertEqual(wheel_event.wheel_delta, -2)
+
+        down_event = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=pygame.MOUSEBUTTONDOWN, pos=(12, 34), button=3)
+        self.assertTrue(down_event.is_mouse_down(3))
+        self.assertTrue(down_event.collides(Rect(0, 0, 100, 100)))
+        self.assertFalse(down_event.collides(Rect(0, 0, 10, 10)))
 
     def test_keyboard_routes_to_screen_handler_when_no_active_window(self) -> None:
         pygame.init()

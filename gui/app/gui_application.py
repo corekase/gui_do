@@ -1,8 +1,11 @@
 import pygame
 from pathlib import Path
+from dataclasses import replace
 from typing import Callable, Optional
 from pygame import Rect
 
+from ..core.event_manager import EventManager
+from ..core.gui_event import EventType
 from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
 from ..core.keyboard_manager import KeyboardManager
@@ -22,6 +25,7 @@ class GuiApplication:
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
         self.input_state = InputState()
+        self.event_manager = EventManager()
         self.pointer_capture = PointerCapture()
         self.keyboard = KeyboardManager()
         default_theme = ColorTheme()
@@ -208,19 +212,21 @@ class GuiApplication:
             scheduler.shutdown()
 
     def process_event(self, event) -> bool:
-        """Process one pygame event through input normalization and scene dispatch."""
-        if event.type == pygame.QUIT:
+        """Process one event through normalization and scene dispatch."""
+        gui_event = self.event_manager.to_gui_event(event, pointer_pos=self._logical_pointer_pos)
+        if gui_event.kind == EventType.QUIT:
             self.running = False
             return True
-        self.input_state.update_from_event(event)
-        raw_pos = getattr(event, "pos", None)
-        if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
-            self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
-        elif event.type == pygame.MOUSEWHEEL:
+        self.input_state.update_from_event(gui_event)
+        if gui_event.kind == EventType.MOUSE_WHEEL:
             wheel_pos = pygame.mouse.get_pos()
             if isinstance(wheel_pos, tuple) and len(wheel_pos) == 2:
                 self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
                 self.input_state.pointer_pos = self._logical_pointer_pos
+                gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
+        raw_pos = getattr(gui_event, "pos", None)
+        if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+            self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
         if self.lock_area is not None:
             self._logical_pointer_pos = self._clamp_to_rect(self._logical_pointer_pos, self.lock_area)
             self.input_state.pointer_pos = self._logical_pointer_pos
@@ -228,11 +234,11 @@ class GuiApplication:
             self._logical_pointer_pos = self.pointer_capture.clamp(self._logical_pointer_pos)
             self.input_state.pointer_pos = self._logical_pointer_pos
         if self.mouse_point_locked and self.lock_point_pos is not None:
-            self._enforce_point_lock(event)
+            self._enforce_point_lock(gui_event)
             self._logical_pointer_pos = (int(self.lock_point_pos[0]), int(self.lock_point_pos[1]))
             self.input_state.pointer_pos = self._logical_pointer_pos
 
-        logical_event = self._logicalize_pointer_event(event)
+        logical_event = self._logicalize_pointer_event(gui_event)
 
         if self.keyboard.is_key_event(logical_event):
             return self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
@@ -349,16 +355,16 @@ class GuiApplication:
             return event
 
         logical_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
-        data = dict(getattr(event, "dict", {}))
-        data["raw_pos"] = raw_pos
-        data["pos"] = logical_pos
-
+        logical_event = replace(event, raw_pos=raw_pos, pos=logical_pos)
         if event_type == pygame.MOUSEMOTION:
             prev = self._last_dispatched_pointer_pos
-            data["raw_rel"] = getattr(event, "rel", None)
-            data["rel"] = (logical_pos[0] - prev[0], logical_pos[1] - prev[1])
+            logical_event = replace(
+                logical_event,
+                raw_rel=getattr(event, "rel", None),
+                rel=(logical_pos[0] - prev[0], logical_pos[1] - prev[1]),
+            )
         self._last_dispatched_pointer_pos = logical_pos
-        return pygame.event.Event(event_type, data)
+        return logical_event
 
     def _init_cursor_system(self) -> None:
         pygame.mouse.set_visible(False)

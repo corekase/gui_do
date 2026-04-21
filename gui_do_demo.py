@@ -356,28 +356,25 @@ class GuiDoDemo:
         self._zoom_life_view_about(center_local, new_size)
 
     def _life_window_event_handler(self, event) -> bool:
-        event_type = getattr(event, "type", None)
-        button = getattr(event, "button", None)
-        pos = getattr(event, "pos", None)
-
-        if event_type == pygame.MOUSEBUTTONDOWN and button == 3:
-            if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
+        if event.is_mouse_down(3) and event.collides(self.life_canvas.rect):
+            pos = event.pos
+            if pos is not None:
                 self.life_dragging = True
                 self.app.set_cursor("hand")
                 self.app.set_lock_point(self.life_canvas, pos)
                 return True
 
-        if event_type == pygame.MOUSEBUTTONUP and button == 3:
+        if event.is_mouse_up(3):
             if self.life_dragging:
                 self.life_dragging = False
                 self.app.set_cursor("normal")
                 self.app.set_lock_point(None)
                 return True
 
-        if event_type == pygame.MOUSEMOTION and self.life_dragging:
+        if event.is_mouse_motion() and self.life_dragging:
             delta = self.app.get_lock_point_motion_delta(event)
             if delta is None:
-                rel = getattr(event, "rel", None)
+                rel = event.rel
                 if isinstance(rel, tuple) and len(rel) == 2:
                     delta = (rel[0], rel[1])
                 else:
@@ -386,16 +383,17 @@ class GuiDoDemo:
             self.life_origin[1] -= delta[1]
             return True
 
-        if event_type == pygame.MOUSEBUTTONDOWN and button in (4, 5):
-            if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
-                wheel_step = 1 if button == 4 else -1
+        if event.is_mouse_down(4) or event.is_mouse_down(5):
+            pos = event.pos
+            if pos is not None and self.life_canvas.rect.collidepoint(pos):
+                wheel_step = 1 if event.button == 4 else -1
                 anchor_local = (pos[0] - self.life_canvas.rect.left, pos[1] - self.life_canvas.rect.top)
                 self._zoom_life_view_about(anchor_local, self.life_cell_size + (wheel_step * 2))
                 return True
 
-        if event_type == pygame.MOUSEWHEEL:
-            pointer_pos = self.app.lock_point_pos if self.app.mouse_point_locked and self.app.lock_point_pos is not None else pygame.mouse.get_pos()
-            if self.life_canvas.rect.collidepoint(pointer_pos):
+        if event.is_mouse_wheel():
+            pointer_pos = self.app.lock_point_pos if self.app.mouse_point_locked and self.app.lock_point_pos is not None else event.pos
+            if pointer_pos is not None and self.life_canvas.rect.collidepoint(pointer_pos):
                 if self.app.mouse_point_locked and self.app.lock_point_pos is not None:
                     lock_window_pos = self.app.convert_to_window(self.app.lock_point_pos, self.life_window)
                     canvas_window_left = self.life_canvas.rect.left - self.life_window.rect.left
@@ -403,7 +401,7 @@ class GuiDoDemo:
                     anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
                 else:
                     anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
-                self._zoom_life_view_about(anchor_local, self.life_cell_size + (getattr(event, "y", 0) * 2))
+                self._zoom_life_view_about(anchor_local, self.life_cell_size + (event.wheel_delta * 2))
                 return True
 
         return False
@@ -689,7 +687,7 @@ class GuiDoDemo:
         return None
 
     def _screen_event_handler(self, event) -> bool:
-        if getattr(event, "type", None) == pygame.KEYDOWN and getattr(event, "key", None) == pygame.K_ESCAPE:
+        if event.is_key_down(pygame.K_ESCAPE):
             self._exit_app()
             return True
         return False
