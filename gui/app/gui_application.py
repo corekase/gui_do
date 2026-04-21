@@ -347,6 +347,9 @@ class GuiApplication:
         raw_pos = (int(raw_pos[0]), int(raw_pos[1]))
         if raw_pos == self.lock_point_pos:
             self._lock_point_last_raw_pos = raw_pos
+            rel = event.raw_rel
+            if isinstance(rel, tuple) and len(rel) == 2:
+                return (int(rel[0]), int(rel[1]))
             return (0, 0)
         if self._lock_point_last_raw_pos is None:
             self._lock_point_last_raw_pos = raw_pos

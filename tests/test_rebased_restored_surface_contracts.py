@@ -306,6 +306,66 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_lock_point_motion_delta_uses_raw_rel_when_recentered(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((300, 200)))
+            probe = object()
+            lock_point = (120, 90)
+            app.set_lock_point(probe, lock_point)
+
+            event = GuiEvent(
+                kind=EventType.MOUSE_MOTION,
+                type=pygame.MOUSEMOTION,
+                pos=lock_point,
+                raw_pos=lock_point,
+                rel=(0, 0),
+                raw_rel=(6, -4),
+            )
+
+            delta = app.get_lock_point_motion_delta(event)
+
+            self.assertEqual(delta, (6, -4))
+        finally:
+            pygame.quit()
+
+    def test_pointer_capture_clamps_logical_pos_but_preserves_raw_pos(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((300, 200)))
+
+            class Probe:
+                def __init__(self):
+                    self.visible = True
+                    self.enabled = True
+                    self.captured = None
+
+                def handle_event(self, event, _app):
+                    if getattr(event, "type", None) == pygame.MOUSEMOTION:
+                        self.captured = {
+                            "pos": getattr(event, "pos", None),
+                            "raw_pos": getattr(event, "raw_pos", None),
+                        }
+                    return False
+
+                def update(self, _dt):
+                    return None
+
+                def draw(self, _surface, _theme):
+                    return None
+
+            probe = app.add(Probe())
+            app.pointer_capture.begin("probe", Rect(0, 0, 100, 80))
+
+            app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (180, 130), "rel": (3, 2)}))
+
+            self.assertIsNotNone(probe.captured)
+            self.assertEqual(probe.captured["pos"], (99, 79))
+            self.assertEqual(probe.captured["raw_pos"], (180, 130))
+            self.assertEqual(app.input_state.pointer_pos, (99, 79))
+        finally:
+            pygame.quit()
+
     def test_mouse_wheel_updates_logical_pointer_without_motion_event(self) -> None:
         pygame.init()
         try:
