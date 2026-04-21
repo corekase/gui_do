@@ -125,6 +125,12 @@ class GuiApplication:
 
     def set_lock_point(self, locking_object, point=None) -> None:
         if locking_object is None:
+            if self.mouse_point_locked and self.lock_point_pos is not None:
+                release_pos = (int(self.lock_point_pos[0]), int(self.lock_point_pos[1]))
+                pygame.mouse.set_pos(release_pos)
+                self._logical_pointer_pos = release_pos
+                self.input_state.pointer_pos = release_pos
+                self._last_dispatched_pointer_pos = release_pos
             self.mouse_point_locked = False
             self.lock_point_pos = None
             self.locking_object = None
