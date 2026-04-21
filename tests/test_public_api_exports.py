@@ -1,6 +1,7 @@
 import unittest
 
 import gui
+from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 from gui import ActionManager
 from gui import EventBus
@@ -13,42 +14,7 @@ from gui import ObservableValue
 from gui import PresentationModel
 
 
-EXPECTED_PUBLIC_EXPORTS = {
-    "GuiApplication",
-    "UiEngine",
-    "PanelControl",
-    "LabelControl",
-    "ButtonControl",
-    "ArrowBoxControl",
-    "ButtonGroupControl",
-    "CanvasControl",
-    "CanvasEventPacket",
-    "FrameControl",
-    "ImageControl",
-    "SliderControl",
-    "ScrollbarControl",
-    "TaskPanelControl",
-    "ToggleControl",
-    "WindowControl",
-    "LayoutAxis",
-    "LayoutManager",
-    "WindowTilingManager",
-    "ActionManager",
-    "EventManager",
-    "EventBus",
-    "FocusManager",
-    "EventPhase",
-    "EventType",
-    "GuiEvent",
-    "InvalidationTracker",
-    "ObservableValue",
-    "PresentationModel",
-    "TaskEvent",
-    "TaskScheduler",
-    "Timers",
-    "BuiltInGraphicsFactory",
-    "ColorTheme",
-}
+EXPECTED_PUBLIC_EXPORTS = set(PUBLIC_API_EXPORT_ORDER)
 
 
 class PublicApiExportsTests(unittest.TestCase):
@@ -80,6 +46,9 @@ class PublicApiExportsTests(unittest.TestCase):
 
     def test_public_all_matches_expected_export_surface(self) -> None:
         self.assertEqual(set(gui.__all__), EXPECTED_PUBLIC_EXPORTS)
+
+    def test_public_all_matches_expected_export_order(self) -> None:
+        self.assertEqual(tuple(gui.__all__), PUBLIC_API_EXPORT_ORDER)
 
     def test_public_all_names_are_resolvable_attributes(self) -> None:
         for export_name in gui.__all__:

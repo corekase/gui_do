@@ -93,6 +93,26 @@ class BoundaryContractsTests(unittest.TestCase):
             f"found internal imports: {sorted(set(offenders))}",
         )
 
+    def test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        offenders = []
+
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        if alias.name.startswith("gui."):
+                            offenders.append(f"{demo_file.name}: {alias.name}")
+
+        self.assertEqual(
+            sorted(set(offenders)),
+            [],
+            "demo entrypoints must not import gui submodules via import statements; "
+            f"found submodule imports: {sorted(set(offenders))}",
+        )
+
     def test_active_demo_entrypoints_exclude_pre_rebase_archives(self) -> None:
         root = Path(__file__).resolve().parents[1]
         entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]

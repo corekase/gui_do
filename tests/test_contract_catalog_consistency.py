@@ -16,8 +16,12 @@ from contract_test_catalog import CONTRACT_TEST_MODULES
 from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
 from contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
 from contract_test_catalog import PRE_REBASE_DEMO_PREFIX
+from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 from contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
 from contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
+from contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
+from contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
+from contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
 
 
 class ContractCatalogConsistencyTests(unittest.TestCase):
@@ -105,6 +109,42 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
             self.assertTrue("/" in reference)
 
         for phrase in PUBLIC_API_REQUIRED_PHRASES:
+            self.assertTrue(phrase.strip())
+
+    def test_public_api_export_order_constant_is_well_formed(self) -> None:
+        self.assertTrue(PUBLIC_API_EXPORT_ORDER)
+        self.assertEqual(len(PUBLIC_API_EXPORT_ORDER), len(set(PUBLIC_API_EXPORT_ORDER)))
+
+        for export_name in PUBLIC_API_EXPORT_ORDER:
+            self.assertTrue(export_name.strip())
+
+    def test_readme_public_api_required_import_constants_are_well_formed(self) -> None:
+        self.assertTrue(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)
+        self.assertTrue(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
+        self.assertEqual(
+            len(README_PUBLIC_API_REQUIRED_GUI_IMPORTS),
+            len(set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)),
+        )
+        self.assertEqual(
+            len(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
+            len(set(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
+        )
+
+        canonical_public_exports = set(PUBLIC_API_EXPORT_ORDER)
+        for required_export in README_PUBLIC_API_REQUIRED_GUI_IMPORTS:
+            self.assertIn(required_export, canonical_public_exports)
+
+        for required_import_line in README_PUBLIC_API_REQUIRED_DEMO_IMPORTS:
+            self.assertTrue(required_import_line.startswith("from demo_parts."))
+
+    def test_readme_public_api_required_phrases_constant_is_well_formed(self) -> None:
+        self.assertTrue(README_PUBLIC_API_REQUIRED_PHRASES)
+        self.assertEqual(
+            len(README_PUBLIC_API_REQUIRED_PHRASES),
+            len(set(README_PUBLIC_API_REQUIRED_PHRASES)),
+        )
+
+        for phrase in README_PUBLIC_API_REQUIRED_PHRASES:
             self.assertTrue(phrase.strip())
 
 

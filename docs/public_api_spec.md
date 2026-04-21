@@ -115,6 +115,7 @@ Enforced contract tests:
 - `tests/test_public_api_docs_contracts.py`
 - `tests/test_architecture_boundary_docs_contracts.py`
 - `tests/test_contract_command_parity.py`
+- `tests/test_readme_public_api_contracts.py`
 - `tests/test_readme_docs_contracts.py`
 - `tests/test_contract_docs_helpers.py`
 - `tests/test_contract_catalog_consistency.py`

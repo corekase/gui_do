@@ -7,6 +7,7 @@ CONTRACT_TEST_MODULES = (
     "tests.test_public_api_docs_contracts",
     "tests.test_architecture_boundary_docs_contracts",
     "tests.test_contract_command_parity",
+    "tests.test_readme_public_api_contracts",
     "tests.test_readme_docs_contracts",
     "tests.test_contract_docs_helpers",
     "tests.test_contract_catalog_consistency",
@@ -44,6 +45,7 @@ BOUNDARY_ENFORCEMENT_TEST_IDS = (
     "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts",
     "tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only",
+    "tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement",
 )
 
 BOUNDARY_PYTEST_COMMAND = "python -m pytest -q tests/test_boundary_contracts.py"
@@ -70,6 +72,43 @@ DEMO_PARTS_EXPORT_ORDER = (
     "MandelStatusEvent",
 )
 
+PUBLIC_API_EXPORT_ORDER = (
+    "GuiApplication",
+    "UiEngine",
+    "PanelControl",
+    "LabelControl",
+    "ButtonControl",
+    "ArrowBoxControl",
+    "ButtonGroupControl",
+    "CanvasControl",
+    "CanvasEventPacket",
+    "FrameControl",
+    "ImageControl",
+    "SliderControl",
+    "ScrollbarControl",
+    "TaskPanelControl",
+    "ToggleControl",
+    "WindowControl",
+    "LayoutAxis",
+    "LayoutManager",
+    "WindowTilingManager",
+    "ActionManager",
+    "EventManager",
+    "EventBus",
+    "FocusManager",
+    "EventPhase",
+    "EventType",
+    "GuiEvent",
+    "InvalidationTracker",
+    "ObservableValue",
+    "PresentationModel",
+    "TaskEvent",
+    "TaskScheduler",
+    "Timers",
+    "BuiltInGraphicsFactory",
+    "ColorTheme",
+)
+
 PUBLIC_API_REQUIRED_REFERENCES = (
     "docs/architecture_boundary_spec.md",
     "demo_parts/mandel_events.py",
@@ -77,4 +116,18 @@ PUBLIC_API_REQUIRED_REFERENCES = (
 
 PUBLIC_API_REQUIRED_PHRASES = (
     "demo_parts.__all__ export surface/order is treated as a locked contract",
+)
+
+README_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
+    "GuiApplication",
+    "UiEngine",
+    "ColorTheme",
+)
+
+README_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
+    "from demo_parts.mandel_events import MandelStatusEvent",
+)
+
+README_PUBLIC_API_REQUIRED_PHRASES = (
+    "Demo-only contracts are intentionally outside gui package",
 )

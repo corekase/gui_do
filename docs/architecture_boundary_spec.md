@@ -21,6 +21,7 @@ Automated tests enforce both directions:
 - `tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts`
 - `tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui`
 - `tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only`
+- `tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement`
 
 The boundary test uses AST-based import inspection, so only real imports are flagged (not comments or strings).
 
