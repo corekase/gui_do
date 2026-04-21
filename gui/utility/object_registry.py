@@ -95,14 +95,11 @@ class GuiObjectRegistry:
         active_window = self.resolve_active_object()
         added_to_task_panel = self._attach_widget_to_container(gui_object, active_window)
 
-        # Invoke optional post-add hooks, rolling back registration if they fail.
-        post_add = getattr(gui_object, '_on_added_to_gui', None)
-        if callable(post_add):
-            try:
-                post_add()
-            except Exception:
-                self._reset_widget_registration(gui_object, active_window, added_to_task_panel)
-                raise
+        try:
+            gui_object.on_added_to_gui()
+        except Exception:
+            self._reset_widget_registration(gui_object, active_window, added_to_task_panel)
+            raise
         return gui_object
 
     def describe_gui_object(self, gui_object: TGuiObject) -> str:

@@ -31,6 +31,7 @@ from .gui_utils.task_panel_settings import TaskPanelSettings
 from .gui_utils.mouse_input_state import MouseInputState
 from .gui_utils.gui_event import GuiEvent
 from .gui_utils.resource_error import DataResourceErrorHandler
+from .scheduling.task_event import TaskEvent
 from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
@@ -647,29 +648,6 @@ class GuiManager:
         """Set task panel lifecycle."""
         self.lifecycle.set_task_panel_lifecycle(preamble, event_handler, postamble)
 
-    def set_task_panel_enabled(self, enabled: bool) -> None:
-        """Set task panel enabled."""
-        panel = self._require_task_panel()
-        panel.set_visible(enabled)
-        if not enabled:
-            self.workspace_state.task_panel_capture = False
-
-    def set_task_panel_auto_hide(self, auto_hide: bool) -> None:
-        """Set task panel auto hide."""
-        self._require_task_panel().set_auto_hide(auto_hide)
-
-    def set_task_panel_hidden_peek_pixels(self, hidden_peek_pixels: int) -> None:
-        """Set task panel hidden peek pixels."""
-        self._require_task_panel().set_hidden_peek_pixels(hidden_peek_pixels)
-
-    def set_task_panel_animation_step_px(self, animation_step_px: int) -> None:
-        """Set task panel animation step in pixels."""
-        self._require_task_panel().set_animation_step_px(animation_step_px)
-
-    def set_task_panel_animation_interval_ms(self, animation_interval_ms: float) -> None:
-        """Set task panel animation interval in milliseconds."""
-        self._require_task_panel().set_animation_interval_ms(animation_interval_ms)
-
     def read_task_panel_settings(self) -> Dict[str, object]:
         """Read task panel settings."""
         panel = self._require_task_panel()
@@ -732,9 +710,9 @@ class GuiManager:
 
     def resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
         """Resolve the target window for a task event, if one is registered and visible."""
-        if getattr(event, 'type', None) != Event.Task:
+        if event.type != Event.Task or not isinstance(event, TaskEvent):
             return None
-        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
+        task_id = cast(Optional[Hashable], event.id)
         if task_id is None:
             return None
         try:
@@ -930,20 +908,18 @@ class GuiManager:
         if task_owner is not None:
             task_owner.handle_event(event)
             return
-        if getattr(event, 'type', None) in (Event.KeyDown, Event.KeyUp):
+        if event.type in (Event.KeyDown, Event.KeyUp):
             active_window = self.active_window
             if active_window is not None and active_window in self.windows and active_window.visible:
                 active_window.handle_event(event)
                 return
             self.screen_lifecycle.handle_event(event)
             return
-        if getattr(event, 'task_panel', False):
+        if event.task_panel:
             if self.task_panel is not None and self.task_panel.visible:
                 self.task_panel.handle_event(event)
                 return
-        event_window = getattr(event, 'window', None)
-        if not isinstance(event_window, Window):
-            event_window = None
+        event_window = event.window
         if event_window is not None and event_window in self.windows and event_window.visible:
             event_window.handle_event(event)
             return
@@ -951,9 +927,57 @@ class GuiManager:
 
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
         """Event."""
+        allowed = {
+            'key',
+            'pos',
+            'rel',
+            'button',
+            'widget_id',
+            'group',
+            'window',
+            'task_panel',
+        }
+        unknown = set(kwargs).difference(allowed)
+        if unknown:
+            unknown_text = ', '.join(sorted(unknown))
+            raise GuiError(f'unsupported gui event payload keys: {unknown_text}')
         if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
             kwargs.setdefault('pos', self._get_mouse_pos())
-        return GuiEvent(event_type, **kwargs)
+        key = kwargs.get('key')
+        if key is not None and type(key) is not int:
+            raise GuiError(f'event key must be int when provided, got: {key!r}')
+        pos = kwargs.get('pos')
+        if pos is not None and (not isinstance(pos, tuple) or len(pos) != 2 or type(pos[0]) is not int or type(pos[1]) is not int):
+            raise GuiError(f'event pos must be a tuple of two ints when provided, got: {pos!r}')
+        rel = kwargs.get('rel')
+        if rel is not None and (not isinstance(rel, tuple) or len(rel) != 2 or type(rel[0]) is not int or type(rel[1]) is not int):
+            raise GuiError(f'event rel must be a tuple of two ints when provided, got: {rel!r}')
+        button = kwargs.get('button')
+        if button is not None and type(button) is not int:
+            raise GuiError(f'event button must be int when provided, got: {button!r}')
+        widget_id = kwargs.get('widget_id')
+        if widget_id is not None and not isinstance(widget_id, str):
+            raise GuiError(f'event widget_id must be str when provided, got: {widget_id!r}')
+        group = kwargs.get('group')
+        if group is not None and not isinstance(group, str):
+            raise GuiError(f'event group must be str when provided, got: {group!r}')
+        window = kwargs.get('window')
+        if window is not None and not isinstance(window, Window):
+            raise GuiError(f'event window must be a Window when provided, got: {window!r}')
+        task_panel = kwargs.get('task_panel', False)
+        if not isinstance(task_panel, bool):
+            raise GuiError(f'event task_panel must be bool when provided, got: {task_panel!r}')
+        return GuiEvent(
+            event_type,
+            key=cast(Optional[int], key),
+            pos=cast(Optional[Tuple[int, int]], pos),
+            rel=cast(Optional[Tuple[int, int]], rel),
+            button=cast(Optional[int], button),
+            widget_id=cast(Optional[str], widget_id),
+            group=cast(Optional[str], group),
+            window=cast(Optional[Window], window),
+            task_panel=task_panel,
+        )
 
     def events(self) -> Iterable["GuiEvent"]:
         """Events."""
@@ -1020,8 +1044,8 @@ class GuiManager:
 
     def place_gui_object(self, gui_object: TGuiObject, geometry: Union[Rect, Tuple[int, int]]) -> TGuiObject:
         """Apply layout geometry to an existing widget/window position."""
-        if not hasattr(gui_object, 'position'):
-            raise GuiError(f'gui_object must expose a position property, got: {gui_object}')
+        if not isinstance(gui_object, (Window, Widget)):
+            raise GuiError(f'gui_object must be a Window or Widget, got: {gui_object}')
         if isinstance(geometry, Rect):
             gui_object.position = geometry.topleft
         elif isinstance(geometry, tuple) and len(geometry) == 2:

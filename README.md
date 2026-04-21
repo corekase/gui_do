@@ -25,6 +25,7 @@ The project now enforces two internal contracts across runtime paths. These are 
 - Rect clamping uses inclusive pixel bounds: `[left, right-1] x [top, bottom-1]`.
 - Pointer collision and bounds checks route through canonical helpers in `gui.utility.geometry`.
 - Screen/window coordinate conversion routes through canonical helpers (`to_screen`, `to_window`) instead of ad-hoc offset math.
+- Window/container coordinate conversion uses a single canonical origin contract: containers must expose integer `x` and `y` attributes.
 
 2. State-transition contract
 - Drag and lock lifecycles are model-driven and transition-based, not free-form field mutation.
@@ -57,14 +58,14 @@ pip install pygame numpy
 Run the full unit test suite locally from repo root:
 
 ```bash
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 Run tests with coverage (line + branch) locally:
 
 ```bash
 python -m pip install coverage
-python -m coverage run --rcfile=.coveragerc -m unittest discover -s tests -v
+python -m coverage run --rcfile=.coveragerc -m unittest discover -s tests -p "test_*.py" -v
 python -m coverage report -m
 python -m coverage xml -o coverage.xml
 ```
@@ -302,13 +303,16 @@ drawing_toggle = gui.task_panel.toggle("circles", gui.gridded(1, 0), ButtonStyle
 Runtime task panel helpers on `GuiManager`:
 
 - `gui.set_task_panel_lifecycle(preamble: Optional[Callable[[], None]] = None, event_handler: Optional[Callable[[BaseEvent], None]] = None, postamble: Optional[Callable[[], None]] = None) -> None`
-- `gui.set_task_panel_enabled(enabled: bool) -> None`
-- `gui.set_task_panel_auto_hide(auto_hide: bool) -> None`
-- `gui.set_task_panel_hidden_peek_pixels(hidden_peek_pixels: int) -> None`
-- `gui.set_task_panel_animation_step_px(animation_step_px: int) -> None`
-- `gui.set_task_panel_animation_interval_ms(animation_interval_ms: float) -> None`
 - `gui.set_task_panel_settings(settings: TaskPanelSettings) -> None`
 - `gui.read_task_panel_settings() -> Dict[str, object]`
+
+Runtime task panel mutators are now direct panel operations:
+
+- `gui.task_panel.set_visible(enabled: bool) -> None`
+- `gui.task_panel.set_auto_hide(auto_hide: bool) -> None`
+- `gui.task_panel.set_hidden_peek_pixels(hidden_peek_pixels: int) -> None`
+- `gui.task_panel.set_animation_step_px(animation_step_px: int) -> None`
+- `gui.task_panel.set_animation_interval_ms(animation_interval_ms: float) -> None`
 
 Runtime window tiling helpers on `GuiManager`:
 
@@ -401,6 +405,12 @@ Common ones:
 - `Event.Group`: for button groups; includes `event.group` and `event.widget_id`.
 - `Event.Task`: async task completion/failure event.
 - `Event.KeyDown`, `Event.KeyUp`, `Event.Quit`.
+
+GUI event payloads are strict and explicit:
+
+- Valid payload keys are `key`, `pos`, `rel`, `button`, `widget_id`, `group`, `window`, and `task_panel`.
+- Unknown payload keys raise `GuiError`.
+- Provided payload values must match expected types (for example `pos` and `rel` must be `(int, int)`).
 
 Pattern used by the demo:
 

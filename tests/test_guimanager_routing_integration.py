@@ -3,12 +3,16 @@ import unittest
 from gui_manager_test_factory import build_routing_stub
 from gui.utility.events import Event
 from gui.utility.gui_manager import GuiManager
+from gui.utility.scheduling.task_event import TaskEvent
+from gui.utility.scheduling.task_kind import TaskKind
 from gui.widgets.window import Window
 
 
 class SimpleEvent:
     def __init__(self, event_type: Event, **kwargs: object) -> None:
         self.type = event_type
+        self.window = None
+        self.task_panel = False
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -38,7 +42,7 @@ class GuiManagerRoutingIntegrationTests(unittest.TestCase):
         owner = self._build_window_stub()
         gui.windows.append(owner)
         GuiManager.set_task_owner(gui, "task-1", owner)
-        event = SimpleEvent(Event.Task, id="task-1")
+        event = TaskEvent(TaskKind.Finished, "task-1")
 
         GuiManager.dispatch_event(gui, event)
 

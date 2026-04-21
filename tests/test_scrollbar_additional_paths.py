@@ -261,14 +261,14 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar.gui = SimpleNamespace()
 
         with self.assertRaises(GuiError):
-            scrollbar._on_added_to_gui()
+            scrollbar.on_added_to_gui()
 
         scrollbar._increment_rect = Rect(50, 10, 20, 20)
         scrollbar._decrement_rect = Rect(10, 10, 20, 20)
         scrollbar._inc_degree = None
 
         with self.assertRaises(GuiError):
-            scrollbar._on_added_to_gui()
+            scrollbar.on_added_to_gui()
 
         created = []
 
@@ -281,7 +281,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar._dec_degree = 180
         scrollbar.gui = SimpleNamespace(arrow_box=build_arrow, widgets=[], windows=[])
 
-        scrollbar._on_added_to_gui()
+        scrollbar.on_added_to_gui()
 
         self.assertTrue(scrollbar._subwidgets_bound)
         self.assertEqual(len(scrollbar._registered), 2)
@@ -290,7 +290,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
 
         # Re-entry should be a no-op when already bound.
         before = list(scrollbar._registered)
-        scrollbar._on_added_to_gui()
+        scrollbar.on_added_to_gui()
         self.assertEqual(scrollbar._registered, before)
 
     def test_on_added_to_gui_rolls_back_created_arrows_on_failure(self) -> None:
@@ -314,7 +314,7 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar.gui = SimpleNamespace(arrow_box=build_arrow, widgets=widgets, windows=[window])
 
         with self.assertRaises(RuntimeError):
-            scrollbar._on_added_to_gui()
+            scrollbar.on_added_to_gui()
 
         self.assertEqual(len(widgets), 0)
         self.assertEqual(len(window.widgets), 0)

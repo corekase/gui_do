@@ -97,7 +97,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         def _boom():
             raise RuntimeError("post add fail")
 
-        widget._on_added_to_gui = _boom
+        widget.on_added_to_gui = _boom
 
         with self.assertRaises(RuntimeError):
             GuiManager.add(gui, widget)
@@ -282,7 +282,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         def _boom():
             raise RuntimeError("post add fail")
 
-        widget._on_added_to_gui = _boom
+        widget.on_added_to_gui = _boom
 
         with self.assertRaises(RuntimeError):
             GuiManager.add(gui, widget)
@@ -613,13 +613,13 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
 
         self.assertEqual(calls, ["sp", "so"])
 
-    def test_set_task_panel_enabled_true_keeps_capture_state(self) -> None:
+    def test_task_panel_set_visible_true_keeps_capture_state(self) -> None:
         gui = self._build_manager_stub()
         panel = _PanelStub(visible=False)
         gui.task_panel = panel
         gui.workspace_state.task_panel_capture = True
 
-        GuiManager.set_task_panel_enabled(gui, True)
+        panel.set_visible(True)
 
         self.assertEqual(panel.set_visible_calls, [True])
         self.assertTrue(gui.workspace_state.task_panel_capture)
@@ -640,7 +640,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         def _boom():
             raise RuntimeError("post add fail")
 
-        widget._on_added_to_gui = _boom
+        widget.on_added_to_gui = _boom
 
         with self.assertRaises(RuntimeError):
             GuiManager.add(gui, widget)

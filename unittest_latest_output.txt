@@ -92,7 +92,7 @@ test_drag_cancels_when_window_scrollbar_enters_higher_window_overlay (test_canva
 test_leave_calls_reset_and_buttonup_non_left_falls_through (test_canvas_scrollbar_additional_paths.ScrollbarRoiBatch5Tests.test_leave_calls_reset_and_buttonup_non_left_falls_through) ... ok
 test_vertical_drag_path_and_graphical_range_vertical (test_canvas_scrollbar_additional_paths.ScrollbarRoiBatch5Tests.test_vertical_drag_path_and_graphical_range_vertical) ... ok
 test_motion_events_are_coalesced (test_dispatcher_scheduler_canvas.CanvasQueueTests.test_motion_events_are_coalesced) ... ok
-test_overflow_tracks_drops_and_invokes_handler (test_dispatcher_scheduler_canvas.CanvasQueueTests.test_overflow_tracks_drops_and_invokes_handler) ... ERROR
+test_overflow_tracks_drops_and_invokes_handler (test_dispatcher_scheduler_canvas.CanvasQueueTests.test_overflow_tracks_drops_and_invokes_handler) ... ok
 test_keydown_becomes_framework_keydown_event (test_dispatcher_scheduler_canvas.EventDispatcherTests.test_keydown_becomes_framework_keydown_event) ... ok
 test_locked_widget_routes_widget_event (test_dispatcher_scheduler_canvas.EventDispatcherTests.test_locked_widget_routes_widget_event) ... ok
 test_dispatch_limit_processes_messages_across_updates (test_dispatcher_scheduler_canvas.SchedulerMessageFlowTests.test_dispatch_limit_processes_messages_across_updates) ... ok
@@ -161,13 +161,12 @@ test_mouse_position_is_mutable_via_setter (test_event_mouse_fixtures_contract.Ev
 test_optional_lock_area_and_extras_are_attached (test_event_mouse_fixtures_contract.EventMouseFixturesContractTests.test_optional_lock_area_and_extras_are_attached) ... ok
 test_clamp_point_to_rect_uses_inclusive_right_bottom (test_geometry_contracts.GeometryContractTests.test_clamp_point_to_rect_uses_inclusive_right_bottom) ... ok
 test_point_in_rect_matches_pygame_bounds (test_geometry_contracts.GeometryContractTests.test_point_in_rect_matches_pygame_bounds) ... ok
+test_to_window_and_to_screen_require_x_y_contract (test_geometry_contracts.GeometryContractTests.test_to_window_and_to_screen_require_x_y_contract) ... ok
 test_to_window_and_to_screen_round_trip (test_geometry_contracts.GeometryContractTests.test_to_window_and_to_screen_round_trip) ... ok
-test_to_window_and_to_screen_support_left_top (test_geometry_contracts.GeometryContractTests.test_to_window_and_to_screen_support_left_top) ... ok
-test_to_window_and_to_screen_support_left_y (test_geometry_contracts.GeometryContractTests.test_to_window_and_to_screen_support_left_y) ... ok
 test_validate_point_accepts_int_tuple (test_geometry_contracts.GeometryContractTests.test_validate_point_accepts_int_tuple) ... ok
 test_validate_point_rejects_non_int_values (test_geometry_contracts.GeometryContractTests.test_validate_point_rejects_non_int_values) ... ok
 test_guievent_keeps_valid_payloads (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_guievent_keeps_valid_payloads) ... ok
-test_guievent_normalizes_malformed_payloads (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_guievent_normalizes_malformed_payloads) ... ok
+test_guievent_rejects_malformed_payloads (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_guievent_rejects_malformed_payloads) ... ok
 test_guimanager_event_injects_mouse_position_for_mouse_events (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_guimanager_event_injects_mouse_position_for_mouse_events) ... ok
 test_set_lock_area_release_clears_lock_state (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_set_lock_area_release_clears_lock_state) ... ok
 test_set_lock_point_rejects_non_widget_lock_owner (test_guievent_and_lock_guards.GuiEventAndLockGuardTests.test_set_lock_point_rejects_non_widget_lock_owner) ... ok
@@ -211,6 +210,7 @@ test_linear_anchor_and_place_helpers_delegate (test_guimanager_helper_apis.GuiMa
 test_private_task_panel_add_created_widget_registers_widget_and_restores_workspace_state (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_private_task_panel_add_created_widget_registers_widget_and_restores_workspace_state) ... ok
 test_private_task_panel_add_created_widget_validates_requirements (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_private_task_panel_add_created_widget_validates_requirements) ... ok
 test_raise_and_lower_window_handle_registered_and_stale_active (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_raise_and_lower_window_handle_registered_and_stale_active) ... ok
+test_read_task_panel_settings_uses_panel_state (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_read_task_panel_settings_uses_panel_state) ... ok
 test_release_pointer_hint_proxy_validates_and_sets_state (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_release_pointer_hint_proxy_validates_and_sets_state) ... ok
 test_resolve_active_object_clears_stale_window (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_resolve_active_object_clears_stale_window) ... ok
 test_resolve_locking_state_clears_invalid_and_orphaned_states (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_resolve_locking_state_clears_invalid_and_orphaned_states) ... ok
@@ -226,9 +226,8 @@ test_set_screen_lifecycle_validates_callables (test_guimanager_helper_apis.GuiMa
 test_set_task_panel_lifecycle_requires_existing_task_panel (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_set_task_panel_lifecycle_requires_existing_task_panel) ... ok
 test_set_task_panel_lifecycle_validates_callables (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_set_task_panel_lifecycle_validates_callables) ... ok
 test_set_task_panel_settings_requires_settings_object (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_set_task_panel_settings_requires_settings_object) ... ok
-test_task_panel_enable_disable_and_settings_wrappers (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_task_panel_enable_disable_and_settings_wrappers) ... ok
+test_task_panel_settings_require_panel_when_disabled (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_task_panel_settings_require_panel_when_disabled) ... ok
 test_task_panel_widget_dispatcher_routes_through_private_task_panel_helper (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_task_panel_widget_dispatcher_routes_through_private_task_panel_helper) ... ok
-test_task_panel_wrappers_require_panel_when_disabled (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_task_panel_wrappers_require_panel_when_disabled) ... ok
 test_window_tiling_manual_relayout_wrapper_delegates (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_window_tiling_manual_relayout_wrapper_delegates) ... ok
 test_window_tiling_runtime_wrappers (test_guimanager_helper_apis.GuiManagerHelperApiTests.test_window_tiling_runtime_wrappers) ... ok
 test_configure_fonts_builds_and_loads_in_one_call (test_guimanager_initialization_and_factories.GuiManagerRoiBatch4Tests.test_configure_fonts_builds_and_loads_in_one_call) ... ok
@@ -301,11 +300,11 @@ test_set_lock_point_unregistered_guard (test_guimanager_task_panel_locking_and_e
 test_set_pristine_default_obj_and_error_wrap_path (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_pristine_default_obj_and_error_wrap_path) ... ok
 test_set_pristine_reraises_guierror_from_loader (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_pristine_reraises_guierror_from_loader) ... ok
 test_set_pristine_success_path_and_default_target_assignment (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_pristine_success_path_and_default_target_assignment) ... ok
-test_set_task_panel_enabled_true_keeps_capture_state (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_task_panel_enabled_true_keeps_capture_state) ... ok
 test_set_task_panel_settings_preserves_visible_true_state (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_task_panel_settings_preserves_visible_true_state) ... ok
 test_set_task_panel_settings_validates_primary_numeric_types (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_task_panel_settings_validates_primary_numeric_types) ... ok
 test_set_task_panel_settings_validates_remaining_inputs (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_task_panel_settings_validates_remaining_inputs) ... ok
 test_set_task_panel_settings_without_old_panel_path (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_set_task_panel_settings_without_old_panel_path) ... ok
+test_task_panel_set_visible_true_keeps_capture_state (test_guimanager_task_panel_locking_and_edge_paths.GuiManagerRoiBatch9Tests.test_task_panel_set_visible_true_keeps_capture_state) ... ok
 test_base_mouse_event_defaults_and_fallback (test_input_emitter_contracts.InputEventEmitterContractsTests.test_base_mouse_event_defaults_and_fallback) ... ok
 test_base_mouse_event_mappings (test_input_emitter_contracts.InputEventEmitterContractsTests.test_base_mouse_event_mappings) ... ok
 test_emit_action_emits_event_with_kwargs (test_input_emitter_contracts.InputEventEmitterContractsTests.test_emit_action_emits_event_with_kwargs) ... ok
@@ -559,12 +558,12 @@ test_release_pointer_hint_round_trip_and_consume (test_state_models_contracts.Lo
 test_clear_task_owners_for_window_removes_only_matching_owner (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_clear_task_owners_for_window_removes_only_matching_owner) ... ok
 test_resolve_task_event_owner_returns_none_for_hidden_or_missing_owner (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_resolve_task_event_owner_returns_none_for_hidden_or_missing_owner) ... ok
 test_resolve_task_event_owner_returns_none_for_non_task_event (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_resolve_task_event_owner_returns_none_for_non_task_event) ... ok
-test_resolve_task_event_owner_returns_none_for_unhashable_id (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_resolve_task_event_owner_returns_none_for_unhashable_id) ... ok
 test_resolve_task_event_owner_returns_registered_visible_owner (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_resolve_task_event_owner_returns_registered_visible_owner) ... ok
 test_set_task_owner_none_removes_existing_owner (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_set_task_owner_none_removes_existing_owner) ... ok
 test_set_task_owner_rejects_unhashable_task_id (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_set_task_owner_rejects_unhashable_task_id) ... ok
 test_set_task_owner_rejects_unregistered_window (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_set_task_owner_rejects_unregistered_window) ... ok
 test_set_task_owners_assigns_multiple_ids (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_set_task_owners_assigns_multiple_ids) ... ok
+test_task_event_rejects_unhashable_id (test_task_owner_resolution.GuiManagerTaskOwnerResolutionTests.test_task_event_rejects_unhashable_id) ... ok
 test_animate_moves_toward_target_and_draw_background_guards_pristine (test_task_panel_configuration.ManagedTaskPanelMethodTests.test_animate_moves_toward_target_and_draw_background_guards_pristine) ... ok
 test_set_animation_interval_ms_replaces_timer_registration (test_task_panel_configuration.ManagedTaskPanelMethodTests.test_set_animation_interval_ms_replaces_timer_registration) ... ok
 test_set_auto_hide_false_snaps_to_shown_y (test_task_panel_configuration.ManagedTaskPanelMethodTests.test_set_auto_hide_false_snaps_to_shown_y) ... ok
@@ -669,20 +668,8 @@ test_configure_validates_runtime_values (test_window_tiling_coordinator.WindowTi
 test_final_layout_is_creation_order_stable_across_visibility_event_order (test_window_tiling_coordinator.WindowTilingCoordinatorTests.test_final_layout_is_creation_order_stable_across_visibility_event_order) ... ok
 test_visibility_change_relayouts_and_centers_remaining_window (test_window_tiling_coordinator.WindowTilingCoordinatorTests.test_visibility_change_relayouts_and_centers_remaining_window) ... ok
 System.Management.Automation.RemoteException
-======================================================================
-ERROR: test_overflow_tracks_drops_and_invokes_handler (test_dispatcher_scheduler_canvas.CanvasQueueTests.test_overflow_tracks_drops_and_invokes_handler)
 ----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "D:\Code\gui_do\tests\test_dispatcher_scheduler_canvas.py", line 244, in test_overflow_tracks_drops_and_invokes_handler
-    self.assertTrue(canvas.handle_event(second, None))
-                    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "D:\Code\gui_do\gui\widgets\canvas.py", line 185, in handle_event
-    if self._overflow_mode == 'reject_new':
-       ^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Canvas' object has no attribute '_overflow_mode'. Did you mean: 'get_overflow_mode'?
+Ran 668 tests in 0.209s
 System.Management.Automation.RemoteException
-----------------------------------------------------------------------
-Ran 669 tests in 0.216s
-System.Management.Automation.RemoteException
-FAILED (errors=1)
+OK
 pygame-ce 2.5.7 (SDL 2.32.10, Python 3.14.4)

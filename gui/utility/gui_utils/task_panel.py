@@ -105,6 +105,18 @@ class _ManagedTaskPanel:
         # Drive smooth reveal/hide behavior with a recurring timer callback.
         gui.timers.add_timer(self._timer_id, self.animation_interval_ms, self.animate)
 
+    @property
+    def x(self) -> int:
+        """Alias x-coordinate to left for canonical container geometry APIs."""
+        return self.left
+
+    @x.setter
+    def x(self, value: int) -> None:
+        """Set panel x-coordinate via left alias."""
+        if not isinstance(value, int):
+            raise GuiError(f'task panel x must be an int, got: {value!r}')
+        self.left = value
+
     def dispose(self) -> None:
         """Release timer resources owned by the panel."""
         self.gui.timers.remove_timer(self._timer_id)

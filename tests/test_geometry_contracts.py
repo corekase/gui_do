@@ -17,16 +17,10 @@ class _WindowStub:
         self.y = y
 
 
-class _PanelStub:
+class _BadWindowStub:
     def __init__(self, left: int, top: int) -> None:
         self.left = left
         self.top = top
-
-
-class _TaskPanelLikeStub:
-    def __init__(self, left: int, y: int) -> None:
-        self.left = left
-        self.y = y
 
 
 class GeometryContractTests(unittest.TestCase):
@@ -56,19 +50,13 @@ class GeometryContractTests(unittest.TestCase):
         self.assertEqual(screen, (107, 59))
         self.assertEqual(to_window(screen, window), local)
 
-    def test_to_window_and_to_screen_support_left_top(self) -> None:
-        panel = _PanelStub(30, 40)
+    def test_to_window_and_to_screen_require_x_y_contract(self) -> None:
+        panel = _BadWindowStub(30, 40)
         local = (1, 2)
-        screen = to_screen(local, panel)
-        self.assertEqual(screen, (31, 42))
-        self.assertEqual(to_window(screen, panel), local)
-
-    def test_to_window_and_to_screen_support_left_y(self) -> None:
-        panel = _TaskPanelLikeStub(30, 40)
-        local = (1, 2)
-        screen = to_screen(local, panel)
-        self.assertEqual(screen, (31, 42))
-        self.assertEqual(to_window(screen, panel), local)
+        with self.assertRaises(ValueError):
+            to_screen(local, panel)
+        with self.assertRaises(ValueError):
+            to_window(local, panel)
 
 
 if __name__ == "__main__":

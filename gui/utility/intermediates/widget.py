@@ -82,6 +82,10 @@ class Widget:
         """Hook for subclasses to react to disabled-state changes."""
         return
 
+    def on_added_to_gui(self) -> None:
+        """Hook invoked after successful registration in a GUI container."""
+        return
+
     def _build_disabled_surface(self, source: Surface) -> Surface:
         """Return a 75% intensity copy of `source`."""
         dimmed = source.copy()

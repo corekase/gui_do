@@ -10,25 +10,21 @@ from gui.utility.intermediates.widget import Widget
 
 
 class GuiEventAndLockGuardTests(unittest.TestCase):
-    def test_guievent_normalizes_malformed_payloads(self) -> None:
-        event = GuiEvent(
-            Event.Widget,
-            key=True,
-            pos=("x", 2),
-            rel=(1,),
-            button=1.25,
-            widget_id=99,
-            group=["g"],
-            task_panel="yes",
-        )
-
-        self.assertIsNone(event.key)
-        self.assertIsNone(event.pos)
-        self.assertIsNone(event.rel)
-        self.assertIsNone(event.button)
-        self.assertIsNone(event.widget_id)
-        self.assertIsNone(event.group)
-        self.assertFalse(event.task_panel)
+    def test_guievent_rejects_malformed_payloads(self) -> None:
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, key=True)
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, pos=("x", 2))
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, rel=(1,))
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, button=1.25)
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, widget_id=99)
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, group=["g"])
+        with self.assertRaises(GuiError):
+            GuiEvent(Event.Widget, task_panel="yes")
 
     def test_guievent_keeps_valid_payloads(self) -> None:
         event = GuiEvent(

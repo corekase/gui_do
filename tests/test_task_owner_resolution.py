@@ -4,6 +4,8 @@ from types import SimpleNamespace
 from gui_manager_test_factory import build_gui_manager_stub
 from gui.utility.events import Event, GuiError
 from gui.utility.gui_manager import GuiManager
+from gui.utility.scheduling.task_kind import TaskKind
+from gui.utility.scheduling.task_event import TaskEvent
 
 
 class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
@@ -67,19 +69,15 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
 
     def test_resolve_task_event_owner_returns_none_for_non_task_event(self) -> None:
         gui = self._build_manager_stub()
-        event = SimpleNamespace(type=Event.KeyDown, id="task-1")
+        event = SimpleNamespace(type=Event.KeyDown)
 
         owner = GuiManager.resolve_task_event_owner(gui, event)
 
         self.assertIsNone(owner)
 
-    def test_resolve_task_event_owner_returns_none_for_unhashable_id(self) -> None:
-        gui = self._build_manager_stub()
-        event = SimpleNamespace(type=Event.Task, id=[])
-
-        owner = GuiManager.resolve_task_event_owner(gui, event)
-
-        self.assertIsNone(owner)
+    def test_task_event_rejects_unhashable_id(self) -> None:
+        with self.assertRaises(GuiError):
+            TaskEvent(operation=TaskKind.Finished, task_id=[])  # type: ignore[arg-type]
 
     def test_resolve_task_event_owner_returns_none_for_hidden_or_missing_owner(self) -> None:
         gui = self._build_manager_stub()
@@ -89,8 +87,8 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         gui._task_owner_by_id["hidden-task"] = hidden
         gui._task_owner_by_id["visible-task"] = visible
 
-        hidden_event = SimpleNamespace(type=Event.Task, id="hidden-task")
-        missing_event = SimpleNamespace(type=Event.Task, id="missing")
+        hidden_event = TaskEvent(operation=TaskKind.Finished, task_id="hidden-task")
+        missing_event = TaskEvent(operation=TaskKind.Finished, task_id="missing")
 
         owner_hidden = GuiManager.resolve_task_event_owner(gui, hidden_event)
         owner_missing = GuiManager.resolve_task_event_owner(gui, missing_event)
@@ -103,7 +101,7 @@ class GuiManagerTaskOwnerResolutionTests(unittest.TestCase):
         owner = SimpleNamespace(visible=True)
         gui.windows.append(owner)
         gui._task_owner_by_id["task-ok"] = owner
-        event = SimpleNamespace(type=Event.Task, id="task-ok")
+        event = TaskEvent(operation=TaskKind.Finished, task_id="task-ok")
 
         resolved = GuiManager.resolve_task_event_owner(gui, event)
 

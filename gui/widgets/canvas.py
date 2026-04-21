@@ -182,7 +182,7 @@ class Canvas(Widget):
             if was_full:
                 self.dropped_events += 1
                 self._notify_overflow()
-                if getattr(self, '_overflow_mode', 'drop_oldest') == 'reject_new':
+                if self._overflow_mode == 'reject_new':
                     return True
             self._events.append(packet)
             self.queued_event = True
@@ -198,7 +198,7 @@ class Canvas(Widget):
         try:
             self.on_overflow(1, self.dropped_events)
         except Exception as exc:
-            if getattr(self, '_overflow_callback_strict', False):
+            if self._overflow_callback_strict:
                 raise GuiError('canvas overflow callback failed in strict mode') from exc
             _logger.warning('Canvas overflow callback failed: %s: %s', type(exc).__name__, exc)
 

@@ -7,6 +7,8 @@ from gui_manager_test_factory import build_routing_stub
 from gui.utility.events import Event
 from gui.utility.gui_manager import GuiManager
 from gui.utility.intermediates.widget import Widget
+from gui.utility.scheduling.task_event import TaskEvent
+from gui.utility.scheduling.task_kind import TaskKind
 from gui.widgets.window import Window
 
 
@@ -18,7 +20,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         panel_events = []
         gui.task_panel = SimpleNamespace(visible=False, handle_event=lambda event: panel_events.append(event))
-        event = SimpleNamespace(type=Event.Widget, task_panel=True)
+        event = SimpleNamespace(type=Event.Widget, task_panel=True, window=None)
 
         GuiManager.dispatch_event(gui, event)
 
@@ -28,7 +30,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
     def test_dispatch_event_non_window_or_hidden_window_falls_back_to_screen(self) -> None:
         gui = self._build_manager_stub()
 
-        not_window_event = SimpleNamespace(type=Event.Widget, window=object())
+        not_window_event = SimpleNamespace(type=Event.Widget, window=object(), task_panel=False)
         GuiManager.dispatch_event(gui, not_window_event)
 
         hidden_window = Window.__new__(Window)
@@ -36,7 +38,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         hidden_window.events = []
         hidden_window.handle_event = lambda event: hidden_window.events.append(event)
         gui.windows.append(hidden_window)
-        hidden_window_event = SimpleNamespace(type=Event.Widget, window=hidden_window)
+        hidden_window_event = SimpleNamespace(type=Event.Widget, window=hidden_window, task_panel=False)
         GuiManager.dispatch_event(gui, hidden_window_event)
 
         self.assertEqual(hidden_window.events, [])
@@ -108,7 +110,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
 
     def test_resolve_task_event_owner_returns_none_for_missing_task_id(self) -> None:
         gui = self._build_manager_stub()
-        event = SimpleNamespace(type=Event.Task)
+        event = TaskEvent(TaskKind.Finished)
 
         owner = GuiManager.resolve_task_event_owner(gui, event)
 

@@ -49,9 +49,20 @@ class WindowTilingCoordinator:
 
     @staticmethod
     def _is_tile_eligible(window: "Window") -> bool:
-        """Return whether a window has geometry fields required for tiling math."""
-        required_attrs = ('x', 'y', 'width', 'height', 'titlebar_size')
-        return all(hasattr(window, name) for name in required_attrs)
+        """Return whether a window exposes valid integer geometry for tiling math."""
+        try:
+            x = window.x
+            y = window.y
+            width = window.width
+            height = window.height
+            titlebar_size = window.titlebar_size
+        except AttributeError:
+            return False
+        if not all(isinstance(value, int) for value in (x, y, width, height, titlebar_size)):
+            return False
+        if width <= 0 or height <= 0 or titlebar_size < 0:
+            return False
+        return True
 
     def _visible_windows(self) -> List["Window"]:
         """Return currently visible registered windows."""

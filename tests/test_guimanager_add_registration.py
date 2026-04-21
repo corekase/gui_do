@@ -59,7 +59,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
         def fail_post_add():
             raise RuntimeError("boom")
 
-        widget._on_added_to_gui = fail_post_add
+        widget.on_added_to_gui = fail_post_add
 
         with self.assertRaises(RuntimeError):
             GuiManager.add(gui, widget)
@@ -79,7 +79,7 @@ class GuiManagerAddRegistrationTests(unittest.TestCase):
         def fail_post_add():
             raise RuntimeError("boom")
 
-        widget._on_added_to_gui = fail_post_add
+        widget.on_added_to_gui = fail_post_add
 
         with self.assertRaises(RuntimeError):
             GuiManager.add(gui, widget)

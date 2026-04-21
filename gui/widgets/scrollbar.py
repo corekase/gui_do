@@ -316,8 +316,8 @@ class Scrollbar(Frame, AxisRangeMixin):
         """Graphical to total."""
         return int(self.pixel_to_total(point, self._total_range))
 
-    def _on_added_to_gui(self) -> None:
-        """On added to gui."""
+    def on_added_to_gui(self) -> None:
+        """Create arrow subwidgets after the scrollbar is registered."""
         if self._subwidgets_bound or self._style == ArrowPosition.Skip:
             return
         if self._increment_rect is None or self._decrement_rect is None:

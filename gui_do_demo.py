@@ -1020,10 +1020,10 @@ class Demo:
         self.scale = max((extent / self.mandel_width).real, (extent / self.mandel_height).imag)
 
     def handle_mandel_task_event(self, event):
-        task_id = getattr(event, 'id', None)
+        task_id = event.id
         if task_id is None:
             return
-        if getattr(event, 'error', None):
+        if event.error is not None:
             print(f'Task failed: id={task_id} error={event.error}', file=sys.stderr)
         if task_id in Demo.mandel_task_ids:
             # Consume buffered result payloads for finished/updated tasks.

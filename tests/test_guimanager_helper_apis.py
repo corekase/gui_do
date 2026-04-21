@@ -151,9 +151,8 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         gui.current_widget = object()  # type: ignore[assignment]
         self.assertIsNone(gui.current_widget)
 
-    def test_task_panel_enable_disable_and_settings_wrappers(self) -> None:
+    def test_read_task_panel_settings_uses_panel_state(self) -> None:
         gui = self._build_manager_stub()
-        set_visible_calls = []
         panel = SimpleNamespace(
             visible=True,
             auto_hide=True,
@@ -165,27 +164,10 @@ class GuiManagerHelperApiTests(unittest.TestCase):
             animation_interval_ms=12.5,
             backdrop_image=None,
             get_rect=lambda: Rect(1, 2, 10, 20),
-            set_visible=lambda enabled: set_visible_calls.append(enabled),
-            set_auto_hide=lambda value: set_visible_calls.append(("auto", value)),
-            set_hidden_peek_pixels=lambda value: set_visible_calls.append(("peek", value)),
-            set_animation_step_px=lambda value: set_visible_calls.append(("step", value)),
-            set_animation_interval_ms=lambda value: set_visible_calls.append(("interval", value)),
         )
         gui.task_panel = panel
-        gui.workspace_state.task_panel_capture = True
-        gui.workspace_state.active_object = object()
-
-        GuiManager.set_task_panel_enabled(gui, False)
-        self.assertFalse(gui.workspace_state.task_panel_capture)
-        self.assertEqual(set_visible_calls[0], False)
-
-        GuiManager.set_task_panel_auto_hide(gui, False)
-        GuiManager.set_task_panel_hidden_peek_pixels(gui, 3)
-        GuiManager.set_task_panel_animation_step_px(gui, 2)
-        GuiManager.set_task_panel_animation_interval_ms(gui, 6.0)
         settings = GuiManager.read_task_panel_settings(gui)
 
-        self.assertFalse(gui.workspace_state.task_panel_capture)
         self.assertEqual(settings["enabled"], panel.visible)
         self.assertEqual(settings["auto_hide"], panel.auto_hide)
         self.assertEqual(settings["panel_height"], panel.panel_height)
@@ -196,24 +178,10 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertEqual(settings["animation_interval_ms"], panel.animation_interval_ms)
         self.assertEqual(settings["backdrop_image"], panel.backdrop_image)
         self.assertEqual(settings["rect"], Rect(1, 2, 10, 20))
-        self.assertIn(("auto", False), set_visible_calls)
-        self.assertIn(("peek", 3), set_visible_calls)
-        self.assertIn(("step", 2), set_visible_calls)
-        self.assertIn(("interval", 6.0), set_visible_calls)
 
-    def test_task_panel_wrappers_require_panel_when_disabled(self) -> None:
+    def test_task_panel_settings_require_panel_when_disabled(self) -> None:
         gui = self._build_manager_stub()
 
-        with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_enabled(gui, True)
-        with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_auto_hide(gui, True)
-        with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_hidden_peek_pixels(gui, 4)
-        with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_animation_step_px(gui, 1)
-        with self.assertRaises(GuiError):
-            GuiManager.set_task_panel_animation_interval_ms(gui, 1.0)
         with self.assertRaises(GuiError):
             GuiManager.read_task_panel_settings(gui)
 
@@ -658,10 +626,15 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         anchored = GuiManager.anchored(gui, (40, 50), anchor='top_left', margin=(2, 3), use_rect=True)
         self.assertEqual(anchored, Rect(7, 8, 40, 50))
 
-        widget = SimpleNamespace(position=(0, 0))
+        widget = Widget.__new__(Widget)
+        widget.draw_rect = Rect(0, 0, 1, 1)
+        widget.hit_rect = None
         returned = GuiManager.place_gui_object(gui, widget, Rect(1, 2, 3, 4))
         self.assertIs(returned, widget)
         self.assertEqual(widget.position, (1, 2))
+
+        with self.assertRaises(GuiError):
+            GuiManager.place_gui_object(gui, SimpleNamespace(position=(0, 0)), (5, 6))  # type: ignore[arg-type]
 
     def test_set_anchor_bounds_validates_and_forwards(self) -> None:
         gui = self._build_manager_stub()

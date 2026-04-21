@@ -212,6 +212,8 @@ class CanvasQueueTests(unittest.TestCase):
         canvas.dropped_events = 0
         canvas.last_overflow = False
         canvas.on_overflow = None
+        canvas._overflow_mode = 'drop_oldest'
+        canvas._overflow_callback_strict = False
         canvas.coalesce_motion_events = True
         canvas.queued_event = False
         canvas.CEvent = None
