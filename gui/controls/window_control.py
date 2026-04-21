@@ -47,9 +47,10 @@ class WindowControl(UiNode):
     def lower_widget_rect(self) -> Rect:
         if self._chrome is not None:
             lower_rect = self._chrome.lower_widget.get_rect()
-            return Rect(self.rect.right - lower_rect.width - 2, self.rect.top + 2, lower_rect.width, lower_rect.height)
-        size = max(12, self.titlebar_height - 6)
-        return Rect(self.rect.right - size - 4, self.rect.top + 3, size, size)
+            return Rect(self.rect.right - lower_rect.width - 2, self.rect.top, lower_rect.width, lower_rect.height)
+        size = max(12, self.titlebar_height)
+        top = self.rect.top
+        return Rect(self.rect.right - size - 4, top, size, size)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         parent = self.parent
@@ -111,9 +112,11 @@ class WindowControl(UiNode):
         else:
             if self._chrome is None or self._chrome_size != (self.rect.width, self.titlebar_height, self.title):
                 self._chrome = factory.build_window_chrome_visuals(self.rect.width, self.titlebar_height, self.title)
+                chrome_height = self._chrome.title_bar_active.get_height()
+                self.titlebar_height = max(18, chrome_height)
                 self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
             draw_rect(surface, theme.medium, self.rect, 0)
-            title_bitmap = self._chrome.title_bar_active if self.active else self._chrome.title_bar_inactive
+            title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
             surface.blit(title_bitmap, self.title_bar_rect().topleft)
             draw_rect(surface, theme.dark, self.rect, 2)
             surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)

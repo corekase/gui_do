@@ -327,26 +327,30 @@ class LegacyGraphicsFactory:
         return surface
 
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str) -> WindowChromeVisuals:
-        inactive = Surface((width, titlebar_height)).convert()
-        active = Surface((width, titlebar_height)).convert()
+        title_font = self._fonts["titlebar"]
+        font_based_height = max(18, title_font.get_linesize() + 8)
+        chrome_height = max(2, font_based_height)
+
+        inactive = Surface((width, chrome_height)).convert()
+        active = Surface((width, chrome_height)).convert()
 
         draw_frame_bitmap(
             inactive,
+            LEGACY_COLOURS["none"],
+            LEGACY_COLOURS["light"],
+            LEGACY_COLOURS["none"],
+            LEGACY_COLOURS["full"],
+            LEGACY_COLOURS["dark"],
+            Rect(0, 0, width, chrome_height),
+        )
+        draw_frame_bitmap(
+            active,
             LEGACY_COLOURS["light"],
             LEGACY_COLOURS["dark"],
             LEGACY_COLOURS["full"],
             LEGACY_COLOURS["none"],
             LEGACY_COLOURS["medium"],
-            Rect(0, 0, width, titlebar_height),
-        )
-        draw_frame_bitmap(
-            active,
-            LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["light"],
-            LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["full"],
-            LEGACY_COLOURS["dark"],
-            Rect(0, 0, width, titlebar_height),
+            Rect(0, 0, width, chrome_height),
         )
 
         old_font = self.get_current_font_name()
@@ -358,11 +362,11 @@ class LegacyGraphicsFactory:
             while self.get_current_font_name() != old_font:
                 self.set_last_font()
 
-        text_y = self._centre(titlebar_height, inactive_text.get_rect().height)
+        text_y = self._centre(chrome_height, inactive_text.get_rect().height)
         inactive.blit(inactive_text, (5, text_y))
         active.blit(active_text, (5, text_y))
 
-        lower = self.draw_window_lower_widget_bitmap(max(2, titlebar_height - 2), LEGACY_COLOURS["full"], LEGACY_COLOURS["medium"])
+        lower = self.draw_window_lower_widget_bitmap(chrome_height, LEGACY_COLOURS["full"], LEGACY_COLOURS["medium"])
 
         return WindowChromeVisuals(title_bar_inactive=inactive, title_bar_active=active, lower_widget=lower)
 

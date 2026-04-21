@@ -61,6 +61,7 @@ class GuiDoDemo:
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0, 0]
         self.mandel_task_ids: Set[str] = set()
+        self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
         self.circles = []
         self._last_panel_visible = True
@@ -298,24 +299,73 @@ class GuiDoDemo:
         self.life_window.visible = False
 
     def _build_mandelbrot_window(self) -> None:
-        mandel_rect = self.app.layout.anchored((932, 460), anchor="bottom_right", margin=(28, 48), use_rect=True)
+        mandel_rect = self.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
         self.mandel_window = self.root.add(WindowControl("mandel_window", mandel_rect, "Mandelbrot"))
+        left = mandel_rect.left
+        top = mandel_rect.top
+        canvas_size = 580
+        canvas_x = left + 20
+        canvas_y = top + 54
+        split_gap = 6
+        split_size = (canvas_size - split_gap) // 2
+        controls_y = canvas_y + canvas_size + 12
+        status_y = controls_y + 38
+
         self._set_text(
-            self.mandel_window.add(LabelControl("mandel_help", Rect(978, 604, 540, 20), "Iterative and recursive renders run as scheduler tasks"))
+            self.mandel_window.add(
+                LabelControl(
+                    "mandel_help",
+                    Rect(left + 20, top + 30, 590, 20),
+                    "Render modes: Iterative, Recursive, 1M 4Tasks, and 4M 4Tasks",
+                )
+            )
         )
-        self.mandel_canvas = self.mandel_window.add(CanvasControl("mandel_canvas", Rect(978, 630, 896, 330), max_events=128))
-        self.mandel_iter_button = self.mandel_window.add(ButtonControl("mandel_iter", Rect(978, 970, 120, 30), "Iterative", self._launch_mandel_iterative))
-        self.mandel_recur_button = self.mandel_window.add(ButtonControl("mandel_recur", Rect(1108, 970, 120, 30), "Recursive", self._launch_mandel_recursive))
-        self.mandel_reset_button = self.mandel_window.add(ButtonControl("mandel_reset", Rect(1238, 970, 110, 30), "Reset", self._clear_mandel))
-        self.mandel_status = self._set_text(
-            self.mandel_window.add(LabelControl("mandel_status", Rect(1360, 976, 380, 20), "Mandelbrot: idle"))
+        self.mandel_canvas = self.mandel_window.add(CanvasControl("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
+        self.mandel_canvas_rect = Rect(canvas_x, canvas_y, canvas_size, canvas_size)
+        self.canvas1 = self.mandel_window.add(CanvasControl("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
+        self.canvas2 = self.mandel_window.add(CanvasControl("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
+        self.canvas3 = self.mandel_window.add(CanvasControl("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
+        self.canvas4 = self.mandel_window.add(
+            CanvasControl("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
         )
 
+        self.mandel_reset_button = self.mandel_window.add(
+            ButtonControl("mandel_reset", Rect(left + 20, controls_y, 112, 30), "Reset", self._clear_mandel, style="angle")
+        )
+        self.mandel_iter_button = self.mandel_window.add(
+            ButtonControl("mandel_iter", Rect(left + 140, controls_y, 112, 30), "Iterative", self._launch_mandel_iterative, style="round")
+        )
+        self.mandel_recur_button = self.mandel_window.add(
+            ButtonControl("mandel_recur", Rect(left + 260, controls_y, 112, 30), "Recursive", self._launch_mandel_recursive, style="round")
+        )
+        self.mandel_one_split_button = self.mandel_window.add(
+            ButtonControl("mandel_one_split", Rect(left + 380, controls_y, 112, 30), "1M 4Tasks", self._launch_mandel_one_split, style="round")
+        )
+        self.mandel_four_split_button = self.mandel_window.add(
+            ButtonControl("mandel_four_split", Rect(left + 500, controls_y, 112, 30), "4M 4Tasks", self._launch_mandel_four_split, style="round")
+        )
+        self.mandel_task_buttons = (
+            self.mandel_iter_button,
+            self.mandel_recur_button,
+            self.mandel_one_split_button,
+            self.mandel_four_split_button,
+        )
+
+        self.mandel_status = self._set_text(
+            self.mandel_window.add(LabelControl("mandel_status", Rect(left + 20, status_y, 590, 20), "Mandelbrot: idle"))
+        )
+
+        self.canvas1.visible = False
+        self.canvas2.visible = False
+        self.canvas3.visible = False
+        self.canvas4.visible = False
+        self._set_mandel_task_buttons_disabled(False)
         self._clear_mandel()
         self.mandel_window.visible = False
 
     def _bind_runtime(self) -> None:
         self.app.timers.add_timer("demo.clock", 1.0, self._on_clock_tick)
+        self.app.scheduler.set_message_dispatch_limit(256)
 
     def _on_clock_tick(self) -> None:
         if self.clock_toggle.pushed:
@@ -462,6 +512,12 @@ class GuiDoDemo:
             return (0, 0, 0)
         return self.mandel_cols[k % len(self.mandel_cols)]
 
+    def _mandel_viewport(self, width: int, height: int) -> Tuple[complex, float]:
+        center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        scale = max((extent / width).real, (extent / height).imag)
+        return center, scale
+
     def _mandel_pixel(self, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
         c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
         z = 0j
@@ -471,8 +527,106 @@ class GuiDoDemo:
                 return k
         return self.max_iter - 1
 
-    def _clear_mandel(self) -> None:
+    def _clear_mandel_surfaces(self) -> None:
         self.mandel_canvas.canvas.fill((0, 100, 100))
+        self.canvas1.canvas.fill((0, 100, 100))
+        self.canvas2.canvas.fill((0, 100, 100))
+        self.canvas3.canvas.fill((0, 100, 100))
+        self.canvas4.canvas.fill((0, 100, 100))
+
+    def _set_mandel_task_buttons_disabled(self, disabled: bool) -> None:
+        for button in self.mandel_task_buttons:
+            button.enabled = not disabled
+
+    def _show_single_mandel_canvas(self) -> None:
+        self.mandel_canvas.visible = True
+        self.canvas1.visible = False
+        self.canvas2.visible = False
+        self.canvas3.visible = False
+        self.canvas4.visible = False
+        self._clear_mandel_surfaces()
+
+    def _prepare_mandel_single_canvas_run(self) -> None:
+        self._set_mandel_task_buttons_disabled(True)
+        self._show_single_mandel_canvas()
+
+    def _prepare_mandel_split_canvas_run(self) -> None:
+        self._set_mandel_task_buttons_disabled(True)
+        self.mandel_canvas.visible = False
+        self.canvas1.visible = True
+        self.canvas2.visible = True
+        self.canvas3.visible = True
+        self.canvas4.visible = True
+        self._clear_mandel_surfaces()
+
+    def _mandel_canvas_for_task(self, task_id: str):
+        canvas_by_task = {
+            "iter": self.mandel_canvas.canvas,
+            "recu": self.mandel_canvas.canvas,
+            "1": self.mandel_canvas.canvas,
+            "2": self.mandel_canvas.canvas,
+            "3": self.mandel_canvas.canvas,
+            "4": self.mandel_canvas.canvas,
+            "can1": self.canvas1.canvas,
+            "can2": self.canvas2.canvas,
+            "can3": self.canvas3.canvas,
+            "can4": self.canvas4.canvas,
+        }
+        return canvas_by_task.get(task_id)
+
+    def _make_mandel_progress_handler(self, task_id: str):
+        def handler(payload):
+            self._apply_mandel_result(task_id, payload)
+
+        return handler
+
+    def _apply_mandel_result(self, task_id: str, payload) -> None:
+        canvas = self._mandel_canvas_for_task(task_id)
+        if canvas is None:
+            return
+
+        if task_id == "iter":
+            y_pos, row = payload
+            if y_pos < 0 or y_pos >= canvas.get_height():
+                return
+            for x_pos, value in enumerate(row):
+                if 0 <= x_pos < canvas.get_width():
+                    canvas.set_at((x_pos, y_pos), self._mandel_col(value))
+            return
+
+        x_pos, y_pos, width, height, values = payload
+        x0 = max(0, x_pos)
+        y0 = max(0, y_pos)
+        x1 = min(canvas.get_width(), x_pos + width)
+        y1 = min(canvas.get_height(), y_pos + height)
+        if x1 <= x0 or y1 <= y0:
+            return
+
+        if isinstance(values, int):
+            canvas.fill(self._mandel_col(values), Rect(x0, y0, x1 - x0, y1 - y0))
+            return
+
+        src_w = max(1, width)
+        if (x0, y0, x1, y1) != (x_pos, y_pos, x_pos + width, y_pos + height):
+            clipped_values = []
+            for row_index in range(y0 - y_pos, y1 - y_pos):
+                start = row_index * src_w + (x0 - x_pos)
+                end = start + (x1 - x0)
+                clipped_values.extend(values[start:end])
+            values = clipped_values
+            x_pos, y_pos, width, height = x0, y0, x1 - x0, y1 - y0
+
+        idx = 0
+        for yy in range(y_pos, y_pos + height):
+            for xx in range(x_pos, x_pos + width):
+                canvas.set_at((xx, yy), self._mandel_col(values[idx]))
+                idx += 1
+
+    def _clear_mandel(self) -> None:
+        self.app.scheduler.remove_tasks(*self.mandel_task_id_pool)
+        self.mandel_task_ids.clear()
+        self._show_single_mandel_canvas()
+        self._set_mandel_task_buttons_disabled(False)
         self.mandel_status.text = "Mandelbrot: cleared"
 
     def _mandel_iterative_task(self, task_id, params):
@@ -482,7 +636,7 @@ class GuiDoDemo:
         for y in range(height):
             row = [self._mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
             self.app.scheduler.send_message(task_id, (y, row))
-        return {"mode": "iterative"}
+        return None
 
     def _recursive_fill(self, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
         if w <= 0 or h <= 0:
@@ -512,58 +666,66 @@ class GuiDoDemo:
         width, height = params["size"]
         center = params["center"]
         scale = params["scale"]
-        self._recursive_fill(task_id, 0, 0, width, height, width, height, center, scale)
-        return {"mode": "recursive"}
+        rect = Rect(params.get("rect", Rect(0, 0, width, height)))
+        self._recursive_fill(task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
+        return None
 
-    def _launch_mandel(self, mode: str) -> None:
-        if self.mandel_task_ids:
-            return
-        self._clear_mandel()
-        width, height = self.mandel_canvas.canvas.get_size()
-        center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        scale = max((extent / width).real, (extent / height).imag)
-        task_id = f"mandel-{mode}-{time.time_ns()}"
-        self.mandel_task_ids.add(task_id)
-        self.mandel_status.text = f"Mandelbrot: running {mode}"
-
-        if mode == "iterative":
-            def on_iter(payload):
-                y, row = payload
-                for x, value in enumerate(row):
-                    self.mandel_canvas.canvas.set_at((x, y), self._mandel_col(value))
-
-            self.app.scheduler.add_task(
-                task_id,
-                self._mandel_iterative_task,
-                parameters={"size": (width, height), "center": center, "scale": scale},
-                message_method=on_iter,
-            )
-            return
-
-        def on_recur(payload):
-            x, y, w, h, values = payload
-            if isinstance(values, int):
-                self.mandel_canvas.canvas.fill(self._mandel_col(values), Rect(x, y, w, h))
-                return
-            idx = 0
-            for yy in range(y, y + h):
-                for xx in range(x, x + w):
-                    self.mandel_canvas.canvas.set_at((xx, yy), self._mandel_col(values[idx]))
-                    idx += 1
-
+    def _queue_mandel_recursive_task(self, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
         self.app.scheduler.add_task(
             task_id,
             self._mandel_recursive_task,
-            parameters={"size": (width, height), "center": center, "scale": scale},
-            message_method=on_recur,
+            parameters={"size": size, "center": center, "scale": scale, "rect": Rect(rect)},
+            message_method=self._make_mandel_progress_handler(task_id),
         )
+        self.mandel_task_ids.add(task_id)
 
     def _launch_mandel_iterative(self) -> None:
-        self._launch_mandel("iterative")
+        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+            return
+        self._prepare_mandel_single_canvas_run()
+        width, height = self.mandel_canvas.canvas.get_size()
+        center, scale = self._mandel_viewport(width, height)
+        self.app.scheduler.add_task(
+            "iter",
+            self._mandel_iterative_task,
+            parameters={"size": (width, height), "center": center, "scale": scale},
+            message_method=self._make_mandel_progress_handler("iter"),
+        )
+        self.mandel_task_ids.add("iter")
+        self.mandel_status.text = "Mandelbrot: running iterative"
 
     def _launch_mandel_recursive(self) -> None:
-        self._launch_mandel("recursive")
+        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+            return
+        self._prepare_mandel_single_canvas_run()
+        width, height = self.mandel_canvas.canvas.get_size()
+        center, scale = self._mandel_viewport(width, height)
+        self._queue_mandel_recursive_task("recu", Rect(0, 0, width, height), (width, height), center, scale)
+        self.mandel_status.text = "Mandelbrot: running recursive"
+
+    def _launch_mandel_one_split(self) -> None:
+        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+            return
+        self._prepare_mandel_single_canvas_run()
+        width, height = self.mandel_canvas.canvas.get_size()
+        center, scale = self._mandel_viewport(width, height)
+        left_w, top_h = width // 2, height // 2
+        right_w, bottom_h = width - left_w, height - top_h
+        self._queue_mandel_recursive_task("1", Rect(0, 0, left_w, top_h), (width, height), center, scale)
+        self._queue_mandel_recursive_task("2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
+        self._queue_mandel_recursive_task("3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
+        self._queue_mandel_recursive_task("4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
+        self.mandel_status.text = "Mandelbrot: running 1M 4Tasks"
+
+    def _launch_mandel_four_split(self) -> None:
+        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+            return
+        self._prepare_mandel_split_canvas_run()
+        width, height = self.canvas1.canvas.get_size()
+        center, scale = self._mandel_viewport(width, height)
+        for task_id in ("can1", "can2", "can3", "can4"):
+            self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
+        self.mandel_status.text = "Mandelbrot: running 4M 4Tasks"
 
     def _update_widget_showcase(self) -> None:
         self.slider_h_label.text = f"H: {self.slider_h.value:.2f}"
@@ -628,13 +790,16 @@ class GuiDoDemo:
         for event in finished:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
+                self.app.scheduler.pop_result(event.task_id, None)
         for event in failed:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
                 self.mandel_status.text = f"Mandelbrot failed: {event.error}"
 
+        busy = self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
+        self._set_mandel_task_buttons_disabled(busy)
         self.app.scheduler.clear_events()
-        if not self.mandel_task_ids and self.mandel_status.text.startswith("Mandelbrot: running"):
+        if not busy and self.mandel_status.text.startswith("Mandelbrot: running"):
             self.mandel_status.text = "Mandelbrot: complete"
 
     def _update(self, dt_seconds: float) -> None:

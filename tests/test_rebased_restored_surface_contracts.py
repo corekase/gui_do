@@ -118,6 +118,78 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         self.assertEqual(scheduler.pop_result("demo")["total"], 4)
         scheduler.shutdown()
 
+    def test_scheduler_duplicate_task_id_replaces_pending_task(self) -> None:
+        scheduler = TaskScheduler(max_workers=1)
+
+        def old_logic(_task_id):
+            return "old"
+
+        def new_logic(_task_id):
+            return "new"
+
+        scheduler.add_task("dup", old_logic)
+        scheduler.add_task("dup", new_logic)
+
+        deadline = time.monotonic() + 1.5
+        while time.monotonic() < deadline:
+            scheduler.update()
+            if scheduler.get_finished_events():
+                break
+            time.sleep(0.01)
+
+        self.assertEqual(scheduler.pop_result("dup"), "new")
+        scheduler.shutdown()
+
+    def test_scheduler_suspend_resume_controls_execution(self) -> None:
+        scheduler = TaskScheduler(max_workers=1)
+        ran = []
+
+        def logic(_task_id):
+            ran.append(True)
+            return "ok"
+
+        scheduler.add_task("s", logic)
+        scheduler.suspend_tasks("s")
+        scheduler.update()
+        self.assertEqual(ran, [])
+        self.assertEqual(scheduler.read_suspended(), ["s"])
+
+        scheduler.resume_tasks("s")
+        deadline = time.monotonic() + 1.5
+        while time.monotonic() < deadline:
+            scheduler.update()
+            if scheduler.get_finished_events():
+                break
+            time.sleep(0.01)
+
+        self.assertEqual(ran, [True])
+        self.assertEqual(scheduler.pop_result("s"), "ok")
+        scheduler.shutdown()
+
+    def test_scheduler_message_dispatch_and_ingest_limits(self) -> None:
+        scheduler = TaskScheduler(max_workers=1)
+        messages = []
+
+        def logic(_task_id):
+            time.sleep(0.2)
+            return "done"
+
+        scheduler.add_task("slow", logic, message_method=lambda payload: messages.append(payload))
+        scheduler.set_message_ingest_limit(1)
+        scheduler.set_message_dispatch_limit(1)
+
+        scheduler.send_message("slow", 1)
+        scheduler.send_message("slow", 2)
+        scheduler.send_message("slow", 3)
+
+        scheduler.update()
+        self.assertEqual(messages, [1])
+        scheduler.update()
+        self.assertEqual(messages, [1, 2])
+        scheduler.update()
+        self.assertEqual(messages, [1, 2, 3])
+        scheduler.shutdown()
+
     def test_task_panel_auto_hide_animation(self) -> None:
         panel = TaskPanelControl("panel", Rect(10, 20, 100, 30), auto_hide=True, hidden_peek_pixels=4, animation_step_px=3)
         # Initially not hovered, should move toward hidden y.

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+import inspect
 from queue import Empty, Queue
-from threading import Lock
-from typing import Any, Callable, Dict, Hashable, List, Optional, Tuple
+from threading import Condition, RLock
+from typing import Any, Callable, Deque, Dict, Hashable, List, Optional, Set
 
 
 @dataclass
@@ -17,30 +20,70 @@ class TaskEvent:
 @dataclass
 class _Task:
     task_id: Hashable
-    logic: Callable[..., Any]
-    parameters: Any
+    run_callable: Callable[[], Any]
     message_method: Optional[Callable[[Any], None]]
+    generation: int
     future: Optional[Future] = None
 
 
+@dataclass
+class _TaskMessage:
+    task_id: Hashable
+    callback: Callable[[Any], None]
+    payload: Any
+    generation: int
+
+
+@dataclass
+class _TaskCompletion:
+    task_id: Hashable
+    generation: int
+    future: Future
+
+
+@dataclass
+class _TaskFailure:
+    task_id: Hashable
+    generation: int
+    error: str
+
+
 class TaskScheduler:
-    """Background task runner with frame-safe message and completion dispatch."""
+    """Threaded task runner with queue limits, suspend/resume, and frame-safe dispatch."""
 
     def __init__(self, max_workers: int = 4) -> None:
-        self._executor = ThreadPoolExecutor(max_workers=max(1, int(max_workers)))
-        self._lock = Lock()
+        self._max_workers = max(1, int(max_workers))
+        self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
+        self._lock = RLock()
+        self._message_slots_changed = Condition(self._lock)
+
         self._tasks: Dict[Hashable, _Task] = {}
+        self._pending: Deque[Hashable] = deque()
+        self._pending_set: Set[Hashable] = set()
+        self._suspended: List[Hashable] = []
+        self._suspended_set: Set[Hashable] = set()
+        self._running: Set[Hashable] = set()
+
         self._results: Dict[Hashable, Any] = {}
-        self._incoming_messages: Queue[Tuple[Hashable, Any]] = Queue()
-        self._incoming_failures: Queue[Tuple[Hashable, str]] = Queue()
-        self._incoming_completions: Queue[Hashable] = Queue()
+        self._task_generation: Dict[Hashable, int] = {}
+        self._task_message_counts: Dict[Hashable, int] = {}
+
+        self._task_messages: Deque[_TaskMessage] = deque()
+        self._message_dispatch_limit: Optional[int] = None
+        self._message_ingest_limit: Optional[int] = 256
+        self._max_queued_messages_per_task: Optional[int] = 512
+
+        self._incoming_messages: Queue[_TaskMessage] = Queue()
+        self._incoming_failures: Queue[_TaskFailure] = Queue()
+        self._incoming_completions: Queue[_TaskCompletion] = Queue()
+
         self._failed_events: List[TaskEvent] = []
         self._finished_events: List[TaskEvent] = []
 
     def shutdown(self) -> None:
-        self._executor.shutdown(wait=False, cancel_futures=True)
         with self._lock:
-            self._tasks.clear()
+            self.remove_all()
+            self._executor.shutdown(wait=False, cancel_futures=True)
 
     def add_task(
         self,
@@ -49,24 +92,190 @@ class TaskScheduler:
         parameters: Any = None,
         message_method: Optional[Callable[[Any], None]] = None,
     ) -> None:
+        self._validate_task_id(task_id)
         if not callable(logic):
             raise ValueError("logic must be callable")
+        if message_method is not None and not callable(message_method):
+            raise ValueError("message_method must be callable")
+
         with self._lock:
-            if task_id in self._tasks:
-                raise ValueError(f"duplicate task id: {task_id}")
-            task = _Task(task_id, logic, parameters, message_method)
+            self._failed_events = [event for event in self._failed_events if event.task_id != task_id]
+            self._finished_events = [event for event in self._finished_events if event.task_id != task_id]
+            if task_id in self._tasks or task_id in self._running or task_id in self._pending_set or task_id in self._suspended_set:
+                self._remove_task_internal(task_id)
+
+            generation = self._task_generation.get(task_id, 0) + 1
+            self._task_generation[task_id] = generation
+            run_callable = self._build_task_callable(task_id, logic, parameters)
+            task = _Task(task_id=task_id, run_callable=run_callable, message_method=message_method, generation=generation)
             self._tasks[task_id] = task
-            task.future = self._executor.submit(self._run_task, task)
+            self._pending.append(task_id)
+            self._pending_set.add(task_id)
 
     def remove_tasks(self, *task_ids: Hashable) -> None:
         with self._lock:
             for task_id in task_ids:
-                task = self._tasks.pop(task_id, None)
-                if task is not None and task.future is not None:
-                    task.future.cancel()
+                self._validate_task_id(task_id)
+                self._remove_task_internal(task_id)
+            removed = set(task_ids)
+            self._finished_events = [event for event in self._finished_events if event.task_id not in removed]
+            self._failed_events = [event for event in self._failed_events if event.task_id not in removed]
+            self._task_messages = deque(message for message in self._task_messages if message.task_id not in removed)
+
+    def remove_all(self) -> None:
+        with self._lock:
+            ids = list(self._tasks.keys())
+            for task_id in ids:
+                self._remove_task_internal(task_id)
+            self._pending.clear()
+            self._pending_set.clear()
+            self._suspended.clear()
+            self._suspended_set.clear()
+            self._running.clear()
+            self._results.clear()
+            self._task_messages.clear()
+            self._task_message_counts.clear()
+            self._message_slots_changed.notify_all()
+
+    def suspend_all(self) -> None:
+        with self._lock:
+            for task_id in list(self._pending):
+                if task_id not in self._suspended_set:
+                    self._suspended.append(task_id)
+                    self._suspended_set.add(task_id)
+            self._pending.clear()
+            self._pending_set.clear()
+
+    def suspend_tasks(self, *task_ids: Hashable) -> None:
+        with self._lock:
+            for task_id in task_ids:
+                self._validate_task_id(task_id)
+                if task_id in self._pending_set:
+                    self._remove_from_pending(task_id)
+                    if task_id not in self._suspended_set:
+                        self._suspended.append(task_id)
+                        self._suspended_set.add(task_id)
+
+    def resume_all(self) -> None:
+        with self._lock:
+            for task_id in list(self._suspended):
+                if task_id in self._tasks and task_id not in self._pending_set:
+                    self._pending.append(task_id)
+                    self._pending_set.add(task_id)
+            self._suspended.clear()
+            self._suspended_set.clear()
+
+    def resume_tasks(self, *task_ids: Hashable) -> None:
+        with self._lock:
+            for task_id in task_ids:
+                self._validate_task_id(task_id)
+                if task_id in self._suspended_set:
+                    self._remove_from_suspended(task_id)
+                    if task_id in self._tasks and task_id not in self._pending_set:
+                        self._pending.append(task_id)
+                        self._pending_set.add(task_id)
+
+    def read_suspended(self) -> List[Hashable]:
+        with self._lock:
+            return self._suspended.copy()
+
+    def read_suspended_len(self) -> int:
+        with self._lock:
+            return len(self._suspended)
+
+    def tasks_active(self) -> bool:
+        with self._lock:
+            return bool(self._pending_set or self._running)
+
+    def tasks_active_match_all(self, *task_ids: Hashable) -> bool:
+        with self._lock:
+            for task_id in task_ids:
+                self._validate_task_id(task_id)
+                if task_id not in self._pending_set and task_id not in self._running:
+                    return False
+            return True
+
+    def tasks_active_match_any(self, *task_ids: Hashable) -> bool:
+        with self._lock:
+            for task_id in task_ids:
+                self._validate_task_id(task_id)
+                if task_id in self._pending_set or task_id in self._running:
+                    return True
+            return False
+
+    def tasks_busy(self) -> bool:
+        with self._lock:
+            return bool(self._pending_set or self._running or self._task_message_counts)
+
+    def tasks_busy_match_any(self, *task_ids: Hashable) -> bool:
+        with self._lock:
+            for task_id in task_ids:
+                self._validate_task_id(task_id)
+                if task_id in self._pending_set or task_id in self._running:
+                    return True
+                if self._task_message_counts.get(task_id, 0) > 0:
+                    return True
+            return False
+
+    def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
+        if max_queued_messages is not None:
+            if not isinstance(max_queued_messages, int):
+                raise ValueError(f"max_queued_messages must be int or None, got: {type(max_queued_messages).__name__}")
+            if max_queued_messages <= 0:
+                raise ValueError(f"max_queued_messages must be > 0, got: {max_queued_messages}")
+        with self._lock:
+            self._max_queued_messages_per_task = max_queued_messages
+            self._message_slots_changed.notify_all()
+
+    def get_max_queued_messages_per_task(self) -> Optional[int]:
+        with self._lock:
+            return self._max_queued_messages_per_task
+
+    def set_message_dispatch_limit(self, max_messages_per_update: Optional[int]) -> None:
+        if max_messages_per_update is not None:
+            if not isinstance(max_messages_per_update, int):
+                raise ValueError(f"max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}")
+            if max_messages_per_update <= 0:
+                raise ValueError(f"max_messages_per_update must be > 0, got: {max_messages_per_update}")
+        with self._lock:
+            self._message_dispatch_limit = max_messages_per_update
+
+    def get_message_dispatch_limit(self) -> Optional[int]:
+        with self._lock:
+            return self._message_dispatch_limit
+
+    def set_message_ingest_limit(self, max_messages_per_update: Optional[int]) -> None:
+        if max_messages_per_update is not None:
+            if not isinstance(max_messages_per_update, int):
+                raise ValueError(f"max_messages_per_update must be int or None, got: {type(max_messages_per_update).__name__}")
+            if max_messages_per_update <= 0:
+                raise ValueError(f"max_messages_per_update must be > 0, got: {max_messages_per_update}")
+        with self._lock:
+            self._message_ingest_limit = max_messages_per_update
+
+    def get_message_ingest_limit(self) -> Optional[int]:
+        with self._lock:
+            return self._message_ingest_limit
 
     def send_message(self, task_id: Hashable, payload: Any) -> None:
-        self._incoming_messages.put((task_id, payload))
+        self._validate_task_id(task_id)
+        with self._lock:
+            while True:
+                task = self._tasks.get(task_id)
+                if task is None:
+                    raise ValueError(f"unknown task id: {task_id}")
+                if task.message_method is None:
+                    raise ValueError(f"task '{task_id}' has no message handler")
+                if not callable(task.message_method):
+                    raise ValueError(f"task '{task_id}' message handler is not callable")
+                queued_count = self._task_message_counts.get(task_id, 0)
+                if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
+                    break
+                self._message_slots_changed.wait()
+
+            self._task_message_counts[task_id] = self._task_message_counts.get(task_id, 0) + 1
+            message = _TaskMessage(task_id=task_id, callback=task.message_method, payload=payload, generation=task.generation)
+        self._incoming_messages.put(message)
 
     def pop_result(self, task_id: Hashable, default: Any = None) -> Any:
         return self._results.pop(task_id, default)
@@ -74,61 +283,201 @@ class TaskScheduler:
     def get_finished_events(self) -> List[TaskEvent]:
         return list(self._finished_events)
 
+    def get_finished_tasks(self) -> List[Hashable]:
+        return [event.task_id for event in self._finished_events if event.operation == "finished"]
+
     def get_failed_events(self) -> List[TaskEvent]:
         return list(self._failed_events)
+
+    def get_failed_tasks(self) -> List[tuple[Hashable, str]]:
+        return [(event.task_id, event.error or "") for event in self._failed_events if event.operation == "failed"]
 
     def clear_events(self) -> None:
         self._finished_events.clear()
         self._failed_events.clear()
 
-    def update(self) -> None:
+    def clear_finished_tasks(self) -> None:
+        self._finished_events.clear()
+
+    def clear_failed_tasks(self) -> None:
+        self._failed_events.clear()
+
+    def update(self) -> List[Hashable]:
+        with self._lock:
+            self._submit_ready_tasks()
+            finished = self._collect_finished_tasks()
         self._drain_messages()
         self._drain_failures()
-        self._drain_completions()
+        self._dispatch_messages()
+        self._drain_failures()
+        return finished
 
-    def _run_task(self, task: _Task) -> Any:
-        try:
-            if task.parameters is None:
-                result = task.logic(task.task_id)
+    def _build_task_callable(self, task_id: Hashable, logic: Callable[..., Any], parameters: Any) -> Callable[[], Any]:
+        def run() -> Any:
+            if parameters is None:
+                outcome = logic(task_id)
             else:
-                result = task.logic(task.task_id, task.parameters)
-            self._results[task.task_id] = result
-            self._incoming_completions.put(task.task_id)
-            return result
-        except Exception as exc:  # noqa: BLE001
-            self._incoming_failures.put((task.task_id, f"{type(exc).__name__}: {exc}"))
-            raise
+                outcome = logic(task_id, parameters)
+            if inspect.isawaitable(outcome):
+                return asyncio.run(outcome)
+            return outcome
 
-    def _drain_messages(self) -> None:
+        return run
+
+    def _enqueue_completion(self, task_id: Hashable, generation: int, future: Future) -> None:
+        self._incoming_completions.put(_TaskCompletion(task_id=task_id, generation=generation, future=future))
+
+    def _enqueue_failure(self, task_id: Hashable, generation: int, error: str) -> None:
+        self._incoming_failures.put(_TaskFailure(task_id=task_id, generation=generation, error=error))
+
+    def _submit_ready_tasks(self) -> None:
+        while self._pending and len(self._running) < self._max_workers:
+            task_id = self._pending.popleft()
+            self._pending_set.discard(task_id)
+            task = self._tasks.get(task_id)
+            if task is None:
+                continue
+            task.future = self._executor.submit(task.run_callable)
+            task.future.add_done_callback(
+                lambda done_future, _task_id=task_id, _generation=task.generation: self._enqueue_completion(_task_id, _generation, done_future)
+            )
+            self._running.add(task_id)
+
+    def _collect_finished_tasks(self) -> List[Hashable]:
+        finished_task_ids: List[Hashable] = []
+        completions: List[_TaskCompletion] = []
         while True:
             try:
-                task_id, payload = self._incoming_messages.get_nowait()
+                completions.append(self._incoming_completions.get_nowait())
             except Empty:
                 break
-            task = self._tasks.get(task_id)
-            if task is None or task.message_method is None:
+        for completion in completions:
+            task_id = completion.task_id
+            if self._task_generation.get(task_id) != completion.generation:
                 continue
+            task = self._tasks.get(task_id)
+            if task is None or task.future is not completion.future:
+                continue
+            self._running.discard(task_id)
             try:
-                task.message_method(payload)
+                result = completion.future.result()
+                self._results[task_id] = result
+                self._finished_events.append(TaskEvent("finished", task_id))
+                finished_task_ids.append(task_id)
             except Exception as exc:  # noqa: BLE001
-                self._failed_events.append(TaskEvent("failed", task_id, f"Task message callback failed: {type(exc).__name__}: {exc}"))
+                self._enqueue_failure(task_id, completion.generation, f"{type(exc).__name__}: {exc}")
+            finally:
+                self._tasks.pop(task_id, None)
+        return finished_task_ids
+
+    def _drain_messages(self) -> None:
+        drained: List[_TaskMessage] = []
+        with self._lock:
+            ingest_limit = self._message_ingest_limit
+        if ingest_limit is None:
+            while True:
+                try:
+                    drained.append(self._incoming_messages.get_nowait())
+                except Empty:
+                    break
+        else:
+            for _ in range(ingest_limit):
+                try:
+                    drained.append(self._incoming_messages.get_nowait())
+                except Empty:
+                    break
+        if not drained:
+            return
+        with self._lock:
+            for message in drained:
+                if self._task_generation.get(message.task_id) != message.generation:
+                    self._decrement_message_count_locked(message.task_id)
+                    continue
+                self._task_messages.append(message)
+
+    def _dispatch_messages(self) -> None:
+        pending_messages: List[_TaskMessage] = []
+        with self._lock:
+            if not self._task_messages:
+                return
+            if self._message_dispatch_limit is None:
+                pending_messages = list(self._task_messages)
+                self._task_messages.clear()
+            else:
+                for _ in range(self._message_dispatch_limit):
+                    if not self._task_messages:
+                        break
+                    pending_messages.append(self._task_messages.popleft())
+
+        for message in pending_messages:
+            with self._lock:
+                if self._task_generation.get(message.task_id) != message.generation:
+                    self._decrement_message_count_locked(message.task_id)
+                    continue
+            try:
+                message.callback(message.payload)
+            except Exception as exc:  # noqa: BLE001
+                self._enqueue_failure(
+                    message.task_id,
+                    message.generation,
+                    f"Task message callback failed: {type(exc).__name__}: {exc}",
+                )
+            finally:
+                with self._lock:
+                    self._decrement_message_count_locked(message.task_id)
 
     def _drain_failures(self) -> None:
         while True:
             try:
-                task_id, error = self._incoming_failures.get_nowait()
+                failure = self._incoming_failures.get_nowait()
             except Empty:
                 break
             with self._lock:
-                self._tasks.pop(task_id, None)
-            self._failed_events.append(TaskEvent("failed", task_id, error))
+                if self._task_generation.get(failure.task_id) != failure.generation:
+                    continue
+                self._failed_events.append(TaskEvent("failed", failure.task_id, failure.error))
+                self._tasks.pop(failure.task_id, None)
+                self._running.discard(failure.task_id)
 
-    def _drain_completions(self) -> None:
-        while True:
-            try:
-                task_id = self._incoming_completions.get_nowait()
-            except Empty:
-                break
-            with self._lock:
-                self._tasks.pop(task_id, None)
-            self._finished_events.append(TaskEvent("finished", task_id, None))
+    def _decrement_message_count_locked(self, task_id: Hashable) -> None:
+        count = self._task_message_counts.get(task_id)
+        if count is None:
+            return
+        next_count = count - 1
+        if next_count <= 0:
+            self._task_message_counts.pop(task_id, None)
+        else:
+            self._task_message_counts[task_id] = next_count
+        self._message_slots_changed.notify_all()
+
+    def _remove_from_pending(self, task_id: Hashable) -> None:
+        if task_id in self._pending_set:
+            if task_id in self._pending:
+                self._pending.remove(task_id)
+            self._pending_set.discard(task_id)
+
+    def _remove_from_suspended(self, task_id: Hashable) -> None:
+        if task_id in self._suspended_set:
+            if task_id in self._suspended:
+                self._suspended.remove(task_id)
+            self._suspended_set.discard(task_id)
+
+    def _remove_task_internal(self, task_id: Hashable) -> None:
+        self._remove_from_pending(task_id)
+        self._remove_from_suspended(task_id)
+        self._task_generation[task_id] = self._task_generation.get(task_id, 0) + 1
+        self._task_message_counts.pop(task_id, None)
+        task = self._tasks.pop(task_id, None)
+        self._results.pop(task_id, None)
+        self._task_messages = deque(message for message in self._task_messages if message.task_id != task_id)
+        if task_id in self._running:
+            self._running.discard(task_id)
+            if task is not None and task.future is not None:
+                task.future.cancel()
+        self._message_slots_changed.notify_all()
+
+    def _validate_task_id(self, task_id: Hashable) -> None:
+        try:
+            hash(task_id)
+        except TypeError as exc:
+            raise ValueError(f"task id must be hashable: {task_id!r}") from exc
