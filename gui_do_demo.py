@@ -275,6 +275,38 @@ class GuiDoDemo:
     def _bind_runtime(self) -> None:
         self.life_scheduler.set_message_dispatch_limit(256)
         self.mandel_scheduler.set_message_dispatch_limit(256)
+        self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
+        self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
+        self._configure_focus_and_accessibility()
+
+    def _configure_focus_and_accessibility(self) -> None:
+        focus_order = [
+            self.quit_button,
+            self.life_toggle_window,
+            self.mandel_toggle_window,
+            self.life_reset_button,
+            self.life_toggle,
+            self.life_zoom_slider,
+            self.mandel_reset_button,
+            self.mandel_iter_button,
+            self.mandel_recur_button,
+            self.mandel_one_split_button,
+            self.mandel_four_split_button,
+        ]
+        for index, control in enumerate(focus_order):
+            control.set_tab_index(index)
+
+        self.quit_button.set_accessibility(role="button", label="Quit")
+        self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
+        self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
+        self.life_reset_button.set_accessibility(role="button", label="Reset life board")
+        self.life_toggle.set_accessibility(role="toggle", label="Run life simulation")
+        self.life_zoom_slider.set_accessibility(role="slider", label="Life zoom")
+        self.mandel_reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
+        self.mandel_iter_button.set_accessibility(role="button", label="Run Mandelbrot iterative")
+        self.mandel_recur_button.set_accessibility(role="button", label="Run Mandelbrot recursive")
+        self.mandel_one_split_button.set_accessibility(role="button", label="Run Mandelbrot one canvas split")
+        self.mandel_four_split_button.set_accessibility(role="button", label="Run Mandelbrot four canvases split")
 
     def _toggle_life_window(self, pushed: bool) -> None:
         self.life_window.visible = bool(pushed)
@@ -359,10 +391,6 @@ class GuiDoDemo:
         self._zoom_life_view_about(center_local, new_size)
 
     def _life_window_event_handler(self, event) -> bool:
-        if event.is_key_down(pygame.K_ESCAPE):
-            self._exit_app()
-            return True
-
         if event.is_mouse_down(3) and event.collides(self.life_canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -414,9 +442,6 @@ class GuiDoDemo:
         return False
 
     def _mandel_window_event_handler(self, event) -> bool:
-        if event.is_key_down(pygame.K_ESCAPE):
-            self._exit_app()
-            return True
         return False
 
     def _life_window_postamble(self) -> None:
@@ -698,9 +723,6 @@ class GuiDoDemo:
         return None
 
     def _screen_event_handler(self, event) -> bool:
-        if event.is_key_down(pygame.K_ESCAPE):
-            self._exit_app()
-            return True
         return False
 
     def _screen_postamble(self) -> None:
