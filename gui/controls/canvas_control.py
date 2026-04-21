@@ -92,6 +92,7 @@ class CanvasControl(UiNode):
             last = self._events[-1]
             if last.is_mouse_motion():
                 self._events[-1] = packet
+                self._dropped_events = 0
                 return True
 
         if len(self._events) >= self._events.maxlen:
@@ -102,8 +103,7 @@ class CanvasControl(UiNode):
                 return True
 
         self._events.append(packet)
-        if self.on_overflow is not None and self._dropped_events > 0:
-            self.on_overflow(self._dropped_events, len(self._events))
+        self._dropped_events = 0
         return event.is_mouse_down() or event.is_mouse_up() or event.is_mouse_motion() or event.is_mouse_wheel()
 
     def draw(self, surface: Surface, theme: "ColorTheme") -> None:
