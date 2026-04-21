@@ -22,6 +22,7 @@ class PanelControl(UiNode):
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
+        self._pending_capture_release_owner_id = None
         self._visual_size = None
 
     def _is_window_like(self, child: UiNode) -> bool:
@@ -116,6 +117,7 @@ class PanelControl(UiNode):
             return False
 
         if self._drag_window is child:
+            self._pending_capture_release_owner_id = child.control_id
             self._drag_window = None
             self._drag_last_pos = None
 
@@ -155,6 +157,12 @@ class PanelControl(UiNode):
         return False
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if self._pending_capture_release_owner_id is not None:
+            owner_id = self._pending_capture_release_owner_id
+            if app.pointer_capture.is_owned_by(owner_id):
+                app.pointer_capture.end(owner_id)
+            self._pending_capture_release_owner_id = None
+
         if self._drag_window is not None:
             invalid_drag_window = (
                 self._drag_window not in self.children

@@ -25,12 +25,17 @@ class PanelDragRemoveCleanupTests(unittest.TestCase):
 
         self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": start, "button": 1}))
         self.assertIs(self.panel._drag_window, window)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("win"))
 
         removed = self.panel.remove(window)
 
         self.assertTrue(removed)
         self.assertIsNone(self.panel._drag_window)
         self.assertIsNone(self.panel._drag_last_pos)
+
+        # Next routed event clears any lingering capture ownership for removed drag window.
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (10, 10), "rel": (0, 0)}))
+        self.assertFalse(self.app.pointer_capture.is_owned_by("win"))
 
 
 if __name__ == "__main__":
