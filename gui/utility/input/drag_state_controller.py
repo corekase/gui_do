@@ -50,18 +50,18 @@ class DragStateController:
     @staticmethod
     def _window_position(window) -> tuple[int, int]:
         """Return current window position from structural x/y contract."""
-        wx = getattr(window, 'x', None)
-        wy = getattr(window, 'y', None)
+        try:
+            wx = window.x
+            wy = window.y
+        except AttributeError as exc:
+            raise ValueError(f'window must provide integer x/y, got: {window}') from exc
         if not isinstance(wx, int) or not isinstance(wy, int):
             raise ValueError(f'window must provide integer x/y, got: {window}')
         return (wx, wy)
 
     @staticmethod
     def _set_window_position(window, x: int, y: int) -> None:
-        """Update window position via property setter when present, else x/y attrs."""
-        if hasattr(type(window), 'position'):
-            window.position = (x, y)
-            return
+        """Update window position through structural x/y contract."""
         window.x = x
         window.y = y
 

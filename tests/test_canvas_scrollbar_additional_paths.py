@@ -363,10 +363,13 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._dragging = True
         scrollbar._horizontal = Orientation.Vertical
         scrollbar._graphic_rect = Rect(10, 10, 20, 100)
+        scrollbar.draw_rect = Rect(10, 10, 20, 100)
         scrollbar._total_range = 100
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
         scrollbar._last_mouse_pos = None
+        scrollbar._drag_left_widget_bounds = False
+        scrollbar._last_in_bounds_screen_pos = None
         scrollbar.gui = build_mouse_gui_stub(mouse_pos=(20, 40))
 
         motion = pygame.event.Event(MOUSEMOTION, {})
@@ -382,9 +385,12 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._last_mouse_pos = 7
         scrollbar._horizontal = Orientation.Horizontal
         scrollbar._graphic_rect = Rect(10, 10, 50, 10)
+        scrollbar.draw_rect = Rect(10, 10, 50, 10)
         scrollbar._total_range = 100
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
+        scrollbar._drag_left_widget_bounds = False
+        scrollbar._last_in_bounds_screen_pos = None
         scrollbar.gui = build_mouse_gui_stub(mouse_pos=(20, 10))
 
         handled = scrollbar.handle_event(pygame.event.Event(MOUSEBUTTONDOWN, {"button": 1}), None)
@@ -403,9 +409,12 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._last_mouse_pos = 3
         scrollbar._horizontal = Orientation.Horizontal
         scrollbar._graphic_rect = Rect(0, 0, 100, 12)
+        scrollbar.draw_rect = Rect(0, 0, 100, 12)
         scrollbar._total_range = 100
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
+        scrollbar._drag_left_widget_bounds = False
+        scrollbar._last_in_bounds_screen_pos = None
         scrollbar.state = InteractiveState.Hover
         overlay = SimpleNamespace(visible=True, get_window_rect=lambda: Rect(10, 0, 60, 30))
         scrollbar.gui = build_mouse_gui_stub(
@@ -430,9 +439,12 @@ class ScrollbarRoiBatch5Tests(unittest.TestCase):
         scrollbar._last_mouse_pos = 4
         scrollbar._horizontal = Orientation.Horizontal
         scrollbar._graphic_rect = Rect(0, 0, 100, 12)
+        scrollbar.draw_rect = Rect(0, 0, 100, 12)
         scrollbar._total_range = 100
         scrollbar._bar_size = 20
         scrollbar._start_pos = 5
+        scrollbar._drag_left_widget_bounds = False
+        scrollbar._last_in_bounds_screen_pos = None
         scrollbar.state = InteractiveState.Hover
         scrollbar.gui = build_mouse_gui_stub(
             mouse_pos=(40, 6),

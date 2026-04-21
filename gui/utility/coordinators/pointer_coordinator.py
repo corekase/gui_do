@@ -67,7 +67,7 @@ class PointerCoordinator:
     def _normalize_window(self, window: Optional[Any]) -> Optional[Any]:
         """Normalize window-like argument to known containers or `None`."""
         if window is not None and window not in self.gui.windows and window is not self.gui.task_panel:
-            return None
+            raise GuiError('window must be a registered window or task panel')
         return window
 
     @staticmethod
@@ -76,6 +76,20 @@ class PointerCoordinator:
         if as_window_coords:
             return geom_to_window(point, window)
         return geom_to_screen(point, window)
+
+    def _finalize_cursor_rect(self, anchor: Tuple[int, int]) -> Any:
+        """Build and persist cursor rect from anchor/hotspot metadata."""
+        if self.gui.cursor_image is None or self.gui.cursor_hotspot is None:
+            raise GuiError('cursor image and hotspot must be set before cursor placement')
+        cursor_rect = self.gui.cursor_rect or self.gui.cursor_image.get_rect()
+        placement = self._build_cursor_placement(
+            anchor=anchor,
+            hotspot=self.gui.cursor_hotspot,
+            size=(cursor_rect.width, cursor_rect.height),
+        )
+        finalized = placement.build_rect()
+        self.gui.cursor_rect = finalized
+        return finalized
 
     def set_cursor(self, name: str) -> None:
         """Activate registered cursor asset and preserve anchor position."""
@@ -86,12 +100,7 @@ class PointerCoordinator:
         self.gui.cursor_image = cursor_asset.image
         self.gui.cursor_hotspot = cursor_asset.hotspot
         self.gui.cursor_rect = self.gui.cursor_image.get_rect()
-        placement = self._build_cursor_placement(
-            anchor=anchor,
-            hotspot=self.gui.cursor_hotspot,
-            size=(self.gui.cursor_rect.width, self.gui.cursor_rect.height),
-        )
-        self.gui.cursor_rect = placement.build_rect()
+        self._finalize_cursor_rect(anchor)
 
     def convert_to_screen(self, point: Tuple[int, int], window: Optional[Any]) -> Tuple[int, int]:
         """Convert container-local point into locked screen coordinates."""

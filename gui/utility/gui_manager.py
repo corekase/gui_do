@@ -143,6 +143,36 @@ class GuiManager:
         return self._scheduler
 
     @property
+    def cursor_image(self) -> Optional[Surface]:
+        """Active cursor bitmap, or None when cursor is unset."""
+        return self._cursor_image
+
+    @cursor_image.setter
+    def cursor_image(self, value: Optional[Surface]) -> None:
+        """Active cursor bitmap, or None when cursor is unset."""
+        self._cursor_image = value
+
+    @property
+    def cursor_hotspot(self) -> Optional[Tuple[int, int]]:
+        """Active cursor hotspot relative to cursor bitmap."""
+        return self._cursor_hotspot
+
+    @cursor_hotspot.setter
+    def cursor_hotspot(self, value: Optional[Tuple[int, int]]) -> None:
+        """Active cursor hotspot relative to cursor bitmap."""
+        self._cursor_hotspot = value
+
+    @property
+    def cursor_rect(self) -> Optional[Rect]:
+        """Current cursor draw rect in screen space."""
+        return self._cursor_rect
+
+    @cursor_rect.setter
+    def cursor_rect(self, value: Optional[Rect]) -> None:
+        """Current cursor draw rect in screen space."""
+        self._cursor_rect = value
+
+    @property
     def dragging(self) -> bool:
         """Dragging."""
         return self._drag_state.dragging
@@ -366,8 +396,11 @@ class GuiManager:
         """Validate a minimal window-like contract for drag state integration."""
         if value is None:
             return
-        vx = getattr(value, 'x', None)
-        vy = getattr(value, 'y', None)
+        try:
+            vx = value.x
+            vy = value.y
+        except AttributeError:
+            raise GuiError(f'{label} must provide integer x/y, got: {value}')
         if not isinstance(vx, int) or not isinstance(vy, int):
             raise GuiError(f'{label} must provide integer x/y, got: {value}')
 
@@ -492,9 +525,9 @@ class GuiManager:
         self.workspace_state: WorkspaceState = WorkspaceState()
         self.windows: List[Window] = []
         self.mouse_pos: Tuple[int, int] = self.input_providers.mouse_get_pos()
-        self.cursor_image: Optional[Surface] = None
-        self.cursor_hotspot: Optional[Tuple[int, int]] = None
-        self.cursor_rect: Optional[Rect] = None
+        self._cursor_image: Optional[Surface] = None
+        self._cursor_hotspot: Optional[Tuple[int, int]] = None
+        self._cursor_rect: Optional[Rect] = None
         self.active_window: Optional[Window] = None
         self.focus_state_data: FocusState = FocusState()
         self.pristine: Optional[Surface] = None

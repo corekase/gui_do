@@ -42,8 +42,20 @@ def point_in_rect(point: Tuple[int, int], rect: Rect) -> bool:
 
 def _window_origin(window: Any) -> Tuple[int, int]:
     """Return normalized (x, y) origin for window-like containers."""
-    wx = getattr(window, 'x', getattr(window, 'left', None))
-    wy = getattr(window, 'y', getattr(window, 'top', None))
+    if hasattr(window, 'x'):
+        wx = window.x
+    elif hasattr(window, 'left'):
+        wx = window.left
+    else:
+        raise ValueError(f'window must provide integer x/left and y/top, got: {window}')
+
+    if hasattr(window, 'y'):
+        wy = window.y
+    elif hasattr(window, 'top'):
+        wy = window.top
+    else:
+        raise ValueError(f'window must provide integer x/left and y/top, got: {window}')
+
     if not isinstance(wx, int) or not isinstance(wy, int):
         raise ValueError(f'window must provide integer x/left and y/top, got: {window}')
     return (wx, wy)

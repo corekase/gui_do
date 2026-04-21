@@ -31,7 +31,11 @@ class Engine:
             raise TypeError('exit_on_finish must be a bool')
         self.state_manager: StateManager = state_manager
         self.clock: Any = clock or pygame.time.Clock()
-        if not callable(getattr(self.clock, 'tick', None)):
+        try:
+            tick = self.clock.tick
+        except AttributeError as exc:
+            raise TypeError('clock must provide a callable tick(fps) method') from exc
+        if not callable(tick):
             raise TypeError('clock must provide a callable tick(fps) method')
         self.fps: int = fps
         self._ticks_provider: Callable[[], int] = ticks_provider or pygame.time.get_ticks

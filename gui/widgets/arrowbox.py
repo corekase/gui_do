@@ -78,17 +78,15 @@ class ArrowBox(BaseInteractive):
 
     def _clear_timer(self) -> None:
         """Clear timer."""
-        timer_id = getattr(self, '_timer_id', None)
+        timer_id = self._timer_id
         if timer_id is None:
             return
         try:
-            gui = getattr(self, 'gui', None)
-            timers = getattr(gui, 'timers', None)
+            timers = self.gui.timers
             if timers is not None:
                 timers.remove_timer(timer_id)
         except Exception as exc:
-            widget_id = getattr(self, 'id', '<unknown>')
-            _logger.warning('ArrowBox timer cleanup failed for %s: %s: %s', widget_id, type(exc).__name__, exc)
+            _logger.warning('ArrowBox timer cleanup failed for %s: %s: %s', self.id, type(exc).__name__, exc)
         finally:
             self._timer_id = None
 

@@ -292,12 +292,12 @@ class Slider(Widget, AxisRangeMixin):
             motion_point = None
             if isinstance(motion_pos, tuple) and len(motion_pos) == 2:
                 motion_point = self.gui._convert_to_window(motion_pos, window)
-                draw_rect = getattr(self, 'draw_rect', None)
-                if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(motion_point):
+                draw_rect = self.draw_rect
+                if draw_rect.collidepoint(motion_point):
                     self._last_in_bounds_screen_pos = motion_pos
-            draw_rect = getattr(self, 'draw_rect', None)
+            draw_rect = self.draw_rect
             leave_check_point = motion_point if motion_point is not None else mouse_point
-            if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and not draw_rect.collidepoint(leave_check_point):
+            if not draw_rect.collidepoint(leave_check_point):
                 self._drag_left_widget_bounds = True
             if self._horizontal == Orientation.Horizontal:
                 axis_pixel = mouse_point[0] - self._graphic_rect.x - self._drag_anchor_offset
@@ -313,18 +313,15 @@ class Slider(Widget, AxisRangeMixin):
         release_pos = normalized.pos
         if isinstance(release_pos, tuple) and len(release_pos) == 2:
             release_point = self.gui._convert_to_window(release_pos, window)
-            draw_rect = getattr(self, 'draw_rect', None)
-            if draw_rect is not None and hasattr(draw_rect, 'collidepoint') and draw_rect.collidepoint(release_point):
+            draw_rect = self.draw_rect
+            if draw_rect.collidepoint(release_point):
                 resolved_release_pos = release_pos
-        if resolved_release_pos is None and getattr(self, '_drag_left_widget_bounds', False):
+        if resolved_release_pos is None and self._drag_left_widget_bounds:
             resolved_release_pos = self._last_in_bounds_screen_pos
         self._reset_drag()
         if isinstance(resolved_release_pos, tuple) and len(resolved_release_pos) == 2:
             self.gui.release_pointer_hint = resolved_release_pos
-            if callable(getattr(self.gui, '_set_mouse_pos', None)):
-                self.gui._set_mouse_pos(resolved_release_pos, False)
-            else:
-                self.gui.mouse_pos = resolved_release_pos
+            self.gui._set_mouse_pos(resolved_release_pos, False)
         if self._wheel_active and self._wheel_hit_area().collidepoint(mouse_point):
             self.state = InteractiveState.Armed
         elif self._handle_area().collidepoint(mouse_point):

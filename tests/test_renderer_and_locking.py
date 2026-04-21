@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 
 import pygame
 from pygame import Rect
@@ -33,6 +34,7 @@ class RendererTests(unittest.TestCase):
         gui.buffered = True
         gui.widgets = [WidgetStub()]
         gui.windows = []
+        gui.active_window = None
         gui.task_panel = None
         gui.mouse_locked = False
         gui.mouse_pos = (0, 0)
@@ -49,6 +51,8 @@ class RendererTests(unittest.TestCase):
             return pygame.Surface((rect.width, rect.height))
 
         gui.copy_graphic_area = copy_graphic_area
+        gui.lock_area = lambda pos: pos
+        gui._set_mouse_pos = lambda pos, _update_physical_coords=False: setattr(gui, 'mouse_pos', pos)
 
         renderer = Renderer(gui)
         renderer.draw()
@@ -61,6 +65,7 @@ class RendererTests(unittest.TestCase):
         gui.buffered = False
         gui.widgets = []
         gui.windows = []
+        gui.active_window = None
         gui.task_panel = None
         gui.mouse_locked = False
         gui.mouse_pos = (50, 60)
@@ -70,6 +75,20 @@ class RendererTests(unittest.TestCase):
         gui.cursor_hotspot = (1, 2)
         gui.cursor_rect = None
         gui.surface = pygame.Surface((40, 40))
+
+        def _finalize_cursor_rect(anchor):
+            rect = Rect(
+                anchor[0] - gui.cursor_hotspot[0],
+                anchor[1] - gui.cursor_hotspot[1],
+                gui.cursor_image.get_rect().width,
+                gui.cursor_image.get_rect().height,
+            )
+            gui.cursor_rect = rect
+            return rect
+
+        gui.pointer = SimpleNamespace(_finalize_cursor_rect=_finalize_cursor_rect)
+        gui.lock_area = lambda pos: pos
+        gui._set_mouse_pos = lambda pos, _update_physical_coords=False: setattr(gui, 'mouse_pos', pos)
 
         renderer = Renderer(gui)
         renderer.draw()

@@ -23,6 +23,12 @@ class _PanelStub:
         self.top = top
 
 
+class _TaskPanelLikeStub:
+    def __init__(self, left: int, y: int) -> None:
+        self.left = left
+        self.y = y
+
+
 class GeometryContractTests(unittest.TestCase):
     def test_validate_point_accepts_int_tuple(self) -> None:
         self.assertEqual(validate_point((2, 3)), (2, 3))
@@ -52,6 +58,13 @@ class GeometryContractTests(unittest.TestCase):
 
     def test_to_window_and_to_screen_support_left_top(self) -> None:
         panel = _PanelStub(30, 40)
+        local = (1, 2)
+        screen = to_screen(local, panel)
+        self.assertEqual(screen, (31, 42))
+        self.assertEqual(to_window(screen, panel), local)
+
+    def test_to_window_and_to_screen_support_left_y(self) -> None:
+        panel = _TaskPanelLikeStub(30, 40)
         local = (1, 2)
         screen = to_screen(local, panel)
         self.assertEqual(screen, (31, 42))

@@ -19,9 +19,10 @@ class DragState:
         """Return whether object satisfies the minimal drag-window contract."""
         if window is None:
             return False
-        has_x = isinstance(getattr(window, 'x', None), int)
-        has_y = isinstance(getattr(window, 'y', None), int)
-        return has_x and has_y
+        try:
+            return isinstance(window.x, int) and isinstance(window.y, int)
+        except AttributeError:
+            return False
 
     @staticmethod
     def _validate_drag_context(window: Window, mouse_delta: Tuple[int, int]) -> None:
@@ -51,11 +52,11 @@ class DragState:
         self.dragging_window = None
         self.mouse_delta = None
 
-    # Backward-compatible wrappers used by existing controllers/tests.
+    # Alias methods retained for naming continuity across callers.
     def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
-        """Backward-compatible alias for start_drag."""
+        """Alias for start_drag."""
         self.start_drag(window, mouse_delta)
 
     def clear_drag(self) -> None:
-        """Backward-compatible alias for stop_drag."""
+        """Alias for stop_drag."""
         self.stop_drag()

@@ -10,6 +10,11 @@ class StateModelBackedStub:
         self._drag_state = DragState()
         self._lock_state = LockState()
         self.object_registry = SimpleNamespace(is_registered_object=lambda _obj: True)
+        self.lock_flow = SimpleNamespace(
+            consume_release_pointer_hint=self._lock_state.consume_release_pointer_hint,
+        )
+        self.pointer = SimpleNamespace(set_physical_mouse_pos=lambda _pos: None)
+        self.input_providers = SimpleNamespace(mouse_get_pos=lambda: getattr(self, 'mouse_pos', (0, 0)))
 
     @property
     def dragging(self):

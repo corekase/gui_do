@@ -50,7 +50,7 @@ class Renderer:
     def _draw_windows(self) -> None:
         """Draw windows."""
         windows_snapshot = tuple(self.gui.windows)
-        active_window = getattr(self.gui, 'active_window', None)
+        active_window = self.gui.active_window
         highlighted_window = active_window if active_window in windows_snapshot and active_window.visible else None
         for window in windows_snapshot:
             if window.visible:
@@ -78,23 +78,11 @@ class Renderer:
         """Draw cursor."""
         if self.gui.mouse_locked:
             clamped_pos = self.gui.lock_area(self.gui.mouse_pos)
-            set_mouse = getattr(self.gui, '_set_mouse_pos', None)
-            if callable(set_mouse):
-                set_mouse(clamped_pos, False)
-            else:
-                self.gui.mouse_pos = clamped_pos
+            self.gui._set_mouse_pos(clamped_pos, False)
         if self.gui.cursor_image is None or self.gui.cursor_hotspot is None:
             return
-        if self.gui.cursor_rect is None:
-            self.gui.cursor_rect = self.gui.cursor_image.get_rect()
         cursor_pos = self._resolve_cursor_pos()
-        cursor_rect = Rect(
-            cursor_pos[0] - self.gui.cursor_hotspot[0],
-            cursor_pos[1] - self.gui.cursor_hotspot[1],
-            self.gui.cursor_rect.width,
-            self.gui.cursor_rect.height,
-        )
-        self.gui.cursor_rect = cursor_rect
+        cursor_rect = self.gui.pointer._finalize_cursor_rect(cursor_pos)
         self._capture_bitmap(cursor_rect)
         self.gui.surface.blit(self.gui.cursor_image, cursor_rect)
 

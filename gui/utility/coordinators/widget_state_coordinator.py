@@ -37,8 +37,6 @@ class WidgetStateCoordinator:
         """Handle widget."""
         if widget.handle_event(event, window):
             if widget.on_activate is not None:
-                if not callable(widget.on_activate):
-                    raise GuiError(f'widget callback is not callable for id: {widget.id}')
                 widget.on_activate()
                 return False
             return True

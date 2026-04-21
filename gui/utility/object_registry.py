@@ -129,7 +129,7 @@ class GuiObjectRegistry:
         """Describe the current container that owns the given widget."""
         if self.gui.task_panel is not None and widget in self.gui.task_panel.widgets:
             return 'task_panel'
-        window = getattr(widget, 'window', None)
+        window = widget.window
         if window is None or not isinstance(window, Window):
             return 'screen'
         return f'window pos=({window.x},{window.y}) size=({window.width},{window.height})'

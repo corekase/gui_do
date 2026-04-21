@@ -26,6 +26,8 @@ class ScrollbarAdditionalPathTests(unittest.TestCase):
         scrollbar._hit = False
         scrollbar._dragging = False
         scrollbar._last_mouse_pos = None
+        scrollbar._drag_left_widget_bounds = False
+        scrollbar._last_in_bounds_screen_pos = None
         scrollbar._subwidgets_bound = False
         scrollbar._registered = []
         scrollbar.draw_rect = Rect(0, 0, 200, 40)

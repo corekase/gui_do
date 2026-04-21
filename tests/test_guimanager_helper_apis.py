@@ -53,15 +53,14 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertEqual(screen_point, (105, 57))
         self.assertEqual(window_point, (5, 7))
 
-    def test_internal_convert_helpers_fallback_when_window_unregistered(self) -> None:
+    def test_internal_convert_helpers_reject_unregistered_window(self) -> None:
         gui = self._build_manager_stub()
         window = SimpleNamespace(x=100, y=50)
 
-        screen_point = GuiManager._convert_to_screen(gui, (5, 7), window)
-        window_point = GuiManager._convert_to_window(gui, (105, 57), window)
-
-        self.assertEqual(screen_point, (5, 7))
-        self.assertEqual(window_point, (105, 57))
+        with self.assertRaises(GuiError):
+            GuiManager._convert_to_screen(gui, (5, 7), window)
+        with self.assertRaises(GuiError):
+            GuiManager._convert_to_window(gui, (105, 57), window)
 
     def test_internal_convert_helpers_validate_point_shape(self) -> None:
         gui = self._build_manager_stub()
@@ -421,7 +420,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
 
         self.assertEqual(calls, [{}])
 
-    def test_handle_widget_executes_callback_paths_and_validates_callable(self) -> None:
+    def test_handle_widget_executes_callback_paths_and_requires_callable_callback(self) -> None:
         gui = self._build_manager_stub()
         marker = []
         event = object()
@@ -438,7 +437,7 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         self.assertTrue(GuiManager.handle_widget(gui, widget, event))
 
         widget.on_activate = "nope"
-        with self.assertRaises(GuiError):
+        with self.assertRaises(TypeError):
             GuiManager.handle_widget(gui, widget, event)
 
         widget.on_activate = lambda: marker.append("unused")

@@ -28,9 +28,9 @@ class ButtonGroup(BaseInteractive):
         selection = self.gui.button_group_mediator.get_selection(self.group)
         if selection is None:
             return self.id
-        if getattr(selection, 'group', None) != self.group:
+        if selection.group != self.group:
             return self.id
-        selected_id = getattr(selection, 'id', None)
+        selected_id = selection.id
         if not isinstance(selected_id, str) or selected_id == '':
             return self.id
         return selected_id

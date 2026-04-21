@@ -68,8 +68,8 @@ class FocusStateController:
 
     def _is_pointer_over_task_panel(self) -> bool:
         """Return whether pointer is currently over a visible task panel."""
-        task_panel = getattr(self.gui, 'task_panel', None)
-        if task_panel is None or not getattr(task_panel, 'visible', False):
+        task_panel = self.gui.task_panel
+        if task_panel is None or not task_panel.visible:
             return False
         mouse_pos = self.gui._get_mouse_pos()
         return point_in_rect(mouse_pos, task_panel.get_rect())

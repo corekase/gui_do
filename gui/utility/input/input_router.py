@@ -77,7 +77,7 @@ class InputRouter:
             return InputAction.pass_event()
         window = lock_obj.window
         if self.gui.handle_widget(lock_obj, event, window):
-            widget_id = getattr(lock_obj, 'id', None)
+            widget_id = lock_obj.id
             return InputAction.emit(Event.Widget, widget_id=widget_id, window=window)
         return InputAction.pass_event()
 
@@ -191,10 +191,8 @@ class InputRouter:
         """Return whether a screen-space event position is inside a specific lock owner draw rect."""
         if lock_obj is None:
             return False
-        draw_rect = getattr(lock_obj, 'draw_rect', None)
-        if draw_rect is None or not hasattr(draw_rect, 'collidepoint'):
-            return False
-        window = getattr(lock_obj, 'window', None)
+        draw_rect = lock_obj.draw_rect
+        window = lock_obj.window
         if window is None:
             return bool(draw_rect.collidepoint(event_pos))
         try:
@@ -226,10 +224,7 @@ class InputRouter:
             self._set_logical_mouse_pos(desired_pos)
             if self.gui.mouse_locked:
                 return
-            pointer = getattr(self.gui, 'pointer', None)
-            set_physical = getattr(pointer, 'set_physical_mouse_pos', None)
-            if callable(set_physical):
-                set_physical(desired_pos)
+            self.gui.pointer.set_physical_mouse_pos(desired_pos)
             return
         if not pre_mouse_locked or pre_mouse_point_locked:
             return
@@ -260,10 +255,7 @@ class InputRouter:
 
         if self.gui.mouse_locked:
             return
-        pointer = getattr(self.gui, 'pointer', None)
-        set_physical = getattr(pointer, 'set_physical_mouse_pos', None)
-        if callable(set_physical):
-            set_physical(desired_pos)
+        self.gui.pointer.set_physical_mouse_pos(desired_pos)
 
     def _sync_pointer_from_mouse_event(
         self,
@@ -287,11 +279,7 @@ class InputRouter:
             return
         if event.type != MOUSEWHEEL:
             return
-        input_providers = getattr(self.gui, 'input_providers', None)
-        mouse_get_pos = getattr(input_providers, 'mouse_get_pos', None)
-        if not callable(mouse_get_pos):
-            return
-        physical_pos = mouse_get_pos()
+        physical_pos = self.gui.input_providers.mouse_get_pos()
         if not isinstance(physical_pos, tuple) or len(physical_pos) != 2:
             return
         self._set_logical_mouse_pos(self.gui.lock_state.clamp_position(physical_pos))
@@ -302,12 +290,4 @@ class InputRouter:
 
     def _consume_release_pointer_hint(self):
         """Consume one-shot widget-provided release pointer override when present."""
-        lock_flow = getattr(self.gui, 'lock_flow', None)
-        consume_from_flow = getattr(lock_flow, 'consume_release_pointer_hint', None)
-        if callable(consume_from_flow):
-            return consume_from_flow()
-        lock_state = getattr(self.gui, '_lock_state', None)
-        consume_from_state = getattr(lock_state, 'consume_release_pointer_hint', None)
-        if callable(consume_from_state):
-            return consume_from_state()
-        return None
+        return self.gui.lock_flow.consume_release_pointer_hint()

@@ -48,6 +48,9 @@ class LockTransitionGuiStub:
         self.lock_point_recenter_pending = False
         self.lock_point_tolerance_rect = None
         self.object_registry = SimpleNamespace(is_registered_object=lambda obj: obj in self.widgets)
+        self.lock_flow = SimpleNamespace(consume_release_pointer_hint=self._lock_state.consume_release_pointer_hint)
+        self.pointer = SimpleNamespace(set_physical_mouse_pos=lambda _pos: None)
+        self.input_providers = SimpleNamespace(mouse_get_pos=lambda: self.mouse_pos)
         self.lock_clear_calls = 0
         self.handled = []
         self.remove_locked_on_handle = False

@@ -86,6 +86,24 @@ class RendererAdditionalPathTests(unittest.TestCase):
         gui.copy_graphic_area_calls = []
         gui.copy_graphic_area = lambda _surface, rect: gui.copy_graphic_area_calls.append(Rect(rect)) or object()
         gui.lock_area = lambda pos: pos
+        gui._set_mouse_pos = lambda pos, _update_physical_coords=False: setattr(gui, 'mouse_pos', pos)
+
+        def _finalize_cursor_rect(anchor):
+            if gui.cursor_image is None or gui.cursor_hotspot is None:
+                raise AssertionError('cursor image/hotspot must be set before placement')
+            cursor_rect = gui.cursor_rect
+            if cursor_rect is None:
+                cursor_rect = gui.cursor_image.get_rect()
+            finalized = Rect(
+                anchor[0] - gui.cursor_hotspot[0],
+                anchor[1] - gui.cursor_hotspot[1],
+                cursor_rect.width,
+                cursor_rect.height,
+            )
+            gui.cursor_rect = finalized
+            return finalized
+
+        gui.pointer = SimpleNamespace(_finalize_cursor_rect=_finalize_cursor_rect)
         return gui
 
     def test_draw_renders_windows_without_highlight_when_no_active_window(self) -> None:

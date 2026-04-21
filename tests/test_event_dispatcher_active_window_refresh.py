@@ -48,10 +48,12 @@ class ActiveWindowGuiStub:
         self.mouse_locked = False
         self.mouse_pos = (0, 0)
         self.input_providers = SimpleNamespace(mouse_get_pos=lambda: self.mouse_pos)
+        self.pointer = SimpleNamespace(set_physical_mouse_pos=lambda _pos: None)
         self.lock_area_rect = None
         self.lock_point_pos = None
         self.lock_point_recenter_pending = False
         self.lock_point_tolerance_rect = None
+        self.lock_flow = SimpleNamespace(consume_release_pointer_hint=self._lock_state.consume_release_pointer_hint)
         self.input_emitter = InputEventEmitter(self)
         self.drag_state = DragStateController(self)
         self.focus_state = FocusStateController(self)

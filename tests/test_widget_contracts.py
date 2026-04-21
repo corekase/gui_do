@@ -132,6 +132,7 @@ class LabelContractTests(unittest.TestCase):
         label.gui = SimpleNamespace(graphics_factory=GraphicsFactorySpy())
         label.shadow = False
         label._font = "main"
+        label.draw_rect = Rect(0, 0, 1, 1)
 
         Label.set_label(label, "updated")
 
