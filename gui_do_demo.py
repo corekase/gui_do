@@ -61,11 +61,14 @@ class GuiDoDemo:
         self._last_brand_ms = pygame.time.get_ticks()
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0, 0]
+        self.life_dragging = False
+        self._life_zoom_slider_last_value = 12
         self.mandel_task_ids: Set[str] = set()
         self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
         self.circles = []
         self._last_panel_visible = True
+        self._frame_dt_seconds = 0.0
 
         self._build_shell()
         self._build_widget_showcase_window()
@@ -73,6 +76,11 @@ class GuiDoDemo:
         self._build_mandelbrot_window()
         self._on_tile_toggle(True)
         self._bind_runtime()
+        self.app.set_screen_lifecycle(
+            preamble=self._screen_preamble,
+            event_handler=self._screen_event_handler,
+            postamble=self._screen_postamble,
+        )
 
         self.app.update = self._update
 
@@ -302,20 +310,62 @@ class GuiDoDemo:
         self.showcase_window.add(ImageControl("icon_img", abs_rect(30, 632, 150, 124), "data/images/realize.png", scale=True))
 
     def _build_life_window(self) -> None:
-        life_rect = self.app.layout.anchored((932, 460), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.life_window = self.root.add(WindowControl("life_window", life_rect, "Conway's Game of Life"))
-        self._set_text(
-            self.life_window.add(LabelControl("life_help", Rect(978, 124, 500, 20), "Left click to toggle cells, Start for continuous update"))
+        life_rect = self.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
+        self.life_window = self.root.add(
+            WindowControl(
+                "life_window",
+                life_rect,
+                "Conway's Game of Life",
+                preamble=self._life_window_preamble,
+                event_handler=self._life_window_event_handler,
+                postamble=self._life_window_postamble,
+            )
+        )
+        content_rect = self.life_window.content_rect()
+        left = content_rect.left
+        top = content_rect.top
+        width = content_rect.width
+        height = content_rect.height
+        widget_height = 28
+        padding = 10
+
+        self.life_canvas = self.life_window.add(
+            CanvasControl("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), height - (widget_height * 2)), max_events=256)
         )
 
-        self.life_canvas = self.life_window.add(CanvasControl("life_canvas", Rect(978, 150, 896, 330), max_events=256))
-        self.life_toggle = self.life_window.add(ToggleControl("life_toggle", Rect(978, 490, 120, 30), "Stop", "Start", pushed=False))
-        self.life_reset_button = self.life_window.add(ButtonControl("life_reset", Rect(1108, 490, 110, 30), "Reset", self._life_reset))
-        self.life_step_button = self.life_window.add(ButtonControl("life_step", Rect(1228, 490, 110, 30), "Step", self._life_step))
-        self.life_zoom_slider = self.life_window.add(
-            SliderControl("life_zoom", Rect(1352, 488, 360, 32), LayoutAxis.HORIZONTAL, 2.0, 24.0, 12.0)
+        controls_y = top + height - widget_height - padding
+        self.life_reset_button = self.life_window.add(
+            ButtonControl("life_reset", Rect(left + padding, controls_y, 100, widget_height), "Reset", self._life_reset, style="angle")
         )
-        self.life_zoom_label = self._set_text(self.life_window.add(LabelControl("life_zoom_label", Rect(1720, 494, 120, 20), "Zoom: 12")))
+        self.life_toggle = self.life_window.add(
+            ToggleControl(
+                "life_toggle",
+                Rect(left + padding + 102, controls_y, 100, widget_height),
+                "Stop",
+                "Start",
+                pushed=False,
+                style="round",
+            )
+        )
+
+        zoom_label_width = 60
+        zoom_label_x = self.life_canvas.rect.right - zoom_label_width
+        slider_left = self.life_toggle.rect.right + 12
+        slider_right = zoom_label_x - 8
+        self.life_zoom_slider = self.life_window.add(
+            SliderControl(
+                "life_zoom",
+                Rect(slider_left, controls_y, max(80, slider_right - slider_left), widget_height),
+                LayoutAxis.HORIZONTAL,
+                2.0,
+                24.0,
+                12.0,
+            )
+        )
+        self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
+        self.life_zoom_label = self._set_text(
+            self.life_window.add(LabelControl("life_zoom_label", Rect(zoom_label_x, controls_y + 6, zoom_label_width, 20), "Zoom"))
+        )
 
         self.life_origin = [self.life_canvas.rect.width // 2, self.life_canvas.rect.height // 2]
         self._life_reset()
@@ -529,6 +579,65 @@ class GuiDoDemo:
                 if self._life_population(n_cell) == 3:
                     new_life.add(n_cell)
         self.life_cells = new_life
+
+    def _zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
+        old_size = max(2, int(round(self._life_zoom_slider_last_value)))
+        clamped_size = max(2, min(24, int(new_size)))
+        if clamped_size == old_size:
+            return
+        anchor_x, anchor_y = anchor_local
+        self.life_origin[0] = anchor_x - ((anchor_x - self.life_origin[0]) / old_size) * clamped_size
+        self.life_origin[1] = anchor_y - ((anchor_y - self.life_origin[1]) / old_size) * clamped_size
+        self.life_zoom_slider.value = float(clamped_size)
+        self._life_zoom_slider_last_value = clamped_size
+
+    def _life_window_preamble(self) -> None:
+        slider_size = max(2, min(24, int(round(self.life_zoom_slider.value))))
+        if slider_size == self._life_zoom_slider_last_value:
+            return
+        center_local = (self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0)
+        self._zoom_life_view_about(center_local, slider_size)
+
+    def _life_window_event_handler(self, event) -> bool:
+        event_type = getattr(event, "type", None)
+        button = getattr(event, "button", None)
+        pos = getattr(event, "pos", None)
+
+        if event_type == pygame.MOUSEBUTTONDOWN and button == 3:
+            if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
+                self.life_dragging = True
+                return True
+
+        if event_type == pygame.MOUSEBUTTONUP and button == 3:
+            if self.life_dragging:
+                self.life_dragging = False
+                return True
+
+        if event_type == pygame.MOUSEMOTION and self.life_dragging:
+            rel = getattr(event, "rel", None)
+            if isinstance(rel, tuple) and len(rel) == 2:
+                self.life_origin[0] -= rel[0]
+                self.life_origin[1] -= rel[1]
+                return True
+
+        if event_type == pygame.MOUSEBUTTONDOWN and button in (4, 5):
+            if isinstance(pos, tuple) and len(pos) == 2 and self.life_canvas.rect.collidepoint(pos):
+                wheel_step = 1 if button == 4 else -1
+                anchor_local = (pos[0] - self.life_canvas.rect.left, pos[1] - self.life_canvas.rect.top)
+                self._zoom_life_view_about(anchor_local, self._life_zoom_slider_last_value + (wheel_step * 2))
+                return True
+
+        if event_type == pygame.MOUSEWHEEL:
+            pointer_pos = self.app.input_state.pointer_pos
+            if self.life_dragging or self.life_canvas.rect.collidepoint(pointer_pos):
+                anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
+                self._zoom_life_view_about(anchor_local, self._life_zoom_slider_last_value + (getattr(event, "y", 0) * 2))
+                return True
+
+        return False
+
+    def _life_window_postamble(self) -> None:
+        self._update_life()
 
     def _mandel_col(self, k: int) -> Tuple[int, int, int]:
         if k >= self.max_iter - 1:
@@ -797,7 +906,6 @@ class GuiDoDemo:
             self._life_step()
 
         cell_size = max(2, int(round(self.life_zoom_slider.value)))
-        self.life_zoom_label.text = f"Zoom: {cell_size}"
         self.life_canvas.canvas.fill((0, 70, 70))
         trim = 0 if cell_size <= 2 else 1
         for cx, cy in self.life_cells:
@@ -826,6 +934,7 @@ class GuiDoDemo:
             self.mandel_status.text = "Mandelbrot: complete"
 
     def _update(self, dt_seconds: float) -> None:
+        self._frame_dt_seconds = dt_seconds
         self.task_panel.set_visible(self.panel_toggle.pushed)
         panel_visible = self.panel_toggle.pushed
         if panel_visible != self._last_panel_visible:
@@ -833,9 +942,15 @@ class GuiDoDemo:
             self._tile_visible_windows()
         GuiApplication.update(self.app, dt_seconds)
 
-        self._update_brand_and_circles(dt_seconds)
+    def _screen_preamble(self) -> None:
+        return None
+
+    def _screen_event_handler(self, _event) -> bool:
+        return False
+
+    def _screen_postamble(self) -> None:
+        self._update_brand_and_circles(self._frame_dt_seconds)
         self._update_widget_showcase()
-        self._update_life()
         self._update_mandel_events()
 
     def run(self) -> None:

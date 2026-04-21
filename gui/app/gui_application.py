@@ -1,4 +1,5 @@
 import pygame
+from typing import Callable, Optional
 
 from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
@@ -29,6 +30,9 @@ class GuiApplication:
         self.graphics_factory = LegacyGraphicsFactory(self.theme)
         self.theme.graphics_factory = self.graphics_factory
         self.running = True
+        self._screen_preamble: Optional[Callable[[], None]] = None
+        self._screen_event_handler: Optional[Callable[[object], bool]] = None
+        self._screen_postamble: Optional[Callable[[], None]] = None
 
     def add(self, node):
         """Add a root node to the application scene."""
@@ -36,9 +40,13 @@ class GuiApplication:
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
+        if self._screen_preamble is not None:
+            self._screen_preamble()
         self.timers.update(dt_seconds)
         self.scheduler.update()
         self.scene.update(dt_seconds)
+        if self._screen_postamble is not None:
+            self._screen_postamble()
 
     def shutdown(self) -> None:
         """Release runtime services."""
@@ -52,7 +60,14 @@ class GuiApplication:
         self.input_state.update_from_event(event)
         if self.pointer_capture.lock_rect is not None:
             self.input_state.pointer_pos = self.pointer_capture.clamp(self.input_state.pointer_pos)
+        if self._screen_event_handler is not None and self._screen_event_handler(event):
+            return True
         return self.scene.dispatch(event, self)
+
+    def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
+        self._screen_preamble = preamble
+        self._screen_event_handler = event_handler
+        self._screen_postamble = postamble
 
     def draw(self) -> None:
         """Render one frame."""

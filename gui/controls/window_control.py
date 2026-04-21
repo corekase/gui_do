@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Callable, List, Optional
 import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
@@ -9,7 +9,16 @@ from ..core.ui_node import UiNode
 class WindowControl(UiNode):
     """Window container with title bar and child controls."""
 
-    def __init__(self, control_id: str, rect: Rect, title: str, titlebar_height: int = 24) -> None:
+    def __init__(
+        self,
+        control_id: str,
+        rect: Rect,
+        title: str,
+        titlebar_height: int = 24,
+        preamble: Optional[Callable[[], None]] = None,
+        event_handler: Optional[Callable[[object], bool]] = None,
+        postamble: Optional[Callable[[], None]] = None,
+    ) -> None:
         super().__init__(control_id, rect)
         self.title = title
         self.titlebar_height = max(18, int(titlebar_height))
@@ -20,6 +29,14 @@ class WindowControl(UiNode):
         self._chrome_size = (0, 0, "")
         self._disabled_overlay = None
         self._disabled_overlay_size = (0, 0)
+        self._preamble = preamble
+        self._event_handler = event_handler
+        self._postamble = postamble
+
+    def set_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
+        self._preamble = preamble
+        self._event_handler = event_handler
+        self._postamble = postamble
 
     @property
     def active(self) -> bool:
@@ -86,14 +103,20 @@ class WindowControl(UiNode):
         return child
 
     def update(self, dt_seconds: float) -> None:
+        if self._preamble is not None:
+            self._preamble()
         for child in self.children:
             if child.visible:
                 child.update(dt_seconds)
+        if self._postamble is not None:
+            self._postamble()
 
     def handle_event(self, event, app) -> bool:
         raw = getattr(event, "pos", None)
         if isinstance(raw, tuple) and len(raw) == 2 and not self.rect.collidepoint(raw):
             return False
+        if self._event_handler is not None and self._event_handler(event):
+            return True
         for child in reversed(self.children):
             if child.visible and child.enabled and child.handle_event(event, app):
                 return True
