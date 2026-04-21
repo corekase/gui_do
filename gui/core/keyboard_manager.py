@@ -23,7 +23,11 @@ class KeyboardManager:
                 return True
         if hasattr(app, "actions") and app.actions.trigger_from_event(event, app):
             return True
+        if event.default_prevented or event.propagation_stopped:
+            return True
         if hasattr(app, "focus") and app.focus.route_key_event(event, app):
+            return True
+        if event.default_prevented or event.propagation_stopped:
             return True
         active_window = scene.active_window()
         if active_window is not None:

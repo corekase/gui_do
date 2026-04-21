@@ -82,6 +82,17 @@ class _StopCaptureNode(UiNode):
         return False
 
 
+class _TargetCountNode(UiNode):
+    def __init__(self, control_id: str, rect: Rect) -> None:
+        super().__init__(control_id, rect)
+        self.events = 0
+
+    def handle_event(self, event, _app) -> bool:
+        if event.kind is EventType.MOUSE_MOTION:
+            self.events += 1
+        return False
+
+
 class CoreFoundationProgressionTests(unittest.TestCase):
     def test_scene_routed_event_phases_are_applied(self) -> None:
         pygame.init()
@@ -272,6 +283,25 @@ class CoreFoundationProgressionTests(unittest.TestCase):
         self.assertEqual(node.accessibility_role, "button")
         self.assertEqual(node.accessibility_label, "Save")
         self.assertEqual(node.tab_index, 2)
+
+    def test_screen_handler_prevent_default_blocks_scene_dispatch(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((220, 120)))
+            root = app.add(PanelControl("root", Rect(0, 0, 220, 120)))
+            probe = root.add(_TargetCountNode("probe", Rect(0, 0, 220, 120)))
+
+            def screen_handler(event) -> bool:
+                event.prevent_default()
+                return False
+
+            app.set_screen_lifecycle(event_handler=screen_handler)
+            consumed = app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (10, 10), "rel": (1, 0)}))
+
+            self.assertTrue(consumed)
+            self.assertEqual(probe.events, 0)
+        finally:
+            pygame.quit()
 
 
 if __name__ == "__main__":

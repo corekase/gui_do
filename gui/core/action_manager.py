@@ -51,7 +51,11 @@ class ActionManager:
             KeyBinding(int(event.key), scene=None, window_only=has_window),
             KeyBinding(int(event.key), scene=None, window_only=False),
         ]
+        seen_bindings = set()
         for binding in candidates:
+            if binding in seen_bindings:
+                continue
+            seen_bindings.add(binding)
             for action_name in self._keymap.get(binding, ()):
                 handler = self._actions.get(action_name)
                 if handler is not None and bool(handler(event)):

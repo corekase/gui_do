@@ -70,6 +70,33 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_key_action_prevent_default_blocks_screen_handler(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            seen = {"action": 0, "screen": 0}
+
+            def action_handler(event) -> bool:
+                seen["action"] += 1
+                event.prevent_default()
+                return False
+
+            def screen_handler(_event) -> bool:
+                seen["screen"] += 1
+                return True
+
+            app.actions.register_action("noop", action_handler)
+            app.actions.bind_key(pygame.K_ESCAPE, "noop")
+            app.set_screen_lifecycle(event_handler=screen_handler)
+
+            consumed = app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+            self.assertTrue(consumed)
+            self.assertEqual(seen["action"], 1)
+            self.assertEqual(seen["screen"], 0)
+        finally:
+            pygame.quit()
+
 
 if __name__ == "__main__":
     unittest.main()

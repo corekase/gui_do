@@ -253,16 +253,22 @@ class GuiApplication:
             self.focus.set_focus(self.scene.top_focus_target_at(logical_event.pos))
 
         if self.keyboard.is_key_event(logical_event):
-            self.invalidation.invalidate_all()
-            return self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
+            consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
+            if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
+                self.invalidation.invalidate_all()
+                return True
 
-        if self._screen_event_handler is not None and self._screen_event_handler(logical_event):
+        screen_consumed = False
+        if self._screen_event_handler is not None:
+            screen_consumed = bool(self._screen_event_handler(logical_event))
+        if screen_consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
             return True
         consumed = self.scene.dispatch(logical_event, self)
-        if consumed:
+        if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
-        return consumed
+            return True
+        return False
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
         self._screen_preamble = preamble
