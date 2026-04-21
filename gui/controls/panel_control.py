@@ -52,8 +52,15 @@ class PanelControl(UiNode):
         return None
 
     def _set_active_window(self, window: UiNode) -> None:
+        is_valid_target = (
+            window in self.children and self._is_window_like(window) and window.visible and window.enabled
+        )
+        target = window if is_valid_target else self._next_top_visible_window(excluding=window)
+        if target is None:
+            self._clear_active_windows()
+            return
         for candidate in self._all_window_children():
-            self._set_window_active_state(candidate, candidate is window)
+            self._set_window_active_state(candidate, candidate is target)
 
     def _clear_active_windows(self) -> None:
         for candidate in self._all_window_children():
