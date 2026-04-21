@@ -54,10 +54,11 @@ class GuiDoDemo:
         self.app = GuiApplication(self.screen)
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
-        self.app.create_scene("life")
-        self.app.create_scene("mandel")
-        self.life_scheduler = self.app.get_scene_scheduler("life")
-        self.mandel_scheduler = self.app.get_scene_scheduler("mandel")
+        self.app.create_scene("main")
+        self.app.switch_scene("main")
+        self.scene_scheduler = self.app.get_scene_scheduler("main")
+        self.life_scheduler = self.scene_scheduler
+        self.mandel_scheduler = self.scene_scheduler
 
         self.ticks = 0
         self.arrow_hits = 0
@@ -73,13 +74,9 @@ class GuiDoDemo:
         self.circles = []
         self._last_panel_visible = True
         self._frame_dt_seconds = 0.0
-        self.active_context = "life"
 
-        self._build_life_context_scene()
-        self._build_mandel_context_scene()
-        self.app.set_pristine("backdrop.jpg", scene_name="life")
-        self.app.set_pristine("backdrop.jpg", scene_name="mandel")
-        self.app.switch_scene("life")
+        self._build_main_scene()
+        self.app.set_pristine("backdrop.jpg", scene_name="main")
         self._bind_runtime()
         self.app.set_screen_lifecycle(
             preamble=self._screen_preamble,
@@ -89,75 +86,35 @@ class GuiDoDemo:
 
         self.app.update = self._update
 
-    def _build_life_context_scene(self) -> None:
+    def _build_main_scene(self) -> None:
         self.root = self.app.add(
-            PanelControl("life_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
-            scene_name="life",
+            PanelControl("main_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
+            scene_name="main",
         )
         self._build_life_window()
-        self.life_window.visible = True
-        self.life_task_panel = self.app.add(
-            TaskPanelControl(
-                "life_task_panel",
-                Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
-                auto_hide=True,
-                hidden_peek_pixels=6,
-                animation_step_px=8,
-                dock_bottom=True,
-            ),
-            scene_name="life",
-        )
-        self.life_quit_button = self.life_task_panel.add(
-            ButtonControl("life_quit", Rect(16, self.screen_rect.height - 40, 120, 30), "Quit", self._exit_app, style="angle")
-        )
-        self.life_switch_button = self.life_task_panel.add(
-            ButtonControl(
-                "life_to_mandel",
-                Rect(146, self.screen_rect.height - 40, 180, 30),
-                "Go Mandelbrot",
-                self._switch_to_mandel_context,
-                style="round",
-            )
-        )
-
-    def _build_mandel_context_scene(self) -> None:
-        self.root = self.app.add(
-            PanelControl("mandel_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
-            scene_name="mandel",
-        )
         self._build_mandelbrot_window()
+        self.life_window.visible = True
         self.mandel_window.visible = True
-        self.mandel_task_panel = self.app.add(
+        self.task_panel = self.app.add(
             TaskPanelControl(
-                "mandel_task_panel",
+                "task_panel",
                 Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
                 auto_hide=True,
                 hidden_peek_pixels=6,
                 animation_step_px=8,
                 dock_bottom=True,
             ),
-            scene_name="mandel",
+            scene_name="main",
         )
-        self.mandel_quit_button = self.mandel_task_panel.add(
-            ButtonControl("mandel_quit", Rect(16, self.screen_rect.height - 40, 120, 30), "Quit", self._exit_app, style="angle")
-        )
-        self.mandel_switch_button = self.mandel_task_panel.add(
+        self.quit_button = self.task_panel.add(
             ButtonControl(
-                "mandel_to_life",
-                Rect(146, self.screen_rect.height - 40, 180, 30),
-                "Go Life",
-                self._switch_to_life_context,
-                style="round",
+                "quit",
+                Rect(16, self.screen_rect.height - 40, 120, 30),
+                "Quit",
+                self._exit_app,
+                style="angle",
             )
         )
-
-    def _switch_to_life_context(self) -> None:
-        self.active_context = "life"
-        self.app.switch_scene("life")
-
-    def _switch_to_mandel_context(self) -> None:
-        self.active_context = "mandel"
-        self.app.switch_scene("mandel")
 
     def _set_title(self, label: LabelControl, size: int = 22) -> LabelControl:
         label.title = True
@@ -1046,8 +1003,7 @@ class GuiDoDemo:
         return False
 
     def _screen_postamble(self) -> None:
-        if self.active_context == "mandel":
-            self._update_mandel_events()
+        self._update_mandel_events()
 
     def run(self) -> None:
         UiEngine(self.app, target_fps=120).run()
