@@ -52,9 +52,12 @@ class GuiDoDemo:
 
         self.screen_rect = self.screen.get_rect()
         self.app = GuiApplication(self.screen)
-        self.root = self.app.add(PanelControl("root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height)))
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
+        self.app.create_scene("life")
+        self.app.create_scene("mandel")
+        self.life_scheduler = self.app.get_scene_scheduler("life")
+        self.mandel_scheduler = self.app.get_scene_scheduler("mandel")
 
         self.ticks = 0
         self.arrow_hits = 0
@@ -70,12 +73,11 @@ class GuiDoDemo:
         self.circles = []
         self._last_panel_visible = True
         self._frame_dt_seconds = 0.0
+        self.active_context = "life"
 
-        self._build_shell()
-        self._build_widget_showcase_window()
-        self._build_life_window()
-        self._build_mandelbrot_window()
-        self._on_tile_toggle(True)
+        self._build_life_context_scene()
+        self._build_mandel_context_scene()
+        self.app.switch_scene("life")
         self._bind_runtime()
         self.app.set_screen_lifecycle(
             preamble=self._screen_preamble,
@@ -84,6 +86,48 @@ class GuiDoDemo:
         )
 
         self.app.update = self._update
+
+    def _build_life_context_scene(self) -> None:
+        self.root = self.app.add(PanelControl("life_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height)), scene_name="life")
+        self._build_life_window()
+        self.life_window.visible = True
+        self.life_switch_button = self.root.add(
+            ButtonControl(
+                "life_to_mandel",
+                Rect(self.screen_rect.width - 196, 14, 180, 30),
+                "Go Mandelbrot",
+                self._switch_to_mandel_context,
+                style="round",
+            )
+        )
+        self.life_quit_button = self.root.add(
+            ButtonControl("life_quit", Rect(16, 14, 120, 30), "Quit", self._exit_app, style="angle")
+        )
+
+    def _build_mandel_context_scene(self) -> None:
+        self.root = self.app.add(PanelControl("mandel_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height)), scene_name="mandel")
+        self._build_mandelbrot_window()
+        self.mandel_window.visible = True
+        self.mandel_switch_button = self.root.add(
+            ButtonControl(
+                "mandel_to_life",
+                Rect(16, 14, 180, 30),
+                "Go Life",
+                self._switch_to_life_context,
+                style="round",
+            )
+        )
+        self.mandel_quit_button = self.root.add(
+            ButtonControl("mandel_quit", Rect(self.screen_rect.width - 136, 14, 120, 30), "Quit", self._exit_app, style="angle")
+        )
+
+    def _switch_to_life_context(self) -> None:
+        self.active_context = "life"
+        self.app.switch_scene("life")
+
+    def _switch_to_mandel_context(self) -> None:
+        self.active_context = "mandel"
+        self.app.switch_scene("mandel")
 
     def _set_title(self, label: LabelControl, size: int = 22) -> LabelControl:
         label.title = True
@@ -438,13 +482,11 @@ class GuiDoDemo:
         self.mandel_window.visible = False
 
     def _bind_runtime(self) -> None:
-        self.app.timers.add_timer("demo.clock", 1.0, self._on_clock_tick)
-        self.app.scheduler.set_message_dispatch_limit(256)
+        self.life_scheduler.set_message_dispatch_limit(256)
+        self.mandel_scheduler.set_message_dispatch_limit(256)
 
     def _on_clock_tick(self) -> None:
-        if self.clock_toggle.pushed:
-            self.ticks += 1
-            self.clock_label.text = f"Clock: {self.ticks}"
+        return None
 
     def _update_brand_and_circles(self, dt_seconds: float) -> None:
         self.bg_canvas.visible = self.circles_toggle.pushed
@@ -536,7 +578,7 @@ class GuiDoDemo:
             total = int(params.get("total", 18))
             for step in range(1, total + 1):
                 time.sleep(0.05)
-                self.app.scheduler.send_message(task_id, {"step": step, "total": total})
+                self.life_scheduler.send_message(task_id, {"step": step, "total": total})
             return {"ok": True}
 
         task_id = f"worker-{time.time_ns()}"
@@ -544,7 +586,7 @@ class GuiDoDemo:
         def on_worker(payload: dict) -> None:
             self.status_label.text = f"Status: worker {payload['step']}/{payload['total']}"
 
-        self.app.scheduler.add_task(task_id, worker_logic, parameters={"total": 18}, message_method=on_worker)
+        self.life_scheduler.add_task(task_id, worker_logic, parameters={"total": 18}, message_method=on_worker)
 
     def _exit_app(self) -> None:
         self.app.running = False
@@ -782,7 +824,7 @@ class GuiDoDemo:
                 idx += 1
 
     def _clear_mandel(self) -> None:
-        self.app.scheduler.remove_tasks(*self.mandel_task_id_pool)
+        self.mandel_scheduler.remove_tasks(*self.mandel_task_id_pool)
         self.mandel_task_ids.clear()
         self._show_single_mandel_canvas()
         self._set_mandel_task_buttons_disabled(False)
@@ -794,7 +836,7 @@ class GuiDoDemo:
         scale = params["scale"]
         for y in range(height):
             row = [self._mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
-            self.app.scheduler.send_message(task_id, (y, row))
+            self.mandel_scheduler.send_message(task_id, (y, row))
         return None
 
     def _recursive_fill(self, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
@@ -809,10 +851,10 @@ class GuiDoDemo:
             for yy in range(y, y + h):
                 for xx in range(x, x + w):
                     values.append(self._mandel_pixel(xx, yy, width, height, center, scale))
-            self.app.scheduler.send_message(task_id, (x, y, w, h, values))
+            self.mandel_scheduler.send_message(task_id, (x, y, w, h, values))
             return
         if tl == tr == bl == br:
-            self.app.scheduler.send_message(task_id, (x, y, w, h, tl))
+            self.mandel_scheduler.send_message(task_id, (x, y, w, h, tl))
             return
         hw = w // 2
         hh = h // 2
@@ -830,7 +872,7 @@ class GuiDoDemo:
         return None
 
     def _queue_mandel_recursive_task(self, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
-        self.app.scheduler.add_task(
+        self.mandel_scheduler.add_task(
             task_id,
             self._mandel_recursive_task,
             parameters={"size": size, "center": center, "scale": scale, "rect": Rect(rect)},
@@ -839,12 +881,12 @@ class GuiDoDemo:
         self.mandel_task_ids.add(task_id)
 
     def _launch_mandel_iterative(self) -> None:
-        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
         width, height = self.mandel_canvas.canvas.get_size()
         center, scale = self._mandel_viewport(width, height)
-        self.app.scheduler.add_task(
+        self.mandel_scheduler.add_task(
             "iter",
             self._mandel_iterative_task,
             parameters={"size": (width, height), "center": center, "scale": scale},
@@ -854,7 +896,7 @@ class GuiDoDemo:
         self.mandel_status.text = "Mandelbrot: running iterative"
 
     def _launch_mandel_recursive(self) -> None:
-        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
         width, height = self.mandel_canvas.canvas.get_size()
@@ -863,7 +905,7 @@ class GuiDoDemo:
         self.mandel_status.text = "Mandelbrot: running recursive"
 
     def _launch_mandel_one_split(self) -> None:
-        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
         width, height = self.mandel_canvas.canvas.get_size()
@@ -877,7 +919,7 @@ class GuiDoDemo:
         self.mandel_status.text = "Mandelbrot: running 1M 4Tasks"
 
     def _launch_mandel_four_split(self) -> None:
-        if self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
+        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_split_canvas_run()
         width, height = self.canvas1.canvas.get_size()
@@ -942,31 +984,26 @@ class GuiDoDemo:
                 self.life_canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
 
     def _update_mandel_events(self) -> None:
-        finished = self.app.scheduler.get_finished_events()
-        failed = self.app.scheduler.get_failed_events()
+        finished = self.mandel_scheduler.get_finished_events()
+        failed = self.mandel_scheduler.get_failed_events()
 
         for event in finished:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
-                self.app.scheduler.pop_result(event.task_id, None)
+                self.mandel_scheduler.pop_result(event.task_id, None)
         for event in failed:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
                 self.mandel_status.text = f"Mandelbrot failed: {event.error}"
 
-        busy = self.app.scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
+        busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
-        self.app.scheduler.clear_events()
+        self.mandel_scheduler.clear_events()
         if not busy and self.mandel_status.text.startswith("Mandelbrot: running"):
             self.mandel_status.text = "Mandelbrot: complete"
 
     def _update(self, dt_seconds: float) -> None:
         self._frame_dt_seconds = dt_seconds
-        self.task_panel.set_visible(self.panel_toggle.pushed)
-        panel_visible = self.panel_toggle.pushed
-        if panel_visible != self._last_panel_visible:
-            self._last_panel_visible = panel_visible
-            self._tile_visible_windows()
         GuiApplication.update(self.app, dt_seconds)
 
     def _screen_preamble(self) -> None:
@@ -976,9 +1013,8 @@ class GuiDoDemo:
         return False
 
     def _screen_postamble(self) -> None:
-        self._update_brand_and_circles(self._frame_dt_seconds)
-        self._update_widget_showcase()
-        self._update_mandel_events()
+        if self.active_context == "mandel":
+            self._update_mandel_events()
 
     def run(self) -> None:
         UiEngine(self.app, target_fps=120).run()

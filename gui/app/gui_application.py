@@ -22,15 +22,27 @@ class GuiApplication:
         self.surface = surface
         self.input_state = InputState()
         self.pointer_capture = PointerCapture()
-        self.scene = Scene()
+        default_theme = ColorTheme()
+        default_factory = LegacyGraphicsFactory(default_theme)
+        default_theme.graphics_factory = default_factory
+        self._scenes = {
+            "default": {
+                "scene": Scene(),
+                "scheduler": TaskScheduler(),
+                "theme": default_theme,
+                "graphics_factory": default_factory,
+            }
+        }
+        self._active_scene_name = "default"
+        active_runtime = self._scenes[self._active_scene_name]
+        self.scene = active_runtime["scene"]
         self.renderer = Renderer()
-        self.scheduler = TaskScheduler()
+        self.scheduler = active_runtime["scheduler"]
         self.timers = Timers()
         self.layout = LayoutManager()
         self.window_tiling = WindowTilingManager(self)
-        self.theme = ColorTheme()
-        self.graphics_factory = LegacyGraphicsFactory(self.theme)
-        self.theme.graphics_factory = self.graphics_factory
+        self.theme = active_runtime["theme"]
+        self.graphics_factory = active_runtime["graphics_factory"]
         self.running = True
         self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
@@ -47,23 +59,76 @@ class GuiApplication:
         self._screen_postamble: Optional[Callable[[], None]] = None
         self._init_cursor_system()
 
-    def add(self, node):
+    def add(self, node, scene_name: Optional[str] = None):
         """Add a root node to the application scene."""
-        return self.scene.add(node)
+        if scene_name is None:
+            return self.scene.add(node)
+        target = self._scene_runtime(scene_name)
+        return target["scene"].add(node)
+
+    def create_scene(self, name: str) -> Scene:
+        runtime = self._scene_runtime(name)
+        return runtime["scene"]
+
+    def switch_scene(self, name: str) -> None:
+        if name not in self._scenes:
+            raise ValueError(f"unknown scene: {name}")
+        self._active_scene_name = name
+        runtime = self._scenes[name]
+        self.scene = runtime["scene"]
+        self.scheduler = runtime["scheduler"]
+        self.theme = runtime["theme"]
+        self.graphics_factory = runtime["graphics_factory"]
+
+    @property
+    def active_scene_name(self) -> str:
+        return self._active_scene_name
+
+    def get_scene_scheduler(self, name: str) -> TaskScheduler:
+        return self._scene_runtime(name)["scheduler"]
+
+    def get_scene_graphics_factory(self, name: str) -> LegacyGraphicsFactory:
+        return self._scene_runtime(name)["graphics_factory"]
+
+    def _create_scene_runtime(self):
+        theme = ColorTheme()
+        factory = LegacyGraphicsFactory(theme)
+        theme.graphics_factory = factory
+        return {
+            "scene": Scene(),
+            "scheduler": TaskScheduler(),
+            "theme": theme,
+            "graphics_factory": factory,
+        }
+
+    def _scene_runtime(self, name: str):
+        runtime = self._scenes.get(name)
+        if runtime is None:
+            runtime = self._create_scene_runtime()
+            self._scenes[name] = runtime
+        return runtime
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
         if self._screen_preamble is not None:
             self._screen_preamble()
         self.timers.update(dt_seconds)
-        self.scheduler.update()
-        self.scene.update(dt_seconds)
+        runtime = self._scenes[self._active_scene_name]
+        runtime["scheduler"].update()
+        runtime["scene"].update(dt_seconds)
         if self._screen_postamble is not None:
             self._screen_postamble()
 
     def shutdown(self) -> None:
         """Release runtime services."""
-        self.scheduler.shutdown()
+        seen = set()
+        for runtime in self._scenes.values():
+            scheduler = runtime["scheduler"]
+            marker = id(scheduler)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            scheduler.shutdown()
 
     def process_event(self, event) -> bool:
         """Process one pygame event through input normalization and scene dispatch."""
@@ -242,7 +307,8 @@ class GuiApplication:
 
     def draw(self) -> None:
         """Render one frame."""
-        self.renderer.render(self.surface, self.scene, self.theme, app=self)
+        runtime = self._scenes[self._active_scene_name]
+        self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.window_tiling.set_enabled(enabled, relayout=relayout)

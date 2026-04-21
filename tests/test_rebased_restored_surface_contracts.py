@@ -258,6 +258,93 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_scene_switch_routes_event_update_and_draw_to_active_scene_only(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            app.create_scene("life")
+            app.create_scene("mandel")
+
+            class Probe:
+                def __init__(self):
+                    self.visible = True
+                    self.enabled = True
+                    self.event_count = 0
+                    self.update_count = 0
+                    self.draw_count = 0
+
+                def handle_event(self, _event, _app):
+                    self.event_count += 1
+                    return False
+
+                def update(self, _dt):
+                    self.update_count += 1
+
+                def draw(self, _surface, _theme):
+                    self.draw_count += 1
+
+            life_probe = app.add(Probe(), scene_name="life")
+            mandel_probe = app.add(Probe(), scene_name="mandel")
+
+            motion = pygame.event.Event(pygame.MOUSEMOTION, {"pos": (40, 30), "rel": (2, 1)})
+
+            app.switch_scene("life")
+            app.process_event(motion)
+            app.update(0.016)
+            app.draw()
+
+            self.assertEqual(life_probe.event_count, 1)
+            self.assertEqual(life_probe.update_count, 1)
+            self.assertEqual(life_probe.draw_count, 1)
+            self.assertEqual(mandel_probe.event_count, 0)
+            self.assertEqual(mandel_probe.update_count, 0)
+            self.assertEqual(mandel_probe.draw_count, 0)
+
+            app.switch_scene("mandel")
+            app.process_event(motion)
+            app.update(0.016)
+            app.draw()
+
+            self.assertEqual(life_probe.event_count, 1)
+            self.assertEqual(life_probe.update_count, 1)
+            self.assertEqual(life_probe.draw_count, 1)
+            self.assertEqual(mandel_probe.event_count, 1)
+            self.assertEqual(mandel_probe.update_count, 1)
+            self.assertEqual(mandel_probe.draw_count, 1)
+        finally:
+            pygame.quit()
+
+    def test_scene_schedulers_are_independent_and_inactive_scene_tasks_do_not_advance(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            app.create_scene("life")
+            app.create_scene("mandel")
+
+            life_scheduler = app.get_scene_scheduler("life")
+            mandel_scheduler = app.get_scene_scheduler("mandel")
+            self.assertIsNot(life_scheduler, mandel_scheduler)
+
+            app.switch_scene("life")
+            finished = {"life": False, "mandel": False}
+
+            life_scheduler.add_task("life_task", lambda _task_id: "life-done")
+            mandel_scheduler.add_task("mandel_task", lambda _task_id: "mandel-done")
+
+            app.update(0.016)
+
+            finished["life"] = bool(life_scheduler.get_finished_events())
+            finished["mandel"] = bool(mandel_scheduler.get_finished_events())
+            self.assertTrue(finished["life"])
+            self.assertFalse(finished["mandel"])
+
+            app.switch_scene("mandel")
+            app.update(0.016)
+            finished["mandel"] = bool(mandel_scheduler.get_finished_events())
+            self.assertTrue(finished["mandel"])
+        finally:
+            pygame.quit()
+
 
 if __name__ == "__main__":
     unittest.main()
