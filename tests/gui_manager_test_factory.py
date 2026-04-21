@@ -3,17 +3,14 @@ from typing import Any, Callable, Literal, Optional
 
 from pygame import Rect
 
-from gui.utility.coordinators.event_delivery import EventDeliveryCoordinator
 from gui.utility.focus_state import FocusStateController
 from gui.utility.gui_utils.focus_state_model import FocusState
-from gui.utility.coordinators.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input.input_emitter import InputEventEmitter
 from gui.utility.gui_utils.input_providers import InputProviders
 from gui.utility.gui_utils.drag_state_model import DragState
 from gui.utility.input.drag_state_controller import DragStateController
 from gui.utility.input.lock_state_controller import LockStateController
 from gui.utility.gui_manager import GuiManager
-from gui.utility.coordinators.layout_coordinator import LayoutCoordinator
 from gui.utility.lifecycle import LifecycleCoordinator, ScreenLifecycle
 from gui.utility.coordinators.lock_flow_coordinator import LockFlowCoordinator
 from gui.utility.gui_utils.lock_state_model import LockState
@@ -21,8 +18,6 @@ from gui.utility.object_registry import GuiObjectRegistry
 from gui.utility.coordinators.pointer_coordinator import PointerCoordinator
 from gui.utility.coordinators.window_tiling_coordinator import WindowTilingCoordinator
 from gui.utility.ui_factory import GuiUiFactory
-from gui.utility.coordinators.widget_state_coordinator import WidgetStateCoordinator
-from gui.utility.coordinators.workspace_coordinator import WorkspaceCoordinator
 from gui.utility.gui_utils.workspace_state import WorkspaceState
 from gui.utility.intermediates.widget import Widget
 
@@ -84,6 +79,7 @@ def build_gui_manager_stub(
     gui.windows = []
     gui.task_panel = None
     gui.workspace_state = WorkspaceState()
+    gui._task_owner_by_id = {}
 
     gui._drag_state = DragState()
     gui._lock_state = LockState()
@@ -127,15 +123,10 @@ def build_gui_manager_stub(
     gui.lock_state = LockStateController(gui)
 
     gui.object_registry = GuiObjectRegistry(gui)
-    gui.event_delivery = EventDeliveryCoordinator(gui)
-    gui.graphics = GraphicsCoordinator(gui)
-    gui.layout = LayoutCoordinator(gui)
     gui.lifecycle = LifecycleCoordinator(gui)
     gui.lock_flow = LockFlowCoordinator(gui)
     gui.pointer = PointerCoordinator(gui)
     gui.window_tiling = WindowTilingCoordinator(gui)
-    gui.widget_state = WidgetStateCoordinator(gui)
-    gui.workspace = WorkspaceCoordinator(gui)
 
     if include_ui_factory:
         gui.ui_factory = GuiUiFactory(gui)

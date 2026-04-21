@@ -341,10 +341,10 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
             pristine=None,
         )
         gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
-        gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
+        gui.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
-        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.coordinators.graphics_coordinator.pygame.transform.smoothscale",
+        with patch("gui.utility.gui_manager.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png", target)
@@ -481,19 +481,19 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui.surface = SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None)
         gui.pristine = None
         gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
-        gui.graphics.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
+        gui.copy_graphic_area = lambda *_args, **_kwargs: SimpleNamespace(convert=lambda: "copied")
 
         scaled = SimpleNamespace(convert=lambda: object(), get_rect=lambda: Rect(0, 0, 10, 6))
-        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", return_value=SimpleNamespace()), patch(
-            "gui.utility.coordinators.graphics_coordinator.pygame.transform.smoothscale",
+        with patch("gui.utility.gui_manager.pygame.image.load", return_value=SimpleNamespace()), patch(
+            "gui.utility.gui_manager.pygame.transform.smoothscale",
             return_value=scaled,
         ):
             GuiManager.set_pristine(gui, "bg.png")
 
         self.assertEqual(gui.pristine, "copied")
 
-        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
-            "gui.utility.coordinators.graphics_coordinator.DataResourceErrorHandler.raise_load_error",
+        with patch("gui.utility.gui_manager.pygame.image.load", side_effect=RuntimeError("load fail")), patch(
+            "gui.utility.gui_manager.DataResourceErrorHandler.raise_load_error",
             side_effect=GuiError("wrapped"),
         ):
             with self.assertRaises(GuiError):
@@ -653,7 +653,7 @@ class GuiManagerRoiBatch9Tests(unittest.TestCase):
         gui._graphics_factory = SimpleNamespace(file_resource=lambda *_args: "image-path")
         target = SimpleNamespace(surface=SimpleNamespace(get_rect=lambda: Rect(0, 0, 10, 6), blit=lambda *_args, **_kwargs: None), pristine=None)
 
-        with patch("gui.utility.coordinators.graphics_coordinator.pygame.image.load", side_effect=GuiError("load guierror")):
+        with patch("gui.utility.gui_manager.pygame.image.load", side_effect=GuiError("load guierror")):
             with self.assertRaises(GuiError):
                 GuiManager.set_pristine(gui, "bg.png", target)
 

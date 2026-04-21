@@ -564,11 +564,11 @@ class GuiManagerHelperApiTests(unittest.TestCase):
     def test_clear_task_owners_for_window_is_noop_when_window_unregistered(self) -> None:
         gui = self._build_manager_stub()
         window = object()
-        gui.event_delivery._task_owner_by_id = {"a": window}
+        gui._task_owner_by_id = {"a": window}
 
         GuiManager.clear_task_owners_for_window(gui, window)
 
-        self.assertEqual(gui.event_delivery._task_owner_by_id, {"a": window})
+        self.assertEqual(gui._task_owner_by_id, {"a": window})
 
     def test_current_widget_property_clears_stale_registration(self) -> None:
         gui = self._build_manager_stub()
@@ -649,13 +649,6 @@ class GuiManagerHelperApiTests(unittest.TestCase):
             reset_linear_cursor=lambda: reset_calls.append(True),
             anchored=lambda size, anchor, margin, use_rect: Rect(7, 8, size[0], size[1]),
         )
-        placed = []
-        gui.layout = SimpleNamespace(
-            place_gui_object=lambda gui_object, geometry: placed.append((gui_object, geometry)),
-            set_grid_properties=gui.layout.set_grid_properties,
-            set_linear_properties=gui.layout.set_linear_properties,
-            set_anchor_bounds=gui.layout.set_anchor_bounds,
-        )
 
         self.assertEqual(GuiManager.linear(gui, 2), (3, 4))
         self.assertEqual(GuiManager.next_linear(gui), (20, 30))
@@ -665,10 +658,10 @@ class GuiManagerHelperApiTests(unittest.TestCase):
         anchored = GuiManager.anchored(gui, (40, 50), anchor='top_left', margin=(2, 3), use_rect=True)
         self.assertEqual(anchored, Rect(7, 8, 40, 50))
 
-        widget = Widget.__new__(Widget)
+        widget = SimpleNamespace(position=(0, 0))
         returned = GuiManager.place_gui_object(gui, widget, Rect(1, 2, 3, 4))
         self.assertIs(returned, widget)
-        self.assertEqual(placed, [(widget, Rect(1, 2, 3, 4))])
+        self.assertEqual(widget.position, (1, 2))
 
     def test_set_anchor_bounds_validates_and_forwards(self) -> None:
         gui = self._build_manager_stub()

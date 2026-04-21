@@ -110,7 +110,7 @@ class GuiManagerRoiBatch6Tests(unittest.TestCase):
         gui = self._build_manager_stub()
         event = SimpleNamespace(type=Event.Task)
 
-        owner = gui.event_delivery.resolve_task_event_owner(event)
+        owner = GuiManager.resolve_task_event_owner(gui, event)
 
         self.assertIsNone(owner)
 

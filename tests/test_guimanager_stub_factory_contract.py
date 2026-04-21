@@ -10,15 +10,10 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
 
         required_attrs = [
             "object_registry",
-            "event_delivery",
-            "graphics",
-            "layout",
             "lifecycle",
             "lock_flow",
             "pointer",
             "window_tiling",
-            "widget_state",
-            "workspace",
         ]
         for attr in required_attrs:
             self.assertTrue(hasattr(gui, attr), f"missing collaborator: {attr}")

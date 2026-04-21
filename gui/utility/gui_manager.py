@@ -9,17 +9,14 @@ from .scheduler import Timers, Scheduler
 from .events import GuiError, ArrowPosition, BaseEvent, ButtonStyle, Event, Orientation
 from .graphics.widget_graphics_factory import WidgetGraphicsFactory
 from .intermediates.buttongroup_mediator import ButtonGroupMediator
-from .coordinators.event_delivery import EventDeliveryCoordinator
 from .event_dispatcher import EventDispatcher
 from .focus_state import FocusStateController
 from .gui_utils.focus_state_model import FocusState
 from .gui_utils.drag_state_model import DragState
-from .coordinators.graphics_coordinator import GraphicsCoordinator
 from .input.input_emitter import InputEventEmitter
 from .gui_utils.input_providers import InputProviders
 from .input.drag_state_controller import DragStateController
 from .input.lock_state_controller import LockStateController
-from .coordinators.layout_coordinator import LayoutCoordinator
 from .layout_manager import LayoutManager
 from .lifecycle import LifecycleCoordinator, ScreenLifecycle
 from .coordinators.lock_flow_coordinator import LockFlowCoordinator
@@ -29,12 +26,11 @@ from .coordinators.pointer_coordinator import PointerCoordinator
 from .coordinators.window_tiling_coordinator import WindowTilingCoordinator
 from .renderer import Renderer
 from .ui_factory import GuiUiFactory
-from .coordinators.widget_state_coordinator import WidgetStateCoordinator
-from .coordinators.workspace_coordinator import WorkspaceCoordinator
 from .gui_utils.workspace_state import WorkspaceState
 from .gui_utils.task_panel_settings import TaskPanelSettings
 from .gui_utils.mouse_input_state import MouseInputState
 from .gui_utils.gui_event import GuiEvent
+from .gui_utils.resource_error import DataResourceErrorHandler
 from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
@@ -535,15 +531,11 @@ class GuiManager:
         self.timers: Timers = Timers()
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
-        self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
-        self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
-        self.layout: LayoutCoordinator = LayoutCoordinator(self)
+        self._task_owner_by_id: dict[Hashable, Window] = {}
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
         self.lock_flow: LockFlowCoordinator = LockFlowCoordinator(self)
         self.pointer: PointerCoordinator = PointerCoordinator(self)
         self.window_tiling: WindowTilingCoordinator = WindowTilingCoordinator(self)
-        self.widget_state: WidgetStateCoordinator = WidgetStateCoordinator(self)
-        self.workspace: WorkspaceCoordinator = WorkspaceCoordinator(self)
         self.button_group_mediator: ButtonGroupMediator = ButtonGroupMediator(self.object_registry.is_registered_button_group)
         self.screen_lifecycle: ScreenLifecycle = ScreenLifecycle()
         self.task_panel: Optional["_ManagedTaskPanel"] = None
@@ -732,19 +724,52 @@ class GuiManager:
 
     def clear_task_owners_for_window(self, window: Window) -> None:
         """Clear task owners for window."""
-        self.event_delivery.clear_task_owners_for_window(window)
+        if window not in self.windows:
+            return
+        stale_ids = [task_id for task_id, owner in self._task_owner_by_id.items() if owner is window]
+        for task_id in stale_ids:
+            del self._task_owner_by_id[task_id]
+
+    def resolve_task_event_owner(self, event: BaseEvent) -> Optional[Window]:
+        """Resolve the target window for a task event, if one is registered and visible."""
+        if getattr(event, 'type', None) != Event.Task:
+            return None
+        task_id = cast(Optional[Hashable], getattr(event, 'id', None))
+        if task_id is None:
+            return None
+        try:
+            hash(task_id)
+        except TypeError:
+            return None
+        owner = self._task_owner_by_id.get(task_id)
+        if owner is None:
+            return None
+        if owner not in self.windows or not owner.visible:
+            return None
+        return owner
 
     def hide_widgets(self, *widgets: Widget) -> None:
         """Hide widgets."""
-        self.widget_state.hide_widgets(*widgets)
+        for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'hide_widgets expected Widget, got: {type(widget).__name__}')
+            widget.visible = False
 
     def lower_window(self, window: Window) -> None:
         """Lower window."""
-        self.workspace.lower_window(window)
+        resolved_window = self.object_registry.resolve_registered_window(window)
+        if resolved_window is None:
+            return
+        self.windows.remove(resolved_window)
+        self.windows.insert(0, resolved_window)
 
     def raise_window(self, window: Window) -> None:
         """Raise window."""
-        self.workspace.raise_window(window)
+        resolved_window = self.object_registry.resolve_registered_window(window)
+        if resolved_window is None:
+            return
+        self.windows.remove(resolved_window)
+        self.windows.append(resolved_window)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
         """Enable or disable automatic non-overlapping window tiling."""
@@ -782,7 +807,15 @@ class GuiManager:
 
     def set_grid_properties(self, anchor: Tuple[int, int], width: int, height: int, spacing: int, use_rect: bool = True) -> None:
         """Configure grid cell sizing used by gridded."""
-        self.layout.set_grid_properties(anchor, width, height, spacing, use_rect)
+        if width <= 0:
+            raise GuiError(f'grid width must be positive, got: {width}')
+        if height <= 0:
+            raise GuiError(f'grid height must be positive, got: {height}')
+        if spacing < 0:
+            raise GuiError(f'grid spacing cannot be negative, got: {spacing}')
+        if not isinstance(anchor, tuple) or len(anchor) != 2:
+            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
+        self.layout_manager.grid.set_properties(anchor, width, height, spacing, use_rect)
 
     def set_linear_properties(
         self,
@@ -795,7 +828,19 @@ class GuiManager:
         use_rect: bool = True,
     ) -> None:
         """Configure linear layout sizing used by linear and next_linear."""
-        self.layout.set_linear_properties(
+        if item_width <= 0:
+            raise GuiError(f'linear item_width must be positive, got: {item_width}')
+        if item_height <= 0:
+            raise GuiError(f'linear item_height must be positive, got: {item_height}')
+        if spacing < 0:
+            raise GuiError(f'linear spacing cannot be negative, got: {spacing}')
+        if not isinstance(horizontal, bool):
+            raise GuiError(f'linear horizontal must be bool, got: {horizontal}')
+        if not isinstance(wrap_count, int) or wrap_count < 0:
+            raise GuiError(f'linear wrap_count must be an int >= 0, got: {wrap_count}')
+        if not isinstance(anchor, tuple) or len(anchor) != 2:
+            raise GuiError(f'anchor must be a tuple of (x, y), got: {anchor}')
+        self.layout_manager.set_linear_properties(
             anchor,
             item_width,
             item_height,
@@ -807,7 +852,9 @@ class GuiManager:
 
     def set_anchor_bounds(self, bounds: Rect) -> None:
         """Configure anchor layout bounds used by anchored."""
-        self.layout.set_anchor_bounds(bounds)
+        if not isinstance(bounds, Rect):
+            raise GuiError(f'anchor bounds must be a Rect, got: {bounds}')
+        self.layout_manager.set_anchor_bounds(bounds)
 
     def set_lock_area(self, locking_object: Optional[Widget], area: Optional[Rect] = None) -> None:
         """Clamp mouse motion to area until released."""
@@ -823,7 +870,25 @@ class GuiManager:
 
     def set_pristine(self, image: str, obj: Optional[Any] = None) -> None:
         """Load a backdrop image, scale it to target surface, and cache pristine copy."""
-        self.graphics.set_pristine(image, obj)
+        if obj is None:
+            obj = self
+        if obj.surface is None:
+            raise GuiError('set_pristine target surface is not initialized')
+        if image is None or not isinstance(image, str) or image == '':
+            raise GuiError(f'set_pristine image must be a non-empty string, got: {image!r}')
+
+        image_path = self.graphics_factory.file_resource('images', image)
+        try:
+            bitmap = pygame.image.load(image_path)
+        except GuiError:
+            raise
+        except Exception as exc:
+            DataResourceErrorHandler.raise_load_error('failed to load pristine image', image_path, exc)
+
+        _, _, width, height = obj.surface.get_rect()
+        scaled_bitmap = pygame.transform.smoothscale(bitmap, (width, height))
+        obj.surface.blit(scaled_bitmap.convert(), (0, 0), scaled_bitmap.get_rect())
+        obj.pristine = self.copy_graphic_area(obj.surface, obj.surface.get_rect()).convert()
 
     def set_screen_lifecycle(
         self,
@@ -836,19 +901,53 @@ class GuiManager:
 
     def set_task_owner(self, task_id: Hashable, window: Optional[Window]) -> None:
         """Set task owner."""
-        self.event_delivery.set_task_owner(task_id, window)
+        try:
+            hash(task_id)
+        except TypeError as exc:
+            raise GuiError(f'task id must be hashable: {task_id!r}') from exc
+        if window is None:
+            self._task_owner_by_id.pop(task_id, None)
+            return
+        if window not in self.windows:
+            raise GuiError('task owner window must be registered')
+        self._task_owner_by_id[task_id] = window
 
     def set_task_owners(self, window: Optional[Window], *task_ids: Hashable) -> None:
         """Set task owners."""
-        self.event_delivery.set_task_owners(window, *task_ids)
+        for task_id in task_ids:
+            self.set_task_owner(task_id, window)
 
     def show_widgets(self, *widgets: Widget) -> None:
         """Show widgets."""
-        self.widget_state.show_widgets(*widgets)
+        for widget in widgets:
+            if not isinstance(widget, Widget):
+                raise GuiError(f'show_widgets expected Widget, got: {type(widget).__name__}')
+            widget.visible = True
 
     def dispatch_event(self, event: BaseEvent) -> None:
         """Dispatch event."""
-        self.event_delivery.dispatch_event(event)
+        task_owner = self.resolve_task_event_owner(event)
+        if task_owner is not None:
+            task_owner.handle_event(event)
+            return
+        if getattr(event, 'type', None) in (Event.KeyDown, Event.KeyUp):
+            active_window = self.active_window
+            if active_window is not None and active_window in self.windows and active_window.visible:
+                active_window.handle_event(event)
+                return
+            self.screen_lifecycle.handle_event(event)
+            return
+        if getattr(event, 'task_panel', False):
+            if self.task_panel is not None and self.task_panel.visible:
+                self.task_panel.handle_event(event)
+                return
+        event_window = getattr(event, 'window', None)
+        if not isinstance(event_window, Window):
+            event_window = None
+        if event_window is not None and event_window in self.windows and event_window.visible:
+            event_window.handle_event(event)
+            return
+        self.screen_lifecycle.handle_event(event)
 
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
         """Event."""
@@ -870,7 +969,12 @@ class GuiManager:
 
     def handle_widget(self, widget: Widget, event: PygameEvent, window: Optional[Window] = None) -> bool:
         """Run widget handler and execute activation callbacks when present."""
-        return self.widget_state.handle_widget(widget, event, window)
+        if widget.handle_event(event, window):
+            if widget.on_activate is not None:
+                widget.on_activate()
+                return False
+            return True
+        return False
 
     def _draw_gui(self) -> None:
         """Render one GUI frame."""
@@ -916,12 +1020,21 @@ class GuiManager:
 
     def place_gui_object(self, gui_object: TGuiObject, geometry: Union[Rect, Tuple[int, int]]) -> TGuiObject:
         """Apply layout geometry to an existing widget/window position."""
-        self.layout.place_gui_object(gui_object, geometry)
+        if not hasattr(gui_object, 'position'):
+            raise GuiError(f'gui_object must expose a position property, got: {gui_object}')
+        if isinstance(geometry, Rect):
+            gui_object.position = geometry.topleft
+        elif isinstance(geometry, tuple) and len(geometry) == 2:
+            gui_object.position = geometry
+        else:
+            raise GuiError(f'geometry must be a Rect or (x, y) tuple, got: {geometry}')
         return gui_object
 
     def copy_graphic_area(self, surface: Surface, rect: Rect, flags: int = 0) -> Surface:
         """Return a surface copy of rect from surface."""
-        return self.graphics.copy_graphic_area(surface, rect, flags)
+        bitmap = pygame.Surface((rect.width, rect.height), flags)
+        bitmap.blit(surface, (0, 0), rect)
+        return bitmap
 
     def enforce_point_lock(self, hardware_position: Tuple[int, int]) -> None:
         """Recenters pointer only when it exits the configured broad center region."""
@@ -933,7 +1046,14 @@ class GuiManager:
 
     def restore_pristine(self, area: Optional[Rect] = None, obj: Optional["_PristineContainer"] = None) -> None:
         """Restore a region from a previously cached pristine bitmap."""
-        self.graphics.restore_pristine(area, obj)
+        if obj is None:
+            obj = self
+        if obj.pristine is None:
+            raise GuiError('restore_pristine called before pristine was initialized')
+        if area is None:
+            area = obj.pristine.get_rect()
+        x, y, _, _ = area
+        obj.surface.blit(obj.pristine, (x, y), area)
 
     def update_focus(self, new_hover: Optional[Widget]) -> None:
         """Update focus."""
