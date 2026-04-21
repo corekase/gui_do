@@ -1,6 +1,7 @@
 import time
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pygame
 from pygame import Rect, Surface
@@ -299,6 +300,21 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
             self.assertEqual(probe.captured["raw_pos"], (240, 160))
             self.assertEqual(probe.captured["raw_rel"], (7, -3))
             self.assertEqual(app.input_state.pointer_pos, lock_point)
+        finally:
+            pygame.quit()
+
+    def test_mouse_wheel_updates_logical_pointer_without_motion_event(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((300, 200)))
+            app._logical_pointer_pos = (0, 0)
+            app.input_state.pointer_pos = (0, 0)
+
+            with patch("pygame.mouse.get_pos", return_value=(123, 77)):
+                app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+
+            self.assertEqual(app.logical_pointer_pos, (123, 77))
+            self.assertEqual(app.input_state.pointer_pos, (123, 77))
         finally:
             pygame.quit()
 

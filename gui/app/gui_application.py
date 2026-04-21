@@ -214,6 +214,11 @@ class GuiApplication:
         raw_pos = getattr(event, "pos", None)
         if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
             self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
+        elif event.type == pygame.MOUSEWHEEL:
+            wheel_pos = pygame.mouse.get_pos()
+            if isinstance(wheel_pos, tuple) and len(wheel_pos) == 2:
+                self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
+                self.input_state.pointer_pos = self._logical_pointer_pos
         if self.lock_area is not None:
             self._logical_pointer_pos = self._clamp_to_rect(self._logical_pointer_pos, self.lock_area)
             self.input_state.pointer_pos = self._logical_pointer_pos
