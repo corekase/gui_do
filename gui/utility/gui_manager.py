@@ -449,8 +449,20 @@ class GuiManager:
 
     def _task_panel_widget(self, widget_type: str, *args: Any, **kwargs: Any) -> Widget:
         """Create one task-panel widget through the UI factory with shared argument shaping."""
-        factory_method = getattr(self.ui_factory, widget_type, None)
-        if not callable(factory_method):
+        task_panel_factories: Dict[str, Callable[..., Widget]] = {
+            'arrow_box': self.ui_factory.arrow_box,
+            'button': self.ui_factory.button,
+            'button_group': self.ui_factory.button_group,
+            'canvas': self.ui_factory.canvas,
+            'frame': self.ui_factory.frame,
+            'image': self.ui_factory.image,
+            'label': self.ui_factory.label,
+            'scrollbar': self.ui_factory.scrollbar,
+            'slider': self.ui_factory.slider,
+            'toggle': self.ui_factory.toggle,
+        }
+        factory_method = task_panel_factories.get(widget_type)
+        if factory_method is None:
             raise GuiError(f'unknown task panel widget type: {widget_type}')
 
         call_args = list(args)

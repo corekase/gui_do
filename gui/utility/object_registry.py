@@ -105,7 +105,7 @@ class GuiObjectRegistry:
     def describe_gui_object(self, gui_object: TGuiObject) -> str:
         """Return a short descriptive string for diagnostics and error reporting."""
         if isinstance(gui_object, Widget):
-            return f'{type(gui_object).__name__} id={getattr(gui_object, "id", "<missing>")}'
+            return f'{type(gui_object).__name__} id={gui_object.id}'
         if isinstance(gui_object, Window):
             return (
                 f'{type(gui_object).__name__} '

@@ -202,7 +202,16 @@ class GuiManagerHelperApiTests(unittest.TestCase):
 
         gui._task_panel_add_created_widget = _private_task_panel_add_created_widget
         gui.ui_factory = SimpleNamespace(
-            button=lambda id, rect, style, text, on_activate=None: (id, rect, style, text, on_activate)
+            arrow_box=lambda *_args, **_kwargs: None,
+            button=lambda id, rect, style, text, on_activate=None: (id, rect, style, text, on_activate),
+            button_group=lambda *_args, **_kwargs: None,
+            canvas=lambda *_args, **_kwargs: None,
+            frame=lambda *_args, **_kwargs: None,
+            image=lambda *_args, **_kwargs: None,
+            label=lambda *_args, **_kwargs: None,
+            scrollbar=lambda *_args, **_kwargs: None,
+            slider=lambda *_args, **_kwargs: None,
+            toggle=lambda *_args, **_kwargs: None,
         )
 
         out = GuiManager._task_panel_widget(gui, "button", "exit", Rect(10, 5, 70, 28), "style", "Exit")  # type: ignore[arg-type]
