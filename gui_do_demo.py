@@ -107,10 +107,17 @@ class GuiDoDemo:
             ),
             scene_name="main",
         )
+        self.app.layout.set_linear_properties(
+            anchor=(16, self.screen_rect.height - 40),
+            item_width=110,
+            item_height=30,
+            spacing=10,
+            horizontal=True,
+        )
         self.quit_button = self.task_panel.add(
             ButtonControl(
                 "quit",
-                Rect(16, self.screen_rect.height - 40, 120, 30),
+                self.app.layout.linear(0),
                 "Quit",
                 self._exit_app,
                 style="angle",
@@ -119,21 +126,23 @@ class GuiDoDemo:
         self.life_toggle_window = self.task_panel.add(
             ToggleControl(
                 "show_life",
-                Rect(146, self.screen_rect.height - 40, 140, 30),
-                "Life On",
-                "Life Off",
+                self.app.layout.linear(1),
+                "Life",
+                "Life",
                 pushed=True,
                 on_toggle=self._toggle_life_window,
+                style="round",
             )
         )
         self.mandel_toggle_window = self.task_panel.add(
             ToggleControl(
                 "show_mandel",
-                Rect(296, self.screen_rect.height - 40, 170, 30),
-                "Mandelbrot On",
-                "Mandelbrot Off",
+                self.app.layout.linear(2),
+                "Mandlebrot",
+                "Mandlebrot",
                 pushed=True,
                 on_toggle=self._toggle_mandel_window,
+                style="round",
             )
         )
         self._tile_visible_windows()
