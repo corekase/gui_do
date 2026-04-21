@@ -5,6 +5,7 @@ from pygame import Rect
 
 from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
+from ..core.keyboard_manager import KeyboardManager
 from ..core.scene import Scene
 from ..core.renderer import Renderer
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
@@ -22,6 +23,7 @@ class GuiApplication:
         self.surface = surface
         self.input_state = InputState()
         self.pointer_capture = PointerCapture()
+        self.keyboard = KeyboardManager()
         default_theme = ColorTheme()
         default_factory = BuiltInGraphicsFactory(default_theme)
         default_theme.graphics_factory = default_factory
@@ -231,6 +233,9 @@ class GuiApplication:
             self.input_state.pointer_pos = self._logical_pointer_pos
 
         logical_event = self._logicalize_pointer_event(event)
+
+        if self.keyboard.is_key_event(logical_event):
+            return self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
 
         if self._screen_event_handler is not None and self._screen_event_handler(logical_event):
             return True

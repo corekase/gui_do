@@ -374,6 +374,65 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_keyboard_routes_to_active_window_before_screen_handler(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+
+            seen = {"window": 0, "screen": 0}
+
+            def window_handler(event) -> bool:
+                if getattr(event, "type", None) == pygame.KEYDOWN and getattr(event, "key", None) == pygame.K_a:
+                    seen["window"] += 1
+                    return True
+                return False
+
+            win = root.add(WindowControl("win", Rect(20, 20, 180, 120), "A", event_handler=window_handler))
+            win.active = True
+
+            def screen_handler(_event) -> bool:
+                seen["screen"] += 1
+                return True
+
+            app.set_screen_lifecycle(event_handler=screen_handler)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_a}))
+
+            self.assertEqual(seen["window"], 1)
+            self.assertEqual(seen["screen"], 0)
+        finally:
+            pygame.quit()
+
+    def test_keyboard_routes_to_screen_handler_when_no_active_window(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+
+            seen = {"window": 0, "screen": 0}
+
+            def window_handler(event) -> bool:
+                if getattr(event, "type", None) == pygame.KEYDOWN:
+                    seen["window"] += 1
+                    return True
+                return False
+
+            root.add(WindowControl("win", Rect(20, 20, 180, 120), "A", event_handler=window_handler))
+
+            def screen_handler(event) -> bool:
+                if getattr(event, "type", None) == pygame.KEYDOWN and getattr(event, "key", None) == pygame.K_ESCAPE:
+                    seen["screen"] += 1
+                    return True
+                return False
+
+            app.set_screen_lifecycle(event_handler=screen_handler)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+            self.assertEqual(seen["window"], 0)
+            self.assertEqual(seen["screen"], 1)
+        finally:
+            pygame.quit()
+
     def test_scene_schedulers_are_independent_and_inactive_scene_tasks_do_not_advance(self) -> None:
         pygame.init()
         try:
