@@ -1,3 +1,5 @@
+[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
+
 # gui_do
 
 Rebased, architecture-first pygame GUI package focused on clean interaction patterns and reliable pointer capture behavior.
