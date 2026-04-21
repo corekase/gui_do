@@ -116,12 +116,25 @@ class PanelControl(UiNode):
         if child not in self.children:
             return False
 
+        was_window = self._is_window_like(child)
+        was_active_window = bool(was_window and getattr(child, "active", False))
+
         if self._drag_window is child:
             self._pending_capture_release_owner_id = child.control_id
             self._drag_window = None
             self._drag_last_pos = None
 
         self.children.remove(child)
+        if was_window:
+            self._set_window_active_state(child, False)
+
+        if was_active_window:
+            next_window = self._top_visible_window()
+            if next_window is None:
+                self._clear_active_windows()
+            else:
+                self._set_active_window(next_window)
+
         child.parent = None
         if hasattr(child, "on_unmount"):
             child.on_unmount(self)
