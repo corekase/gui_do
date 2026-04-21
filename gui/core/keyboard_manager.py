@@ -20,12 +20,18 @@ class KeyboardManager:
             shift_pressed = bool(modifiers & pygame.KMOD_SHIFT)
             focus_scope = scene.active_window()
             if app.focus.cycle_focus(scene, forward=not shift_pressed, window=focus_scope):
+                event.prevent_default()
+                event.stop_propagation()
                 return True
         if hasattr(app, "actions") and app.actions.trigger_from_event(event, app):
+            event.prevent_default()
+            event.stop_propagation()
             return True
         if event.default_prevented or event.propagation_stopped:
             return True
         if hasattr(app, "focus") and app.focus.route_key_event(event, app):
+            event.prevent_default()
+            event.stop_propagation()
             return True
         if event.default_prevented or event.propagation_stopped:
             return True
@@ -33,7 +39,13 @@ class KeyboardManager:
         if active_window is not None:
             # Focused windows own keyboard input; do not bubble key events to screen while focused.
             active_window.handle_event(event, app)
+            event.prevent_default()
+            event.stop_propagation()
             return True
         if screen_event_handler is not None:
-            return bool(screen_event_handler(event))
+            consumed = bool(screen_event_handler(event))
+            if consumed:
+                event.prevent_default()
+                event.stop_propagation()
+            return consumed
         return False

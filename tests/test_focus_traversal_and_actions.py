@@ -44,6 +44,24 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_keyboard_manager_marks_tab_event_as_prevented(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            win = root.add(WindowControl("win", Rect(10, 10, 240, 140), "Win"))
+            win.add(_FocusableProbe("first", Rect(20, 40, 80, 20), tab_index=0))
+            win.active = True
+
+            event = app.event_manager.to_gui_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            consumed = app.keyboard.route_key_event(app.scene, event, app, None)
+
+            self.assertTrue(consumed)
+            self.assertTrue(event.default_prevented)
+            self.assertTrue(event.propagation_stopped)
+        finally:
+            pygame.quit()
+
     def test_bound_action_executes_before_screen_handler(self) -> None:
         pygame.init()
         try:
@@ -94,6 +112,27 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
             self.assertTrue(consumed)
             self.assertEqual(seen["action"], 1)
             self.assertEqual(seen["screen"], 0)
+        finally:
+            pygame.quit()
+
+    def test_active_window_keyboard_ownership_marks_event_prevented(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+
+            def window_handler(_event) -> bool:
+                return False
+
+            win = root.add(WindowControl("win", Rect(20, 20, 180, 120), "A", event_handler=window_handler))
+            win.active = True
+            event = app.event_manager.to_gui_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+            consumed = app.keyboard.route_key_event(app.scene, event, app, None)
+
+            self.assertTrue(consumed)
+            self.assertTrue(event.default_prevented)
+            self.assertTrue(event.propagation_stopped)
         finally:
             pygame.quit()
 
