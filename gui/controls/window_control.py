@@ -56,7 +56,9 @@ class WindowControl(UiNode):
         self._active = is_active
 
     def title_bar_rect(self) -> Rect:
-        return Rect(self.rect.left, self.rect.top, self.rect.width, self.titlebar_height)
+        lower_rect = self.lower_widget_rect()
+        width = max(0, lower_rect.left - self.rect.left)
+        return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
 
     def content_rect(self) -> Rect:
         return Rect(self.rect.left, self.rect.top + self.titlebar_height, self.rect.width, self.rect.height - self.titlebar_height)
@@ -64,10 +66,10 @@ class WindowControl(UiNode):
     def lower_widget_rect(self) -> Rect:
         if self._chrome is not None:
             lower_rect = self._chrome.lower_widget.get_rect()
-            return Rect(self.rect.right - lower_rect.width - 2, self.rect.top, lower_rect.width, lower_rect.height)
+            return Rect(self.rect.right - lower_rect.width, self.rect.top, lower_rect.width, lower_rect.height)
         size = max(12, self.titlebar_height)
         top = self.rect.top
-        return Rect(self.rect.right - size - 4, top, size, size)
+        return Rect(self.rect.right - size, top, size, size)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         parent = self.parent
@@ -158,7 +160,9 @@ class WindowControl(UiNode):
                 self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
             draw_rect(surface, theme.medium, self.rect, 0)
             title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
-            surface.blit(title_bitmap, self.title_bar_rect().topleft)
+            title_rect = self.title_bar_rect()
+            source_rect = Rect(0, 0, title_rect.width, title_rect.height)
+            surface.blit(title_bitmap, title_rect.topleft, source_rect)
             draw_rect(surface, theme.dark, self.rect, 2)
             surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)
             if not self.enabled:

@@ -337,7 +337,7 @@ class LegacyGraphicsFactory:
         draw_frame_bitmap(
             inactive,
             LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["light"],
+            LEGACY_COLOURS["dark"],
             LEGACY_COLOURS["none"],
             LEGACY_COLOURS["full"],
             LEGACY_COLOURS["dark"],
@@ -362,9 +362,10 @@ class LegacyGraphicsFactory:
             while self.get_current_font_name() != old_font:
                 self.set_last_font()
 
-        text_y = self._centre(chrome_height, inactive_text.get_rect().height)
-        inactive.blit(inactive_text, (5, text_y))
-        active.blit(active_text, (5, text_y))
+        inactive_y = self._centre(chrome_height, inactive_text.get_rect().height)
+        active_y = self._centre(chrome_height, active_text.get_rect().height)
+        inactive.blit(inactive_text, (5, inactive_y))
+        active.blit(active_text, (5, active_y))
 
         lower = self.draw_window_lower_widget_bitmap(chrome_height, LEGACY_COLOURS["full"], LEGACY_COLOURS["medium"])
 
