@@ -58,6 +58,7 @@ class GuiApplication:
         self._screen_event_handler: Optional[Callable[[object], bool]] = None
         self._screen_postamble: Optional[Callable[[], None]] = None
         self._init_cursor_system()
+        self._sync_scene_scheduler_activity(self._active_scene_name)
 
     @staticmethod
     def _load_pristine_surface(source):
@@ -88,6 +89,7 @@ class GuiApplication:
         if name not in self._scenes:
             raise ValueError(f"unknown scene: {name}")
         self._active_scene_name = name
+        self._sync_scene_scheduler_activity(name)
         runtime = self._scenes[name]
         self.scene = runtime["scene"]
         self.scheduler = runtime["scheduler"]
@@ -116,6 +118,7 @@ class GuiApplication:
             "screen_pristine": None,
             "screen_pristine_scaled": None,
             "screen_pristine_scaled_size": (0, 0),
+            "scene_auto_suspended": set(),
         }
 
     def _scene_runtime(self, name: str):
@@ -126,7 +129,25 @@ class GuiApplication:
         runtime.setdefault("screen_pristine", None)
         runtime.setdefault("screen_pristine_scaled", None)
         runtime.setdefault("screen_pristine_scaled_size", (0, 0))
+        runtime.setdefault("scene_auto_suspended", set())
         return runtime
+
+    def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:
+        for scene_name, runtime in self._scenes.items():
+            scheduler = runtime["scheduler"]
+            auto_suspended = runtime.setdefault("scene_auto_suspended", set())
+            if scene_name == active_scene_name:
+                scheduler.set_execution_paused(False)
+                if auto_suspended:
+                    scheduler.resume_tasks(*tuple(auto_suspended))
+                    auto_suspended.clear()
+                continue
+
+            scheduler.set_execution_paused(True)
+            before = set(scheduler.read_suspended())
+            scheduler.suspend_all()
+            after = set(scheduler.read_suspended())
+            auto_suspended.update(after.difference(before))
 
     def set_pristine(self, source, scene_name: Optional[str] = None) -> None:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)

@@ -759,11 +759,11 @@ class GuiDoDemo:
         return self.max_iter - 1
 
     def _clear_mandel_surfaces(self) -> None:
-        self.mandel_canvas.canvas.fill((0, 100, 100))
-        self.canvas1.canvas.fill((0, 100, 100))
-        self.canvas2.canvas.fill((0, 100, 100))
-        self.canvas3.canvas.fill((0, 100, 100))
-        self.canvas4.canvas.fill((0, 100, 100))
+        self.mandel_canvas.canvas.fill(self.app.theme.medium)
+        self.canvas1.canvas.fill(self.app.theme.medium)
+        self.canvas2.canvas.fill(self.app.theme.medium)
+        self.canvas3.canvas.fill(self.app.theme.medium)
+        self.canvas4.canvas.fill(self.app.theme.medium)
 
     def _set_mandel_task_buttons_disabled(self, disabled: bool) -> None:
         for button in self.mandel_task_buttons:
@@ -1005,7 +1005,7 @@ class GuiDoDemo:
             self._life_step()
 
         cell_size = max(2, int(round(self.life_cell_size)))
-        self.life_canvas.canvas.fill((0, 70, 70))
+        self.life_canvas.canvas.fill(self.app.theme.medium)
         trim = 0 if cell_size <= 2 else 1
         for cx, cy in self.life_cells:
             px = int(self.life_origin[0] + (cx * cell_size))

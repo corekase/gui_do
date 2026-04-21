@@ -331,7 +331,10 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
             life_scheduler.add_task("life_task", lambda _task_id: "life-done")
             mandel_scheduler.add_task("mandel_task", lambda _task_id: "mandel-done")
 
-            app.update(0.016)
+            deadline = time.monotonic() + 1.0
+            while time.monotonic() < deadline and not life_scheduler.get_finished_events():
+                app.update(0.016)
+                time.sleep(0.005)
 
             finished["life"] = bool(life_scheduler.get_finished_events())
             finished["mandel"] = bool(mandel_scheduler.get_finished_events())
@@ -339,9 +342,84 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
             self.assertFalse(finished["mandel"])
 
             app.switch_scene("mandel")
-            app.update(0.016)
+            deadline = time.monotonic() + 1.0
+            while time.monotonic() < deadline and not mandel_scheduler.get_finished_events():
+                app.update(0.016)
+                time.sleep(0.005)
             finished["mandel"] = bool(mandel_scheduler.get_finished_events())
             self.assertTrue(finished["mandel"])
+        finally:
+            pygame.quit()
+
+    def test_scene_switch_suspends_inactive_scheduler_tasks_and_resumes_on_reactivation(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            app.create_scene("life")
+            app.create_scene("mandel")
+
+            life_scheduler = app.get_scene_scheduler("life")
+            mandel_scheduler = app.get_scene_scheduler("mandel")
+
+            life_scheduler.add_task("life_task", lambda _task_id: "life")
+            mandel_scheduler.add_task("mandel_task", lambda _task_id: "mandel")
+
+            app.switch_scene("life")
+            self.assertEqual(life_scheduler.read_suspended(), [])
+            self.assertIn("mandel_task", mandel_scheduler.read_suspended())
+
+            app.switch_scene("mandel")
+            self.assertIn("life_task", life_scheduler.read_suspended())
+            self.assertNotIn("mandel_task", mandel_scheduler.read_suspended())
+
+            app.switch_scene("life")
+            self.assertNotIn("life_task", life_scheduler.read_suspended())
+            self.assertIn("mandel_task", mandel_scheduler.read_suspended())
+        finally:
+            pygame.quit()
+
+    def test_running_inactive_scene_task_pauses_until_scene_is_active_again(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            app.create_scene("life")
+            app.create_scene("mandel")
+
+            mandel_scheduler = app.get_scene_scheduler("mandel")
+
+            def progress_task(task_id, params):
+                for step in range(params["steps"]):
+                    time.sleep(params["sleep"])
+                    mandel_scheduler.send_message(task_id, step)
+                return "done"
+
+            consumed = []
+            mandel_scheduler.add_task(
+                "mandel_progress",
+                progress_task,
+                parameters={"steps": 200, "sleep": 0.002},
+                message_method=lambda payload: consumed.append(payload),
+            )
+
+            app.switch_scene("mandel")
+            app.update(0.016)
+
+            app.switch_scene("life")
+            paused_count = len(consumed)
+            time.sleep(0.06)
+
+            self.assertEqual(mandel_scheduler.get_finished_events(), [])
+            self.assertEqual(len(consumed), paused_count)
+
+            app.switch_scene("mandel")
+            deadline = time.monotonic() + 2.5
+            while time.monotonic() < deadline:
+                app.update(0.016)
+                if mandel_scheduler.get_finished_events():
+                    break
+                time.sleep(0.01)
+
+            self.assertTrue(bool(mandel_scheduler.get_finished_events()))
         finally:
             pygame.quit()
 

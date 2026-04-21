@@ -56,6 +56,8 @@ class TaskScheduler:
         self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
         self._lock = RLock()
         self._message_slots_changed = Condition(self._lock)
+        self._execution_state_changed = Condition(self._lock)
+        self._execution_paused = False
 
         self._tasks: Dict[Hashable, _Task] = {}
         self._pending: Deque[Hashable] = deque()
@@ -82,8 +84,19 @@ class TaskScheduler:
 
     def shutdown(self) -> None:
         with self._lock:
+            self._execution_paused = False
+            self._execution_state_changed.notify_all()
             self.remove_all()
             self._executor.shutdown(wait=False, cancel_futures=True)
+
+    def set_execution_paused(self, paused: bool) -> None:
+        with self._lock:
+            self._execution_paused = bool(paused)
+            self._execution_state_changed.notify_all()
+
+    def is_execution_paused(self) -> bool:
+        with self._lock:
+            return self._execution_paused
 
     def add_task(
         self,
@@ -268,6 +281,9 @@ class TaskScheduler:
                     raise ValueError(f"task '{task_id}' has no message handler")
                 if not callable(task.message_method):
                     raise ValueError(f"task '{task_id}' message handler is not callable")
+                if self._execution_paused:
+                    self._execution_state_changed.wait()
+                    continue
                 queued_count = self._task_message_counts.get(task_id, 0)
                 if self._max_queued_messages_per_task is None or queued_count < self._max_queued_messages_per_task:
                     break
@@ -314,6 +330,7 @@ class TaskScheduler:
 
     def _build_task_callable(self, task_id: Hashable, logic: Callable[..., Any], parameters: Any) -> Callable[[], Any]:
         def run() -> Any:
+            self._wait_if_execution_paused()
             if parameters is None:
                 outcome = logic(task_id)
             else:
@@ -323,6 +340,11 @@ class TaskScheduler:
             return outcome
 
         return run
+
+    def _wait_if_execution_paused(self) -> None:
+        with self._lock:
+            while self._execution_paused:
+                self._execution_state_changed.wait()
 
     def _enqueue_completion(self, task_id: Hashable, generation: int, future: Future) -> None:
         self._incoming_completions.put(_TaskCompletion(task_id=task_id, generation=generation, future=future))
