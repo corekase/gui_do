@@ -112,3 +112,6 @@ Enforced contract tests:
 - `tests/test_public_api_exports.py`
 - `tests/test_mandel_event_schema_exports.py`
 - `tests/test_public_api_docs_contracts.py`
+- `tests/test_architecture_boundary_docs_contracts.py`
+- `tests/test_contract_command_parity.py`
+- `tests/test_readme_docs_contracts.py`

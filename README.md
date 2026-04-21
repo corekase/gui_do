@@ -137,11 +137,11 @@ python -m pytest -q tests/test_rebased_pointer_capture_contracts.py
 
 ```bash
 # CI-equivalent unittest invocation:
-python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts -v
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_docs_contracts -v
 
 # Equivalent pytest invocations:
 python -m pytest -q tests/test_boundary_contracts.py
-python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_docs_contracts.py
 ```
 
 ## Testing Policy (Rebased Only)
