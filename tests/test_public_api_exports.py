@@ -13,6 +13,44 @@ from gui import ObservableValue
 from gui import PresentationModel
 
 
+EXPECTED_PUBLIC_EXPORTS = {
+    "GuiApplication",
+    "UiEngine",
+    "PanelControl",
+    "LabelControl",
+    "ButtonControl",
+    "ArrowBoxControl",
+    "ButtonGroupControl",
+    "CanvasControl",
+    "CanvasEventPacket",
+    "FrameControl",
+    "ImageControl",
+    "SliderControl",
+    "ScrollbarControl",
+    "TaskPanelControl",
+    "ToggleControl",
+    "WindowControl",
+    "LayoutAxis",
+    "LayoutManager",
+    "WindowTilingManager",
+    "ActionManager",
+    "EventManager",
+    "EventBus",
+    "FocusManager",
+    "EventPhase",
+    "EventType",
+    "GuiEvent",
+    "InvalidationTracker",
+    "ObservableValue",
+    "PresentationModel",
+    "TaskEvent",
+    "TaskScheduler",
+    "Timers",
+    "BuiltInGraphicsFactory",
+    "ColorTheme",
+}
+
+
 class PublicApiExportsTests(unittest.TestCase):
     def test_core_api_exports_are_importable(self) -> None:
         self.assertTrue(callable(ActionManager))
@@ -39,6 +77,13 @@ class PublicApiExportsTests(unittest.TestCase):
         self.assertNotIn("MandelStatusEvent", exported)
         self.assertFalse(any(name.startswith("MANDEL_") for name in exported))
         self.assertFalse(any("mandel" in name.lower() for name in exported))
+
+    def test_public_all_matches_expected_export_surface(self) -> None:
+        self.assertEqual(set(gui.__all__), EXPECTED_PUBLIC_EXPORTS)
+
+    def test_public_all_names_are_resolvable_attributes(self) -> None:
+        for export_name in gui.__all__:
+            self.assertTrue(hasattr(gui, export_name), f"gui missing attribute for __all__ export: {export_name}")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ This document defines hard package boundaries between reusable framework code an
 
 - `gui/` is framework/runtime package code and must not depend on `demo_parts/`.
 - `demo_parts/` contains demo-specific contracts and must remain independent from `gui/` imports.
-- Demo entrypoints (for example `gui_do_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports.
+- Active demo entrypoints (`*_demo.py`, excluding archived `_pre_rebase*_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports.
 
 ## Current Demo Boundary Assets
 
@@ -20,6 +20,7 @@ Automated tests enforce both directions:
 
 - `tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts`
 - `tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui`
+- `tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only`
 
 The boundary test uses AST-based import inspection, so only real imports are flagged (not comments or strings).
 

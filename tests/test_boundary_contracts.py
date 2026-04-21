@@ -5,10 +5,10 @@ from unittest import mock
 
 
 class BoundaryContractsTests(unittest.TestCase):
-    def _imported_top_levels_from_file(self, py_file: Path) -> set[str]:
+    def _parse_python_file(self, py_file: Path) -> ast.AST:
         text = py_file.read_text(encoding="utf-8")
         try:
-            tree = ast.parse(text, filename=str(py_file))
+            return ast.parse(text, filename=str(py_file))
         except SyntaxError as exc:
             location = "unknown"
             if exc.lineno is not None and exc.offset is not None:
@@ -17,6 +17,9 @@ class BoundaryContractsTests(unittest.TestCase):
                 f"Failed to parse {py_file} during boundary import inspection: "
                 f"{exc.msg} ({location})"
             )
+
+    def _imported_top_levels_from_file(self, py_file: Path) -> set[str]:
+        tree = self._parse_python_file(py_file)
         imported: set[str] = set()
 
         for node in ast.walk(tree):
@@ -35,6 +38,16 @@ class BoundaryContractsTests(unittest.TestCase):
             if any(package in imported for package in blocked_packages):
                 offenders.append(str(py_file.relative_to(root)))
         return sorted(offenders)
+
+    def _active_demo_entrypoints(self, root: Path) -> list[Path]:
+        return sorted(
+            (
+                path
+                for path in root.glob("*_demo.py")
+                if not path.name.startswith("_pre_rebase")
+            ),
+            key=lambda path: path.name,
+        )
 
     def test_gui_package_does_not_depend_on_demo_parts(self) -> None:
         root = Path(__file__).resolve().parents[1]
@@ -59,22 +72,30 @@ class BoundaryContractsTests(unittest.TestCase):
         self.assertIn("Failed to parse", message)
         self.assertIn("boundary import inspection", message)
 
-    def test_demo_entrypoint_uses_public_gui_api_only(self) -> None:
+    def test_demo_entrypoints_use_public_gui_api_only(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        demo_file = root / "gui_do_demo.py"
-        text = demo_file.read_text(encoding="utf-8")
-        tree = ast.parse(text, filename=str(demo_file))
         offenders = []
 
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("gui."):
-                offenders.append(node.module)
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("gui."):
+                    offenders.append(f"{demo_file.name}: {node.module}")
 
         self.assertEqual(
             sorted(set(offenders)),
             [],
-            f"demo entrypoint must import gui symbols from package root only; found internal imports: {sorted(set(offenders))}",
+            "demo entrypoints must import gui symbols from package root only; "
+            f"found internal imports: {sorted(set(offenders))}",
         )
+
+    def test_active_demo_entrypoints_exclude_pre_rebase_archives(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]
+
+        self.assertIn("gui_do_demo.py", entrypoint_names)
+        self.assertFalse(any(name.startswith("_pre_rebase") for name in entrypoint_names))
 
 
 if __name__ == "__main__":

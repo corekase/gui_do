@@ -43,6 +43,8 @@ The package exports the following symbols via `gui/__init__.py`:
 - `BuiltInGraphicsFactory`
 - `ColorTheme`
 
+This `gui.__all__` export set is treated as an exact, locked public surface and is regression-tested.
+
 ## Event Contract
 
 All event dispatch paths use canonical `GuiEvent` objects.
@@ -109,3 +111,4 @@ Enforced contract tests:
 - `tests/test_boundary_contracts.py`
 - `tests/test_public_api_exports.py`
 - `tests/test_mandel_event_schema_exports.py`
+- `tests/test_public_api_docs_contracts.py`

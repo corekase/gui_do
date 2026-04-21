@@ -89,6 +89,7 @@ from demo_parts.mandel_events import MandelStatusEvent
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
 - Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
+- Active demo entrypoints (`*_demo.py`) import framework symbols from `gui` package-root exports; archived `_pre_rebase*_demo.py` files are excluded from this contract.
 
 ## Architecture Docs
 
@@ -136,11 +137,11 @@ python -m pytest -q tests/test_rebased_pointer_capture_contracts.py
 
 ```bash
 # CI-equivalent unittest invocation:
-python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports -v
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts -v
 
 # Equivalent pytest invocations:
 python -m pytest -q tests/test_boundary_contracts.py
-python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py
 ```
 
 ## Testing Policy (Rebased Only)

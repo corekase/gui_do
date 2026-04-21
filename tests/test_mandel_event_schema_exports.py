@@ -1,9 +1,16 @@
 import unittest
 import importlib
 import sys
+import demo_parts
 
 from demo_parts.mandel_events import MANDEL_KIND_COMPLETE
+from demo_parts.mandel_events import MANDEL_KIND_CLEARED
 from demo_parts.mandel_events import MANDEL_KIND_FAILED
+from demo_parts.mandel_events import MANDEL_KIND_IDLE
+from demo_parts.mandel_events import MANDEL_KIND_RUNNING_FOUR_SPLIT
+from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ITERATIVE
+from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ONE_SPLIT
+from demo_parts.mandel_events import MANDEL_KIND_RUNNING_RECURSIVE
 from demo_parts.mandel_events import MANDEL_KIND_STATUS
 from demo_parts.mandel_events import MANDEL_STATUS_SCOPE
 from demo_parts.mandel_events import MANDEL_STATUS_TOPIC
@@ -16,6 +23,12 @@ class MandelEventSchemaExportTests(unittest.TestCase):
     def test_schema_exports_are_available(self) -> None:
         self.assertEqual(MANDEL_STATUS_TOPIC, "demo.mandel.status")
         self.assertEqual(MANDEL_STATUS_SCOPE, "main")
+        self.assertEqual(MANDEL_KIND_IDLE, "idle")
+        self.assertEqual(MANDEL_KIND_CLEARED, "cleared")
+        self.assertEqual(MANDEL_KIND_RUNNING_ITERATIVE, "running_iterative")
+        self.assertEqual(MANDEL_KIND_RUNNING_RECURSIVE, "running_recursive")
+        self.assertEqual(MANDEL_KIND_RUNNING_ONE_SPLIT, "running_one_split")
+        self.assertEqual(MANDEL_KIND_RUNNING_FOUR_SPLIT, "running_four_split")
         self.assertEqual(MANDEL_KIND_STATUS, "status")
         self.assertEqual(MANDEL_KIND_FAILED, "failed")
         self.assertEqual(MANDEL_KIND_COMPLETE, "complete")
@@ -55,8 +68,29 @@ class MandelEventSchemaExportTests(unittest.TestCase):
         self.assertIs(PackageMandelStatusEvent, MandelStatusEvent)
 
     def test_demo_parts_all_contains_core_schema_names(self) -> None:
-        self.assertIn("MandelStatusEvent", demo_parts_all)
-        self.assertIn("MANDEL_STATUS_TOPIC", demo_parts_all)
+        expected_names = {
+            "MANDEL_STATUS_TOPIC",
+            "MANDEL_STATUS_SCOPE",
+            "MANDEL_KIND_IDLE",
+            "MANDEL_KIND_CLEARED",
+            "MANDEL_KIND_RUNNING_ITERATIVE",
+            "MANDEL_KIND_RUNNING_RECURSIVE",
+            "MANDEL_KIND_RUNNING_ONE_SPLIT",
+            "MANDEL_KIND_RUNNING_FOUR_SPLIT",
+            "MANDEL_KIND_FAILED",
+            "MANDEL_KIND_COMPLETE",
+            "MANDEL_KIND_STATUS",
+            "MandelStatusEvent",
+        }
+
+        self.assertTrue(expected_names.issubset(set(demo_parts_all)))
+
+    def test_demo_parts_all_has_no_duplicates(self) -> None:
+        self.assertEqual(len(demo_parts_all), len(set(demo_parts_all)))
+
+    def test_demo_parts_all_names_are_resolvable_attributes(self) -> None:
+        for export_name in demo_parts_all:
+            self.assertTrue(hasattr(demo_parts, export_name), f"demo_parts missing attribute for __all__ export: {export_name}")
 
 
 if __name__ == "__main__":
