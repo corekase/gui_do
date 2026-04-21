@@ -250,7 +250,7 @@ class WindowControl(UiNode):
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(18, chrome_height)
             self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
-        title_bitmap = self._chrome.title_bar_inactive if self.active else self._chrome.title_bar_active
+        title_bitmap = self._chrome.title_bar_active if self.active else self._chrome.title_bar_inactive
         title_rect = self.title_bar_rect()
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)
         surface.blit(title_bitmap, title_rect.topleft, source_rect)

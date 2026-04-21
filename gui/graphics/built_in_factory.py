@@ -356,8 +356,8 @@ class BuiltInGraphicsFactory:
         old_font = self.get_current_font_name()
         self.set_font("titlebar")
         try:
-            inactive_text = self.render_text(title, colour=self.theme.highlight, shadow=True)
-            active_text = self.render_text(title, colour=self.theme.text, shadow=True)
+            inactive_text = self.render_text(title, colour=self.theme.text, shadow=True)
+            active_text = self.render_text(title, colour=self.theme.highlight, shadow=True)
         finally:
             while self.get_current_font_name() != old_font:
                 self.set_last_font()

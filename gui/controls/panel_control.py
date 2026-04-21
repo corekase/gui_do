@@ -150,6 +150,18 @@ class PanelControl(UiNode):
         return False
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if self._drag_window is not None:
+            invalid_drag_window = (
+                self._drag_window not in self.children
+                or not self._drag_window.visible
+                or not self._drag_window.enabled
+            )
+            if invalid_drag_window:
+                if app.pointer_capture.is_owned_by(self._drag_window.control_id):
+                    app.pointer_capture.end(self._drag_window.control_id)
+                self._drag_window = None
+                self._drag_last_pos = None
+
         raw = event.pos
 
         if event.is_mouse_motion() and self._drag_window is not None:
