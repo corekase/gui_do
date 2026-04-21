@@ -9,16 +9,25 @@ class UiEngine:
         self.target_fps = max(1, int(target_fps))
         self.clock = pygame.time.Clock()
 
-    def run(self) -> None:
-        """Run until app.running is set False."""
+    def run(self, max_frames: int | None = None) -> int:
+        """Run until app.running is set False or an optional frame limit is reached."""
+        frame_count = 0
         try:
             while self.app.running:
+                if max_frames is not None and frame_count >= max_frames:
+                    break
                 self.app.input_state.begin_frame()
                 for event in pygame.event.get():
                     self.app.process_event(event)
+                    if not self.app.running:
+                        break
+                if not self.app.running:
+                    break
                 dt_seconds = self.clock.tick(self.target_fps) / 1000.0
                 self.app.update(dt_seconds)
                 self.app.draw()
                 pygame.display.flip()
+                frame_count += 1
         finally:
             self.app.shutdown()
+        return frame_count
