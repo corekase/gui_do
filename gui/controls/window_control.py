@@ -5,7 +5,7 @@ import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
-from ..core.gui_event import GuiEvent
+from ..core.gui_event import EventPhase, GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -181,32 +181,63 @@ class WindowControl(UiNode):
         if self._postamble is not None:
             self._postamble()
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        def _owns_node(target) -> bool:
-            if target is None:
-                return False
-            if target is self:
-                return True
-            pending = list(self.children)
-            while pending:
-                node = pending.pop()
-                if node is target:
-                    return True
-                pending.extend(node.children)
+    def _owns_node(self, target) -> bool:
+        if target is None:
             return False
+        if target is self:
+            return True
+        pending = list(self.children)
+        while pending:
+            node = pending.pop()
+            if node is target:
+                return True
+            pending.extend(node.children)
+        return False
 
+    def _accepts_event_scope(self, event: GuiEvent, app: "GuiApplication") -> bool:
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2 and not self.rect.collidepoint(raw):
             lock_object = app.locking_object
             lock_active = bool(app.mouse_point_locked and app.lock_point_pos is not None)
-            if not (lock_active and _owns_node(lock_object)):
+            if not (lock_active and self._owns_node(lock_object)):
                 return False
-        if self._event_handler is not None and self._event_handler(event):
-            return True
-        for child in reversed(self.children):
-            if child.visible and child.enabled and child.handle_event(event, app):
+        return True
+
+    @staticmethod
+    def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
+        if hasattr(child, "handle_routed_event"):
+            return bool(child.handle_routed_event(event, app))
+        if event.phase is EventPhase.TARGET and hasattr(child, "handle_event"):
+            return bool(child.handle_event(event, app))
+        return False
+
+    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
+        ordered = list(reversed(self.children)) if reverse else list(self.children)
+        for child in ordered:
+            if not (child.visible and child.enabled):
+                continue
+            if self._dispatch_child_event(child, event, app):
+                return True
+            if event.propagation_stopped:
                 return True
         return False
+
+    def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self._accepts_event_scope(event, app):
+            return False
+        return self._dispatch_children(event, app, reverse=False)
+
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self._accepts_event_scope(event, app):
+            return False
+        if self._event_handler is not None and self._event_handler(event):
+            return True
+        return self._dispatch_children(event, app, reverse=True)
+
+    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if not self._accepts_event_scope(event, app):
+            return False
+        return self._dispatch_children(event, app, reverse=True)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         factory = theme.graphics_factory

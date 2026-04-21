@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from ..core.gui_event import GuiEvent
+from ..core.gui_event import EventPhase, GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -130,7 +130,26 @@ class PanelControl(UiNode):
             if child.visible:
                 child.update(dt_seconds)
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    @staticmethod
+    def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
+        if hasattr(child, "handle_routed_event"):
+            return bool(child.handle_routed_event(event, app))
+        if event.phase is EventPhase.TARGET and hasattr(child, "handle_event"):
+            return bool(child.handle_event(event, app))
+        return False
+
+    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
+        ordered = list(reversed(self.children)) if reverse else list(self.children)
+        for child in ordered:
+            if not (child.visible and child.enabled):
+                continue
+            if self._dispatch_child_event(child, event, app):
+                return True
+            if event.propagation_stopped:
+                return True
+        return False
+
+    def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
         raw = event.pos
 
         if event.is_mouse_motion() and self._drag_window is not None:
@@ -172,10 +191,13 @@ class PanelControl(UiNode):
                     app.pointer_capture.begin(window.control_id, app.surface.get_rect())
                     return True
 
-        for child in reversed(self.children):
-            if child.visible and child.enabled and child.handle_event(event, app):
-                return True
-        return False
+        return self._dispatch_children(event, app, reverse=False)
+
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        return self._dispatch_children(event, app, reverse=True)
+
+    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        return self._dispatch_children(event, app, reverse=True)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         if self.draw_background:

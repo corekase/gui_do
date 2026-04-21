@@ -5,6 +5,7 @@ from pygame import Rect, Surface
 
 from gui.app.gui_application import GuiApplication
 from gui.controls.panel_control import PanelControl
+from gui.controls.window_control import WindowControl
 from gui.core.event_bus import EventBus
 from gui.core.gui_event import EventPhase, EventType, GuiEvent
 from gui.core.presentation_model import ObservableValue, PresentationModel
@@ -123,6 +124,37 @@ class CoreFoundationProgressionTests(unittest.TestCase):
 
             self.assertTrue(consumed)
             self.assertEqual(seen["count"], 1)
+        finally:
+            pygame.quit()
+
+    def test_panel_propagates_routed_phases_to_child_nodes(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((220, 120)))
+            root = app.add(PanelControl("root", Rect(0, 0, 220, 120)))
+            probe = root.add(_ProbeNode("probe", Rect(20, 20, 60, 30)))
+
+            app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (25, 25), "rel": (1, 0)}))
+
+            self.assertEqual(probe.capture_count, 1)
+            self.assertEqual(probe.target_count, 1)
+            self.assertEqual(probe.bubble_count, 1)
+        finally:
+            pygame.quit()
+
+    def test_window_propagates_routed_phases_to_child_nodes(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            window = root.add(WindowControl("win", Rect(20, 20, 200, 130), "W"))
+            probe = window.add(_ProbeNode("probe", Rect(40, 60, 80, 20)))
+
+            app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (45, 65), "rel": (2, 1)}))
+
+            self.assertEqual(probe.capture_count, 1)
+            self.assertEqual(probe.target_count, 1)
+            self.assertEqual(probe.bubble_count, 1)
         finally:
             pygame.quit()
 
