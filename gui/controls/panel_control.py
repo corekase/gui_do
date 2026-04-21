@@ -114,6 +114,11 @@ class PanelControl(UiNode):
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
         if child not in self.children:
             return False
+
+        if self._drag_window is child:
+            self._drag_window = None
+            self._drag_last_pos = None
+
         self.children.remove(child)
         child.parent = None
         if hasattr(child, "on_unmount"):
