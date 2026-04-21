@@ -349,14 +349,14 @@ class LegacyGraphicsFactory:
             LEGACY_COLOURS["dark"],
             LEGACY_COLOURS["full"],
             LEGACY_COLOURS["none"],
-            LEGACY_COLOURS["medium"],
+            LEGACY_COLOURS["dark"],
             Rect(0, 0, width, chrome_height),
         )
 
         old_font = self.get_current_font_name()
         self.set_font("titlebar")
         try:
-            inactive_text = self.render_text(title, colour=self.theme.highlight, shadow=False)
+            inactive_text = self.render_text(title, colour=self.theme.highlight, shadow=True)
             active_text = self.render_text(title, colour=self.theme.text, shadow=True)
         finally:
             while self.get_current_font_name() != old_font:
