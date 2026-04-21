@@ -51,12 +51,3 @@ class DragState:
         self.dragging = False
         self.dragging_window = None
         self.mouse_delta = None
-
-    # Alias methods retained for naming continuity across callers.
-    def begin_drag(self, window: Window, mouse_delta: Tuple[int, int]) -> None:
-        """Alias for start_drag."""
-        self.start_drag(window, mouse_delta)
-
-    def clear_drag(self) -> None:
-        """Alias for stop_drag."""
-        self.stop_drag()
