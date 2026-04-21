@@ -11,7 +11,6 @@ class GuiManagerStubFactoryContractTests(unittest.TestCase):
         required_attrs = [
             "object_registry",
             "event_delivery",
-            "event_input",
             "graphics",
             "layout",
             "lifecycle",

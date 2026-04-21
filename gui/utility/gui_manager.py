@@ -16,7 +16,6 @@ from .gui_utils.focus_state_model import FocusState
 from .gui_utils.drag_state_model import DragState
 from .coordinators.graphics_coordinator import GraphicsCoordinator
 from .input.input_emitter import InputEventEmitter
-from .coordinators.input_event_coordinator import InputEventCoordinator
 from .gui_utils.input_providers import InputProviders
 from .input.drag_state_controller import DragStateController
 from .input.lock_state_controller import LockStateController
@@ -35,6 +34,7 @@ from .coordinators.workspace_coordinator import WorkspaceCoordinator
 from .gui_utils.workspace_state import WorkspaceState
 from .gui_utils.task_panel_settings import TaskPanelSettings
 from .gui_utils.mouse_input_state import MouseInputState
+from .gui_utils.gui_event import GuiEvent
 from .intermediates.widget import Widget
 from ..widgets.window import Window
 from ..widgets.button import Button
@@ -49,7 +49,6 @@ from ..widgets.buttongroup import ButtonGroup
 from ..widgets.frame import Frame
 
 if TYPE_CHECKING:
-    from .gui_utils.gui_event import GuiEvent
     from .gui_utils.task_panel import _ManagedTaskPanel
 
 TGuiObject = TypeVar("TGuiObject", Window, Widget)
@@ -537,7 +536,6 @@ class GuiManager:
         self.ui_factory: GuiUiFactory = GuiUiFactory(self)
         self.object_registry: GuiObjectRegistry = GuiObjectRegistry(self)
         self.event_delivery: EventDeliveryCoordinator = EventDeliveryCoordinator(self)
-        self.event_input: InputEventCoordinator = InputEventCoordinator(self)
         self.graphics: GraphicsCoordinator = GraphicsCoordinator(self)
         self.layout: LayoutCoordinator = LayoutCoordinator(self)
         self.lifecycle: LifecycleCoordinator = LifecycleCoordinator(self)
@@ -854,11 +852,17 @@ class GuiManager:
 
     def event(self, event_type: Event, **kwargs: object) -> "GuiEvent":
         """Event."""
-        return self.event_input.event(event_type, **kwargs)
+        if event_type in (Event.MouseButtonUp, Event.MouseButtonDown, Event.MouseMotion):
+            kwargs.setdefault('pos', self._get_mouse_pos())
+        return GuiEvent(event_type, **kwargs)
 
     def events(self) -> Iterable["GuiEvent"]:
         """Events."""
-        yield from self.event_input.events()
+        for raw_event in self.input_providers.event_getter():
+            event = self.handle_event(raw_event)
+            if event.type == Event.Pass:
+                continue
+            yield event
 
     def handle_event(self, event: PygameEvent) -> "GuiEvent":
         """Handle event."""

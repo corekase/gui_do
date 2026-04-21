@@ -8,7 +8,6 @@ from gui.utility.focus_state import FocusStateController
 from gui.utility.gui_utils.focus_state_model import FocusState
 from gui.utility.coordinators.graphics_coordinator import GraphicsCoordinator
 from gui.utility.input.input_emitter import InputEventEmitter
-from gui.utility.coordinators.input_event_coordinator import InputEventCoordinator
 from gui.utility.gui_utils.input_providers import InputProviders
 from gui.utility.gui_utils.drag_state_model import DragState
 from gui.utility.input.drag_state_controller import DragStateController
@@ -129,7 +128,6 @@ def build_gui_manager_stub(
 
     gui.object_registry = GuiObjectRegistry(gui)
     gui.event_delivery = EventDeliveryCoordinator(gui)
-    gui.event_input = InputEventCoordinator(gui)
     gui.graphics = GraphicsCoordinator(gui)
     gui.layout = LayoutCoordinator(gui)
     gui.lifecycle = LifecycleCoordinator(gui)

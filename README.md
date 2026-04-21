@@ -28,7 +28,7 @@ The project now enforces two internal contracts across runtime paths. These are 
 
 2. State-transition contract
 - Drag and lock lifecycles are model-driven and transition-based, not free-form field mutation.
-- `DragState` transitions use `start_drag` / `stop_drag` (legacy aliases remain for compatibility).
+- `DragState` transitions use `start_drag` / `stop_drag` only.
 - `LockState` transitions use validated `apply_area_lock` / `apply_point_lock` / `clear_lock`.
 - `GuiManager` proxy setters for drag/lock state enforce strict input validation and preserve model invariants.
 
