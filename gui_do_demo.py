@@ -1,8 +1,21 @@
 import math
-from typing import Set, Tuple
+from typing import Optional, Set, Tuple
 
 import pygame
 from pygame import Rect
+from demo_parts.mandel_events import (
+    MANDEL_KIND_CLEARED,
+    MANDEL_KIND_COMPLETE,
+    MANDEL_KIND_FAILED,
+    MANDEL_KIND_RUNNING_FOUR_SPLIT,
+    MANDEL_KIND_RUNNING_ITERATIVE,
+    MANDEL_KIND_RUNNING_ONE_SPLIT,
+    MANDEL_KIND_RUNNING_RECURSIVE,
+    MANDEL_KIND_STATUS,
+    MANDEL_STATUS_SCOPE,
+    MANDEL_STATUS_TOPIC,
+    MandelStatusEvent,
+)
 from gui.core.presentation_model import ObservableValue, PresentationModel
 
 from gui import (
@@ -18,6 +31,7 @@ from gui import (
     UiEngine,
     WindowControl,
 )
+
 class _MandelPresentationModel(PresentationModel):
     """Presentation state for Mandelbrot controls and status text."""
 
@@ -72,6 +86,10 @@ class GuiDoDemo:
         self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
         self.mandel_model = _MandelPresentationModel()
+        self._mandel_status_topic = MANDEL_STATUS_TOPIC
+        self._mandel_status_scope = MANDEL_STATUS_SCOPE
+        self._mandel_status_subscription = None
+        self._mandel_status_bus_ready = False
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
@@ -291,10 +309,47 @@ class GuiDoDemo:
         self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.mandel_model.bind(self.mandel_model.status_text, self._on_mandel_status_changed)
+        self._mandel_status_subscription = self.app.events.subscribe(
+            self._mandel_status_topic,
+            self._on_mandel_status_event,
+            scope=self._mandel_status_scope,
+        )
+        self._mandel_status_bus_ready = True
         self._configure_focus_and_accessibility()
 
     def _on_mandel_status_changed(self, text: str) -> None:
         self.mandel_status.text = text
+
+    def _on_mandel_status_event(self, payload) -> None:
+        self.mandel_model.set_status(self._format_mandel_status(MandelStatusEvent.from_payload(payload)))
+
+    def _format_mandel_status(self, payload) -> str:
+        event = MandelStatusEvent.from_payload(payload)
+        details = "" if event.detail is None else str(event.detail)
+        mapping = {
+            "idle": "Mandelbrot: idle",
+            MANDEL_KIND_CLEARED: "Mandelbrot: cleared",
+            MANDEL_KIND_RUNNING_ITERATIVE: "Mandelbrot: running iterative",
+            MANDEL_KIND_RUNNING_RECURSIVE: "Mandelbrot: running recursive",
+            MANDEL_KIND_RUNNING_ONE_SPLIT: "Mandelbrot: running 1M 4Tasks",
+            MANDEL_KIND_RUNNING_FOUR_SPLIT: "Mandelbrot: running 4M 4Tasks",
+            MANDEL_KIND_COMPLETE: "Mandelbrot: complete",
+        }
+        if event.kind in mapping:
+            return mapping[event.kind]
+        if event.kind == MANDEL_KIND_FAILED:
+            return f"Mandelbrot failed: {details}" if details else "Mandelbrot failed"
+        if event.kind == MANDEL_KIND_STATUS:
+            return details if details else "Mandelbrot: idle"
+        return details if details else f"Mandelbrot: {event.kind}"
+
+    def _publish_mandel_event(self, kind: str, detail: Optional[str] = None) -> None:
+        event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
+        payload = event.to_payload()
+        if self._mandel_status_bus_ready:
+            self.app.events.publish(self._mandel_status_topic, payload, scope=self._mandel_status_scope)
+            return
+        self.mandel_model.set_status(self._format_mandel_status(event))
 
     def _configure_focus_and_accessibility(self) -> None:
         focus_order = [
@@ -584,7 +639,7 @@ class GuiDoDemo:
         self.mandel_task_ids.clear()
         self._show_single_mandel_canvas()
         self._set_mandel_task_buttons_disabled(False)
-        self.mandel_model.set_status("Mandelbrot: cleared")
+        self._publish_mandel_event(MANDEL_KIND_CLEARED)
 
     def _mandel_iterative_task(self, task_id, params):
         width, height = params["size"]
@@ -649,7 +704,7 @@ class GuiDoDemo:
             message_method=self._make_mandel_progress_handler("iter"),
         )
         self.mandel_task_ids.add("iter")
-        self.mandel_model.set_status("Mandelbrot: running iterative")
+        self._publish_mandel_event(MANDEL_KIND_RUNNING_ITERATIVE)
 
     def _launch_mandel_recursive(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -658,7 +713,7 @@ class GuiDoDemo:
         width, height = self.mandel_canvas.canvas.get_size()
         center, scale = self._mandel_viewport(width, height)
         self._queue_mandel_recursive_task("recu", Rect(0, 0, width, height), (width, height), center, scale)
-        self.mandel_model.set_status("Mandelbrot: running recursive")
+        self._publish_mandel_event(MANDEL_KIND_RUNNING_RECURSIVE)
 
     def _launch_mandel_one_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -672,7 +727,7 @@ class GuiDoDemo:
         self._queue_mandel_recursive_task("2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
-        self.mandel_model.set_status("Mandelbrot: running 1M 4Tasks")
+        self._publish_mandel_event(MANDEL_KIND_RUNNING_ONE_SPLIT)
 
     def _launch_mandel_four_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -682,7 +737,7 @@ class GuiDoDemo:
         center, scale = self._mandel_viewport(width, height)
         for task_id in ("can1", "can2", "can3", "can4"):
             self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
-        self.mandel_model.set_status("Mandelbrot: running 4M 4Tasks")
+        self._publish_mandel_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
 
     def _update_life(self) -> None:
         while True:
@@ -725,13 +780,13 @@ class GuiDoDemo:
         for event in failed:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
-                self.mandel_model.set_status(f"Mandelbrot failed: {event.error}")
+                self._publish_mandel_event(MANDEL_KIND_FAILED, str(event.error))
 
         busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
         self.mandel_scheduler.clear_events()
         if not busy and self.mandel_model.status_text.value.startswith("Mandelbrot: running"):
-            self.mandel_model.set_status("Mandelbrot: complete")
+            self._publish_mandel_event(MANDEL_KIND_COMPLETE)
 
     def _update(self, dt_seconds: float) -> None:
         GuiApplication.update(self.app, dt_seconds)
@@ -747,6 +802,10 @@ class GuiDoDemo:
 
     def run(self) -> None:
         UiEngine(self.app, target_fps=120).run()
+        if self._mandel_status_subscription is not None:
+            self.app.events.unsubscribe(self._mandel_status_subscription)
+            self._mandel_status_subscription = None
+        self._mandel_status_bus_ready = False
         self.mandel_model.dispose()
         pygame.quit()
 

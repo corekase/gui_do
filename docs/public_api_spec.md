@@ -27,9 +27,16 @@ The package exports the following symbols via `gui/__init__.py`:
 - `LayoutAxis`
 - `LayoutManager`
 - `WindowTilingManager`
+- `ActionManager`
 - `EventManager`
+- `EventBus`
+- `FocusManager`
+- `EventPhase`
 - `EventType`
 - `GuiEvent`
+- `InvalidationTracker`
+- `ObservableValue`
+- `PresentationModel`
 - `TaskEvent`
 - `TaskScheduler`
 - `Timers`
@@ -48,6 +55,10 @@ Required event consumption patterns:
   - `event.is_mouse_up(...)`
   - `event.is_mouse_motion()`
   - `event.is_mouse_wheel()`
+- Routed controls:
+  - `event.with_phase(...)`
+  - `event.stop_propagation()`
+  - `event.prevent_default()`
 - Position and motion data:
   - `event.pos`
   - `event.rel`
@@ -83,3 +94,9 @@ The rebased package is strict by design:
 - No optional graphics-factory rendering behavior.
 
 New APIs must preserve these strict-contract principles.
+
+## Demo-Specific Modules
+
+Demo-only contracts are intentionally outside the `gui` package boundary.
+
+- Mandelbrot demo event schema is defined in `demo_parts/mandel_events.py`.

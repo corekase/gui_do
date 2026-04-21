@@ -32,8 +32,13 @@ from .controls.window_control import WindowControl
 from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
 from .layout.window_tiling_manager import WindowTilingManager
+from .core.action_manager import ActionManager
 from .core.event_manager import EventManager
-from .core.gui_event import EventType, GuiEvent
+from .core.event_bus import EventBus
+from .core.focus_manager import FocusManager
+from .core.gui_event import EventPhase, EventType, GuiEvent
+from .core.invalidation import InvalidationTracker
+from .core.presentation_model import ObservableValue, PresentationModel
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
 from .graphics.built_in_factory import BuiltInGraphicsFactory
@@ -59,9 +64,16 @@ __all__ = [
     "LayoutAxis",
     "LayoutManager",
     "WindowTilingManager",
+    "ActionManager",
     "EventManager",
+    "EventBus",
+    "FocusManager",
+    "EventPhase",
     "EventType",
     "GuiEvent",
+    "InvalidationTracker",
+    "ObservableValue",
+    "PresentationModel",
     "TaskEvent",
     "TaskScheduler",
     "Timers",

@@ -54,6 +54,9 @@ Canonical event object used by the app pipeline:
 - `task_id: Optional[Hashable]`
 - `error: Optional[str]`
 - `source_event: Optional[object]` (raw source event, when present)
+- `phase: EventPhase` (`CAPTURE`, `TARGET`, `BUBBLE`)
+- `propagation_stopped: bool`
+- `default_prevented: bool`
 
 Helper operations on `GuiEvent` simplify consumer code:
 
@@ -63,6 +66,9 @@ Helper operations on `GuiEvent` simplify consumer code:
 - `is_mouse_motion()` / `is_mouse_wheel()`
 - `wheel_delta`
 - `collides(rect)`
+- `with_phase(phase)`
+- `stop_propagation()`
+- `prevent_default()`
 
 ## Construction and Normalization
 
@@ -98,7 +104,25 @@ App pipeline (`GuiApplication.process_event`) must execute in this order:
 8. Route key/text events via keyboard manager:
    - active visible enabled window first,
    - then screen handler fallback.
+   - any consumed key path marks default/prevented propagation semantics.
 9. Route non-key events to screen handler first; if unhandled, dispatch to scene graph.
+   - when `default_prevented` or `propagation_stopped` is set, fallback dispatch is suppressed.
+
+## Routed Phase Behavior
+
+Scene routing executes in three phases for each event:
+
+1. `CAPTURE` from root toward targets.
+2. `TARGET` on normal hit-tested/stacked dispatch.
+3. `BUBBLE` from target context back outward.
+
+Container controls (`PanelControl`, `WindowControl`) propagate routed phases to children using the same canonical event object.
+
+Propagation and default semantics:
+
+- `stop_propagation()` halts remaining listeners/phases.
+- `prevent_default()` marks fallback/default paths as consumed.
+- Keyboard ownership paths (actions, focus traversal, active window) set these flags when consuming events.
 
 ## Best-Practice Integration Notes
 

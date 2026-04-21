@@ -44,6 +44,8 @@ Rebased, architecture-first pygame GUI package focused on clean interaction patt
   - timers.py: Timers
 - gui/theme
   - color_theme.py: ColorTheme
+- demo_parts
+  - mandel_events.py: Mandelbrot demo-only event schema and constants
 
 ## Install
 
@@ -77,7 +79,16 @@ from gui import (
   Timers,
     ColorTheme,
 )
+
+  # Demo-only contracts are intentionally outside gui package:
+  from demo_parts.mandel_events import MandelStatusEvent
 ```
+
+  ## Demo/Package Boundary
+
+  - `gui/` contains reusable framework/runtime functionality.
+  - `demo_parts/` contains demo-specific contracts and helpers.
+  - Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
 
 ## Restored Functional Surface
 
