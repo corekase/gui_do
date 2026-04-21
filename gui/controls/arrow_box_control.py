@@ -4,7 +4,6 @@ from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP
 
 from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
@@ -44,14 +43,14 @@ class ArrowBoxControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self._pressed = True
                 self._invoke()
                 if self.repeat_interval_seconds > 0:
                     app.timers.add_timer(self._timer_id, self.repeat_interval_seconds, self._invoke)
                 return True
-        if event.type == MOUSEBUTTONUP and event.button == 1:
+        if event.is_mouse_up(1):
             if self._pressed:
                 self._pressed = False
                 app.timers.remove_timer(self._timer_id)

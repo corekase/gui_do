@@ -647,9 +647,7 @@ class GuiDoDemo:
             packet = self.life_canvas.read_event()
             if packet is None:
                 break
-            if packet.pos is None or packet.button != 1:
-                continue
-            if packet.event_type != pygame.MOUSEBUTTONDOWN:
+            if packet.pos is None or not packet.is_mouse_down(1):
                 continue
             local_x = packet.pos[0] - self.life_canvas.rect.left
             local_y = packet.pos[1] - self.life_canvas.rect.top

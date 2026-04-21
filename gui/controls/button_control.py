@@ -2,7 +2,6 @@ from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP
 
 from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
@@ -30,11 +29,11 @@ class ButtonControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self.pressed = True
                 return True
-        if event.type == MOUSEBUTTONUP and event.button == 1:
+        if event.is_mouse_up(1):
             was_pressed = self.pressed
             self.pressed = False
             if was_pressed and self.hovered:

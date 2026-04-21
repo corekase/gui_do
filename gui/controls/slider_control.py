@@ -1,5 +1,4 @@
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 from typing import TYPE_CHECKING
 
 from ..core.gui_event import GuiEvent
@@ -77,7 +76,7 @@ class SliderControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         raw = event.pos
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):
                 handle = self.handle_rect()
                 if self.axis == LayoutAxis.HORIZONTAL:
@@ -88,7 +87,7 @@ class SliderControl(UiNode):
                 self.dragging = True
                 return True
 
-        if event.type == MOUSEMOTION and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
+        if event.is_mouse_motion() and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
             pos = app.pointer_capture.clamp(app.input_state.pointer_pos)
             if self.axis == LayoutAxis.HORIZONTAL:
                 axis_pixel = pos[0] - self._drag_anchor_offset + (self.handle_size // 2)
@@ -98,12 +97,12 @@ class SliderControl(UiNode):
             self._clamp_value()
             return True
 
-        if event.type == MOUSEBUTTONUP and event.button == 1 and self.dragging:
+        if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
             app.pointer_capture.end(self.control_id)
             return True
 
-        if event.type == MOUSEWHEEL and self.rect.collidepoint(app.input_state.pointer_pos):
+        if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
             self.value += float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)
             self._clamp_value()
             return True

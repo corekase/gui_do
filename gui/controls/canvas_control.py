@@ -4,9 +4,8 @@ from typing import Callable, Deque, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect, Surface
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 
-from ..core.gui_event import GuiEvent
+from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -15,11 +14,27 @@ if TYPE_CHECKING:
 
 @dataclass
 class CanvasEventPacket:
-    event_type: int
+    kind: EventType
     pos: Optional[tuple] = None
     rel: Optional[tuple] = None
     button: Optional[int] = None
     wheel_delta: Optional[int] = None
+
+    def is_mouse_motion(self) -> bool:
+        return self.kind is EventType.MOUSE_MOTION
+
+    def is_mouse_wheel(self) -> bool:
+        return self.kind is EventType.MOUSE_WHEEL
+
+    def is_mouse_down(self, button: Optional[int] = None) -> bool:
+        if self.kind is not EventType.MOUSE_BUTTON_DOWN:
+            return False
+        return button is None or self.button == int(button)
+
+    def is_mouse_up(self, button: Optional[int] = None) -> bool:
+        if self.kind is not EventType.MOUSE_BUTTON_UP:
+            return False
+        return button is None or self.button == int(button)
 
 
 class CanvasControl(UiNode):
@@ -67,7 +82,7 @@ class CanvasControl(UiNode):
             return False
 
         packet = CanvasEventPacket(
-            event_type=event.type,
+            kind=event.kind,
             pos=raw,
             rel=event.rel,
             button=event.button,
@@ -75,7 +90,7 @@ class CanvasControl(UiNode):
         )
         if event.is_mouse_motion() and self.coalesce_motion_events and self._events:
             last = self._events[-1]
-            if last.event_type == MOUSEMOTION:
+            if last.is_mouse_motion():
                 self._events[-1] = packet
                 return True
 

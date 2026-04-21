@@ -254,8 +254,8 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         fired = []
         control = ButtonControl("b", Rect(10, 10, 80, 30), "B", on_click=lambda: fired.append(True))
 
-        down = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1)
-        up = SimpleNamespace(type=pygame.MOUSEBUTTONUP, pos=(20, 20), button=1)
+        down = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1)
+        up = GuiEvent(kind=EventType.MOUSE_BUTTON_UP, type=pygame.MOUSEBUTTONUP, pos=(20, 20), button=1)
 
         self.assertTrue(control.handle_event(down, None))
         self.assertTrue(control.pressed)

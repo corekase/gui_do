@@ -1,5 +1,4 @@
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, MOUSEWHEEL
 from typing import TYPE_CHECKING
 
 from ..core.gui_event import GuiEvent
@@ -91,7 +90,7 @@ class ScrollbarControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         raw = event.pos
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):
                 handle = self.handle_rect()
                 if self.axis == LayoutAxis.HORIZONTAL:
@@ -102,7 +101,7 @@ class ScrollbarControl(UiNode):
                 self.dragging = True
                 return True
 
-        if event.type == MOUSEMOTION and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
+        if event.is_mouse_motion() and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
             pos = app.pointer_capture.clamp(app.input_state.pointer_pos)
             track = self._track_rect()
             if self.axis == LayoutAxis.HORIZONTAL:
@@ -113,12 +112,12 @@ class ScrollbarControl(UiNode):
             self._clamp_offset()
             return True
 
-        if event.type == MOUSEBUTTONUP and event.button == 1 and self.dragging:
+        if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
             app.pointer_capture.end(self.control_id)
             return True
 
-        if event.type == MOUSEWHEEL and self.rect.collidepoint(app.input_state.pointer_pos):
+        if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
             self.offset -= int(event.wheel_delta) * self.step
             self._clamp_offset()
             return True

@@ -2,7 +2,6 @@ from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
-from pygame.locals import MOUSEBUTTONDOWN
 
 from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
@@ -39,7 +38,7 @@ class ToggleControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+        if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self.pushed = not self.pushed
                 if self.on_toggle is not None:
