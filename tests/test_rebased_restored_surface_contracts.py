@@ -482,6 +482,36 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_active_window_consumes_escape_without_screen_fallback(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+
+            seen = {"window": 0, "screen": 0}
+
+            def window_handler(event) -> bool:
+                if event.is_key_down(pygame.K_ESCAPE):
+                    seen["window"] += 1
+                return False
+
+            win = root.add(WindowControl("win", Rect(20, 20, 180, 120), "A", event_handler=window_handler))
+            win.active = True
+
+            def screen_handler(event) -> bool:
+                if event.is_key_down(pygame.K_ESCAPE):
+                    seen["screen"] += 1
+                return True
+
+            app.set_screen_lifecycle(event_handler=screen_handler)
+            consumed = app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_ESCAPE}))
+
+            self.assertTrue(consumed)
+            self.assertEqual(seen["window"], 1)
+            self.assertEqual(seen["screen"], 0)
+        finally:
+            pygame.quit()
+
     def test_scene_schedulers_are_independent_and_inactive_scene_tasks_do_not_advance(self) -> None:
         pygame.init()
         try:

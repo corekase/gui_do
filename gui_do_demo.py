@@ -202,7 +202,14 @@ class GuiDoDemo:
 
     def _build_mandelbrot_window(self) -> None:
         mandel_rect = self.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.mandel_window = self.root.add(WindowControl("mandel_window", mandel_rect, "Mandelbrot"))
+        self.mandel_window = self.root.add(
+            WindowControl(
+                "mandel_window",
+                mandel_rect,
+                "Mandelbrot",
+                event_handler=self._mandel_window_event_handler,
+            )
+        )
         left = mandel_rect.left
         top = mandel_rect.top
         canvas_size = 580
@@ -352,6 +359,10 @@ class GuiDoDemo:
         self._zoom_life_view_about(center_local, new_size)
 
     def _life_window_event_handler(self, event) -> bool:
+        if event.is_key_down(pygame.K_ESCAPE):
+            self._exit_app()
+            return True
+
         if event.is_mouse_down(3) and event.collides(self.life_canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -400,6 +411,12 @@ class GuiDoDemo:
                 self._zoom_life_view_about(anchor_local, self.life_cell_size + (event.wheel_delta * 2))
                 return True
 
+        return False
+
+    def _mandel_window_event_handler(self, event) -> bool:
+        if event.is_key_down(pygame.K_ESCAPE):
+            self._exit_app()
+            return True
         return False
 
     def _life_window_postamble(self) -> None:
