@@ -9,6 +9,10 @@ from ..core.gui_event import EventType
 from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
 from ..core.keyboard_manager import KeyboardManager
+from ..core.focus_manager import FocusManager
+from ..core.action_manager import ActionManager
+from ..core.event_bus import EventBus
+from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
 from ..core.renderer import Renderer
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
@@ -28,6 +32,10 @@ class GuiApplication:
         self.event_manager = EventManager()
         self.pointer_capture = PointerCapture()
         self.keyboard = KeyboardManager()
+        self.focus = FocusManager()
+        self.actions = ActionManager()
+        self.events = EventBus()
+        self.invalidation = InvalidationTracker()
         default_theme = ColorTheme()
         default_factory = BuiltInGraphicsFactory(default_theme)
         default_theme.graphics_factory = default_factory
@@ -197,6 +205,7 @@ class GuiApplication:
         runtime = self._scenes[self._active_scene_name]
         runtime["scheduler"].update()
         runtime["scene"].update(dt_seconds)
+        self.invalidation.invalidate_all()
         if self._screen_postamble is not None:
             self._screen_postamble()
 
@@ -240,12 +249,20 @@ class GuiApplication:
 
         logical_event = self._logicalize_pointer_event(gui_event)
 
+        if logical_event.is_mouse_down(1):
+            self.focus.set_focus(self.scene.top_focus_target_at(logical_event.pos))
+
         if self.keyboard.is_key_event(logical_event):
+            self.invalidation.invalidate_all()
             return self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
 
         if self._screen_event_handler is not None and self._screen_event_handler(logical_event):
+            self.invalidation.invalidate_all()
             return True
-        return self.scene.dispatch(logical_event, self)
+        consumed = self.scene.dispatch(logical_event, self)
+        if consumed:
+            self.invalidation.invalidate_all()
+        return consumed
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
         self._screen_preamble = preamble

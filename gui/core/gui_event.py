@@ -23,6 +23,12 @@ class EventType(Enum):
     TASK = "task"
 
 
+class EventPhase(Enum):
+    CAPTURE = "capture"
+    TARGET = "target"
+    BUBBLE = "bubble"
+
+
 _PYGAME_KIND_MAP = {
     pygame.QUIT: EventType.QUIT,
     pygame.KEYDOWN: EventType.KEY_DOWN,
@@ -58,9 +64,22 @@ class GuiEvent:
     task_id: Optional[Hashable] = None
     error: Optional[str] = None
     source_event: Optional[object] = None
+    phase: EventPhase = EventPhase.TARGET
+    propagation_stopped: bool = False
+    default_prevented: bool = False
 
     def is_kind(self, *kinds: EventType) -> bool:
         return self.kind in kinds
+
+    def with_phase(self, phase: EventPhase) -> "GuiEvent":
+        self.phase = phase
+        return self
+
+    def stop_propagation(self) -> None:
+        self.propagation_stopped = True
+
+    def prevent_default(self) -> None:
+        self.default_prevented = True
 
     def is_key_down(self, key: Optional[int] = None) -> bool:
         if self.kind is not EventType.KEY_DOWN:

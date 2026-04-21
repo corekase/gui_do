@@ -5,6 +5,9 @@ class Renderer:
     """Renderer that draws one scene with one color theme."""
 
     def render(self, surface, scene, theme, app=None) -> None:
+        full_redraw = True
+        if app is not None and hasattr(app, "invalidation"):
+            full_redraw, _regions = app.invalidation.begin_frame()
         restored = False
         if app is not None:
             restored = bool(app.restore_pristine(surface=surface))
@@ -26,3 +29,5 @@ class Renderer:
         draw_x = int(anchor[0]) - int(hotspot[0])
         draw_y = int(anchor[1]) - int(hotspot[1])
         surface.blit(cursor_surface, (draw_x, draw_y))
+        if app is not None and hasattr(app, "invalidation"):
+            app.invalidation.end_frame()

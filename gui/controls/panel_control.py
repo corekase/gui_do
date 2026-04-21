@@ -105,7 +105,25 @@ class PanelControl(UiNode):
         """Attach one child control and return it."""
         child.parent = self
         self.children.append(child)
+        if hasattr(child, "on_mount"):
+            child.on_mount(self)
+        if hasattr(child, "invalidate"):
+            child.invalidate()
         return child
+
+    def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
+        if child not in self.children:
+            return False
+        self.children.remove(child)
+        child.parent = None
+        if hasattr(child, "on_unmount"):
+            child.on_unmount(self)
+        if dispose:
+            if hasattr(child, "dispose"):
+                child.dispose()
+        if hasattr(self, "invalidate"):
+            self.invalidate()
+        return True
 
     def update(self, dt_seconds: float) -> None:
         for child in self.children:

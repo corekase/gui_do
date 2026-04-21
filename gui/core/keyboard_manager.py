@@ -13,6 +13,10 @@ class KeyboardManager:
         return event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING)
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
+        if hasattr(app, "actions") and app.actions.trigger_from_event(event, app):
+            return True
+        if hasattr(app, "focus") and app.focus.route_key_event(event, app):
+            return True
         active_window = scene.active_window()
         if active_window is not None:
             # Focused windows own keyboard input; do not bubble key events to screen while focused.

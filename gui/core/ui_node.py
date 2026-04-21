@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from .gui_event import GuiEvent
+from .gui_event import EventPhase, GuiEvent
 
 if TYPE_CHECKING:
     import pygame
@@ -19,8 +19,14 @@ class UiNode:
         self.rect = Rect(rect)
         self.enabled = True
         self._visible = True
+        self._focused = False
         self.parent: Optional["UiNode"] = None
         self.children: list["UiNode"] = []
+        self.accessibility_role = "widget"
+        self.accessibility_label: Optional[str] = None
+        self.tab_index = -1
+        self._disposed = False
+        self._dirty = True
 
     @property
     def visible(self) -> bool:
@@ -35,6 +41,66 @@ class UiNode:
 
     def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
         """Hook for controls that need side effects when visibility changes."""
+        self.invalidate()
+
+    @property
+    def focused(self) -> bool:
+        return self._focused
+
+    def accepts_focus(self) -> bool:
+        return self.tab_index >= 0
+
+    def set_accessibility(self, *, role: str | None = None, label: str | None = None) -> None:
+        if role is not None:
+            self.accessibility_role = str(role)
+        if label is not None:
+            self.accessibility_label = str(label)
+
+    def set_tab_index(self, index: int) -> None:
+        self.tab_index = int(index)
+
+    def _set_focused(self, value: bool) -> None:
+        is_focused = bool(value)
+        if self._focused == is_focused:
+            return
+        self._focused = is_focused
+        self.on_focus_changed(is_focused)
+        self.invalidate()
+
+    def on_focus_changed(self, _is_focused: bool) -> None:
+        """Hook for controls that react to focus changes."""
+
+    def hit_test(self, pos) -> bool:
+        return isinstance(pos, tuple) and len(pos) == 2 and self.rect.collidepoint(pos)
+
+    def on_mount(self, _parent: "UiNode | None") -> None:
+        """Hook called when node is attached to a parent or scene."""
+
+    def on_unmount(self, _parent: "UiNode | None") -> None:
+        """Hook called when node is detached from a parent or scene."""
+
+    def dispose(self) -> None:
+        self._disposed = True
+        for child in list(self.children):
+            child.dispose()
+
+    @property
+    def disposed(self) -> bool:
+        return self._disposed
+
+    def invalidate(self) -> None:
+        self._dirty = True
+        if self.parent is not None:
+            self.parent.invalidate()
+
+    def clear_dirty(self) -> None:
+        self._dirty = False
+        for child in self.children:
+            child.clear_dirty()
+
+    @property
+    def dirty(self) -> bool:
+        return self._dirty
 
     def is_window(self) -> bool:
         return False
@@ -54,6 +120,21 @@ class UiNode:
     def handle_event(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
         """Handle one normalized GuiEvent and return whether consumed."""
         return False
+
+    def on_event_capture(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
+        """Capture-phase event hook."""
+        return False
+
+    def on_event_bubble(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
+        """Bubble-phase event hook."""
+        return False
+
+    def handle_routed_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        if event.phase is EventPhase.CAPTURE:
+            return bool(self.on_event_capture(event, app))
+        if event.phase is EventPhase.BUBBLE:
+            return bool(self.on_event_bubble(event, app))
+        return bool(self.handle_event(event, app))
 
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
         """Draw control onto target surface."""

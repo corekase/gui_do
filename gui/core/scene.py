@@ -1,7 +1,7 @@
 from typing import List
 from typing import TYPE_CHECKING
 
-from .gui_event import GuiEvent
+from .gui_event import EventPhase, GuiEvent
 from .ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -18,7 +18,23 @@ class Scene:
 
     def add(self, node: UiNode) -> UiNode:
         self.nodes.append(node)
+        node.parent = None
+        if hasattr(node, "on_mount"):
+            node.on_mount(None)
+        if hasattr(node, "invalidate"):
+            node.invalidate()
         return node
+
+    def remove(self, node: UiNode, *, dispose: bool = False) -> bool:
+        if node not in self.nodes:
+            return False
+        self.nodes.remove(node)
+        if hasattr(node, "on_unmount"):
+            node.on_unmount(None)
+        if dispose:
+            if hasattr(node, "dispose"):
+                node.dispose()
+        return True
 
     def update(self, dt_seconds: float) -> None:
         for node in self.nodes:
@@ -71,10 +87,43 @@ class Scene:
             if isinstance(pos, tuple) and len(pos) == 2:
                 if not self._point_in_task_panel(pos) and not self._point_in_window(pos):
                     self._clear_active_windows()
+        capture_event = event.with_phase(EventPhase.CAPTURE)
+        for node in self.nodes:
+            if node.visible and node.enabled and self._dispatch_node_event(node, capture_event, app):
+                return True
+            if capture_event.propagation_stopped:
+                return True
+
+        target_event = event.with_phase(EventPhase.TARGET)
         for node in reversed(self.nodes):
-            if node.visible and node.enabled and node.handle_event(event, app):
+            if node.visible and node.enabled and self._dispatch_node_event(node, target_event, app):
+                return True
+            if target_event.propagation_stopped:
+                return True
+
+        bubble_event = event.with_phase(EventPhase.BUBBLE)
+        for node in self.nodes:
+            if node.visible and node.enabled and self._dispatch_node_event(node, bubble_event, app):
+                return True
+            if bubble_event.propagation_stopped:
                 return True
         return False
+
+    @staticmethod
+    def _dispatch_node_event(node, event: GuiEvent, app: "GuiApplication") -> bool:
+        if hasattr(node, "handle_routed_event"):
+            return bool(node.handle_routed_event(event, app))
+        if event.phase is EventPhase.TARGET and hasattr(node, "handle_event"):
+            return bool(node.handle_event(event, app))
+        return False
+
+    def top_focus_target_at(self, pos) -> UiNode | None:
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return None
+        for node in reversed(self._walk_nodes()):
+            if node.visible and node.enabled and node.accepts_focus() and node.hit_test(pos):
+                return node
+        return None
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         for node in self.nodes:
