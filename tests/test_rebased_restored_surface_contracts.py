@@ -53,8 +53,8 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         manager.set_anchor_bounds(Rect(0, 0, 200, 100))
         self.assertEqual(manager.anchored((20, 10), anchor="top_left", margin=(2, 3), use_rect=True), Rect(2, 3, 20, 10))
         self.assertEqual(manager.anchored((20, 10), anchor="top_center", margin=(0, 4), use_rect=True), Rect(90, 4, 20, 10))
-        self.assertEqual(manager.linear_item(2), Rect(5, 19, 10, 11))
-        self.assertEqual(manager.next_linear_item(), Rect(5, 6, 10, 11))
+        self.assertEqual(manager.linear(2), Rect(5, 19, 10, 11))
+        self.assertEqual(manager.next_linear(), Rect(5, 6, 10, 11))
 
         node = SimpleNamespace(rect=Rect(0, 0, 1, 1))
         manager.place_gui_object(node, Rect(7, 8, 9, 10))

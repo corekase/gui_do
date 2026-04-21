@@ -55,10 +55,6 @@ class LayoutManager:
             return Rect(gx, gy, self._grid.width, self._grid.height)
         return (gx, gy)
 
-    def grid_item(self, x: int, y: int) -> Geometry:
-        """Compatibility alias for old API naming."""
-        return self.gridded(x, y)
-
     def set_linear_properties(
         self,
         anchor: Tuple[int, int],
@@ -86,18 +82,10 @@ class LayoutManager:
             return Rect(px, py, self._linear.width, self._linear.height)
         return (px, py)
 
-    def linear_item(self, index: int) -> Geometry:
-        """Compatibility alias for old API naming."""
-        return self.linear(index)
-
     def next_linear(self) -> Geometry:
         geo = self.linear(self._linear_cursor)
         self._linear_cursor += 1
         return geo
-
-    def next_linear_item(self) -> Geometry:
-        """Compatibility alias for old API naming."""
-        return self.next_linear()
 
     def reset_linear_cursor(self) -> None:
         self._linear_cursor = 0

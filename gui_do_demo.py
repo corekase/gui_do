@@ -1,24 +1,16 @@
 import math
-import time
-from random import randint
 from typing import Set, Tuple
 
 import pygame
 from pygame import Rect
 
 from gui import (
-    ArrowBoxControl,
     ButtonControl,
-    ButtonGroupControl,
     CanvasControl,
-    FrameControl,
     GuiApplication,
-    ImageControl,
     LabelControl,
     LayoutAxis,
-    LayoutManager,
     PanelControl,
-    ScrollbarControl,
     SliderControl,
     TaskPanelControl,
     ToggleControl,
@@ -61,9 +53,6 @@ class GuiDoDemo:
         self.life_scheduler = self.scene_scheduler
         self.mandel_scheduler = self.scene_scheduler
 
-        self.ticks = 0
-        self.arrow_hits = 0
-        self._last_brand_ms = pygame.time.get_ticks()
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0, 0]
         self.life_cell_size = 12
@@ -72,9 +61,6 @@ class GuiDoDemo:
         self.mandel_task_ids: Set[str] = set()
         self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
-        self.circles = []
-        self._last_panel_visible = True
-        self._frame_dt_seconds = 0.0
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
@@ -147,230 +133,10 @@ class GuiDoDemo:
         )
         self._tile_visible_windows()
 
-    def _set_title(self, label: LabelControl, size: int = 22) -> LabelControl:
-        label.title = True
-        label.text_size = size
-        return label
-
     def _set_text(self, label: LabelControl, size: int = 16) -> LabelControl:
         label.title = False
         label.text_size = size
         return label
-
-    def _build_shell(self) -> None:
-        self.bg_canvas = self.root.add(CanvasControl("bg_canvas", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), max_events=1))
-        self.bg_canvas.enabled = False
-        self.bg_canvas.canvas.fill((0, 0, 0, 0))
-
-        self._set_title(
-            self.root.add(LabelControl("header", Rect(28, 20, 900, 30), "gui_do built-in widget showcase (rebased OOP demo)")),
-            24,
-        )
-        self._set_text(
-            self.root.add(
-                LabelControl(
-                    "sub_header",
-                    Rect(28, 52, 1300, 22),
-                    "old demo behaviors: style showcase, life, mandelbrot, task panel, and window layering/drag",
-                )
-            ),
-            16,
-        )
-        self.gui_do_label = self._set_title(
-            self.root.add(LabelControl("gui_do_label", Rect(48, 76, 280, 56), "gui_do")),
-            54,
-        )
-        self.gui_do_pos_x = float(self.gui_do_label.rect.x)
-        self.gui_do_pos_y = float(self.gui_do_label.rect.y)
-        self.gui_do_speed = 250.0
-        self.gui_do_angle = math.radians(35.0)
-
-        for _ in range(64):
-            size = randint(6, 12)
-            self.circles.append(
-                {
-                    "x": float(randint(size, self.screen_rect.width - (size * 2))),
-                    "y": float(randint(size, self.screen_rect.height - (size * 2))),
-                    "dx": float(randint(-80, 80) or 40),
-                    "dy": float(randint(-80, 80) or -50),
-                    "size": size,
-                    "col": (0, 200, 200) if randint(0, 1) == 0 else (0, 150, 150),
-                }
-            )
-
-        self.root.add(ImageControl("realize", Rect(self.screen_rect.width - 156, 14, 140, 72), "data/images/realize.png", scale=True))
-
-        self.app.layout.set_grid_properties(anchor=(self.screen_rect.width - 760, 18), width=180, height=32, spacing=10)
-        self.circles_toggle = self.root.add(ToggleControl("circles_toggle", self.app.layout.gridded(0, 0), "Circles On", "Circles Off", pushed=True))
-        self.panel_toggle = self.root.add(ToggleControl("panel_toggle", self.app.layout.gridded(1, 0), "Panel On", "Panel Off", pushed=True))
-        self.clock_toggle = self.root.add(ToggleControl("clock_toggle", self.app.layout.gridded(2, 0), "Clock On", "Clock Off", pushed=True))
-        self.clock_label = self._set_text(
-            self.root.add(LabelControl("clock", Rect(self.screen_rect.width - 200, 26, 180, 20), "Clock: 0")),
-            16,
-        )
-
-        self.task_panel = self.app.add(
-            TaskPanelControl(
-                "task_panel",
-                Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
-                auto_hide=True,
-                hidden_peek_pixels=6,
-                animation_step_px=8,
-                dock_bottom=True,
-            )
-        )
-        self._set_text(
-            self.task_panel.add(LabelControl("task_label", Rect(16, self.screen_rect.height - 36, 110, 20), "Task panel")),
-            16,
-        )
-        self.status_label = self._set_text(
-            self.task_panel.add(LabelControl("task_status", Rect(130, self.screen_rect.height - 36, 640, 20), "Status: ready")),
-            16,
-        )
-
-        self.app.layout.set_linear_properties(
-            anchor=(590, self.screen_rect.height - 40),
-            item_width=120,
-            item_height=30,
-            spacing=10,
-            horizontal=True,
-        )
-        self.showcase_toggle = self.task_panel.add(
-            ToggleControl("show_showcase", self.app.layout.linear(0), "Showcase On", "Showcase Off", pushed=True, on_toggle=self._toggle_showcase)
-        )
-        self.life_toggle_window = self.task_panel.add(
-            ToggleControl("show_life", self.app.layout.linear(1), "Life On", "Life Off", pushed=False, on_toggle=self._toggle_life_window)
-        )
-        self.mandel_toggle_window = self.task_panel.add(
-            ToggleControl("show_mandel", self.app.layout.linear(2), "Mandel On", "Mandel Off", pushed=False, on_toggle=self._toggle_mandel_window)
-        )
-        self.tile_toggle = self.task_panel.add(
-            ToggleControl(
-                "tile_windows",
-                self.app.layout.linear(3),
-                "Tile On",
-                "Tile Off",
-                pushed=True,
-                on_toggle=self._on_tile_toggle,
-            )
-        )
-        self.task_panel.add(ButtonControl("tile_now", self.app.layout.linear(4), "Tile Now", self._tile_visible_windows))
-        self.task_panel.add(ButtonControl("run_worker", self.app.layout.linear(5), "Run Worker", self._run_worker))
-        self.task_panel.add(ButtonControl("exit", Rect(self.screen_rect.width - 132, self.screen_rect.height - 40, 120, 30), "Exit", self._exit_app))
-
-    def _build_widget_showcase_window(self) -> None:
-        showcase_rect = self.app.layout.anchored((910, 940), anchor="top_left", margin=(28, 92), use_rect=True)
-        self.showcase_window = self.root.add(WindowControl("showcase_window", showcase_rect, "Widget Showcase"))
-        left = showcase_rect.left
-        top = showcase_rect.top
-        showcase_layout = LayoutManager()
-
-        def abs_rect(offset_x: int, offset_y: int, width: int, height: int) -> Rect:
-            return Rect(left + offset_x, top + offset_y, width, height)
-
-        self._set_text(
-            self.showcase_window.add(
-                LabelControl(
-                    "show_help",
-                    abs_rect(18, 32, 820, 20),
-                    "Built-in-equivalent widgets: buttons, toggles, groups, sliders, scrollbars, arrows, canvas, image",
-                )
-            )
-        )
-
-        self.showcase_window.add(FrameControl("style_frame", abs_rect(18, 60, 820, 214), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("style_title", abs_rect(30, 68, 420, 22), "Styles (box/round/angle/radio/check)")), 18)
-
-        styles = ("box", "round", "angle", "radio", "check")
-        showcase_layout.set_linear_properties(anchor=(left + 30, top + 104), item_width=140, item_height=30, spacing=14, horizontal=True)
-        for idx, style in enumerate(styles):
-            self.showcase_window.add(ButtonControl(f"btn_{style}", showcase_layout.linear_item(idx), f"{style.title()} Btn", style=style))
-
-        showcase_layout.set_linear_properties(anchor=(left + 30, top + 142), item_width=140, item_height=30, spacing=14, horizontal=True)
-        for idx, style in enumerate(styles):
-            self.showcase_window.add(
-                ToggleControl(
-                    f"tog_{style}",
-                    showcase_layout.linear_item(idx),
-                    f"{style.title()} On",
-                    f"{style.title()} Off",
-                    pushed=False,
-                    style=style,
-                )
-            )
-
-        group_labels = ("Group A", "Group B", "Group C", "Group D", "Group E")
-        showcase_layout.set_linear_properties(anchor=(left + 30, top + 182), item_width=140, item_height=30, spacing=14, horizontal=True)
-        for idx, style in enumerate(styles):
-            self.showcase_window.add(
-                ButtonGroupControl(
-                    f"bg_{chr(ord('a') + idx)}",
-                    showcase_layout.linear_item(idx),
-                    "built_in_group",
-                    group_labels[idx],
-                    selected=(idx == 0),
-                    style=style,
-                )
-            )
-
-        self.showcase_window.add(FrameControl("axis_frame", abs_rect(18, 286, 820, 214), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("axis_title", abs_rect(30, 294, 400, 22), "Sliders and Scrollbars")), 18)
-
-        self.slider_h = self.showcase_window.add(
-            SliderControl("slider_h", abs_rect(30, 336, 420, 30), LayoutAxis.HORIZONTAL, 0.0, 100.0, 42.0)
-        )
-        self.slider_h_label = self._set_text(self.showcase_window.add(LabelControl("slider_h_label", abs_rect(460, 342, 150, 20), "H: 42.00")))
-
-        self.slider_v = self.showcase_window.add(
-            SliderControl("slider_v", abs_rect(612, 334, 30, 140), LayoutAxis.VERTICAL, 0.0, 10.0, 5.0)
-        )
-        self.slider_v_label = self._set_text(self.showcase_window.add(LabelControl("slider_v_label", abs_rect(648, 392, 170, 20), "V: 5.00")))
-
-        self.scroll_h = self.showcase_window.add(
-            ScrollbarControl(
-                "scroll_h",
-                abs_rect(30, 378, 420, 24),
-                LayoutAxis.HORIZONTAL,
-                content_size=3000,
-                viewport_size=640,
-                offset=320,
-                step=64,
-            )
-        )
-        self.scroll_h_label = self._set_text(self.showcase_window.add(LabelControl("scroll_h_label", abs_rect(460, 380, 170, 20), "SH: 320")))
-
-        self.scroll_v = self.showcase_window.add(
-            ScrollbarControl(
-                "scroll_v",
-                abs_rect(682, 334, 24, 140),
-                LayoutAxis.VERTICAL,
-                content_size=2200,
-                viewport_size=480,
-                offset=220,
-                step=48,
-            )
-        )
-        self.scroll_v_label = self._set_text(self.showcase_window.add(LabelControl("scroll_v_label", abs_rect(712, 392, 120, 20), "SV: 220")))
-
-        self.showcase_window.add(FrameControl("arrow_canvas_frame", abs_rect(18, 512, 820, 268), border_width=2))
-        self._set_title(self.showcase_window.add(LabelControl("arrow_title", abs_rect(30, 520, 300, 22), "Arrow Boxes and Canvas")), 18)
-
-        self.arrow_hits_label = self._set_text(self.showcase_window.add(LabelControl("arrow_hits", abs_rect(30, 554, 180, 20), "Arrow hits: 0")))
-        showcase_layout.set_linear_properties(anchor=(left + 30, top + 584), item_width=36, item_height=36, spacing=8, horizontal=True)
-        self.showcase_window.add(ArrowBoxControl("arrow_left", showcase_layout.linear_item(0), 180, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_right", showcase_layout.linear_item(1), 0, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_up", showcase_layout.linear_item(2), 270, on_activate=self._arrow_hit))
-        self.showcase_window.add(ArrowBoxControl("arrow_down", showcase_layout.linear_item(3), 90, on_activate=self._arrow_hit))
-
-        self.canvas_status_label = self._set_text(
-            self.showcase_window.add(LabelControl("canvas_status", abs_rect(228, 554, 590, 20), "Canvas: left click draws, right click clears"))
-        )
-        self.showcase_canvas = self.showcase_window.add(CanvasControl("showcase_canvas", abs_rect(228, 584, 594, 184), max_events=128))
-        self.showcase_canvas.canvas.fill((0, 72, 72))
-        self.showcase_canvas.set_overflow_mode("drop_oldest")
-        self.showcase_canvas.set_overflow_handler(self._on_showcase_canvas_overflow)
-
-        self.showcase_window.add(ImageControl("icon_img", abs_rect(30, 632, 150, 124), "data/images/realize.png", scale=True))
 
     def _build_life_window(self) -> None:
         life_rect = self.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
@@ -503,66 +269,11 @@ class GuiDoDemo:
         self.life_scheduler.set_message_dispatch_limit(256)
         self.mandel_scheduler.set_message_dispatch_limit(256)
 
-    def _on_clock_tick(self) -> None:
-        return None
-
-    def _update_brand_and_circles(self, dt_seconds: float) -> None:
-        self.bg_canvas.visible = self.circles_toggle.pushed
-        if self.circles_toggle.pushed:
-            self.bg_canvas.canvas.fill((0, 0, 0, 0))
-            for item in self.circles:
-                item["x"] += item["dx"] * dt_seconds
-                item["y"] += item["dy"] * dt_seconds
-                size = item["size"]
-                if item["x"] <= size or item["x"] >= self.screen_rect.width - (size + 1):
-                    item["dx"] *= -1.0
-                if item["y"] <= size or item["y"] >= self.screen_rect.height - (size + 1):
-                    item["dy"] *= -1.0
-                pygame.draw.circle(self.bg_canvas.canvas, item["col"], (int(item["x"]), int(item["y"])), size)
-
-        now_ms = pygame.time.get_ticks()
-        elapsed_ms = max(1, now_ms - self._last_brand_ms)
-        self._last_brand_ms = now_ms
-        delta = elapsed_ms / 1000.0
-
-        dx = math.cos(self.gui_do_angle) * self.gui_do_speed * delta
-        dy = math.sin(self.gui_do_angle) * self.gui_do_speed * delta
-        self.gui_do_pos_x += dx
-        self.gui_do_pos_y += dy
-
-        label_rect = self.gui_do_label.rect
-        max_x = self.screen_rect.width - label_rect.width - 16
-        min_x = 16
-        max_y = self.screen_rect.height - label_rect.height - 80
-        min_y = 76
-
-        if self.gui_do_pos_x <= min_x or self.gui_do_pos_x >= max_x:
-            self.gui_do_angle = math.pi - self.gui_do_angle
-            self.gui_do_pos_x = max(min_x, min(max_x, self.gui_do_pos_x))
-        if self.gui_do_pos_y <= min_y or self.gui_do_pos_y >= max_y:
-            self.gui_do_angle = -self.gui_do_angle
-            self.gui_do_pos_y = max(min_y, min(max_y, self.gui_do_pos_y))
-
-        self.gui_do_label.rect.topleft = (int(self.gui_do_pos_x), int(self.gui_do_pos_y))
-
-    def _toggle_showcase(self, pushed: bool) -> None:
-        self.showcase_window.visible = bool(pushed)
-        if pushed:
-            self._tile_visible_windows(newly_visible=[self.showcase_window])
-            self.status_label.text = "Status: showcase visible"
-        else:
-            self.status_label.text = "Status: showcase hidden"
-
     def _toggle_life_window(self, pushed: bool) -> None:
         self.life_window.visible = bool(pushed)
         if pushed:
             self._tile_visible_windows(newly_visible=[self.life_window])
         else:
-            self._tile_visible_windows()
-
-    def _on_tile_toggle(self, pushed: bool) -> None:
-        self.app.set_window_tiling_enabled(bool(pushed), relayout=True)
-        if pushed:
             self._tile_visible_windows()
 
     def _toggle_mandel_window(self, pushed: bool) -> None:
@@ -574,7 +285,7 @@ class GuiDoDemo:
 
     def _visible_windows_for_tiling(self):
         windows = []
-        for name in ("showcase_window", "life_window", "mandel_window"):
+        for name in ("life_window", "mandel_window"):
             window = getattr(self, name, None)
             if window is not None and window.visible:
                 windows.append(window)
@@ -587,32 +298,8 @@ class GuiDoDemo:
             newly_visible = self._visible_windows_for_tiling()
         self.app.tile_windows(newly_visible=newly_visible)
 
-    def _run_worker(self) -> None:
-        self.status_label.text = "Status: async worker started"
-
-        def worker_logic(task_id, params):
-            total = int(params.get("total", 18))
-            for step in range(1, total + 1):
-                time.sleep(0.05)
-                self.life_scheduler.send_message(task_id, {"step": step, "total": total})
-            return {"ok": True}
-
-        task_id = f"worker-{time.time_ns()}"
-
-        def on_worker(payload: dict) -> None:
-            self.status_label.text = f"Status: worker {payload['step']}/{payload['total']}"
-
-        self.life_scheduler.add_task(task_id, worker_logic, parameters={"total": 18}, message_method=on_worker)
-
     def _exit_app(self) -> None:
         self.app.running = False
-
-    def _arrow_hit(self) -> None:
-        self.arrow_hits += 1
-        self.arrow_hits_label.text = f"Arrow hits: {self.arrow_hits}"
-
-    def _on_showcase_canvas_overflow(self, dropped: int, queued: int) -> None:
-        self.canvas_status_label.text = f"Canvas overflow: dropped {dropped}, queued {queued}"
 
     def _life_reset(self) -> None:
         self.life_cells.clear()
@@ -944,29 +631,6 @@ class GuiDoDemo:
             self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
         self.mandel_status.text = "Mandelbrot: running 4M 4Tasks"
 
-    def _update_widget_showcase(self) -> None:
-        self.slider_h_label.text = f"H: {self.slider_h.value:.2f}"
-        self.slider_v_label.text = f"V: {self.slider_v.value:.2f}"
-        self.scroll_h_label.text = f"SH: {self.scroll_h.offset}"
-        self.scroll_v_label.text = f"SV: {self.scroll_v.offset}"
-
-        while True:
-            packet = self.showcase_canvas.read_event()
-            if packet is None:
-                break
-            if packet.pos is None:
-                continue
-            if packet.event_type == pygame.MOUSEBUTTONDOWN and packet.button == 1:
-                local_x = packet.pos[0] - self.showcase_canvas.rect.left
-                local_y = packet.pos[1] - self.showcase_canvas.rect.top
-                radius = randint(6, 18)
-                col = (randint(100, 255), randint(100, 255), randint(100, 255))
-                pygame.draw.circle(self.showcase_canvas.canvas, col, (local_x, local_y), radius)
-                self.canvas_status_label.text = f"Canvas: drew at ({local_x}, {local_y})"
-            elif packet.event_type == pygame.MOUSEBUTTONDOWN and packet.button == 3:
-                self.showcase_canvas.canvas.fill((0, 72, 72))
-                self.canvas_status_label.text = "Canvas: cleared"
-
     def _update_life(self) -> None:
         while True:
             packet = self.life_canvas.read_event()
@@ -1019,7 +683,6 @@ class GuiDoDemo:
             self.mandel_status.text = "Mandelbrot: complete"
 
     def _update(self, dt_seconds: float) -> None:
-        self._frame_dt_seconds = dt_seconds
         GuiApplication.update(self.app, dt_seconds)
 
     def _screen_preamble(self) -> None:
