@@ -1,4 +1,5 @@
 from typing import List, Optional
+import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
@@ -13,10 +14,29 @@ class WindowControl(UiNode):
         self.title = title
         self.titlebar_height = max(18, int(titlebar_height))
         self.children: List[UiNode] = []
-        self.active = False
+        self._active = False
         self.parent: Optional[UiNode] = None
         self._chrome = None
         self._chrome_size = (0, 0, "")
+        self._disabled_overlay = None
+        self._disabled_overlay_size = (0, 0)
+
+    @property
+    def active(self) -> bool:
+        return self._active
+
+    @active.setter
+    def active(self, value: bool) -> None:
+        is_active = bool(value)
+        if self._active == is_active:
+            return
+        if is_active:
+            parent = self.parent
+            set_active = getattr(parent, "_set_active_window", None) if parent is not None else None
+            if callable(set_active):
+                set_active(self)
+                return
+        self._active = is_active
 
     def title_bar_rect(self) -> Rect:
         return Rect(self.rect.left, self.rect.top, self.rect.width, self.titlebar_height)
@@ -30,6 +50,25 @@ class WindowControl(UiNode):
             return Rect(self.rect.right - lower_rect.width - 2, self.rect.top + 2, lower_rect.width, lower_rect.height)
         size = max(12, self.titlebar_height - 6)
         return Rect(self.rect.right - size - 4, self.rect.top + 3, size, size)
+
+    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
+        parent = self.parent
+        if parent is None:
+            return
+        visibility_changed = getattr(parent, "_on_window_visibility_changed", None)
+        if callable(visibility_changed):
+            visibility_changed(self, old_visible, new_visible)
+            return
+        if old_visible or not new_visible:
+            return
+        raise_window = getattr(parent, "_raise_window", None)
+        if callable(raise_window):
+            raise_window(self)
+            return
+        children = getattr(parent, "children", None)
+        if isinstance(children, list) and self in children:
+            children.remove(self)
+            children.append(self)
 
     def move_by(self, dx: int, dy: int) -> None:
         if dx == 0 and dy == 0:
@@ -78,6 +117,15 @@ class WindowControl(UiNode):
             surface.blit(title_bitmap, self.title_bar_rect().topleft)
             draw_rect(surface, theme.dark, self.rect, 2)
             surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)
+            if not self.enabled:
+                overlay_size = (self.rect.width, self.rect.height)
+                if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:
+                    self._disabled_overlay = factory.build_disabled_bitmap(self._chrome.title_bar_inactive)
+                    wash = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+                    wash.fill((50, 50, 50, 120))
+                    self._disabled_overlay = wash
+                    self._disabled_overlay_size = overlay_size
+                surface.blit(self._disabled_overlay, self.rect.topleft)
         for child in self.children:
             if child.visible:
                 child.draw(surface, theme)

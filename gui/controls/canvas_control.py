@@ -31,6 +31,7 @@ class CanvasControl(UiNode):
         self.on_overflow: Optional[Callable[[int, int], None]] = None
         self._dropped_events = 0
         self._visuals = None
+        self._visual_size = None
 
     def get_canvas_surface(self) -> Surface:
         return self.canvas
@@ -94,7 +95,16 @@ class CanvasControl(UiNode):
             draw_rect(surface, theme.medium, self.rect, 0)
             draw_rect(surface, theme.dark, self.rect, 2)
         else:
-            if self._visuals is None:
+            visual_size = (self.rect.width, self.rect.height)
+            if self._visuals is None or self._visual_size != visual_size:
                 self._visuals = factory.build_frame_visuals(self.rect)
-            surface.blit(self._visuals.idle, self.rect)
+                self._visual_size = visual_size
+            selected = factory.resolve_visual_state(
+                self._visuals,
+                visible=self.visible,
+                enabled=self.enabled,
+                armed=False,
+                hovered=False,
+            )
+            surface.blit(selected, self.rect)
         surface.blit(self.canvas, self.rect)

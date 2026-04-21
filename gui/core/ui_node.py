@@ -11,8 +11,22 @@ class UiNode:
         self.control_id = control_id
         self.rect = Rect(rect)
         self.enabled = True
-        self.visible = True
+        self._visible = True
         self.parent: Optional["UiNode"] = None
+
+    @property
+    def visible(self) -> bool:
+        return self._visible
+
+    @visible.setter
+    def visible(self, value: bool) -> None:
+        previous = self._visible
+        self._visible = bool(value)
+        if previous != self._visible:
+            self._on_visibility_changed(previous, self._visible)
+
+    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
+        """Hook for controls that need side effects when visibility changes."""
 
     def update(self, _dt_seconds: float) -> None:
         """Per-frame state update."""

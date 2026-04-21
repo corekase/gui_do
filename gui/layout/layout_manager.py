@@ -55,6 +55,10 @@ class LayoutManager:
             return Rect(gx, gy, self._grid.width, self._grid.height)
         return (gx, gy)
 
+    def grid_item(self, x: int, y: int) -> Geometry:
+        """Compatibility alias for old API naming."""
+        return self.gridded(x, y)
+
     def set_linear_properties(
         self,
         anchor: Tuple[int, int],
@@ -82,10 +86,18 @@ class LayoutManager:
             return Rect(px, py, self._linear.width, self._linear.height)
         return (px, py)
 
+    def linear_item(self, index: int) -> Geometry:
+        """Compatibility alias for old API naming."""
+        return self.linear(index)
+
     def next_linear(self) -> Geometry:
         geo = self.linear(self._linear_cursor)
         self._linear_cursor += 1
         return geo
+
+    def next_linear_item(self) -> Geometry:
+        """Compatibility alias for old API naming."""
+        return self.next_linear()
 
     def reset_linear_cursor(self) -> None:
         self._linear_cursor = 0
@@ -106,10 +118,18 @@ class LayoutManager:
         dx, dy = int(margin[0]), int(margin[1])
         if anchor == "top_left":
             rect.topleft = (bounds.left + dx, bounds.top + dy)
+        elif anchor == "top_center":
+            rect.midtop = (bounds.centerx + dx, bounds.top + dy)
         elif anchor == "top_right":
             rect.topright = (bounds.right - dx, bounds.top + dy)
+        elif anchor == "center_left":
+            rect.midleft = (bounds.left + dx, bounds.centery + dy)
+        elif anchor == "center_right":
+            rect.midright = (bounds.right - dx, bounds.centery + dy)
         elif anchor == "bottom_left":
             rect.bottomleft = (bounds.left + dx, bounds.bottom - dy)
+        elif anchor == "bottom_center":
+            rect.midbottom = (bounds.centerx + dx, bounds.bottom - dy)
         elif anchor == "bottom_right":
             rect.bottomright = (bounds.right - dx, bounds.bottom - dy)
         else:

@@ -31,9 +31,10 @@ from .controls.toggle_control import ToggleControl
 from .controls.window_control import WindowControl
 from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
+from .layout.window_tiling_manager import WindowTilingManager
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
-from .core.graphics_factory import LegacyGraphicsFactory
+from .graphics.legacy_factory import LegacyGraphicsFactory
 from .theme.color_theme import ColorTheme
 
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     "WindowControl",
     "LayoutAxis",
     "LayoutManager",
+    "WindowTilingManager",
     "TaskEvent",
     "TaskScheduler",
     "Timers",

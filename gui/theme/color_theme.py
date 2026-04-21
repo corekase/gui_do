@@ -5,19 +5,21 @@ from typing import Dict, Tuple
 
 import pygame
 
+from ..graphics.legacy_definitions import LEGACY_COLOURS
+
 
 class ColorTheme:
     """Classic gui_do-inspired palette, fonts, and text helper."""
 
     def __init__(self) -> None:
-        # Legacy-inspired teal palette.
-        self.light = (0, 200, 200)
-        self.medium = (0, 150, 150)
-        self.dark = (0, 100, 100)
-        self.background = (0, 60, 60)
-        self.highlight = (238, 230, 0)
-        self.text = (255, 255, 255)
-        self.shadow = (0, 0, 0)
+        # Literal palette from the legacy widget base.
+        self.light = LEGACY_COLOURS["light"]
+        self.medium = LEGACY_COLOURS["medium"]
+        self.dark = LEGACY_COLOURS["dark"]
+        self.background = LEGACY_COLOURS["background"]
+        self.highlight = LEGACY_COLOURS["highlight"]
+        self.text = LEGACY_COLOURS["text"]
+        self.shadow = LEGACY_COLOURS["none"]
 
         # Shared aliases used by controls.
         self.panel = self.medium

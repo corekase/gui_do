@@ -16,6 +16,7 @@ class PanelControl(UiNode):
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
+        self._visual_size = None
 
     def _is_window_like(self, child: UiNode) -> bool:
         return hasattr(child, "title_bar_rect") and hasattr(child, "lower_widget_rect") and hasattr(child, "move_by")
@@ -27,6 +28,19 @@ class PanelControl(UiNode):
                 windows.append(child)
         return windows
 
+    def _all_window_children(self) -> List[UiNode]:
+        windows: List[UiNode] = []
+        for child in self.children:
+            if self._is_window_like(child):
+                windows.append(child)
+        return windows
+
+    def _set_window_active_state(self, window: UiNode, is_active: bool) -> None:
+        if hasattr(window, "_active"):
+            window._active = bool(is_active)
+            return
+        window.active = bool(is_active)
+
     def _top_window_at(self, pos) -> Optional[UiNode]:
         for child in reversed(self.children):
             if child.visible and child.enabled and self._is_window_like(child) and child.rect.collidepoint(pos):
@@ -34,12 +48,40 @@ class PanelControl(UiNode):
         return None
 
     def _set_active_window(self, window: UiNode) -> None:
-        for candidate in self._window_children():
-            candidate.active = candidate is window
+        for candidate in self._all_window_children():
+            self._set_window_active_state(candidate, candidate is window)
 
     def _clear_active_windows(self) -> None:
-        for candidate in self._window_children():
-            candidate.active = False
+        for candidate in self._all_window_children():
+            self._set_window_active_state(candidate, False)
+
+    def _next_top_visible_window(self, excluding: Optional[UiNode] = None) -> Optional[UiNode]:
+        for child in reversed(self.children):
+            if child is excluding:
+                continue
+            if child.visible and child.enabled and self._is_window_like(child):
+                return child
+        return None
+
+    def _top_visible_window(self) -> Optional[UiNode]:
+        for child in reversed(self.children):
+            if child.visible and child.enabled and self._is_window_like(child):
+                return child
+        return None
+
+    def _on_window_visibility_changed(self, window: UiNode, old_visible: bool, new_visible: bool) -> None:
+        if old_visible == new_visible:
+            return
+        if new_visible:
+            self._raise_window(window)
+            self._set_active_window(window)
+            return
+        self._set_window_active_state(window, False)
+        next_window = self._next_top_visible_window(excluding=window)
+        if next_window is None:
+            self._clear_active_windows()
+            return
+        self._set_active_window(next_window)
 
     def _raise_window(self, window: UiNode) -> None:
         if window in self.children:
@@ -47,9 +89,14 @@ class PanelControl(UiNode):
             self.children.append(window)
 
     def _lower_window(self, window: UiNode) -> None:
-        if window in self.children:
-            self.children.remove(window)
-            self.children.insert(0, window)
+        if window not in self.children:
+            return
+        self.children.remove(window)
+        window_indices = [idx for idx, child in enumerate(self.children) if self._is_window_like(child)]
+        if not window_indices:
+            self.children.append(window)
+            return
+        self.children.insert(window_indices[0], window)
 
     def add(self, child: UiNode) -> UiNode:
         """Attach one child control and return it."""
@@ -89,13 +136,11 @@ class PanelControl(UiNode):
 
         if event_type == pygame.MOUSEBUTTONDOWN and button == 1 and isinstance(raw, tuple) and len(raw) == 2:
             window = self._top_window_at(raw)
-            if window is None:
-                self._clear_active_windows()
-            else:
+            if window is not None:
                 self._set_active_window(window)
                 if window.lower_widget_rect().collidepoint(raw):
                     self._lower_window(window)
-                    new_top = self._top_window_at(raw)
+                    new_top = self._top_visible_window()
                     if new_top is None:
                         self._clear_active_windows()
                     else:
@@ -119,9 +164,18 @@ class PanelControl(UiNode):
             draw_rect(surface, theme.medium, self.rect, 0)
             draw_rect(surface, theme.dark, self.rect, 2)
         else:
-            if self._visuals is None:
+            visual_size = (self.rect.width, self.rect.height)
+            if self._visuals is None or self._visual_size != visual_size:
                 self._visuals = factory.build_frame_visuals(self.rect)
-            surface.blit(self._visuals.idle, self.rect)
+                self._visual_size = visual_size
+            selected = factory.resolve_visual_state(
+                self._visuals,
+                visible=self.visible,
+                enabled=self.enabled,
+                armed=False,
+                hovered=False,
+            )
+            surface.blit(selected, self.rect)
         for child in self.children:
             if child.visible:
                 child.draw(surface, theme)

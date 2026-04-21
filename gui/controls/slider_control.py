@@ -121,8 +121,19 @@ class SliderControl(UiNode):
         if self._handle_visuals is None or self._handle_visuals_size != handle_size:
             self._handle_visuals = factory.build_frame_visuals(handle)
             self._handle_visuals_size = handle_size
-        surface.blit(self._track_visuals.idle, travel)
-        if self.dragging:
-            surface.blit(self._handle_visuals.armed, handle)
-        else:
-            surface.blit(self._handle_visuals.hover, handle)
+        track_selected = factory.resolve_visual_state(
+            self._track_visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=False,
+            hovered=False,
+        )
+        handle_selected = factory.resolve_visual_state(
+            self._handle_visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=self.dragging,
+            hovered=not self.dragging,
+        )
+        surface.blit(track_selected, travel)
+        surface.blit(handle_selected, handle)

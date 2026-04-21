@@ -19,8 +19,9 @@ class ButtonGroupControl(ToggleControl):
         group: str,
         text: str,
         selected: bool = False,
+        style: str = "box",
     ) -> None:
-        super().__init__(control_id, rect, text_on=text, text_off=text, pushed=selected, on_toggle=None)
+        super().__init__(control_id, rect, text_on=text, text_off=text, pushed=selected, on_toggle=None, style=style)
         self.group = group
         if selected:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id

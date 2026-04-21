@@ -29,6 +29,7 @@ class ToggleControl(UiNode):
         self.style = style
         self.hovered = False
         self._visuals = None
+        self._visual_key = None
 
     def handle_event(self, event, _app) -> bool:
         raw = getattr(event, "pos", None)
@@ -58,13 +59,15 @@ class ToggleControl(UiNode):
             surface.blit(text_bitmap, text_rect)
             return
 
-        if self._visuals is None:
+        visual_key = (self.style, self.text_on, self.text_off, self.rect.width, self.rect.height)
+        if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect)
-        if not self.enabled:
-            surface.blit(self._visuals.disabled, self.rect)
-        elif self.pushed:
-            surface.blit(self._visuals.armed, self.rect)
-        elif self.hovered:
-            surface.blit(self._visuals.hover, self.rect)
-        else:
-            surface.blit(self._visuals.idle, self.rect)
+            self._visual_key = visual_key
+        selected = factory.resolve_visual_state(
+            self._visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=self.pushed,
+            hovered=self.hovered,
+        )
+        surface.blit(selected, self.rect)

@@ -28,6 +28,7 @@ class ArrowBoxControl(UiNode):
         self._pressed = False
         self._timer_id = ("arrow_repeat", self.control_id)
         self._visuals = None
+        self._visual_key = None
 
     def _invoke(self) -> None:
         if self.on_activate is not None:
@@ -65,13 +66,16 @@ class ArrowBoxControl(UiNode):
                     points = [(cx + 6, cy - 4), (cx + 6, cy + 4), (cx - 6, cy)]
             polygon(surface, theme.text, points)
             return
-        if self._visuals is None:
+        visual_key = (self.rect.width, self.rect.height, int(self.direction) % 360)
+        if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.draw_arrow_visuals(self.rect, self.direction)
-        if not self.enabled:
-            surface.blit(self._visuals.disabled, self.rect)
-        elif self._pressed:
-            surface.blit(self._visuals.armed, self.rect)
-        elif self.rect.collidepoint(pygame.mouse.get_pos()):
-            surface.blit(self._visuals.hover, self.rect)
-        else:
-            surface.blit(self._visuals.idle, self.rect)
+            self._visual_key = visual_key
+        hovered = self.rect.collidepoint(pygame.mouse.get_pos())
+        selected = factory.resolve_visual_state(
+            self._visuals,
+            visible=self.visible,
+            enabled=self.enabled,
+            armed=self._pressed,
+            hovered=hovered,
+        )
+        surface.blit(selected, self.rect)

@@ -2,20 +2,25 @@ import time
 import unittest
 from types import SimpleNamespace
 
-from pygame import Rect
+import pygame
+from pygame import Rect, Surface
 
 from gui import (
     ArrowBoxControl,
+    ButtonControl,
     ButtonGroupControl,
     CanvasControl,
     FrameControl,
+    GuiApplication,
     LayoutManager,
+    PanelControl,
     TaskPanelControl,
     TaskScheduler,
     TaskEvent,
     Timers,
     ToggleControl,
     WindowControl,
+    WindowTilingManager,
 )
 
 
@@ -29,6 +34,7 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         self.assertIsNotNone(ArrowBoxControl)
         self.assertIsNotNone(ButtonGroupControl)
         self.assertIsNotNone(LayoutManager)
+        self.assertIsNotNone(WindowTilingManager)
         self.assertIsNotNone(Timers)
         self.assertIsNotNone(TaskScheduler)
         self.assertIsNotNone(TaskEvent)
@@ -45,10 +51,36 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
 
         manager.set_anchor_bounds(Rect(0, 0, 200, 100))
         self.assertEqual(manager.anchored((20, 10), anchor="top_left", margin=(2, 3), use_rect=True), Rect(2, 3, 20, 10))
+        self.assertEqual(manager.anchored((20, 10), anchor="top_center", margin=(0, 4), use_rect=True), Rect(90, 4, 20, 10))
+        self.assertEqual(manager.linear_item(2), Rect(5, 19, 10, 11))
+        self.assertEqual(manager.next_linear_item(), Rect(5, 6, 10, 11))
 
         node = SimpleNamespace(rect=Rect(0, 0, 1, 1))
         manager.place_gui_object(node, Rect(7, 8, 9, 10))
         self.assertEqual(node.rect, Rect(7, 8, 9, 10))
+
+    def test_window_tiling_api_tiles_non_overlapping_windows(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((900, 700)))
+            root = app.add(PanelControl("root", Rect(0, 0, 900, 700)))
+            w1 = root.add(WindowControl("w1", Rect(20, 20, 260, 200), "W1"))
+            w2 = root.add(WindowControl("w2", Rect(40, 40, 260, 200), "W2"))
+            w3 = root.add(WindowControl("w3", Rect(60, 60, 260, 200), "W3"))
+
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.configure_window_tiling(gap=12, padding=12, avoid_task_panel=False, center_on_failure=True, relayout=False)
+            app.tile_windows()
+
+            settings = app.read_window_tiling_settings()
+            self.assertTrue(settings["enabled"])
+            self.assertEqual(settings["gap"], 12)
+
+            self.assertFalse(w1.rect.colliderect(w2.rect))
+            self.assertFalse(w1.rect.colliderect(w3.rect))
+            self.assertFalse(w2.rect.colliderect(w3.rect))
+        finally:
+            pygame.quit()
 
     def test_timers_repeat_callbacks(self) -> None:
         timers = Timers()
@@ -97,6 +129,21 @@ class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
         for _ in range(10):
             panel.update(0.016)
         self.assertGreaterEqual(panel.rect.y, panel._hidden_y)
+
+    def test_button_arms_on_mouse_down_and_clicks_on_mouse_up(self) -> None:
+        fired = []
+        control = ButtonControl("b", Rect(10, 10, 80, 30), "B", on_click=lambda: fired.append(True))
+
+        down = SimpleNamespace(type=pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=1)
+        up = SimpleNamespace(type=pygame.MOUSEBUTTONUP, pos=(20, 20), button=1)
+
+        self.assertTrue(control.handle_event(down, None))
+        self.assertTrue(control.pressed)
+        self.assertEqual(fired, [])
+
+        self.assertTrue(control.handle_event(up, None))
+        self.assertFalse(control.pressed)
+        self.assertEqual(fired, [True])
 
 
 if __name__ == "__main__":

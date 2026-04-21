@@ -4,10 +4,11 @@ from ..core.input_state import InputState
 from ..core.pointer_capture import PointerCapture
 from ..core.scene import Scene
 from ..core.renderer import Renderer
-from ..core.graphics_factory import LegacyGraphicsFactory
+from ..graphics.legacy_factory import LegacyGraphicsFactory
 from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
+from ..layout.window_tiling_manager import WindowTilingManager
 from ..theme.color_theme import ColorTheme
 
 
@@ -23,6 +24,7 @@ class GuiApplication:
         self.scheduler = TaskScheduler()
         self.timers = Timers()
         self.layout = LayoutManager()
+        self.window_tiling = WindowTilingManager(self)
         self.theme = ColorTheme()
         self.graphics_factory = LegacyGraphicsFactory(self.theme)
         self.theme.graphics_factory = self.graphics_factory
@@ -55,3 +57,29 @@ class GuiApplication:
     def draw(self) -> None:
         """Render one frame."""
         self.renderer.render(self.surface, self.scene, self.theme)
+
+    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
+        self.window_tiling.set_enabled(enabled, relayout=relayout)
+
+    def configure_window_tiling(
+        self,
+        *,
+        gap=None,
+        padding=None,
+        avoid_task_panel=None,
+        center_on_failure=None,
+        relayout: bool = True,
+    ) -> None:
+        self.window_tiling.configure(
+            gap=gap,
+            padding=padding,
+            avoid_task_panel=avoid_task_panel,
+            center_on_failure=center_on_failure,
+            relayout=relayout,
+        )
+
+    def tile_windows(self, newly_visible=None) -> None:
+        self.window_tiling.arrange_windows(newly_visible=newly_visible)
+
+    def read_window_tiling_settings(self):
+        return self.window_tiling.read_settings()
