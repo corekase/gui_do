@@ -45,7 +45,18 @@ class TaskPanelControl(PanelControl):
         self._child_local_offsets[added] = (added.rect.x - self.rect.x, added.rect.y - self.rect.y)
         return added
 
+    def remove(self, child, *, dispose: bool = False) -> bool:
+        removed = super().remove(child, dispose=dispose)
+        if removed:
+            self._child_local_offsets.pop(child, None)
+        return removed
+
     def _sync_children_to_panel_position(self) -> None:
+        live_children = set(self.children)
+        for tracked_child in list(self._child_local_offsets):
+            if tracked_child not in live_children:
+                del self._child_local_offsets[tracked_child]
+
         for child in self.children:
             offset = self._child_local_offsets.get(child)
             if offset is None:
