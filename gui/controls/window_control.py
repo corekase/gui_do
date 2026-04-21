@@ -112,6 +112,9 @@ class WindowControl(UiNode):
         if self._active == is_active:
             return
         if is_active:
+            if not (self.visible and self.enabled):
+                self._active = False
+                return
             parent = self.parent
             if parent is not None:
                 parent._set_active_window(self)
