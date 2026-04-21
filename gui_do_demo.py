@@ -3,6 +3,7 @@ from typing import Set, Tuple
 
 import pygame
 from pygame import Rect
+from gui.core.presentation_model import ObservableValue, PresentationModel
 
 from gui import (
     ButtonControl,
@@ -17,6 +18,15 @@ from gui import (
     UiEngine,
     WindowControl,
 )
+class _MandelPresentationModel(PresentationModel):
+    """Presentation state for Mandelbrot controls and status text."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.status_text = ObservableValue("Mandelbrot: idle")
+
+    def set_status(self, text: str) -> None:
+        self.status_text.value = str(text)
 
 
 class GuiDoDemo:
@@ -61,6 +71,7 @@ class GuiDoDemo:
         self.mandel_task_ids: Set[str] = set()
         self.mandel_task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.max_iter = 96
+        self.mandel_model = _MandelPresentationModel()
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
@@ -261,7 +272,9 @@ class GuiDoDemo:
         )
 
         self.mandel_status = self._set_text(
-            self.mandel_window.add(LabelControl("mandel_status", Rect(left + 20, status_y, 590, 20), "Mandelbrot: idle"))
+            self.mandel_window.add(
+                LabelControl("mandel_status", Rect(left + 20, status_y, 590, 20), self.mandel_model.status_text.value)
+            )
         )
 
         self.canvas1.visible = False
@@ -277,7 +290,11 @@ class GuiDoDemo:
         self.mandel_scheduler.set_message_dispatch_limit(256)
         self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
+        self.mandel_model.bind(self.mandel_model.status_text, self._on_mandel_status_changed)
         self._configure_focus_and_accessibility()
+
+    def _on_mandel_status_changed(self, text: str) -> None:
+        self.mandel_status.text = text
 
     def _configure_focus_and_accessibility(self) -> None:
         focus_order = [
@@ -567,7 +584,7 @@ class GuiDoDemo:
         self.mandel_task_ids.clear()
         self._show_single_mandel_canvas()
         self._set_mandel_task_buttons_disabled(False)
-        self.mandel_status.text = "Mandelbrot: cleared"
+        self.mandel_model.set_status("Mandelbrot: cleared")
 
     def _mandel_iterative_task(self, task_id, params):
         width, height = params["size"]
@@ -632,7 +649,7 @@ class GuiDoDemo:
             message_method=self._make_mandel_progress_handler("iter"),
         )
         self.mandel_task_ids.add("iter")
-        self.mandel_status.text = "Mandelbrot: running iterative"
+        self.mandel_model.set_status("Mandelbrot: running iterative")
 
     def _launch_mandel_recursive(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -641,7 +658,7 @@ class GuiDoDemo:
         width, height = self.mandel_canvas.canvas.get_size()
         center, scale = self._mandel_viewport(width, height)
         self._queue_mandel_recursive_task("recu", Rect(0, 0, width, height), (width, height), center, scale)
-        self.mandel_status.text = "Mandelbrot: running recursive"
+        self.mandel_model.set_status("Mandelbrot: running recursive")
 
     def _launch_mandel_one_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -655,7 +672,7 @@ class GuiDoDemo:
         self._queue_mandel_recursive_task("2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
-        self.mandel_status.text = "Mandelbrot: running 1M 4Tasks"
+        self.mandel_model.set_status("Mandelbrot: running 1M 4Tasks")
 
     def _launch_mandel_four_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -665,7 +682,7 @@ class GuiDoDemo:
         center, scale = self._mandel_viewport(width, height)
         for task_id in ("can1", "can2", "can3", "can4"):
             self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
-        self.mandel_status.text = "Mandelbrot: running 4M 4Tasks"
+        self.mandel_model.set_status("Mandelbrot: running 4M 4Tasks")
 
     def _update_life(self) -> None:
         while True:
@@ -708,13 +725,13 @@ class GuiDoDemo:
         for event in failed:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
-                self.mandel_status.text = f"Mandelbrot failed: {event.error}"
+                self.mandel_model.set_status(f"Mandelbrot failed: {event.error}")
 
         busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
         self.mandel_scheduler.clear_events()
-        if not busy and self.mandel_status.text.startswith("Mandelbrot: running"):
-            self.mandel_status.text = "Mandelbrot: complete"
+        if not busy and self.mandel_model.status_text.value.startswith("Mandelbrot: running"):
+            self.mandel_model.set_status("Mandelbrot: complete")
 
     def _update(self, dt_seconds: float) -> None:
         GuiApplication.update(self.app, dt_seconds)
@@ -730,6 +747,7 @@ class GuiDoDemo:
 
     def run(self) -> None:
         UiEngine(self.app, target_fps=120).run()
+        self.mandel_model.dispose()
         pygame.quit()
 
 
