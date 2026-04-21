@@ -17,6 +17,7 @@ from demo_parts.mandel_events import MANDEL_STATUS_TOPIC
 from demo_parts.mandel_events import MandelStatusEvent
 from demo_parts import __all__ as demo_parts_all
 from demo_parts import MandelStatusEvent as PackageMandelStatusEvent
+from contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
 
 
 class MandelEventSchemaExportTests(unittest.TestCase):
@@ -67,23 +68,9 @@ class MandelEventSchemaExportTests(unittest.TestCase):
     def test_demo_parts_package_reexports_dataclass(self) -> None:
         self.assertIs(PackageMandelStatusEvent, MandelStatusEvent)
 
-    def test_demo_parts_all_contains_core_schema_names(self) -> None:
-        expected_names = {
-            "MANDEL_STATUS_TOPIC",
-            "MANDEL_STATUS_SCOPE",
-            "MANDEL_KIND_IDLE",
-            "MANDEL_KIND_CLEARED",
-            "MANDEL_KIND_RUNNING_ITERATIVE",
-            "MANDEL_KIND_RUNNING_RECURSIVE",
-            "MANDEL_KIND_RUNNING_ONE_SPLIT",
-            "MANDEL_KIND_RUNNING_FOUR_SPLIT",
-            "MANDEL_KIND_FAILED",
-            "MANDEL_KIND_COMPLETE",
-            "MANDEL_KIND_STATUS",
-            "MandelStatusEvent",
-        }
-
-        self.assertTrue(expected_names.issubset(set(demo_parts_all)))
+    def test_demo_parts_all_matches_expected_schema_surface_and_order(self) -> None:
+        self.assertEqual(tuple(demo_parts_all), DEMO_PARTS_EXPORT_ORDER)
+        self.assertEqual(set(demo_parts_all), set(DEMO_PARTS_EXPORT_ORDER))
 
     def test_demo_parts_all_has_no_duplicates(self) -> None:
         self.assertEqual(len(demo_parts_all), len(set(demo_parts_all)))

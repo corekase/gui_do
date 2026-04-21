@@ -2,15 +2,21 @@ import re
 import unittest
 from pathlib import Path
 
+from contract_docs_helpers import backticked_bullet_items
+from contract_docs_helpers import commands_from_fenced_section
 from contract_docs_helpers import readme_boundary_commands
 from contract_docs_helpers import section_body
+from contract_test_catalog import BOUNDARY_ASSET_PATHS
 from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
 from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
 from contract_test_catalog import BOUNDARY_RELATED_DOC_PATHS
 
 
 EXPECTED_BOUNDARY_ENFORCEMENT_TESTS = set(BOUNDARY_ENFORCEMENT_TEST_IDS)
+EXPECTED_BOUNDARY_ENFORCEMENT_TESTS_ORDER = tuple(BOUNDARY_ENFORCEMENT_TEST_IDS)
 EXPECTED_RELATED_DOCS = set(BOUNDARY_RELATED_DOC_PATHS)
+EXPECTED_RELATED_DOCS_ORDER = tuple(BOUNDARY_RELATED_DOC_PATHS)
+EXPECTED_BOUNDARY_ASSET_PATHS_ORDER = tuple(BOUNDARY_ASSET_PATHS)
 
 
 class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
@@ -28,17 +34,20 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
         text = self._read_boundary_spec()
         section = self._section_body(text, "## Enforcement")
 
-        documented_tests = {
-            match.group(1)
-            for match in re.finditer(r"^-\s+`([^`]+)`\s*$", section, flags=re.MULTILINE)
-            if "::" in match.group(1)
-        }
+        documented_tests = [
+            item
+            for item in backticked_bullet_items(section)
+            if "::" in item
+        ]
 
-        self.assertEqual(documented_tests, EXPECTED_BOUNDARY_ENFORCEMENT_TESTS)
+        self.assertEqual(tuple(documented_tests), EXPECTED_BOUNDARY_ENFORCEMENT_TESTS_ORDER)
+        self.assertEqual(set(documented_tests), EXPECTED_BOUNDARY_ENFORCEMENT_TESTS)
+        self.assertEqual(len(documented_tests), len(set(documented_tests)))
 
     def test_boundary_spec_lists_pytest_run_command(self) -> None:
         text = self._read_boundary_spec()
-        self.assertIn(BOUNDARY_PYTEST_COMMAND, text)
+        commands = commands_from_fenced_section(text, "## Enforcement", "architecture_boundary_spec.md", fence_language="bash")
+        self.assertEqual(commands, [BOUNDARY_PYTEST_COMMAND])
 
     def test_boundary_spec_pytest_command_is_listed_in_readme_boundary_commands(self) -> None:
         text = self._read_boundary_spec()
@@ -57,24 +66,28 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
         text = self._read_boundary_spec()
         section = self._section_body(text, "## Current Demo Boundary Assets")
         repo_root = self._repo_root()
-        documented_paths = {
+        documented_paths = [
             match.group(1)
             for match in re.finditer(r"`([^`]+\.py)`", section)
-        }
+        ]
 
-        self.assertIn("demo_parts/mandel_events.py", documented_paths)
+        self.assertEqual(tuple(documented_paths), EXPECTED_BOUNDARY_ASSET_PATHS_ORDER)
+        self.assertEqual(len(documented_paths), len(set(documented_paths)))
         for relative_path in documented_paths:
             self.assertTrue((repo_root / relative_path).exists(), f"documented path does not exist: {relative_path}")
 
     def test_related_documents_list_matches_expected(self) -> None:
         text = self._read_boundary_spec()
         section = self._section_body(text, "Related documents:")
-        documented_docs = {
-            match.group(1)
-            for match in re.finditer(r"^-\s+`([^`]+\.md)`\s*$", section, flags=re.MULTILINE)
-        }
+        documented_docs = [
+            item
+            for item in backticked_bullet_items(section)
+            if item.endswith(".md")
+        ]
 
-        self.assertEqual(documented_docs, EXPECTED_RELATED_DOCS)
+        self.assertEqual(tuple(documented_docs), EXPECTED_RELATED_DOCS_ORDER)
+        self.assertEqual(set(documented_docs), EXPECTED_RELATED_DOCS)
+        self.assertEqual(len(documented_docs), len(set(documented_docs)))
 
 
 if __name__ == "__main__":

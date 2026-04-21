@@ -3,10 +3,13 @@ import unittest
 from pathlib import Path
 
 import gui
+from contract_docs_helpers import backticked_bullet_items
+from contract_docs_helpers import section_body
 from contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 
 
-EXPECTED_PUBLIC_API_CONTRACT_TESTS = set(CONTRACT_TEST_FILE_PATHS)
+EXPECTED_PUBLIC_API_CONTRACT_TESTS = tuple(CONTRACT_TEST_FILE_PATHS)
+EXPECTED_PUBLIC_EXPORT_ORDER = tuple(gui.__all__)
 
 
 class PublicApiDocsContractsTests(unittest.TestCase):
@@ -16,35 +19,27 @@ class PublicApiDocsContractsTests(unittest.TestCase):
         return spec_path.read_text(encoding="utf-8")
 
     def _section_body(self, text: str, heading: str) -> str:
-        start_index = text.find(heading)
-        self.assertNotEqual(start_index, -1, f"public_api_spec.md missing '{heading}' section")
-        section = text[start_index + len(heading):]
-        next_heading = section.find("\n## ")
-        if next_heading != -1:
-            section = section[:next_heading]
-        return section
+        return section_body(text, heading, "public_api_spec.md")
 
     def test_public_api_spec_exports_match_gui_all(self) -> None:
         text = self._read_public_api_spec()
         section = self._section_body(text, "## Public Exports")
 
-        documented_exports = {
+        documented_exports = [
             match.group(1)
             for match in re.finditer(r"^-\s+`([A-Za-z_][A-Za-z0-9_]*)`\s*$", section, flags=re.MULTILINE)
-        }
+        ]
 
-        self.assertEqual(documented_exports, set(gui.__all__))
+        self.assertEqual(tuple(documented_exports), EXPECTED_PUBLIC_EXPORT_ORDER)
+        self.assertEqual(len(documented_exports), len(set(documented_exports)))
 
     def test_public_api_spec_enforced_tests_list_is_complete(self) -> None:
         text = self._read_public_api_spec()
         section = self._section_body(text, "Enforced contract tests:")
 
-        documented_tests = {
-            match.group(1)
-            for match in re.finditer(r"^-\s+`([^`]+)`\s*$", section, flags=re.MULTILINE)
-        }
+        documented_tests = backticked_bullet_items(section)
 
-        self.assertEqual(documented_tests, EXPECTED_PUBLIC_API_CONTRACT_TESTS)
+        self.assertEqual(tuple(documented_tests), EXPECTED_PUBLIC_API_CONTRACT_TESTS)
 
 
 if __name__ == "__main__":

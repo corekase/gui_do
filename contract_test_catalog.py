@@ -28,6 +28,10 @@ BOUNDARY_RELATED_DOC_PATHS = (
     "docs/event_system_spec.md",
 )
 
+BOUNDARY_ASSET_PATHS = (
+    "demo_parts/mandel_events.py",
+)
+
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
     "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts",
     "tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui",
@@ -35,3 +39,24 @@ BOUNDARY_ENFORCEMENT_TEST_IDS = (
 )
 
 BOUNDARY_PYTEST_COMMAND = "python -m pytest -q tests/test_boundary_contracts.py"
+
+BOUNDARY_COMMAND_SEQUENCE = (
+    CONTRACT_UNITTEST_COMMAND,
+    BOUNDARY_PYTEST_COMMAND,
+    CONTRACT_PYTEST_COMMAND,
+)
+
+DEMO_PARTS_EXPORT_ORDER = (
+    "MANDEL_STATUS_TOPIC",
+    "MANDEL_STATUS_SCOPE",
+    "MANDEL_KIND_IDLE",
+    "MANDEL_KIND_CLEARED",
+    "MANDEL_KIND_RUNNING_ITERATIVE",
+    "MANDEL_KIND_RUNNING_RECURSIVE",
+    "MANDEL_KIND_RUNNING_ONE_SPLIT",
+    "MANDEL_KIND_RUNNING_FOUR_SPLIT",
+    "MANDEL_KIND_FAILED",
+    "MANDEL_KIND_COMPLETE",
+    "MANDEL_KIND_STATUS",
+    "MandelStatusEvent",
+)

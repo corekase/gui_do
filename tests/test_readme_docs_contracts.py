@@ -2,19 +2,14 @@ import re
 import unittest
 from pathlib import Path
 
+from contract_docs_helpers import backticked_bullet_items
 from contract_docs_helpers import readme_boundary_commands
 from contract_docs_helpers import section_body
 from contract_test_catalog import ARCHITECTURE_DOC_PATHS
-from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
-from contract_test_catalog import CONTRACT_PYTEST_COMMAND
-from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
+from contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
 
 EXPECTED_ARCHITECTURE_DOCS = set(ARCHITECTURE_DOC_PATHS)
-EXPECTED_BOUNDARY_COMMANDS = [
-    CONTRACT_UNITTEST_COMMAND,
-    BOUNDARY_PYTEST_COMMAND,
-    CONTRACT_PYTEST_COMMAND,
-]
+EXPECTED_BOUNDARY_COMMANDS = list(BOUNDARY_COMMAND_SEQUENCE)
 
 
 class ReadmeDocsContractsTests(unittest.TestCase):
@@ -30,8 +25,9 @@ class ReadmeDocsContractsTests(unittest.TestCase):
     def test_architecture_docs_section_lists_expected_documents(self) -> None:
         section = self._section_body(self._read_readme(), "## Architecture Docs")
         documented = {
-            match.group(1)
-            for match in re.finditer(r"^-\s+`([^`]+\.md)`:", section, flags=re.MULTILINE)
+            item
+            for item in backticked_bullet_items(section)
+            if item.endswith(".md")
         }
 
         self.assertEqual(documented, EXPECTED_ARCHITECTURE_DOCS)
