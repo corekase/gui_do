@@ -143,6 +143,14 @@ class PanelControl(UiNode):
         if window in self.children:
             self.children.remove(window)
             self.children.append(window)
+        if window.visible and window.enabled:
+            self._set_active_window(window)
+            return
+        active_window = self._top_visible_window()
+        if active_window is None:
+            self._clear_active_windows()
+            return
+        self._set_active_window(active_window)
 
     def _lower_window(self, window: UiNode) -> None:
         if window not in self.children:
@@ -151,8 +159,14 @@ class PanelControl(UiNode):
         window_indices = [idx for idx, child in enumerate(self.children) if self._is_window_like(child)]
         if not window_indices:
             self.children.append(window)
+        else:
+            self.children.insert(window_indices[0], window)
+
+        active_window = self._top_visible_window()
+        if active_window is None:
+            self._clear_active_windows()
             return
-        self.children.insert(window_indices[0], window)
+        self._set_active_window(active_window)
 
     def add(self, child: UiNode) -> UiNode:
         """Attach one child control and return it."""
