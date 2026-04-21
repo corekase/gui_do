@@ -27,6 +27,8 @@ class WindowDragStateGuardsTests(unittest.TestCase):
         self.assertTrue(self.app.pointer_capture.is_owned_by("win"))
 
         win.visible = False
+        self.assertIsNone(self.root._drag_window)
+        self.assertIsNone(self.root._drag_last_pos)
         before = win.rect.topleft
         self.app.process_event(
             pygame.event.Event(
@@ -46,6 +48,8 @@ class WindowDragStateGuardsTests(unittest.TestCase):
         self.assertTrue(self.app.pointer_capture.is_owned_by("win"))
 
         win.enabled = False
+        self.assertIsNone(self.root._drag_window)
+        self.assertIsNone(self.root._drag_last_pos)
         before = win.rect.topleft
         self.app.process_event(
             pygame.event.Event(

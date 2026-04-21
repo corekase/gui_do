@@ -88,6 +88,10 @@ class PanelControl(UiNode):
                 else:
                     self._set_active_window(next_window)
             return
+        if self._drag_window is window:
+            self._pending_capture_release_owner_id = window.control_id
+            self._drag_window = None
+            self._drag_last_pos = None
         self._set_window_active_state(window, False)
         next_window = self._next_top_visible_window(excluding=window)
         if next_window is None:
@@ -99,10 +103,18 @@ class PanelControl(UiNode):
         if old_enabled == new_enabled:
             return
         if not window.visible:
+            if self._drag_window is window:
+                self._pending_capture_release_owner_id = window.control_id
+                self._drag_window = None
+                self._drag_last_pos = None
             self._set_window_active_state(window, False)
             return
         if not new_enabled:
             was_active = bool(getattr(window, "active", False))
+            if self._drag_window is window:
+                self._pending_capture_release_owner_id = window.control_id
+                self._drag_window = None
+                self._drag_last_pos = None
             self._set_window_active_state(window, False)
             if not was_active:
                 return
