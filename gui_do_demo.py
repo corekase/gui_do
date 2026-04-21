@@ -18,19 +18,19 @@ from demo_parts.mandel_events import (
 )
 
 from gui import (
+    GuiApplication,
+    UiEngine,
+    PanelControl,
+    LabelControl,
     ButtonControl,
     CanvasControl,
-    GuiApplication,
-    LabelControl,
-    LayoutAxis,
-    ObservableValue,
-    PanelControl,
-    PresentationModel,
     SliderControl,
     TaskPanelControl,
     ToggleControl,
-    UiEngine,
     WindowControl,
+    LayoutAxis,
+    ObservableValue,
+    PresentationModel,
 )
 
 class _MandelPresentationModel(PresentationModel):

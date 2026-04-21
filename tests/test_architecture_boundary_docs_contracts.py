@@ -6,6 +6,7 @@ from contract_docs_helpers import backticked_bullet_items
 from contract_docs_helpers import commands_from_fenced_section
 from contract_docs_helpers import readme_boundary_commands
 from contract_docs_helpers import section_body
+from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from contract_test_catalog import BOUNDARY_ASSET_PATHS
 from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
 from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
@@ -18,6 +19,7 @@ EXPECTED_BOUNDARY_ENFORCEMENT_TESTS_ORDER = tuple(BOUNDARY_ENFORCEMENT_TEST_IDS)
 EXPECTED_RELATED_DOCS = set(BOUNDARY_RELATED_DOC_PATHS)
 EXPECTED_RELATED_DOCS_ORDER = tuple(BOUNDARY_RELATED_DOC_PATHS)
 EXPECTED_BOUNDARY_ASSET_PATHS_ORDER = tuple(BOUNDARY_ASSET_PATHS)
+EXPECTED_ACTIVE_DEMO_ENTRYPOINTS_ORDER = tuple(ACTIVE_DEMO_ENTRYPOINTS)
 
 
 class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
@@ -59,9 +61,11 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
     def test_boundary_rule_mentions_active_demo_entrypoint_scope(self) -> None:
         text = self._read_boundary_spec()
         section = self._section_body(text, "## Boundary Rule")
+        normalized_section = section.replace("`", "")
 
         for phrase in BOUNDARY_RULE_REQUIRED_PHRASES:
-            self.assertIn(phrase, section)
+            normalized_phrase = phrase.replace("`", "")
+            self.assertIn(normalized_phrase, normalized_section)
 
     def test_current_demo_boundary_asset_paths_exist(self) -> None:
         text = self._read_boundary_spec()
@@ -73,6 +77,21 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
         ]
 
         self.assertEqual(tuple(documented_paths), EXPECTED_BOUNDARY_ASSET_PATHS_ORDER)
+        self.assertEqual(len(documented_paths), len(set(documented_paths)))
+        for relative_path in documented_paths:
+            self.assertTrue((repo_root / relative_path).exists(), f"documented path does not exist: {relative_path}")
+
+    def test_current_active_demo_entrypoints_match_expected(self) -> None:
+        text = self._read_boundary_spec()
+        section = self._section_body(text, "## Current Active Demo Entrypoints")
+        repo_root = self._repo_root()
+        documented_paths = [
+            item
+            for item in backticked_bullet_items(section)
+            if item.endswith(".py")
+        ]
+
+        self.assertEqual(tuple(documented_paths), EXPECTED_ACTIVE_DEMO_ENTRYPOINTS_ORDER)
         self.assertEqual(len(documented_paths), len(set(documented_paths)))
         for relative_path in documented_paths:
             self.assertTrue((repo_root / relative_path).exists(), f"documented path does not exist: {relative_path}")

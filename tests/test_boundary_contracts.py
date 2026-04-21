@@ -4,7 +4,9 @@ from pathlib import Path
 from unittest import mock
 
 from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
+from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from contract_test_catalog import PRE_REBASE_DEMO_PREFIX
+from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 
 class BoundaryContractsTests(unittest.TestCase):
@@ -113,12 +115,111 @@ class BoundaryContractsTests(unittest.TestCase):
             f"found submodule imports: {sorted(set(offenders))}",
         )
 
+    def test_demo_entrypoints_import_only_named_public_gui_exports(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        wildcard_offenders = []
+        non_public_offenders = []
+        canonical_public_exports = set(PUBLIC_API_EXPORT_ORDER)
+
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                    for alias in node.names:
+                        if alias.name == "*":
+                            wildcard_offenders.append(f"{demo_file.name}: from gui import *")
+                        elif alias.name not in canonical_public_exports:
+                            non_public_offenders.append(f"{demo_file.name}: {alias.name}")
+
+        self.assertEqual(
+            sorted(set(wildcard_offenders)),
+            [],
+            "demo entrypoints must not use wildcard imports from gui root; "
+            f"found wildcard imports: {sorted(set(wildcard_offenders))}",
+        )
+        self.assertEqual(
+            sorted(set(non_public_offenders)),
+            [],
+            "demo entrypoints must import only canonical public gui exports; "
+            f"found non-public imports: {sorted(set(non_public_offenders))}",
+        )
+
+    def test_demo_entrypoints_gui_root_import_names_follow_canonical_order(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        ordering_offenders = []
+        canonical_index = {name: idx for idx, name in enumerate(PUBLIC_API_EXPORT_ORDER)}
+
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                    imported_names = [alias.name for alias in node.names if alias.name != "*"]
+                    imported_indices = [canonical_index[name] for name in imported_names if name in canonical_index]
+                    if imported_indices != sorted(imported_indices):
+                        ordering_offenders.append(f"{demo_file.name}: {imported_names}")
+
+        self.assertEqual(
+            sorted(set(ordering_offenders)),
+            [],
+            "demo entrypoints should keep gui root imports in canonical public export order; "
+            f"found ordering violations: {sorted(set(ordering_offenders))}",
+        )
+
+    def test_demo_entrypoints_do_not_alias_gui_root_imports(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        alias_offenders = []
+
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                    for alias in node.names:
+                        if alias.asname is not None:
+                            alias_offenders.append(f"{demo_file.name}: {alias.name} as {alias.asname}")
+
+        self.assertEqual(
+            sorted(set(alias_offenders)),
+            [],
+            "demo entrypoints should import gui root names without aliases; "
+            f"found aliased imports: {sorted(set(alias_offenders))}",
+        )
+
+    def test_demo_entrypoints_use_single_gui_root_import_block(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        offenders = []
+
+        for demo_file in self._active_demo_entrypoints(root):
+            tree = self._parse_python_file(demo_file)
+            gui_root_import_count = sum(
+                1
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom) and node.module == "gui"
+            )
+            if gui_root_import_count != 1:
+                offenders.append(f"{demo_file.name}: gui root import blocks={gui_root_import_count}")
+
+        self.assertEqual(
+            sorted(set(offenders)),
+            [],
+            "active demo entrypoints should use a single from gui import (...) block; "
+            f"found violations: {sorted(set(offenders))}",
+        )
+
     def test_active_demo_entrypoints_exclude_pre_rebase_archives(self) -> None:
         root = Path(__file__).resolve().parents[1]
         entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]
 
         self.assertIn("gui_do_demo.py", entrypoint_names)
         self.assertFalse(any(name.startswith(PRE_REBASE_DEMO_PREFIX) for name in entrypoint_names))
+
+    def test_active_demo_entrypoints_match_expected_contract_set(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        entrypoint_names = tuple(path.name for path in self._active_demo_entrypoints(root))
+
+        self.assertEqual(entrypoint_names, ACTIVE_DEMO_ENTRYPOINTS)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from contract_docs_helpers import section_body
 from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
+from contract_test_catalog import README_PUBLIC_API_GUI_IMPORT_ORDER
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
@@ -30,7 +31,7 @@ class ReadmePublicApiContractsTests(unittest.TestCase):
         self.assertIn("from gui import (", section)
         self.assertNotIn("from gui.", section)
 
-    def test_public_api_section_includes_required_gui_imports(self) -> None:
+    def test_public_api_section_gui_import_block_matches_canonical_example(self) -> None:
         section = self._public_api_section()
 
         gui_import_block = re.search(r"from\s+gui\s+import\s*\((.*?)\)", section, flags=re.DOTALL)
@@ -48,12 +49,10 @@ class ReadmePublicApiContractsTests(unittest.TestCase):
         for name in imported_names:
             self.assertIn(name, canonical, f"README imports non-public gui symbol: {name}")
 
+        self.assertEqual(tuple(imported_names), README_PUBLIC_API_GUI_IMPORT_ORDER)
+
         for required_name in README_PUBLIC_API_REQUIRED_GUI_IMPORTS:
             self.assertIn(required_name, imported_names)
-
-        canonical_index = {name: idx for idx, name in enumerate(PUBLIC_API_EXPORT_ORDER)}
-        imported_indices = [canonical_index[name] for name in imported_names]
-        self.assertEqual(imported_indices, sorted(imported_indices))
 
     def test_public_api_section_includes_required_demo_import_lines(self) -> None:
         section = self._public_api_section()

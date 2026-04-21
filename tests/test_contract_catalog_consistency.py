@@ -3,6 +3,7 @@ from pathlib import Path
 
 from contract_test_catalog import ARCHITECTURE_DOC_PATHS
 from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
+from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from contract_test_catalog import BOUNDARY_ASSET_PATHS
 from contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
 from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
@@ -20,6 +21,8 @@ from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 from contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
 from contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
+from contract_test_catalog import README_PUBLIC_API_GUI_IMPORT_ORDER
+from contract_test_catalog import README_BOUNDARY_REQUIRED_PHRASES
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
 from contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
 
@@ -55,6 +58,7 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertTrue(BOUNDARY_ASSET_PATHS)
         self.assertTrue(BOUNDARY_WORKFLOW_STEP_NAME.strip())
         self.assertTrue(ACTIVE_DEMO_ENTRYPOINT_GLOB.strip())
+        self.assertTrue(ACTIVE_DEMO_ENTRYPOINTS)
         self.assertTrue(PRE_REBASE_DEMO_PREFIX.strip())
         self.assertTrue(BOUNDARY_RULE_REQUIRED_PHRASES)
         self.assertEqual(BOUNDARY_WORKFLOW_STEP_NAME, "Run boundary contract tests")
@@ -62,6 +66,7 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertEqual(len(BOUNDARY_ENFORCEMENT_TEST_IDS), len(set(BOUNDARY_ENFORCEMENT_TEST_IDS)))
         self.assertEqual(len(BOUNDARY_ASSET_PATHS), len(set(BOUNDARY_ASSET_PATHS)))
         self.assertEqual(len(BOUNDARY_RULE_REQUIRED_PHRASES), len(set(BOUNDARY_RULE_REQUIRED_PHRASES)))
+        self.assertEqual(len(ACTIVE_DEMO_ENTRYPOINTS), len(set(ACTIVE_DEMO_ENTRYPOINTS)))
         self.assertIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
         self.assertIn(f"{PRE_REBASE_DEMO_PREFIX}*_demo.py", BOUNDARY_RULE_REQUIRED_PHRASES)
 
@@ -73,6 +78,20 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
 
         for asset_path in BOUNDARY_ASSET_PATHS:
             self.assertTrue(asset_path.endswith(".py"))
+
+        for entrypoint in ACTIVE_DEMO_ENTRYPOINTS:
+            self.assertTrue(entrypoint.endswith("_demo.py"))
+            self.assertFalse(entrypoint.startswith(PRE_REBASE_DEMO_PREFIX))
+
+    def test_active_demo_entrypoints_match_glob_and_prefix_filters(self) -> None:
+        root = self._repo_root()
+        discovered = tuple(
+            path.name
+            for path in sorted(root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB), key=lambda path: path.name)
+            if not path.name.startswith(PRE_REBASE_DEMO_PREFIX)
+        )
+
+        self.assertEqual(discovered, ACTIVE_DEMO_ENTRYPOINTS)
 
     def test_boundary_command_sequence_matches_canonical_commands(self) -> None:
         self.assertEqual(
@@ -121,6 +140,7 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
     def test_readme_public_api_required_import_constants_are_well_formed(self) -> None:
         self.assertTrue(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)
         self.assertTrue(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
+        self.assertTrue(README_PUBLIC_API_GUI_IMPORT_ORDER)
         self.assertEqual(
             len(README_PUBLIC_API_REQUIRED_GUI_IMPORTS),
             len(set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)),
@@ -129,10 +149,21 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
             len(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
             len(set(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
         )
+        self.assertEqual(
+            len(README_PUBLIC_API_GUI_IMPORT_ORDER),
+            len(set(README_PUBLIC_API_GUI_IMPORT_ORDER)),
+        )
 
         canonical_public_exports = set(PUBLIC_API_EXPORT_ORDER)
         for required_export in README_PUBLIC_API_REQUIRED_GUI_IMPORTS:
             self.assertIn(required_export, canonical_public_exports)
+
+        for imported_export in README_PUBLIC_API_GUI_IMPORT_ORDER:
+            self.assertIn(imported_export, canonical_public_exports)
+
+        self.assertTrue(
+            set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS).issubset(set(README_PUBLIC_API_GUI_IMPORT_ORDER))
+        )
 
         for required_import_line in README_PUBLIC_API_REQUIRED_DEMO_IMPORTS:
             self.assertTrue(required_import_line.startswith("from demo_parts."))
@@ -145,6 +176,16 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         )
 
         for phrase in README_PUBLIC_API_REQUIRED_PHRASES:
+            self.assertTrue(phrase.strip())
+
+    def test_readme_boundary_required_phrases_constant_is_well_formed(self) -> None:
+        self.assertTrue(README_BOUNDARY_REQUIRED_PHRASES)
+        self.assertEqual(
+            len(README_BOUNDARY_REQUIRED_PHRASES),
+            len(set(README_BOUNDARY_REQUIRED_PHRASES)),
+        )
+
+        for phrase in README_BOUNDARY_REQUIRED_PHRASES:
             self.assertTrue(phrase.strip())
 
 

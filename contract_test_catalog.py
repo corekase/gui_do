@@ -35,10 +35,16 @@ BOUNDARY_ASSET_PATHS = (
 
 ACTIVE_DEMO_ENTRYPOINT_GLOB = "*_demo.py"
 PRE_REBASE_DEMO_PREFIX = "_pre_rebase"
+ACTIVE_DEMO_ENTRYPOINTS = (
+    "gui_do_demo.py",
+)
 
 BOUNDARY_RULE_REQUIRED_PHRASES = (
     ACTIVE_DEMO_ENTRYPOINT_GLOB,
     f"{PRE_REBASE_DEMO_PREFIX}*_demo.py",
+    "from gui import ...",
+    "without aliases",
+    "single from gui import (...) block",
 )
 
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
@@ -46,6 +52,11 @@ BOUNDARY_ENFORCEMENT_TEST_IDS = (
     "tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement",
+    "tests/test_boundary_contracts.py::test_demo_entrypoints_import_only_named_public_gui_exports",
+    "tests/test_boundary_contracts.py::test_demo_entrypoints_gui_root_import_names_follow_canonical_order",
+    "tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_alias_gui_root_imports",
+    "tests/test_boundary_contracts.py::test_demo_entrypoints_use_single_gui_root_import_block",
+    "tests/test_boundary_contracts.py::test_active_demo_entrypoints_match_expected_contract_set",
 )
 
 BOUNDARY_PYTEST_COMMAND = "python -m pytest -q tests/test_boundary_contracts.py"
@@ -124,10 +135,44 @@ README_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
     "ColorTheme",
 )
 
+README_PUBLIC_API_GUI_IMPORT_ORDER = (
+    "GuiApplication",
+    "UiEngine",
+    "PanelControl",
+    "LabelControl",
+    "ButtonControl",
+    "ArrowBoxControl",
+    "ButtonGroupControl",
+    "CanvasControl",
+    "FrameControl",
+    "ImageControl",
+    "SliderControl",
+    "ScrollbarControl",
+    "TaskPanelControl",
+    "ToggleControl",
+    "WindowControl",
+    "LayoutAxis",
+    "LayoutManager",
+    "TaskEvent",
+    "TaskScheduler",
+    "Timers",
+    "ColorTheme",
+)
+
 README_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
     "from demo_parts.mandel_events import MandelStatusEvent",
 )
 
 README_PUBLIC_API_REQUIRED_PHRASES = (
     "Demo-only contracts are intentionally outside gui package",
+)
+
+README_BOUNDARY_REQUIRED_PHRASES = (
+    "gui/",
+    "demo_parts/",
+    "*_demo.py",
+    "_pre_rebase*_demo.py",
+    "from gui import ...",
+    "without aliases",
+    "single from gui import (...) block",
 )

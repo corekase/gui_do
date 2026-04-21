@@ -89,7 +89,7 @@ from demo_parts.mandel_events import MandelStatusEvent
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
 - Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
-- Active demo entrypoints (`*_demo.py`) import framework symbols from `gui` package-root exports; archived `_pre_rebase*_demo.py` files are excluded from this contract.
+- Active demo entrypoints (`*_demo.py`) import framework symbols from `gui` package-root exports (`from gui import ...`) without aliases and with a single `from gui import (...)` block; archived `_pre_rebase*_demo.py` files are excluded from this contract.
 
 ## Architecture Docs
 
