@@ -2,16 +2,22 @@ import unittest
 from pathlib import Path
 
 from contract_test_catalog import ARCHITECTURE_DOC_PATHS
+from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
 from contract_test_catalog import BOUNDARY_ASSET_PATHS
 from contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
 from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
 from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
 from contract_test_catalog import BOUNDARY_RELATED_DOC_PATHS
+from contract_test_catalog import BOUNDARY_RULE_REQUIRED_PHRASES
+from contract_test_catalog import BOUNDARY_WORKFLOW_STEP_NAME
 from contract_test_catalog import CONTRACT_PYTEST_COMMAND
 from contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 from contract_test_catalog import CONTRACT_TEST_MODULES
 from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
 from contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
+from contract_test_catalog import PRE_REBASE_DEMO_PREFIX
+from contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
+from contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
 
 
 class ContractCatalogConsistencyTests(unittest.TestCase):
@@ -43,9 +49,17 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertTrue(BOUNDARY_ENFORCEMENT_TEST_IDS)
         self.assertTrue(BOUNDARY_RELATED_DOC_PATHS)
         self.assertTrue(BOUNDARY_ASSET_PATHS)
+        self.assertTrue(BOUNDARY_WORKFLOW_STEP_NAME.strip())
+        self.assertTrue(ACTIVE_DEMO_ENTRYPOINT_GLOB.strip())
+        self.assertTrue(PRE_REBASE_DEMO_PREFIX.strip())
+        self.assertTrue(BOUNDARY_RULE_REQUIRED_PHRASES)
+        self.assertEqual(BOUNDARY_WORKFLOW_STEP_NAME, "Run boundary contract tests")
         self.assertEqual(BOUNDARY_PYTEST_COMMAND, "python -m pytest -q tests/test_boundary_contracts.py")
         self.assertEqual(len(BOUNDARY_ENFORCEMENT_TEST_IDS), len(set(BOUNDARY_ENFORCEMENT_TEST_IDS)))
         self.assertEqual(len(BOUNDARY_ASSET_PATHS), len(set(BOUNDARY_ASSET_PATHS)))
+        self.assertEqual(len(BOUNDARY_RULE_REQUIRED_PHRASES), len(set(BOUNDARY_RULE_REQUIRED_PHRASES)))
+        self.assertIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
+        self.assertIn(f"{PRE_REBASE_DEMO_PREFIX}*_demo.py", BOUNDARY_RULE_REQUIRED_PHRASES)
 
         for test_id in BOUNDARY_ENFORCEMENT_TEST_IDS:
             self.assertIn("::", test_id)
@@ -80,6 +94,18 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
 
         for entry in DEMO_PARTS_EXPORT_ORDER[:-1]:
             self.assertTrue(entry.startswith("MANDEL_"))
+
+    def test_public_api_required_references_and_phrases_are_well_formed(self) -> None:
+        self.assertTrue(PUBLIC_API_REQUIRED_REFERENCES)
+        self.assertTrue(PUBLIC_API_REQUIRED_PHRASES)
+        self.assertEqual(len(PUBLIC_API_REQUIRED_REFERENCES), len(set(PUBLIC_API_REQUIRED_REFERENCES)))
+        self.assertEqual(len(PUBLIC_API_REQUIRED_PHRASES), len(set(PUBLIC_API_REQUIRED_PHRASES)))
+
+        for reference in PUBLIC_API_REQUIRED_REFERENCES:
+            self.assertTrue("/" in reference)
+
+        for phrase in PUBLIC_API_REQUIRED_PHRASES:
+            self.assertTrue(phrase.strip())
 
 
 if __name__ == "__main__":

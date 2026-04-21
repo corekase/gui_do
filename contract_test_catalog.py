@@ -32,6 +32,14 @@ BOUNDARY_ASSET_PATHS = (
     "demo_parts/mandel_events.py",
 )
 
+ACTIVE_DEMO_ENTRYPOINT_GLOB = "*_demo.py"
+PRE_REBASE_DEMO_PREFIX = "_pre_rebase"
+
+BOUNDARY_RULE_REQUIRED_PHRASES = (
+    ACTIVE_DEMO_ENTRYPOINT_GLOB,
+    f"{PRE_REBASE_DEMO_PREFIX}*_demo.py",
+)
+
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
     "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts",
     "tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui",
@@ -39,6 +47,7 @@ BOUNDARY_ENFORCEMENT_TEST_IDS = (
 )
 
 BOUNDARY_PYTEST_COMMAND = "python -m pytest -q tests/test_boundary_contracts.py"
+BOUNDARY_WORKFLOW_STEP_NAME = "Run boundary contract tests"
 
 BOUNDARY_COMMAND_SEQUENCE = (
     CONTRACT_UNITTEST_COMMAND,
@@ -59,4 +68,13 @@ DEMO_PARTS_EXPORT_ORDER = (
     "MANDEL_KIND_COMPLETE",
     "MANDEL_KIND_STATUS",
     "MandelStatusEvent",
+)
+
+PUBLIC_API_REQUIRED_REFERENCES = (
+    "docs/architecture_boundary_spec.md",
+    "demo_parts/mandel_events.py",
+)
+
+PUBLIC_API_REQUIRED_PHRASES = (
+    "demo_parts.__all__ export surface/order is treated as a locked contract",
 )

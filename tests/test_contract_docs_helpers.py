@@ -5,10 +5,23 @@ from contract_docs_helpers import commands_from_fenced_section
 from contract_docs_helpers import backticked_bullet_items
 from contract_docs_helpers import readme_boundary_commands
 from contract_docs_helpers import section_body
+from contract_docs_helpers import workflow_step_names
+from contract_docs_helpers import workflow_step_names_from_text
 from contract_docs_helpers import workflow_step_run_command
 from contract_docs_helpers import workflow_step_run_command_from_text
+from contract_test_catalog import BOUNDARY_WORKFLOW_STEP_NAME
 from contract_test_catalog import CONTRACT_PYTEST_COMMAND
 from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
+
+
+EXPECTED_HELPER_TEST_METHODS = (
+    "test_workflow_step_run_command_from_text_supports_single_line_run",
+    "test_workflow_step_run_command_from_text_supports_block_run",
+    "test_workflow_step_run_command_from_text_raises_for_empty_block",
+    "test_workflow_step_run_command_from_text_does_not_use_later_step_run",
+    "test_workflow_step_names_from_text_extracts_names_in_order",
+    "test_workflow_step_names_includes_canonical_boundary_step",
+)
 
 
 class ContractDocsHelpersTests(unittest.TestCase):
@@ -59,7 +72,7 @@ class ContractDocsHelpersTests(unittest.TestCase):
         self.assertIn(CONTRACT_PYTEST_COMMAND, commands)
 
     def test_workflow_step_run_command_matches_canonical_contract_unittest(self) -> None:
-        run_command = workflow_step_run_command(self._repo_root(), "Run boundary contract tests")
+        run_command = workflow_step_run_command(self._repo_root(), BOUNDARY_WORKFLOW_STEP_NAME)
 
         self.assertEqual(run_command, CONTRACT_UNITTEST_COMMAND)
 
@@ -67,8 +80,8 @@ class ContractDocsHelpersTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             workflow_step_run_command(self._repo_root(), "Missing Step")
 
-        def test_workflow_step_run_command_from_text_supports_single_line_run(self) -> None:
-                workflow_text = """
+    def test_workflow_step_run_command_from_text_supports_single_line_run(self) -> None:
+        workflow_text = """
 jobs:
     test:
         steps:
@@ -76,12 +89,12 @@ jobs:
                 run: python -m unittest tests.test_boundary_contracts -v
 """
 
-                run_command = workflow_step_run_command_from_text(workflow_text, "Example")
+        run_command = workflow_step_run_command_from_text(workflow_text, "Example")
 
-                self.assertEqual(run_command, "python -m unittest tests.test_boundary_contracts -v")
+        self.assertEqual(run_command, "python -m unittest tests.test_boundary_contracts -v")
 
-        def test_workflow_step_run_command_from_text_supports_block_run(self) -> None:
-                workflow_text = """
+    def test_workflow_step_run_command_from_text_supports_block_run(self) -> None:
+        workflow_text = """
 jobs:
     test:
         steps:
@@ -92,12 +105,12 @@ jobs:
                     python -m pytest -q tests/test_boundary_contracts.py
 """
 
-                run_command = workflow_step_run_command_from_text(workflow_text, "Example")
+        run_command = workflow_step_run_command_from_text(workflow_text, "Example")
 
-                self.assertEqual(run_command, "python -m unittest tests.test_boundary_contracts -v")
+        self.assertEqual(run_command, "python -m unittest tests.test_boundary_contracts -v")
 
-        def test_workflow_step_run_command_from_text_raises_for_empty_block(self) -> None:
-                workflow_text = """
+    def test_workflow_step_run_command_from_text_raises_for_empty_block(self) -> None:
+        workflow_text = """
 jobs:
     test:
         steps:
@@ -106,11 +119,11 @@ jobs:
                     # only comment
 """
 
-                with self.assertRaises(AssertionError):
-                        workflow_step_run_command_from_text(workflow_text, "Example")
+        with self.assertRaises(AssertionError):
+            workflow_step_run_command_from_text(workflow_text, "Example")
 
-        def test_workflow_step_run_command_from_text_does_not_use_later_step_run(self) -> None:
-                workflow_text = """
+    def test_workflow_step_run_command_from_text_does_not_use_later_step_run(self) -> None:
+        workflow_text = """
 jobs:
     test:
         steps:
@@ -119,8 +132,34 @@ jobs:
                 run: python -m unittest tests.test_boundary_contracts -v
 """
 
-                with self.assertRaises(AssertionError):
-                        workflow_step_run_command_from_text(workflow_text, "First")
+        with self.assertRaises(AssertionError):
+            workflow_step_run_command_from_text(workflow_text, "First")
+
+    def test_workflow_step_names_from_text_extracts_names_in_order(self) -> None:
+        workflow_text = """
+jobs:
+    test:
+        steps:
+            - name: Checkout
+                uses: actions/checkout@v4
+            - name: Run boundary contract tests
+                run: python -m unittest tests.test_boundary_contracts -v
+            - name: Coverage report
+                run: python -m coverage report -m
+"""
+
+        step_names = workflow_step_names_from_text(workflow_text)
+
+        self.assertEqual(step_names, ["Checkout", "Run boundary contract tests", "Coverage report"])
+
+    def test_workflow_step_names_includes_canonical_boundary_step(self) -> None:
+        step_names = workflow_step_names(self._repo_root())
+
+        self.assertIn(BOUNDARY_WORKFLOW_STEP_NAME, step_names)
+
+    def test_helper_guard_expected_methods_exist_as_class_methods(self) -> None:
+        for method_name in EXPECTED_HELPER_TEST_METHODS:
+            self.assertTrue(hasattr(ContractDocsHelpersTests, method_name), f"missing test method: {method_name}")
 
 
 if __name__ == "__main__":

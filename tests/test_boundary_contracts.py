@@ -3,6 +3,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
+from contract_test_catalog import PRE_REBASE_DEMO_PREFIX
+
 
 class BoundaryContractsTests(unittest.TestCase):
     def _parse_python_file(self, py_file: Path) -> ast.AST:
@@ -43,8 +46,8 @@ class BoundaryContractsTests(unittest.TestCase):
         return sorted(
             (
                 path
-                for path in root.glob("*_demo.py")
-                if not path.name.startswith("_pre_rebase")
+                for path in root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB)
+                if not path.name.startswith(PRE_REBASE_DEMO_PREFIX)
             ),
             key=lambda path: path.name,
         )
@@ -95,7 +98,7 @@ class BoundaryContractsTests(unittest.TestCase):
         entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]
 
         self.assertIn("gui_do_demo.py", entrypoint_names)
-        self.assertFalse(any(name.startswith("_pre_rebase") for name in entrypoint_names))
+        self.assertFalse(any(name.startswith(PRE_REBASE_DEMO_PREFIX) for name in entrypoint_names))
 
 
 if __name__ == "__main__":

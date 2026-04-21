@@ -5,6 +5,8 @@ from pathlib import Path
 import gui
 from contract_docs_helpers import backticked_bullet_items
 from contract_docs_helpers import section_body
+from contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
+from contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
 from contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 
 
@@ -40,6 +42,22 @@ class PublicApiDocsContractsTests(unittest.TestCase):
         documented_tests = backticked_bullet_items(section)
 
         self.assertEqual(tuple(documented_tests), EXPECTED_PUBLIC_API_CONTRACT_TESTS)
+
+    def test_demo_specific_modules_section_contains_required_references(self) -> None:
+        text = self._read_public_api_spec()
+        section = self._section_body(text, "## Demo-Specific Modules")
+
+        for reference in PUBLIC_API_REQUIRED_REFERENCES:
+            self.assertIn(reference, section)
+
+    def test_demo_specific_modules_section_contains_required_phrases(self) -> None:
+        text = self._read_public_api_spec()
+        section = self._section_body(text, "## Demo-Specific Modules")
+        normalized_section = section.replace("`", "")
+
+        for phrase in PUBLIC_API_REQUIRED_PHRASES:
+            normalized_phrase = phrase.replace("`", "")
+            self.assertIn(normalized_phrase, normalized_section)
 
 
 if __name__ == "__main__":

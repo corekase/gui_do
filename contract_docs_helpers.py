@@ -57,6 +57,18 @@ def workflow_step_run_command(repo_root: Path, step_name: str) -> str:
     return workflow_step_run_command_from_text(workflow_text, step_name)
 
 
+def workflow_step_names(repo_root: Path) -> list[str]:
+    workflow_text = (repo_root / ".github" / "workflows" / "unittest.yml").read_text(encoding="utf-8")
+    return workflow_step_names_from_text(workflow_text)
+
+
+def workflow_step_names_from_text(workflow_text: str) -> list[str]:
+    return [
+        match.group(1).strip()
+        for match in re.finditer(r"^\s*-\s*name:\s*(.+?)\s*$", workflow_text, flags=re.MULTILINE)
+    ]
+
+
 def workflow_step_run_command_from_text(workflow_text: str, step_name: str) -> str:
     target = f"- name: {step_name}"
     start = workflow_text.find(target)
@@ -64,8 +76,9 @@ def workflow_step_run_command_from_text(workflow_text: str, step_name: str) -> s
         raise AssertionError(f"workflow missing '{step_name}' step")
 
     section = workflow_text[start:]
-    next_step_index = section.find("\n      - name: ")
-    if next_step_index != -1:
+    next_step_match = re.search(r"\n\s*-\s*name:\s+", section[len(target):])
+    if next_step_match is not None:
+        next_step_index = len(target) + next_step_match.start()
         section = section[:next_step_index]
 
     run_marker = "run: "

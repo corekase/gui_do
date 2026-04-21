@@ -10,6 +10,7 @@ from contract_test_catalog import BOUNDARY_ASSET_PATHS
 from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
 from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
 from contract_test_catalog import BOUNDARY_RELATED_DOC_PATHS
+from contract_test_catalog import BOUNDARY_RULE_REQUIRED_PHRASES
 
 
 EXPECTED_BOUNDARY_ENFORCEMENT_TESTS = set(BOUNDARY_ENFORCEMENT_TEST_IDS)
@@ -59,8 +60,8 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
         text = self._read_boundary_spec()
         section = self._section_body(text, "## Boundary Rule")
 
-        self.assertIn("*_demo.py", section)
-        self.assertIn("_pre_rebase*_demo.py", section)
+        for phrase in BOUNDARY_RULE_REQUIRED_PHRASES:
+            self.assertIn(phrase, section)
 
     def test_current_demo_boundary_asset_paths_exist(self) -> None:
         text = self._read_boundary_spec()
