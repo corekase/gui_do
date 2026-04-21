@@ -78,7 +78,15 @@ class PanelControl(UiNode):
             return
         if new_visible:
             self._raise_window(window)
-            self._set_active_window(window)
+            if window.enabled:
+                self._set_active_window(window)
+            else:
+                self._set_window_active_state(window, False)
+                next_window = self._next_top_visible_window(excluding=window)
+                if next_window is None:
+                    self._clear_active_windows()
+                else:
+                    self._set_active_window(next_window)
             return
         self._set_window_active_state(window, False)
         next_window = self._next_top_visible_window(excluding=window)
