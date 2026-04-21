@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ITERATIVE, MandelStatusEvent
-from gui.core.event_bus import EventBus
+from gui import EventBus
 from gui_do_demo import _MandelPresentationModel
 from gui_do_demo import GuiDoDemo
 

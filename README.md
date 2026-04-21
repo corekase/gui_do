@@ -57,38 +57,44 @@ pip install pygame
 
 ```python
 from gui import (
-  ArrowBoxControl,
+    ArrowBoxControl,
     GuiApplication,
     UiEngine,
     PanelControl,
-  FrameControl,
-  ImageControl,
-  ToggleControl,
-  CanvasControl,
-  WindowControl,
-  TaskPanelControl,
-  ButtonGroupControl,
+    FrameControl,
+    ImageControl,
+    ToggleControl,
+    CanvasControl,
+    WindowControl,
+    TaskPanelControl,
+    ButtonGroupControl,
     LabelControl,
     ButtonControl,
     SliderControl,
     ScrollbarControl,
     LayoutAxis,
-  LayoutManager,
-  TaskScheduler,
-  TaskEvent,
-  Timers,
+    LayoutManager,
+    TaskScheduler,
+    TaskEvent,
+    Timers,
     ColorTheme,
 )
 
-  # Demo-only contracts are intentionally outside gui package:
-  from demo_parts.mandel_events import MandelStatusEvent
+# Demo-only contracts are intentionally outside gui package:
+from demo_parts.mandel_events import MandelStatusEvent
 ```
 
-  ## Demo/Package Boundary
+## Demo/Package Boundary
 
-  - `gui/` contains reusable framework/runtime functionality.
-  - `demo_parts/` contains demo-specific contracts and helpers.
-  - Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
+- `gui/` contains reusable framework/runtime functionality.
+- `demo_parts/` contains demo-specific contracts and helpers.
+- Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
+
+## Architecture Docs
+
+- `docs/public_api_spec.md`: supported exports and strict API contracts.
+- `docs/event_system_spec.md`: normalized event model and routing semantics.
+- `docs/architecture_boundary_spec.md`: package boundary rules and enforcement tests.
 
 ## Restored Functional Surface
 
@@ -122,6 +128,19 @@ python gui_do_demo.py
 
 ```bash
 python -m unittest tests.test_rebased_pointer_capture_contracts -v
+# Equivalent pytest invocation:
+python -m pytest -q tests/test_rebased_pointer_capture_contracts.py
+```
+
+## Run Boundary Contract Tests
+
+```bash
+# CI-equivalent unittest invocation:
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports -v
+
+# Equivalent pytest invocations:
+python -m pytest -q tests/test_boundary_contracts.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py
 ```
 
 ## Testing Policy (Rebased Only)

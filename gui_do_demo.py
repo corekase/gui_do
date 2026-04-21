@@ -16,7 +16,6 @@ from demo_parts.mandel_events import (
     MANDEL_STATUS_TOPIC,
     MandelStatusEvent,
 )
-from gui.core.presentation_model import ObservableValue, PresentationModel
 
 from gui import (
     ButtonControl,
@@ -24,7 +23,9 @@ from gui import (
     GuiApplication,
     LabelControl,
     LayoutAxis,
+    ObservableValue,
     PanelControl,
+    PresentationModel,
     SliderControl,
     TaskPanelControl,
     ToggleControl,
@@ -153,8 +154,8 @@ class GuiDoDemo:
             ToggleControl(
                 "show_mandel",
                 self.app.layout.linear(2),
-                "Mandlebrot",
-                "Mandlebrot",
+                "Mandelbrot",
+                "Mandelbrot",
                 pushed=True,
                 on_toggle=self._toggle_mandel_window,
                 style="round",

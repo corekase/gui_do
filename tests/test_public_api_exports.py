@@ -1,5 +1,7 @@
 import unittest
 
+import gui
+
 from gui import ActionManager
 from gui import EventBus
 from gui import EventPhase
@@ -26,6 +28,17 @@ class PublicApiExportsTests(unittest.TestCase):
         event.with_phase(EventPhase.CAPTURE)
 
         self.assertEqual(event.phase, EventPhase.CAPTURE)
+
+    def test_demo_specific_mandel_symbols_not_exported_from_gui(self) -> None:
+        self.assertFalse(hasattr(gui, "MANDEL_STATUS_TOPIC"))
+        self.assertFalse(hasattr(gui, "MandelStatusEvent"))
+
+    def test_public_all_excludes_demo_symbols(self) -> None:
+        exported = set(gui.__all__)
+
+        self.assertNotIn("MandelStatusEvent", exported)
+        self.assertFalse(any(name.startswith("MANDEL_") for name in exported))
+        self.assertFalse(any("mandel" in name.lower() for name in exported))
 
 
 if __name__ == "__main__":

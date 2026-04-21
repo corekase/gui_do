@@ -100,3 +100,12 @@ New APIs must preserve these strict-contract principles.
 Demo-only contracts are intentionally outside the `gui` package boundary.
 
 - Mandelbrot demo event schema is defined in `demo_parts/mandel_events.py`.
+- No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from `gui.__all__`.
+
+Boundary rules and enforcement details are specified in `docs/architecture_boundary_spec.md`.
+
+Enforced contract tests:
+
+- `tests/test_boundary_contracts.py`
+- `tests/test_public_api_exports.py`
+- `tests/test_mandel_event_schema_exports.py`
