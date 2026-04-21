@@ -31,6 +31,14 @@ class ButtonGroupControl(ToggleControl):
         if selected:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
 
+    def on_mount(self, _parent) -> None:
+        if self.pushed:
+            ButtonGroupControl._selection_by_group[self.group] = self.control_id
+
+    def on_unmount(self, _parent) -> None:
+        if ButtonGroupControl._selection_by_group.get(self.group) == self.control_id:
+            del ButtonGroupControl._selection_by_group[self.group]
+
     @property
     def button_id(self) -> str:
         return ButtonGroupControl._selection_by_group.get(self.group, self.control_id)
