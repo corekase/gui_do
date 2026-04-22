@@ -227,7 +227,7 @@ class LifeSimulationFeature(Part):
         self.set_life_zoom_label()
         toggle.pushed = False
 
-    def life_population(self, demo, cell: Tuple[int, int]) -> int:
+    def life_population(self, cell: Tuple[int, int]) -> int:
         count = 0
         for dx, dy in self.neighbours:
             if (cell[0] + dx, cell[1] + dy) in self.life_cells:
@@ -237,12 +237,12 @@ class LifeSimulationFeature(Part):
     def life_step(self, demo) -> None:
         new_life: Set[Tuple[int, int]] = set()
         for cell in self.life_cells:
-            pop = self.life_population(demo, cell)
+            pop = self.life_population(cell)
             if pop in (2, 3):
                 new_life.add(cell)
             for dx, dy in self.neighbours:
                 n_cell = (cell[0] + dx, cell[1] + dy)
-                if self.life_population(demo, n_cell) == 3:
+                if self.life_population(n_cell) == 3:
                     new_life.add(n_cell)
         self.life_cells = new_life
 

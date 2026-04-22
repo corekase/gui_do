@@ -4,22 +4,30 @@ from types import SimpleNamespace
 from demo_parts.life_demo_part import LifeSimulationFeature
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
-from gui import EventBus
-from gui_do_demo import _MandelPresentationModel
+from gui import EventBus, ObservableValue, PresentationModel
 from gui_do_demo import GuiDoDemo
 from shared.part_lifecycle import PartManager
 
 
+class _TestMandelPresentationModel(PresentationModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.status_text = ObservableValue("Mandelbrot: idle")
+
+    def set_status(self, text: str) -> None:
+        self.status_text.value = str(text)
+
+
 class GuiDoDemoPresentationModelTests(unittest.TestCase):
     def test_status_text_updates_via_set_status(self) -> None:
-        model = _MandelPresentationModel()
+        model = _TestMandelPresentationModel()
 
         model.set_status("Mandelbrot: running iterative")
 
         self.assertEqual(model.status_text.value, "Mandelbrot: running iterative")
 
     def test_observer_receives_status_updates_and_dispose_unsubscribes(self) -> None:
-        model = _MandelPresentationModel()
+        model = _TestMandelPresentationModel()
         seen = []
         model.bind(model.status_text, lambda text: seen.append(text))
 
@@ -31,7 +39,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_publish_mandel_event_uses_bus_when_ready(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo.app = SimpleNamespace(events=EventBus())
         demo._mandel_status_topic = "demo.mandel.status"
         demo._mandel_status_scope = "main"
@@ -48,7 +56,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_publish_mandel_event_falls_back_without_bus(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo._mandel_status_bus_ready = False
 
         demo._mandel_part().publish_event("status", "Mandelbrot: direct")
@@ -71,7 +79,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_publish_mandel_running_status_includes_task_count_and_mode(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo._mandel_status_bus_ready = False
 
         # Create and configure mandelbrot part
@@ -93,9 +101,35 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertEqual(published, [(MANDEL_KIND_STATUS, "Mandelbrot: running iterative (2 tasks)")])
 
+    def test_publish_mandel_running_status_dedupes_when_bus_is_ready(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+
+        publish_calls = []
+
+        class _EventsStub:
+            def publish(self, topic, payload, scope=None):
+                publish_calls.append((topic, payload, scope))
+
+        demo.app = SimpleNamespace(events=_EventsStub())
+        demo._mandel_status_bus_ready = True
+        demo._mandel_status_topic = "demo.mandel.status"
+        demo._mandel_status_scope = "main"
+
+        mandel_part = MandelbrotRenderFeature()
+        mandel_part.running_mode = "running iterative"
+        mandel_part.task_ids = {"iter", "aux"}
+        mandel_part.demo = demo
+        mandel_part.status_bus_ready = True
+        demo._mandel_feature = mandel_part
+
+        demo._mandel_part().publish_running_status()
+        demo._mandel_part().publish_running_status()
+
+        self.assertEqual(len(publish_calls), 1)
+
     def test_update_mandel_events_publishes_running_count_when_busy(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo._mandel_status_bus_ready = False
 
         # Create and configure mandelbrot part
@@ -133,7 +167,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_update_mandel_events_marks_complete_when_running_ends(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo.mandel_model.set_status("Mandelbrot: running iterative (1 task)")
 
         # Create and configure mandelbrot part
@@ -173,7 +207,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_update_mandel_events_aggregates_multiple_failures(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
 
         # Create and configure mandelbrot part
         mandel_part = MandelbrotRenderFeature()
@@ -214,7 +248,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_update_mandel_events_single_failure_includes_task_id(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
 
         # Create and configure mandelbrot part
         mandel_part = MandelbrotRenderFeature()
@@ -249,7 +283,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_update_mandel_events_failure_summary_is_deterministically_sorted(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
 
         # Create and configure mandelbrot part
         mandel_part = MandelbrotRenderFeature()
@@ -305,7 +339,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_update_mandel_events_applies_capped_failure_summary(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         mandel_part = MandelbrotRenderFeature()
         mandel_part.running_mode = "running 4M 4Tasks"
         mandel_part.failure_preview_limit = 2
@@ -397,7 +431,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_adjust_mandel_failure_preview_limit_publishes_status(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         mandel_part = MandelbrotRenderFeature()
         mandel_part.failure_preview_limit = 3
         mandel_part.demo = demo
@@ -413,7 +447,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_adjust_mandel_failure_preview_limit_reports_bound(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         mandel_part = MandelbrotRenderFeature()
         mandel_part.failure_preview_limit = 1
         mandel_part.demo = demo
@@ -429,7 +463,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
     def test_mandel_part_posts_status_message_to_life_part(self) -> None:
         demo = SimpleNamespace()
-        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model = _TestMandelPresentationModel()
         demo._last_mandel_status_sent = None
 
         life = LifeSimulationFeature()

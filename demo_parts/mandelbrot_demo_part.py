@@ -96,6 +96,8 @@ class MandelbrotRenderFeature(Part):
         self.status_topic = MANDEL_STATUS_TOPIC
         self.status_scope = MANDEL_STATUS_SCOPE
         self.status_bus_ready = False
+        self.status_subscription = None
+        self.last_status_sent = None
 
     def build(self, demo) -> None:
         ui = demo.app.read_part_ui_types()
@@ -111,7 +113,6 @@ class MandelbrotRenderFeature(Part):
         self.demo = demo  # Store demo reference
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
-        demo.mandel_scheduler = self.scheduler
         self.scheduler.set_message_dispatch_limit(256)
         self.status_topic = getattr(demo, "_mandel_status_topic", MANDEL_STATUS_TOPIC)
         self.status_scope = getattr(demo, "_mandel_status_scope", MANDEL_STATUS_SCOPE)
@@ -122,13 +123,21 @@ class MandelbrotRenderFeature(Part):
         if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "bind") and hasattr(demo.mandel_model, "status_text"):
             demo.mandel_model.bind(demo.mandel_model.status_text, lambda text: self.on_status_changed(demo, text))
         if hasattr(demo.app, "events") and hasattr(demo.app.events, "subscribe"):
-            demo._mandel_status_subscription = demo.app.events.subscribe(
+            self.status_subscription = demo.app.events.subscribe(
                 self.status_topic,
                 lambda payload: self.on_status_event(demo, payload),
                 scope=self.status_scope,
             )
             self.status_bus_ready = True
-            setattr(demo, "_mandel_status_bus_ready", True)
+
+    def shutdown_runtime(self, demo) -> None:
+        if self.status_subscription is not None and hasattr(demo.app, "events") and hasattr(demo.app.events, "unsubscribe"):
+            demo.app.events.unsubscribe(self.status_subscription)
+            self.status_subscription = None
+        self.status_bus_ready = False
+        model = getattr(demo, "mandel_model", None)
+        if model is not None and hasattr(model, "dispose"):
+            model.dispose()
 
     def _get_scheduler(self, demo):
         scheduler = self.scheduler
@@ -169,10 +178,9 @@ class MandelbrotRenderFeature(Part):
             status_text = str(model.status_text.value)
         else:
             status_text = str(self.status_text)
-        last_sent = getattr(demo, "_last_mandel_status_sent", None)
-        if status_text == last_sent:
+        if status_text == self.last_status_sent:
             return
-        demo._last_mandel_status_sent = status_text
+        self.last_status_sent = status_text
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
 
     def postamble(self, host) -> None:
@@ -366,13 +374,14 @@ class MandelbrotRenderFeature(Part):
             return
         event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
         payload = event.to_payload()
-        bus_ready = bool(getattr(demo, "_mandel_status_bus_ready", False) or self.status_bus_ready)
+        formatted_status = self.format_status(demo, event)
+        # Keep local status in sync before publishing so repeated frame checks do not
+        # republish identical running-status events while tasks are still busy.
+        self._set_status_text(demo, formatted_status)
+        bus_ready = bool(self.status_bus_ready or getattr(demo, "_mandel_status_bus_ready", False))
         if bus_ready and hasattr(demo.app, "events") and hasattr(demo.app.events, "publish"):
             demo.app.events.publish(self.status_topic, payload, scope=self.status_scope)
             return
-        # Fall back to direct model update
-        formatted_status = self.format_status(demo, event)
-        self._set_status_text(demo, formatted_status)
 
     def publish_running_status(self) -> None:
         demo = self.demo
@@ -691,7 +700,3 @@ class MandelbrotRenderFeature(Part):
         if not busy and current_status.startswith("Mandelbrot: running"):
             self.running_mode = None
             self.publish_event(MANDEL_KIND_COMPLETE)
-
-
-# Backward-compatible alias retained for in-flight refs/tests during migration.
-MandelbrotDemoPart = MandelbrotRenderFeature

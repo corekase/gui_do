@@ -1,10 +1,6 @@
-from typing import Set, Tuple
-
 import pygame
 from pygame import Rect
 from demo_parts.mandelbrot_demo_part import (
-    MANDEL_STATUS_SCOPE,
-    MANDEL_STATUS_TOPIC,
     MandelbrotRenderFeature,
 )
 from demo_parts.life_demo_part import LifeSimulationFeature
@@ -15,19 +11,7 @@ from gui import (
     ButtonControl,
     TaskPanelControl,
     ToggleControl,
-    ObservableValue,
-    PresentationModel,
 )
-
-class _MandelPresentationModel(PresentationModel):
-    """Presentation state for Mandelbrot controls and status text."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.status_text = ObservableValue("Mandelbrot: idle")
-
-    def set_status(self, text: str) -> None:
-        self.status_text.value = str(text)
 
 
 class GuiDoDemo:
@@ -50,11 +34,6 @@ class GuiDoDemo:
         self.app.switch_scene("main")
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
         self.app.set_window_tiling_enabled(True, relayout=False)
-        self.mandel_model = _MandelPresentationModel()
-        self._mandel_status_topic = MANDEL_STATUS_TOPIC
-        self._mandel_status_scope = MANDEL_STATUS_SCOPE
-        self._mandel_status_subscription = None
-        self._mandel_status_bus_ready = False
 
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
         self._life_feature = LifeSimulationFeature()
@@ -197,11 +176,7 @@ class GuiDoDemo:
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""
         self.app.run(target_fps=120)
-        if self._mandel_status_subscription is not None:
-            self.app.events.unsubscribe(self._mandel_status_subscription)
-            self._mandel_status_subscription = None
-        self._mandel_status_bus_ready = False
-        self.mandel_model.dispose()
+        self._mandel_part().shutdown_runtime(self)
         pygame.quit()
 
 
