@@ -100,6 +100,11 @@ pygame.quit()
    pip install pygame numpy
    ```
 
+For CI parity (includes coverage tooling used by GitHub Actions):
+```bash
+pip install -r requirements-ci.txt
+```
+
 ### Running Tests
 
 Run all tests:
