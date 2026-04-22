@@ -44,14 +44,24 @@ class ButtonGroupControl(ToggleControl):
         return ButtonGroupControl._selection_by_group.get(self.group, self.control_id)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        handled = super().handle_event(event, app)
-        if not handled or not self.pushed:
-            return handled
+        if not self.visible or not self.enabled:
+            self.hovered = False
+            return False
+
+        raw = event.pos
+        if isinstance(raw, tuple) and len(raw) == 2:
+            self.hovered = self.rect.collidepoint(raw)
+        if not event.is_mouse_down(1):
+            return False
+        if not (isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)):
+            return False
+
         previous = ButtonGroupControl._selection_by_group.get(self.group)
-        ButtonGroupControl._selection_by_group[self.group] = self.control_id
-        if previous == self.control_id:
+        if previous == self.control_id and self.pushed:
             return True
+
         self.pushed = True
+        ButtonGroupControl._selection_by_group[self.group] = self.control_id
         self._clear_peer_selection(app)
         return True
 
