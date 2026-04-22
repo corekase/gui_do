@@ -58,6 +58,15 @@ class SliderControlRuntimeTests(unittest.TestCase):
         self.assertFalse(consumed)
         self.assertEqual(slider.value, 50.0)
 
+    def test_keyboard_ignored_when_not_focused(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        slider.set_tab_index(0)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+        self.assertFalse(consumed)
+        self.assertEqual(slider.value, 50.0)
+
 
 if __name__ == "__main__":
     unittest.main()

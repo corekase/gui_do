@@ -100,6 +100,12 @@ class FocusManager:
             return False
 
         focused = self._focused_node
+        if focused is None:
+            # Keep focus unset for reverse traversal until focus is explicitly established.
+            if not forward:
+                return False
+            self.set_focus(candidates[0])
+            return True
         if focused not in candidates:
             next_index = 0 if forward else (len(candidates) - 1)
             self.set_focus(candidates[next_index])

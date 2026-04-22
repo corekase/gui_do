@@ -155,6 +155,16 @@ class SliderControl(UiNode):
             self.dragging = False
             return False
 
+        if not self.focused and (
+            event.is_key_down(pygame.K_HOME)
+            or event.is_key_down(pygame.K_END)
+            or event.is_key_down(pygame.K_LEFT)
+            or event.is_key_down(pygame.K_RIGHT)
+            or event.is_key_down(pygame.K_DOWN)
+            or event.is_key_down(pygame.K_UP)
+        ):
+            return False
+
         step = self._keyboard_step()
         if event.is_key_down(pygame.K_HOME):
             return self._set_value(self.minimum, reason=ValueChangeReason.KEYBOARD)

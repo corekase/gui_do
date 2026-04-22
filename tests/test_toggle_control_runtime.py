@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, ToggleControl
+from gui import GuiApplication, PanelControl, ToggleControl, WindowControl
 
 
 class ToggleControlRuntimeTests(unittest.TestCase):
@@ -45,6 +45,21 @@ class ToggleControlRuntimeTests(unittest.TestCase):
         self.assertFalse(consumed)
         self.assertFalse(toggle.pushed)
         self.assertEqual(states, [])
+
+    def test_space_ignored_when_no_focus_even_with_active_window(self) -> None:
+        states = []
+        win = self.root.add(WindowControl("w", Rect(10, 10, 220, 130), "Life"))
+        toggle = win.add(ToggleControl("life_toggle", Rect(20, 20, 100, 30), "Start", "Stop", pushed=False, on_toggle=lambda state: states.append(state)))
+        toggle.set_tab_index(0)
+        win.active = True
+
+        self.assertIsNone(self.app.focus.focused_node)
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
+
+        self.assertTrue(consumed)
+        self.assertFalse(toggle.pushed)
+        self.assertEqual(states, [])
+        self.assertIsNone(self.app.focus.focused_node)
 
 
 if __name__ == "__main__":

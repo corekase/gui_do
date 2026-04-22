@@ -42,6 +42,9 @@ class ButtonControl(UiNode):
             self.pressed = False
             return False
 
+        if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
+            return False
+
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
             self._invoke_click()
             return True

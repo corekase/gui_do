@@ -623,6 +623,15 @@ class GuiDoDemo:
     def _set_mandel_task_buttons_disabled(self, disabled: bool) -> None:
         for button in self.mandel_task_buttons:
             button.enabled = not disabled
+        if not disabled:
+            return
+        focused = self.app.focus.focused_node
+        if focused not in self.mandel_task_buttons:
+            return
+        if self.mandel_reset_button.visible and self.mandel_reset_button.enabled and self.mandel_reset_button.accepts_focus():
+            self.app.focus.set_focus(self.mandel_reset_button, show_hint=False)
+            return
+        self.app.focus.revalidate_focus(self.app.scene)
 
     def _show_single_mandel_canvas(self) -> None:
         self.mandel_canvas.visible = True

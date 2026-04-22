@@ -167,6 +167,18 @@ class ScrollbarControl(UiNode):
             self.dragging = False
             return False
 
+        if not self.focused and (
+            event.is_key_down(pygame.K_HOME)
+            or event.is_key_down(pygame.K_END)
+            or event.is_key_down(pygame.K_PAGEUP)
+            or event.is_key_down(pygame.K_PAGEDOWN)
+            or event.is_key_down(pygame.K_LEFT)
+            or event.is_key_down(pygame.K_RIGHT)
+            or event.is_key_down(pygame.K_UP)
+            or event.is_key_down(pygame.K_DOWN)
+        ):
+            return False
+
         if event.is_key_down(pygame.K_HOME):
             return self._set_offset(0, reason=ValueChangeReason.KEYBOARD)
         if event.is_key_down(pygame.K_END):

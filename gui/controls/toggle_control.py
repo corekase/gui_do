@@ -54,6 +54,8 @@ class ToggleControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
+        if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
+            return False
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
             self._commit_toggle()
             return True

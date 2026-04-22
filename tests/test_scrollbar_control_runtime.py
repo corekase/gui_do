@@ -95,6 +95,25 @@ class ScrollbarControlRuntimeTests(unittest.TestCase):
         self.assertFalse(consumed)
         self.assertEqual(bar.offset, 100)
 
+    def test_keyboard_ignored_when_not_focused(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+        self.assertFalse(consumed)
+        self.assertEqual(bar.offset, 100)
+
 
 if __name__ == "__main__":
     unittest.main()

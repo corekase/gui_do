@@ -32,6 +32,18 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_space)
         self.assertEqual(len(fired), 2)
 
+    def test_keyboard_activation_ignored_when_not_focused(self) -> None:
+        fired = []
+        control = self.root.add(ArrowBoxControl("arr", Rect(20, 20, 40, 30), 0, on_activate=lambda: fired.append(True), repeat_interval_seconds=0.05))
+        control.set_tab_index(0)
+
+        consumed_return = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        consumed_space = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
+
+        self.assertFalse(consumed_return)
+        self.assertFalse(consumed_space)
+        self.assertEqual(fired, [])
+
     def test_repeat_cancels_when_pointer_leaves_while_pressed(self) -> None:
         fired = []
         control = self.root.add(ArrowBoxControl("arr", Rect(20, 20, 40, 30), 0, on_activate=lambda: fired.append(True), repeat_interval_seconds=0.05))
