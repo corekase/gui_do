@@ -41,6 +41,32 @@ class Timers:
     def remove_timer(self, timer_id: Hashable) -> None:
         self._timers.pop(timer_id, None)
 
+    def timer_ids(self) -> list:
+        """Return a list of all currently registered timer ids (both repeating and one-shot)."""
+        return list(self._timers.keys())
+
+    def cancel_all(self) -> int:
+        """Cancel all registered timers and return the number that were removed."""
+        count = len(self._timers)
+        self._timers.clear()
+        return count
+
+    def reschedule(self, timer_id: Hashable, new_interval_seconds: float) -> bool:
+        """Change the interval of an existing repeating timer; return False if not found.
+
+        The elapsed accumulator is preserved so that partial progress toward the next
+        fire is not discarded.  One-shot timers may also be rescheduled — their
+        remaining delay is updated to *new_interval_seconds*.  Raises ``ValueError``
+        when *new_interval_seconds* is not > 0.
+        """
+        if new_interval_seconds <= 0:
+            raise ValueError("new_interval_seconds must be > 0")
+        timer = self._timers.get(timer_id)
+        if timer is None:
+            return False
+        timer.interval_seconds = float(new_interval_seconds)
+        return True
+
     def update(self, dt_seconds: float) -> None:
         if dt_seconds <= 0:
             return

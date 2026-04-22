@@ -107,6 +107,39 @@ class GuiEvent:
     def is_mouse_wheel(self) -> bool:
         return self.kind is EventType.MOUSE_WHEEL
 
+    def is_left_down(self) -> bool:
+        """Return True for a left-button press (equivalent to ``is_mouse_down(1)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 1
+
+    def is_left_up(self) -> bool:
+        """Return True for a left-button release (equivalent to ``is_mouse_up(1)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 1
+
+    def is_right_down(self) -> bool:
+        """Return True for a right-button press (equivalent to ``is_mouse_down(3)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 3
+
+    def is_right_up(self) -> bool:
+        """Return True for a right-button release (equivalent to ``is_mouse_up(3)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 3
+
+    def is_middle_down(self) -> bool:
+        """Return True for a middle-button press (equivalent to ``is_mouse_down(2)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 2
+
+    def is_middle_up(self) -> bool:
+        """Return True for a middle-button release (equivalent to ``is_mouse_up(2)``)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 2
+
+    def is_text_event(self) -> bool:
+        """Return True for text-input or text-editing events."""
+        return self.kind in (EventType.TEXT_INPUT, EventType.TEXT_EDITING)
+
+    def clone(self) -> "GuiEvent":
+        """Return a shallow copy of this event with an independent propagation state."""
+        import dataclasses
+        return dataclasses.replace(self)
+
     @property
     def wheel_delta(self) -> int:
         return int(self.wheel_y)
