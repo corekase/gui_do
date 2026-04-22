@@ -91,6 +91,18 @@ class ScrollbarControl(UiNode):
         """Adjust offset programmatically by a delta with clamp and callbacks."""
         return self._set_offset(self.offset + int(delta), reason=ValueChangeReason.PROGRAMMATIC)
 
+    @property
+    def scroll_fraction(self) -> float:
+        """Return the current scroll position as a normalized 0.0–1.0 fraction.
+
+        0.0 means scrolled to the beginning, 1.0 means scrolled to the end.
+        Returns 0.0 when content fits entirely within the viewport.
+        """
+        max_off = self._max_offset()
+        if max_off <= 0:
+            return 0.0
+        return min(max(self.offset / max_off, 0.0), 1.0)
+
     def _set_offset(self, new_offset: int, reason: ValueChangeReason = ValueChangeReason.PROGRAMMATIC) -> bool:
         old_offset = self.offset
         self.offset = int(new_offset)

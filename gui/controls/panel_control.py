@@ -191,6 +191,19 @@ class PanelControl(UiNode):
         """Return the number of direct children that are window-type nodes."""
         return sum(1 for c in self.children if self._is_window_like(c))
 
+    def clear_children(self, *, dispose: bool = False) -> int:
+        """Remove all direct children and return the count removed.
+
+        Calls ``remove()`` for each child so that window management hooks
+        (activation, drag-cancel) run correctly. Pass ``dispose=True`` to
+        also call ``dispose()`` on every removed child.
+        """
+        count = 0
+        for child in list(self.children):
+            if self.remove(child, dispose=dispose):
+                count += 1
+        return count
+
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
         if child not in self.children:
             return False

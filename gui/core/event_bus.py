@@ -52,3 +52,19 @@ class EventBus:
         for sub in list(self._subscribers.get(str(topic), ())):
             if sub.scope is None or sub.scope == scope:
                 sub.handler(payload)
+
+    def once(self, topic: str, handler: EventHandler, *, scope: str | None = None) -> Subscription:
+        """Subscribe to *topic* and automatically unsubscribe after the first delivery.
+
+        Returns the ``Subscription`` in case the caller wants to cancel it before
+        the first event fires.
+        """
+        sub_holder: list[Subscription] = []
+
+        def _one_shot_wrapper(payload: object) -> None:
+            self.unsubscribe(sub_holder[0])
+            handler(payload)
+
+        sub = self.subscribe(topic, _one_shot_wrapper, scope=scope)
+        sub_holder.append(sub)
+        return sub

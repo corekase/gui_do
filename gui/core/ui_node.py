@@ -88,6 +88,47 @@ class UiNode:
     def hit_test(self, pos) -> bool:
         return isinstance(pos, tuple) and len(pos) == 2 and self.rect.collidepoint(pos)
 
+    # --- Visibility / enabled helpers ---
+
+    def show(self) -> None:
+        """Make this node visible. Equivalent to ``node.visible = True``."""
+        self.visible = True
+
+    def hide(self) -> None:
+        """Make this node invisible. Equivalent to ``node.visible = False``."""
+        self.visible = False
+
+    def enable(self) -> None:
+        """Enable this node. Equivalent to ``node.enabled = True``."""
+        self.enabled = True
+
+    def disable(self) -> None:
+        """Disable this node. Equivalent to ``node.enabled = False``."""
+        self.enabled = False
+
+    # --- Geometry helpers ---
+
+    def set_pos(self, x: int, y: int) -> None:
+        """Move this node's top-left corner to (x, y) and invalidate."""
+        self.rect.x = int(x)
+        self.rect.y = int(y)
+        self.invalidate()
+
+    def move_to(self, x: int, y: int) -> None:
+        """Alias for ``set_pos(x, y)``."""
+        self.set_pos(x, y)
+
+    def resize(self, width: int, height: int) -> None:
+        """Resize this node to (width, height) without changing position, then invalidate."""
+        self.rect.width = int(width)
+        self.rect.height = int(height)
+        self.invalidate()
+
+    def set_rect(self, rect: "Rect") -> None:
+        """Replace this node's rect entirely and invalidate."""
+        self.rect = Rect(rect)
+        self.invalidate()
+
     # --- Tree traversal helpers ---
 
     def ancestors(self) -> "Generator[UiNode, None, None]":
@@ -118,6 +159,10 @@ class UiNode:
             queue.extend(candidate.children)
         return result
 
+    def find_descendants_of_type(self, node_type: type) -> "List[UiNode]":
+        """Return all descendants (BFS) that are instances of *node_type*."""
+        return self.find_descendants(lambda n: isinstance(n, node_type))
+
     def is_root(self) -> bool:
         """Return True when this node has no parent (is a scene root node)."""
         return self.parent is None
@@ -139,6 +184,21 @@ class UiNode:
             return self.parent.children.index(self)
         except ValueError:
             return 0
+
+    def siblings(self) -> "Generator[UiNode, None, None]":
+        """Yield all sibling nodes (nodes sharing the same parent, excluding self)."""
+        if self.parent is None:
+            return
+        for child in self.parent.children:
+            if child is not self:
+                yield child
+
+    def root(self) -> "UiNode":
+        """Return the root ancestor of this node (or self if already a root node)."""
+        current: UiNode = self
+        while current.parent is not None:
+            current = current.parent
+        return current
 
     # --- Lifecycle ---
 

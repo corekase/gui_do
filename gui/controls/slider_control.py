@@ -110,6 +110,22 @@ class SliderControl(UiNode):
         """Adjust value programmatically by a delta with clamp and callbacks."""
         return self._set_value(self.value + float(delta), reason=ValueChangeReason.PROGRAMMATIC)
 
+    @property
+    def normalized(self) -> float:
+        """Return the current value as a normalized 0.0–1.0 ratio within the slider range.
+
+        Returns 0.0 when minimum equals maximum.
+        """
+        span = self.maximum - self.minimum
+        if span <= 0:
+            return 0.0
+        return min(max((self.value - self.minimum) / span, 0.0), 1.0)
+
+    def set_normalized(self, ratio: float) -> bool:
+        """Set value from a normalized 0.0–1.0 ratio. Clamped to the valid range."""
+        clamped = min(max(float(ratio), 0.0), 1.0)
+        return self.set_value(self.minimum + clamped * (self.maximum - self.minimum))
+
     def _set_value(self, new_value: float, reason: ValueChangeReason = ValueChangeReason.PROGRAMMATIC) -> bool:
         old_value = self.value
         self.value = float(new_value)

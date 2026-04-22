@@ -462,3 +462,35 @@ class GuiApplication:
 
     def read_window_tiling_settings(self):
         return self.window_tiling.read_settings()
+
+    # --- Convenience helpers ---
+
+    def quit(self) -> None:
+        """Signal the engine to exit the run loop at the end of the current frame."""
+        self.running = False
+
+    def find(self, control_id: str, scene_name: Optional[str] = None):
+        """Find the first node with *control_id* in the active (or named) scene.
+
+        Shorthand for ``app.scene.find(control_id)``.
+        Returns the node, or ``None`` if not found.
+        """
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        return scene.find(control_id)
+
+    def find_all(self, predicate, scene_name: Optional[str] = None) -> list:
+        """Return all nodes in the active (or named) scene that satisfy *predicate*.
+
+        Shorthand for ``app.scene.find_all(predicate)``.
+        """
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        return scene.find_all(predicate)
+
+    def focus_on(self, control_id: str, scene_name: Optional[str] = None) -> bool:
+        """Focus the first focusable node with *control_id* in the active (or named) scene.
+
+        Shorthand for ``app.focus.set_focus_by_id(app.scene, control_id)``.
+        Returns ``True`` when a matching focusable node was found and focused.
+        """
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        return self.focus.set_focus_by_id(scene, control_id)

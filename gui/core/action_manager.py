@@ -100,3 +100,12 @@ class ActionManager:
                 if not names:
                     del self._keymap[binding]
         return removed
+
+    def register_and_bind(self, action_name: str, key: int, handler: ActionHandler, *, scene: str | None = None, window_only: bool = False) -> None:
+        """Register an action handler and bind a key to it in one call.
+
+        Equivalent to calling ``register_action(action_name, handler)`` followed by
+        ``bind_key(key, action_name, scene=scene, window_only=window_only)``.
+        """
+        self.register_action(action_name, handler)
+        self.bind_key(key, action_name, scene=scene, window_only=window_only)

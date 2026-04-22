@@ -175,6 +175,17 @@ class WindowControl(UiNode):
             self.invalidate()
         return True
 
+    def clear_children(self, *, dispose: bool = False) -> int:
+        """Remove all direct children and return the count removed.
+
+        Pass ``dispose=True`` to also call ``dispose()`` on every removed child.
+        """
+        count = 0
+        for child in list(self.children):
+            if self.remove(child, dispose=dispose):
+                count += 1
+        return count
+
     def update(self, dt_seconds: float) -> None:
         if self._preamble is not None:
             self._preamble()
