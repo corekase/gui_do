@@ -168,6 +168,10 @@ class GuiDoDemo:
         label.text_size = size
         return label
 
+    def _set_life_zoom_label(self) -> None:
+        zoom_level = max(2, int(round(self.life_cell_size)))
+        self.life_zoom_label.text = f"Zoom {zoom_level}"
+
     def _build_life_window(self) -> None:
         life_rect = self.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
         self.life_window = self.root.add(
@@ -224,7 +228,7 @@ class GuiDoDemo:
         )
         self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
         self.life_zoom_label = self._set_text(
-            self.life_window.add(LabelControl("life_zoom_label", Rect(zoom_label_x, controls_y + 6, zoom_label_width, 20), "Zoom"))
+            self.life_window.add(LabelControl("life_zoom_label", Rect(zoom_label_x, controls_y + 6, zoom_label_width, 20), "Zoom 12"))
         )
 
         self.life_origin = [self.life_canvas.rect.width // 2, self.life_canvas.rect.height // 2]
@@ -417,6 +421,7 @@ class GuiDoDemo:
         self.life_cell_size = 12
         self.life_zoom_slider.value = 5.0
         self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
+        self._set_life_zoom_label()
         self.life_toggle.pushed = False
 
     def _life_population(self, cell: Tuple[int, int]) -> int:
@@ -450,6 +455,7 @@ class GuiDoDemo:
         slider_value = max(0, min(11, (clamped_size // 2) - 1))
         self.life_zoom_slider.value = float(slider_value)
         self._life_zoom_slider_last_value = int(slider_value)
+        self._set_life_zoom_label()
 
     def _life_window_preamble(self) -> None:
         slider_value = max(0, min(11, int(round(self.life_zoom_slider.value))))

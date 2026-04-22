@@ -49,6 +49,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo.life_cell_size = 12
         demo._life_zoom_slider_last_value = 5
         demo.life_zoom_slider = SimpleNamespace(value=5.0)
+        demo.life_zoom_label = SimpleNamespace(text="Zoom 12")
         demo.life_canvas = _LifeCanvasStub([])
         demo.app = SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0)))
         demo.life_toggle = SimpleNamespace(pushed=False)
@@ -70,6 +71,15 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
 
         self.assertEqual(demo._life_zoom_slider_last_value, 6)
         self.assertEqual(demo.life_cell_size, 14)
+        self.assertEqual(demo.life_zoom_label.text, "Zoom 14")
+
+    def test_life_reset_sets_zoom_label_to_default(self) -> None:
+        demo = self._make_demo_stub()
+        demo.life_zoom_label.text = "Zoom 18"
+
+        demo._life_reset()
+
+        self.assertEqual(demo.life_zoom_label.text, "Zoom 12")
 
     def test_update_life_uses_local_packet_position_when_available(self) -> None:
         demo = self._make_demo_stub()
