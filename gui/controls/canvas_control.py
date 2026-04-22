@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 class CanvasEventPacket:
     kind: EventType
     pos: Optional[tuple] = None
+    local_pos: Optional[tuple] = None
     rel: Optional[tuple] = None
     button: Optional[int] = None
     wheel_delta: Optional[int] = None
@@ -44,6 +45,7 @@ class CanvasControl(UiNode):
         super().__init__(control_id, rect)
         self.canvas = Surface(self.rect.size).convert_alpha()
         self.canvas.fill((0, 0, 0, 0))
+        self._canvas_size = self.rect.size
         self._events: Deque[CanvasEventPacket] = deque(maxlen=max(1, int(max_events)))
         self.coalesce_motion_events = True
         self.overflow_mode = "drop_oldest"
@@ -76,17 +78,32 @@ class CanvasControl(UiNode):
             return None
         return self._events.popleft()
 
+    def _ensure_canvas_size(self) -> None:
+        target_size = self.rect.size
+        if self._canvas_size == target_size:
+            return
+        resized = Surface(target_size).convert_alpha()
+        resized.fill((0, 0, 0, 0))
+        resized.blit(self.canvas, (0, 0))
+        self.canvas = resized
+        self._canvas_size = target_size
+
     def handle_event(self, event: GuiEvent, _app) -> bool:
         if not self.visible or not self.enabled:
             return False
+
+        self._ensure_canvas_size()
 
         raw = event.pos
         if not (isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw)):
             return False
 
+        local = (int(raw[0]) - int(self.rect.left), int(raw[1]) - int(self.rect.top))
+
         packet = CanvasEventPacket(
             kind=event.kind,
             pos=raw,
+            local_pos=local,
             rel=event.rel,
             button=event.button,
             wheel_delta=event.wheel_delta,
@@ -112,6 +129,7 @@ class CanvasControl(UiNode):
         return event.is_mouse_down() or event.is_mouse_up() or event.is_mouse_motion() or event.is_mouse_wheel()
 
     def draw(self, surface: Surface, theme: "ColorTheme") -> None:
+        self._ensure_canvas_size()
         factory = theme.graphics_factory
         visual_size = (self.rect.width, self.rect.height)
         if self._visuals is None or self._visual_size != visual_size:
