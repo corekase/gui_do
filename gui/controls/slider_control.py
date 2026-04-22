@@ -1,6 +1,7 @@
 import pygame
+from typing import Callable, Optional, TYPE_CHECKING
+
 from pygame import Rect
-from typing import TYPE_CHECKING
 
 from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
@@ -23,12 +24,14 @@ class SliderControl(UiNode):
         minimum: float,
         maximum: float,
         value: float,
+        on_change: Optional[Callable[[float], None]] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
         self.minimum = float(minimum)
         self.maximum = float(maximum)
         self.value = float(value)
+        self.on_change = on_change
         self.dragging = False
         self.handle_size = 16
         self._drag_anchor_offset = 0
@@ -75,8 +78,16 @@ class SliderControl(UiNode):
         return max(1.0, abs(span) * 0.05)
 
     def _nudge(self, delta: float) -> None:
-        self.value += float(delta)
+        self._set_value(self.value + float(delta))
+
+    def _set_value(self, new_value: float) -> bool:
+        old_value = self.value
+        self.value = float(new_value)
         self._clamp_value()
+        changed = self.value != old_value
+        if changed and self.on_change is not None:
+            self.on_change(self.value)
+        return changed
 
     def handle_rect(self) -> Rect:
         self._normalize_range()
@@ -100,13 +111,9 @@ class SliderControl(UiNode):
 
         step = self._keyboard_step()
         if event.is_key_down(pygame.K_HOME):
-            self.value = self.minimum
-            self._clamp_value()
-            return True
+            return self._set_value(self.minimum)
         if event.is_key_down(pygame.K_END):
-            self.value = self.maximum
-            self._clamp_value()
-            return True
+            return self._set_value(self.maximum)
         if self.axis == LayoutAxis.HORIZONTAL:
             if event.is_key_down(pygame.K_LEFT):
                 self._nudge(-step)
@@ -140,9 +147,7 @@ class SliderControl(UiNode):
                 axis_pixel = pos[0] - self._drag_anchor_offset + (self.handle_size // 2)
             else:
                 axis_pixel = pos[1] - self._drag_anchor_offset + (self.handle_size // 2)
-            self.value = self._to_value(axis_pixel)
-            self._clamp_value()
-            return True
+            return self._set_value(self._to_value(axis_pixel))
 
         if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
@@ -150,9 +155,7 @@ class SliderControl(UiNode):
             return True
 
         if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
-            self.value += float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)
-            self._clamp_value()
-            return True
+            return self._set_value(self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)))
         return False
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:

@@ -1,0 +1,120 @@
+import os
+import unittest
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
+import pygame
+from pygame import Rect
+
+from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl
+
+
+class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        pygame.init()
+        self.surface = pygame.display.set_mode((300, 200))
+        self.app = GuiApplication(self.surface)
+        self.root = self.app.add(PanelControl("root", Rect(0, 0, 300, 200)))
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def test_slider_keyboard_triggers_on_change_only_when_value_changes(self) -> None:
+        changed = []
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                0.0,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+        slider.set_tab_index(0)
+        self.app.focus.set_focus(slider)
+
+        consumed_home = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        consumed_right = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+        self.assertFalse(consumed_home)
+        self.assertTrue(consumed_right)
+        self.assertEqual(changed, [5.0])
+
+    def test_slider_end_triggers_on_change_once_until_value_changes_again(self) -> None:
+        changed = []
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                50.0,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+        slider.set_tab_index(0)
+        self.app.focus.set_focus(slider)
+
+        consumed_end = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_END}))
+        consumed_end_again = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_END}))
+
+        self.assertTrue(consumed_end)
+        self.assertFalse(consumed_end_again)
+        self.assertEqual(changed, [100.0])
+
+    def test_scrollbar_keyboard_triggers_on_change_only_when_offset_changes(self) -> None:
+        changed = []
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=0,
+                step=10,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        consumed_home = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        consumed_right = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+        self.assertFalse(consumed_home)
+        self.assertTrue(consumed_right)
+        self.assertEqual(changed, [10])
+
+    def test_scrollbar_page_down_triggers_on_change_once_at_lower_bound(self) -> None:
+        changed = []
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=0,
+                step=10,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        consumed_page_down = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_PAGEDOWN}))
+        consumed_home = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        consumed_home_again = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+
+        self.assertTrue(consumed_page_down)
+        self.assertTrue(consumed_home)
+        self.assertFalse(consumed_home_again)
+        self.assertEqual(changed, [180, 0])
+
+
+if __name__ == "__main__":
+    unittest.main()
