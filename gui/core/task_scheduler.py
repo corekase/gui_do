@@ -230,6 +230,28 @@ class TaskScheduler:
                     return True
             return False
 
+    # --- Count queries ---
+
+    def pending_count(self) -> int:
+        """Return the number of tasks currently queued and waiting to be submitted."""
+        with self._lock:
+            return len(self._pending_set)
+
+    def running_count(self) -> int:
+        """Return the number of tasks currently executing in the thread pool."""
+        with self._lock:
+            return len(self._running)
+
+    def suspended_count(self) -> int:
+        """Return the number of tasks currently suspended."""
+        with self._lock:
+            return len(self._suspended_set)
+
+    def task_count(self) -> int:
+        """Return the total number of known tasks (pending + running + suspended)."""
+        with self._lock:
+            return len(self._pending_set) + len(self._running) + len(self._suspended_set)
+
     def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
         if max_queued_messages is not None:
             if not isinstance(max_queued_messages, int):
