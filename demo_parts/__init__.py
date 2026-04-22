@@ -1,17 +1,17 @@
-"""Demo-only modules and typed contracts for gui_do_demo runtime paths."""
+"""Minimal demo-only contract re-exports."""
 
-from .mandel_events import MANDEL_KIND_CLEARED
-from .mandel_events import MANDEL_KIND_COMPLETE
-from .mandel_events import MANDEL_KIND_FAILED
-from .mandel_events import MANDEL_KIND_IDLE
-from .mandel_events import MANDEL_KIND_RUNNING_FOUR_SPLIT
-from .mandel_events import MANDEL_KIND_RUNNING_ITERATIVE
-from .mandel_events import MANDEL_KIND_RUNNING_ONE_SPLIT
-from .mandel_events import MANDEL_KIND_RUNNING_RECURSIVE
-from .mandel_events import MANDEL_KIND_STATUS
-from .mandel_events import MANDEL_STATUS_SCOPE
-from .mandel_events import MANDEL_STATUS_TOPIC
-from .mandel_events import MandelStatusEvent
+from .mandelbrot_demo_part import MANDEL_KIND_CLEARED
+from .mandelbrot_demo_part import MANDEL_KIND_COMPLETE
+from .mandelbrot_demo_part import MANDEL_KIND_FAILED
+from .mandelbrot_demo_part import MANDEL_KIND_IDLE
+from .mandelbrot_demo_part import MANDEL_KIND_RUNNING_FOUR_SPLIT
+from .mandelbrot_demo_part import MANDEL_KIND_RUNNING_ITERATIVE
+from .mandelbrot_demo_part import MANDEL_KIND_RUNNING_ONE_SPLIT
+from .mandelbrot_demo_part import MANDEL_KIND_RUNNING_RECURSIVE
+from .mandelbrot_demo_part import MANDEL_KIND_STATUS
+from .mandelbrot_demo_part import MANDEL_STATUS_SCOPE
+from .mandelbrot_demo_part import MANDEL_STATUS_TOPIC
+from .mandelbrot_demo_part import MandelStatusEvent
 
 __all__ = [
     "MANDEL_STATUS_TOPIC",

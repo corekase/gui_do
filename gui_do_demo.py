@@ -2,12 +2,12 @@ from typing import Set, Tuple
 
 import pygame
 from pygame import Rect
-from demo_parts.mandel_events import (
+from demo_parts.mandelbrot_demo_part import (
     MANDEL_STATUS_SCOPE,
     MANDEL_STATUS_TOPIC,
+    MandelbrotRenderFeature,
 )
-from demo_parts.life_simulation_feature import LifeSimulationFeature
-from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
+from demo_parts.life_demo_part import LifeSimulationFeature
 
 from gui import (
     GuiApplication,

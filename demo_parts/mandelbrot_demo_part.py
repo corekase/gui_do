@@ -3,25 +3,52 @@
 from __future__ import annotations
 
 import pygame
+from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from .demo_part import DemoPart
-
-from .mandel_events import (
-    MANDEL_KIND_CLEARED,
-    MANDEL_KIND_COMPLETE,
-    MANDEL_KIND_FAILED,
-    MANDEL_KIND_RUNNING_FOUR_SPLIT,
-    MANDEL_KIND_RUNNING_ITERATIVE,
-    MANDEL_KIND_RUNNING_ONE_SPLIT,
-    MANDEL_KIND_RUNNING_RECURSIVE,
-    MANDEL_KIND_STATUS,
-    MandelStatusEvent,
-)
+from shared.part_lifecycle import Part
 
 
-class MandelbrotRenderFeature(DemoPart):
+MANDEL_STATUS_TOPIC = "demo.mandel.status"
+MANDEL_STATUS_SCOPE = "main"
+
+MANDEL_KIND_IDLE = "idle"
+MANDEL_KIND_CLEARED = "cleared"
+MANDEL_KIND_RUNNING_ITERATIVE = "running_iterative"
+MANDEL_KIND_RUNNING_RECURSIVE = "running_recursive"
+MANDEL_KIND_RUNNING_ONE_SPLIT = "running_one_split"
+MANDEL_KIND_RUNNING_FOUR_SPLIT = "running_four_split"
+MANDEL_KIND_FAILED = "failed"
+MANDEL_KIND_COMPLETE = "complete"
+MANDEL_KIND_STATUS = "status"
+
+
+@dataclass(frozen=True)
+class MandelStatusEvent:
+    kind: str
+    detail: Optional[str] = None
+
+    def to_payload(self) -> dict[str, str]:
+        payload = {"kind": str(self.kind)}
+        if self.detail is not None:
+            payload["detail"] = str(self.detail)
+        return payload
+
+    @classmethod
+    def from_payload(cls, payload) -> "MandelStatusEvent":
+        if isinstance(payload, MandelStatusEvent):
+            return payload
+        if isinstance(payload, dict):
+            kind = str(payload.get("kind", MANDEL_KIND_STATUS))
+            detail = payload.get("detail")
+            if detail is not None:
+                detail = str(detail)
+            return cls(kind=kind, detail=detail)
+        return cls(kind=MANDEL_KIND_STATUS, detail=str(payload))
+
+
+class MandelbrotRenderFeature(Part):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
     FAILURE_PREVIEW_MIN = 1
@@ -115,6 +142,9 @@ class MandelbrotRenderFeature(DemoPart):
             return
         demo._last_mandel_status_sent = status_text
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
+
+    def postamble(self, host) -> None:
+        self.on_post_frame(host)
 
     def format_help_text(self, demo) -> str:
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"

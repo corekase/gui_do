@@ -12,7 +12,7 @@ This document defines hard package boundaries between reusable framework code an
 
 ## Current Demo Boundary Assets
 
-- `demo_parts/mandel_events.py`: Mandelbrot status topic, kind constants, and payload dataclass.
+- `demo_parts/mandelbrot_demo_part.py`: Mandelbrot status topic, kind constants, and payload dataclass.
 
 ## Current Active Demo Entrypoints
 

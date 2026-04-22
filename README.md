@@ -47,7 +47,7 @@ Rebased, architecture-first pygame GUI package focused on clean interaction patt
 - gui/theme
   - color_theme.py: ColorTheme
 - demo_parts
-  - mandel_events.py: Mandelbrot demo-only event schema and constants
+  - mandelbrot_demo_part.py: Mandelbrot demo-only event schema and constants
 
 ## Install
 
@@ -83,14 +83,14 @@ from gui import (
 )
 
 # Demo-only contracts are intentionally outside gui package:
-from demo_parts.mandel_events import MandelStatusEvent
+from demo_parts.mandelbrot_demo_part import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
 
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
-- Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandel_events.py` and is not part of the `gui` public API.
+- Mandelbrot status schema (`MandelStatusEvent`, `MANDEL_*`) lives in `demo_parts/mandelbrot_demo_part.py` and is not part of the `gui` public API.
 - Active demo entrypoints (`*_demo.py`) import framework symbols from `gui` package-root exports (`from gui import ...`) without aliases and with a single `from gui import (...)` block; archived `_pre_rebase*_demo.py` files are excluded from this contract.
 
 ## Architecture Docs

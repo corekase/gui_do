@@ -6,10 +6,10 @@ import math
 from typing import Set, Tuple
 
 from pygame import Rect
-from .demo_part import DemoPart
+from shared.part_lifecycle import Part
 
 
-class LifeSimulationFeature(DemoPart):
+class LifeSimulationFeature(Part):
     """Build and run the Conway's Game of Life feature window and interactions."""
 
     def __init__(self) -> None:
@@ -75,6 +75,9 @@ class LifeSimulationFeature(DemoPart):
                 latest_status = str(payload["status"])
         if latest_status is not None:
             demo._life_last_mandel_status = latest_status
+
+    def postamble(self, host) -> None:
+        self.on_post_frame(host)
 
     def build_window(
         self,

@@ -3,18 +3,18 @@ import importlib
 import sys
 import demo_parts
 
-from demo_parts.mandel_events import MANDEL_KIND_COMPLETE
-from demo_parts.mandel_events import MANDEL_KIND_CLEARED
-from demo_parts.mandel_events import MANDEL_KIND_FAILED
-from demo_parts.mandel_events import MANDEL_KIND_IDLE
-from demo_parts.mandel_events import MANDEL_KIND_RUNNING_FOUR_SPLIT
-from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ITERATIVE
-from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ONE_SPLIT
-from demo_parts.mandel_events import MANDEL_KIND_RUNNING_RECURSIVE
-from demo_parts.mandel_events import MANDEL_KIND_STATUS
-from demo_parts.mandel_events import MANDEL_STATUS_SCOPE
-from demo_parts.mandel_events import MANDEL_STATUS_TOPIC
-from demo_parts.mandel_events import MandelStatusEvent
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_CLEARED
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_FAILED
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_IDLE
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_FOUR_SPLIT
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_ITERATIVE
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_ONE_SPLIT
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_RECURSIVE
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_STATUS
+from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_SCOPE
+from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_TOPIC
+from demo_parts.mandelbrot_demo_part import MandelStatusEvent
 from demo_parts import __all__ as demo_parts_all
 from demo_parts import MandelStatusEvent as PackageMandelStatusEvent
 from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
@@ -43,7 +43,7 @@ class MandelEventSchemaExportTests(unittest.TestCase):
         self.assertEqual(restored, event)
 
     def test_demo_parts_schema_module_importable(self) -> None:
-        module = importlib.import_module("demo_parts.mandel_events")
+        module = importlib.import_module("demo_parts.mandelbrot_demo_part")
 
         self.assertTrue(hasattr(module, "MandelStatusEvent"))
 

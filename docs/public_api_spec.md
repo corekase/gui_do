@@ -107,7 +107,7 @@ New APIs must preserve these strict-contract principles.
 
 Demo-only contracts are intentionally outside the `gui` package boundary.
 
-- Mandelbrot demo event schema is defined in `demo_parts/mandel_events.py`.
+- Mandelbrot demo event schema is defined in `demo_parts/mandelbrot_demo_part.py`.
 - `demo_parts.__all__` export surface/order is treated as a locked contract for demo schema consumers.
 - No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from `gui.__all__`.
 

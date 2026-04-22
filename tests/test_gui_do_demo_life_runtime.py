@@ -8,7 +8,7 @@ import pygame
 
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
-from demo_parts.life_simulation_feature import LifeSimulationFeature
+from demo_parts.life_demo_part import LifeSimulationFeature
 
 
 class _Packet:

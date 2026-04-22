@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 from demo_parts.life_demo_part import LifeSimulationFeature
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
-from demo_parts.mandel_events import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
+from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
 from gui import EventBus
 from gui_do_demo import _MandelPresentationModel
 from gui_do_demo import GuiDoDemo
-from part_system import PartManager
+from shared.part_lifecycle import PartManager
 
 
 class GuiDoDemoPresentationModelTests(unittest.TestCase):

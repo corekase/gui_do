@@ -30,7 +30,7 @@ from ..controls.canvas_control import CanvasControl
 from ..controls.slider_control import SliderControl
 from ..controls.toggle_control import ToggleControl
 from ..theme.color_theme import ColorTheme
-from part_system import PartManager
+from shared.part_lifecycle import PartManager
 
 
 @dataclass(frozen=True)

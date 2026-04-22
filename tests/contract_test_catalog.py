@@ -30,7 +30,7 @@ BOUNDARY_RELATED_DOC_PATHS = (
 )
 
 BOUNDARY_ASSET_PATHS = (
-    "demo_parts/mandel_events.py",
+    "demo_parts/mandelbrot_demo_part.py",
 )
 
 ACTIVE_DEMO_ENTRYPOINT_GLOB = "*_demo.py"
@@ -128,7 +128,7 @@ PUBLIC_API_EXPORT_ORDER = (
 
 PUBLIC_API_REQUIRED_REFERENCES = (
     "docs/architecture_boundary_spec.md",
-    "demo_parts/mandel_events.py",
+    "demo_parts/mandelbrot_demo_part.py",
 )
 
 PUBLIC_API_REQUIRED_PHRASES = (
@@ -166,7 +166,7 @@ README_PUBLIC_API_GUI_IMPORT_ORDER = (
 )
 
 README_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
-    "from demo_parts.mandel_events import MandelStatusEvent",
+    "from demo_parts.mandelbrot_demo_part import MandelStatusEvent",
 )
 
 README_PUBLIC_API_REQUIRED_PHRASES = (

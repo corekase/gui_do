@@ -12,7 +12,7 @@ from gui.controls.canvas_control import CanvasControl
 from gui.controls.slider_control import SliderControl
 from gui.controls.toggle_control import ToggleControl
 from gui.layout.layout_axis import LayoutAxis
-from part_system import Part
+from shared.part_lifecycle import Part
 
 
 def _make_app() -> GuiApplication:
