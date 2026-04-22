@@ -9,8 +9,8 @@ Architecture-first pygame GUI framework focused on clean interaction patterns, r
 ### Installation
 
 ```bash
-# Install the only runtime dependency
-pip install pygame
+# Install runtime dependencies
+pip install pygame numpy
 ```
 
 ### Run the Demo
@@ -95,9 +95,9 @@ pygame.quit()
    # or
    source venv/bin/activate      # On macOS/Linux
    ```
-3. Install pygame:
+3. Install dependencies:
    ```bash
-   pip install pygame
+   pip install pygame numpy
    ```
 
 ### Running Tests
