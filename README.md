@@ -137,6 +137,57 @@ These constraints ensure maintainability and prevent common GUI bugs:
 - **Normalized event dispatch**: All raw pygame events are normalized to canonical `GuiEvent` objects at framework ingress.
 - **No compatibility shims**: The package is strict by design with no backwards-compatibility layers.
 
+## Public API
+
+```python
+from gui import (
+    GuiApplication,
+    UiEngine,
+    PanelControl,
+    LabelControl,
+    ButtonControl,
+    ArrowBoxControl,
+    ButtonGroupControl,
+    CanvasControl,
+    FrameControl,
+    ImageControl,
+    SliderControl,
+    ScrollbarControl,
+    TaskPanelControl,
+    ToggleControl,
+    WindowControl,
+    LayoutAxis,
+    LayoutManager,
+    TaskEvent,
+    TaskScheduler,
+    Timers,
+    ColorTheme,
+)
+
+# Demo-only contracts are intentionally outside gui package:
+from demo_parts.mandelbrot_demo_part import MandelStatusEvent
+```
+
+## Demo/Package Boundary
+
+- `gui/` contains reusable framework/runtime functionality.
+- `demo_parts/` contains demo-specific contracts and helpers.
+- Active demo entrypoints (`*_demo.py`, excluding archived `_pre_rebase*_demo.py`) should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
+
+## Architecture Docs
+
+- `docs/public_api_spec.md`: supported exports and strict API contracts.
+- `docs/event_system_spec.md`: normalized event model and routing semantics.
+- `docs/architecture_boundary_spec.md`: package boundary rules and enforcement tests.
+
+## Run Boundary Contract Tests
+
+```bash
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_public_api_contracts tests.test_readme_docs_contracts tests.test_contract_docs_helpers tests.test_contract_catalog_consistency -v
+python -m pytest -q tests/test_boundary_contracts.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_public_api_contracts.py tests/test_readme_docs_contracts.py tests/test_contract_docs_helpers.py tests/test_contract_catalog_consistency.py
+```
+
 ## Tutorial: Building a Feature with the Life Simulation
 
 This tutorial walks through the Life feature implementation to show how to build, compose, and integrate a feature into the gui_do framework.
