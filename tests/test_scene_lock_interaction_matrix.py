@@ -541,6 +541,440 @@ class SceneLockInteractionMatrixTests(unittest.TestCase):
         app.process_event(pygame.event.Event(pygame.MOUSEBUTTONUP, {"pos": title_anchor, "button": 1}))
         self.assertIsNone(app.pointer_capture.owner_id)
 
+    def test_focus_scene_scheduler_permutations_avoid_stale_focus(self) -> None:
+        operation_names = ["tab", "shift_tab", "switch_mandel", "switch_default", "disable_focused", "enable_all"]
+
+        for sequence in itertools.permutations(operation_names, 3):
+            with self.subTest(sequence=sequence):
+                app = GuiApplication(self.surface)
+
+                root_life = app.add(PanelControl("root", Rect(0, 0, 500, 360)))
+                win_life = root_life.add(WindowControl("life", Rect(40, 40, 220, 160), "L"))
+                life_first = win_life.add(_FocusableProbe("life_first", Rect(60, 80, 30, 20), tab_index=0))
+                life_second = win_life.add(_FocusableProbe("life_second", Rect(60, 110, 30, 20), tab_index=1))
+                win_life.active = True
+
+                app.create_scene("mandel")
+                root_mandel = app.add(PanelControl("root_mandel", Rect(0, 0, 500, 360)), scene_name="mandel")
+                win_mandel = root_mandel.add(WindowControl("mandel", Rect(60, 60, 220, 160), "M"))
+                mandel_first = win_mandel.add(_FocusableProbe("mandel_first", Rect(80, 100, 30, 20), tab_index=0))
+                mandel_second = win_mandel.add(_FocusableProbe("mandel_second", Rect(80, 130, 30, 20), tab_index=1))
+                win_mandel.active = True
+
+                all_probes = [life_first, life_second, mandel_first, mandel_second]
+
+                life_scheduler = app.get_scene_scheduler("default")
+                mandel_scheduler = app.get_scene_scheduler("mandel")
+                life_scheduler.add_task("life_task", lambda _task_id: "life")
+                mandel_scheduler.add_task("mandel_task", lambda _task_id: "mandel")
+                app.switch_scene("default")
+
+                for op_name in sequence:
+                    if op_name == "tab":
+                        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+                    elif op_name == "shift_tab":
+                        app.process_event(
+                            pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT})
+                        )
+                    elif op_name == "switch_mandel":
+                        app.switch_scene("mandel")
+                    elif op_name == "switch_default":
+                        app.switch_scene("default")
+                    elif op_name == "disable_focused":
+                        focused = app.focus.focused_node
+                        if focused is not None:
+                            focused.enabled = False
+                    elif op_name == "enable_all":
+                        for probe in all_probes:
+                            probe.visible = True
+                            probe.enabled = True
+                    else:
+                        raise AssertionError(f"unknown operation: {op_name}")
+
+                    # Trigger focus-manager validation path for detached/disabled/hidden focused nodes.
+                    app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+                    focused = app.focus.focused_node
+                    if focused is not None:
+                        self.assertIn(focused, app.scene._walk_nodes())
+                        self.assertTrue(focused.visible)
+                        self.assertTrue(focused.enabled)
+
+                    if app.active_scene_name == "default":
+                        self.assertNotIn("life_task", life_scheduler.read_suspended())
+                        self.assertIn("mandel_task", mandel_scheduler.read_suspended())
+                    else:
+                        self.assertIn("life_task", life_scheduler.read_suspended())
+                        self.assertNotIn("mandel_task", mandel_scheduler.read_suspended())
+
+    def test_focus_remove_readd_permutations_across_scene_switches_avoid_stale_focus(self) -> None:
+        operation_names = ["tab", "switch_mandel", "switch_default", "remove_focused", "readd_removed"]
+
+        for sequence in itertools.permutations(operation_names, 3):
+            with self.subTest(sequence=sequence):
+                app = GuiApplication(self.surface)
+
+                root_life = app.add(PanelControl("root", Rect(0, 0, 500, 360)))
+                win_life = root_life.add(WindowControl("life", Rect(40, 40, 220, 160), "L"))
+                life_first = win_life.add(_FocusableProbe("life_first", Rect(60, 80, 30, 20), tab_index=0))
+                life_second = win_life.add(_FocusableProbe("life_second", Rect(60, 110, 30, 20), tab_index=1))
+                win_life.active = True
+
+                app.create_scene("mandel")
+                root_mandel = app.add(PanelControl("root_mandel", Rect(0, 0, 500, 360)), scene_name="mandel")
+                win_mandel = root_mandel.add(WindowControl("mandel", Rect(60, 60, 220, 160), "M"))
+                mandel_first = win_mandel.add(_FocusableProbe("mandel_first", Rect(80, 100, 30, 20), tab_index=0))
+                mandel_second = win_mandel.add(_FocusableProbe("mandel_second", Rect(80, 130, 30, 20), tab_index=1))
+                win_mandel.active = True
+
+                probe_parent = {
+                    life_first: win_life,
+                    life_second: win_life,
+                    mandel_first: win_mandel,
+                    mandel_second: win_mandel,
+                }
+                removed = []
+
+                life_scheduler = app.get_scene_scheduler("default")
+                mandel_scheduler = app.get_scene_scheduler("mandel")
+                life_scheduler.add_task("life_task", lambda _task_id: "life")
+                mandel_scheduler.add_task("mandel_task", lambda _task_id: "mandel")
+                app.switch_scene("default")
+
+                for op_name in sequence:
+                    if op_name == "tab":
+                        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+                    elif op_name == "switch_mandel":
+                        app.switch_scene("mandel")
+                    elif op_name == "switch_default":
+                        app.switch_scene("default")
+                    elif op_name == "remove_focused":
+                        focused = app.focus.focused_node
+                        if isinstance(focused, _FocusableProbe):
+                            parent = probe_parent[focused]
+                            if focused in parent.children:
+                                self.assertTrue(parent.remove(focused))
+                                removed.append(focused)
+                    elif op_name == "readd_removed":
+                        if removed:
+                            probe = removed.pop()
+                            parent = probe_parent[probe]
+                            if probe not in parent.children:
+                                parent.add(probe)
+                                probe.visible = True
+                                probe.enabled = True
+                    else:
+                        raise AssertionError(f"unknown operation: {op_name}")
+
+                    # Trigger focus-manager stale-focus guard path.
+                    app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+                    focused = app.focus.focused_node
+                    if focused is not None:
+                        self.assertIn(focused, app.scene._walk_nodes())
+                        self.assertTrue(focused.visible)
+                        self.assertTrue(focused.enabled)
+
+                    if app.active_scene_name == "default":
+                        self.assertNotIn("life_task", life_scheduler.read_suspended())
+                        self.assertIn("mandel_task", mandel_scheduler.read_suspended())
+                    else:
+                        self.assertIn("life_task", life_scheduler.read_suspended())
+                        self.assertNotIn("mandel_task", mandel_scheduler.read_suspended())
+
+    def test_focus_remove_readd_with_window_state_transitions_preserves_focus_and_active_invariants(self) -> None:
+        operation_names = [
+            "tab",
+            "remove_focused",
+            "readd_removed",
+            "hide_active_window",
+            "show_active_window",
+            "disable_active_window",
+            "enable_all_windows",
+        ]
+
+        for sequence in itertools.permutations(operation_names, 3):
+            with self.subTest(sequence=sequence):
+                app = GuiApplication(self.surface)
+
+                root = app.add(PanelControl("root", Rect(0, 0, 500, 360)))
+                win_a = root.add(WindowControl("a", Rect(40, 40, 220, 160), "A"))
+                win_b = root.add(WindowControl("b", Rect(220, 60, 220, 160), "B"))
+
+                probe_a1 = win_a.add(_FocusableProbe("a1", Rect(60, 80, 30, 20), tab_index=0))
+                probe_a2 = win_a.add(_FocusableProbe("a2", Rect(60, 110, 30, 20), tab_index=1))
+                probe_b1 = win_b.add(_FocusableProbe("b1", Rect(240, 100, 30, 20), tab_index=0))
+                probe_b2 = win_b.add(_FocusableProbe("b2", Rect(240, 130, 30, 20), tab_index=1))
+
+                probe_parent = {
+                    probe_a1: win_a,
+                    probe_a2: win_a,
+                    probe_b1: win_b,
+                    probe_b2: win_b,
+                }
+                removed = []
+
+                win_b.active = True
+
+                for op_name in sequence:
+                    if op_name == "tab":
+                        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+                    elif op_name == "remove_focused":
+                        focused = app.focus.focused_node
+                        if isinstance(focused, _FocusableProbe):
+                            parent = probe_parent[focused]
+                            if focused in parent.children:
+                                self.assertTrue(parent.remove(focused))
+                                removed.append(focused)
+                    elif op_name == "readd_removed":
+                        if removed:
+                            probe = removed.pop()
+                            parent = probe_parent[probe]
+                            if probe not in parent.children:
+                                parent.add(probe)
+                                probe.visible = True
+                                probe.enabled = True
+                    elif op_name == "hide_active_window":
+                        active_id = self._active_id(win_a, win_b)
+                        if active_id == "a":
+                            win_a.visible = False
+                        elif active_id == "b":
+                            win_b.visible = False
+                    elif op_name == "show_active_window":
+                        win_a.visible = True
+                        win_b.visible = True
+                    elif op_name == "disable_active_window":
+                        active_id = self._active_id(win_a, win_b)
+                        if active_id == "a":
+                            win_a.enabled = False
+                        elif active_id == "b":
+                            win_b.enabled = False
+                    elif op_name == "enable_all_windows":
+                        win_a.enabled = True
+                        win_b.enabled = True
+                    else:
+                        raise AssertionError(f"unknown operation: {op_name}")
+
+                    # Trigger focus manager validation for stale focus after detach/hide/disable.
+                    app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+                    focused = app.focus.focused_node
+                    if focused is not None:
+                        self.assertIn(focused, app.scene._walk_nodes())
+                        self.assertTrue(focused.visible)
+                        self.assertTrue(focused.enabled)
+
+                    self._assert_activation_invariants(win_a, win_b)
+
+    def test_focus_window_state_and_drag_capture_permutations_preserve_invariants(self) -> None:
+        operation_names = [
+            "tab",
+            "remove_focused",
+            "readd_removed",
+            "hide_active_window",
+            "disable_active_window",
+            "drag_start_a",
+            "drag_release",
+            "flush_motion",
+        ]
+
+        for sequence in itertools.permutations(operation_names, 3):
+            with self.subTest(sequence=sequence):
+                app = GuiApplication(self.surface)
+
+                root = app.add(PanelControl("root", Rect(0, 0, 500, 360)))
+                win_a = root.add(WindowControl("a", Rect(40, 40, 220, 160), "A"))
+                win_b = root.add(WindowControl("b", Rect(220, 60, 220, 160), "B"))
+
+                probe_a1 = win_a.add(_FocusableProbe("a1", Rect(60, 80, 30, 20), tab_index=0))
+                probe_a2 = win_a.add(_FocusableProbe("a2", Rect(60, 110, 30, 20), tab_index=1))
+                probe_b1 = win_b.add(_FocusableProbe("b1", Rect(240, 100, 30, 20), tab_index=0))
+                probe_b2 = win_b.add(_FocusableProbe("b2", Rect(240, 130, 30, 20), tab_index=1))
+
+                probe_parent = {
+                    probe_a1: win_a,
+                    probe_a2: win_a,
+                    probe_b1: win_b,
+                    probe_b2: win_b,
+                }
+                removed = []
+
+                win_b.active = True
+                drag_anchor_a = (win_a.rect.left + 10, win_a.rect.top + 10)
+
+                for op_name in sequence:
+                    if op_name == "tab":
+                        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+                    elif op_name == "remove_focused":
+                        focused = app.focus.focused_node
+                        if isinstance(focused, _FocusableProbe):
+                            parent = probe_parent[focused]
+                            if focused in parent.children:
+                                self.assertTrue(parent.remove(focused))
+                                removed.append(focused)
+                    elif op_name == "readd_removed":
+                        if removed:
+                            probe = removed.pop()
+                            parent = probe_parent[probe]
+                            if probe not in parent.children:
+                                parent.add(probe)
+                                probe.visible = True
+                                probe.enabled = True
+                    elif op_name == "hide_active_window":
+                        active_id = self._active_id(win_a, win_b)
+                        if active_id == "a":
+                            win_a.visible = False
+                        elif active_id == "b":
+                            win_b.visible = False
+                    elif op_name == "disable_active_window":
+                        active_id = self._active_id(win_a, win_b)
+                        if active_id == "a":
+                            win_a.enabled = False
+                        elif active_id == "b":
+                            win_b.enabled = False
+                    elif op_name == "drag_start_a":
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEBUTTONDOWN,
+                                {"pos": drag_anchor_a, "button": 1},
+                            )
+                        )
+                    elif op_name == "drag_release":
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEBUTTONUP,
+                                {"pos": drag_anchor_a, "button": 1},
+                            )
+                        )
+                    elif op_name == "flush_motion":
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEMOTION,
+                                {"pos": (5, 5), "rel": (0, 0), "buttons": (0, 0, 0)},
+                            )
+                        )
+                    else:
+                        raise AssertionError(f"unknown operation: {op_name}")
+
+                    # Trigger focus-manager stale-focus validation for detached/hidden/disabled nodes.
+                    app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+                    focused = app.focus.focused_node
+                    if focused is not None:
+                        self.assertIn(focused, app.scene._walk_nodes())
+                        self.assertTrue(focused.visible)
+                        self.assertTrue(focused.enabled)
+
+                    self._assert_drag_state_consistency(root, app)
+                    self._assert_activation_invariants(win_a, win_b)
+
+    def test_focus_window_drag_permutations_with_lock_transitions_preserve_invariants(self) -> None:
+        operation_names = [
+            "tab",
+            "remove_focused",
+            "readd_removed",
+            "lock_point_on",
+            "lock_point_off",
+            "lock_area_on",
+            "lock_area_off",
+            "drag_start_a",
+            "drag_release",
+            "flush_motion",
+        ]
+
+        for sequence in itertools.permutations(operation_names, 3):
+            with self.subTest(sequence=sequence):
+                app = GuiApplication(self.surface)
+
+                root = app.add(PanelControl("root", Rect(0, 0, 500, 360)))
+                win_a = root.add(WindowControl("a", Rect(40, 40, 220, 160), "A"))
+                win_b = root.add(WindowControl("b", Rect(220, 60, 220, 160), "B"))
+
+                probe_a1 = win_a.add(_FocusableProbe("a1", Rect(60, 80, 30, 20), tab_index=0))
+                probe_a2 = win_a.add(_FocusableProbe("a2", Rect(60, 110, 30, 20), tab_index=1))
+                probe_b1 = win_b.add(_FocusableProbe("b1", Rect(240, 100, 30, 20), tab_index=0))
+                probe_b2 = win_b.add(_FocusableProbe("b2", Rect(240, 130, 30, 20), tab_index=1))
+
+                probe_parent = {
+                    probe_a1: win_a,
+                    probe_a2: win_a,
+                    probe_b1: win_b,
+                    probe_b2: win_b,
+                }
+                removed = []
+
+                win_b.active = True
+                drag_anchor_a = (win_a.rect.left + 10, win_a.rect.top + 10)
+                lock_rect = Rect(0, 0, 160, 120)
+
+                for op_name in sequence:
+                    if op_name == "tab":
+                        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+                    elif op_name == "remove_focused":
+                        focused = app.focus.focused_node
+                        if isinstance(focused, _FocusableProbe):
+                            parent = probe_parent[focused]
+                            if focused in parent.children:
+                                self.assertTrue(parent.remove(focused))
+                                removed.append(focused)
+                    elif op_name == "readd_removed":
+                        if removed:
+                            probe = removed.pop()
+                            parent = probe_parent[probe]
+                            if probe not in parent.children:
+                                parent.add(probe)
+                                probe.visible = True
+                                probe.enabled = True
+                    elif op_name == "lock_point_on":
+                        app.set_lock_point(win_a, drag_anchor_a)
+                    elif op_name == "lock_point_off":
+                        app.set_lock_point(None)
+                    elif op_name == "lock_area_on":
+                        app.set_lock_area(lock_rect)
+                    elif op_name == "lock_area_off":
+                        app.set_lock_area(None)
+                    elif op_name == "drag_start_a":
+                        down_pos = (490, 350) if app.mouse_point_locked else drag_anchor_a
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEBUTTONDOWN,
+                                {"pos": down_pos, "button": 1},
+                            )
+                        )
+                    elif op_name == "drag_release":
+                        up_pos = (490, 350) if app.mouse_point_locked else drag_anchor_a
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEBUTTONUP,
+                                {"pos": up_pos, "button": 1},
+                            )
+                        )
+                    elif op_name == "flush_motion":
+                        app.process_event(
+                            pygame.event.Event(
+                                pygame.MOUSEMOTION,
+                                {"pos": (5, 5), "rel": (0, 0), "buttons": (0, 0, 0)},
+                            )
+                        )
+                    else:
+                        raise AssertionError(f"unknown operation: {op_name}")
+
+                    # Trigger focus-manager stale-focus validation for detached/hidden/disabled nodes.
+                    app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+                    focused = app.focus.focused_node
+                    if focused is not None:
+                        self.assertIn(focused, app.scene._walk_nodes())
+                        self.assertTrue(focused.visible)
+                        self.assertTrue(focused.enabled)
+
+                    self._assert_lock_state_sane(app)
+                    self._assert_drag_state_consistency(root, app)
+                    self._assert_activation_invariants(win_a, win_b)
+
+                    if app.mouse_point_locked and app.lock_point_pos is not None:
+                        self.assertEqual(app.input_state.pointer_pos, app.lock_point_pos)
+
 
 if __name__ == "__main__":
     unittest.main()
