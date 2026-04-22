@@ -8,6 +8,7 @@ import pygame
 
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
+from demo_parts.life_simulation_feature import LifeSimulationFeature
 
 
 class _Packet:
@@ -43,54 +44,59 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
 
     def _make_demo_stub(self) -> GuiDoDemo:
         demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.neighbours = GuiDoDemo.neighbours
-        demo.life_cells = set()
-        demo.life_origin = [0.0, 0.0]
-        demo.life_cell_size = 12
-        demo._life_zoom_slider_last_value = 5
+        # Create the life part and configure it
+        life_part = LifeSimulationFeature()
+        life_part.life_cells = set()
+        life_part.life_origin = [0.0, 0.0]
+        life_part.life_cell_size = 12
+        life_part.life_zoom_slider_last_value = 5
+        demo._life_feature = life_part
+        # Set up UI elements on demo
         demo.life_zoom_slider = SimpleNamespace(value=5.0)
         demo.life_zoom_label = SimpleNamespace(text="Zoom 12")
         demo.life_canvas = _LifeCanvasStub([])
         demo.app = SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0)))
         demo.life_toggle = SimpleNamespace(pushed=False)
+        # Set the demo reference on the part so it can access UI elements
+        life_part.demo = demo
         return demo
 
     def test_life_preamble_applies_external_slider_value_change(self) -> None:
         demo = self._make_demo_stub()
         demo.life_zoom_slider.value = 7.0
 
-        demo._life_window_preamble()
+        demo._life_part().life_window_preamble()
 
-        self.assertEqual(demo._life_zoom_slider_last_value, 7)
-        self.assertEqual(demo.life_cell_size, 16)
+        self.assertEqual(demo._life_part().life_zoom_slider_last_value, 7)
+        self.assertEqual(demo._life_part().life_cell_size, 16)
 
     def test_slider_callback_applies_zoom_change(self) -> None:
         demo = self._make_demo_stub()
 
-        demo._on_life_zoom_slider_changed(6.0)
+        demo._life_part().on_life_zoom_slider_changed(6.0)
 
-        self.assertEqual(demo._life_zoom_slider_last_value, 6)
-        self.assertEqual(demo.life_cell_size, 14)
+        self.assertEqual(demo._life_part().life_zoom_slider_last_value, 6)
+        self.assertEqual(demo._life_part().life_cell_size, 14)
         self.assertEqual(demo.life_zoom_label.text, "Zoom 14")
 
     def test_life_reset_sets_zoom_label_to_default(self) -> None:
         demo = self._make_demo_stub()
         demo.life_zoom_label.text = "Zoom 18"
 
-        demo._life_reset()
+        demo._life_part().life_reset()
 
         self.assertEqual(demo.life_zoom_label.text, "Zoom 12")
 
     def test_update_life_uses_local_packet_position_when_available(self) -> None:
         demo = self._make_demo_stub()
-        demo.life_cell_size = 10
+        demo._life_part().life_cell_size = 10
         demo.life_canvas = _LifeCanvasStub([
             _Packet(local_pos=(15, 15), pos=(200, 200), button=1),
         ])
 
-        demo._update_life()
+        demo._life_part().update_life(demo)
 
-        self.assertIn((1, 1), demo.life_cells)
+        self.assertIn((1, 1), demo._life_part().life_cells)
 
 
 if __name__ == "__main__":

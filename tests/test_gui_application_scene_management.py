@@ -5,6 +5,14 @@ from unittest.mock import MagicMock, patch
 import pygame
 
 from gui.app.gui_application import GuiApplication
+from gui.controls.window_control import WindowControl
+from gui.controls.label_control import LabelControl
+from gui.controls.button_control import ButtonControl
+from gui.controls.canvas_control import CanvasControl
+from gui.controls.slider_control import SliderControl
+from gui.controls.toggle_control import ToggleControl
+from gui.layout.layout_axis import LayoutAxis
+from part_system import Part
 
 
 def _make_app() -> GuiApplication:
@@ -109,6 +117,72 @@ class RemoveSceneTests(GuiApplicationSceneManagementSetup):
         self.app.remove_scene("away")
         with self.assertRaises(ValueError):
             self.app.switch_scene("away")
+
+
+class _StubPart(Part):
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.host_seen = None
+
+    def on_register(self, host) -> None:
+        self.host_seen = host
+
+
+class PartApiTests(GuiApplicationSceneManagementSetup):
+
+    def test_register_and_get_part(self) -> None:
+        part = _StubPart("alpha")
+        self.app.register_part(part, host=self.app)
+        self.assertIs(self.app.get_part("alpha"), part)
+        self.assertIn("alpha", self.app.part_names())
+
+    def test_unregister_part(self) -> None:
+        self.app.register_part(_StubPart("alpha"), host=self.app)
+        self.assertTrue(self.app.unregister_part("alpha"))
+        self.assertIsNone(self.app.get_part("alpha"))
+
+    def test_send_part_message(self) -> None:
+        sender = _StubPart("sender")
+        target = _StubPart("target")
+        self.app.register_part(sender, host=self.app)
+        self.app.register_part(target, host=self.app)
+        sent = self.app.send_part_message("sender", "target", {"kind": "ping"})
+        self.assertTrue(sent)
+        self.assertTrue(target.has_messages())
+        msg = target.pop_message()
+        self.assertEqual("ping", msg["kind"])
+        self.assertEqual("sender", msg["_from"])
+        self.assertEqual("target", msg["_to"])
+
+    def test_register_and_run_part_runnable(self) -> None:
+        self.app.register_part(_StubPart("worker"), host=self.app)
+        self.app.register_part_runnable("worker", "sum", lambda x, y: x + y)
+        self.assertEqual(7, self.app.run_part_runnable("worker", "sum", 3, 4))
+
+    def test_app_run_delegates_to_ui_engine(self) -> None:
+        with patch("gui.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
+            frames = self.app.run(target_fps=75, max_frames=3)
+
+        self.assertEqual(12, frames)
+        run_mock.assert_called_once_with(max_frames=3)
+
+
+class PartUiTypesTests(GuiApplicationSceneManagementSetup):
+
+    def test_read_part_ui_types_returns_same_instance(self) -> None:
+        ui_types_a = self.app.read_part_ui_types()
+        ui_types_b = self.app.read_part_ui_types()
+        self.assertIs(ui_types_a, ui_types_b)
+
+    def test_read_part_ui_types_contains_expected_bindings(self) -> None:
+        ui_types = self.app.read_part_ui_types()
+        self.assertIs(ui_types.window_control_cls, WindowControl)
+        self.assertIs(ui_types.label_control_cls, LabelControl)
+        self.assertIs(ui_types.button_control_cls, ButtonControl)
+        self.assertIs(ui_types.canvas_control_cls, CanvasControl)
+        self.assertIs(ui_types.slider_control_cls, SliderControl)
+        self.assertIs(ui_types.toggle_control_cls, ToggleControl)
+        self.assertIs(ui_types.layout_axis_cls, LayoutAxis)
 
 
 if __name__ == "__main__":

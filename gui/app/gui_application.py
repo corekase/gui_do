@@ -1,6 +1,6 @@
 import pygame
 from pathlib import Path
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import Callable, Optional
 from pygame import Rect
 
@@ -22,7 +22,26 @@ from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
 from ..layout.window_tiling_manager import WindowTilingManager
+from ..layout.layout_axis import LayoutAxis
+from ..controls.window_control import WindowControl
+from ..controls.label_control import LabelControl
+from ..controls.button_control import ButtonControl
+from ..controls.canvas_control import CanvasControl
+from ..controls.slider_control import SliderControl
+from ..controls.toggle_control import ToggleControl
 from ..theme.color_theme import ColorTheme
+from part_system import PartManager
+
+
+@dataclass(frozen=True)
+class PartUiTypes:
+    window_control_cls: type
+    label_control_cls: type
+    button_control_cls: type
+    canvas_control_cls: type
+    slider_control_cls: type
+    toggle_control_cls: type
+    layout_axis_cls: type
 
 
 class GuiApplication:
@@ -63,6 +82,16 @@ class GuiApplication:
         self.window_tiling = active_runtime["window_tiling"]
         self.theme = active_runtime["theme"]
         self.graphics_factory = active_runtime["graphics_factory"]
+        self._part_ui_types = PartUiTypes(
+            window_control_cls=WindowControl,
+            label_control_cls=LabelControl,
+            button_control_cls=ButtonControl,
+            canvas_control_cls=CanvasControl,
+            slider_control_cls=SliderControl,
+            toggle_control_cls=ToggleControl,
+            layout_axis_cls=LayoutAxis,
+        )
+        self.parts = PartManager(self)
         self.running = True
         self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
@@ -86,6 +115,16 @@ class GuiApplication:
             return self.scene.add(node)
         target = self._scene_runtime(scene_name)
         return target["scene"].add(node)
+
+    def read_part_ui_types(self) -> PartUiTypes:
+        """Return GUI constructor classes used by part build routines."""
+        return self._part_ui_types
+
+    def style_label(self, label, size: int = 16):
+        """Apply consistent demo-friendly defaults to a label-like control."""
+        label.title = False
+        label.text_size = int(size)
+        return label
 
     def create_scene(self, name: str) -> Scene:
         runtime = self._scene_runtime(name)
@@ -213,6 +252,7 @@ class GuiApplication:
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
+        self.parts.run_preamble()
         if self._screen_preamble is not None:
             self._screen_preamble()
         self.timers.update(dt_seconds)
@@ -224,6 +264,7 @@ class GuiApplication:
         self.focus.revalidate_focus(runtime["scene"])
         if self._screen_postamble is not None:
             self._screen_postamble()
+        self.parts.run_postamble()
 
     def shutdown(self) -> None:
         """Release runtime services."""
@@ -276,6 +317,9 @@ class GuiApplication:
                 return True
 
         screen_consumed = False
+        if self.parts.handle_event(logical_event):
+            self.invalidation.invalidate_all()
+            return True
         if self._screen_event_handler is not None:
             screen_consumed = bool(self._screen_event_handler(logical_event))
         if screen_consumed or logical_event.default_prevented or logical_event.propagation_stopped:
@@ -437,6 +481,7 @@ class GuiApplication:
         """Render one frame."""
         runtime = self._scenes[self._active_scene_name]
         self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
+        self.parts.draw(self.surface, runtime["theme"])
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.window_tiling.set_enabled(enabled, relayout=relayout)
@@ -465,6 +510,16 @@ class GuiApplication:
         return self.window_tiling.read_settings()
 
     # --- Convenience helpers ---
+
+    def run(self, target_fps: int = 60, max_frames: Optional[int] = None) -> int:
+        """Run the managed GUI lifecycle loop via UiEngine.
+
+        This keeps lifecycle ownership at the application layer while still
+        reusing the engine implementation for frame processing.
+        """
+        from ..loop.ui_engine import UiEngine
+
+        return UiEngine(self, target_fps=target_fps).run(max_frames=max_frames)
 
     def quit(self) -> None:
         """Signal the engine to exit the run loop at the end of the current frame."""
@@ -495,3 +550,56 @@ class GuiApplication:
         """
         scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
         return self.focus.set_focus_by_id(scene, control_id)
+
+    # --- Part helpers ---
+
+    def register_part(self, part, host=None):
+        """Register a Part with optional host context.
+
+        Returns the registered part instance.
+        """
+        return self.parts.register(part, host=host)
+
+    def unregister_part(self, name: str, host=None) -> bool:
+        """Unregister a Part by name, returning True when it existed."""
+        return self.parts.unregister(name, host=host)
+
+    def get_part(self, name: str):
+        """Return a registered Part by name, or None when absent."""
+        return self.parts.get(name)
+
+    def part_names(self) -> tuple[str, ...]:
+        """Return registered Part names in registration order."""
+        return self.parts.names()
+
+    def send_part_message(self, sender_name: str, target_part_name: str, message: dict) -> bool:
+        """Send dictionary message between registered parts by name."""
+        return self.parts.send_message(sender_name, target_part_name, message)
+
+    def register_part_scene_node(self, part_name: str, node, scene_name: Optional[str] = None):
+        """Attach a scene node on behalf of a registered part."""
+        return self.parts.register_scene_node(part_name, node, scene_name=scene_name)
+
+    def register_part_window(self, part_name: str, window, scene_name: Optional[str] = None):
+        """Attach a window node on behalf of a registered part."""
+        return self.parts.register_window(part_name, window, scene_name=scene_name)
+
+    def register_part_runnable(self, part_name: str, runnable_name: str, runnable) -> None:
+        """Register a callable runnable under a registered part name."""
+        self.parts.register_runnable(part_name, runnable_name, runnable)
+
+    def run_part_runnable(self, part_name: str, runnable_name: str, *args, **kwargs):
+        """Execute a previously registered runnable for a part."""
+        return self.parts.run(part_name, runnable_name, *args, **kwargs)
+
+    def build_parts(self, host) -> None:
+        """Call optional build(host) on all registered parts."""
+        self.parts.build_parts(host)
+
+    def bind_parts_runtime(self, host) -> None:
+        """Call optional bind_runtime(host) on all registered parts."""
+        self.parts.bind_runtime(host)
+
+    def configure_parts_accessibility(self, host, tab_index_start: int) -> int:
+        """Call optional configure_accessibility(host, index) on parts in order."""
+        return self.parts.configure_accessibility(host, tab_index_start)
