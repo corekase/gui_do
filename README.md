@@ -2,7 +2,7 @@
 
 # gui_do
 
-Architecture-first pygame GUI framework focused on clean interaction patterns, reliable pointer capture behavior, and composable feature architecture.
+Architecture-first pygame GUI framework focused on clean interaction patterns, and composable feature architecture.
 
 ## Quick Start
 
@@ -140,7 +140,6 @@ These constraints ensure maintainability and prevent common GUI bugs:
 - **Slider/scrollbar never reposition pointer on release**: This prevents cursor drift at the end of drags.
 - **Release ends capture only**: No cursor reconciliation or mutation logic runs during release.
 - **Normalized event dispatch**: All raw pygame events are normalized to canonical `GuiEvent` objects at framework ingress.
-- **No compatibility shims**: The package is strict by design with no backwards-compatibility layers.
 
 ## Public API
 
