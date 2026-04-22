@@ -8,6 +8,7 @@ from ..core.value_change_callback import ValueChangeCallback
 from ..core.value_change_callback import ValueChangeCallbackMode
 from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_callback import normalize_value_change_callback_mode
+from ..core.value_change_callback import validate_value_change_callback
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
@@ -41,6 +42,7 @@ class ScrollbarControl(UiNode):
         self.step = max(1, int(step))
         self.on_change = on_change
         self.on_change_mode = normalize_value_change_callback_mode(on_change_mode)
+        validate_value_change_callback(self.on_change, self.on_change_mode)
         self.dragging = False
         self._drag_anchor_offset = 0
         self._track_visuals = None
@@ -51,8 +53,16 @@ class ScrollbarControl(UiNode):
 
     def set_on_change_mode(self, mode: str) -> ValueChangeCallbackMode:
         """Update callback dispatch mode at runtime with validation."""
-        self.on_change_mode = normalize_value_change_callback_mode(mode)
+        normalized = normalize_value_change_callback_mode(mode)
+        validate_value_change_callback(self.on_change, normalized)
+        self.on_change_mode = normalized
         return self.on_change_mode
+
+    def set_on_change_callback(self, callback: Optional[ValueChangeCallback[int]]) -> Optional[ValueChangeCallback[int]]:
+        """Update callback at runtime and validate compatibility with current mode."""
+        validate_value_change_callback(callback, self.on_change_mode)
+        self.on_change = callback
+        return self.on_change
 
     def _normalize_geometry(self) -> None:
         self.content_size = max(1, int(self.content_size))

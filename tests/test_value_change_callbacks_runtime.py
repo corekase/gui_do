@@ -212,39 +212,35 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.assertEqual(changed, [(110, ValueChangeReason.KEYBOARD), (120, ValueChangeReason.PROGRAMMATIC)])
 
     def test_slider_strict_mode_rejects_value_only_callback(self) -> None:
-        slider = self.root.add(
-            SliderControl(
-                "s",
-                Rect(20, 20, 180, 24),
-                LayoutAxis.HORIZONTAL,
-                0.0,
-                100.0,
-                50.0,
-                on_change=lambda value: None,
-                on_change_mode="reason-required",
-            )
-        )
-
         with self.assertRaises(TypeError):
-            slider.adjust_value(5.0)
+            self.root.add(
+                SliderControl(
+                    "s",
+                    Rect(20, 20, 180, 24),
+                    LayoutAxis.HORIZONTAL,
+                    0.0,
+                    100.0,
+                    50.0,
+                    on_change=lambda value: None,
+                    on_change_mode="reason-required",
+                )
+            )
 
     def test_scrollbar_strict_mode_rejects_value_only_callback(self) -> None:
-        bar = self.root.add(
-            ScrollbarControl(
-                "sb",
-                Rect(20, 60, 180, 24),
-                LayoutAxis.HORIZONTAL,
-                content_size=1000,
-                viewport_size=200,
-                offset=100,
-                step=10,
-                on_change=lambda value: None,
-                on_change_mode="reason-required",
-            )
-        )
-
         with self.assertRaises(TypeError):
-            bar.adjust_offset(10)
+            self.root.add(
+                ScrollbarControl(
+                    "sb",
+                    Rect(20, 60, 180, 24),
+                    LayoutAxis.HORIZONTAL,
+                    content_size=1000,
+                    viewport_size=200,
+                    offset=100,
+                    step=10,
+                    on_change=lambda value: None,
+                    on_change_mode="reason-required",
+                )
+            )
 
     def test_slider_strict_mode_accepts_reason_callback(self) -> None:
         changed = []
@@ -267,6 +263,7 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.assertEqual(changed, [(55.0, ValueChangeReason.PROGRAMMATIC)])
 
     def test_slider_set_on_change_mode_switches_runtime_behavior(self) -> None:
+        changed = []
         slider = self.root.add(
             SliderControl(
                 "s",
@@ -275,17 +272,54 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
                 0.0,
                 100.0,
                 50.0,
-                on_change=lambda value: None,
+                on_change=lambda value, reason: changed.append((value, reason)),
             )
         )
 
         selected = slider.set_on_change_mode("reason-required")
+        changed_flag = slider.adjust_value(5.0)
 
         self.assertEqual(selected, "reason-required")
-        with self.assertRaises(TypeError):
-            slider.adjust_value(5.0)
+        self.assertTrue(changed_flag)
+        self.assertEqual(changed, [(55.0, ValueChangeReason.PROGRAMMATIC)])
 
     def test_scrollbar_set_on_change_mode_switches_runtime_behavior(self) -> None:
+        changed = []
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+                on_change=lambda value, reason: changed.append((value, reason)),
+            )
+        )
+
+        selected = bar.set_on_change_mode("reason-required")
+        changed_flag = bar.adjust_offset(10)
+
+        self.assertEqual(selected, "reason-required")
+        self.assertTrue(changed_flag)
+        self.assertEqual(changed, [(110, ValueChangeReason.PROGRAMMATIC)])
+
+    def test_set_on_change_mode_rejects_invalid_values(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 180, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        bar = self.root.add(
+            ScrollbarControl("sb", Rect(20, 60, 180, 24), LayoutAxis.HORIZONTAL, content_size=1000, viewport_size=200, offset=100, step=10)
+        )
+
+        with self.assertRaises(ValueError):
+            slider.set_on_change_mode("strict")
+        with self.assertRaises(ValueError):
+            bar.set_on_change_mode("strict")
+
+    def test_set_on_change_mode_rejects_existing_incompatible_callback(self) -> None:
+        slider = self.root.add(
+            SliderControl("s", Rect(20, 20, 180, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0, on_change=lambda value: None)
+        )
         bar = self.root.add(
             ScrollbarControl(
                 "sb",
@@ -299,22 +333,29 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
             )
         )
 
-        selected = bar.set_on_change_mode("reason-required")
-
-        self.assertEqual(selected, "reason-required")
         with self.assertRaises(TypeError):
-            bar.adjust_offset(10)
+            slider.set_on_change_mode("reason-required")
+        with self.assertRaises(TypeError):
+            bar.set_on_change_mode("reason-required")
 
-    def test_set_on_change_mode_rejects_invalid_values(self) -> None:
+    def test_set_on_change_callback_validates_current_mode(self) -> None:
         slider = self.root.add(SliderControl("s", Rect(20, 20, 180, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
         bar = self.root.add(
             ScrollbarControl("sb", Rect(20, 60, 180, 24), LayoutAxis.HORIZONTAL, content_size=1000, viewport_size=200, offset=100, step=10)
         )
+        slider.set_on_change_mode("reason-required")
+        bar.set_on_change_mode("reason-required")
 
-        with self.assertRaises(ValueError):
-            slider.set_on_change_mode("strict")
-        with self.assertRaises(ValueError):
-            bar.set_on_change_mode("strict")
+        with self.assertRaises(TypeError):
+            slider.set_on_change_callback(lambda value: None)
+        with self.assertRaises(TypeError):
+            bar.set_on_change_callback(lambda value: None)
+
+        slider_callback = slider.set_on_change_callback(lambda value, reason: None)
+        bar_callback = bar.set_on_change_callback(lambda value, reason: None)
+
+        self.assertIsNotNone(slider_callback)
+        self.assertIsNotNone(bar_callback)
 
 
 if __name__ == "__main__":

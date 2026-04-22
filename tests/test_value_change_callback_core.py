@@ -1,7 +1,9 @@
 import unittest
 
 from gui.core.value_change_callback import dispatch_value_change
+from gui.core.value_change_callback import callback_accepts_reason
 from gui.core.value_change_callback import normalize_value_change_callback_mode
+from gui.core.value_change_callback import validate_value_change_callback
 from gui.core.value_change_reason import ValueChangeReason
 
 
@@ -61,6 +63,16 @@ class ValueChangeCallbackCoreTests(unittest.TestCase):
     def test_dispatch_rejects_invalid_mode(self) -> None:
         with self.assertRaises(ValueError):
             dispatch_value_change(lambda value: None, 1, ValueChangeReason.PROGRAMMATIC, mode="invalid")  # type: ignore[arg-type]
+
+    def test_callback_accepts_reason_helper(self) -> None:
+        self.assertFalse(callback_accepts_reason(lambda value: None))
+        self.assertTrue(callback_accepts_reason(lambda value, reason: None))
+        self.assertTrue(callback_accepts_reason(lambda *args: None))
+
+    def test_validate_value_change_callback_strict_mode(self) -> None:
+        validate_value_change_callback(lambda value, reason: None, mode="reason-required")
+        with self.assertRaises(TypeError):
+            validate_value_change_callback(lambda value: None, mode="reason-required")
 
 
 if __name__ == "__main__":

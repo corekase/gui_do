@@ -35,6 +35,20 @@ def _accepts_reason(callback: Callable) -> bool:
     return len(positional) >= 2
 
 
+def callback_accepts_reason(callback: Optional[ValueChangeCallback[TValue]]) -> bool:
+    """Return whether a callback can accept `(value, reason)` arguments."""
+    if callback is None:
+        return False
+    return _accepts_reason(callback)
+
+
+def validate_value_change_callback(callback: Optional[ValueChangeCallback[TValue]], mode: ValueChangeCallbackMode = "compat") -> None:
+    """Validate callback compatibility for the selected dispatch mode."""
+    mode = normalize_value_change_callback_mode(mode)
+    if mode == "reason-required" and callback is not None and not _accepts_reason(callback):
+        raise TypeError("on_change callback must accept (value, reason) when mode='reason-required'")
+
+
 def dispatch_value_change(
     callback: Optional[ValueChangeCallback[TValue]],
     value: TValue,
@@ -44,10 +58,8 @@ def dispatch_value_change(
     """Invoke a value-change callback with backward-compatible arity handling."""
     if callback is None:
         return
-    mode = normalize_value_change_callback_mode(mode)
+    validate_value_change_callback(callback, mode)
     accepts_reason = _accepts_reason(callback)
-    if mode == "reason-required" and not accepts_reason:
-        raise TypeError("on_change callback must accept (value, reason) when mode='reason-required'")
     if accepts_reason:
         callback(value, reason)
         return

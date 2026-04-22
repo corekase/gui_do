@@ -1,4 +1,6 @@
 import unittest
+from collections.abc import Callable as AbcCallable
+from typing import Literal, Union, get_args, get_origin
 
 import gui
 from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
@@ -14,6 +16,8 @@ from gui import normalize_value_change_callback_mode
 from gui import ObservableValue
 from gui import PresentationModel
 from gui import VALUE_CHANGE_CALLBACK_MODES
+from gui import ValueChangeCallback
+from gui import ValueChangeCallbackMode
 
 
 EXPECTED_PUBLIC_EXPORTS = set(PUBLIC_API_EXPORT_ORDER)
@@ -62,6 +66,17 @@ class PublicApiExportsTests(unittest.TestCase):
     def test_callback_mode_normalizer_export_is_canonical(self) -> None:
         self.assertEqual(normalize_value_change_callback_mode("  COMPAT  "), "compat")
         self.assertEqual(normalize_value_change_callback_mode("reason-required"), "reason-required")
+
+    def test_value_change_callback_mode_type_alias_export_shape(self) -> None:
+        self.assertIs(get_origin(ValueChangeCallbackMode), Literal)
+        self.assertEqual(get_args(ValueChangeCallbackMode), ("compat", "reason-required"))
+
+    def test_value_change_callback_type_alias_export_shape(self) -> None:
+        self.assertIs(get_origin(ValueChangeCallback), Union)
+        variants = get_args(ValueChangeCallback)
+        self.assertEqual(len(variants), 2)
+        for variant in variants:
+            self.assertIs(get_origin(variant), AbcCallable)
 
 
 if __name__ == "__main__":
