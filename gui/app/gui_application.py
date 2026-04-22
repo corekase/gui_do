@@ -17,6 +17,7 @@ from ..core.scene import Scene
 from ..core.renderer import Renderer
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
+from ..core.focus_visualizer import FocusVisualizer
 from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -33,7 +34,8 @@ class GuiApplication:
         self.event_manager = EventManager()
         self.pointer_capture = PointerCapture()
         self.keyboard = KeyboardManager()
-        self.focus = FocusManager()
+        self.focus_visualizer = FocusVisualizer(self)
+        self.focus = FocusManager(visualizer=self.focus_visualizer)
         self.actions = ActionManager()
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
@@ -214,6 +216,7 @@ class GuiApplication:
         if self._screen_preamble is not None:
             self._screen_preamble()
         self.timers.update(dt_seconds)
+        self.focus_visualizer.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
         runtime["scheduler"].update()
         runtime["scene"].update(dt_seconds)

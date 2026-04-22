@@ -1,13 +1,20 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .focus_visualizer import FocusVisualizer
 
 
 class FocusManager:
-    """Tracks keyboard focus independently from window activation."""
+    """Tracks keyboard focus independently from window activation.
 
-    def __init__(self) -> None:
+    Optionally displays a visual focus indicator via an attached FocusVisualizer.
+    """
+
+    def __init__(self, visualizer: Optional["FocusVisualizer"] = None) -> None:
         self._focused_node = None
+        self._visualizer = visualizer
 
     @property
     def focused_node(self):
@@ -32,6 +39,12 @@ class FocusManager:
         self._focused_node = node
         if node is not None:
             node._set_focused(True)
+        # Trigger visual focus indicator
+        if self._visualizer is not None:
+            if node is not None:
+                self._visualizer.set_focus_hint(node)
+            else:
+                self._visualizer.clear_focus_hint()
 
     def set_focus_by_id(self, scene, control_id: str) -> bool:
         """Find the first focusable node with *control_id* in *scene* and focus it.
