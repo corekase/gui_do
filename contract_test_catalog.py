@@ -113,6 +113,7 @@ PUBLIC_API_EXPORT_ORDER = (
     "VALUE_CHANGE_CALLBACK_MODES",
     "ValueChangeCallbackMode",
     "ValueChangeCallback",
+    "ensure_reason_callback",
     "normalize_value_change_callback_mode",
     "ValueChangeReason",
     "InvalidationTracker",

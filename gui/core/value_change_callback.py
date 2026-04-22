@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Literal, Optional, TypeVar, Union
+from typing import Callable, Literal, Optional, TypeVar, Union, cast
 
 from .value_change_reason import ValueChangeReason
 
@@ -40,6 +40,21 @@ def callback_accepts_reason(callback: Optional[ValueChangeCallback[TValue]]) -> 
     if callback is None:
         return False
     return _accepts_reason(callback)
+
+
+def ensure_reason_callback(callback: Optional[ValueChangeCallback[TValue]]) -> Optional[ValueReasonCallback[TValue]]:
+    """Return a reason-aware callback, adapting legacy value-only callbacks when needed."""
+    if callback is None:
+        return None
+    if _accepts_reason(callback):
+        return cast(ValueReasonCallback[TValue], callback)
+
+    value_only = cast(ValueOnlyCallback[TValue], callback)
+
+    def adapted(value: TValue, _reason: ValueChangeReason) -> None:
+        value_only(value)
+
+    return adapted
 
 
 def validate_value_change_callback(callback: Optional[ValueChangeCallback[TValue]], mode: ValueChangeCallbackMode = "compat") -> None:

@@ -12,6 +12,7 @@ from gui import EventType
 from gui import FocusManager
 from gui import GuiEvent
 from gui import InvalidationTracker
+from gui import ensure_reason_callback
 from gui import normalize_value_change_callback_mode
 from gui import ObservableValue
 from gui import PresentationModel
@@ -66,6 +67,14 @@ class PublicApiExportsTests(unittest.TestCase):
     def test_callback_mode_normalizer_export_is_canonical(self) -> None:
         self.assertEqual(normalize_value_change_callback_mode("  COMPAT  "), "compat")
         self.assertEqual(normalize_value_change_callback_mode("reason-required"), "reason-required")
+
+    def test_ensure_reason_callback_export_adapts_value_only_callback(self) -> None:
+        seen = []
+        adapted = ensure_reason_callback(lambda value: seen.append(value))
+
+        self.assertIsNotNone(adapted)
+        adapted(3, gui.ValueChangeReason.KEYBOARD)
+        self.assertEqual(seen, [3])
 
     def test_value_change_callback_mode_type_alias_export_shape(self) -> None:
         self.assertIs(get_origin(ValueChangeCallbackMode), Literal)

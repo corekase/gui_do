@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl, ValueChangeReason
+from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl, ValueChangeReason, ensure_reason_callback
 
 
 class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
@@ -261,6 +261,26 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
 
         self.assertTrue(changed_flag)
         self.assertEqual(changed, [(55.0, ValueChangeReason.PROGRAMMATIC)])
+
+    def test_slider_strict_mode_accepts_adapted_value_only_callback(self) -> None:
+        changed = []
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                50.0,
+                on_change=ensure_reason_callback(lambda value: changed.append(value)),
+                on_change_mode="reason-required",
+            )
+        )
+
+        changed_flag = slider.adjust_value(5.0)
+
+        self.assertTrue(changed_flag)
+        self.assertEqual(changed, [55.0])
 
     def test_slider_set_on_change_mode_switches_runtime_behavior(self) -> None:
         changed = []

@@ -40,6 +40,7 @@ from .core.gui_event import EventPhase, EventType, GuiEvent
 from .core.value_change_callback import VALUE_CHANGE_CALLBACK_MODES
 from .core.value_change_callback import ValueChangeCallback
 from .core.value_change_callback import ValueChangeCallbackMode
+from .core.value_change_callback import ensure_reason_callback
 from .core.value_change_callback import normalize_value_change_callback_mode
 from .core.value_change_reason import ValueChangeReason
 from .core.invalidation import InvalidationTracker
@@ -79,6 +80,7 @@ __all__ = [
     "VALUE_CHANGE_CALLBACK_MODES",
     "ValueChangeCallbackMode",
     "ValueChangeCallback",
+    "ensure_reason_callback",
     "normalize_value_change_callback_mode",
     "ValueChangeReason",
     "InvalidationTracker",

@@ -2,6 +2,7 @@ import unittest
 
 from gui.core.value_change_callback import dispatch_value_change
 from gui.core.value_change_callback import callback_accepts_reason
+from gui.core.value_change_callback import ensure_reason_callback
 from gui.core.value_change_callback import normalize_value_change_callback_mode
 from gui.core.value_change_callback import validate_value_change_callback
 from gui.core.value_change_reason import ValueChangeReason
@@ -73,6 +74,27 @@ class ValueChangeCallbackCoreTests(unittest.TestCase):
         validate_value_change_callback(lambda value, reason: None, mode="reason-required")
         with self.assertRaises(TypeError):
             validate_value_change_callback(lambda value: None, mode="reason-required")
+
+    def test_ensure_reason_callback_adapts_value_only_callback(self) -> None:
+        seen = []
+        adapted = ensure_reason_callback(lambda value: seen.append(value))
+
+        self.assertIsNotNone(adapted)
+        adapted(11, ValueChangeReason.KEYBOARD)
+
+        self.assertEqual(seen, [11])
+
+    def test_ensure_reason_callback_preserves_reason_callback(self) -> None:
+        seen = []
+
+        def callback(value, reason):
+            seen.append((value, reason))
+
+        adapted = ensure_reason_callback(callback)
+
+        self.assertIs(adapted, callback)
+        adapted(4, ValueChangeReason.WHEEL)
+        self.assertEqual(seen, [(4, ValueChangeReason.WHEEL)])
 
 
 if __name__ == "__main__":
