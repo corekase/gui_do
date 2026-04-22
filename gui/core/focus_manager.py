@@ -30,7 +30,7 @@ class FocusManager:
     def clear_focus(self) -> None:
         self.set_focus(None)
 
-    def set_focus(self, node) -> None:
+    def set_focus(self, node, show_hint: bool = True) -> None:
         previous = self._focused_node
         if previous is node:
             return
@@ -42,7 +42,7 @@ class FocusManager:
         # Trigger visual focus indicator
         if self._visualizer is not None:
             if node is not None:
-                self._visualizer.set_focus_hint(node)
+                self._visualizer.set_focus_hint(node, show_hint=show_hint)
             else:
                 self._visualizer.clear_focus_hint()
 

@@ -31,17 +31,23 @@ class FocusVisualizer:
         self._current_hint_node = None  # Node currently showing the focus hint
         self._current_hint_elapsed = 0.0  # Total time since hint started
 
-    def set_focus_hint(self, node) -> None:
+    def set_focus_hint(self, node, show_hint: bool = True) -> None:
         """Start displaying a focus hint for the given node.
 
+        Args:
+            node: The node to show the hint for.
+            show_hint: If True, display the visual hint. If False, no hint is shown.
+                Default is True (show hint).
+
         When focus switches to a new control, the previous hint is immediately cleared
-        (no fade-out).
+        (no fade-out). If show_hint is False, the hint is not displayed at all.
         """
         if node is self._current_hint_node:
             return  # Already showing this hint
 
         # Start displaying the new hint (old hint immediately clears)
-        self._current_hint_node = node
+        # Only store node if we're showing the hint
+        self._current_hint_node = node if show_hint else None
         self._current_hint_elapsed = 0.0
 
     def clear_focus_hint(self) -> None:
