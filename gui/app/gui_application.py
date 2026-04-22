@@ -252,7 +252,6 @@ class GuiApplication:
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
-        self.parts.run_preamble()
         if self._screen_preamble is not None:
             self._screen_preamble()
         self.timers.update(dt_seconds)
@@ -264,7 +263,7 @@ class GuiApplication:
         self.focus.revalidate_focus(runtime["scene"])
         if self._screen_postamble is not None:
             self._screen_postamble()
-        self.parts.run_postamble()
+        self.parts.update_parts()
 
     def shutdown(self) -> None:
         """Release runtime services."""

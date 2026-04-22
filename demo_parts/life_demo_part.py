@@ -89,8 +89,8 @@ class LifeSimulationFeature(Part):
         if latest_status is not None:
             self.last_mandel_status = latest_status
 
-    def postamble(self, host) -> None:
-        """Part lifecycle postamble hook delegated from the host application."""
+    def on_update(self, host) -> None:
+        """Part lifecycle on_update hook delegated from the host application."""
         self.on_post_frame(host)
 
     def build_window(

@@ -180,8 +180,8 @@ class MandelbrotRenderFeature(Part):
         self.last_status_sent = status_text
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
 
-    def postamble(self, host) -> None:
-        """Part lifecycle postamble hook delegated from the host application."""
+    def on_update(self, host) -> None:
+        """Part lifecycle on_update hook delegated from the host application."""
         self.on_post_frame(host)
 
     def format_help_text(self, demo) -> str:

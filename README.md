@@ -204,9 +204,8 @@ Every feature in gui_do is a `Part` subclass. Parts follow a standardized lifecy
 1. **`build(demo)`**: Create all UI controls and wire event handlers
 2. **`bind_runtime(demo)`**: Connect runtime services (scheduler, timers, event bus)
 3. **`configure_accessibility(demo, tab_index_start)`**: Set up keyboard navigation and accessibility metadata
-4. **`on_post_frame(demo)`**: Process cross-part messages and state updates (runs every frame after GUI logic)
-5. **`postamble(demo)`**: Post-frame cleanup hook (called automatically)
-6. **`shutdown_runtime(demo)`** (optional): Cleanup when the app shuts down
+4. **`on_update(demo)`**: Process cross-part messages and state updates (called every frame by `app.update()`)
+5. **`shutdown_runtime(demo)`** (optional): Cleanup when the app shuts down
 
 ### Step 1: Define Your Feature Class
 
@@ -322,10 +321,10 @@ def configure_accessibility(self, demo, tab_index_start: int) -> int:
 
 ### Step 5: Handle Events and State
 
-The `postamble()` hook runs every frame and processes events:
+The `on_update()` hook runs every frame and processes events:
 
 ```python
-def postamble(self, host) -> None:
+def on_update(self, host) -> None:
     """Run Life simulation update and consume canvas events."""
     # Drain canvas events (mouse clicks, drags, wheel)
     while self.canvas.has_events():
@@ -429,7 +428,7 @@ while app.running:
         app.process_event(event)  # Normalize to GuiEvent, route to controls
 
     # 2. Update all parts and controls
-    app.update()  # Runs preamble() then postamble() on all parts
+    app.update()  # Calls on_update() on all parts after processing input and controls
 
     # 3. Draw the scene
     app.draw()  # Renders all controls, then calls draw() on all parts
@@ -499,19 +498,15 @@ def configure_accessibility(self, host, tab_index_start: int) -> int:
     return next_index
 ```
 
-#### `on_post_frame(host)` / `postamble(host)`
+#### `on_update(host)`
 
 **Purpose**: Update feature state, process events, and publish messages every frame.
 
-**When it runs**: Called from `GuiApplication.update()` after the UI engine has processed input and updated all controls. `postamble()` is always called; `on_post_frame()` is up to you to implement.
+**When it runs**: Called from `GuiApplication.update()` after the UI engine has processed input and updated all controls.
 
 **Signature**:
 ```python
-def postamble(self, host) -> None:
-    """Called every frame after GUI logic."""
-    self.on_post_frame(host)
-
-def on_post_frame(self, host) -> None:
+def on_update(self, host) -> None:
     """Drain events, update state, publish messages."""
     # Process control events
     while self.canvas.has_events():
@@ -631,7 +626,7 @@ This section documents the type annotations and patterns used throughout gui_do.
 - **`UiNode`**: Base class for all GUI controls. All controls inherit from `UiNode`.
 - **`Control`**: A `UiNode` that can receive events and has interactive behavior (buttons, sliders, etc.).
 - **`Container`**: A `UiNode` that can have children (panels, windows, frames).
-- **`Part`**: A composable feature that implements lifecycle hooks (`build`, `bind_runtime`, `postamble`).
+- **`Part`**: A composable feature that implements lifecycle hooks (`build`, `bind_runtime`, `on_update`).
 - **`GuiEvent`**: Normalized pygame event wrapper with semantic methods like `is_mouse_down()`, `is_key_down()`.
 - **`Scene`**: A top-level container that manages a graph of UI nodes.
 
@@ -734,7 +729,7 @@ class MyFeature(Part):
         # Set up keyboard navigation
         return next_tab_index
 
-    def postamble(self, demo):
+    def on_update(self, demo):
         # Update every frame
         pass
 ```

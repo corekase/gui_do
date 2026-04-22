@@ -24,13 +24,10 @@ class Part:
     def on_unregister(self, host) -> None:
         return None
 
-    def preamble(self, host) -> None:
-        return None
-
     def handle_event(self, host, event) -> bool:
         return False
 
-    def postamble(self, host) -> None:
+    def on_update(self, host) -> None:
         return None
 
     def draw(self, host, surface, theme) -> None:
@@ -146,11 +143,6 @@ class PartManager:
             raise KeyError(f"unknown runnable: {part_name}.{runnable_name}")
         return runnable(*args, **kwargs)
 
-    def run_preamble(self, host=None) -> None:
-        for part in self._parts.values():
-            host_obj = self._resolve_host(part.name, host)
-            part.preamble(host_obj)
-
     def handle_event(self, event, host=None) -> bool:
         for part in self._parts.values():
             host_obj = self._resolve_host(part.name, host)
@@ -158,10 +150,10 @@ class PartManager:
                 return True
         return False
 
-    def run_postamble(self, host=None) -> None:
+    def update_parts(self, host=None) -> None:
         for part in self._parts.values():
             host_obj = self._resolve_host(part.name, host)
-            part.postamble(host_obj)
+            part.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
         for part in self._parts.values():
