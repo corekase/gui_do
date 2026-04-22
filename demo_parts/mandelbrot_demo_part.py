@@ -114,14 +114,10 @@ class MandelbrotRenderFeature(Part):
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
         self.scheduler.set_message_dispatch_limit(256)
-        self.status_topic = getattr(demo, "_mandel_status_topic", MANDEL_STATUS_TOPIC)
-        self.status_scope = getattr(demo, "_mandel_status_scope", MANDEL_STATUS_SCOPE)
         demo.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self.adjust_failure_preview_limit(demo, -1))
         demo.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self.adjust_failure_preview_limit(demo, 1))
         demo.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
         demo.app.actions.bind_key(pygame.K_RIGHTBRACKET, "mandel_failure_preview_increase", scene="main")
-        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "bind") and hasattr(demo.mandel_model, "status_text"):
-            demo.mandel_model.bind(demo.mandel_model.status_text, lambda text: self.on_status_changed(demo, text))
         if hasattr(demo.app, "events") and hasattr(demo.app.events, "subscribe"):
             self.status_subscription = demo.app.events.subscribe(
                 self.status_topic,
@@ -135,14 +131,9 @@ class MandelbrotRenderFeature(Part):
             demo.app.events.unsubscribe(self.status_subscription)
             self.status_subscription = None
         self.status_bus_ready = False
-        model = getattr(demo, "mandel_model", None)
-        if model is not None and hasattr(model, "dispose"):
-            model.dispose()
 
     def _get_scheduler(self, demo):
         scheduler = self.scheduler
-        if scheduler is None:
-            scheduler = getattr(demo, "mandel_scheduler", None)
         if scheduler is None and hasattr(demo, "app") and hasattr(demo.app, "get_scene_scheduler"):
             scheduler = demo.app.get_scene_scheduler("main")
         if scheduler is None:
@@ -173,11 +164,7 @@ class MandelbrotRenderFeature(Part):
 
     def on_post_frame(self, demo) -> None:
         self.update_events()
-        model = getattr(demo, "mandel_model", None)
-        if model is not None and hasattr(model, "status_text"):
-            status_text = str(model.status_text.value)
-        else:
-            status_text = str(self.status_text)
+        status_text = str(self.status_text)
         if status_text == self.last_status_sent:
             return
         self.last_status_sent = status_text
@@ -190,18 +177,12 @@ class MandelbrotRenderFeature(Part):
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"
 
     def set_help_label(self, demo) -> None:
-        label = self.help_label if self.help_label is not None else getattr(demo, "mandel_help", None)
-        if label is not None:
-            label.text = self.format_help_text(demo)
+        self.help_label.text = self.format_help_text(demo)
 
     def _set_status_text(self, demo, text: str) -> None:
         normalized = str(text)
         self.status_text = normalized
-        if self.status_label is not None:
-            self.status_label.text = normalized
-        model = getattr(demo, "mandel_model", None)
-        if model is not None and hasattr(model, "set_status"):
-            model.set_status(normalized)
+        self.status_label.text = normalized
 
     def set_failure_preview_limit(self, demo, limit: int) -> int:
         clamped = max(self.FAILURE_PREVIEW_MIN, min(self.FAILURE_PREVIEW_MAX, int(limit)))
@@ -315,8 +296,6 @@ class MandelbrotRenderFeature(Part):
         demo.mandel_task_buttons = self.task_buttons
 
         default_status = self.status_text
-        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
-            default_status = str(demo.mandel_model.status_text.value)
         self.status_label = demo.app.style_label(
             self.window.add(
                 label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), default_status)
@@ -335,8 +314,7 @@ class MandelbrotRenderFeature(Part):
 
     @staticmethod
     def on_status_changed(demo, text: str) -> None:
-        if hasattr(demo, "mandel_status"):
-            demo.mandel_status.text = text
+        demo.mandel_status.text = text
 
     def on_status_event(self, demo, payload) -> None:
         self._set_status_text(demo, self.format_status(demo, MandelStatusEvent.from_payload(payload)))
@@ -378,7 +356,7 @@ class MandelbrotRenderFeature(Part):
         # Keep local status in sync before publishing so repeated frame checks do not
         # republish identical running-status events while tasks are still busy.
         self._set_status_text(demo, formatted_status)
-        bus_ready = bool(self.status_bus_ready or getattr(demo, "_mandel_status_bus_ready", False))
+        bus_ready = bool(self.status_bus_ready)
         if bus_ready and hasattr(demo.app, "events") and hasattr(demo.app.events, "publish"):
             demo.app.events.publish(self.status_topic, payload, scope=self.status_scope)
             return
@@ -391,10 +369,7 @@ class MandelbrotRenderFeature(Part):
         task_count = len(self.task_ids)
         task_word = "task" if task_count == 1 else "tasks"
         detail = f"Mandelbrot: {mode} ({task_count} {task_word})"
-        current_status = self.status_text
-        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
-            current_status = str(demo.mandel_model.status_text.value)
-        if current_status == detail:
+        if self.status_text == detail:
             return
         self.publish_event(MANDEL_KIND_STATUS, detail)
 
@@ -694,9 +669,6 @@ class MandelbrotRenderFeature(Part):
         if busy:
             self.publish_running_status()
         scheduler.clear_events()
-        current_status = self.status_text
-        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
-            current_status = str(demo.mandel_model.status_text.value)
-        if not busy and current_status.startswith("Mandelbrot: running"):
+        if not busy and self.status_text.startswith("Mandelbrot: running"):
             self.running_mode = None
             self.publish_event(MANDEL_KIND_COMPLETE)

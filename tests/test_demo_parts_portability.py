@@ -85,7 +85,7 @@ class DemoPartsPortabilityTests(unittest.TestCase):
 
     def test_mandel_publish_event_updates_internal_status_without_model(self) -> None:
         part = MandelbrotRenderFeature()
-        host = SimpleNamespace(app=SimpleNamespace(), _publish_mandel_event=None)
+        host = SimpleNamespace(app=SimpleNamespace())
         part.demo = host
         part.status_label = SimpleNamespace(text="")
 

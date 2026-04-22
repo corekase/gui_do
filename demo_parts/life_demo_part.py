@@ -84,34 +84,9 @@ class LifeSimulationFeature(Part):
                 latest_status = str(payload["status"])
         if latest_status is not None:
             self.last_mandel_status = latest_status
-            setattr(demo, "_life_last_mandel_status", latest_status)
 
     def postamble(self, host) -> None:
         self.on_post_frame(host)
-
-    def _life_canvas(self):
-        if self.canvas is not None:
-            return self.canvas
-        demo = self.demo
-        return getattr(demo, "life_canvas", None)
-
-    def _life_toggle(self):
-        if self.toggle is not None:
-            return self.toggle
-        demo = self.demo
-        return getattr(demo, "life_toggle", None)
-
-    def _life_zoom_slider(self):
-        if self.zoom_slider is not None:
-            return self.zoom_slider
-        demo = self.demo
-        return getattr(demo, "life_zoom_slider", None)
-
-    def _life_zoom_label(self):
-        if self.zoom_label is not None:
-            return self.zoom_label
-        demo = self.demo
-        return getattr(demo, "life_zoom_label", None)
 
     def build_window(
         self,
@@ -209,23 +184,17 @@ class LifeSimulationFeature(Part):
 
     def set_life_zoom_label(self) -> None:
         zoom_level = max(2, int(round(self.life_cell_size)))
-        zoom_label = self._life_zoom_label()
-        if zoom_label is not None:
-            zoom_label.text = f"Zoom {zoom_level}"
+        self.zoom_label.text = f"Zoom {zoom_level}"
 
     def life_reset(self) -> None:
-        demo = self.demo
-        canvas = self._life_canvas()
-        zoom_slider = self._life_zoom_slider()
-        toggle = self._life_toggle()
         self.life_cells.clear()
         self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
-        self.life_origin = [canvas.rect.width / 2.0, canvas.rect.height / 2.0]
+        self.life_origin = [self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0]
         self.life_cell_size = 12
-        zoom_slider.value = 5.0
-        self.life_zoom_slider_last_value = int(round(zoom_slider.value))
+        self.zoom_slider.value = 5.0
+        self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         self.set_life_zoom_label()
-        toggle.pushed = False
+        self.toggle.pushed = False
 
     def life_population(self, cell: Tuple[int, int]) -> int:
         count = 0
@@ -256,14 +225,12 @@ class LifeSimulationFeature(Part):
         self.life_origin[1] = anchor_y - ((anchor_y - self.life_origin[1]) / old_size) * clamped_size
         self.life_cell_size = clamped_size
         slider_value = max(0, min(11, (clamped_size // 2) - 1))
-        zoom_slider = self._life_zoom_slider()
-        zoom_slider.value = float(slider_value)
+        self.zoom_slider.value = float(slider_value)
         self.life_zoom_slider_last_value = int(slider_value)
         self.set_life_zoom_label()
 
     def life_window_preamble(self) -> None:
-        zoom_slider = self._life_zoom_slider()
-        slider_value = max(0, min(11, int(round(zoom_slider.value))))
+        slider_value = max(0, min(11, int(round(self.zoom_slider.value))))
         self.sync_life_zoom_from_slider(slider_value)
 
     def on_life_zoom_slider_changed(self, value: float) -> None:
@@ -278,14 +245,13 @@ class LifeSimulationFeature(Part):
             self.life_zoom_slider_last_value = slider_value
             return
         self.life_zoom_slider_last_value = slider_value
-        canvas = self._life_canvas()
-        center_local = (canvas.rect.width / 2.0, canvas.rect.height / 2.0)
+        center_local = (self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0)
         self.zoom_life_view_about(self.demo, center_local, new_size)
 
     def life_window_event_handler(self, event) -> bool:
         demo = self.demo
-        canvas = self._life_canvas()
-        window = self.window if self.window is not None else getattr(demo, "life_window", None)
+        canvas = self.canvas
+        window = self.window
         if event.is_mouse_down(3) and event.collides(canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -339,11 +305,10 @@ class LifeSimulationFeature(Part):
     def life_window_postamble(self) -> None:
         self.update_life()
 
-    def update_life(self, demo=None) -> None:
-        if demo is None:
-            demo = self.demo
-        canvas = self._life_canvas()
-        toggle = self._life_toggle()
+    def update_life(self) -> None:
+        demo = self.demo
+        canvas = self.canvas
+        toggle = self.toggle
         while True:
             packet = canvas.read_event()
             if packet is None:

@@ -41,8 +41,6 @@ class GuiDoDemo:
         self._demo_features = [self._life_feature, self._mandel_feature]
         for feature in self._demo_features:
             self.app.register_part(feature, host=self)
-        # Backward-compatible alias used by existing tests.
-        self._feature_parts = self._demo_features
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")

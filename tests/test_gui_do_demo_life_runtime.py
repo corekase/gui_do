@@ -57,6 +57,10 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo.life_canvas = _LifeCanvasStub([])
         demo.app = SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0)))
         demo.life_toggle = SimpleNamespace(pushed=False)
+        life_part.zoom_slider = demo.life_zoom_slider
+        life_part.zoom_label = demo.life_zoom_label
+        life_part.canvas = demo.life_canvas
+        life_part.toggle = demo.life_toggle
         # Set the demo reference on the part so it can access UI elements
         life_part.demo = demo
         return demo
@@ -93,8 +97,9 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo.life_canvas = _LifeCanvasStub([
             _Packet(local_pos=(15, 15), pos=(200, 200), button=1),
         ])
+        demo._life_part().canvas = demo.life_canvas
 
-        demo._life_part().update_life(demo)
+        demo._life_part().update_life()
 
         self.assertIn((1, 1), demo._life_part().life_cells)
 
