@@ -85,6 +85,17 @@ class MandelbrotRenderFeature(Part):
         self.failure_preview_limit = 3
         self.scheduler = None
         self.demo = None  # Will be set during build_window
+        self.window = None
+        self.help_label = None
+        self.status_label = None
+        self.primary_canvas = None
+        self.split_canvases = {}
+        self.reset_button = None
+        self.task_buttons = ()
+        self.status_text = "Mandelbrot: idle"
+        self.status_topic = MANDEL_STATUS_TOPIC
+        self.status_scope = MANDEL_STATUS_SCOPE
+        self.status_bus_ready = False
 
     def build(self, demo) -> None:
         ui = demo.app.read_part_ui_types()
@@ -102,17 +113,22 @@ class MandelbrotRenderFeature(Part):
             self.scheduler = demo.app.get_scene_scheduler("main")
         demo.mandel_scheduler = self.scheduler
         self.scheduler.set_message_dispatch_limit(256)
+        self.status_topic = getattr(demo, "_mandel_status_topic", MANDEL_STATUS_TOPIC)
+        self.status_scope = getattr(demo, "_mandel_status_scope", MANDEL_STATUS_SCOPE)
         demo.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self.adjust_failure_preview_limit(demo, -1))
         demo.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self.adjust_failure_preview_limit(demo, 1))
         demo.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
         demo.app.actions.bind_key(pygame.K_RIGHTBRACKET, "mandel_failure_preview_increase", scene="main")
-        demo.mandel_model.bind(demo.mandel_model.status_text, lambda text: self.on_status_changed(demo, text))
-        demo._mandel_status_subscription = demo.app.events.subscribe(
-            demo._mandel_status_topic,
-            lambda payload: self.on_status_event(demo, payload),
-            scope=demo._mandel_status_scope,
-        )
-        demo._mandel_status_bus_ready = True
+        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "bind") and hasattr(demo.mandel_model, "status_text"):
+            demo.mandel_model.bind(demo.mandel_model.status_text, lambda text: self.on_status_changed(demo, text))
+        if hasattr(demo.app, "events") and hasattr(demo.app.events, "subscribe"):
+            demo._mandel_status_subscription = demo.app.events.subscribe(
+                self.status_topic,
+                lambda payload: self.on_status_event(demo, payload),
+                scope=self.status_scope,
+            )
+            self.status_bus_ready = True
+            setattr(demo, "_mandel_status_bus_ready", True)
 
     def _get_scheduler(self, demo):
         scheduler = self.scheduler
@@ -127,11 +143,8 @@ class MandelbrotRenderFeature(Part):
 
     def configure_accessibility(self, demo, tab_index_start: int) -> int:
         controls = [
-            demo.mandel_reset_button,
-            demo.mandel_iter_button,
-            demo.mandel_recur_button,
-            demo.mandel_one_split_button,
-            demo.mandel_four_split_button,
+            self.reset_button,
+            *self.task_buttons,
         ]
         labels = [
             "Clear Mandelbrot surfaces",
@@ -142,6 +155,8 @@ class MandelbrotRenderFeature(Part):
         ]
         next_index = int(tab_index_start)
         for control, label in zip(controls, labels):
+            if control is None:
+                continue
             control.set_tab_index(next_index)
             control.set_accessibility(role="button", label=label)
             next_index += 1
@@ -150,9 +165,10 @@ class MandelbrotRenderFeature(Part):
     def on_post_frame(self, demo) -> None:
         self.update_events()
         model = getattr(demo, "mandel_model", None)
-        if model is None or not hasattr(model, "status_text"):
-            return
-        status_text = str(model.status_text.value)
+        if model is not None and hasattr(model, "status_text"):
+            status_text = str(model.status_text.value)
+        else:
+            status_text = str(self.status_text)
         last_sent = getattr(demo, "_last_mandel_status_sent", None)
         if status_text == last_sent:
             return
@@ -166,8 +182,18 @@ class MandelbrotRenderFeature(Part):
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"
 
     def set_help_label(self, demo) -> None:
-        if hasattr(demo, "mandel_help") and demo.mandel_help is not None:
-            demo.mandel_help.text = self.format_help_text(demo)
+        label = self.help_label if self.help_label is not None else getattr(demo, "mandel_help", None)
+        if label is not None:
+            label.text = self.format_help_text(demo)
+
+    def _set_status_text(self, demo, text: str) -> None:
+        normalized = str(text)
+        self.status_text = normalized
+        if self.status_label is not None:
+            self.status_label.text = normalized
+        model = getattr(demo, "mandel_model", None)
+        if model is not None and hasattr(model, "set_status"):
+            model.set_status(normalized)
 
     def set_failure_preview_limit(self, demo, limit: int) -> int:
         clamped = max(self.FAILURE_PREVIEW_MIN, min(self.FAILURE_PREVIEW_MAX, int(limit)))
@@ -195,7 +221,7 @@ class MandelbrotRenderFeature(Part):
     ) -> None:
         self.demo = demo  # Store demo reference for callbacks
         mandel_rect = demo.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
-        demo.mandel_window = demo.root.add(
+        self.window = demo.root.add(
             window_control_cls(
                 "mandel_window",
                 mandel_rect,
@@ -203,6 +229,7 @@ class MandelbrotRenderFeature(Part):
                 event_handler=lambda event: self.window_event_handler(demo, event),
             )
         )
+        demo.mandel_window = self.window
         left = mandel_rect.left
         top = mandel_rect.top
         canvas_size = 580
@@ -213,8 +240,8 @@ class MandelbrotRenderFeature(Part):
         controls_y = canvas_y + canvas_size + 12
         status_y = controls_y + 38
 
-        demo.mandel_help = demo.app.style_label(
-            demo.mandel_window.add(
+        self.help_label = demo.app.style_label(
+            self.window.add(
                 label_control_cls(
                     "mandel_help",
                     Rect(left + 20, top + 30, 590, 20),
@@ -222,14 +249,21 @@ class MandelbrotRenderFeature(Part):
                 )
             )
         )
-        demo.mandel_canvas = demo.mandel_window.add(canvas_control_cls("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
+        demo.mandel_help = self.help_label
+        self.primary_canvas = self.window.add(canvas_control_cls("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
+        demo.mandel_canvas = self.primary_canvas
         demo.mandel_canvas_rect = Rect(canvas_x, canvas_y, canvas_size, canvas_size)
-        demo.canvas1 = demo.mandel_window.add(canvas_control_cls("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
-        demo.canvas2 = demo.mandel_window.add(canvas_control_cls("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
-        demo.canvas3 = demo.mandel_window.add(canvas_control_cls("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
-        demo.canvas4 = demo.mandel_window.add(
+        canvas1 = self.window.add(canvas_control_cls("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
+        canvas2 = self.window.add(canvas_control_cls("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
+        canvas3 = self.window.add(canvas_control_cls("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
+        canvas4 = self.window.add(
             canvas_control_cls("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
         )
+        self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
+        demo.canvas1 = canvas1
+        demo.canvas2 = canvas2
+        demo.canvas3 = canvas3
+        demo.canvas4 = canvas4
 
         demo.app.layout.set_linear_properties(
             anchor=(left + 20, controls_y),
@@ -244,48 +278,60 @@ class MandelbrotRenderFeature(Part):
         mandel_one_split_rect = demo.app.layout.next_linear()
         mandel_four_split_rect = demo.app.layout.next_linear()
 
-        demo.mandel_reset_button = demo.mandel_window.add(
+        self.reset_button = self.window.add(
             button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(demo), style="angle")
         )
-        demo.mandel_iter_button = demo.mandel_window.add(
+        demo.mandel_reset_button = self.reset_button
+        mandel_iter_button = self.window.add(
             button_control_cls("mandel_iter", mandel_iter_rect, "Iterative", lambda: self.launch_iterative(demo), style="round")
         )
-        demo.mandel_recur_button = demo.mandel_window.add(
+        mandel_recur_button = self.window.add(
             button_control_cls("mandel_recur", mandel_recur_rect, "Recursive", lambda: self.launch_recursive(demo), style="round")
         )
-        demo.mandel_one_split_button = demo.mandel_window.add(
+        mandel_one_split_button = self.window.add(
             button_control_cls("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", lambda: self.launch_one_split(demo), style="round")
         )
-        demo.mandel_four_split_button = demo.mandel_window.add(
+        mandel_four_split_button = self.window.add(
             button_control_cls("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", lambda: self.launch_four_split(demo), style="round")
         )
-        demo.mandel_task_buttons = (
-            demo.mandel_iter_button,
-            demo.mandel_recur_button,
-            demo.mandel_one_split_button,
-            demo.mandel_four_split_button,
+        demo.mandel_iter_button = mandel_iter_button
+        demo.mandel_recur_button = mandel_recur_button
+        demo.mandel_one_split_button = mandel_one_split_button
+        demo.mandel_four_split_button = mandel_four_split_button
+        self.task_buttons = (
+            mandel_iter_button,
+            mandel_recur_button,
+            mandel_one_split_button,
+            mandel_four_split_button,
         )
+        demo.mandel_task_buttons = self.task_buttons
 
-        demo.mandel_status = demo.app.style_label(
-            demo.mandel_window.add(
-                label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), demo.mandel_model.status_text.value)
+        default_status = self.status_text
+        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
+            default_status = str(demo.mandel_model.status_text.value)
+        self.status_label = demo.app.style_label(
+            self.window.add(
+                label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), default_status)
             )
         )
+        demo.mandel_status = self.status_label
+        self.status_text = default_status
 
-        demo.canvas1.visible = False
-        demo.canvas2.visible = False
-        demo.canvas3.visible = False
-        demo.canvas4.visible = False
+        canvas1.visible = False
+        canvas2.visible = False
+        canvas3.visible = False
+        canvas4.visible = False
         self.set_task_buttons_disabled(demo, False)
         self.clear(demo)
-        demo.mandel_window.visible = False
+        self.window.visible = False
 
     @staticmethod
     def on_status_changed(demo, text: str) -> None:
-        demo.mandel_status.text = text
+        if hasattr(demo, "mandel_status"):
+            demo.mandel_status.text = text
 
     def on_status_event(self, demo, payload) -> None:
-        demo.mandel_model.set_status(self.format_status(demo, MandelStatusEvent.from_payload(payload)))
+        self._set_status_text(demo, self.format_status(demo, MandelStatusEvent.from_payload(payload)))
 
     @staticmethod
     def format_status(_demo, payload) -> str:
@@ -320,12 +366,13 @@ class MandelbrotRenderFeature(Part):
             return
         event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
         payload = event.to_payload()
-        if getattr(demo, "_mandel_status_bus_ready", False):
-            demo.app.events.publish(demo._mandel_status_topic, payload, scope=demo._mandel_status_scope)
+        bus_ready = bool(getattr(demo, "_mandel_status_bus_ready", False) or self.status_bus_ready)
+        if bus_ready and hasattr(demo.app, "events") and hasattr(demo.app.events, "publish"):
+            demo.app.events.publish(self.status_topic, payload, scope=self.status_scope)
             return
         # Fall back to direct model update
         formatted_status = self.format_status(demo, event)
-        demo.mandel_model.set_status(formatted_status)
+        self._set_status_text(demo, formatted_status)
 
     def publish_running_status(self) -> None:
         demo = self.demo
@@ -335,7 +382,10 @@ class MandelbrotRenderFeature(Part):
         task_count = len(self.task_ids)
         task_word = "task" if task_count == 1 else "tasks"
         detail = f"Mandelbrot: {mode} ({task_count} {task_word})"
-        if demo.mandel_model.status_text.value == detail:
+        current_status = self.status_text
+        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
+            current_status = str(demo.mandel_model.status_text.value)
+        if current_status == detail:
             return
         self.publish_event(MANDEL_KIND_STATUS, detail)
 
@@ -380,14 +430,14 @@ class MandelbrotRenderFeature(Part):
         return self.max_iter - 1
 
     def clear_surfaces(self, demo) -> None:
-        demo.mandel_canvas.canvas.fill(demo.app.theme.medium)
-        demo.canvas1.canvas.fill(demo.app.theme.medium)
-        demo.canvas2.canvas.fill(demo.app.theme.medium)
-        demo.canvas3.canvas.fill(demo.app.theme.medium)
-        demo.canvas4.canvas.fill(demo.app.theme.medium)
+        self.primary_canvas.canvas.fill(demo.app.theme.medium)
+        self.split_canvases["can1"].canvas.fill(demo.app.theme.medium)
+        self.split_canvases["can2"].canvas.fill(demo.app.theme.medium)
+        self.split_canvases["can3"].canvas.fill(demo.app.theme.medium)
+        self.split_canvases["can4"].canvas.fill(demo.app.theme.medium)
 
     def set_task_buttons_disabled(self, demo, disabled: bool) -> None:
-        buttons = getattr(demo, "mandel_task_buttons", ())
+        buttons = self.task_buttons
         for button in buttons:
             button.enabled = not disabled
         if not disabled:
@@ -397,17 +447,17 @@ class MandelbrotRenderFeature(Part):
         focused = demo.app.focus.focused_node
         if focused not in buttons:
             return
-        if demo.mandel_reset_button.visible and demo.mandel_reset_button.enabled and demo.mandel_reset_button.accepts_focus():
-            demo.app.focus.set_focus(demo.mandel_reset_button, show_hint=False)
+        if self.reset_button.visible and self.reset_button.enabled and self.reset_button.accepts_focus():
+            demo.app.focus.set_focus(self.reset_button, show_hint=False)
             return
         demo.app.focus.revalidate_focus(demo.app.scene)
 
     def show_single_canvas(self, demo) -> None:
-        demo.mandel_canvas.visible = True
-        demo.canvas1.visible = False
-        demo.canvas2.visible = False
-        demo.canvas3.visible = False
-        demo.canvas4.visible = False
+        self.primary_canvas.visible = True
+        self.split_canvases["can1"].visible = False
+        self.split_canvases["can2"].visible = False
+        self.split_canvases["can3"].visible = False
+        self.split_canvases["can4"].visible = False
         self.clear_surfaces(demo)
 
     def prepare_single_canvas_run(self, demo) -> None:
@@ -416,25 +466,25 @@ class MandelbrotRenderFeature(Part):
 
     def prepare_split_canvas_run(self, demo) -> None:
         self.set_task_buttons_disabled(demo, True)
-        demo.mandel_canvas.visible = False
-        demo.canvas1.visible = True
-        demo.canvas2.visible = True
-        demo.canvas3.visible = True
-        demo.canvas4.visible = True
+        self.primary_canvas.visible = False
+        self.split_canvases["can1"].visible = True
+        self.split_canvases["can2"].visible = True
+        self.split_canvases["can3"].visible = True
+        self.split_canvases["can4"].visible = True
         self.clear_surfaces(demo)
 
     def canvas_for_task(self, demo, task_id: str):
         canvas_by_task = {
-            "iter": demo.mandel_canvas.canvas,
-            "recu": demo.mandel_canvas.canvas,
-            "1": demo.mandel_canvas.canvas,
-            "2": demo.mandel_canvas.canvas,
-            "3": demo.mandel_canvas.canvas,
-            "4": demo.mandel_canvas.canvas,
-            "can1": demo.canvas1.canvas,
-            "can2": demo.canvas2.canvas,
-            "can3": demo.canvas3.canvas,
-            "can4": demo.canvas4.canvas,
+            "iter": self.primary_canvas.canvas,
+            "recu": self.primary_canvas.canvas,
+            "1": self.primary_canvas.canvas,
+            "2": self.primary_canvas.canvas,
+            "3": self.primary_canvas.canvas,
+            "4": self.primary_canvas.canvas,
+            "can1": self.split_canvases["can1"].canvas,
+            "can2": self.split_canvases["can2"].canvas,
+            "can3": self.split_canvases["can3"].canvas,
+            "can4": self.split_canvases["can4"].canvas,
         }
         return canvas_by_task.get(task_id)
 
@@ -553,7 +603,7 @@ class MandelbrotRenderFeature(Part):
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
         self.prepare_single_canvas_run(demo)
-        width, height = demo.mandel_canvas.canvas.get_size()
+        width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
         scheduler.add_task(
             "iter",
@@ -571,7 +621,7 @@ class MandelbrotRenderFeature(Part):
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
         self.prepare_single_canvas_run(demo)
-        width, height = demo.mandel_canvas.canvas.get_size()
+        width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
         self.queue_recursive_task(demo, "recu", Rect(0, 0, width, height), (width, height), center, scale)
         self.running_mode = "running recursive"
@@ -583,7 +633,7 @@ class MandelbrotRenderFeature(Part):
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
         self.prepare_single_canvas_run(demo)
-        width, height = demo.mandel_canvas.canvas.get_size()
+        width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
         left_w, top_h = width // 2, height // 2
         right_w, bottom_h = width - left_w, height - top_h
@@ -600,7 +650,7 @@ class MandelbrotRenderFeature(Part):
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
         self.prepare_split_canvas_run(demo)
-        width, height = demo.canvas1.canvas.get_size()
+        width, height = self.split_canvases["can1"].canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
         for task_id in ("can1", "can2", "can3", "can4"):
             self.queue_recursive_task(demo, task_id, Rect(0, 0, width, height), (width, height), center, scale)
@@ -635,7 +685,10 @@ class MandelbrotRenderFeature(Part):
         if busy:
             self.publish_running_status()
         scheduler.clear_events()
-        if not busy and demo.mandel_model.status_text.value.startswith("Mandelbrot: running"):
+        current_status = self.status_text
+        if hasattr(demo, "mandel_model") and hasattr(demo.mandel_model, "status_text"):
+            current_status = str(demo.mandel_model.status_text.value)
+        if not busy and current_status.startswith("Mandelbrot: running"):
             self.running_mode = None
             self.publish_event(MANDEL_KIND_COMPLETE)
 

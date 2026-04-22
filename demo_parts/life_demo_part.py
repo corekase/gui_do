@@ -26,6 +26,13 @@ class LifeSimulationFeature(Part):
         self.life_zoom_slider_last_value = 5
         self.scheduler = None
         self.demo = None  # Will be set during build_window
+        self.window = None
+        self.canvas = None
+        self.reset_button = None
+        self.toggle = None
+        self.zoom_slider = None
+        self.zoom_label = None
+        self.last_mandel_status = None
 
     def build(self, demo) -> None:
         ui = demo.app.read_part_ui_types()
@@ -47,9 +54,9 @@ class LifeSimulationFeature(Part):
 
     def configure_accessibility(self, demo, tab_index_start: int) -> int:
         controls = [
-            demo.life_reset_button,
-            demo.life_toggle,
-            demo.life_zoom_slider,
+            self.reset_button,
+            self.toggle,
+            self.zoom_slider,
         ]
         roles = [
             ("button", "Reset life board"),
@@ -58,6 +65,8 @@ class LifeSimulationFeature(Part):
         ]
         next_index = int(tab_index_start)
         for control, (role, label) in zip(controls, roles):
+            if control is None:
+                continue
             control.set_tab_index(next_index)
             control.set_accessibility(role=role, label=label)
             next_index += 1
@@ -74,10 +83,35 @@ class LifeSimulationFeature(Part):
             if "status" in payload:
                 latest_status = str(payload["status"])
         if latest_status is not None:
-            demo._life_last_mandel_status = latest_status
+            self.last_mandel_status = latest_status
+            setattr(demo, "_life_last_mandel_status", latest_status)
 
     def postamble(self, host) -> None:
         self.on_post_frame(host)
+
+    def _life_canvas(self):
+        if self.canvas is not None:
+            return self.canvas
+        demo = self.demo
+        return getattr(demo, "life_canvas", None)
+
+    def _life_toggle(self):
+        if self.toggle is not None:
+            return self.toggle
+        demo = self.demo
+        return getattr(demo, "life_toggle", None)
+
+    def _life_zoom_slider(self):
+        if self.zoom_slider is not None:
+            return self.zoom_slider
+        demo = self.demo
+        return getattr(demo, "life_zoom_slider", None)
+
+    def _life_zoom_label(self):
+        if self.zoom_label is not None:
+            return self.zoom_label
+        demo = self.demo
+        return getattr(demo, "life_zoom_label", None)
 
     def build_window(
         self,
@@ -93,17 +127,18 @@ class LifeSimulationFeature(Part):
     ) -> None:
         self.demo = demo  # Store demo reference for use in callback methods
         life_rect = demo.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
-        demo.life_window = demo.root.add(
+        self.window = demo.root.add(
             window_control_cls(
                 "life_window",
                 life_rect,
                 "Conway's Game of Life",
                 preamble=self.life_window_preamble,
-                event_handler=lambda event: self.life_window_event_handler(demo, event),
+                event_handler=self.life_window_event_handler,
                 postamble=self.life_window_postamble,
             )
         )
-        content_rect = demo.life_window.content_rect()
+        demo.life_window = self.window
+        content_rect = self.window.content_rect()
         left = content_rect.left
         top = content_rect.top
         width = content_rect.width
@@ -111,9 +146,10 @@ class LifeSimulationFeature(Part):
         widget_height = 28
         padding = 10
 
-        demo.life_canvas = demo.life_window.add(
+        self.canvas = self.window.add(
             canvas_control_cls("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), height - (widget_height * 2)), max_events=256)
         )
+        demo.life_canvas = self.canvas
 
         controls_y = top + height - widget_height - padding
 
@@ -130,10 +166,11 @@ class LifeSimulationFeature(Part):
         zoom_slider_slot_2 = demo.app.layout.next_linear()
         zoom_label_slot = demo.app.layout.next_linear()
 
-        demo.life_reset_button = demo.life_window.add(
+        self.reset_button = self.window.add(
             button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle")
         )
-        demo.life_toggle = demo.life_window.add(
+        demo.life_reset_button = self.reset_button
+        self.toggle = self.window.add(
             toggle_control_cls(
                 "life_toggle",
                 life_toggle_rect,
@@ -143,10 +180,11 @@ class LifeSimulationFeature(Part):
                 style="round",
             )
         )
+        demo.life_toggle = self.toggle
 
         slider_left = zoom_slider_slot_1.left
         slider_right = zoom_slider_slot_2.right
-        demo.life_zoom_slider = demo.life_window.add(
+        self.zoom_slider = self.window.add(
             slider_control_cls(
                 "life_zoom",
                 Rect(slider_left, controls_y, max(80, slider_right - slider_left), widget_height),
@@ -157,31 +195,37 @@ class LifeSimulationFeature(Part):
                 on_change=self.on_life_zoom_slider_changed,
             )
         )
-        self.life_zoom_slider_last_value = int(round(demo.life_zoom_slider.value))
+        demo.life_zoom_slider = self.zoom_slider
+        self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
-        demo.life_zoom_label = demo.app.style_label(
-            demo.life_window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12"))
+        self.zoom_label = demo.app.style_label(
+            self.window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12"))
         )
+        demo.life_zoom_label = self.zoom_label
 
-        demo.life_origin = [demo.life_canvas.rect.width // 2, demo.life_canvas.rect.height // 2]
+        demo.life_origin = [self.canvas.rect.width // 2, self.canvas.rect.height // 2]
         self.life_reset()
-        demo.life_window.visible = False
+        self.window.visible = False
 
     def set_life_zoom_label(self) -> None:
-        demo = self.demo
         zoom_level = max(2, int(round(self.life_cell_size)))
-        demo.life_zoom_label.text = f"Zoom {zoom_level}"
+        zoom_label = self._life_zoom_label()
+        if zoom_label is not None:
+            zoom_label.text = f"Zoom {zoom_level}"
 
     def life_reset(self) -> None:
         demo = self.demo
+        canvas = self._life_canvas()
+        zoom_slider = self._life_zoom_slider()
+        toggle = self._life_toggle()
         self.life_cells.clear()
         self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
-        self.life_origin = [demo.life_canvas.rect.width / 2.0, demo.life_canvas.rect.height / 2.0]
+        self.life_origin = [canvas.rect.width / 2.0, canvas.rect.height / 2.0]
         self.life_cell_size = 12
-        demo.life_zoom_slider.value = 5.0
-        self.life_zoom_slider_last_value = int(round(demo.life_zoom_slider.value))
+        zoom_slider.value = 5.0
+        self.life_zoom_slider_last_value = int(round(zoom_slider.value))
         self.set_life_zoom_label()
-        demo.life_toggle.pushed = False
+        toggle.pushed = False
 
     def life_population(self, demo, cell: Tuple[int, int]) -> int:
         count = 0
@@ -212,20 +256,20 @@ class LifeSimulationFeature(Part):
         self.life_origin[1] = anchor_y - ((anchor_y - self.life_origin[1]) / old_size) * clamped_size
         self.life_cell_size = clamped_size
         slider_value = max(0, min(11, (clamped_size // 2) - 1))
-        demo.life_zoom_slider.value = float(slider_value)
+        zoom_slider = self._life_zoom_slider()
+        zoom_slider.value = float(slider_value)
         self.life_zoom_slider_last_value = int(slider_value)
         self.set_life_zoom_label()
 
     def life_window_preamble(self) -> None:
-        demo = self.demo
-        slider_value = max(0, min(11, int(round(demo.life_zoom_slider.value))))
+        zoom_slider = self._life_zoom_slider()
+        slider_value = max(0, min(11, int(round(zoom_slider.value))))
         self.sync_life_zoom_from_slider(slider_value)
 
     def on_life_zoom_slider_changed(self, value: float) -> None:
         self.sync_life_zoom_from_slider(int(round(value)))
 
     def sync_life_zoom_from_slider(self, slider_value: int) -> None:
-        demo = self.demo
         if slider_value == self.life_zoom_slider_last_value:
             return
         old_size = max(2, int(round(self.life_cell_size)))
@@ -234,16 +278,20 @@ class LifeSimulationFeature(Part):
             self.life_zoom_slider_last_value = slider_value
             return
         self.life_zoom_slider_last_value = slider_value
-        center_local = (demo.life_canvas.rect.width / 2.0, demo.life_canvas.rect.height / 2.0)
-        self.zoom_life_view_about(demo, center_local, new_size)
+        canvas = self._life_canvas()
+        center_local = (canvas.rect.width / 2.0, canvas.rect.height / 2.0)
+        self.zoom_life_view_about(self.demo, center_local, new_size)
 
-    def life_window_event_handler(self, demo, event) -> bool:
-        if event.is_mouse_down(3) and event.collides(demo.life_canvas.rect):
+    def life_window_event_handler(self, event) -> bool:
+        demo = self.demo
+        canvas = self._life_canvas()
+        window = self.window if self.window is not None else getattr(demo, "life_window", None)
+        if event.is_mouse_down(3) and event.collides(canvas.rect):
             pos = event.pos
             if pos is not None:
                 self.life_dragging = True
                 demo.app.set_cursor("hand")
-                demo.app.set_lock_point(demo.life_canvas, pos)
+                demo.app.set_lock_point(canvas, pos)
                 return True
 
         if event.is_mouse_up(3):
@@ -267,35 +315,37 @@ class LifeSimulationFeature(Part):
 
         if event.is_mouse_down(4) or event.is_mouse_down(5):
             pos = event.pos
-            if pos is not None and demo.life_canvas.rect.collidepoint(pos):
+            if pos is not None and canvas.rect.collidepoint(pos):
                 wheel_step = 1 if event.button == 4 else -1
-                anchor_local = (pos[0] - demo.life_canvas.rect.left, pos[1] - demo.life_canvas.rect.top)
+                anchor_local = (pos[0] - canvas.rect.left, pos[1] - canvas.rect.top)
                 self.zoom_life_view_about(demo, anchor_local, self.life_cell_size + (wheel_step * 2))
                 return True
 
         if event.is_mouse_wheel():
             pointer_pos = demo.app.lock_point_pos if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None else event.pos
-            if pointer_pos is not None and demo.life_canvas.rect.collidepoint(pointer_pos):
+            if pointer_pos is not None and canvas.rect.collidepoint(pointer_pos):
                 if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None:
-                    lock_window_pos = demo.app.convert_to_window(demo.app.lock_point_pos, demo.life_window)
-                    canvas_window_left = demo.life_canvas.rect.left - demo.life_window.rect.left
-                    canvas_window_top = demo.life_canvas.rect.top - demo.life_window.rect.top
+                    lock_window_pos = demo.app.convert_to_window(demo.app.lock_point_pos, window)
+                    canvas_window_left = canvas.rect.left - window.rect.left
+                    canvas_window_top = canvas.rect.top - window.rect.top
                     anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
                 else:
-                    anchor_local = (pointer_pos[0] - demo.life_canvas.rect.left, pointer_pos[1] - demo.life_canvas.rect.top)
+                    anchor_local = (pointer_pos[0] - canvas.rect.left, pointer_pos[1] - canvas.rect.top)
                 self.zoom_life_view_about(demo, anchor_local, self.life_cell_size + (event.wheel_delta * 2))
                 return True
 
         return False
 
     def life_window_postamble(self) -> None:
-        demo = self.demo
-        self.update_life(demo)
+        self.update_life()
 
-    def update_life(self, demo) -> None:
-        part = demo._life_part()
+    def update_life(self, demo=None) -> None:
+        if demo is None:
+            demo = self.demo
+        canvas = self._life_canvas()
+        toggle = self._life_toggle()
         while True:
-            packet = demo.life_canvas.read_event()
+            packet = canvas.read_event()
             if packet is None:
                 break
             if not packet.is_mouse_down(1):
@@ -303,8 +353,8 @@ class LifeSimulationFeature(Part):
             if packet.local_pos is not None:
                 local_x, local_y = packet.local_pos
             elif packet.pos is not None:
-                local_x = packet.pos[0] - demo.life_canvas.rect.left
-                local_y = packet.pos[1] - demo.life_canvas.rect.top
+                local_x = packet.pos[0] - canvas.rect.left
+                local_y = packet.pos[1] - canvas.rect.top
             else:
                 continue
             cell_size = max(2, int(round(self.life_cell_size)))
@@ -316,14 +366,14 @@ class LifeSimulationFeature(Part):
             else:
                 self.life_cells.add(cell)
 
-        if demo.life_toggle.pushed:
+        if toggle.pushed:
             self.life_step(demo)
 
         cell_size = max(2, int(round(self.life_cell_size)))
-        demo.life_canvas.canvas.fill(demo.app.theme.medium)
+        canvas.canvas.fill(demo.app.theme.medium)
         trim = 0 if cell_size <= 2 else 1
         for cx, cy in self.life_cells:
             px = int(self.life_origin[0] + (cx * cell_size))
             py = int(self.life_origin[1] + (cy * cell_size))
-            if -cell_size <= px <= demo.life_canvas.rect.width and -cell_size <= py <= demo.life_canvas.rect.height:
-                demo.life_canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
+            if -cell_size <= px <= canvas.rect.width and -cell_size <= py <= canvas.rect.height:
+                canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
