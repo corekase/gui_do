@@ -330,6 +330,14 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         self.assertEqual(normal, 4)
         self.assertEqual(demo._mandel_failure_preview_limit, 4)
 
+    def test_set_mandel_failure_preview_limit_refreshes_help_label_when_available(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_help = SimpleNamespace(text="")
+
+        demo.set_mandel_failure_preview_limit(6)
+
+        self.assertIn("Failure preview [ ]: 6", demo.mandel_help.text)
+
     def test_configured_preview_limit_controls_failure_summary(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
         demo.set_mandel_failure_preview_limit(1)
@@ -343,6 +351,15 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         )
 
         self.assertEqual(detail, "3 tasks failed - can1: boom; +2 more")
+
+    def test_format_mandel_help_text_includes_modes_and_preview_limit(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo._mandel_failure_preview_limit = 5
+
+        text = demo._format_mandel_help_text()
+
+        self.assertIn("Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks", text)
+        self.assertIn("Failure preview [ ]: 5", text)
 
     def test_adjust_mandel_failure_preview_limit_publishes_status(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)

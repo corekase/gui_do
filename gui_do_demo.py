@@ -172,9 +172,18 @@ class GuiDoDemo:
         label.text_size = size
         return label
 
+    def _format_mandel_help_text(self) -> str:
+        limit = int(getattr(self, "_mandel_failure_preview_limit", 3))
+        return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {limit}"
+
+    def _set_mandel_help_label(self) -> None:
+        if hasattr(self, "mandel_help") and self.mandel_help is not None:
+            self.mandel_help.text = self._format_mandel_help_text()
+
     def set_mandel_failure_preview_limit(self, limit: int) -> int:
         clamped = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, int(limit)))
         self._mandel_failure_preview_limit = clamped
+        self._set_mandel_help_label()
         return clamped
 
     def _adjust_mandel_failure_preview_limit(self, delta: int) -> bool:
@@ -273,12 +282,12 @@ class GuiDoDemo:
         controls_y = canvas_y + canvas_size + 12
         status_y = controls_y + 38
 
-        self._set_text(
+        self.mandel_help = self._set_text(
             self.mandel_window.add(
                 LabelControl(
                     "mandel_help",
                     Rect(left + 20, top + 30, 590, 20),
-                    "Render modes: Iterative, Recursive, 1M 4Tasks, and 4M 4Tasks",
+                    self._format_mandel_help_text(),
                 )
             )
         )
