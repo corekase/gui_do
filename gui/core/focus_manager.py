@@ -98,26 +98,14 @@ class FocusManager:
         self.set_focus(candidates[next_index])
         return True
 
-        previous = self._focused_node
-        if previous is node:
-            return
-        if previous is not None:
-            previous._set_focused(False)
-        self._focused_node = node
-        if node is not None:
-            node._set_focused(True)
+    @property
+    def has_focus(self) -> bool:
+        """Return True when any node is currently focused."""
+        return self._focused_node is not None
 
-    def route_key_event(self, event, app) -> bool:
-        target = self._focused_node
-        if target is None:
-            return False
-        if target not in app.scene._walk_nodes():
-            self.clear_focus()
-            return False
-        if not target.visible or not target.enabled:
-            self.clear_focus()
-            return False
-        return bool(target.handle_event(event, app))
+    def focusable_count(self, scene, *, window=None) -> int:
+        """Return the number of focusable nodes in *scene*, optionally scoped to *window*."""
+        return len(self._focusable_nodes(scene, window=window))
 
     @staticmethod
     def _is_descendant(node, ancestor) -> bool:
