@@ -37,6 +37,7 @@ from .core.event_manager import EventManager
 from .core.event_bus import EventBus
 from .core.focus_manager import FocusManager
 from .core.gui_event import EventPhase, EventType, GuiEvent
+from .core.value_change_callback import VALUE_CHANGE_CALLBACK_MODES
 from .core.value_change_reason import ValueChangeReason
 from .core.invalidation import InvalidationTracker
 from .core.presentation_model import ObservableValue, PresentationModel
@@ -72,6 +73,7 @@ __all__ = [
     "EventPhase",
     "EventType",
     "GuiEvent",
+    "VALUE_CHANGE_CALLBACK_MODES",
     "ValueChangeReason",
     "InvalidationTracker",
     "ObservableValue",

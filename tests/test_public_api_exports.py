@@ -12,6 +12,7 @@ from gui import GuiEvent
 from gui import InvalidationTracker
 from gui import ObservableValue
 from gui import PresentationModel
+from gui import VALUE_CHANGE_CALLBACK_MODES
 
 
 EXPECTED_PUBLIC_EXPORTS = set(PUBLIC_API_EXPORT_ORDER)
@@ -53,6 +54,9 @@ class PublicApiExportsTests(unittest.TestCase):
     def test_public_all_names_are_resolvable_attributes(self) -> None:
         for export_name in gui.__all__:
             self.assertTrue(hasattr(gui, export_name), f"gui missing attribute for __all__ export: {export_name}")
+
+    def test_value_change_callback_modes_export_is_canonical_tuple(self) -> None:
+        self.assertEqual(VALUE_CHANGE_CALLBACK_MODES, ("compat", "reason-required"))
 
 
 if __name__ == "__main__":
