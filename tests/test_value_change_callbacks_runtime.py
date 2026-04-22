@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl
+from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl, ValueChangeReason
 
 
 class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
@@ -187,7 +187,7 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
         slider.adjust_value(5.0)
 
-        self.assertEqual(changed, [(55.0, "keyboard"), (60.0, "programmatic")])
+        self.assertEqual(changed, [(55.0, ValueChangeReason.KEYBOARD), (60.0, ValueChangeReason.PROGRAMMATIC)])
 
     def test_scrollbar_on_change_receives_reason_metadata_when_callback_accepts_it(self) -> None:
         changed = []
@@ -209,7 +209,7 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
         bar.adjust_offset(10)
 
-        self.assertEqual(changed, [(110, "keyboard"), (120, "programmatic")])
+        self.assertEqual(changed, [(110, ValueChangeReason.KEYBOARD), (120, ValueChangeReason.PROGRAMMATIC)])
 
 
 if __name__ == "__main__":

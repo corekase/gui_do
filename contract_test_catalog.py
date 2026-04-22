@@ -110,6 +110,7 @@ PUBLIC_API_EXPORT_ORDER = (
     "EventPhase",
     "EventType",
     "GuiEvent",
+    "ValueChangeReason",
     "InvalidationTracker",
     "ObservableValue",
     "PresentationModel",

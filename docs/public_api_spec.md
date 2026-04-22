@@ -34,6 +34,7 @@ The package exports the following symbols via `gui/__init__.py`:
 - `EventPhase`
 - `EventType`
 - `GuiEvent`
+- `ValueChangeReason`
 - `InvalidationTracker`
 - `ObservableValue`
 - `PresentationModel`

@@ -5,6 +5,7 @@ from typing import Callable, Optional, TYPE_CHECKING
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
+from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
 
@@ -58,11 +59,11 @@ class SliderControl(UiNode):
         ]
         return len(positional) >= 2
 
-    def _notify_change(self, reason: str) -> None:
+    def _notify_change(self, reason: ValueChangeReason) -> None:
         if self.on_change is None:
             return
         if self._accepts_reason(self.on_change):
-            self.on_change(self.value, str(reason))
+            self.on_change(self.value, reason)
             return
         self.on_change(self.value)
 
@@ -107,13 +108,13 @@ class SliderControl(UiNode):
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""
-        return self._set_value(value, reason="programmatic")
+        return self._set_value(value, reason=ValueChangeReason.PROGRAMMATIC)
 
     def adjust_value(self, delta: float) -> bool:
         """Adjust value programmatically by a delta with clamp and callbacks."""
-        return self._set_value(self.value + float(delta), reason="programmatic")
+        return self._set_value(self.value + float(delta), reason=ValueChangeReason.PROGRAMMATIC)
 
-    def _set_value(self, new_value: float, reason: str = "programmatic") -> bool:
+    def _set_value(self, new_value: float, reason: ValueChangeReason = ValueChangeReason.PROGRAMMATIC) -> bool:
         old_value = self.value
         self.value = float(new_value)
         self._clamp_value()
@@ -144,19 +145,19 @@ class SliderControl(UiNode):
 
         step = self._keyboard_step()
         if event.is_key_down(pygame.K_HOME):
-            return self._set_value(self.minimum, reason="keyboard")
+            return self._set_value(self.minimum, reason=ValueChangeReason.KEYBOARD)
         if event.is_key_down(pygame.K_END):
-            return self._set_value(self.maximum, reason="keyboard")
+            return self._set_value(self.maximum, reason=ValueChangeReason.KEYBOARD)
         if self.axis == LayoutAxis.HORIZONTAL:
             if event.is_key_down(pygame.K_LEFT):
-                return self._set_value(self.value - step, reason="keyboard")
+                return self._set_value(self.value - step, reason=ValueChangeReason.KEYBOARD)
             if event.is_key_down(pygame.K_RIGHT):
-                return self._set_value(self.value + step, reason="keyboard")
+                return self._set_value(self.value + step, reason=ValueChangeReason.KEYBOARD)
         else:
             if event.is_key_down(pygame.K_DOWN):
-                return self._set_value(self.value - step, reason="keyboard")
+                return self._set_value(self.value - step, reason=ValueChangeReason.KEYBOARD)
             if event.is_key_down(pygame.K_UP):
-                return self._set_value(self.value + step, reason="keyboard")
+                return self._set_value(self.value + step, reason=ValueChangeReason.KEYBOARD)
 
         raw = event.pos
         if event.is_mouse_down(1):
@@ -176,7 +177,7 @@ class SliderControl(UiNode):
                 axis_pixel = pos[0] - self._drag_anchor_offset + (self.handle_size // 2)
             else:
                 axis_pixel = pos[1] - self._drag_anchor_offset + (self.handle_size // 2)
-            return self._set_value(self._to_value(axis_pixel), reason="mouse_drag")
+            return self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
@@ -184,7 +185,10 @@ class SliderControl(UiNode):
             return True
 
         if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
-            return self._set_value(self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)), reason="wheel")
+            return self._set_value(
+                self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)),
+                reason=ValueChangeReason.WHEEL,
+            )
         return False
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
