@@ -62,6 +62,7 @@ class GuiDoDemo:
         self.app.configure_parts_accessibility(self, len(base_controls))
 
     def _life_part(self):
+        """Return the Life feature instance, creating/wiring it on demand."""
         part = getattr(self, "_life_feature", None)
         if part is None:
             part = LifeSimulationFeature()
@@ -71,6 +72,7 @@ class GuiDoDemo:
         return part
 
     def _mandel_part(self):
+        """Return the Mandelbrot feature instance, creating/wiring it on demand."""
         part = getattr(self, "_mandel_feature", None)
         if part is None:
             part = MandelbrotRenderFeature()
@@ -165,12 +167,6 @@ class GuiDoDemo:
         )
         _tile_visible_windows()
 
-    # ---------------------------------------------------------------------
-    # Accessibility, visibility toggles, and window tiling.
-    # ---------------------------------------------------------------------
-    # ---------------------------------------------------------------------
-    # Frame updates and engine lifecycle hooks.
-    # ---------------------------------------------------------------------
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""
         self.app.run(target_fps=120)

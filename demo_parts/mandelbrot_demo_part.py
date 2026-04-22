@@ -26,10 +26,13 @@ MANDEL_KIND_STATUS = "status"
 
 @dataclass(frozen=True)
 class MandelStatusEvent:
+    """Typed status payload used for Mandelbrot status bus publication."""
+
     kind: str
     detail: Optional[str] = None
 
     def to_payload(self) -> dict[str, str]:
+        """Serialize event fields into a transport-safe dictionary payload."""
         payload = {"kind": str(self.kind)}
         if self.detail is not None:
             payload["detail"] = str(self.detail)
@@ -37,6 +40,7 @@ class MandelStatusEvent:
 
     @classmethod
     def from_payload(cls, payload) -> "MandelStatusEvent":
+        """Build a status event from event instance, dict payload, or raw value."""
         if isinstance(payload, MandelStatusEvent):
             return payload
         if isinstance(payload, dict):
@@ -100,6 +104,7 @@ class MandelbrotRenderFeature(Part):
         self.last_status_sent = None
 
     def build(self, demo) -> None:
+        """Build the Mandelbrot feature UI using configured application UI types."""
         ui = demo.app.read_part_ui_types()
         self.build_window(
             demo,
@@ -110,6 +115,7 @@ class MandelbrotRenderFeature(Part):
         )
 
     def bind_runtime(self, demo) -> None:
+        """Bind scheduler, keyboard shortcuts, and event-bus subscription hooks."""
         self.demo = demo  # Store demo reference
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
@@ -127,12 +133,14 @@ class MandelbrotRenderFeature(Part):
             self.status_bus_ready = True
 
     def shutdown_runtime(self, demo) -> None:
+        """Unsubscribe runtime resources created by bind_runtime."""
         if self.status_subscription is not None and hasattr(demo.app, "events") and hasattr(demo.app.events, "unsubscribe"):
             demo.app.events.unsubscribe(self.status_subscription)
             self.status_subscription = None
         self.status_bus_ready = False
 
     def _get_scheduler(self, demo):
+        """Resolve and memoize the scene scheduler used by render tasks."""
         scheduler = self.scheduler
         if scheduler is None and hasattr(demo, "app") and hasattr(demo.app, "get_scene_scheduler"):
             scheduler = demo.app.get_scene_scheduler("main")
@@ -142,6 +150,7 @@ class MandelbrotRenderFeature(Part):
         return scheduler
 
     def configure_accessibility(self, demo, tab_index_start: int) -> int:
+        """Assign accessibility metadata and tab order for Mandelbrot controls."""
         controls = [
             self.reset_button,
             *self.task_buttons,
@@ -163,6 +172,7 @@ class MandelbrotRenderFeature(Part):
         return next_index
 
     def on_post_frame(self, demo) -> None:
+        """Publish post-frame status updates and cross-part status messages."""
         self.update_events()
         status_text = str(self.status_text)
         if status_text == self.last_status_sent:
@@ -171,26 +181,32 @@ class MandelbrotRenderFeature(Part):
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
 
     def postamble(self, host) -> None:
+        """Part lifecycle postamble hook delegated from the host application."""
         self.on_post_frame(host)
 
     def format_help_text(self, demo) -> str:
+        """Return help text showing render modes and failure-preview shortcut state."""
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"
 
     def set_help_label(self, demo) -> None:
+        """Refresh the Mandelbrot help label text."""
         self.help_label.text = self.format_help_text(demo)
 
     def _set_status_text(self, demo, text: str) -> None:
+        """Set canonical status text and keep status label in sync."""
         normalized = str(text)
         self.status_text = normalized
         self.status_label.text = normalized
 
     def set_failure_preview_limit(self, demo, limit: int) -> int:
+        """Set failure summary preview limit and clamp to supported range."""
         clamped = max(self.FAILURE_PREVIEW_MIN, min(self.FAILURE_PREVIEW_MAX, int(limit)))
         self.failure_preview_limit = clamped
         self.set_help_label(demo)
         return clamped
 
     def adjust_failure_preview_limit(self, demo, delta: int) -> bool:
+        """Adjust preview limit by delta and publish immediate user feedback."""
         previous = self.failure_preview_limit
         effective = self.set_failure_preview_limit(demo, previous + int(delta))
         detail = f"Mandelbrot failure preview limit: {effective}"
@@ -208,6 +224,7 @@ class MandelbrotRenderFeature(Part):
         canvas_control_cls,
         button_control_cls,
     ) -> None:
+        """Create the Mandelbrot window, canvases, controls, and status labels."""
         self.demo = demo  # Store demo reference for callbacks
         mandel_rect = demo.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
         self.window = demo.root.add(
@@ -314,13 +331,16 @@ class MandelbrotRenderFeature(Part):
 
     @staticmethod
     def on_status_changed(demo, text: str) -> None:
+        """Direct status-label setter used by tests and optional host hooks."""
         demo.mandel_status.text = text
 
     def on_status_event(self, demo, payload) -> None:
+        """Handle status-bus events and render normalized status text."""
         self._set_status_text(demo, self.format_status(demo, MandelStatusEvent.from_payload(payload)))
 
     @staticmethod
     def format_status(_demo, payload) -> str:
+        """Convert status payload/event values into user-facing status strings."""
         event = MandelStatusEvent.from_payload(payload)
         details = "" if event.detail is None else str(event.detail)
         mapping = {
@@ -341,6 +361,7 @@ class MandelbrotRenderFeature(Part):
         return details if details else f"Mandelbrot: {event.kind}"
 
     def publish_event(self, kind: str, detail: Optional[str] = None) -> None:
+        """Publish status updates through the event bus and local label state."""
         demo = self.demo
         part = self
         if kind in (MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED):
@@ -362,6 +383,7 @@ class MandelbrotRenderFeature(Part):
             return
 
     def publish_running_status(self) -> None:
+        """Publish running-mode telemetry with current active task count."""
         demo = self.demo
         if not self.task_ids:
             return
@@ -374,6 +396,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_event(MANDEL_KIND_STATUS, detail)
 
     def format_failure_summary(self, failed_details) -> str:
+        """Format deterministic, bounded failure summaries for status display."""
         if not failed_details:
             return ""
         if len(failed_details) == 1:
@@ -391,20 +414,24 @@ class MandelbrotRenderFeature(Part):
 
     @staticmethod
     def window_event_handler(_demo, event) -> bool:
+        """Window-level event hook; retained for explicit extension seam."""
         return False
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
+        """Map an iteration count to the Mandelbrot palette color."""
         if k >= self.max_iter - 1:
             return (0, 0, 0)
         return self.mandel_cols[k % len(self.mandel_cols)]
 
     def mandel_viewport(self, _demo, width: int, height: int) -> Tuple[complex, float]:
+        """Return viewport center and scale for the requested render dimensions."""
         center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
         scale = max((extent / width).real, (extent / height).imag)
         return center, scale
 
     def mandel_pixel(self, _demo, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
+        """Compute Mandelbrot iteration count for one pixel coordinate."""
         c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
         z = 0j
         for k in range(self.max_iter):
@@ -414,6 +441,7 @@ class MandelbrotRenderFeature(Part):
         return self.max_iter - 1
 
     def clear_surfaces(self, demo) -> None:
+        """Clear all Mandelbrot canvases to the theme medium background color."""
         self.primary_canvas.canvas.fill(demo.app.theme.medium)
         self.split_canvases["can1"].canvas.fill(demo.app.theme.medium)
         self.split_canvases["can2"].canvas.fill(demo.app.theme.medium)
@@ -421,6 +449,7 @@ class MandelbrotRenderFeature(Part):
         self.split_canvases["can4"].canvas.fill(demo.app.theme.medium)
 
     def set_task_buttons_disabled(self, demo, disabled: bool) -> None:
+        """Enable or disable launch buttons and keep focus state valid."""
         buttons = self.task_buttons
         for button in buttons:
             button.enabled = not disabled
@@ -437,6 +466,7 @@ class MandelbrotRenderFeature(Part):
         demo.app.focus.revalidate_focus(demo.app.scene)
 
     def show_single_canvas(self, demo) -> None:
+        """Show the primary render canvas and hide split canvases."""
         self.primary_canvas.visible = True
         self.split_canvases["can1"].visible = False
         self.split_canvases["can2"].visible = False
@@ -445,10 +475,12 @@ class MandelbrotRenderFeature(Part):
         self.clear_surfaces(demo)
 
     def prepare_single_canvas_run(self, demo) -> None:
+        """Prepare UI for single-canvas rendering modes."""
         self.set_task_buttons_disabled(demo, True)
         self.show_single_canvas(demo)
 
     def prepare_split_canvas_run(self, demo) -> None:
+        """Prepare UI for split-canvas rendering mode."""
         self.set_task_buttons_disabled(demo, True)
         self.primary_canvas.visible = False
         self.split_canvases["can1"].visible = True
@@ -458,6 +490,7 @@ class MandelbrotRenderFeature(Part):
         self.clear_surfaces(demo)
 
     def canvas_for_task(self, demo, task_id: str):
+        """Resolve target canvas surface for a given scheduler task id."""
         canvas_by_task = {
             "iter": self.primary_canvas.canvas,
             "recu": self.primary_canvas.canvas,
@@ -473,12 +506,14 @@ class MandelbrotRenderFeature(Part):
         return canvas_by_task.get(task_id)
 
     def make_progress_handler(self, demo, task_id: str):
+        """Build a scheduler message callback that applies task render payloads."""
         def handler(payload):
             self.apply_result(demo, task_id, payload)
 
         return handler
 
     def apply_result(self, demo, task_id: str, payload) -> None:
+        """Apply task payloads to target canvas surfaces, with bounds clipping."""
         canvas = self.canvas_for_task(demo, task_id)
         if canvas is None:
             return
@@ -501,6 +536,7 @@ class MandelbrotRenderFeature(Part):
             return
 
         if isinstance(values, int):
+            # Scalar payload means region is uniform and can be filled in one call.
             canvas.fill(self.mandel_col(values), Rect(x0, y0, x1 - x0, y1 - y0))
             return
 
@@ -521,6 +557,7 @@ class MandelbrotRenderFeature(Part):
                 idx += 1
 
     def clear(self, demo) -> None:
+        """Cancel active tasks, reset canvases/UI state, and publish cleared status."""
         scheduler = self._get_scheduler(demo)
         scheduler.remove_tasks(*self.task_id_pool)
         self.task_ids.clear()
@@ -530,6 +567,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_event(MANDEL_KIND_CLEARED)
 
     def iterative_task(self, demo, task_id, params):
+        """Worker entrypoint for iterative full-frame scanline rendering."""
         scheduler = self._get_scheduler(demo)
         width, height = params["size"]
         center = params["center"]
@@ -540,6 +578,7 @@ class MandelbrotRenderFeature(Part):
         return None
 
     def recursive_fill(self, demo, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
+        """Recursively subdivide a rectangle and emit fill/pixel payload messages."""
         scheduler = self._get_scheduler(demo)
         if w <= 0 or h <= 0:
             return
@@ -565,6 +604,7 @@ class MandelbrotRenderFeature(Part):
         self.recursive_fill(demo, task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
 
     def recursive_task(self, demo, task_id, params):
+        """Worker entrypoint for recursive rendering over a requested rectangle."""
         width, height = params["size"]
         center = params["center"]
         scale = params["scale"]
@@ -573,6 +613,7 @@ class MandelbrotRenderFeature(Part):
         return None
 
     def queue_recursive_task(self, demo, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
+        """Queue one recursive render task and track its task id as active."""
         scheduler = self._get_scheduler(demo)
         scheduler.add_task(
             task_id,
@@ -583,6 +624,7 @@ class MandelbrotRenderFeature(Part):
         self.task_ids.add(task_id)
 
     def launch_iterative(self, demo) -> None:
+        """Launch iterative render mode when no Mandelbrot task is already running."""
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
@@ -601,6 +643,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_running_status()
 
     def launch_recursive(self, demo) -> None:
+        """Launch single-task recursive render mode."""
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
@@ -613,6 +656,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_running_status()
 
     def launch_one_split(self, demo) -> None:
+        """Launch four recursive tasks that render quadrants into one canvas."""
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
@@ -630,6 +674,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_running_status()
 
     def launch_four_split(self, demo) -> None:
+        """Launch four recursive tasks across four independent split canvases."""
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
@@ -643,6 +688,7 @@ class MandelbrotRenderFeature(Part):
         self.publish_running_status()
 
     def update_events(self) -> None:
+        """Drain scheduler event streams and synchronize UI/task status state."""
         demo = self.demo
         if demo is None:
             return

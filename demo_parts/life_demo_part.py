@@ -35,6 +35,7 @@ class LifeSimulationFeature(Part):
         self.last_mandel_status = None
 
     def build(self, demo) -> None:
+        """Build the Life feature UI using the application's configured UI types."""
         ui = demo.app.read_part_ui_types()
         self.build_window(
             demo,
@@ -48,11 +49,13 @@ class LifeSimulationFeature(Part):
         )
 
     def bind_runtime(self, demo) -> None:
+        """Bind scheduler/runtime services required after scene construction."""
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
         self.scheduler.set_message_dispatch_limit(256)
 
     def configure_accessibility(self, demo, tab_index_start: int) -> int:
+        """Assign accessibility metadata and tab order for Life controls."""
         controls = [
             self.reset_button,
             self.toggle,
@@ -73,6 +76,7 @@ class LifeSimulationFeature(Part):
         return next_index
 
     def on_post_frame(self, demo) -> None:
+        """Consume cross-part status messages published by the Mandelbrot feature."""
         latest_status = None
         while self.has_messages():
             payload = self.pop_message()
@@ -86,6 +90,7 @@ class LifeSimulationFeature(Part):
             self.last_mandel_status = latest_status
 
     def postamble(self, host) -> None:
+        """Part lifecycle postamble hook delegated from the host application."""
         self.on_post_frame(host)
 
     def build_window(
@@ -100,6 +105,7 @@ class LifeSimulationFeature(Part):
         label_control_cls,
         layout_axis_cls,
     ) -> None:
+        """Create the Life window, canvas, and interaction controls."""
         self.demo = demo  # Store demo reference for use in callback methods
         life_rect = demo.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
         self.window = demo.root.add(
@@ -183,10 +189,12 @@ class LifeSimulationFeature(Part):
         self.window.visible = False
 
     def set_life_zoom_label(self) -> None:
+        """Refresh the Life zoom label text from the effective cell size."""
         zoom_level = max(2, int(round(self.life_cell_size)))
         self.zoom_label.text = f"Zoom {zoom_level}"
 
     def life_reset(self) -> None:
+        """Reset simulation state, viewport origin, zoom level, and run toggle."""
         self.life_cells.clear()
         self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
         self.life_origin = [self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0]
@@ -197,6 +205,7 @@ class LifeSimulationFeature(Part):
         self.toggle.pushed = False
 
     def life_population(self, cell: Tuple[int, int]) -> int:
+        """Return the number of alive neighbours surrounding one cell."""
         count = 0
         for dx, dy in self.neighbours:
             if (cell[0] + dx, cell[1] + dy) in self.life_cells:
@@ -204,6 +213,7 @@ class LifeSimulationFeature(Part):
         return count
 
     def life_step(self, demo) -> None:
+        """Advance the simulation by one generation using Conway rules."""
         new_life: Set[Tuple[int, int]] = set()
         for cell in self.life_cells:
             pop = self.life_population(cell)
@@ -216,6 +226,7 @@ class LifeSimulationFeature(Part):
         self.life_cells = new_life
 
     def zoom_life_view_about(self, demo, anchor_local: Tuple[float, float], new_size: int) -> None:
+        """Zoom around a local canvas anchor while preserving the anchored world point."""
         old_size = max(2, int(round(self.life_cell_size)))
         clamped_size = max(2, min(24, int(new_size)))
         if clamped_size == old_size:
@@ -230,13 +241,16 @@ class LifeSimulationFeature(Part):
         self.set_life_zoom_label()
 
     def life_window_preamble(self) -> None:
+        """Window preamble hook that reconciles zoom changes from slider position."""
         slider_value = max(0, min(11, int(round(self.zoom_slider.value))))
         self.sync_life_zoom_from_slider(slider_value)
 
     def on_life_zoom_slider_changed(self, value: float) -> None:
+        """Slider callback that converts float slider values into integer zoom steps."""
         self.sync_life_zoom_from_slider(int(round(value)))
 
     def sync_life_zoom_from_slider(self, slider_value: int) -> None:
+        """Apply slider-driven zoom changes using the canvas center as anchor."""
         if slider_value == self.life_zoom_slider_last_value:
             return
         old_size = max(2, int(round(self.life_cell_size)))
@@ -249,6 +263,7 @@ class LifeSimulationFeature(Part):
         self.zoom_life_view_about(self.demo, center_local, new_size)
 
     def life_window_event_handler(self, event) -> bool:
+        """Handle drag, click, and wheel interactions routed to the Life window."""
         demo = self.demo
         canvas = self.canvas
         window = self.window
@@ -268,6 +283,7 @@ class LifeSimulationFeature(Part):
                 return True
 
         if event.is_mouse_motion() and self.life_dragging:
+            # Prefer lock-point delta to keep drag behavior stable under pointer lock.
             delta = demo.app.get_lock_point_motion_delta(event)
             if delta is None:
                 rel = event.rel
@@ -291,6 +307,7 @@ class LifeSimulationFeature(Part):
             pointer_pos = demo.app.lock_point_pos if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None else event.pos
             if pointer_pos is not None and canvas.rect.collidepoint(pointer_pos):
                 if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None:
+                    # Convert locked window-space pointer to canvas-local coordinates.
                     lock_window_pos = demo.app.convert_to_window(demo.app.lock_point_pos, window)
                     canvas_window_left = canvas.rect.left - window.rect.left
                     canvas_window_top = canvas.rect.top - window.rect.top
@@ -303,9 +320,11 @@ class LifeSimulationFeature(Part):
         return False
 
     def life_window_postamble(self) -> None:
+        """Window postamble hook that drains queued events and renders the board."""
         self.update_life()
 
     def update_life(self) -> None:
+        """Process queued canvas input, step simulation, then redraw visible cells."""
         demo = self.demo
         canvas = self.canvas
         toggle = self.toggle
@@ -315,6 +334,7 @@ class LifeSimulationFeature(Part):
                 break
             if not packet.is_mouse_down(1):
                 continue
+            # Prefer canvas-local packet coordinates; fall back to global packet position.
             if packet.local_pos is not None:
                 local_x, local_y = packet.local_pos
             elif packet.pos is not None:
