@@ -1,3 +1,4 @@
+import pygame
 from pygame import Rect
 from typing import TYPE_CHECKING
 
@@ -69,6 +70,14 @@ class SliderControl(UiNode):
         ratio = min(max(ratio, 0.0), 1.0)
         return self.minimum + ((self.maximum - self.minimum) * ratio)
 
+    def _keyboard_step(self) -> float:
+        span = self.maximum - self.minimum
+        return max(1.0, abs(span) * 0.05)
+
+    def _nudge(self, delta: float) -> None:
+        self.value += float(delta)
+        self._clamp_value()
+
     def handle_rect(self) -> Rect:
         self._normalize_range()
         pixel = self._to_pixel(self.value)
@@ -88,6 +97,30 @@ class SliderControl(UiNode):
                 app.pointer_capture.end(self.control_id)
             self.dragging = False
             return False
+
+        step = self._keyboard_step()
+        if event.is_key_down(pygame.K_HOME):
+            self.value = self.minimum
+            self._clamp_value()
+            return True
+        if event.is_key_down(pygame.K_END):
+            self.value = self.maximum
+            self._clamp_value()
+            return True
+        if self.axis == LayoutAxis.HORIZONTAL:
+            if event.is_key_down(pygame.K_LEFT):
+                self._nudge(-step)
+                return True
+            if event.is_key_down(pygame.K_RIGHT):
+                self._nudge(step)
+                return True
+        else:
+            if event.is_key_down(pygame.K_DOWN):
+                self._nudge(-step)
+                return True
+            if event.is_key_down(pygame.K_UP):
+                self._nudge(step)
+                return True
 
         raw = event.pos
         if event.is_mouse_down(1):
