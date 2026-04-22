@@ -32,6 +32,22 @@ class ValueChangeCallbackCoreTests(unittest.TestCase):
     def test_dispatch_ignores_none_callback(self) -> None:
         dispatch_value_change(None, 1, ValueChangeReason.PROGRAMMATIC)
 
+    def test_dispatch_strict_mode_requires_reason_callback(self) -> None:
+        with self.assertRaises(TypeError):
+            dispatch_value_change(lambda value: None, 1, ValueChangeReason.KEYBOARD, mode="reason-required")
+
+    def test_dispatch_strict_mode_accepts_reason_callback(self) -> None:
+        seen = []
+
+        dispatch_value_change(
+            lambda value, reason: seen.append((value, reason)),
+            9,
+            ValueChangeReason.WHEEL,
+            mode="reason-required",
+        )
+
+        self.assertEqual(seen, [(9, ValueChangeReason.WHEEL)])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ from pygame import Rect
 
 from ..core.gui_event import GuiEvent
 from ..core.value_change_callback import ValueChangeCallback
+from ..core.value_change_callback import ValueChangeCallbackMode
 from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
@@ -29,6 +30,7 @@ class ScrollbarControl(UiNode):
         offset: int = 0,
         step: int = 16,
         on_change: Optional[ValueChangeCallback[int]] = None,
+        on_change_mode: ValueChangeCallbackMode = "compat",
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -37,6 +39,7 @@ class ScrollbarControl(UiNode):
         self.offset = max(0, int(offset))
         self.step = max(1, int(step))
         self.on_change = on_change
+        self.on_change_mode = on_change_mode
         self.dragging = False
         self._drag_anchor_offset = 0
         self._track_visuals = None
@@ -78,7 +81,7 @@ class ScrollbarControl(UiNode):
         self._clamp_offset()
         changed = self.offset != old_offset
         if changed:
-            dispatch_value_change(self.on_change, self.offset, reason)
+            dispatch_value_change(self.on_change, self.offset, reason, mode=self.on_change_mode)
         return changed
 
     def _track_rect(self) -> Rect:

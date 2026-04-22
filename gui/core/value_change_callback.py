@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, Optional, TypeVar, Union
+from typing import Callable, Literal, Optional, TypeVar, Union
 
 from .value_change_reason import ValueChangeReason
 
@@ -7,6 +7,7 @@ TValue = TypeVar("TValue")
 ValueOnlyCallback = Callable[[TValue], None]
 ValueReasonCallback = Callable[[TValue, ValueChangeReason], None]
 ValueChangeCallback = Union[ValueOnlyCallback[TValue], ValueReasonCallback[TValue]]
+ValueChangeCallbackMode = Literal["compat", "reason-required"]
 
 
 def _accepts_reason(callback: Callable) -> bool:
@@ -25,11 +26,19 @@ def _accepts_reason(callback: Callable) -> bool:
     return len(positional) >= 2
 
 
-def dispatch_value_change(callback: Optional[ValueChangeCallback[TValue]], value: TValue, reason: ValueChangeReason) -> None:
+def dispatch_value_change(
+    callback: Optional[ValueChangeCallback[TValue]],
+    value: TValue,
+    reason: ValueChangeReason,
+    mode: ValueChangeCallbackMode = "compat",
+) -> None:
     """Invoke a value-change callback with backward-compatible arity handling."""
     if callback is None:
         return
-    if _accepts_reason(callback):
+    accepts_reason = _accepts_reason(callback)
+    if mode == "reason-required" and not accepts_reason:
+        raise TypeError("on_change callback must accept (value, reason) when mode='reason-required'")
+    if accepts_reason:
         callback(value, reason)
         return
     callback(value)

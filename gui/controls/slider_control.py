@@ -5,6 +5,7 @@ from pygame import Rect
 
 from ..core.gui_event import GuiEvent
 from ..core.value_change_callback import ValueChangeCallback
+from ..core.value_change_callback import ValueChangeCallbackMode
 from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
@@ -28,6 +29,7 @@ class SliderControl(UiNode):
         maximum: float,
         value: float,
         on_change: Optional[ValueChangeCallback[float]] = None,
+        on_change_mode: ValueChangeCallbackMode = "compat",
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -35,6 +37,7 @@ class SliderControl(UiNode):
         self.maximum = float(maximum)
         self.value = float(value)
         self.on_change = on_change
+        self.on_change_mode = on_change_mode
         self.dragging = False
         self.handle_size = 16
         self._drag_anchor_offset = 0
@@ -97,7 +100,7 @@ class SliderControl(UiNode):
         self._clamp_value()
         changed = self.value != old_value
         if changed:
-            dispatch_value_change(self.on_change, self.value, reason)
+            dispatch_value_change(self.on_change, self.value, reason, mode=self.on_change_mode)
         return changed
 
     def handle_rect(self) -> Rect:
