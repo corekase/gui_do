@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from demo_parts.mandel_events import MANDEL_KIND_RUNNING_ITERATIVE, MandelStatusEvent
+from demo_parts.mandel_events import MANDEL_KIND_COMPLETE, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
 from gui import EventBus
 from gui_do_demo import _MandelPresentationModel
 from gui_do_demo import GuiDoDemo
@@ -65,6 +65,97 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         round_trip = MandelStatusEvent.from_payload(payload)
 
         self.assertEqual(round_trip, event)
+
+    def test_publish_mandel_running_status_includes_task_count_and_mode(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_status_bus_ready = False
+        demo._mandel_running_mode = "running iterative"
+        demo.mandel_task_ids = {"iter", "aux"}
+
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+            demo.mandel_model.set_status(str(detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._publish_mandel_running_status()
+
+        self.assertEqual(published, [(MANDEL_KIND_STATUS, "Mandelbrot: running iterative (2 tasks)")])
+
+    def test_update_mandel_events_publishes_running_count_when_busy(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_running_mode = "running iterative"
+        demo.mandel_task_ids = {"iter"}
+
+        class _BusyScheduler:
+            def get_finished_events(self):
+                return []
+
+            def get_failed_events(self):
+                return []
+
+            def tasks_busy_match_any(self, *_args):
+                return True
+
+            def clear_events(self):
+                return None
+
+        demo.mandel_scheduler = _BusyScheduler()
+        demo.mandel_task_id_pool = ("iter",)
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+            demo.mandel_model.set_status(str(detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_STATUS, "Mandelbrot: running iterative (1 task)"), published)
+
+    def test_update_mandel_events_marks_complete_when_running_ends(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo.mandel_model.set_status("Mandelbrot: running iterative (1 task)")
+        demo._mandel_running_mode = "running iterative"
+        demo.mandel_task_ids = {"iter"}
+
+        class _FinishedScheduler:
+            def get_finished_events(self):
+                return [SimpleNamespace(task_id="iter")]
+
+            def get_failed_events(self):
+                return []
+
+            def tasks_busy_match_any(self, *_args):
+                return False
+
+            def clear_events(self):
+                return None
+
+            def pop_result(self, _task_id, _default):
+                return None
+
+        demo.mandel_scheduler = _FinishedScheduler()
+        demo.mandel_task_id_pool = ("iter",)
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_COMPLETE, None), published)
+        self.assertIsNone(demo._mandel_running_mode)
 
 
 if __name__ == "__main__":

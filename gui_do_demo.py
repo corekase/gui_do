@@ -91,6 +91,7 @@ class GuiDoDemo:
         self._mandel_status_scope = MANDEL_STATUS_SCOPE
         self._mandel_status_subscription = None
         self._mandel_status_bus_ready = False
+        self._mandel_running_mode: Optional[str] = None
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
@@ -350,12 +351,25 @@ class GuiDoDemo:
         return details if details else f"Mandelbrot: {event.kind}"
 
     def _publish_mandel_event(self, kind: str, detail: Optional[str] = None) -> None:
+        if kind in (MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED):
+            self._mandel_running_mode = None
         event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
         payload = event.to_payload()
         if self._mandel_status_bus_ready:
             self.app.events.publish(self._mandel_status_topic, payload, scope=self._mandel_status_scope)
             return
         self.mandel_model.set_status(self._format_mandel_status(event))
+
+    def _publish_mandel_running_status(self) -> None:
+        if not self.mandel_task_ids:
+            return
+        mode = self._mandel_running_mode if self._mandel_running_mode is not None else "running"
+        task_count = len(self.mandel_task_ids)
+        task_word = "task" if task_count == 1 else "tasks"
+        detail = f"Mandelbrot: {mode} ({task_count} {task_word})"
+        if self.mandel_model.status_text.value == detail:
+            return
+        self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
 
     def _configure_focus_and_accessibility(self) -> None:
         focus_order = [
@@ -651,6 +665,7 @@ class GuiDoDemo:
     def _clear_mandel(self) -> None:
         self.mandel_scheduler.remove_tasks(*self.mandel_task_id_pool)
         self.mandel_task_ids.clear()
+        self._mandel_running_mode = None
         self._show_single_mandel_canvas()
         self._set_mandel_task_buttons_disabled(False)
         self._publish_mandel_event(MANDEL_KIND_CLEARED)
@@ -718,7 +733,9 @@ class GuiDoDemo:
             message_method=self._make_mandel_progress_handler("iter"),
         )
         self.mandel_task_ids.add("iter")
+        self._mandel_running_mode = "running iterative"
         self._publish_mandel_event(MANDEL_KIND_RUNNING_ITERATIVE)
+        self._publish_mandel_running_status()
 
     def _launch_mandel_recursive(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -727,7 +744,9 @@ class GuiDoDemo:
         width, height = self.mandel_canvas.canvas.get_size()
         center, scale = self._mandel_viewport(width, height)
         self._queue_mandel_recursive_task("recu", Rect(0, 0, width, height), (width, height), center, scale)
+        self._mandel_running_mode = "running recursive"
         self._publish_mandel_event(MANDEL_KIND_RUNNING_RECURSIVE)
+        self._publish_mandel_running_status()
 
     def _launch_mandel_one_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -741,7 +760,9 @@ class GuiDoDemo:
         self._queue_mandel_recursive_task("2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
         self._queue_mandel_recursive_task("4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
+        self._mandel_running_mode = "running 1M 4Tasks"
         self._publish_mandel_event(MANDEL_KIND_RUNNING_ONE_SPLIT)
+        self._publish_mandel_running_status()
 
     def _launch_mandel_four_split(self) -> None:
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
@@ -751,7 +772,9 @@ class GuiDoDemo:
         center, scale = self._mandel_viewport(width, height)
         for task_id in ("can1", "can2", "can3", "can4"):
             self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
+        self._mandel_running_mode = "running 4M 4Tasks"
         self._publish_mandel_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
+        self._publish_mandel_running_status()
 
     def _update_life(self) -> None:
         while True:
@@ -803,8 +826,11 @@ class GuiDoDemo:
 
         busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
+        if busy:
+            self._publish_mandel_running_status()
         self.mandel_scheduler.clear_events()
         if not busy and self.mandel_model.status_text.value.startswith("Mandelbrot: running"):
+            self._mandel_running_mode = None
             self._publish_mandel_event(MANDEL_KIND_COMPLETE)
 
     def _update(self, dt_seconds: float) -> None:
