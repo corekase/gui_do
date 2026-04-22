@@ -30,6 +30,12 @@ class ButtonControl(UiNode):
         if self.on_click is not None:
             self.on_click()
 
+    def set_on_click(self, callback: Optional[Callable[[], None]]) -> None:
+        """Replace the click callback at runtime. Pass None to remove it."""
+        if callback is not None and not callable(callback):
+            raise ValueError("on_click callback must be callable or None")
+        self.on_click = callback
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         del app
         if not self.visible or not self.enabled:

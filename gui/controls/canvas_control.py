@@ -37,6 +37,30 @@ class CanvasEventPacket:
             return False
         return button is None or self.button == int(button)
 
+    def is_left_down(self) -> bool:
+        """Return True for a left-button press (button 1)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 1
+
+    def is_left_up(self) -> bool:
+        """Return True for a left-button release (button 1)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 1
+
+    def is_right_down(self) -> bool:
+        """Return True for a right-button press (button 3)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 3
+
+    def is_right_up(self) -> bool:
+        """Return True for a right-button release (button 3)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 3
+
+    def is_middle_down(self) -> bool:
+        """Return True for a middle-button press (button 2)."""
+        return self.kind is EventType.MOUSE_BUTTON_DOWN and self.button == 2
+
+    def is_middle_up(self) -> bool:
+        """Return True for a middle-button release (button 2)."""
+        return self.kind is EventType.MOUSE_BUTTON_UP and self.button == 2
+
 
 class CanvasControl(UiNode):
     """Drawable canvas with internal event queue."""

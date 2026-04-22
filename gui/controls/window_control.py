@@ -149,6 +149,14 @@ class WindowControl(UiNode):
             return
         parent._on_window_enabled_changed(self, old_enabled, new_enabled)
 
+    def close(self) -> None:
+        """Hide this window, releasing active state and drag ownership.
+
+        Equivalent to setting ``visible = False`` but provides a clear,
+        intent-revealing API consistent with standard GUI window semantics.
+        """
+        self.visible = False
+
     def move_by(self, dx: int, dy: int) -> None:
         if dx == 0 and dy == 0:
             return

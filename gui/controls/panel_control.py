@@ -178,6 +178,19 @@ class PanelControl(UiNode):
             child.invalidate()
         return child
 
+    @property
+    def child_count(self) -> int:
+        """Return the number of direct children."""
+        return len(self.children)
+
+    def has_child(self, child: UiNode) -> bool:
+        """Return True when *child* is a direct child of this panel."""
+        return child in self.children
+
+    def window_count(self) -> int:
+        """Return the number of direct children that are window-type nodes."""
+        return sum(1 for c in self.children if self._is_window_like(c))
+
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
         if child not in self.children:
             return False

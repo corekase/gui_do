@@ -9,6 +9,11 @@ class UiEngine:
         self.target_fps = max(1, int(target_fps))
         self.clock = pygame.time.Clock()
 
+    @property
+    def current_fps(self) -> float:
+        """Return the measured FPS of the last clock tick (0.0 before first tick)."""
+        return float(self.clock.get_fps())
+
     def run(self, max_frames: int | None = None) -> int:
         """Run until app.running is set False or an optional frame limit is reached."""
         frame_count = 0

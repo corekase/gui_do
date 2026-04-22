@@ -64,9 +64,6 @@ class TaskPanelControl(PanelControl):
                 self._child_local_offsets[child] = offset
             child.rect.topleft = (self.rect.x + offset[0], self.rect.y + offset[1])
 
-    def set_visible(self, visible: bool) -> None:
-        self.visible = bool(visible)
-
     def set_auto_hide(self, auto_hide: bool) -> None:
         self.auto_hide = bool(auto_hide)
 

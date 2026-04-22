@@ -11,11 +11,16 @@ if TYPE_CHECKING:
 class LabelControl(UiNode):
     """Simple text label control."""
 
-    def __init__(self, control_id: str, rect: Rect, text: str) -> None:
+    _VALID_ALIGNS = ("left", "center", "right")
+
+    def __init__(self, control_id: str, rect: Rect, text: str, align: str = "left") -> None:
         super().__init__(control_id, rect)
         self._text = str(text)
         self._title = False
         self._text_size = 16
+        if align not in self._VALID_ALIGNS:
+            raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}")
+        self._align = align
 
     @property
     def text(self) -> str:
@@ -53,7 +58,28 @@ class LabelControl(UiNode):
         self._text_size = next_size
         self.invalidate()
 
+    @property
+    def align(self) -> str:
+        return self._align
+
+    @align.setter
+    def align(self, value: str) -> None:
+        if value not in self._VALID_ALIGNS:
+            raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {value!r}")
+        if self._align == value:
+            return
+        self._align = value
+        self.invalidate()
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
         rendered = theme.render_text(self._text, size=self._text_size, title=self._title, color=colour, shadow=True)
-        surface.blit(rendered, self.rect.topleft)
+        rw, rh = rendered.get_size()
+        y = self.rect.top + max(0, (self.rect.height - rh) // 2)
+        if self._align == "center":
+            x = self.rect.left + max(0, (self.rect.width - rw) // 2)
+        elif self._align == "right":
+            x = self.rect.right - rw
+        else:
+            x = self.rect.left
+        surface.blit(rendered, (x, y))

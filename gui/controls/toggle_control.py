@@ -40,6 +40,12 @@ class ToggleControl(UiNode):
         if self.on_toggle is not None:
             self.on_toggle(self.pushed)
 
+    def set_on_toggle(self, callback: Optional[Callable[[bool], None]]) -> None:
+        """Replace the toggle callback at runtime. Pass None to remove it."""
+        if callback is not None and not callable(callback):
+            raise ValueError("on_toggle callback must be callable or None")
+        self.on_toggle = callback
+
     def handle_event(self, event: GuiEvent, _app) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False

@@ -40,6 +40,12 @@ class ArrowBoxControl(UiNode):
         if self.on_activate is not None:
             self.on_activate()
 
+    def set_on_activate(self, callback: Optional[Callable[[], None]]) -> None:
+        """Replace the activation callback at runtime. Pass None to remove it."""
+        if callback is not None and not callable(callback):
+            raise ValueError("on_activate callback must be callable or None")
+        self.on_activate = callback
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             self._hovered = False

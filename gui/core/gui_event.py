@@ -81,6 +81,10 @@ class GuiEvent:
     def prevent_default(self) -> None:
         self.default_prevented = True
 
+    def is_quit(self) -> bool:
+        """Return True for application-quit events."""
+        return self.kind is EventType.QUIT
+
     def is_key_down(self, key: Optional[int] = None) -> bool:
         if self.kind is not EventType.KEY_DOWN:
             return False

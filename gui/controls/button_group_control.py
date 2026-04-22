@@ -31,6 +31,19 @@ class ButtonGroupControl(ToggleControl):
         if selected:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
 
+    @classmethod
+    def clear_group_registry(cls, group: str | None = None) -> None:
+        """Remove stale group selection entries.
+
+        When *group* is given, only that group's entry is cleared.
+        When *group* is ``None``, the entire class-level registry is cleared.
+        This is primarily for test isolation between independent app instances.
+        """
+        if group is None:
+            cls._selection_by_group.clear()
+        else:
+            cls._selection_by_group.pop(group, None)
+
     def on_mount(self, _parent) -> None:
         if self.pushed:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
