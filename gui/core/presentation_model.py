@@ -26,6 +26,20 @@ class ObservableValue(Generic[T]):
         for observer in list(self._observers):
             observer(self._value)
 
+    def set_silently(self, new_value: T) -> None:
+        """Update the stored value without notifying any observers."""
+        self._value = new_value
+
+    def force_notify(self) -> None:
+        """Notify all observers with the current value, even if it has not changed."""
+        for observer in list(self._observers):
+            observer(self._value)
+
+    @property
+    def observer_count(self) -> int:
+        """Return the number of active observer subscriptions."""
+        return len(self._observers)
+
     def subscribe(self, observer: Observer[T]) -> Callable[[], None]:
         self._observers.append(observer)
 

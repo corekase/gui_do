@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from .gui_event import EventType
 
@@ -30,16 +30,61 @@ class ActionManager:
     def unregister_action(self, action_name: str) -> None:
         self._actions.pop(str(action_name), None)
 
+    def has_action(self, action_name: str) -> bool:
+        """Return True if *action_name* has a registered handler."""
+        return str(action_name) in self._actions
+
+    def registered_actions(self) -> List[str]:
+        """Return a sorted list of all registered action names."""
+        return sorted(self._actions.keys())
+
     def bind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> None:
         binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only))
         names = self._keymap[binding]
         if action_name not in names:
             names.append(action_name)
 
+    def unbind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> bool:
+        """Remove one specific key→action binding. Returns True if a binding was removed."""
+        binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only))
+        names = self._keymap.get(binding)
+        if not names or action_name not in names:
+            return False
+        names.remove(action_name)
+        if not names:
+            del self._keymap[binding]
+        return True
+
+    def bindings_for_action(self, action_name: str) -> List[KeyBinding]:
+        """Return all key bindings that route to *action_name*."""
+        return [binding for binding, names in self._keymap.items() if action_name in names]
+
     def clear_bindings(self) -> None:
         self._keymap.clear()
 
     def trigger_from_event(self, event, app) -> bool:
+        if event.kind is not EventType.KEY_DOWN or event.key is None:
+            return False
+        scene_name = getattr(app, "active_scene_name", None)
+        has_window = bool(app.scene.active_window())
+
+        candidates = [
+            KeyBinding(int(event.key), scene=scene_name, window_only=has_window),
+            KeyBinding(int(event.key), scene=scene_name, window_only=False),
+            KeyBinding(int(event.key), scene=None, window_only=has_window),
+            KeyBinding(int(event.key), scene=None, window_only=False),
+        ]
+        seen_bindings = set()
+        for binding in candidates:
+            if binding in seen_bindings:
+                continue
+            seen_bindings.add(binding)
+            for action_name in self._keymap.get(binding, ()):
+                handler = self._actions.get(action_name)
+                if handler is not None and bool(handler(event)):
+                    return True
+        return False
+
         if event.kind is not EventType.KEY_DOWN or event.key is None:
             return False
         scene_name = getattr(app, "active_scene_name", None)
