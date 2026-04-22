@@ -318,6 +318,32 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertIn((MANDEL_KIND_FAILED, "4 tasks failed - can1: boom; can2: bang; +2 more"), published)
 
+    def test_set_mandel_failure_preview_limit_clamps_and_returns_value(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+
+        low = demo.set_mandel_failure_preview_limit(0)
+        high = demo.set_mandel_failure_preview_limit(999)
+        normal = demo.set_mandel_failure_preview_limit(4)
+
+        self.assertEqual(low, 1)
+        self.assertEqual(high, 20)
+        self.assertEqual(normal, 4)
+        self.assertEqual(demo._mandel_failure_preview_limit, 4)
+
+    def test_configured_preview_limit_controls_failure_summary(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.set_mandel_failure_preview_limit(1)
+
+        detail = demo._format_mandel_failure_summary(
+            [
+                ("can1", "boom"),
+                ("can2", "bang"),
+                ("can3", "biff"),
+            ]
+        )
+
+        self.assertEqual(detail, "3 tasks failed - can1: boom; +2 more")
+
 
 if __name__ == "__main__":
     unittest.main()

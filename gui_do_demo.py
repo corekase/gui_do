@@ -57,6 +57,8 @@ class GuiDoDemo:
         (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
         (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3),
     )
+    _MANDEL_FAILURE_PREVIEW_MIN = 1
+    _MANDEL_FAILURE_PREVIEW_MAX = 20
 
     def __init__(self) -> None:
         pygame.init()
@@ -169,6 +171,11 @@ class GuiDoDemo:
         label.title = False
         label.text_size = size
         return label
+
+    def set_mandel_failure_preview_limit(self, limit: int) -> int:
+        clamped = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, int(limit)))
+        self._mandel_failure_preview_limit = clamped
+        return clamped
 
     def _set_life_zoom_label(self) -> None:
         zoom_level = max(2, int(round(self.life_cell_size)))
@@ -379,7 +386,8 @@ class GuiDoDemo:
             task_id, error = failed_details[0]
             return f"{task_id}: {error}"
 
-        limit = max(1, int(getattr(self, "_mandel_failure_preview_limit", 3)))
+        configured = int(getattr(self, "_mandel_failure_preview_limit", 3))
+        limit = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, configured))
         preview = failed_details[:limit]
         summary = "; ".join(f"{task_id}: {error}" for task_id, error in preview)
         remaining = len(failed_details) - len(preview)
