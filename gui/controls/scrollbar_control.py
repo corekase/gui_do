@@ -1,10 +1,11 @@
-import inspect
 import pygame
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
+from ..core.value_change_callback import ValueChangeCallback
+from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
@@ -27,7 +28,7 @@ class ScrollbarControl(UiNode):
         viewport_size: int,
         offset: int = 0,
         step: int = 16,
-        on_change: Optional[Callable[[int], None]] = None,
+        on_change: Optional[ValueChangeCallback[int]] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -43,30 +44,6 @@ class ScrollbarControl(UiNode):
         self._track_visuals_size = None
         self._handle_visuals_size = None
         self._clamp_offset()
-
-    @staticmethod
-    def _accepts_reason(callback: Callable) -> bool:
-        try:
-            signature = inspect.signature(callback)
-        except (TypeError, ValueError):
-            return False
-        for parameter in signature.parameters.values():
-            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
-                return True
-        positional = [
-            parameter
-            for parameter in signature.parameters.values()
-            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-        return len(positional) >= 2
-
-    def _notify_change(self, reason: ValueChangeReason) -> None:
-        if self.on_change is None:
-            return
-        if self._accepts_reason(self.on_change):
-            self.on_change(self.offset, reason)
-            return
-        self.on_change(self.offset)
 
     def _normalize_geometry(self) -> None:
         self.content_size = max(1, int(self.content_size))
@@ -101,7 +78,7 @@ class ScrollbarControl(UiNode):
         self._clamp_offset()
         changed = self.offset != old_offset
         if changed:
-            self._notify_change(reason)
+            dispatch_value_change(self.on_change, self.offset, reason)
         return changed
 
     def _track_rect(self) -> Rect:

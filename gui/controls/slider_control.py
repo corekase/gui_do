@@ -1,10 +1,11 @@
-import inspect
 import pygame
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
+from ..core.value_change_callback import ValueChangeCallback
+from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
@@ -26,7 +27,7 @@ class SliderControl(UiNode):
         minimum: float,
         maximum: float,
         value: float,
-        on_change: Optional[Callable[[float], None]] = None,
+        on_change: Optional[ValueChangeCallback[float]] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -42,30 +43,6 @@ class SliderControl(UiNode):
         self._track_visuals_size = None
         self._handle_visuals_size = None
         self._clamp_value()
-
-    @staticmethod
-    def _accepts_reason(callback: Callable) -> bool:
-        try:
-            signature = inspect.signature(callback)
-        except (TypeError, ValueError):
-            return False
-        for parameter in signature.parameters.values():
-            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
-                return True
-        positional = [
-            parameter
-            for parameter in signature.parameters.values()
-            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-        return len(positional) >= 2
-
-    def _notify_change(self, reason: ValueChangeReason) -> None:
-        if self.on_change is None:
-            return
-        if self._accepts_reason(self.on_change):
-            self.on_change(self.value, reason)
-            return
-        self.on_change(self.value)
 
     def _normalize_range(self) -> None:
         if self.maximum < self.minimum:
@@ -120,7 +97,7 @@ class SliderControl(UiNode):
         self._clamp_value()
         changed = self.value != old_value
         if changed:
-            self._notify_change(reason)
+            dispatch_value_change(self.on_change, self.value, reason)
         return changed
 
     def handle_rect(self) -> Rect:
