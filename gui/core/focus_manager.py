@@ -30,6 +30,9 @@ class FocusManager:
         target = self._focused_node
         if target is None:
             return False
+        if target not in app.scene._walk_nodes():
+            self.clear_focus()
+            return False
         if not target.visible or not target.enabled:
             self.clear_focus()
             return False
