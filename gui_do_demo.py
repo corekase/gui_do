@@ -219,6 +219,7 @@ class GuiDoDemo:
                 0.0,
                 11.0,
                 5.0,
+                on_change=self._on_life_zoom_slider_changed,
             )
         )
         self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
@@ -452,6 +453,12 @@ class GuiDoDemo:
 
     def _life_window_preamble(self) -> None:
         slider_value = max(0, min(11, int(round(self.life_zoom_slider.value))))
+        self._sync_life_zoom_from_slider(slider_value)
+
+    def _on_life_zoom_slider_changed(self, value: float) -> None:
+        self._sync_life_zoom_from_slider(int(round(value)))
+
+    def _sync_life_zoom_from_slider(self, slider_value: int) -> None:
         if slider_value == self._life_zoom_slider_last_value:
             return
         old_size = max(2, int(round(self.life_cell_size)))
@@ -745,10 +752,15 @@ class GuiDoDemo:
             packet = self.life_canvas.read_event()
             if packet is None:
                 break
-            if packet.pos is None or not packet.is_mouse_down(1):
+            if not packet.is_mouse_down(1):
                 continue
-            local_x = packet.pos[0] - self.life_canvas.rect.left
-            local_y = packet.pos[1] - self.life_canvas.rect.top
+            if packet.local_pos is not None:
+                local_x, local_y = packet.local_pos
+            elif packet.pos is not None:
+                local_x = packet.pos[0] - self.life_canvas.rect.left
+                local_y = packet.pos[1] - self.life_canvas.rect.top
+            else:
+                continue
             cell_size = max(2, int(round(self.life_cell_size)))
             cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
