@@ -13,17 +13,47 @@ class LabelControl(UiNode):
 
     def __init__(self, control_id: str, rect: Rect, text: str) -> None:
         super().__init__(control_id, rect)
-        self.text = text
-        self.title = False
-        self.text_size = 16
+        self._text = str(text)
+        self._title = False
+        self._text_size = 16
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    @text.setter
+    def text(self, value: str) -> None:
+        next_text = str(value)
+        if self._text == next_text:
+            return
+        self._text = next_text
+        self.invalidate()
+
+    @property
+    def title(self) -> bool:
+        return self._title
+
+    @title.setter
+    def title(self, value: bool) -> None:
+        next_title = bool(value)
+        if self._title == next_title:
+            return
+        self._title = next_title
+        self.invalidate()
+
+    @property
+    def text_size(self) -> int:
+        return self._text_size
+
+    @text_size.setter
+    def text_size(self, value: int) -> None:
+        next_size = max(1, int(value))
+        if self._text_size == next_size:
+            return
+        self._text_size = next_size
+        self.invalidate()
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        factory = theme.graphics_factory
-        old = factory.get_current_font_name()
-        factory.set_font("titlebar" if self.title else "normal")
-        try:
-            rendered = factory.render_text(self.text, colour=theme.text, shadow=True)
-        finally:
-            while factory.get_current_font_name() != old:
-                factory.set_last_font()
+        colour = theme.text if self.enabled else theme.medium
+        rendered = theme.render_text(self._text, size=self._text_size, title=self._title, color=colour, shadow=True)
         surface.blit(rendered, self.rect.topleft)
