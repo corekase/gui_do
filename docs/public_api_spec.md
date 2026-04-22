@@ -35,6 +35,7 @@ The package exports the following symbols via `gui/__init__.py`:
 - `EventType`
 - `GuiEvent`
 - `VALUE_CHANGE_CALLBACK_MODES`
+- `normalize_value_change_callback_mode`
 - `ValueChangeReason`
 - `InvalidationTracker`
 - `ObservableValue`

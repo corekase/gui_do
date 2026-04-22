@@ -111,6 +111,7 @@ PUBLIC_API_EXPORT_ORDER = (
     "EventType",
     "GuiEvent",
     "VALUE_CHANGE_CALLBACK_MODES",
+    "normalize_value_change_callback_mode",
     "ValueChangeReason",
     "InvalidationTracker",
     "ObservableValue",

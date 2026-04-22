@@ -10,6 +10,7 @@ from gui import EventType
 from gui import FocusManager
 from gui import GuiEvent
 from gui import InvalidationTracker
+from gui import normalize_value_change_callback_mode
 from gui import ObservableValue
 from gui import PresentationModel
 from gui import VALUE_CHANGE_CALLBACK_MODES
@@ -57,6 +58,10 @@ class PublicApiExportsTests(unittest.TestCase):
 
     def test_value_change_callback_modes_export_is_canonical_tuple(self) -> None:
         self.assertEqual(VALUE_CHANGE_CALLBACK_MODES, ("compat", "reason-required"))
+
+    def test_callback_mode_normalizer_export_is_canonical(self) -> None:
+        self.assertEqual(normalize_value_change_callback_mode("  COMPAT  "), "compat")
+        self.assertEqual(normalize_value_change_callback_mode("reason-required"), "reason-required")
 
 
 if __name__ == "__main__":
