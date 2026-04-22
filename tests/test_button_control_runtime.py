@@ -62,6 +62,19 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.app.focus.focused_node)
         self.assertEqual(fired, [])
 
+    def test_hover_resets_when_reenabled_after_pointer_moves_away_while_disabled(self) -> None:
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (30, 30), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        self.assertTrue(control.hovered)
+
+        control.enabled = False
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (200, 120), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        control.enabled = True
+
+        self.assertFalse(control.hovered)
+        self.assertFalse(control.pressed)
+
 
 if __name__ == "__main__":
     unittest.main()

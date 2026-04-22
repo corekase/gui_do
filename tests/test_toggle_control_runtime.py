@@ -61,6 +61,18 @@ class ToggleControlRuntimeTests(unittest.TestCase):
         self.assertEqual(states, [])
         self.assertIsNone(self.app.focus.focused_node)
 
+    def test_hover_resets_when_reenabled_after_pointer_moves_away_while_disabled(self) -> None:
+        toggle = self.root.add(ToggleControl("tog", Rect(20, 20, 80, 30), "On", "Off", pushed=False))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (30, 30), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        self.assertTrue(toggle.hovered)
+
+        toggle.enabled = False
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (200, 120), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        toggle.enabled = True
+
+        self.assertFalse(toggle.hovered)
+
 
 if __name__ == "__main__":
     unittest.main()

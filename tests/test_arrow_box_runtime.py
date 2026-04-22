@@ -63,6 +63,19 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
         self.app.update(0.2)
         self.assertEqual(len(fired), 1)
 
+    def test_hover_resets_when_reenabled_after_pointer_moves_away_while_disabled(self) -> None:
+        control = self.root.add(ArrowBoxControl("arr", Rect(20, 20, 40, 30), 0, on_activate=lambda: None, repeat_interval_seconds=0.05))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (30, 30), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        self.assertTrue(control._hovered)
+
+        control.enabled = False
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (200, 120), "rel": (0, 0), "buttons": (0, 0, 0)}))
+        control.enabled = True
+
+        self.assertFalse(control._hovered)
+        self.assertFalse(control._pressed)
+
 
 if __name__ == "__main__":
     unittest.main()
