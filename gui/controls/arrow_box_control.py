@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
+import pygame
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
@@ -50,6 +51,13 @@ class ArrowBoxControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
+        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
+            self._invoke()
+            return True
+        if event.is_mouse_motion() and self._pressed and not self._hovered:
+            self._pressed = False
+            app.timers.remove_timer(self._timer_id)
+            return True
         if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self._pressed = True
