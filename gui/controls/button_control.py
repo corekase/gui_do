@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
+import pygame
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
@@ -25,11 +26,20 @@ class ButtonControl(UiNode):
         self._visuals = None
         self._visual_key = None
 
+    def _invoke_click(self) -> None:
+        if self.on_click is not None:
+            self.on_click()
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        del app
         if not self.visible or not self.enabled:
             self.hovered = False
             self.pressed = False
             return False
+
+        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
+            self._invoke_click()
+            return True
 
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
@@ -42,8 +52,7 @@ class ButtonControl(UiNode):
             was_pressed = self.pressed
             self.pressed = False
             if was_pressed and self.hovered:
-                if self.on_click is not None:
-                    self.on_click()
+                self._invoke_click()
                 return True
             return was_pressed
         return False
