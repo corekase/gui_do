@@ -6,7 +6,7 @@ from pygame import Rect
 
 
 class WindowTilingManager:
-    """Non-overlapping window tiling adapted for the rebased scene graph."""
+    """Non-overlapping window tiling for the scene graph."""
 
     def __init__(self, app, scene=None) -> None:
         self.app = app

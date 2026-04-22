@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the supported public surface of the rebased `gui` package and the strict contracts expected by runtime components.
+This document defines the supported public surface of the `gui` package and the strict contracts expected by runtime components.
 
 ## Public Exports
 
@@ -95,7 +95,7 @@ No fallback render paths are part of the public contract.
 
 ## Compatibility Policy
 
-The rebased package is strict by design:
+The package is strict by design:
 
 - No compatibility shims.
 - No duck-typed fallback pathways in core dispatch and control rendering.

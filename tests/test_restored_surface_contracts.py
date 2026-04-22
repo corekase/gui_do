@@ -28,7 +28,7 @@ from gui import (
 )
 
 
-class RebasedRestoredSurfaceContractsTests(unittest.TestCase):
+class RestoredSurfaceContractsTests(unittest.TestCase):
     def test_restored_symbols_are_importable(self) -> None:
         self.assertIsNotNone(FrameControl)
         self.assertIsNotNone(ToggleControl)

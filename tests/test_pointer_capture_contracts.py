@@ -9,7 +9,7 @@ from pygame import Rect
 from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl
 
 
-class RebasedPointerCaptureContractsTest(unittest.TestCase):
+class PointerCaptureContractsTest(unittest.TestCase):
     def setUp(self) -> None:
         pygame.init()
         self.surface = pygame.display.set_mode((420, 300))

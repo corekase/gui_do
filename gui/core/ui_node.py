@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class UiNode:
-    """Base node for all controls in the rebased package."""
+    """Base node for all controls in the package."""
 
     def __init__(self, control_id: str, rect: Rect) -> None:
         self.control_id = control_id

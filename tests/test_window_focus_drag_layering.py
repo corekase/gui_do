@@ -9,7 +9,7 @@ from pygame import Rect
 from gui import CanvasControl, GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
 
 
-class RebasedWindowFocusDragLayeringTest(unittest.TestCase):
+class WindowFocusDragLayeringTest(unittest.TestCase):
     def setUp(self) -> None:
         pygame.init()
         self.surface = pygame.display.set_mode((500, 360))

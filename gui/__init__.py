@@ -1,4 +1,4 @@
-"""Rebased GUI package entry point."""
+"""GUI package entry point."""
 
 import ctypes
 import os

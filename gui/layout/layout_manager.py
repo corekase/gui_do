@@ -30,7 +30,7 @@ class _LinearConfig:
 
 
 class LayoutManager:
-    """Grid, linear, and anchor layout helpers for rebased controls."""
+    """Grid, linear, and anchor layout helpers for controls."""
 
     def __init__(self) -> None:
         self._grid = _GridConfig()

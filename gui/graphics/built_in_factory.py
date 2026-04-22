@@ -33,7 +33,7 @@ class WindowChromeVisuals:
 
 
 class BuiltInGraphicsFactory:
-    """Built-in bitmap factory adapted to the rebased control API."""
+    """Built-in bitmap factory for the control API."""
 
     def __init__(self, theme) -> None:
         self.theme = theme

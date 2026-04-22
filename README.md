@@ -110,7 +110,7 @@ python -m unittest discover tests -v
 Run specific test suites:
 ```bash
 # Pointer capture contracts
-python -m unittest tests.test_rebased_pointer_capture_contracts -v
+python -m unittest tests.test_pointer_capture_contracts -v
 
 # Architecture boundaries
 python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_architecture_boundary_docs_contracts -v
@@ -135,7 +135,7 @@ These constraints ensure maintainability and prevent common GUI bugs:
 - **Slider/scrollbar never reposition pointer on release**: This prevents cursor drift at the end of drags.
 - **Release ends capture only**: No cursor reconciliation or mutation logic runs during release.
 - **Normalized event dispatch**: All raw pygame events are normalized to canonical `GuiEvent` objects at framework ingress.
-- **No compatibility shims**: The rebased package is strict by design with no backwards-compatibility layers.
+- **No compatibility shims**: The package is strict by design with no backwards-compatibility layers.
 
 ## Tutorial: Building a Feature with the Life Simulation
 
@@ -849,29 +849,3 @@ For detailed specifications, see:
 - **[docs/public_api_spec.md](docs/public_api_spec.md)**: Complete list of public exports and API contracts
 - **[docs/event_system_spec.md](docs/event_system_spec.md)**: Event normalization and routing semantics
 - **[docs/architecture_boundary_spec.md](docs/architecture_boundary_spec.md)**: Package boundaries between framework and demo code
-
-- The authoritative test surface is rebased-only.
-- Legacy pre-rebase tests are intentionally removed and unsupported.
-- Backward compatibility with the old package layout and APIs is not provided.
-- `tests/test_rebased_pointer_capture_contracts.py` is the canonical behavioral contract for pointer-capture drag/release behavior.
-
-The demo showcases:
-
-- Horizontal slider
-- Horizontal scrollbar
-- Vertical slider
-- Real-time value labels
-- Task panel auto-hide behavior
-- Background worker progress updates through scheduler messaging
-- Timer-driven UI updates
-- Window and canvas controls
-- Grouped button selection and arrow-box repeat behavior
-
-## Why This Rebase
-
-This package was restructured to align with GUI best practices for:
-
-- explicit scene graph boundaries,
-- predictable control dispatch,
-- separation of input normalization and rendering,
-- and robust drag behavior built on capture corridors instead of release-time cursor corrections.
