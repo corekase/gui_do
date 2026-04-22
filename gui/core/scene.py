@@ -1,4 +1,4 @@
-from typing import List
+from typing import Callable, Generator, List, Optional
 from typing import TYPE_CHECKING
 
 from .gui_event import EventPhase, GuiEvent
@@ -46,6 +46,25 @@ class Scene:
 
     def _is_task_panel(self, node: UiNode) -> bool:
         return node.is_task_panel()
+
+    # --- Query helpers ---
+
+    def find(self, control_id: str) -> "Optional[UiNode]":
+        """Return the first node in BFS order whose ``control_id`` matches, or ``None``."""
+        for node in self._walk_nodes():
+            if node.control_id == control_id:
+                return node
+        return None
+
+    def find_all(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
+        """Return all nodes in BFS order that satisfy *predicate*."""
+        return [node for node in self._walk_nodes() if predicate(node)]
+
+    def node_count(self) -> int:
+        """Return the total number of nodes reachable from this scene (including descendants)."""
+        return len(self._walk_nodes())
+
+    # --- Internal traversal ---
 
     def _walk_nodes(self) -> List[UiNode]:
         stack = list(self.nodes)

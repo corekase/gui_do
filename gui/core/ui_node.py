@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Callable, Generator, List, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
@@ -87,6 +87,38 @@ class UiNode:
 
     def hit_test(self, pos) -> bool:
         return isinstance(pos, tuple) and len(pos) == 2 and self.rect.collidepoint(pos)
+
+    # --- Tree traversal helpers ---
+
+    def ancestors(self) -> "Generator[UiNode, None, None]":
+        """Yield each ancestor node starting from the immediate parent up to the root."""
+        current = self.parent
+        while current is not None:
+            yield current
+            current = current.parent
+
+    def find_descendant(self, control_id: str) -> "Optional[UiNode]":
+        """Return the first descendant (BFS) whose ``control_id`` matches, or ``None``."""
+        queue: List[UiNode] = list(self.children)
+        while queue:
+            candidate = queue.pop(0)
+            if candidate.control_id == control_id:
+                return candidate
+            queue.extend(candidate.children)
+        return None
+
+    def find_descendants(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
+        """Return all descendants (BFS) that satisfy *predicate*."""
+        result: List[UiNode] = []
+        queue: List[UiNode] = list(self.children)
+        while queue:
+            candidate = queue.pop(0)
+            if predicate(candidate):
+                result.append(candidate)
+            queue.extend(candidate.children)
+        return result
+
+    # --- Lifecycle ---
 
     def on_mount(self, _parent: "UiNode | None") -> None:
         """Hook called when node is attached to a parent or scene."""
