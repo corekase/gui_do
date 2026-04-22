@@ -45,6 +45,9 @@ class _MandelPresentationModel(PresentationModel):
 
 
 class GuiDoDemo:
+    """Interactive demo app showcasing gui_do controls and scene workflows."""
+
+    # Simulation/model constants.
     neighbours = (
         (-1, -1), (-1, 0), (-1, 1),
         (0, -1),           (0, 1),
@@ -61,6 +64,7 @@ class GuiDoDemo:
     _MANDEL_FAILURE_PREVIEW_MAX = 20
 
     def __init__(self) -> None:
+        """Initialize pygame, app services, scene state, and demo UI."""
         pygame.init()
         flags = pygame.FULLSCREEN | pygame.SCALED
         try:
@@ -107,7 +111,11 @@ class GuiDoDemo:
 
         self.app.update = self._update
 
+    # ---------------------------------------------------------------------
+    # Scene construction and widget composition.
+    # ---------------------------------------------------------------------
     def _build_main_scene(self) -> None:
+        """Build root scene container, windows, and bottom task panel controls."""
         self.root = self.app.add(
             PanelControl("main_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
             scene_name="main",
@@ -168,25 +176,30 @@ class GuiDoDemo:
         self._tile_visible_windows()
 
     def _set_text(self, label: LabelControl, size: int = 16) -> LabelControl:
+        """Apply consistent demo text styling to a label and return it."""
         label.title = False
         label.text_size = size
         return label
 
     def _format_mandel_help_text(self) -> str:
+        """Return the dynamic help string shown above the Mandelbrot canvas."""
         limit = int(getattr(self, "_mandel_failure_preview_limit", 3))
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {limit}"
 
     def _set_mandel_help_label(self) -> None:
+        """Refresh Mandel help label text when runtime options change."""
         if hasattr(self, "mandel_help") and self.mandel_help is not None:
             self.mandel_help.text = self._format_mandel_help_text()
 
     def set_mandel_failure_preview_limit(self, limit: int) -> int:
+        """Set Mandel failure preview limit and return the clamped effective value."""
         clamped = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, int(limit)))
         self._mandel_failure_preview_limit = clamped
         self._set_mandel_help_label()
         return clamped
 
     def _adjust_mandel_failure_preview_limit(self, delta: int) -> bool:
+        """Adjust failure preview limit and publish user-facing status feedback."""
         previous = self._mandel_failure_preview_limit
         effective = self.set_mandel_failure_preview_limit(previous + int(delta))
         detail = f"Mandelbrot failure preview limit: {effective}"
@@ -196,10 +209,12 @@ class GuiDoDemo:
         return True
 
     def _set_life_zoom_label(self) -> None:
+        """Render the current life-cell zoom level into the zoom label."""
         zoom_level = max(2, int(round(self.life_cell_size)))
         self.life_zoom_label.text = f"Zoom {zoom_level}"
 
     def _build_life_window(self) -> None:
+        """Create the Game of Life window, canvas, and bottom control strip."""
         life_rect = self.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
         self.life_window = self.root.add(
             WindowControl(
@@ -224,13 +239,28 @@ class GuiDoDemo:
         )
 
         controls_y = top + height - widget_height - padding
+
+        # Use a linear strip for consistent control-row geometry.
+        self.app.layout.set_linear_properties(
+            anchor=(left + padding, controls_y),
+            item_width=100,
+            item_height=widget_height,
+            spacing=12,
+            horizontal=True,
+        )
+        life_reset_rect = self.app.layout.next_linear()
+        life_toggle_rect = self.app.layout.next_linear()
+        zoom_slider_slot_1 = self.app.layout.next_linear()
+        zoom_slider_slot_2 = self.app.layout.next_linear()
+        zoom_label_slot = self.app.layout.next_linear()
+
         self.life_reset_button = self.life_window.add(
-            ButtonControl("life_reset", Rect(left + padding, controls_y, 100, widget_height), "Reset", self._life_reset, style="angle")
+            ButtonControl("life_reset", life_reset_rect, "Reset", self._life_reset, style="angle")
         )
         self.life_toggle = self.life_window.add(
             ToggleControl(
                 "life_toggle",
-                Rect(left + padding + 102, controls_y, 100, widget_height),
+                life_toggle_rect,
                 "Stop",
                 "Start",
                 pushed=False,
@@ -238,10 +268,8 @@ class GuiDoDemo:
             )
         )
 
-        zoom_label_width = 60
-        zoom_label_x = self.life_canvas.rect.right - zoom_label_width
-        slider_left = self.life_toggle.rect.right + 12
-        slider_right = zoom_label_x - 8
+        slider_left = zoom_slider_slot_1.left
+        slider_right = zoom_slider_slot_2.right
         self.life_zoom_slider = self.life_window.add(
             SliderControl(
                 "life_zoom",
@@ -254,8 +282,9 @@ class GuiDoDemo:
             )
         )
         self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
+        zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
         self.life_zoom_label = self._set_text(
-            self.life_window.add(LabelControl("life_zoom_label", Rect(zoom_label_x, controls_y + 6, zoom_label_width, 20), "Zoom 12"))
+            self.life_window.add(LabelControl("life_zoom_label", zoom_label_rect, "Zoom 12"))
         )
 
         self.life_origin = [self.life_canvas.rect.width // 2, self.life_canvas.rect.height // 2]
@@ -263,6 +292,7 @@ class GuiDoDemo:
         self.life_window.visible = False
 
     def _build_mandelbrot_window(self) -> None:
+        """Create the Mandelbrot window, canvases, controls, and status labels."""
         mandel_rect = self.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
         self.mandel_window = self.root.add(
             WindowControl(
@@ -300,20 +330,34 @@ class GuiDoDemo:
             CanvasControl("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
         )
 
+        # Keep the Mandel action row on a single linear layout strip.
+        self.app.layout.set_linear_properties(
+            anchor=(left + 20, controls_y),
+            item_width=112,
+            item_height=30,
+            spacing=8,
+            horizontal=True,
+        )
+        mandel_reset_rect = self.app.layout.next_linear()
+        mandel_iter_rect = self.app.layout.next_linear()
+        mandel_recur_rect = self.app.layout.next_linear()
+        mandel_one_split_rect = self.app.layout.next_linear()
+        mandel_four_split_rect = self.app.layout.next_linear()
+
         self.mandel_reset_button = self.mandel_window.add(
-            ButtonControl("mandel_reset", Rect(left + 20, controls_y, 112, 30), "Reset", self._clear_mandel, style="angle")
+            ButtonControl("mandel_reset", mandel_reset_rect, "Reset", self._clear_mandel, style="angle")
         )
         self.mandel_iter_button = self.mandel_window.add(
-            ButtonControl("mandel_iter", Rect(left + 140, controls_y, 112, 30), "Iterative", self._launch_mandel_iterative, style="round")
+            ButtonControl("mandel_iter", mandel_iter_rect, "Iterative", self._launch_mandel_iterative, style="round")
         )
         self.mandel_recur_button = self.mandel_window.add(
-            ButtonControl("mandel_recur", Rect(left + 260, controls_y, 112, 30), "Recursive", self._launch_mandel_recursive, style="round")
+            ButtonControl("mandel_recur", mandel_recur_rect, "Recursive", self._launch_mandel_recursive, style="round")
         )
         self.mandel_one_split_button = self.mandel_window.add(
-            ButtonControl("mandel_one_split", Rect(left + 380, controls_y, 112, 30), "1M 4Tasks", self._launch_mandel_one_split, style="round")
+            ButtonControl("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", self._launch_mandel_one_split, style="round")
         )
         self.mandel_four_split_button = self.mandel_window.add(
-            ButtonControl("mandel_four_split", Rect(left + 500, controls_y, 112, 30), "4M 4Tasks", self._launch_mandel_four_split, style="round")
+            ButtonControl("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", self._launch_mandel_four_split, style="round")
         )
         self.mandel_task_buttons = (
             self.mandel_iter_button,
@@ -337,6 +381,7 @@ class GuiDoDemo:
         self.mandel_window.visible = False
 
     def _bind_runtime(self) -> None:
+        """Register keyboard actions, event bus bindings, and accessibility metadata."""
         self.life_scheduler.set_message_dispatch_limit(256)
         self.mandel_scheduler.set_message_dispatch_limit(256)
         self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
@@ -354,13 +399,19 @@ class GuiDoDemo:
         self._mandel_status_bus_ready = True
         self._configure_focus_and_accessibility()
 
+    # ---------------------------------------------------------------------
+    # Status presentation and event-bus synchronization.
+    # ---------------------------------------------------------------------
     def _on_mandel_status_changed(self, text: str) -> None:
+        """Apply presentation-model status updates to the visible label."""
         self.mandel_status.text = text
 
     def _on_mandel_status_event(self, payload) -> None:
+        """Handle event-bus Mandel status payload and update presentation model."""
         self.mandel_model.set_status(self._format_mandel_status(MandelStatusEvent.from_payload(payload)))
 
     def _format_mandel_status(self, payload) -> str:
+        """Normalize Mandel status payloads into a user-facing status line."""
         event = MandelStatusEvent.from_payload(payload)
         details = "" if event.detail is None else str(event.detail)
         mapping = {
@@ -381,6 +432,7 @@ class GuiDoDemo:
         return details if details else f"Mandelbrot: {event.kind}"
 
     def _publish_mandel_event(self, kind: str, detail: Optional[str] = None) -> None:
+        """Publish Mandel status event or fall back to direct model update."""
         if kind in (MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED):
             self._mandel_running_mode = None
         event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
@@ -391,6 +443,7 @@ class GuiDoDemo:
         self.mandel_model.set_status(self._format_mandel_status(event))
 
     def _publish_mandel_running_status(self) -> None:
+        """Emit running status text with current in-flight task count."""
         if not self.mandel_task_ids:
             return
         mode = self._mandel_running_mode if self._mandel_running_mode is not None else "running"
@@ -402,6 +455,7 @@ class GuiDoDemo:
         self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
 
     def _format_mandel_failure_summary(self, failed_details) -> str:
+        """Build a deterministic, capped summary string for Mandel task failures."""
         if not failed_details:
             return ""
         if len(failed_details) == 1:
@@ -417,7 +471,11 @@ class GuiDoDemo:
             summary = f"{summary}; +{remaining} more"
         return f"{len(failed_details)} tasks failed - {summary}"
 
+    # ---------------------------------------------------------------------
+    # Accessibility, visibility toggles, and window tiling.
+    # ---------------------------------------------------------------------
     def _configure_focus_and_accessibility(self) -> None:
+        """Configure tab order and accessibility labels for interactive controls."""
         focus_order = [
             self.quit_button,
             self.life_toggle_window,
@@ -447,6 +505,7 @@ class GuiDoDemo:
         self.mandel_four_split_button.set_accessibility(role="button", label="Run Mandelbrot four canvases split")
 
     def _toggle_life_window(self, pushed: bool) -> None:
+        """Show or hide Life window and retile visible windows."""
         self.life_window.visible = bool(pushed)
         if pushed:
             self._tile_visible_windows(newly_visible=[self.life_window])
@@ -454,6 +513,7 @@ class GuiDoDemo:
             self._tile_visible_windows()
 
     def _toggle_mandel_window(self, pushed: bool) -> None:
+        """Show or hide Mandel window and retile visible windows."""
         self.mandel_window.visible = bool(pushed)
         if pushed:
             self._tile_visible_windows(newly_visible=[self.mandel_window])
@@ -461,10 +521,12 @@ class GuiDoDemo:
             self._tile_visible_windows()
 
     def _visible_windows_for_tiling(self):
+        """Return currently visible demo windows eligible for tiling."""
         windows = [self.life_window, self.mandel_window]
         return [window for window in windows if window.visible]
 
     def _tile_visible_windows(self, newly_visible=None) -> None:
+        """Apply configured tiling strategy to visible demo windows."""
         if not self.app.read_window_tiling_settings().get("enabled", False):
             return
         if newly_visible is None:
@@ -472,9 +534,14 @@ class GuiDoDemo:
         self.app.tile_windows(newly_visible=newly_visible)
 
     def _exit_app(self) -> None:
+        """Signal the application loop to stop on the next update."""
         self.app.running = False
 
+    # ---------------------------------------------------------------------
+    # Life simulation state and interaction logic.
+    # ---------------------------------------------------------------------
     def _life_reset(self) -> None:
+        """Reset Life board, zoom, and playback toggle to demo defaults."""
         self.life_cells.clear()
         self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
         self.life_origin = [self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0]
@@ -485,6 +552,7 @@ class GuiDoDemo:
         self.life_toggle.pushed = False
 
     def _life_population(self, cell: Tuple[int, int]) -> int:
+        """Count live neighbors for a given Life cell."""
         count = 0
         for dx, dy in self.neighbours:
             if (cell[0] + dx, cell[1] + dy) in self.life_cells:
@@ -492,6 +560,7 @@ class GuiDoDemo:
         return count
 
     def _life_step(self) -> None:
+        """Advance Conway's Game of Life simulation by one generation."""
         new_life: Set[Tuple[int, int]] = set()
         for cell in self.life_cells:
             pop = self._life_population(cell)
@@ -504,6 +573,7 @@ class GuiDoDemo:
         self.life_cells = new_life
 
     def _zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
+        """Zoom Life canvas around a local anchor while preserving that anchor point."""
         old_size = max(2, int(round(self.life_cell_size)))
         clamped_size = max(2, min(24, int(new_size)))
         if clamped_size == old_size:
@@ -518,13 +588,16 @@ class GuiDoDemo:
         self._set_life_zoom_label()
 
     def _life_window_preamble(self) -> None:
+        """Sync zoom state from slider before per-frame Life updates."""
         slider_value = max(0, min(11, int(round(self.life_zoom_slider.value))))
         self._sync_life_zoom_from_slider(slider_value)
 
     def _on_life_zoom_slider_changed(self, value: float) -> None:
+        """Handle slider callback and map it to discrete Life zoom steps."""
         self._sync_life_zoom_from_slider(int(round(value)))
 
     def _sync_life_zoom_from_slider(self, slider_value: int) -> None:
+        """Apply discrete slider zoom updates around the canvas center."""
         if slider_value == self._life_zoom_slider_last_value:
             return
         old_size = max(2, int(round(self.life_cell_size)))
@@ -537,6 +610,7 @@ class GuiDoDemo:
         self._zoom_life_view_about(center_local, new_size)
 
     def _life_window_event_handler(self, event) -> bool:
+        """Process Life canvas drag, wheel zoom, and lock-point interactions."""
         if event.is_mouse_down(3) and event.collides(self.life_canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -587,24 +661,32 @@ class GuiDoDemo:
 
         return False
 
+    # ---------------------------------------------------------------------
+    # Mandelbrot render pipeline and task orchestration.
+    # ---------------------------------------------------------------------
     def _mandel_window_event_handler(self, event) -> bool:
+        """Handle Mandel window-level events (unused in this demo)."""
         return False
 
     def _life_window_postamble(self) -> None:
+        """Flush queued Life input and redraw board each frame."""
         self._update_life()
 
     def _mandel_col(self, k: int) -> Tuple[int, int, int]:
+        """Map iteration count to palette color for Mandelbrot rendering."""
         if k >= self.max_iter - 1:
             return (0, 0, 0)
         return self.mandel_cols[k % len(self.mandel_cols)]
 
     def _mandel_viewport(self, width: int, height: int) -> Tuple[complex, float]:
+        """Return default Mandel viewport center and pixel scale for a canvas size."""
         center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
         scale = max((extent / width).real, (extent / height).imag)
         return center, scale
 
     def _mandel_pixel(self, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
+        """Evaluate Mandelbrot iteration count for one pixel coordinate."""
         c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
         z = 0j
         for k in range(self.max_iter):
@@ -614,6 +696,7 @@ class GuiDoDemo:
         return self.max_iter - 1
 
     def _clear_mandel_surfaces(self) -> None:
+        """Clear all Mandel canvases to the current theme medium color."""
         self.mandel_canvas.canvas.fill(self.app.theme.medium)
         self.canvas1.canvas.fill(self.app.theme.medium)
         self.canvas2.canvas.fill(self.app.theme.medium)
@@ -621,6 +704,7 @@ class GuiDoDemo:
         self.canvas4.canvas.fill(self.app.theme.medium)
 
     def _set_mandel_task_buttons_disabled(self, disabled: bool) -> None:
+        """Toggle Mandel run controls and keep focus on an enabled control."""
         for button in self.mandel_task_buttons:
             button.enabled = not disabled
         if not disabled:
@@ -634,6 +718,7 @@ class GuiDoDemo:
         self.app.focus.revalidate_focus(self.app.scene)
 
     def _show_single_mandel_canvas(self) -> None:
+        """Switch UI to single-canvas Mandel presentation mode."""
         self.mandel_canvas.visible = True
         self.canvas1.visible = False
         self.canvas2.visible = False
@@ -642,10 +727,12 @@ class GuiDoDemo:
         self._clear_mandel_surfaces()
 
     def _prepare_mandel_single_canvas_run(self) -> None:
+        """Prepare controls/canvases for a single-canvas Mandel task launch."""
         self._set_mandel_task_buttons_disabled(True)
         self._show_single_mandel_canvas()
 
     def _prepare_mandel_split_canvas_run(self) -> None:
+        """Prepare controls/canvases for a four-canvas Mandel task launch."""
         self._set_mandel_task_buttons_disabled(True)
         self.mandel_canvas.visible = False
         self.canvas1.visible = True
@@ -655,6 +742,7 @@ class GuiDoDemo:
         self._clear_mandel_surfaces()
 
     def _mandel_canvas_for_task(self, task_id: str):
+        """Resolve task id to its destination pygame canvas surface."""
         canvas_by_task = {
             "iter": self.mandel_canvas.canvas,
             "recu": self.mandel_canvas.canvas,
@@ -670,12 +758,14 @@ class GuiDoDemo:
         return canvas_by_task.get(task_id)
 
     def _make_mandel_progress_handler(self, task_id: str):
+        """Build scheduler message handler that routes payloads by task id."""
         def handler(payload):
             self._apply_mandel_result(task_id, payload)
 
         return handler
 
     def _apply_mandel_result(self, task_id: str, payload) -> None:
+        """Apply Mandel worker payload into the target canvas, with clipping."""
         canvas = self._mandel_canvas_for_task(task_id)
         if canvas is None:
             return
@@ -718,6 +808,7 @@ class GuiDoDemo:
                 idx += 1
 
     def _clear_mandel(self) -> None:
+        """Stop Mandel tasks and reset UI/state to cleared mode."""
         self.mandel_scheduler.remove_tasks(*self.mandel_task_id_pool)
         self.mandel_task_ids.clear()
         self._mandel_running_mode = None
@@ -726,6 +817,7 @@ class GuiDoDemo:
         self._publish_mandel_event(MANDEL_KIND_CLEARED)
 
     def _mandel_iterative_task(self, task_id, params):
+        """Compute Mandel rows iteratively and stream row payload updates."""
         width, height = params["size"]
         center = params["center"]
         scale = params["scale"]
@@ -735,6 +827,7 @@ class GuiDoDemo:
         return None
 
     def _recursive_fill(self, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
+        """Recursive Mandel region evaluation using corner coherence fill optimization."""
         if w <= 0 or h <= 0:
             return
         tl = self._mandel_pixel(x, y, width, height, center, scale)
@@ -759,6 +852,7 @@ class GuiDoDemo:
         self._recursive_fill(task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
 
     def _mandel_recursive_task(self, task_id, params):
+        """Run recursive Mandel fill task for full or partial region."""
         width, height = params["size"]
         center = params["center"]
         scale = params["scale"]
@@ -767,6 +861,7 @@ class GuiDoDemo:
         return None
 
     def _queue_mandel_recursive_task(self, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
+        """Enqueue one recursive Mandel task and track it as in-flight."""
         self.mandel_scheduler.add_task(
             task_id,
             self._mandel_recursive_task,
@@ -776,6 +871,7 @@ class GuiDoDemo:
         self.mandel_task_ids.add(task_id)
 
     def _launch_mandel_iterative(self) -> None:
+        """Launch iterative full-canvas Mandel rendering task."""
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
@@ -793,6 +889,7 @@ class GuiDoDemo:
         self._publish_mandel_running_status()
 
     def _launch_mandel_recursive(self) -> None:
+        """Launch recursive full-canvas Mandel rendering task."""
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
@@ -804,6 +901,7 @@ class GuiDoDemo:
         self._publish_mandel_running_status()
 
     def _launch_mandel_one_split(self) -> None:
+        """Launch one-canvas, four-task recursive Mandel rendering split."""
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_single_canvas_run()
@@ -820,6 +918,7 @@ class GuiDoDemo:
         self._publish_mandel_running_status()
 
     def _launch_mandel_four_split(self) -> None:
+        """Launch four-canvas, four-task recursive Mandel rendering split."""
         if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
             return
         self._prepare_mandel_split_canvas_run()
@@ -831,7 +930,11 @@ class GuiDoDemo:
         self._publish_mandel_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
         self._publish_mandel_running_status()
 
+    # ---------------------------------------------------------------------
+    # Frame updates and engine lifecycle hooks.
+    # ---------------------------------------------------------------------
     def _update_life(self) -> None:
+        """Consume Life canvas events, mutate board, and redraw the Life surface."""
         while True:
             packet = self.life_canvas.read_event()
             if packet is None:
@@ -867,6 +970,7 @@ class GuiDoDemo:
                 self.life_canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
 
     def _update_mandel_events(self) -> None:
+        """Drain Mandel scheduler events and maintain UI/status/task state."""
         finished = self.mandel_scheduler.get_finished_events()
         failed = self.mandel_scheduler.get_failed_events()
         failed_details = []
@@ -894,18 +998,23 @@ class GuiDoDemo:
             self._publish_mandel_event(MANDEL_KIND_COMPLETE)
 
     def _update(self, dt_seconds: float) -> None:
+        """Delegate frame update into GuiApplication core update pipeline."""
         GuiApplication.update(self.app, dt_seconds)
 
     def _screen_preamble(self) -> None:
+        """Scene-level preamble hook (kept for parity with lifecycle API)."""
         return None
 
     def _screen_event_handler(self, event) -> bool:
+        """Scene-level event hook (unused; allows app default dispatching)."""
         return False
 
     def _screen_postamble(self) -> None:
+        """Scene-level postamble hook used to reconcile Mandel task events."""
         self._update_mandel_events()
 
     def run(self) -> None:
+        """Run demo engine and perform shutdown cleanup on exit."""
         UiEngine(self.app, target_fps=120).run()
         if self._mandel_status_subscription is not None:
             self.app.events.unsubscribe(self._mandel_status_subscription)
@@ -916,6 +1025,7 @@ class GuiDoDemo:
 
 
 def main() -> None:
+    """Entrypoint for running the gui_do demo as a script."""
     GuiDoDemo().run()
 
 
