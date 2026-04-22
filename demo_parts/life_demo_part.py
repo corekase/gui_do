@@ -118,7 +118,6 @@ class LifeSimulationFeature(Part):
                 postamble=self.life_window_postamble,
             )
         )
-        demo.life_window = self.window
         content_rect = self.window.content_rect()
         left = content_rect.left
         top = content_rect.top
@@ -130,7 +129,6 @@ class LifeSimulationFeature(Part):
         self.canvas = self.window.add(
             canvas_control_cls("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), height - (widget_height * 2)), max_events=256)
         )
-        demo.life_canvas = self.canvas
 
         controls_y = top + height - widget_height - padding
 
@@ -150,7 +148,6 @@ class LifeSimulationFeature(Part):
         self.reset_button = self.window.add(
             button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle")
         )
-        demo.life_reset_button = self.reset_button
         self.toggle = self.window.add(
             toggle_control_cls(
                 "life_toggle",
@@ -161,7 +158,6 @@ class LifeSimulationFeature(Part):
                 style="round",
             )
         )
-        demo.life_toggle = self.toggle
 
         slider_left = zoom_slider_slot_1.left
         slider_right = zoom_slider_slot_2.right
@@ -176,15 +172,11 @@ class LifeSimulationFeature(Part):
                 on_change=self.on_life_zoom_slider_changed,
             )
         )
-        demo.life_zoom_slider = self.zoom_slider
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
         self.zoom_label = demo.app.style_label(
             self.window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12"))
         )
-        demo.life_zoom_label = self.zoom_label
-
-        demo.life_origin = [self.canvas.rect.width // 2, self.canvas.rect.height // 2]
         self.life_reset()
         self.window.visible = False
 

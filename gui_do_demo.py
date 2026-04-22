@@ -89,6 +89,8 @@ class GuiDoDemo:
             scene_name="main",
         )
         self.app.build_parts(self)
+        self.life_window = self._life_part().window
+        self.mandel_window = self._mandel_part().window
         self.life_window.visible = True
         self.mandel_window.visible = True
         self.task_panel = self.app.add(

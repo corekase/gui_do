@@ -235,7 +235,6 @@ class MandelbrotRenderFeature(Part):
                 event_handler=lambda event: self.window_event_handler(demo, event),
             )
         )
-        demo.mandel_window = self.window
         left = mandel_rect.left
         top = mandel_rect.top
         canvas_size = 580
@@ -255,10 +254,7 @@ class MandelbrotRenderFeature(Part):
                 )
             )
         )
-        demo.mandel_help = self.help_label
         self.primary_canvas = self.window.add(canvas_control_cls("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
-        demo.mandel_canvas = self.primary_canvas
-        demo.mandel_canvas_rect = Rect(canvas_x, canvas_y, canvas_size, canvas_size)
         canvas1 = self.window.add(canvas_control_cls("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
         canvas2 = self.window.add(canvas_control_cls("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
         canvas3 = self.window.add(canvas_control_cls("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
@@ -266,10 +262,6 @@ class MandelbrotRenderFeature(Part):
             canvas_control_cls("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
         )
         self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
-        demo.canvas1 = canvas1
-        demo.canvas2 = canvas2
-        demo.canvas3 = canvas3
-        demo.canvas4 = canvas4
 
         demo.app.layout.set_linear_properties(
             anchor=(left + 20, controls_y),
@@ -287,7 +279,6 @@ class MandelbrotRenderFeature(Part):
         self.reset_button = self.window.add(
             button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(demo), style="angle")
         )
-        demo.mandel_reset_button = self.reset_button
         mandel_iter_button = self.window.add(
             button_control_cls("mandel_iter", mandel_iter_rect, "Iterative", lambda: self.launch_iterative(demo), style="round")
         )
@@ -300,17 +291,12 @@ class MandelbrotRenderFeature(Part):
         mandel_four_split_button = self.window.add(
             button_control_cls("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", lambda: self.launch_four_split(demo), style="round")
         )
-        demo.mandel_iter_button = mandel_iter_button
-        demo.mandel_recur_button = mandel_recur_button
-        demo.mandel_one_split_button = mandel_one_split_button
-        demo.mandel_four_split_button = mandel_four_split_button
         self.task_buttons = (
             mandel_iter_button,
             mandel_recur_button,
             mandel_one_split_button,
             mandel_four_split_button,
         )
-        demo.mandel_task_buttons = self.task_buttons
 
         default_status = self.status_text
         self.status_label = demo.app.style_label(
@@ -318,7 +304,6 @@ class MandelbrotRenderFeature(Part):
                 label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), default_status)
             )
         )
-        demo.mandel_status = self.status_label
         self.status_text = default_status
 
         canvas1.visible = False
@@ -332,7 +317,7 @@ class MandelbrotRenderFeature(Part):
     @staticmethod
     def on_status_changed(demo, text: str) -> None:
         """Direct status-label setter used by tests and optional host hooks."""
-        demo.mandel_status.text = text
+        demo._mandel_part().status_label.text = text
 
     def on_status_event(self, demo, payload) -> None:
         """Handle status-bus events and render normalized status text."""
