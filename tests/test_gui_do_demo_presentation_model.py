@@ -228,6 +228,42 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertIn((MANDEL_KIND_FAILED, "iter: boom"), published)
 
+    def test_update_mandel_events_failure_summary_is_deterministically_sorted(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_running_mode = "running 4M 4Tasks"
+        demo.mandel_task_ids = {"can1", "can2", "can3"}
+
+        class _UnorderedFailedScheduler:
+            def get_finished_events(self):
+                return []
+
+            def get_failed_events(self):
+                return [
+                    SimpleNamespace(task_id="can2", error="bang"),
+                    SimpleNamespace(task_id="can1", error="boom"),
+                ]
+
+            def tasks_busy_match_any(self, *_args):
+                return False
+
+            def clear_events(self):
+                return None
+
+        demo.mandel_scheduler = _UnorderedFailedScheduler()
+        demo.mandel_task_id_pool = ("can1", "can2", "can3")
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_FAILED, "2 tasks failed - can1: boom; can2: bang"), published)
+
 
 if __name__ == "__main__":
     unittest.main()

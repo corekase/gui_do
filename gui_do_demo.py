@@ -826,6 +826,7 @@ class GuiDoDemo:
                 failed_details.append((str(event.task_id), str(event.error)))
 
         if failed_details:
+            failed_details.sort(key=lambda item: (item[0], item[1]))
             if len(failed_details) == 1:
                 task_id, error = failed_details[0]
                 self._publish_mandel_event(MANDEL_KIND_FAILED, f"{task_id}: {error}")
