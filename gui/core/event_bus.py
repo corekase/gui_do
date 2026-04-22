@@ -32,6 +32,22 @@ class EventBus:
             return
         self._subscribers[subscription.topic] = [candidate for candidate in subs if candidate != subscription]
 
+    def unsubscribe_scope(self, scope: str) -> int:
+        """Remove all subscriptions whose scope matches *scope*. Returns the number removed."""
+        removed = 0
+        for topic in list(self._subscribers.keys()):
+            before = self._subscribers[topic]
+            after = [s for s in before if s.scope != scope]
+            removed += len(before) - len(after)
+            self._subscribers[topic] = after
+        return removed
+
+    def subscriber_count(self, topic: str | None = None) -> int:
+        """Return the total number of active subscriptions, optionally filtered to *topic*."""
+        if topic is not None:
+            return len(self._subscribers.get(str(topic), []))
+        return sum(len(subs) for subs in self._subscribers.values())
+
     def publish(self, topic: str, payload: object = None, *, scope: str | None = None) -> None:
         for sub in list(self._subscribers.get(str(topic), ())):
             if sub.scope is None or sub.scope == scope:

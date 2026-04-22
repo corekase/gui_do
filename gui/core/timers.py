@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, Hashable
 
 
@@ -9,20 +9,34 @@ class _Timer:
     interval_seconds: float
     callback: Callable[[], None]
     elapsed_seconds: float = 0.0
+    once: bool = False
 
 
 class Timers:
-    """Frame-driven repeating timer service."""
+    """Frame-driven repeating and one-shot timer service."""
 
     def __init__(self) -> None:
         self._timers: Dict[Hashable, _Timer] = {}
 
     def add_timer(self, timer_id: Hashable, interval_seconds: float, callback: Callable[[], None]) -> None:
+        """Register a repeating timer that fires every *interval_seconds*."""
         if interval_seconds <= 0:
             raise ValueError("interval_seconds must be > 0")
         if not callable(callback):
             raise ValueError("callback must be callable")
         self._timers[timer_id] = _Timer(float(interval_seconds), callback)
+
+    def add_once(self, timer_id: Hashable, delay_seconds: float, callback: Callable[[], None]) -> None:
+        """Register a one-shot timer that fires once after *delay_seconds* then removes itself."""
+        if delay_seconds <= 0:
+            raise ValueError("delay_seconds must be > 0")
+        if not callable(callback):
+            raise ValueError("callback must be callable")
+        self._timers[timer_id] = _Timer(float(delay_seconds), callback, once=True)
+
+    def has_timer(self, timer_id: Hashable) -> bool:
+        """Return True if a timer with *timer_id* is currently registered."""
+        return timer_id in self._timers
 
     def remove_timer(self, timer_id: Hashable) -> None:
         self._timers.pop(timer_id, None)
@@ -35,6 +49,11 @@ class Timers:
             if timer is None:
                 continue
             timer.elapsed_seconds += dt_seconds
-            while timer.elapsed_seconds >= timer.interval_seconds:
-                timer.elapsed_seconds -= timer.interval_seconds
-                timer.callback()
+            if timer.once:
+                if timer.elapsed_seconds >= timer.interval_seconds:
+                    self._timers.pop(timer_id, None)
+                    timer.callback()
+            else:
+                while timer.elapsed_seconds >= timer.interval_seconds:
+                    timer.elapsed_seconds -= timer.interval_seconds
+                    timer.callback()
