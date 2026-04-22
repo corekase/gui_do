@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 from typing import TYPE_CHECKING
 
+import pygame
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
@@ -34,6 +35,11 @@ class ToggleControl(UiNode):
         self._visuals = None
         self._visual_key = None
 
+    def _commit_toggle(self) -> None:
+        self.pushed = not self.pushed
+        if self.on_toggle is not None:
+            self.on_toggle(self.pushed)
+
     def handle_event(self, event: GuiEvent, _app) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
@@ -42,11 +48,12 @@ class ToggleControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
+        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
+            self._commit_toggle()
+            return True
         if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
-                self.pushed = not self.pushed
-                if self.on_toggle is not None:
-                    self.on_toggle(self.pushed)
+                self._commit_toggle()
                 return True
         return False
 
