@@ -221,6 +221,7 @@ class GuiApplication:
         runtime["scheduler"].update()
         runtime["scene"].update(dt_seconds)
         self.invalidation.invalidate_all()
+        self.focus.revalidate_focus(runtime["scene"])
         if self._screen_postamble is not None:
             self._screen_postamble()
 

@@ -111,9 +111,44 @@ class FocusManager:
         self.set_focus(candidates[next_index])
         return True
 
+    def revalidate_focus(self, scene) -> None:
+        """If the focused node is no longer focusable, move to the nearest valid node or clear.
+
+        Searches within the same enclosing window as the previously focused node first.
+        Focus is moved without showing the keyboard hint (it is an automatic transition).
+        """
+        focused = self._focused_node
+        if focused is None:
+            return
+        if focused.visible and focused.enabled and focused.accepts_focus():
+            return  # still valid, nothing to do
+
+        window = self._find_ancestor_window(focused)
+        candidates = self._focusable_nodes(scene, window=window)
+
+        if not candidates:
+            self.clear_focus()
+            return
+
+        focused_tab = getattr(focused, "tab_index", -1)
+        for candidate in candidates:
+            if candidate.tab_index >= focused_tab:
+                self.set_focus(candidate, show_hint=False)
+                return
+        self.set_focus(candidates[0], show_hint=False)
+
+    @staticmethod
+    def _find_ancestor_window(node) -> "object | None":
+        """Walk ancestors to find the nearest enclosing WindowControl, or None."""
+        current = node.parent
+        while current is not None:
+            if hasattr(current, "titlebar_height"):
+                return current
+            current = current.parent
+        return None
+
     @property
     def has_focus(self) -> bool:
-        """Return True when any node is currently focused."""
         return self._focused_node is not None
 
     def focusable_count(self, scene, *, window=None) -> int:
