@@ -48,6 +48,22 @@ class MandelStatusEvent:
         return cls(kind=MANDEL_KIND_STATUS, detail=str(payload))
 
 
+__all__ = [
+    "MANDEL_STATUS_TOPIC",
+    "MANDEL_STATUS_SCOPE",
+    "MANDEL_KIND_IDLE",
+    "MANDEL_KIND_CLEARED",
+    "MANDEL_KIND_RUNNING_ITERATIVE",
+    "MANDEL_KIND_RUNNING_RECURSIVE",
+    "MANDEL_KIND_RUNNING_ONE_SPLIT",
+    "MANDEL_KIND_RUNNING_FOUR_SPLIT",
+    "MANDEL_KIND_FAILED",
+    "MANDEL_KIND_COMPLETE",
+    "MANDEL_KIND_STATUS",
+    "MandelStatusEvent",
+]
+
+
 class MandelbrotRenderFeature(Part):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 

@@ -1,8 +1,8 @@
 import unittest
 import importlib
 import sys
-import demo_parts
 
+import demo_parts.mandelbrot_demo_part as mandel_module
 from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE
 from demo_parts.mandelbrot_demo_part import MANDEL_KIND_CLEARED
 from demo_parts.mandelbrot_demo_part import MANDEL_KIND_FAILED
@@ -15,8 +15,8 @@ from demo_parts.mandelbrot_demo_part import MANDEL_KIND_STATUS
 from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_SCOPE
 from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_TOPIC
 from demo_parts.mandelbrot_demo_part import MandelStatusEvent
-from demo_parts import __all__ as demo_parts_all
-from demo_parts import MandelStatusEvent as PackageMandelStatusEvent
+from demo_parts.mandelbrot_demo_part import __all__ as mandel_module_all
+from demo_parts.mandelbrot_demo_part import MandelStatusEvent as ModuleMandelStatusEvent
 from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
 
 
@@ -65,19 +65,19 @@ class MandelEventSchemaExportTests(unittest.TestCase):
         with self.assertRaises(ModuleNotFoundError):
             importlib.import_module("gui.core.mandel_events")
 
-    def test_demo_parts_package_reexports_dataclass(self) -> None:
-        self.assertIs(PackageMandelStatusEvent, MandelStatusEvent)
+    def test_mandel_module_exports_dataclass(self) -> None:
+        self.assertIs(ModuleMandelStatusEvent, MandelStatusEvent)
 
-    def test_demo_parts_all_matches_expected_schema_surface_and_order(self) -> None:
-        self.assertEqual(tuple(demo_parts_all), DEMO_PARTS_EXPORT_ORDER)
-        self.assertEqual(set(demo_parts_all), set(DEMO_PARTS_EXPORT_ORDER))
+    def test_mandel_module_all_matches_expected_schema_surface_and_order(self) -> None:
+        self.assertEqual(tuple(mandel_module_all), DEMO_PARTS_EXPORT_ORDER)
+        self.assertEqual(set(mandel_module_all), set(DEMO_PARTS_EXPORT_ORDER))
 
-    def test_demo_parts_all_has_no_duplicates(self) -> None:
-        self.assertEqual(len(demo_parts_all), len(set(demo_parts_all)))
+    def test_mandel_module_all_has_no_duplicates(self) -> None:
+        self.assertEqual(len(mandel_module_all), len(set(mandel_module_all)))
 
-    def test_demo_parts_all_names_are_resolvable_attributes(self) -> None:
-        for export_name in demo_parts_all:
-            self.assertTrue(hasattr(demo_parts, export_name), f"demo_parts missing attribute for __all__ export: {export_name}")
+    def test_mandel_module_all_names_are_resolvable_attributes(self) -> None:
+        for export_name in mandel_module_all:
+            self.assertTrue(hasattr(mandel_module, export_name), f"mandelbrot_demo_part missing attribute for __all__ export: {export_name}")
 
 
 if __name__ == "__main__":

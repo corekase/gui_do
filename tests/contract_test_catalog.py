@@ -132,7 +132,7 @@ PUBLIC_API_REQUIRED_REFERENCES = (
 )
 
 PUBLIC_API_REQUIRED_PHRASES = (
-    "demo_parts.__all__ export surface/order is treated as a locked contract",
+    "demo_parts.mandelbrot_demo_part.__all__ export surface/order is treated as a locked contract",
 )
 
 README_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
