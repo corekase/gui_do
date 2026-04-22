@@ -2,12 +2,12 @@ import re
 import unittest
 from pathlib import Path
 
-from contract_docs_helpers import section_body
-from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
-from contract_test_catalog import README_PUBLIC_API_GUI_IMPORT_ORDER
-from contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
-from contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
-from contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
+from tests.contract_docs_helpers import section_body
+from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
+from tests.contract_test_catalog import README_PUBLIC_API_GUI_IMPORT_ORDER
+from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
+from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
+from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
 
 
 class ReadmePublicApiContractsTests(unittest.TestCase):

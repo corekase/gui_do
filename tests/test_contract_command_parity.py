@@ -1,12 +1,12 @@
 import unittest
 from pathlib import Path
 
-from contract_docs_helpers import readme_boundary_commands
-from contract_docs_helpers import workflow_step_names
-from contract_docs_helpers import workflow_step_run_command
-from contract_test_catalog import CONTRACT_PYTEST_COMMAND
-from contract_test_catalog import CONTRACT_UNITTEST_COMMAND
-from contract_test_catalog import BOUNDARY_WORKFLOW_STEP_NAME
+from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import workflow_step_names
+from tests.contract_docs_helpers import workflow_step_run_command
+from tests.contract_test_catalog import CONTRACT_PYTEST_COMMAND
+from tests.contract_test_catalog import CONTRACT_UNITTEST_COMMAND
+from tests.contract_test_catalog import BOUNDARY_WORKFLOW_STEP_NAME
 
 
 

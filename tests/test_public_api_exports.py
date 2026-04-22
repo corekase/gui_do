@@ -3,7 +3,7 @@ from collections.abc import Callable as AbcCallable
 from typing import Literal, Union, get_args, get_origin
 
 import gui
-from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
+from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 from gui import ActionManager
 from gui import EventBus

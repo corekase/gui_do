@@ -2,12 +2,12 @@ import re
 import unittest
 from pathlib import Path
 
-from contract_docs_helpers import backticked_bullet_items
-from contract_docs_helpers import readme_boundary_commands
-from contract_docs_helpers import section_body
-from contract_test_catalog import ARCHITECTURE_DOC_PATHS
-from contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
-from contract_test_catalog import README_BOUNDARY_REQUIRED_PHRASES
+from tests.contract_docs_helpers import backticked_bullet_items
+from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import section_body
+from tests.contract_test_catalog import ARCHITECTURE_DOC_PATHS
+from tests.contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
+from tests.contract_test_catalog import README_BOUNDARY_REQUIRED_PHRASES
 
 EXPECTED_ARCHITECTURE_DOCS = set(ARCHITECTURE_DOC_PATHS)
 EXPECTED_BOUNDARY_COMMANDS = list(BOUNDARY_COMMAND_SEQUENCE)

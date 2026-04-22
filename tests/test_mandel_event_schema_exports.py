@@ -17,7 +17,7 @@ from demo_parts.mandel_events import MANDEL_STATUS_TOPIC
 from demo_parts.mandel_events import MandelStatusEvent
 from demo_parts import __all__ as demo_parts_all
 from demo_parts import MandelStatusEvent as PackageMandelStatusEvent
-from contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
+from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
 
 
 class MandelEventSchemaExportTests(unittest.TestCase):

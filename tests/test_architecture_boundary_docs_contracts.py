@@ -2,16 +2,16 @@ import re
 import unittest
 from pathlib import Path
 
-from contract_docs_helpers import backticked_bullet_items
-from contract_docs_helpers import commands_from_fenced_section
-from contract_docs_helpers import readme_boundary_commands
-from contract_docs_helpers import section_body
-from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
-from contract_test_catalog import BOUNDARY_ASSET_PATHS
-from contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
-from contract_test_catalog import BOUNDARY_PYTEST_COMMAND
-from contract_test_catalog import BOUNDARY_RELATED_DOC_PATHS
-from contract_test_catalog import BOUNDARY_RULE_REQUIRED_PHRASES
+from tests.contract_docs_helpers import backticked_bullet_items
+from tests.contract_docs_helpers import commands_from_fenced_section
+from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import section_body
+from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
+from tests.contract_test_catalog import BOUNDARY_ASSET_PATHS
+from tests.contract_test_catalog import BOUNDARY_ENFORCEMENT_TEST_IDS
+from tests.contract_test_catalog import BOUNDARY_PYTEST_COMMAND
+from tests.contract_test_catalog import BOUNDARY_RELATED_DOC_PATHS
+from tests.contract_test_catalog import BOUNDARY_RULE_REQUIRED_PHRASES
 
 
 EXPECTED_BOUNDARY_ENFORCEMENT_TESTS = set(BOUNDARY_ENFORCEMENT_TEST_IDS)

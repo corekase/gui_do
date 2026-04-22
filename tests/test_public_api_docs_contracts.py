@@ -2,12 +2,12 @@ import re
 import unittest
 from pathlib import Path
 
-from contract_docs_helpers import backticked_bullet_items
-from contract_docs_helpers import section_body
-from contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
-from contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
-from contract_test_catalog import CONTRACT_TEST_FILE_PATHS
-from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
+from tests.contract_docs_helpers import backticked_bullet_items
+from tests.contract_docs_helpers import section_body
+from tests.contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
+from tests.contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
+from tests.contract_test_catalog import CONTRACT_TEST_FILE_PATHS
+from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 
 EXPECTED_PUBLIC_API_CONTRACT_TESTS = tuple(CONTRACT_TEST_FILE_PATHS)

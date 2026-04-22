@@ -3,10 +3,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
-from contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
-from contract_test_catalog import PRE_REBASE_DEMO_PREFIX
-from contract_test_catalog import PUBLIC_API_EXPORT_ORDER
+from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
+from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
+from tests.contract_test_catalog import PRE_REBASE_DEMO_PREFIX
+from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 
 class BoundaryContractsTests(unittest.TestCase):
