@@ -1,7 +1,7 @@
 """Tests for GUI package convenience helper functions (2026-04-22).
 
 Covers:
-  - UiNode: show/hide, enable/disable, set_pos/move_to, resize, set_rect,
+    - UiNode: show/hide, enable/disable, set_pos, resize, set_rect,
              siblings, root, find_descendants_of_type
   - PanelControl / WindowControl: clear_children
   - GuiApplication: find, find_all, focus_on, quit
@@ -104,12 +104,6 @@ class UiNodeGeometryTests(unittest.TestCase):
         node.set_pos(100, 200)
         self.assertEqual(node.rect.topleft, (100, 200))
         self.assertEqual(node.rect.size, (50, 50))
-
-    def test_move_to_is_alias_for_set_pos(self) -> None:
-        node = _node(rect=Rect(0, 0, 60, 30))
-        node.move_to(10, 20)
-        self.assertEqual(node.rect.topleft, (10, 20))
-        self.assertEqual(node.rect.size, (60, 30))
 
     def test_set_pos_invalidates(self) -> None:
         node = _node()

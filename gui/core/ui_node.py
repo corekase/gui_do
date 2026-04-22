@@ -1,4 +1,4 @@
-from typing import Callable, Generator, List, Optional
+from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
@@ -113,10 +113,6 @@ class UiNode:
         self.rect.x = int(x)
         self.rect.y = int(y)
         self.invalidate()
-
-    def move_to(self, x: int, y: int) -> None:
-        """Alias for ``set_pos(x, y)``."""
-        self.set_pos(x, y)
 
     def resize(self, width: int, height: int) -> None:
         """Resize this node to (width, height) without changing position, then invalidate."""
