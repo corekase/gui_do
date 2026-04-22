@@ -1,12 +1,12 @@
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
-from pathlib import Path
 import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
 from ..core.gui_event import EventPhase, GuiEvent
 from ..core.ui_node import UiNode
+from ..graphics import load_pristine_surface
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -56,22 +56,8 @@ class WindowControl(UiNode):
     def set_active(self, value: bool) -> None:
         self._active = bool(value)
 
-    @staticmethod
-    def _load_pristine_surface(source):
-        if source is None:
-            return None
-        if isinstance(source, pygame.Surface):
-            return source.convert()
-        if isinstance(source, (str, Path)):
-            candidate = Path(source)
-            if not candidate.is_absolute():
-                root = Path(__file__).resolve().parents[2]
-                candidate = root / "data" / "images" / str(source)
-            return pygame.image.load(str(candidate)).convert()
-        raise TypeError("pristine source must be a Surface or path-like string")
-
     def set_pristine(self, source) -> None:
-        self._pristine = self._load_pristine_surface(source)
+        self._pristine = load_pristine_surface(source)
         self._pristine_scaled = None
         self._pristine_scaled_size = (0, 0)
 

@@ -16,6 +16,7 @@ from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
 from ..core.renderer import Renderer
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
+from ..graphics import load_pristine_surface
 from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -76,20 +77,6 @@ class GuiApplication:
         self._screen_postamble: Optional[Callable[[], None]] = None
         self._init_cursor_system()
         self._sync_scene_scheduler_activity(self._active_scene_name)
-
-    @staticmethod
-    def _load_pristine_surface(source):
-        if source is None:
-            return None
-        if isinstance(source, pygame.Surface):
-            return source.convert()
-        if isinstance(source, (str, Path)):
-            candidate = Path(source)
-            if not candidate.is_absolute():
-                root = Path(__file__).resolve().parents[2]
-                candidate = root / "data" / "images" / str(source)
-            return pygame.image.load(str(candidate)).convert()
-        raise TypeError("pristine source must be a Surface or path-like string")
 
     def add(self, node, scene_name: Optional[str] = None):
         """Add a root node to the application scene."""
@@ -198,7 +185,7 @@ class GuiApplication:
 
     def set_pristine(self, source, scene_name: Optional[str] = None) -> None:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        runtime["screen_pristine"] = self._load_pristine_surface(source)
+        runtime["screen_pristine"] = load_pristine_surface(source)
         runtime["screen_pristine_scaled"] = None
         runtime["screen_pristine_scaled_size"] = (0, 0)
 

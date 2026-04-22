@@ -74,8 +74,7 @@ class TaskPanelControl(PanelControl):
     def set_animation_step_px(self, animation_step_px: int) -> None:
         self.animation_step_px = max(1, int(animation_step_px))
 
-    def update(self, dt_seconds: float) -> None:
-        del dt_seconds
+    def update(self, _dt_seconds: float) -> None:
         if self.visible and self.auto_hide:
             target = self._shown_y if self._hovered else self._hidden_y
             if self.rect.y < target:

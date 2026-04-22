@@ -36,8 +36,7 @@ class ButtonControl(UiNode):
             raise ValueError("on_click callback must be callable or None")
         self.on_click = callback
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        del app
+    def handle_event(self, event: GuiEvent, _app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             self.pressed = False
