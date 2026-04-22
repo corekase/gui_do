@@ -1,8 +1,6 @@
 import pygame
 from pygame import Rect
-from demo_parts.mandelbrot_demo_part import (
-    MandelbrotRenderFeature,
-)
+from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 from demo_parts.life_demo_part import LifeSimulationFeature
 
 from gui import (
