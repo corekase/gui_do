@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from demo_parts.mandel_events import MANDEL_KIND_COMPLETE, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
+from demo_parts.mandel_events import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
 from gui import EventBus
 from gui_do_demo import _MandelPresentationModel
 from gui_do_demo import GuiDoDemo
@@ -156,6 +156,77 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertIn((MANDEL_KIND_COMPLETE, None), published)
         self.assertIsNone(demo._mandel_running_mode)
+
+    def test_update_mandel_events_aggregates_multiple_failures(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_running_mode = "running 4M 4Tasks"
+        demo.mandel_task_ids = {"can1", "can2", "can3"}
+
+        class _FailedScheduler:
+            def get_finished_events(self):
+                return []
+
+            def get_failed_events(self):
+                return [
+                    SimpleNamespace(task_id="can1", error="boom"),
+                    SimpleNamespace(task_id="can2", error="bang"),
+                ]
+
+            def tasks_busy_match_any(self, *_args):
+                return True
+
+            def clear_events(self):
+                return None
+
+        demo.mandel_scheduler = _FailedScheduler()
+        demo.mandel_task_id_pool = ("can1", "can2", "can3")
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+            if detail is not None:
+                demo.mandel_model.set_status(str(detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_FAILED, "2 tasks failed - can1: boom; can2: bang"), published)
+
+    def test_update_mandel_events_single_failure_includes_task_id(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_running_mode = "running iterative"
+        demo.mandel_task_ids = {"iter"}
+
+        class _SingleFailedScheduler:
+            def get_finished_events(self):
+                return []
+
+            def get_failed_events(self):
+                return [SimpleNamespace(task_id="iter", error="boom")]
+
+            def tasks_busy_match_any(self, *_args):
+                return False
+
+            def clear_events(self):
+                return None
+
+        demo.mandel_scheduler = _SingleFailedScheduler()
+        demo.mandel_task_id_pool = ("iter",)
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_FAILED, "iter: boom"), published)
 
 
 if __name__ == "__main__":

@@ -814,6 +814,7 @@ class GuiDoDemo:
     def _update_mandel_events(self) -> None:
         finished = self.mandel_scheduler.get_finished_events()
         failed = self.mandel_scheduler.get_failed_events()
+        failed_details = []
 
         for event in finished:
             if event.task_id in self.mandel_task_ids:
@@ -822,7 +823,15 @@ class GuiDoDemo:
         for event in failed:
             if event.task_id in self.mandel_task_ids:
                 self.mandel_task_ids.remove(event.task_id)
-                self._publish_mandel_event(MANDEL_KIND_FAILED, str(event.error))
+                failed_details.append((str(event.task_id), str(event.error)))
+
+        if failed_details:
+            if len(failed_details) == 1:
+                task_id, error = failed_details[0]
+                self._publish_mandel_event(MANDEL_KIND_FAILED, f"{task_id}: {error}")
+            else:
+                summary = "; ".join(f"{task_id}: {error}" for task_id, error in failed_details)
+                self._publish_mandel_event(MANDEL_KIND_FAILED, f"{len(failed_details)} tasks failed - {summary}")
 
         busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
