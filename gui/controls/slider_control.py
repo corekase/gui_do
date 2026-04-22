@@ -1,3 +1,4 @@
+import inspect
 import pygame
 from typing import Callable, Optional, TYPE_CHECKING
 
@@ -41,6 +42,30 @@ class SliderControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_value()
 
+    @staticmethod
+    def _accepts_reason(callback: Callable) -> bool:
+        try:
+            signature = inspect.signature(callback)
+        except (TypeError, ValueError):
+            return False
+        for parameter in signature.parameters.values():
+            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+                return True
+        positional = [
+            parameter
+            for parameter in signature.parameters.values()
+            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+        return len(positional) >= 2
+
+    def _notify_change(self, reason: str) -> None:
+        if self.on_change is None:
+            return
+        if self._accepts_reason(self.on_change):
+            self.on_change(self.value, str(reason))
+            return
+        self.on_change(self.value)
+
     def _normalize_range(self) -> None:
         if self.maximum < self.minimum:
             self.minimum, self.maximum = self.maximum, self.minimum
@@ -82,19 +107,19 @@ class SliderControl(UiNode):
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""
-        return self._set_value(value)
+        return self._set_value(value, reason="programmatic")
 
     def adjust_value(self, delta: float) -> bool:
         """Adjust value programmatically by a delta with clamp and callbacks."""
-        return self._set_value(self.value + float(delta))
+        return self._set_value(self.value + float(delta), reason="programmatic")
 
-    def _set_value(self, new_value: float) -> bool:
+    def _set_value(self, new_value: float, reason: str = "programmatic") -> bool:
         old_value = self.value
         self.value = float(new_value)
         self._clamp_value()
         changed = self.value != old_value
-        if changed and self.on_change is not None:
-            self.on_change(self.value)
+        if changed:
+            self._notify_change(reason)
         return changed
 
     def handle_rect(self) -> Rect:
@@ -119,23 +144,19 @@ class SliderControl(UiNode):
 
         step = self._keyboard_step()
         if event.is_key_down(pygame.K_HOME):
-            return self._set_value(self.minimum)
+            return self._set_value(self.minimum, reason="keyboard")
         if event.is_key_down(pygame.K_END):
-            return self._set_value(self.maximum)
+            return self._set_value(self.maximum, reason="keyboard")
         if self.axis == LayoutAxis.HORIZONTAL:
             if event.is_key_down(pygame.K_LEFT):
-                self._nudge(-step)
-                return True
+                return self._set_value(self.value - step, reason="keyboard")
             if event.is_key_down(pygame.K_RIGHT):
-                self._nudge(step)
-                return True
+                return self._set_value(self.value + step, reason="keyboard")
         else:
             if event.is_key_down(pygame.K_DOWN):
-                self._nudge(-step)
-                return True
+                return self._set_value(self.value - step, reason="keyboard")
             if event.is_key_down(pygame.K_UP):
-                self._nudge(step)
-                return True
+                return self._set_value(self.value + step, reason="keyboard")
 
         raw = event.pos
         if event.is_mouse_down(1):
@@ -155,7 +176,7 @@ class SliderControl(UiNode):
                 axis_pixel = pos[0] - self._drag_anchor_offset + (self.handle_size // 2)
             else:
                 axis_pixel = pos[1] - self._drag_anchor_offset + (self.handle_size // 2)
-            return self._set_value(self._to_value(axis_pixel))
+            return self._set_value(self._to_value(axis_pixel), reason="mouse_drag")
 
         if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
@@ -163,7 +184,7 @@ class SliderControl(UiNode):
             return True
 
         if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
-            return self._set_value(self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)))
+            return self._set_value(self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)), reason="wheel")
         return False
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:

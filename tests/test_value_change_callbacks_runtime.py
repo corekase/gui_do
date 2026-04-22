@@ -168,6 +168,49 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.assertEqual(bar.offset, 800)
         self.assertEqual(changed, [250, 800])
 
+    def test_slider_on_change_receives_reason_metadata_when_callback_accepts_it(self) -> None:
+        changed = []
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                50.0,
+                on_change=lambda value, reason: changed.append((value, reason)),
+            )
+        )
+        slider.set_tab_index(0)
+        self.app.focus.set_focus(slider)
+
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+        slider.adjust_value(5.0)
+
+        self.assertEqual(changed, [(55.0, "keyboard"), (60.0, "programmatic")])
+
+    def test_scrollbar_on_change_receives_reason_metadata_when_callback_accepts_it(self) -> None:
+        changed = []
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+                on_change=lambda value, reason: changed.append((value, reason)),
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+        bar.adjust_offset(10)
+
+        self.assertEqual(changed, [(110, "keyboard"), (120, "programmatic")])
+
 
 if __name__ == "__main__":
     unittest.main()

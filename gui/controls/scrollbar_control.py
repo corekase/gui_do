@@ -1,3 +1,4 @@
+import inspect
 import pygame
 from typing import Callable, Optional, TYPE_CHECKING
 
@@ -42,6 +43,30 @@ class ScrollbarControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_offset()
 
+    @staticmethod
+    def _accepts_reason(callback: Callable) -> bool:
+        try:
+            signature = inspect.signature(callback)
+        except (TypeError, ValueError):
+            return False
+        for parameter in signature.parameters.values():
+            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+                return True
+        positional = [
+            parameter
+            for parameter in signature.parameters.values()
+            if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
+        return len(positional) >= 2
+
+    def _notify_change(self, reason: str) -> None:
+        if self.on_change is None:
+            return
+        if self._accepts_reason(self.on_change):
+            self.on_change(self.offset, str(reason))
+            return
+        self.on_change(self.offset)
+
     def _normalize_geometry(self) -> None:
         self.content_size = max(1, int(self.content_size))
         self.viewport_size = max(1, int(self.viewport_size))
@@ -63,19 +88,19 @@ class ScrollbarControl(UiNode):
 
     def set_offset(self, offset: int) -> bool:
         """Set offset programmatically with clamp and on_change callback semantics."""
-        return self._set_offset(offset)
+        return self._set_offset(offset, reason="programmatic")
 
     def adjust_offset(self, delta: int) -> bool:
         """Adjust offset programmatically by a delta with clamp and callbacks."""
-        return self._set_offset(self.offset + int(delta))
+        return self._set_offset(self.offset + int(delta), reason="programmatic")
 
-    def _set_offset(self, new_offset: int) -> bool:
+    def _set_offset(self, new_offset: int, reason: str = "programmatic") -> bool:
         old_offset = self.offset
         self.offset = int(new_offset)
         self._clamp_offset()
         changed = self.offset != old_offset
-        if changed and self.on_change is not None:
-            self.on_change(self.offset)
+        if changed:
+            self._notify_change(reason)
         return changed
 
     def _track_rect(self) -> Rect:
@@ -134,29 +159,23 @@ class ScrollbarControl(UiNode):
             return False
 
         if event.is_key_down(pygame.K_HOME):
-            return self._set_offset(0)
+            return self._set_offset(0, reason="keyboard")
         if event.is_key_down(pygame.K_END):
-            return self._set_offset(self._max_offset())
+            return self._set_offset(self._max_offset(), reason="keyboard")
         if event.is_key_down(pygame.K_PAGEUP):
-            self._nudge(-self._page_step())
-            return True
+            return self._set_offset(self.offset - self._page_step(), reason="keyboard")
         if event.is_key_down(pygame.K_PAGEDOWN):
-            self._nudge(self._page_step())
-            return True
+            return self._set_offset(self.offset + self._page_step(), reason="keyboard")
         if self.axis == LayoutAxis.HORIZONTAL:
             if event.is_key_down(pygame.K_LEFT):
-                self._nudge(-self.step)
-                return True
+                return self._set_offset(self.offset - self.step, reason="keyboard")
             if event.is_key_down(pygame.K_RIGHT):
-                self._nudge(self.step)
-                return True
+                return self._set_offset(self.offset + self.step, reason="keyboard")
         else:
             if event.is_key_down(pygame.K_UP):
-                self._nudge(-self.step)
-                return True
+                return self._set_offset(self.offset - self.step, reason="keyboard")
             if event.is_key_down(pygame.K_DOWN):
-                self._nudge(self.step)
-                return True
+                return self._set_offset(self.offset + self.step, reason="keyboard")
 
         raw = event.pos
         if event.is_mouse_down(1):
@@ -177,7 +196,7 @@ class ScrollbarControl(UiNode):
                 axis_pixel = pos[0] - track.left - self._drag_anchor_offset
             else:
                 axis_pixel = pos[1] - track.top - self._drag_anchor_offset
-            return self._set_offset(self._pixel_to_offset(axis_pixel))
+            return self._set_offset(self._pixel_to_offset(axis_pixel), reason="mouse_drag")
 
         if event.is_mouse_up(1) and self.dragging:
             self.dragging = False
@@ -185,7 +204,7 @@ class ScrollbarControl(UiNode):
             return True
 
         if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
-            return self._set_offset(self.offset - (int(event.wheel_delta) * self.step))
+            return self._set_offset(self.offset - (int(event.wheel_delta) * self.step), reason="wheel")
         return False
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
