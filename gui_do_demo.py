@@ -1,21 +1,13 @@
-import math
 from typing import Optional, Set, Tuple
 
 import pygame
 from pygame import Rect
 from demo_parts.mandel_events import (
-    MANDEL_KIND_CLEARED,
-    MANDEL_KIND_COMPLETE,
-    MANDEL_KIND_FAILED,
-    MANDEL_KIND_RUNNING_FOUR_SPLIT,
-    MANDEL_KIND_RUNNING_ITERATIVE,
-    MANDEL_KIND_RUNNING_ONE_SPLIT,
-    MANDEL_KIND_RUNNING_RECURSIVE,
-    MANDEL_KIND_STATUS,
     MANDEL_STATUS_SCOPE,
     MANDEL_STATUS_TOPIC,
-    MandelStatusEvent,
 )
+from demo_parts.life_simulation_feature import LifeSimulationFeature
+from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 
 from gui import (
     GuiApplication,
@@ -100,6 +92,23 @@ class GuiDoDemo:
         self._mandel_running_mode: Optional[str] = None
         self._mandel_failure_preview_limit = 3
 
+        # Keep gui constructors on the demo so demo_parts modules can remain gui-independent.
+        self._window_control_cls = WindowControl
+        self._label_control_cls = LabelControl
+        self._button_control_cls = ButtonControl
+        self._canvas_control_cls = CanvasControl
+        self._slider_control_cls = SliderControl
+        self._toggle_control_cls = ToggleControl
+        self._layout_axis_cls = LayoutAxis
+
+        # Feature registry keeps concerns isolated behind a small lifecycle contract.
+        self._demo_features = [
+            LifeSimulationFeature(),
+            MandelbrotRenderFeature(),
+        ]
+        # Backward-compatible alias used by existing tests.
+        self._feature_parts = self._demo_features
+
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
         self._bind_runtime()
@@ -120,8 +129,8 @@ class GuiDoDemo:
             PanelControl("main_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
             scene_name="main",
         )
-        self._build_life_window()
-        self._build_mandelbrot_window()
+        for feature in self._demo_features:
+            feature.build(self)
         self.life_window.visible = True
         self.mandel_window.visible = True
         self.task_panel = self.app.add(
@@ -183,220 +192,53 @@ class GuiDoDemo:
 
     def _format_mandel_help_text(self) -> str:
         """Return the dynamic help string shown above the Mandelbrot canvas."""
-        limit = int(getattr(self, "_mandel_failure_preview_limit", 3))
-        return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {limit}"
+        return MandelbrotRenderFeature.format_help_text(self)
 
     def _set_mandel_help_label(self) -> None:
         """Refresh Mandel help label text when runtime options change."""
-        if hasattr(self, "mandel_help") and self.mandel_help is not None:
-            self.mandel_help.text = self._format_mandel_help_text()
+        MandelbrotRenderFeature.set_help_label(self)
 
     def set_mandel_failure_preview_limit(self, limit: int) -> int:
         """Set Mandel failure preview limit and return the clamped effective value."""
-        clamped = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, int(limit)))
-        self._mandel_failure_preview_limit = clamped
-        self._set_mandel_help_label()
-        return clamped
+        return MandelbrotRenderFeature.set_failure_preview_limit(self, limit)
 
     def _adjust_mandel_failure_preview_limit(self, delta: int) -> bool:
         """Adjust failure preview limit and publish user-facing status feedback."""
-        previous = self._mandel_failure_preview_limit
-        effective = self.set_mandel_failure_preview_limit(previous + int(delta))
-        detail = f"Mandelbrot failure preview limit: {effective}"
-        if effective == previous:
-            detail = f"{detail} (at bound)"
-        self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
-        return True
+        return MandelbrotRenderFeature.adjust_failure_preview_limit(self, delta)
 
     def _set_life_zoom_label(self) -> None:
         """Render the current life-cell zoom level into the zoom label."""
-        zoom_level = max(2, int(round(self.life_cell_size)))
-        self.life_zoom_label.text = f"Zoom {zoom_level}"
+        LifeSimulationFeature.set_life_zoom_label(self)
 
     def _build_life_window(self) -> None:
         """Create the Game of Life window, canvas, and bottom control strip."""
-        life_rect = self.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.life_window = self.root.add(
-            WindowControl(
-                "life_window",
-                life_rect,
-                "Conway's Game of Life",
-                preamble=self._life_window_preamble,
-                event_handler=self._life_window_event_handler,
-                postamble=self._life_window_postamble,
-            )
+        LifeSimulationFeature.build_window(
+            self,
+            window_control_cls=self._window_control_cls,
+            canvas_control_cls=self._canvas_control_cls,
+            button_control_cls=self._button_control_cls,
+            toggle_control_cls=self._toggle_control_cls,
+            slider_control_cls=self._slider_control_cls,
+            label_control_cls=self._label_control_cls,
+            layout_axis_cls=self._layout_axis_cls,
         )
-        content_rect = self.life_window.content_rect()
-        left = content_rect.left
-        top = content_rect.top
-        width = content_rect.width
-        height = content_rect.height
-        widget_height = 28
-        padding = 10
-
-        self.life_canvas = self.life_window.add(
-            CanvasControl("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), height - (widget_height * 2)), max_events=256)
-        )
-
-        controls_y = top + height - widget_height - padding
-
-        # Use a linear strip for consistent control-row geometry.
-        self.app.layout.set_linear_properties(
-            anchor=(left + padding, controls_y),
-            item_width=100,
-            item_height=widget_height,
-            spacing=12,
-            horizontal=True,
-        )
-        life_reset_rect = self.app.layout.next_linear()
-        life_toggle_rect = self.app.layout.next_linear()
-        zoom_slider_slot_1 = self.app.layout.next_linear()
-        zoom_slider_slot_2 = self.app.layout.next_linear()
-        zoom_label_slot = self.app.layout.next_linear()
-
-        self.life_reset_button = self.life_window.add(
-            ButtonControl("life_reset", life_reset_rect, "Reset", self._life_reset, style="angle")
-        )
-        self.life_toggle = self.life_window.add(
-            ToggleControl(
-                "life_toggle",
-                life_toggle_rect,
-                "Stop",
-                "Start",
-                pushed=False,
-                style="round",
-            )
-        )
-
-        slider_left = zoom_slider_slot_1.left
-        slider_right = zoom_slider_slot_2.right
-        self.life_zoom_slider = self.life_window.add(
-            SliderControl(
-                "life_zoom",
-                Rect(slider_left, controls_y, max(80, slider_right - slider_left), widget_height),
-                LayoutAxis.HORIZONTAL,
-                0.0,
-                11.0,
-                5.0,
-                on_change=self._on_life_zoom_slider_changed,
-            )
-        )
-        self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
-        zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
-        self.life_zoom_label = self._set_text(
-            self.life_window.add(LabelControl("life_zoom_label", zoom_label_rect, "Zoom 12"))
-        )
-
-        self.life_origin = [self.life_canvas.rect.width // 2, self.life_canvas.rect.height // 2]
-        self._life_reset()
-        self.life_window.visible = False
 
     def _build_mandelbrot_window(self) -> None:
         """Create the Mandelbrot window, canvases, controls, and status labels."""
-        mandel_rect = self.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.mandel_window = self.root.add(
-            WindowControl(
-                "mandel_window",
-                mandel_rect,
-                "Mandelbrot",
-                event_handler=self._mandel_window_event_handler,
-            )
+        MandelbrotRenderFeature.build_window(
+            self,
+            window_control_cls=self._window_control_cls,
+            label_control_cls=self._label_control_cls,
+            canvas_control_cls=self._canvas_control_cls,
+            button_control_cls=self._button_control_cls,
         )
-        left = mandel_rect.left
-        top = mandel_rect.top
-        canvas_size = 580
-        canvas_x = left + 20
-        canvas_y = top + 54
-        split_gap = 6
-        split_size = (canvas_size - split_gap) // 2
-        controls_y = canvas_y + canvas_size + 12
-        status_y = controls_y + 38
-
-        self.mandel_help = self._set_text(
-            self.mandel_window.add(
-                LabelControl(
-                    "mandel_help",
-                    Rect(left + 20, top + 30, 590, 20),
-                    self._format_mandel_help_text(),
-                )
-            )
-        )
-        self.mandel_canvas = self.mandel_window.add(CanvasControl("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
-        self.mandel_canvas_rect = Rect(canvas_x, canvas_y, canvas_size, canvas_size)
-        self.canvas1 = self.mandel_window.add(CanvasControl("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
-        self.canvas2 = self.mandel_window.add(CanvasControl("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
-        self.canvas3 = self.mandel_window.add(CanvasControl("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
-        self.canvas4 = self.mandel_window.add(
-            CanvasControl("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
-        )
-
-        # Keep the Mandel action row on a single linear layout strip.
-        self.app.layout.set_linear_properties(
-            anchor=(left + 20, controls_y),
-            item_width=112,
-            item_height=30,
-            spacing=8,
-            horizontal=True,
-        )
-        mandel_reset_rect = self.app.layout.next_linear()
-        mandel_iter_rect = self.app.layout.next_linear()
-        mandel_recur_rect = self.app.layout.next_linear()
-        mandel_one_split_rect = self.app.layout.next_linear()
-        mandel_four_split_rect = self.app.layout.next_linear()
-
-        self.mandel_reset_button = self.mandel_window.add(
-            ButtonControl("mandel_reset", mandel_reset_rect, "Reset", self._clear_mandel, style="angle")
-        )
-        self.mandel_iter_button = self.mandel_window.add(
-            ButtonControl("mandel_iter", mandel_iter_rect, "Iterative", self._launch_mandel_iterative, style="round")
-        )
-        self.mandel_recur_button = self.mandel_window.add(
-            ButtonControl("mandel_recur", mandel_recur_rect, "Recursive", self._launch_mandel_recursive, style="round")
-        )
-        self.mandel_one_split_button = self.mandel_window.add(
-            ButtonControl("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", self._launch_mandel_one_split, style="round")
-        )
-        self.mandel_four_split_button = self.mandel_window.add(
-            ButtonControl("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", self._launch_mandel_four_split, style="round")
-        )
-        self.mandel_task_buttons = (
-            self.mandel_iter_button,
-            self.mandel_recur_button,
-            self.mandel_one_split_button,
-            self.mandel_four_split_button,
-        )
-
-        self.mandel_status = self._set_text(
-            self.mandel_window.add(
-                LabelControl("mandel_status", Rect(left + 20, status_y, 590, 20), self.mandel_model.status_text.value)
-            )
-        )
-
-        self.canvas1.visible = False
-        self.canvas2.visible = False
-        self.canvas3.visible = False
-        self.canvas4.visible = False
-        self._set_mandel_task_buttons_disabled(False)
-        self._clear_mandel()
-        self.mandel_window.visible = False
 
     def _bind_runtime(self) -> None:
         """Register keyboard actions, event bus bindings, and accessibility metadata."""
-        self.life_scheduler.set_message_dispatch_limit(256)
-        self.mandel_scheduler.set_message_dispatch_limit(256)
         self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
-        self.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self._adjust_mandel_failure_preview_limit(-1))
-        self.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self._adjust_mandel_failure_preview_limit(1))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
-        self.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
-        self.app.actions.bind_key(pygame.K_RIGHTBRACKET, "mandel_failure_preview_increase", scene="main")
-        self.mandel_model.bind(self.mandel_model.status_text, self._on_mandel_status_changed)
-        self._mandel_status_subscription = self.app.events.subscribe(
-            self._mandel_status_topic,
-            self._on_mandel_status_event,
-            scope=self._mandel_status_scope,
-        )
-        self._mandel_status_bus_ready = True
+        for feature in self._demo_features:
+            feature.bind_runtime(self)
         self._configure_focus_and_accessibility()
 
     # ---------------------------------------------------------------------
@@ -404,105 +246,47 @@ class GuiDoDemo:
     # ---------------------------------------------------------------------
     def _on_mandel_status_changed(self, text: str) -> None:
         """Apply presentation-model status updates to the visible label."""
-        self.mandel_status.text = text
+        MandelbrotRenderFeature.on_status_changed(self, text)
 
     def _on_mandel_status_event(self, payload) -> None:
         """Handle event-bus Mandel status payload and update presentation model."""
-        self.mandel_model.set_status(self._format_mandel_status(MandelStatusEvent.from_payload(payload)))
+        MandelbrotRenderFeature.on_status_event(self, payload)
 
     def _format_mandel_status(self, payload) -> str:
         """Normalize Mandel status payloads into a user-facing status line."""
-        event = MandelStatusEvent.from_payload(payload)
-        details = "" if event.detail is None else str(event.detail)
-        mapping = {
-            "idle": "Mandelbrot: idle",
-            MANDEL_KIND_CLEARED: "Mandelbrot: cleared",
-            MANDEL_KIND_RUNNING_ITERATIVE: "Mandelbrot: running iterative",
-            MANDEL_KIND_RUNNING_RECURSIVE: "Mandelbrot: running recursive",
-            MANDEL_KIND_RUNNING_ONE_SPLIT: "Mandelbrot: running 1M 4Tasks",
-            MANDEL_KIND_RUNNING_FOUR_SPLIT: "Mandelbrot: running 4M 4Tasks",
-            MANDEL_KIND_COMPLETE: "Mandelbrot: complete",
-        }
-        if event.kind in mapping:
-            return mapping[event.kind]
-        if event.kind == MANDEL_KIND_FAILED:
-            return f"Mandelbrot failed: {details}" if details else "Mandelbrot failed"
-        if event.kind == MANDEL_KIND_STATUS:
-            return details if details else "Mandelbrot: idle"
-        return details if details else f"Mandelbrot: {event.kind}"
+        return MandelbrotRenderFeature.format_status(self, payload)
 
     def _publish_mandel_event(self, kind: str, detail: Optional[str] = None) -> None:
         """Publish Mandel status event or fall back to direct model update."""
-        if kind in (MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED):
-            self._mandel_running_mode = None
-        event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
-        payload = event.to_payload()
-        if self._mandel_status_bus_ready:
-            self.app.events.publish(self._mandel_status_topic, payload, scope=self._mandel_status_scope)
-            return
-        self.mandel_model.set_status(self._format_mandel_status(event))
+        MandelbrotRenderFeature.publish_event(self, kind, detail)
 
     def _publish_mandel_running_status(self) -> None:
         """Emit running status text with current in-flight task count."""
-        if not self.mandel_task_ids:
-            return
-        mode = self._mandel_running_mode if self._mandel_running_mode is not None else "running"
-        task_count = len(self.mandel_task_ids)
-        task_word = "task" if task_count == 1 else "tasks"
-        detail = f"Mandelbrot: {mode} ({task_count} {task_word})"
-        if self.mandel_model.status_text.value == detail:
-            return
-        self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
+        MandelbrotRenderFeature.publish_running_status(self)
 
     def _format_mandel_failure_summary(self, failed_details) -> str:
         """Build a deterministic, capped summary string for Mandel task failures."""
-        if not failed_details:
-            return ""
-        if len(failed_details) == 1:
-            task_id, error = failed_details[0]
-            return f"{task_id}: {error}"
-
-        configured = int(getattr(self, "_mandel_failure_preview_limit", 3))
-        limit = max(self._MANDEL_FAILURE_PREVIEW_MIN, min(self._MANDEL_FAILURE_PREVIEW_MAX, configured))
-        preview = failed_details[:limit]
-        summary = "; ".join(f"{task_id}: {error}" for task_id, error in preview)
-        remaining = len(failed_details) - len(preview)
-        if remaining > 0:
-            summary = f"{summary}; +{remaining} more"
-        return f"{len(failed_details)} tasks failed - {summary}"
+        return MandelbrotRenderFeature.format_failure_summary(self, failed_details)
 
     # ---------------------------------------------------------------------
     # Accessibility, visibility toggles, and window tiling.
     # ---------------------------------------------------------------------
     def _configure_focus_and_accessibility(self) -> None:
         """Configure tab order and accessibility labels for interactive controls."""
-        focus_order = [
+        base_controls = [
             self.quit_button,
             self.life_toggle_window,
             self.mandel_toggle_window,
-            self.life_reset_button,
-            self.life_toggle,
-            self.life_zoom_slider,
-            self.mandel_reset_button,
-            self.mandel_iter_button,
-            self.mandel_recur_button,
-            self.mandel_one_split_button,
-            self.mandel_four_split_button,
         ]
-        for index, control in enumerate(focus_order):
+        for index, control in enumerate(base_controls):
             control.set_tab_index(index)
 
         self.quit_button.set_accessibility(role="button", label="Quit")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
-        self.life_reset_button.set_accessibility(role="button", label="Reset life board")
-        self.life_toggle.set_accessibility(role="toggle", label="Run life simulation")
-        self.life_zoom_slider.set_accessibility(role="slider", label="Life zoom")
-        self.mandel_reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
-        self.mandel_iter_button.set_accessibility(role="button", label="Run Mandelbrot iterative")
-        self.mandel_recur_button.set_accessibility(role="button", label="Run Mandelbrot recursive")
-        self.mandel_one_split_button.set_accessibility(role="button", label="Run Mandelbrot one canvas split")
-        self.mandel_four_split_button.set_accessibility(role="button", label="Run Mandelbrot four canvases split")
+        next_index = len(base_controls)
+        for feature in self._demo_features:
+            next_index = feature.configure_accessibility(self, next_index)
 
     def _toggle_life_window(self, pushed: bool) -> None:
         """Show or hide Life window and retile visible windows."""
@@ -542,460 +326,137 @@ class GuiDoDemo:
     # ---------------------------------------------------------------------
     def _life_reset(self) -> None:
         """Reset Life board, zoom, and playback toggle to demo defaults."""
-        self.life_cells.clear()
-        self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
-        self.life_origin = [self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0]
-        self.life_cell_size = 12
-        self.life_zoom_slider.value = 5.0
-        self._life_zoom_slider_last_value = int(round(self.life_zoom_slider.value))
-        self._set_life_zoom_label()
-        self.life_toggle.pushed = False
+        LifeSimulationFeature.life_reset(self)
 
     def _life_population(self, cell: Tuple[int, int]) -> int:
         """Count live neighbors for a given Life cell."""
-        count = 0
-        for dx, dy in self.neighbours:
-            if (cell[0] + dx, cell[1] + dy) in self.life_cells:
-                count += 1
-        return count
+        return LifeSimulationFeature.life_population(self, cell)
 
     def _life_step(self) -> None:
         """Advance Conway's Game of Life simulation by one generation."""
-        new_life: Set[Tuple[int, int]] = set()
-        for cell in self.life_cells:
-            pop = self._life_population(cell)
-            if pop in (2, 3):
-                new_life.add(cell)
-            for dx, dy in self.neighbours:
-                n_cell = (cell[0] + dx, cell[1] + dy)
-                if self._life_population(n_cell) == 3:
-                    new_life.add(n_cell)
-        self.life_cells = new_life
+        LifeSimulationFeature.life_step(self)
 
     def _zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
         """Zoom Life canvas around a local anchor while preserving that anchor point."""
-        old_size = max(2, int(round(self.life_cell_size)))
-        clamped_size = max(2, min(24, int(new_size)))
-        if clamped_size == old_size:
-            return
-        anchor_x, anchor_y = anchor_local
-        self.life_origin[0] = anchor_x - ((anchor_x - self.life_origin[0]) / old_size) * clamped_size
-        self.life_origin[1] = anchor_y - ((anchor_y - self.life_origin[1]) / old_size) * clamped_size
-        self.life_cell_size = clamped_size
-        slider_value = max(0, min(11, (clamped_size // 2) - 1))
-        self.life_zoom_slider.value = float(slider_value)
-        self._life_zoom_slider_last_value = int(slider_value)
-        self._set_life_zoom_label()
+        LifeSimulationFeature.zoom_life_view_about(self, anchor_local, new_size)
 
     def _life_window_preamble(self) -> None:
         """Sync zoom state from slider before per-frame Life updates."""
-        slider_value = max(0, min(11, int(round(self.life_zoom_slider.value))))
-        self._sync_life_zoom_from_slider(slider_value)
+        LifeSimulationFeature.life_window_preamble(self)
 
     def _on_life_zoom_slider_changed(self, value: float) -> None:
         """Handle slider callback and map it to discrete Life zoom steps."""
-        self._sync_life_zoom_from_slider(int(round(value)))
+        LifeSimulationFeature.on_life_zoom_slider_changed(self, value)
 
     def _sync_life_zoom_from_slider(self, slider_value: int) -> None:
         """Apply discrete slider zoom updates around the canvas center."""
-        if slider_value == self._life_zoom_slider_last_value:
-            return
-        old_size = max(2, int(round(self.life_cell_size)))
-        new_size = (slider_value + 1) * 2
-        if new_size == old_size:
-            self._life_zoom_slider_last_value = slider_value
-            return
-        self._life_zoom_slider_last_value = slider_value
-        center_local = (self.life_canvas.rect.width / 2.0, self.life_canvas.rect.height / 2.0)
-        self._zoom_life_view_about(center_local, new_size)
+        LifeSimulationFeature.sync_life_zoom_from_slider(self, slider_value)
 
     def _life_window_event_handler(self, event) -> bool:
         """Process Life canvas drag, wheel zoom, and lock-point interactions."""
-        if event.is_mouse_down(3) and event.collides(self.life_canvas.rect):
-            pos = event.pos
-            if pos is not None:
-                self.life_dragging = True
-                self.app.set_cursor("hand")
-                self.app.set_lock_point(self.life_canvas, pos)
-                return True
-
-        if event.is_mouse_up(3):
-            if self.life_dragging:
-                self.life_dragging = False
-                self.app.set_cursor("normal")
-                self.app.set_lock_point(None)
-                return True
-
-        if event.is_mouse_motion() and self.life_dragging:
-            delta = self.app.get_lock_point_motion_delta(event)
-            if delta is None:
-                rel = event.rel
-                if isinstance(rel, tuple) and len(rel) == 2:
-                    delta = (rel[0], rel[1])
-                else:
-                    delta = (0, 0)
-            self.life_origin[0] -= delta[0]
-            self.life_origin[1] -= delta[1]
-            return True
-
-        if event.is_mouse_down(4) or event.is_mouse_down(5):
-            pos = event.pos
-            if pos is not None and self.life_canvas.rect.collidepoint(pos):
-                wheel_step = 1 if event.button == 4 else -1
-                anchor_local = (pos[0] - self.life_canvas.rect.left, pos[1] - self.life_canvas.rect.top)
-                self._zoom_life_view_about(anchor_local, self.life_cell_size + (wheel_step * 2))
-                return True
-
-        if event.is_mouse_wheel():
-            pointer_pos = self.app.lock_point_pos if self.app.mouse_point_locked and self.app.lock_point_pos is not None else event.pos
-            if pointer_pos is not None and self.life_canvas.rect.collidepoint(pointer_pos):
-                if self.app.mouse_point_locked and self.app.lock_point_pos is not None:
-                    lock_window_pos = self.app.convert_to_window(self.app.lock_point_pos, self.life_window)
-                    canvas_window_left = self.life_canvas.rect.left - self.life_window.rect.left
-                    canvas_window_top = self.life_canvas.rect.top - self.life_window.rect.top
-                    anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
-                else:
-                    anchor_local = (pointer_pos[0] - self.life_canvas.rect.left, pointer_pos[1] - self.life_canvas.rect.top)
-                self._zoom_life_view_about(anchor_local, self.life_cell_size + (event.wheel_delta * 2))
-                return True
-
-        return False
+        return LifeSimulationFeature.life_window_event_handler(self, event)
 
     # ---------------------------------------------------------------------
     # Mandelbrot render pipeline and task orchestration.
     # ---------------------------------------------------------------------
     def _mandel_window_event_handler(self, event) -> bool:
         """Handle Mandel window-level events (unused in this demo)."""
-        return False
+        return MandelbrotRenderFeature.window_event_handler(self, event)
 
     def _life_window_postamble(self) -> None:
         """Flush queued Life input and redraw board each frame."""
-        self._update_life()
+        LifeSimulationFeature.life_window_postamble(self)
 
     def _mandel_col(self, k: int) -> Tuple[int, int, int]:
         """Map iteration count to palette color for Mandelbrot rendering."""
-        if k >= self.max_iter - 1:
-            return (0, 0, 0)
-        return self.mandel_cols[k % len(self.mandel_cols)]
+        return MandelbrotRenderFeature.mandel_col(self, k)
 
     def _mandel_viewport(self, width: int, height: int) -> Tuple[complex, float]:
         """Return default Mandel viewport center and pixel scale for a canvas size."""
-        center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        scale = max((extent / width).real, (extent / height).imag)
-        return center, scale
+        return MandelbrotRenderFeature.mandel_viewport(self, width, height)
 
     def _mandel_pixel(self, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
         """Evaluate Mandelbrot iteration count for one pixel coordinate."""
-        c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
-        z = 0j
-        for k in range(self.max_iter):
-            z = z * z + c
-            if (z * z.conjugate()).real > 4.0:
-                return k
-        return self.max_iter - 1
+        return MandelbrotRenderFeature.mandel_pixel(self, px, py, width, height, center, scale)
 
     def _clear_mandel_surfaces(self) -> None:
         """Clear all Mandel canvases to the current theme medium color."""
-        self.mandel_canvas.canvas.fill(self.app.theme.medium)
-        self.canvas1.canvas.fill(self.app.theme.medium)
-        self.canvas2.canvas.fill(self.app.theme.medium)
-        self.canvas3.canvas.fill(self.app.theme.medium)
-        self.canvas4.canvas.fill(self.app.theme.medium)
+        MandelbrotRenderFeature.clear_surfaces(self)
 
     def _set_mandel_task_buttons_disabled(self, disabled: bool) -> None:
         """Toggle Mandel run controls and keep focus on an enabled control."""
-        for button in self.mandel_task_buttons:
-            button.enabled = not disabled
-        if not disabled:
-            return
-        focused = self.app.focus.focused_node
-        if focused not in self.mandel_task_buttons:
-            return
-        if self.mandel_reset_button.visible and self.mandel_reset_button.enabled and self.mandel_reset_button.accepts_focus():
-            self.app.focus.set_focus(self.mandel_reset_button, show_hint=False)
-            return
-        self.app.focus.revalidate_focus(self.app.scene)
+        MandelbrotRenderFeature.set_task_buttons_disabled(self, disabled)
 
     def _show_single_mandel_canvas(self) -> None:
         """Switch UI to single-canvas Mandel presentation mode."""
-        self.mandel_canvas.visible = True
-        self.canvas1.visible = False
-        self.canvas2.visible = False
-        self.canvas3.visible = False
-        self.canvas4.visible = False
-        self._clear_mandel_surfaces()
+        MandelbrotRenderFeature.show_single_canvas(self)
 
     def _prepare_mandel_single_canvas_run(self) -> None:
         """Prepare controls/canvases for a single-canvas Mandel task launch."""
-        self._set_mandel_task_buttons_disabled(True)
-        self._show_single_mandel_canvas()
+        MandelbrotRenderFeature.prepare_single_canvas_run(self)
 
     def _prepare_mandel_split_canvas_run(self) -> None:
         """Prepare controls/canvases for a four-canvas Mandel task launch."""
-        self._set_mandel_task_buttons_disabled(True)
-        self.mandel_canvas.visible = False
-        self.canvas1.visible = True
-        self.canvas2.visible = True
-        self.canvas3.visible = True
-        self.canvas4.visible = True
-        self._clear_mandel_surfaces()
+        MandelbrotRenderFeature.prepare_split_canvas_run(self)
 
     def _mandel_canvas_for_task(self, task_id: str):
         """Resolve task id to its destination pygame canvas surface."""
-        canvas_by_task = {
-            "iter": self.mandel_canvas.canvas,
-            "recu": self.mandel_canvas.canvas,
-            "1": self.mandel_canvas.canvas,
-            "2": self.mandel_canvas.canvas,
-            "3": self.mandel_canvas.canvas,
-            "4": self.mandel_canvas.canvas,
-            "can1": self.canvas1.canvas,
-            "can2": self.canvas2.canvas,
-            "can3": self.canvas3.canvas,
-            "can4": self.canvas4.canvas,
-        }
-        return canvas_by_task.get(task_id)
+        return MandelbrotRenderFeature.canvas_for_task(self, task_id)
 
     def _make_mandel_progress_handler(self, task_id: str):
         """Build scheduler message handler that routes payloads by task id."""
-        def handler(payload):
-            self._apply_mandel_result(task_id, payload)
-
-        return handler
+        return MandelbrotRenderFeature.make_progress_handler(self, task_id)
 
     def _apply_mandel_result(self, task_id: str, payload) -> None:
         """Apply Mandel worker payload into the target canvas, with clipping."""
-        canvas = self._mandel_canvas_for_task(task_id)
-        if canvas is None:
-            return
-
-        if task_id == "iter":
-            y_pos, row = payload
-            if y_pos < 0 or y_pos >= canvas.get_height():
-                return
-            for x_pos, value in enumerate(row):
-                if 0 <= x_pos < canvas.get_width():
-                    canvas.set_at((x_pos, y_pos), self._mandel_col(value))
-            return
-
-        x_pos, y_pos, width, height, values = payload
-        x0 = max(0, x_pos)
-        y0 = max(0, y_pos)
-        x1 = min(canvas.get_width(), x_pos + width)
-        y1 = min(canvas.get_height(), y_pos + height)
-        if x1 <= x0 or y1 <= y0:
-            return
-
-        if isinstance(values, int):
-            canvas.fill(self._mandel_col(values), Rect(x0, y0, x1 - x0, y1 - y0))
-            return
-
-        src_w = max(1, width)
-        if (x0, y0, x1, y1) != (x_pos, y_pos, x_pos + width, y_pos + height):
-            clipped_values = []
-            for row_index in range(y0 - y_pos, y1 - y_pos):
-                start = row_index * src_w + (x0 - x_pos)
-                end = start + (x1 - x0)
-                clipped_values.extend(values[start:end])
-            values = clipped_values
-            x_pos, y_pos, width, height = x0, y0, x1 - x0, y1 - y0
-
-        idx = 0
-        for yy in range(y_pos, y_pos + height):
-            for xx in range(x_pos, x_pos + width):
-                canvas.set_at((xx, yy), self._mandel_col(values[idx]))
-                idx += 1
+        MandelbrotRenderFeature.apply_result(self, task_id, payload)
 
     def _clear_mandel(self) -> None:
         """Stop Mandel tasks and reset UI/state to cleared mode."""
-        self.mandel_scheduler.remove_tasks(*self.mandel_task_id_pool)
-        self.mandel_task_ids.clear()
-        self._mandel_running_mode = None
-        self._show_single_mandel_canvas()
-        self._set_mandel_task_buttons_disabled(False)
-        self._publish_mandel_event(MANDEL_KIND_CLEARED)
+        MandelbrotRenderFeature.clear(self)
 
     def _mandel_iterative_task(self, task_id, params):
         """Compute Mandel rows iteratively and stream row payload updates."""
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        for y in range(height):
-            row = [self._mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
-            self.mandel_scheduler.send_message(task_id, (y, row))
-        return None
+        return MandelbrotRenderFeature.iterative_task(self, task_id, params)
 
     def _recursive_fill(self, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
         """Recursive Mandel region evaluation using corner coherence fill optimization."""
-        if w <= 0 or h <= 0:
-            return
-        tl = self._mandel_pixel(x, y, width, height, center, scale)
-        tr = self._mandel_pixel(x + w - 1, y, width, height, center, scale)
-        bl = self._mandel_pixel(x, y + h - 1, width, height, center, scale)
-        br = self._mandel_pixel(x + w - 1, y + h - 1, width, height, center, scale)
-        if w <= 4 or h <= 4:
-            values = []
-            for yy in range(y, y + h):
-                for xx in range(x, x + w):
-                    values.append(self._mandel_pixel(xx, yy, width, height, center, scale))
-            self.mandel_scheduler.send_message(task_id, (x, y, w, h, values))
-            return
-        if tl == tr == bl == br:
-            self.mandel_scheduler.send_message(task_id, (x, y, w, h, tl))
-            return
-        hw = w // 2
-        hh = h // 2
-        self._recursive_fill(task_id, x, y, hw, hh, width, height, center, scale)
-        self._recursive_fill(task_id, x + hw, y, w - hw, hh, width, height, center, scale)
-        self._recursive_fill(task_id, x, y + hh, hw, h - hh, width, height, center, scale)
-        self._recursive_fill(task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
+        MandelbrotRenderFeature.recursive_fill(self, task_id, x, y, w, h, width, height, center, scale)
 
     def _mandel_recursive_task(self, task_id, params):
         """Run recursive Mandel fill task for full or partial region."""
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        rect = Rect(params.get("rect", Rect(0, 0, width, height)))
-        self._recursive_fill(task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
-        return None
+        return MandelbrotRenderFeature.recursive_task(self, task_id, params)
 
     def _queue_mandel_recursive_task(self, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
         """Enqueue one recursive Mandel task and track it as in-flight."""
-        self.mandel_scheduler.add_task(
-            task_id,
-            self._mandel_recursive_task,
-            parameters={"size": size, "center": center, "scale": scale, "rect": Rect(rect)},
-            message_method=self._make_mandel_progress_handler(task_id),
-        )
-        self.mandel_task_ids.add(task_id)
+        MandelbrotRenderFeature.queue_recursive_task(self, task_id, rect, size, center, scale)
 
     def _launch_mandel_iterative(self) -> None:
         """Launch iterative full-canvas Mandel rendering task."""
-        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
-            return
-        self._prepare_mandel_single_canvas_run()
-        width, height = self.mandel_canvas.canvas.get_size()
-        center, scale = self._mandel_viewport(width, height)
-        self.mandel_scheduler.add_task(
-            "iter",
-            self._mandel_iterative_task,
-            parameters={"size": (width, height), "center": center, "scale": scale},
-            message_method=self._make_mandel_progress_handler("iter"),
-        )
-        self.mandel_task_ids.add("iter")
-        self._mandel_running_mode = "running iterative"
-        self._publish_mandel_event(MANDEL_KIND_RUNNING_ITERATIVE)
-        self._publish_mandel_running_status()
+        MandelbrotRenderFeature.launch_iterative(self)
 
     def _launch_mandel_recursive(self) -> None:
         """Launch recursive full-canvas Mandel rendering task."""
-        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
-            return
-        self._prepare_mandel_single_canvas_run()
-        width, height = self.mandel_canvas.canvas.get_size()
-        center, scale = self._mandel_viewport(width, height)
-        self._queue_mandel_recursive_task("recu", Rect(0, 0, width, height), (width, height), center, scale)
-        self._mandel_running_mode = "running recursive"
-        self._publish_mandel_event(MANDEL_KIND_RUNNING_RECURSIVE)
-        self._publish_mandel_running_status()
+        MandelbrotRenderFeature.launch_recursive(self)
 
     def _launch_mandel_one_split(self) -> None:
         """Launch one-canvas, four-task recursive Mandel rendering split."""
-        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
-            return
-        self._prepare_mandel_single_canvas_run()
-        width, height = self.mandel_canvas.canvas.get_size()
-        center, scale = self._mandel_viewport(width, height)
-        left_w, top_h = width // 2, height // 2
-        right_w, bottom_h = width - left_w, height - top_h
-        self._queue_mandel_recursive_task("1", Rect(0, 0, left_w, top_h), (width, height), center, scale)
-        self._queue_mandel_recursive_task("2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
-        self._queue_mandel_recursive_task("3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
-        self._queue_mandel_recursive_task("4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
-        self._mandel_running_mode = "running 1M 4Tasks"
-        self._publish_mandel_event(MANDEL_KIND_RUNNING_ONE_SPLIT)
-        self._publish_mandel_running_status()
+        MandelbrotRenderFeature.launch_one_split(self)
 
     def _launch_mandel_four_split(self) -> None:
         """Launch four-canvas, four-task recursive Mandel rendering split."""
-        if self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool):
-            return
-        self._prepare_mandel_split_canvas_run()
-        width, height = self.canvas1.canvas.get_size()
-        center, scale = self._mandel_viewport(width, height)
-        for task_id in ("can1", "can2", "can3", "can4"):
-            self._queue_mandel_recursive_task(task_id, Rect(0, 0, width, height), (width, height), center, scale)
-        self._mandel_running_mode = "running 4M 4Tasks"
-        self._publish_mandel_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
-        self._publish_mandel_running_status()
+        MandelbrotRenderFeature.launch_four_split(self)
 
     # ---------------------------------------------------------------------
     # Frame updates and engine lifecycle hooks.
     # ---------------------------------------------------------------------
     def _update_life(self) -> None:
         """Consume Life canvas events, mutate board, and redraw the Life surface."""
-        while True:
-            packet = self.life_canvas.read_event()
-            if packet is None:
-                break
-            if not packet.is_mouse_down(1):
-                continue
-            if packet.local_pos is not None:
-                local_x, local_y = packet.local_pos
-            elif packet.pos is not None:
-                local_x = packet.pos[0] - self.life_canvas.rect.left
-                local_y = packet.pos[1] - self.life_canvas.rect.top
-            else:
-                continue
-            cell_size = max(2, int(round(self.life_cell_size)))
-            cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
-            cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
-            cell = (cell_x, cell_y)
-            if cell in self.life_cells:
-                self.life_cells.remove(cell)
-            else:
-                self.life_cells.add(cell)
-
-        if self.life_toggle.pushed:
-            self._life_step()
-
-        cell_size = max(2, int(round(self.life_cell_size)))
-        self.life_canvas.canvas.fill(self.app.theme.medium)
-        trim = 0 if cell_size <= 2 else 1
-        for cx, cy in self.life_cells:
-            px = int(self.life_origin[0] + (cx * cell_size))
-            py = int(self.life_origin[1] + (cy * cell_size))
-            if -cell_size <= px <= self.life_canvas.rect.width and -cell_size <= py <= self.life_canvas.rect.height:
-                self.life_canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
+        LifeSimulationFeature.update_life(self)
 
     def _update_mandel_events(self) -> None:
         """Drain Mandel scheduler events and maintain UI/status/task state."""
-        finished = self.mandel_scheduler.get_finished_events()
-        failed = self.mandel_scheduler.get_failed_events()
-        failed_details = []
-
-        for event in finished:
-            if event.task_id in self.mandel_task_ids:
-                self.mandel_task_ids.remove(event.task_id)
-                self.mandel_scheduler.pop_result(event.task_id, None)
-        for event in failed:
-            if event.task_id in self.mandel_task_ids:
-                self.mandel_task_ids.remove(event.task_id)
-                failed_details.append((str(event.task_id), str(event.error)))
-
-        if failed_details:
-            failed_details.sort(key=lambda item: (item[0], item[1]))
-            self._publish_mandel_event(MANDEL_KIND_FAILED, self._format_mandel_failure_summary(failed_details))
-
-        busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
-        self._set_mandel_task_buttons_disabled(busy)
-        if busy:
-            self._publish_mandel_running_status()
-        self.mandel_scheduler.clear_events()
-        if not busy and self.mandel_model.status_text.value.startswith("Mandelbrot: running"):
-            self._mandel_running_mode = None
-            self._publish_mandel_event(MANDEL_KIND_COMPLETE)
+        MandelbrotRenderFeature.update_events(self)
 
     def _update(self, dt_seconds: float) -> None:
         """Delegate frame update into GuiApplication core update pipeline."""
@@ -1011,7 +472,8 @@ class GuiDoDemo:
 
     def _screen_postamble(self) -> None:
         """Scene-level postamble hook used to reconcile Mandel task events."""
-        self._update_mandel_events()
+        for feature in self._demo_features:
+            feature.on_post_frame(self)
 
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""
