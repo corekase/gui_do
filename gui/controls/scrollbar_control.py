@@ -1,3 +1,4 @@
+import pygame
 from pygame import Rect
 from typing import TYPE_CHECKING
 
@@ -50,6 +51,13 @@ class ScrollbarControl(UiNode):
     def _clamp_offset(self) -> None:
         self._normalize_geometry()
         self.offset = min(max(0, self.offset), self._max_offset())
+
+    def _page_step(self) -> int:
+        return max(self.step, int(round(self.viewport_size * 0.9)))
+
+    def _nudge(self, delta: int) -> None:
+        self.offset += int(delta)
+        self._clamp_offset()
 
     def _track_rect(self) -> Rect:
         if self.axis == LayoutAxis.HORIZONTAL:
@@ -105,6 +113,35 @@ class ScrollbarControl(UiNode):
                 app.pointer_capture.end(self.control_id)
             self.dragging = False
             return False
+
+        if event.is_key_down(pygame.K_HOME):
+            self.offset = 0
+            self._clamp_offset()
+            return True
+        if event.is_key_down(pygame.K_END):
+            self.offset = self._max_offset()
+            self._clamp_offset()
+            return True
+        if event.is_key_down(pygame.K_PAGEUP):
+            self._nudge(-self._page_step())
+            return True
+        if event.is_key_down(pygame.K_PAGEDOWN):
+            self._nudge(self._page_step())
+            return True
+        if self.axis == LayoutAxis.HORIZONTAL:
+            if event.is_key_down(pygame.K_LEFT):
+                self._nudge(-self.step)
+                return True
+            if event.is_key_down(pygame.K_RIGHT):
+                self._nudge(self.step)
+                return True
+        else:
+            if event.is_key_down(pygame.K_UP):
+                self._nudge(-self.step)
+                return True
+            if event.is_key_down(pygame.K_DOWN):
+                self._nudge(self.step)
+                return True
 
         raw = event.pos
         if event.is_mouse_down(1):

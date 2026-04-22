@@ -1,0 +1,100 @@
+import os
+import unittest
+
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
+import pygame
+from pygame import Rect
+
+from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl
+
+
+class ScrollbarControlRuntimeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        pygame.init()
+        self.surface = pygame.display.set_mode((280, 180))
+        self.app = GuiApplication(self.surface)
+        self.root = self.app.add(PanelControl("root", Rect(0, 0, 280, 180)))
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def test_horizontal_keyboard_step_page_and_bounds(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        consumed_left = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_LEFT}))
+        consumed_right = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+        consumed_page_down = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_PAGEDOWN}))
+        consumed_page_up = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_PAGEUP}))
+
+        self.assertTrue(consumed_left)
+        self.assertTrue(consumed_right)
+        self.assertTrue(consumed_page_down)
+        self.assertTrue(consumed_page_up)
+        self.assertGreaterEqual(bar.offset, 0)
+        self.assertLessEqual(bar.offset, bar._max_offset())
+
+    def test_vertical_keyboard_direction_and_home_end(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sv",
+                Rect(20, 20, 24, 140),
+                LayoutAxis.VERTICAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_DOWN}))
+        down_offset = bar.offset
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_UP}))
+        up_offset = bar.offset
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        home_offset = bar.offset
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_END}))
+
+        self.assertGreater(down_offset, 100)
+        self.assertLess(up_offset, down_offset)
+        self.assertEqual(home_offset, 0)
+        self.assertEqual(bar.offset, bar._max_offset())
+
+    def test_keyboard_ignored_when_disabled(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+        bar.enabled = False
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+
+        self.assertFalse(consumed)
+        self.assertEqual(bar.offset, 100)
+
+
+if __name__ == "__main__":
+    unittest.main()
