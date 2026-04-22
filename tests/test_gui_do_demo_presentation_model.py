@@ -264,6 +264,60 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertIn((MANDEL_KIND_FAILED, "2 tasks failed - can1: boom; can2: bang"), published)
 
+    def test_format_mandel_failure_summary_caps_preview_and_reports_remainder(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo._mandel_failure_preview_limit = 2
+
+        detail = demo._format_mandel_failure_summary(
+            [
+                ("can1", "boom"),
+                ("can2", "bang"),
+                ("can3", "biff"),
+                ("can4", "bop"),
+            ]
+        )
+
+        self.assertEqual(detail, "4 tasks failed - can1: boom; can2: bang; +2 more")
+
+    def test_update_mandel_events_applies_capped_failure_summary(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.mandel_model = _MandelPresentationModel()
+        demo._mandel_running_mode = "running 4M 4Tasks"
+        demo._mandel_failure_preview_limit = 2
+        demo.mandel_task_ids = {"can1", "can2", "can3", "can4"}
+
+        class _ManyFailedScheduler:
+            def get_finished_events(self):
+                return []
+
+            def get_failed_events(self):
+                return [
+                    SimpleNamespace(task_id="can3", error="biff"),
+                    SimpleNamespace(task_id="can1", error="boom"),
+                    SimpleNamespace(task_id="can4", error="bop"),
+                    SimpleNamespace(task_id="can2", error="bang"),
+                ]
+
+            def tasks_busy_match_any(self, *_args):
+                return False
+
+            def clear_events(self):
+                return None
+
+        demo.mandel_scheduler = _ManyFailedScheduler()
+        demo.mandel_task_id_pool = ("can1", "can2", "can3", "can4")
+        demo._set_mandel_task_buttons_disabled = lambda _disabled: None
+        published = []
+
+        def _capture(kind, detail=None):
+            published.append((kind, detail))
+
+        demo._publish_mandel_event = _capture
+
+        demo._update_mandel_events()
+
+        self.assertIn((MANDEL_KIND_FAILED, "4 tasks failed - can1: boom; can2: bang; +2 more"), published)
+
 
 if __name__ == "__main__":
     unittest.main()

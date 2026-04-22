@@ -92,6 +92,7 @@ class GuiDoDemo:
         self._mandel_status_subscription = None
         self._mandel_status_bus_ready = False
         self._mandel_running_mode: Optional[str] = None
+        self._mandel_failure_preview_limit = 3
 
         self._build_main_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
@@ -370,6 +371,21 @@ class GuiDoDemo:
         if self.mandel_model.status_text.value == detail:
             return
         self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
+
+    def _format_mandel_failure_summary(self, failed_details) -> str:
+        if not failed_details:
+            return ""
+        if len(failed_details) == 1:
+            task_id, error = failed_details[0]
+            return f"{task_id}: {error}"
+
+        limit = max(1, int(getattr(self, "_mandel_failure_preview_limit", 3)))
+        preview = failed_details[:limit]
+        summary = "; ".join(f"{task_id}: {error}" for task_id, error in preview)
+        remaining = len(failed_details) - len(preview)
+        if remaining > 0:
+            summary = f"{summary}; +{remaining} more"
+        return f"{len(failed_details)} tasks failed - {summary}"
 
     def _configure_focus_and_accessibility(self) -> None:
         focus_order = [
@@ -827,12 +843,7 @@ class GuiDoDemo:
 
         if failed_details:
             failed_details.sort(key=lambda item: (item[0], item[1]))
-            if len(failed_details) == 1:
-                task_id, error = failed_details[0]
-                self._publish_mandel_event(MANDEL_KIND_FAILED, f"{task_id}: {error}")
-            else:
-                summary = "; ".join(f"{task_id}: {error}" for task_id, error in failed_details)
-                self._publish_mandel_event(MANDEL_KIND_FAILED, f"{len(failed_details)} tasks failed - {summary}")
+            self._publish_mandel_event(MANDEL_KIND_FAILED, self._format_mandel_failure_summary(failed_details))
 
         busy = self.mandel_scheduler.tasks_busy_match_any(*self.mandel_task_id_pool)
         self._set_mandel_task_buttons_disabled(busy)
