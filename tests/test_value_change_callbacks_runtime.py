@@ -115,6 +115,59 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.assertFalse(consumed_home_again)
         self.assertEqual(changed, [180, 0])
 
+    def test_slider_programmatic_set_and_adjust_emit_callbacks_only_on_change(self) -> None:
+        changed = []
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                50.0,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+
+        changed_set = slider.set_value(75.0)
+        unchanged_set = slider.set_value(75.0)
+        changed_adjust = slider.adjust_value(100.0)
+        unchanged_adjust = slider.adjust_value(0.0)
+
+        self.assertTrue(changed_set)
+        self.assertFalse(unchanged_set)
+        self.assertTrue(changed_adjust)
+        self.assertFalse(unchanged_adjust)
+        self.assertEqual(slider.value, 100.0)
+        self.assertEqual(changed, [75.0, 100.0])
+
+    def test_scrollbar_programmatic_set_and_adjust_emit_callbacks_only_on_change(self) -> None:
+        changed = []
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+                on_change=lambda value: changed.append(value),
+            )
+        )
+
+        changed_set = bar.set_offset(250)
+        unchanged_set = bar.set_offset(250)
+        changed_adjust = bar.adjust_offset(1000)
+        unchanged_adjust = bar.adjust_offset(0)
+
+        self.assertTrue(changed_set)
+        self.assertFalse(unchanged_set)
+        self.assertTrue(changed_adjust)
+        self.assertFalse(unchanged_adjust)
+        self.assertEqual(bar.offset, 800)
+        self.assertEqual(changed, [250, 800])
+
 
 if __name__ == "__main__":
     unittest.main()

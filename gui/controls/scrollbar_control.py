@@ -61,6 +61,14 @@ class ScrollbarControl(UiNode):
     def _nudge(self, delta: int) -> None:
         self._set_offset(self.offset + int(delta))
 
+    def set_offset(self, offset: int) -> bool:
+        """Set offset programmatically with clamp and on_change callback semantics."""
+        return self._set_offset(offset)
+
+    def adjust_offset(self, delta: int) -> bool:
+        """Adjust offset programmatically by a delta with clamp and callbacks."""
+        return self._set_offset(self.offset + int(delta))
+
     def _set_offset(self, new_offset: int) -> bool:
         old_offset = self.offset
         self.offset = int(new_offset)

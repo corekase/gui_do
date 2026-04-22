@@ -80,6 +80,14 @@ class SliderControl(UiNode):
     def _nudge(self, delta: float) -> None:
         self._set_value(self.value + float(delta))
 
+    def set_value(self, value: float) -> bool:
+        """Set value programmatically with clamp and on_change callback semantics."""
+        return self._set_value(value)
+
+    def adjust_value(self, delta: float) -> bool:
+        """Adjust value programmatically by a delta with clamp and callbacks."""
+        return self._set_value(self.value + float(delta))
+
     def _set_value(self, new_value: float) -> bool:
         old_value = self.value
         self.value = float(new_value)
