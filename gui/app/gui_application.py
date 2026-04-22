@@ -118,6 +118,31 @@ class GuiApplication:
     def active_scene_name(self) -> str:
         return self._active_scene_name
 
+    def scene_names(self) -> list:
+        """Return a list of all registered scene names (including the active one)."""
+        return list(self._scenes.keys())
+
+    def has_scene(self, name: str) -> bool:
+        """Return True when a scene with *name* has been registered or accessed."""
+        return name in self._scenes
+
+    def remove_scene(self, name: str) -> bool:
+        """Remove a non-active scene and shut down its scheduler.
+
+        Returns False if the scene does not exist or is the currently active scene
+        (active scenes cannot be removed).
+        """
+        if name not in self._scenes:
+            return False
+        if name == self._active_scene_name:
+            return False
+        runtime = self._scenes.pop(name)
+        try:
+            runtime["scheduler"].shutdown()
+        except Exception:
+            pass
+        return True
+
     def get_scene_scheduler(self, name: str) -> TaskScheduler:
         return self._scene_runtime(name)["scheduler"]
 

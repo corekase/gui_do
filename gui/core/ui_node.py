@@ -118,6 +118,28 @@ class UiNode:
             queue.extend(candidate.children)
         return result
 
+    def is_root(self) -> bool:
+        """Return True when this node has no parent (is a scene root node)."""
+        return self.parent is None
+
+    def depth(self) -> int:
+        """Return tree depth, where a root node has depth 0."""
+        d = 0
+        current = self.parent
+        while current is not None:
+            d += 1
+            current = current.parent
+        return d
+
+    def sibling_index(self) -> int:
+        """Return position of this node among its parent's children, or 0 for root nodes."""
+        if self.parent is None:
+            return 0
+        try:
+            return self.parent.children.index(self)
+        except ValueError:
+            return 0
+
     # --- Lifecycle ---
 
     def on_mount(self, _parent: "UiNode | None") -> None:
