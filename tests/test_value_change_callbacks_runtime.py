@@ -266,6 +266,56 @@ class ValueChangeCallbacksRuntimeTests(unittest.TestCase):
         self.assertTrue(changed_flag)
         self.assertEqual(changed, [(55.0, ValueChangeReason.PROGRAMMATIC)])
 
+    def test_slider_set_on_change_mode_switches_runtime_behavior(self) -> None:
+        slider = self.root.add(
+            SliderControl(
+                "s",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                0.0,
+                100.0,
+                50.0,
+                on_change=lambda value: None,
+            )
+        )
+
+        selected = slider.set_on_change_mode("reason-required")
+
+        self.assertEqual(selected, "reason-required")
+        with self.assertRaises(TypeError):
+            slider.adjust_value(5.0)
+
+    def test_scrollbar_set_on_change_mode_switches_runtime_behavior(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 60, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+                on_change=lambda value: None,
+            )
+        )
+
+        selected = bar.set_on_change_mode("reason-required")
+
+        self.assertEqual(selected, "reason-required")
+        with self.assertRaises(TypeError):
+            bar.adjust_offset(10)
+
+    def test_set_on_change_mode_rejects_invalid_values(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 180, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        bar = self.root.add(
+            ScrollbarControl("sb", Rect(20, 60, 180, 24), LayoutAxis.HORIZONTAL, content_size=1000, viewport_size=200, offset=100, step=10)
+        )
+
+        with self.assertRaises(ValueError):
+            slider.set_on_change_mode("strict")
+        with self.assertRaises(ValueError):
+            bar.set_on_change_mode("strict")
+
 
 if __name__ == "__main__":
     unittest.main()

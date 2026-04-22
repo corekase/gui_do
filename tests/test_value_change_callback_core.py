@@ -1,6 +1,7 @@
 import unittest
 
 from gui.core.value_change_callback import dispatch_value_change
+from gui.core.value_change_callback import normalize_value_change_callback_mode
 from gui.core.value_change_reason import ValueChangeReason
 
 
@@ -47,6 +48,19 @@ class ValueChangeCallbackCoreTests(unittest.TestCase):
         )
 
         self.assertEqual(seen, [(9, ValueChangeReason.WHEEL)])
+
+    def test_normalize_callback_mode_accepts_supported_values(self) -> None:
+        self.assertEqual(normalize_value_change_callback_mode("compat"), "compat")
+        self.assertEqual(normalize_value_change_callback_mode("reason-required"), "reason-required")
+        self.assertEqual(normalize_value_change_callback_mode("  COMPAT  "), "compat")
+
+    def test_normalize_callback_mode_rejects_unsupported_values(self) -> None:
+        with self.assertRaises(ValueError):
+            normalize_value_change_callback_mode("strict")
+
+    def test_dispatch_rejects_invalid_mode(self) -> None:
+        with self.assertRaises(ValueError):
+            dispatch_value_change(lambda value: None, 1, ValueChangeReason.PROGRAMMATIC, mode="invalid")  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
