@@ -177,6 +177,15 @@ class GuiDoDemo:
         self._mandel_failure_preview_limit = clamped
         return clamped
 
+    def _adjust_mandel_failure_preview_limit(self, delta: int) -> bool:
+        previous = self._mandel_failure_preview_limit
+        effective = self.set_mandel_failure_preview_limit(previous + int(delta))
+        detail = f"Mandelbrot failure preview limit: {effective}"
+        if effective == previous:
+            detail = f"{detail} (at bound)"
+        self._publish_mandel_event(MANDEL_KIND_STATUS, detail)
+        return True
+
     def _set_life_zoom_label(self) -> None:
         zoom_level = max(2, int(round(self.life_cell_size)))
         self.life_zoom_label.text = f"Zoom {zoom_level}"
@@ -322,7 +331,11 @@ class GuiDoDemo:
         self.life_scheduler.set_message_dispatch_limit(256)
         self.mandel_scheduler.set_message_dispatch_limit(256)
         self.app.actions.register_action("exit", lambda _event: (self._exit_app() or True))
+        self.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self._adjust_mandel_failure_preview_limit(-1))
+        self.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self._adjust_mandel_failure_preview_limit(1))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
+        self.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
+        self.app.actions.bind_key(pygame.K_RIGHTBRACKET, "mandel_failure_preview_increase", scene="main")
         self.mandel_model.bind(self.mandel_model.status_text, self._on_mandel_status_changed)
         self._mandel_status_subscription = self.app.events.subscribe(
             self._mandel_status_topic,

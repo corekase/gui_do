@@ -344,6 +344,30 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertEqual(detail, "3 tasks failed - can1: boom; +2 more")
 
+    def test_adjust_mandel_failure_preview_limit_publishes_status(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo._mandel_failure_preview_limit = 3
+        published = []
+        demo._publish_mandel_event = lambda kind, detail=None: published.append((kind, detail))
+
+        consumed = demo._adjust_mandel_failure_preview_limit(1)
+
+        self.assertTrue(consumed)
+        self.assertEqual(demo._mandel_failure_preview_limit, 4)
+        self.assertIn((MANDEL_KIND_STATUS, "Mandelbrot failure preview limit: 4"), published)
+
+    def test_adjust_mandel_failure_preview_limit_reports_bound(self) -> None:
+        demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo._mandel_failure_preview_limit = 1
+        published = []
+        demo._publish_mandel_event = lambda kind, detail=None: published.append((kind, detail))
+
+        consumed = demo._adjust_mandel_failure_preview_limit(-1)
+
+        self.assertTrue(consumed)
+        self.assertEqual(demo._mandel_failure_preview_limit, 1)
+        self.assertIn((MANDEL_KIND_STATUS, "Mandelbrot failure preview limit: 1 (at bound)"), published)
+
 
 if __name__ == "__main__":
     unittest.main()
