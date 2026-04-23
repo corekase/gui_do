@@ -33,6 +33,9 @@ class GuiDoDemo:
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.create_scene("main")
         self.app.create_scene("control_showcase")
+        self.app.switch_scene("control_showcase")
+        self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
+        self.app.set_window_tiling_enabled(True, relayout=False)
         self.app.switch_scene("main")
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
         self.app.set_window_tiling_enabled(True, relayout=False)
@@ -72,6 +75,10 @@ class GuiDoDemo:
         self._build_main_scene()
         self._build_control_showcase_scene()
         self.app.build_parts(self)
+        self.app.tile_windows()  # pre-register main scene windows in creation order
+        self.app.switch_scene("control_showcase")
+        self.app.tile_windows()  # pre-register showcase scene windows in creation order
+        self.app.switch_scene("main")
         self.life_window = self._life_feature.window
         self.mandel_window = self._mandel_feature.window
         self.styles_window = self._styles_feature.window
