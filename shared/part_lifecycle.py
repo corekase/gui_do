@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import OrderedDict, deque
 from copy import deepcopy
+import inspect
 from typing import Any, Callable, Deque, Dict, Iterable, Optional
 
 
@@ -255,6 +256,23 @@ class RoutedMessagePart(Part):
 class PartManager:
     """Coordinates lifecycle, messaging, and utility registrations for parts."""
 
+    _HOST_PARAMETER_HOOKS = (
+        "on_register",
+        "on_unregister",
+        "build",
+        "bind_runtime",
+        "configure_accessibility",
+        "shutdown_runtime",
+        "handle_event",
+        "on_update",
+        "draw",
+        "handle_screen_event",
+        "on_screen_update",
+        "draw_screen",
+        "on_logic_command",
+        "on_message",
+    )
+
     def __init__(self, app) -> None:
         self.app = app
         self._parts: "OrderedDict[str, Part]" = OrderedDict()
@@ -268,6 +286,7 @@ class PartManager:
             raise TypeError("register expects a Part instance")
         if part.name in self._parts:
             raise ValueError(f"part already registered: {part.name}")
+        self._validate_host_parameter_contract(part)
         part._part_manager = self
         self._parts[part.name] = part
         host_obj = self.app if host is None else host
@@ -462,6 +481,30 @@ class PartManager:
         if scene_name is None:
             return True
         return str(scene_name) == str(self.app.active_scene_name)
+
+    @classmethod
+    def _validate_host_parameter_contract(cls, part: Part) -> None:
+        for hook_name in cls._HOST_PARAMETER_HOOKS:
+            method = getattr(part, hook_name, None)
+            if method is None or not callable(method):
+                continue
+            try:
+                signature = inspect.signature(method)
+            except (TypeError, ValueError):
+                continue
+            positional = [
+                parameter
+                for parameter in signature.parameters.values()
+                if parameter.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+            if not positional:
+                continue
+            host_parameter_name = positional[0].name
+            if host_parameter_name in ("host", "_host"):
+                continue
+            raise ValueError(
+                f"{part.__class__.__name__}.{hook_name} first positional parameter must be 'host' or '_host', got {host_parameter_name!r}"
+            )
 
     @staticmethod
     def _normalize_alias(alias: str) -> str:

@@ -49,9 +49,9 @@ class BouncingShapesBackdropFeature(ScreenPart):
         self._create_shapes()
         self._rng.shuffle(self._shapes)
 
-    def bind_runtime(self, demo) -> None:
+    def bind_runtime(self, host) -> None:
         """Initialize random shape positions using screen bounds from the host."""
-        width, height = demo.screen_rect.size
+        width, height = host.screen_rect.size
         self._randomize_positions(width, height)
 
     def on_screen_update(self, host, _dt_seconds: float) -> None:

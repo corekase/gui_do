@@ -57,10 +57,10 @@ class StylesShowcaseFeature(Part):
         self.footer_labels = []
         self._group_footer_bindings = []
 
-    def build(self, demo) -> None:
-        ui = demo.app.read_part_ui_types()
+    def build(self, host) -> None:
+        ui = host.app.read_part_ui_types()
         self.register_font_roles(
-            demo,
+            host,
             {
                 "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
                 "heading": {"size": 18, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial", "bold": True},
@@ -70,7 +70,7 @@ class StylesShowcaseFeature(Part):
             scene_name="control_showcase",
         )
         self.build_window(
-            demo,
+            host,
             window_control_cls=ui.window_control_cls,
             label_control_cls=ui.label_control_cls,
             button_control_cls=ui.button_control_cls,
@@ -80,7 +80,7 @@ class StylesShowcaseFeature(Part):
 
     def build_window(
         self,
-        demo,
+        host,
         *,
         window_control_cls,
         label_control_cls,
@@ -88,9 +88,9 @@ class StylesShowcaseFeature(Part):
         toggle_control_cls,
         button_group_control_cls,
     ) -> None:
-        self.demo = demo
-        window_rect = demo.app.layout.anchored((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), anchor="top_center", margin=(0, 120), use_rect=True)
-        self.window = demo.control_showcase_root.add(
+        self.demo = host
+        window_rect = host.app.layout.anchored((self.WINDOW_WIDTH, self.WINDOW_HEIGHT), anchor="top_center", margin=(0, 120), use_rect=True)
+        self.window = host.control_showcase_root.add(
             window_control_cls(
                 "styles_window",
                 window_rect,
@@ -107,7 +107,7 @@ class StylesShowcaseFeature(Part):
         controls_anchor_y = heading_y + self.HEADING_HEIGHT + self.HEADING_GAP
         footer_y = controls_anchor_y + (len(self.ROW_LABELS) * self.CONTROL_HEIGHT) + ((len(self.ROW_LABELS) - 1) * self.CONTROL_GAP) + self.FOOTER_GAP
 
-        demo.app.layout.set_grid_properties(
+        host.app.layout.set_grid_properties(
             anchor=(content_rect.left + self.PADDING_X, controls_anchor_y),
             item_width=self.COLUMN_WIDTH,
             item_height=self.CONTROL_HEIGHT,
@@ -135,12 +135,12 @@ class StylesShowcaseFeature(Part):
         toggle_column_index = button_column_index + 1
 
         for column_index, (slug, heading_text, style_sequence) in enumerate(group_columns):
-            heading = demo.app.style_label(
+            heading = host.app.style_label(
                 self.window.add(label_control_cls(f"styles_heading_{slug}", Rect(content_rect.left + self.PADDING_X + (column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), heading_text, align="center")),
                 size=18,
                 role=self.font_role("heading"),
             )
-            footer = demo.app.style_label(
+            footer = host.app.style_label(
                 self.window.add(
                     label_control_cls(
                         f"styles_footer_{slug}",
@@ -164,7 +164,7 @@ class StylesShowcaseFeature(Part):
                 control = self.window.add(
                     button_group_control_cls(
                         f"styles_{slug}_{row_index + 1}",
-                        self._styled_grid_rect(demo, column_index, row_index, style_sequence[row_index]),
+                        self._styled_grid_rect(host, column_index, row_index, style_sequence[row_index]),
                         group_name,
                         row_label,
                         selected=False,
@@ -176,7 +176,7 @@ class StylesShowcaseFeature(Part):
                 self.group_controls.append(control)
                 self._group_footer_bindings.append((control, footer, self._format_group_info(column_index, row_index)))
 
-        demo.app.style_label(
+        host.app.style_label(
             self.window.add(label_control_cls("styles_heading_buttons", Rect(content_rect.left + self.PADDING_X + (button_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "Buttons", align="center")),
             size=18,
             role=self.font_role("heading"),
@@ -185,7 +185,7 @@ class StylesShowcaseFeature(Part):
             control = self.window.add(
                 button_control_cls(
                     f"styles_button_{style_name}",
-                    self._styled_grid_rect(demo, button_column_index, row_index, style_name),
+                    self._styled_grid_rect(host, button_column_index, row_index, style_name),
                     style_name.capitalize(),
                     lambda: None,
                     style=style_name,
@@ -196,7 +196,7 @@ class StylesShowcaseFeature(Part):
             focus_index += 1
             self.button_controls.append(control)
 
-        demo.app.style_label(
+        host.app.style_label(
             self.window.add(label_control_cls("styles_heading_toggles", Rect(content_rect.left + self.PADDING_X + (toggle_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "Toggles", align="center")),
             size=18,
             role=self.font_role("heading"),
@@ -205,7 +205,7 @@ class StylesShowcaseFeature(Part):
             control = self.window.add(
                 toggle_control_cls(
                     f"styles_toggle_{style_name}",
-                    self._styled_grid_rect(demo, toggle_column_index, row_index, style_name),
+                    self._styled_grid_rect(host, toggle_column_index, row_index, style_name),
                     style_name.capitalize(),
                     style_name.capitalize(),
                     pushed=False,
@@ -225,8 +225,8 @@ class StylesShowcaseFeature(Part):
         id_short = f"{int(row_index) + 1}"
         return f"Gr: {group_short} ID: {id_short}"
 
-    def _styled_grid_rect(self, demo, column_index: int, row_index: int, style_name: str) -> Rect:
-        cell = Rect(demo.app.layout.gridded(column_index, row_index))
+    def _styled_grid_rect(self, host, column_index: int, row_index: int, style_name: str) -> Rect:
+        cell = Rect(host.app.layout.gridded(column_index, row_index))
         if str(style_name).lower() not in self.CENTERED_STYLES:
             return cell
         width = min(cell.width, self.CENTERED_STYLE_WIDTH)

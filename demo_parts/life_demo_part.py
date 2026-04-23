@@ -118,11 +118,11 @@ class LifeSimulationFeature(RoutedMessagePart):
         self.toggle = None
         self.zoom_slider = None
 
-    def build(self, demo) -> None:
+    def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""
-        ui = demo.app.read_part_ui_types()
+        ui = host.app.read_part_ui_types()
         self.register_font_roles(
-            demo,
+            host,
             {
                 "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
                 "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
@@ -130,7 +130,7 @@ class LifeSimulationFeature(RoutedMessagePart):
             scene_name="main",
         )
         self.build_window(
-            demo,
+            host,
             window_control_cls=ui.window_control_cls,
             canvas_control_cls=ui.canvas_control_cls,
             button_control_cls=ui.button_control_cls,
@@ -139,16 +139,16 @@ class LifeSimulationFeature(RoutedMessagePart):
             layout_axis_cls=ui.layout_axis_cls,
         )
 
-    def bind_runtime(self, demo) -> None:
+    def bind_runtime(self, host) -> None:
         """Bind scheduler/runtime services required after scene construction."""
         if self.scheduler is None:
-            self.scheduler = demo.app.get_scene_scheduler("main")
+            self.scheduler = host.app.get_scene_scheduler("main")
         self.scheduler.set_message_dispatch_limit(256)
         if self.logic_part_name(alias=self.LOGIC_ALIAS) is None:
             self.bind_logic_part("life_simulation_logic", alias=self.LOGIC_ALIAS)
         self._send_life_logic_command("snapshot")
 
-    def configure_accessibility(self, demo, tab_index_start: int) -> int:
+    def configure_accessibility(self, host, tab_index_start: int) -> int:
         """Assign accessibility metadata and tab order for Life controls."""
         controls = [
             self.reset_button,
@@ -204,7 +204,7 @@ class LifeSimulationFeature(RoutedMessagePart):
 
     def build_window(
         self,
-        demo,
+        host,
         *,
         window_control_cls,
         canvas_control_cls,
@@ -214,9 +214,9 @@ class LifeSimulationFeature(RoutedMessagePart):
         layout_axis_cls,
     ) -> None:
         """Create the Life window, canvas, and interaction controls."""
-        self.demo = demo  # Store demo reference for use in callback methods
-        life_rect = demo.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.window = demo.root.add(
+        self.demo = host  # Store host reference for use in callback methods
+        life_rect = host.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
+        self.window = host.root.add(
             window_control_cls(
                 "life_window",
                 life_rect,
@@ -250,17 +250,17 @@ class LifeSimulationFeature(RoutedMessagePart):
         slot_width = max(1, (row_width - (control_spacing * (slot_count - 1))) // slot_count)
         strip_width = (slot_width * slot_count) + (control_spacing * (slot_count - 1))
         strip_left = left + padding + max(0, (row_width - strip_width) // 2)
-        demo.app.layout.set_linear_properties(
+        host.app.layout.set_linear_properties(
             anchor=(strip_left, controls_y),
             item_width=slot_width,
             item_height=widget_height,
             spacing=control_spacing,
             horizontal=True,
         )
-        life_reset_rect = demo.app.layout.next_linear()
-        life_toggle_rect = demo.app.layout.next_linear()
-        zoom_slider_slot_1 = demo.app.layout.next_linear()
-        zoom_slider_slot_2 = demo.app.layout.next_linear()
+        life_reset_rect = host.app.layout.next_linear()
+        life_toggle_rect = host.app.layout.next_linear()
+        zoom_slider_slot_1 = host.app.layout.next_linear()
+        zoom_slider_slot_2 = host.app.layout.next_linear()
 
         self.reset_button = self.window.add(
             button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle", font_role=self.font_role("control"))
