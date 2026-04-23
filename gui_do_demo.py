@@ -114,8 +114,8 @@ class GuiDoDemo:
         self.app.build_parts(self)
         self.life_window = self._life_part().window
         self.mandel_window = self._mandel_part().window
-        self.life_window.visible = True
-        self.mandel_window.visible = True
+        self.life_window.visible = False
+        self.mandel_window.visible = False
         self.task_panel = self.app.add(
             TaskPanelControl(
                 "task_panel",
@@ -173,7 +173,7 @@ class GuiDoDemo:
                 self.app.layout.linear(1),
                 "Life",
                 "Life",
-                pushed=True,
+                pushed=False,
                 on_toggle=_on_life_toggle,
                 style="round",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
@@ -185,7 +185,7 @@ class GuiDoDemo:
                 self.app.layout.linear(2),
                 "Mandelbrot",
                 "Mandelbrot",
-                pushed=True,
+                pushed=False,
                 on_toggle=_on_mandel_toggle,
                 style="round",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
