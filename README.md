@@ -93,6 +93,26 @@ Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and a
 
 There are four part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
 
+#### Part Lifecycle Hooks: `on_register` and `on_unregister`
+
+Two additional hooks are called by `PartManager` outside the main lifecycle sequence:
+
+- `on_register(host)` — called immediately when the part is registered via `app.register_part(...)`. Use it for one-time setup that does not depend on the scene being active.
+- `on_unregister(host)` — called when the part is removed via `app.unregister_part(...)`, after `shutdown_runtime`. Use it for final cleanup.
+
+```python
+from shared.part_lifecycle import Part
+
+class MyFeature(Part):
+    def on_register(self, host) -> None:
+        # Called once when registered; scene may not be active yet.
+        pass
+
+    def on_unregister(self, host) -> None:
+        # Called on removal, after shutdown_runtime.
+        pass
+```
+
 #### `Part` — General-purpose feature unit
 
 `Part` is the standard base for features that build and manage controls (windows, buttons, canvases, sliders, etc.) on a scene. Its lifecycle hooks integrate directly with `GuiApplication` scene management: `build` creates controls, `bind_runtime` wires services, `on_update` runs frame logic, and `draw` renders into its own controls rather than directly onto the screen surface.
@@ -395,6 +415,12 @@ toggle = parent.add(
 # Activate/query toggle state
 toggle.pushed = True  # Set state
 is_on = toggle.pushed  # Read state
+
+# Replace callbacks at runtime
+button.set_on_click(lambda: print("new callback"))
+button.set_on_click(None)     # remove callback
+toggle.set_on_toggle(lambda pushed: print(pushed))
+toggle.set_on_toggle(None)    # remove callback
 ```
 
 ### Label Control
@@ -610,6 +636,33 @@ is_active = window.is_active()
 window_rect = window.get_window_rect()
 content_rect = window.content_rect()
 ```
+
+### Panel Control
+
+`PanelControl` is the base container for child controls. Use it to group related widgets, manage windows, and build layout regions. It optionally draws a theme background fill.
+
+```python
+from gui import PanelControl
+
+# A region panel that draws a background
+panel = root.add(
+    PanelControl("sidebar", Rect(0, 0, 240, screen_height), draw_background=True)
+)
+
+# A transparent/non-painting container (useful with set_pristine/restore_pristine)
+root_container = root.add(
+    PanelControl("root_container", screen_rect, draw_background=False)
+)
+
+# Add children to a panel
+label = panel.add(LabelControl("info", Rect(8, 8, 224, 24), "Panel content"))
+button = panel.add(ButtonControl("ok", Rect(8, 40, 100, 32), "OK"))
+
+# Remove a child
+panel.remove(label)
+```
+
+`PanelControl` also manages floating `WindowControl` children: it tracks the active window, handles z-order with `_raise_window` / `_lower_window`, and clears stale drag state when windows are hidden or disabled.
 
 ### Task Panel Control
 
@@ -863,9 +916,13 @@ app.layout.set_linear_properties(
     horizontal=True,
 )
 
-# Get next position in linear layout
+# Get next position in linear layout (auto-advances cursor)
 rect1 = app.layout.next_linear()
 rect2 = app.layout.next_linear()
+
+# Or access by explicit index (does not advance cursor)
+rect_at_0 = app.layout.linear(0)
+rect_at_3 = app.layout.linear(3)
 ```
 
 ## Observable Values and Data Binding
@@ -993,9 +1050,14 @@ task_panel.set_animation_step_px(6)
 from gui import ColorTheme, BuiltInGraphicsFactory
 
 # Each scene has a theme accessible as app.theme (for the active scene).
-# Access palette colors directly:
-bg_color = app.theme.background
-text_color = app.theme.text
+# Full built-in palette:
+bg_color    = app.theme.background  # scene fill color
+text_color  = app.theme.text        # primary text color
+light_color = app.theme.light       # lightest widget surface
+med_color   = app.theme.medium      # mid-tone (used for disabled-state text/borders)
+dark_color  = app.theme.dark        # darkest border/shadow accent
+high_color  = app.theme.highlight   # selection / focus accent
+shadow_col  = app.theme.shadow      # text drop-shadow color
 
 # Register font roles for a scene (overrides built-in body/title/display defaults)
 app.register_font_role(
@@ -1299,6 +1361,16 @@ focused = app.focus_on("my_button")
 focused = app.focus_on("my_button", scene_name="settings")
 ```
 
+### Part Accessibility and Messaging Helpers
+
+```python
+# Call configure_accessibility on all parts in order (returns next available tab index)
+next_idx = app.configure_parts_accessibility(demo, tab_index_start=0)
+
+# Send a message between two registered parts by name
+app.send_part_message("producer_part", "consumer_part", {"topic": "data_update", "value": 42})
+```
+
 ### Scene-Specific Services
 
 ```python
@@ -1314,6 +1386,40 @@ roles = app.font_roles(scene_name="main")
 app.tile_windows()                     # immediately relayout all visible windows
 settings = app.read_window_tiling_settings()  # current tiling configuration dict
 ```
+
+## UiEngine Standalone Usage
+
+`app.run()` is the preferred entry point and manages `UiEngine` internally. Use `UiEngine` directly only when you need frame-level control (for example, to impose a maximum frame count in tests or to drive the loop from an outer runner).
+
+```python
+from gui import UiEngine
+
+engine = UiEngine(app, target_fps=60)
+
+# Bounded run — returns the number of frames processed
+frames = engine.run(max_frames=300)
+
+# Read measured FPS after the loop
+print(f"Average FPS: {engine.current_fps:.1f}")
+```
+
+The engine calls `app.process_event(event)`, `app.update(dt_seconds)`, `app.draw()`, and `pygame.display.flip()` each frame, then calls `app.shutdown()` when the loop exits.
+
+## Cursor Management
+
+`GuiApplication` hides the system cursor at startup and renders a software cursor each frame. Two built-in cursors are registered by default: `normal` and `hand`.
+
+```python
+# Register a custom cursor (image looked up under data/cursors/ or absolute path)
+app.register_cursor("crosshair", "crosshair.png", hotspot=(8, 8))
+
+# Switch the active cursor
+app.set_cursor("hand")
+app.set_cursor("normal")
+app.set_cursor("crosshair")
+```
+
+The renderer blits the active cursor surface each frame at the logical pointer position (or the lock-point position when point-lock is active).
 
 ## Contributing
 
