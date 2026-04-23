@@ -3,6 +3,7 @@ from pygame import Rect
 from demo_parts.mandelbrot_demo_part import MandelbrotLogicPart, MandelbrotRenderFeature
 from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
 from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
+from demo_parts.styles_demo_part import StylesShowcaseFeature
 
 from gui import (
     GuiApplication,
@@ -46,6 +47,7 @@ class GuiDoDemo:
         )
         self._life_logic_feature = LifeSimulationLogicPart()
         self._life_feature = LifeSimulationFeature()
+        self._styles_feature = StylesShowcaseFeature()
         self._mandel_logic_primary = MandelbrotLogicPart("mandelbrot_logic_primary")
         self._mandel_logic_can1 = MandelbrotLogicPart("mandelbrot_logic_can1")
         self._mandel_logic_can2 = MandelbrotLogicPart("mandelbrot_logic_can2")
@@ -57,6 +59,7 @@ class GuiDoDemo:
             self._showcase_shapes_feature,
             self._life_logic_feature,
             self._life_feature,
+            self._styles_feature,
             self._mandel_logic_primary,
             self._mandel_logic_can1,
             self._mandel_logic_can2,
@@ -68,6 +71,13 @@ class GuiDoDemo:
 
         self._build_main_scene()
         self._build_control_showcase_scene()
+        self.app.build_parts(self)
+        self.life_window = self._life_feature.window
+        self.mandel_window = self._mandel_feature.window
+        self.styles_window = self._styles_feature.window
+        self.life_window.visible = False
+        self.mandel_window.visible = False
+        self.styles_window.visible = False
         self.app.set_pristine("backdrop.jpg", scene_name="main")
         self.app.set_pristine("backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
@@ -83,12 +93,14 @@ class GuiDoDemo:
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
         self.showcase_back_button.set_tab_index(0)
+        self.showcase_styles_toggle.set_tab_index(1)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
         self.showcase_button.set_accessibility(role="button", label="Showcase")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
         self.showcase_back_button.set_accessibility(role="button", label="Back")
+        self.showcase_styles_toggle.set_accessibility(role="toggle", label="Show Styles window")
         self.app.configure_parts_accessibility(self, len(base_controls))
 
     def _register_screen_font_roles(self) -> None:
@@ -139,11 +151,6 @@ class GuiDoDemo:
                 role=self.SCREEN_TITLE_FONT_ROLE,
             )
         )
-        self.app.build_parts(self)
-        self.life_window = self._life_feature.window
-        self.mandel_window = self._mandel_feature.window
-        self.life_window.visible = False
-        self.mandel_window.visible = False
         self.task_panel = self.app.add(
             TaskPanelControl(
                 "task_panel",
@@ -245,13 +252,37 @@ class GuiDoDemo:
             ),
             scene_name="control_showcase",
         )
+        self.app.layout.set_linear_properties(
+            anchor=(16, self.screen_rect.height - 40),
+            item_width=110,
+            item_height=30,
+            spacing=10,
+            horizontal=True,
+        )
+
+        def _on_styles_toggle(pushed: bool) -> None:
+            self._styles_feature.window.visible = bool(pushed)
+            self.app.tile_windows(newly_visible=[self._styles_feature.window] if pushed else None)
+
         self.showcase_back_button = self.showcase_task_panel.add(
             ButtonControl(
                 "showcase_back",
-                Rect(16, self.screen_rect.height - 40, 110, 30),
+                self.app.layout.linear(0),
                 "Back",
                 lambda: self.app.switch_scene("main"),
                 style="angle",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
+        self.showcase_styles_toggle = self.showcase_task_panel.add(
+            ToggleControl(
+                "show_styles",
+                self.app.layout.linear(1),
+                "Styles",
+                "Styles",
+                pushed=False,
+                on_toggle=_on_styles_toggle,
+                style="round",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )

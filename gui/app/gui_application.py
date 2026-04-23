@@ -29,6 +29,7 @@ from ..controls.button_control import ButtonControl
 from ..controls.canvas_control import CanvasControl
 from ..controls.slider_control import SliderControl
 from ..controls.toggle_control import ToggleControl
+from ..controls.button_group_control import ButtonGroupControl
 from ..theme.color_theme import ColorTheme
 from shared.part_lifecycle import PartManager
 
@@ -42,6 +43,7 @@ class PartUiTypes:
     slider_control_cls: type
     toggle_control_cls: type
     layout_axis_cls: type
+    button_group_control_cls: type
 
 
 class GuiApplication:
@@ -81,6 +83,7 @@ class GuiApplication:
             slider_control_cls=SliderControl,
             toggle_control_cls=ToggleControl,
             layout_axis_cls=LayoutAxis,
+            button_group_control_cls=ButtonGroupControl,
         )
         self.parts = PartManager(self)
         self.running = True

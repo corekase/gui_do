@@ -20,12 +20,24 @@ class _LinearConfig:
     use_rect: bool = True
 
 
+@dataclass
+class _GridConfig:
+    anchor: Tuple[int, int] = (0, 0)
+    width: int = 100
+    height: int = 40
+    column_spacing: int = 8
+    row_spacing: int = 8
+    use_rect: bool = True
+
+
 class LayoutManager:
     """Grid, linear, and anchor layout helpers for controls."""
 
     def __init__(self) -> None:
         self._linear = _LinearConfig()
         self._linear_cursor = 0
+        self._grid = _GridConfig()
+        self._grid_cursor = 0
         self._anchor_bounds = Rect(0, 0, 1, 1)
 
     def set_linear_properties(
@@ -59,6 +71,47 @@ class LayoutManager:
         geo = self.linear(self._linear_cursor)
         self._linear_cursor += 1
         return geo
+
+    def set_grid_properties(
+        self,
+        *,
+        anchor: Tuple[int, int],
+        item_width: int,
+        item_height: int,
+        column_spacing: int,
+        row_spacing: int,
+        use_rect: bool = True,
+    ) -> None:
+        self._grid = _GridConfig(
+            anchor=(int(anchor[0]), int(anchor[1])),
+            width=int(item_width),
+            height=int(item_height),
+            column_spacing=int(column_spacing),
+            row_spacing=int(row_spacing),
+            use_rect=bool(use_rect),
+        )
+        self._grid_cursor = 0
+
+    def gridded(self, column: int, row: int, column_span: int = 1, row_span: int = 1) -> Geometry:
+        col = int(column)
+        row_idx = int(row)
+        col_span = max(1, int(column_span))
+        row_span_count = max(1, int(row_span))
+        px = self._grid.anchor[0] + (col * (self._grid.width + self._grid.column_spacing))
+        py = self._grid.anchor[1] + (row_idx * (self._grid.height + self._grid.row_spacing))
+        width = (self._grid.width * col_span) + (self._grid.column_spacing * (col_span - 1))
+        height = (self._grid.height * row_span_count) + (self._grid.row_spacing * (row_span_count - 1))
+        if self._grid.use_rect:
+            return Rect(px, py, width, height)
+        return (px, py)
+
+    def next_gridded(self, columns: int) -> Geometry:
+        col_count = max(1, int(columns))
+        index = self._grid_cursor
+        self._grid_cursor += 1
+        row = index // col_count
+        col = index % col_count
+        return self.gridded(col, row)
 
     def set_anchor_bounds(self, bounds: Rect) -> None:
         self._anchor_bounds = Rect(bounds)

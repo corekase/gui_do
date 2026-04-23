@@ -45,12 +45,36 @@ class ButtonGroupControl(ToggleControl):
             cls._selection_by_group.pop(group, None)
 
     def on_mount(self, _parent) -> None:
+        if _parent is None:
+            if self.pushed:
+                ButtonGroupControl._selection_by_group[self.group] = self.control_id
+            return
+
+        selected_id = ButtonGroupControl._selection_by_group.get(self.group)
         if self.pushed:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
+            self._clear_peer_selection_from_nodes([_parent])
+            return
+
+        if selected_id is None:
+            self.pushed = True
+            ButtonGroupControl._selection_by_group[self.group] = self.control_id
+            return
+
+        if selected_id == self.control_id:
+            self.pushed = True
 
     def on_unmount(self, _parent) -> None:
-        if ButtonGroupControl._selection_by_group.get(self.group) == self.control_id:
-            del ButtonGroupControl._selection_by_group[self.group]
+        if ButtonGroupControl._selection_by_group.get(self.group) != self.control_id:
+            return
+
+        replacement = self._first_group_peer_from_nodes([_parent] if _parent is not None else [])
+        if replacement is None:
+            ButtonGroupControl._selection_by_group.pop(self.group, None)
+            return
+        replacement.pushed = True
+        ButtonGroupControl._selection_by_group[self.group] = replacement.control_id
+        replacement._clear_peer_selection_from_nodes([_parent])
 
     @property
     def button_id(self) -> str:
@@ -78,10 +102,26 @@ class ButtonGroupControl(ToggleControl):
         self._clear_peer_selection(app)
         return True
 
-    def _clear_peer_selection(self, app) -> None:
-        stack = list(app.scene.nodes)
-        while stack:
-            node = stack.pop()
-            stack.extend(node.children)
+    @staticmethod
+    def _walk_nodes(nodes) -> list:
+        queue = [node for node in nodes if node is not None]
+        visited = []
+        while queue:
+            node = queue.pop(0)
+            visited.append(node)
+            queue.extend(node.children)
+        return visited
+
+    def _first_group_peer_from_nodes(self, nodes):
+        for node in self._walk_nodes(nodes):
+            if isinstance(node, ButtonGroupControl) and node.group == self.group and node.control_id != self.control_id:
+                return node
+        return None
+
+    def _clear_peer_selection_from_nodes(self, nodes) -> None:
+        for node in self._walk_nodes(nodes):
             if isinstance(node, ButtonGroupControl) and node.group == self.group and node.control_id != self.control_id:
                 node.pushed = False
+
+    def _clear_peer_selection(self, app) -> None:
+        self._clear_peer_selection_from_nodes(app.scene.nodes)

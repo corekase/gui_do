@@ -50,6 +50,20 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         self.assertEqual(manager.linear(1), Rect(17, 6, 10, 11))
         self.assertEqual(manager.linear(2), Rect(5, 19, 10, 11))
 
+        manager.set_grid_properties(
+            anchor=(40, 50),
+            item_width=20,
+            item_height=10,
+            column_spacing=3,
+            row_spacing=4,
+            use_rect=True,
+        )
+        self.assertEqual(manager.gridded(0, 0), Rect(40, 50, 20, 10))
+        self.assertEqual(manager.gridded(2, 1), Rect(86, 64, 20, 10))
+        self.assertEqual(manager.gridded(1, 0, column_span=2), Rect(63, 50, 43, 10))
+        self.assertEqual(manager.next_gridded(columns=3), Rect(40, 50, 20, 10))
+        self.assertEqual(manager.next_gridded(columns=3), Rect(63, 50, 20, 10))
+
         manager.set_anchor_bounds(Rect(0, 0, 200, 100))
         self.assertEqual(manager.anchored((20, 10), anchor="top_left", margin=(2, 3), use_rect=True), Rect(2, 3, 20, 10))
         self.assertEqual(manager.anchored((20, 10), anchor="top_center", margin=(0, 4), use_rect=True), Rect(90, 4, 20, 10))
