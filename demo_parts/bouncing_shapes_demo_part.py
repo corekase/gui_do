@@ -38,7 +38,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
         circle_count: int = 28,
         diamond_count: int = 0,
         seed: Optional[int] = None,
-        scene_name: str = "main",
+        scene_name: Optional[str] = None,
         part_name: str = "bouncing_shapes_backdrop",
     ) -> None:
         super().__init__(part_name, scene_name=scene_name)

@@ -40,13 +40,9 @@ class GuiDoDemo:
         self.app.switch_scene("main")
 
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
+        # A single backdrop instance with scene_name=None runs in all scenes so
+        # shape positions and velocities are shared and continuous across scene switches.
         self._shapes_feature = BouncingShapesBackdropFeature(circle_count=30, diamond_count=12)
-        self._showcase_shapes_feature = BouncingShapesBackdropFeature(
-            circle_count=30,
-            diamond_count=12,
-            scene_name="control_showcase",
-            part_name="bouncing_shapes_backdrop_showcase",
-        )
         self._life_logic_feature = LifeSimulationLogicPart()
         self._life_feature = LifeSimulationFeature()
         self._styles_feature = StylesShowcaseFeature()
@@ -58,7 +54,6 @@ class GuiDoDemo:
         self._mandel_feature = MandelbrotRenderFeature()
         for feature in [
             self._shapes_feature,
-            self._showcase_shapes_feature,
             self._life_logic_feature,
             self._life_feature,
             self._styles_feature,
