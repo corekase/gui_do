@@ -162,6 +162,32 @@ Private and shared logic are both supported:
 
 `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
 
+#### `RoutedMessagePart` — Topic-routed message dispatch
+
+`RoutedMessagePart` is a `Part` subclass that routes incoming messages by a canonical **topic key** instead of requiring manual `pop_message()` loop inspection. It adds a single override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
+
+```python
+from shared.part_lifecycle import RoutedMessagePart
+
+class StatusConsumerPart(RoutedMessagePart):
+    # Override MESSAGE_TOPIC_KEY if the sending party uses a different field name.
+    MESSAGE_TOPIC_KEY = "topic"  # default
+
+    def message_handlers(self):
+        return {
+            "data_update": self._on_data_update,
+            "reset":       self._on_reset,
+        }
+
+    def _on_data_update(self, host, sender_name: str, payload: dict) -> None:
+        print(f"Data from {sender_name}: {payload['value']}")
+
+    def _on_reset(self, host, sender_name: str, payload: dict) -> None:
+        print("Reset requested")
+```
+
+`on_update` calls `on_message()` for each queued message. Unknown topics are silently ignored by default; override `on_message()` to handle them differently.
+
 #### `ScreenPart` — Direct screen drawing with frame synchronisation
 
 `ScreenPart` is a `Part` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
@@ -850,30 +876,46 @@ from gui import ObservableValue, PresentationModel
 # Create an observable value
 count = ObservableValue(initial_value=0)
 
-# Subscribe to changes
+# Subscribe to changes; subscribe() returns an unsubscribe callable
 def on_count_changed(new_value):
     print(f"Count changed to {new_value}")
 
-count.subscribe(on_count_changed)
+unsubscribe = count.subscribe(on_count_changed)
 
-# Update value
-count.set(5)  # Triggers subscriber
+# Update value via the property setter (triggers all subscribers)
+count.value = 5
 
-# Create a presentation model (groups related values)
+# Update without notifying subscribers
+count.set_silently(10)
+
+# Notify all subscribers with the current value even if it has not changed
+count.force_notify()
+
+# Introspect the number of active subscriptions
+n = count.observer_count
+
+# Unsubscribe later
+unsubscribe()
+
+# Create a presentation model (groups related values and manages subscriptions)
 class SceneViewModel(PresentationModel):
     def __init__(self):
         super().__init__()
         self.zoom = ObservableValue(1.0)
-        self.rotation = ObservableValue(0.0)
         self.is_playing = ObservableValue(False)
 
 view_model = SceneViewModel()
-view_model.zoom.subscribe(lambda z: print(f"Zoom: {z}"))
-view_model.is_playing.subscribe(lambda playing: print(f"Playing: {playing}"))
 
-# Update values
-view_model.zoom.set(2.0)
-view_model.is_playing.set(True)
+# bind() registers the subscription and tracks it for disposal
+view_model.bind(view_model.zoom, lambda z: print(f"Zoom: {z}"))
+view_model.bind(view_model.is_playing, lambda playing: print(f"Playing: {playing}"))
+
+# Update values via property setter
+view_model.zoom.value = 2.0
+view_model.is_playing.value = True
+
+# Dispose all managed subscriptions at once (e.g., on scene cleanup)
+view_model.dispose()
 ```
 
 ## Canvas and Custom Drawing
@@ -983,6 +1025,41 @@ toggle.font_role = "body"
 
 ## Advanced Patterns
 
+### Event Bus (Pub-Sub)
+
+`EventBus` is a scoped publish-subscribe bus for non-input UI events. Access it as `app.events`.
+
+```python
+from gui import EventBus
+
+bus = app.events
+
+# Subscribe; returns a Subscription object for later removal
+sub = bus.subscribe("status_changed", lambda payload: print(f"Status: {payload}"))
+
+# Subscribe with an optional scope tag for bulk removal
+sub2 = bus.subscribe("data_ready", handler, scope="life_scene")
+
+# Publish to all matching subscribers
+bus.publish("status_changed", {"message": "Ready"})
+
+# Publish to subscribers in a specific scope only
+bus.publish("data_ready", result, scope="life_scene")
+
+# Unsubscribe one subscription
+bus.unsubscribe(sub)
+
+# Remove all subscriptions tagged with a scope; returns the count removed
+removed = bus.unsubscribe_scope("life_scene")
+
+# Subscribe for exactly one delivery, then automatically unsubscribe
+bus.once("startup_done", lambda _: print("Startup complete!"))
+
+# Introspect — total subscription count or per-topic
+total = bus.subscriber_count()
+for_topic = bus.subscriber_count("status_changed")
+```
+
 ### Cross-Part Communication via Messaging
 
 Parts communicate by sending dictionary messages to named target parts. The receiver drains its queue each frame.
@@ -1011,6 +1088,45 @@ class ConsumerPart(Part):
         # self.message_count()       -> int queue length
         # self.message_queue_empty() -> bool
         # self.clear_messages()      -> discard all queued messages
+```
+
+### Part Font Role Management
+
+Parts can register their own namespaced font roles without colliding with other parts or application-level roles. Roles are stored under a qualified name `part.<part_name>.<role_name>` and resolved via `self.font_role(...)`.
+
+```python
+from shared.part_lifecycle import Part
+
+class MyFeature(Part):
+    def __init__(self):
+        super().__init__("my_feature", scene_name="main")
+
+    def build(self, host) -> None:
+        # Register a single namespaced font role owned by this part
+        self.register_font_role(
+            host,
+            "heading",
+            size=20,
+            file_path="data/fonts/Ubuntu-B.ttf",
+            system_name="arial",
+            bold=True,
+            scene_name="main",
+        )
+
+        # Register several roles at once
+        self.register_font_roles(
+            host,
+            {
+                "body":    {"size": 14, "system_name": "arial"},
+                "caption": {"size": 11, "system_name": "arial", "italic": True},
+            },
+            scene_name="main",
+        )
+
+    def bind_runtime(self, host) -> None:
+        # Resolve the local role name to the qualified global name
+        heading_role = self.font_role("heading")   # "part.my_feature.heading"
+        host.app.style_label(self.title_label, size=20, role=heading_role)
 ```
 
 ### Scene Transitions
@@ -1061,33 +1177,100 @@ app.set_screen_lifecycle(
 
 ### Using Timers for Timed Events
 
-The `Timers` service allows scheduling one-shot and repeating timers per scene.
+The `Timers` service schedules one-shot and repeating callbacks per scene. Access the active scene's timer service via `app.timers`.
 
 ```python
-# Get timers for a scene
-timers = app.get_scene_timers("main")
+# Access the active scene's timer service
+timers = app.timers
 
-# Schedule a one-shot timer
-def on_timer_1000ms():
-    print("1 second elapsed")
+# Schedule a one-shot timer (fires once after delay_seconds, then removes itself)
+timers.add_once("my_timer", delay_seconds=1.0, callback=lambda: print("1 second elapsed"))
 
-timers.set_timer(
-    key="my_timer",
-    duration_ms=1000,
-    callback=on_timer_1000ms,
-    repeat=False,  # One-shot
+# Schedule a repeating timer (fires every interval_seconds)
+timers.add_timer(
+    "repeating",
+    interval_seconds=0.5,
+    callback=lambda: print("Fires every 500 ms"),
 )
 
-# Schedule a repeating timer
-timers.set_timer(
-    key="repeating",
-    duration_ms=500,
-    callback=lambda: print("Repeating every 500ms"),
-    repeat=True,
-)
+# Reschedule an existing timer (preserves elapsed accumulator)
+timers.reschedule("repeating", new_interval_seconds=0.25)
 
-# Cancel a timer
-timers.clear_timer("my_timer")
+# Check and cancel a specific timer
+if timers.has_timer("my_timer"):
+    timers.remove_timer("my_timer")
+
+# List all active timer ids
+ids = timers.timer_ids()
+
+# Cancel all timers at once; returns the count that were removed
+cancelled = timers.cancel_all()
+```
+
+## GuiApplication Helpers
+
+`GuiApplication` exposes a number of shorthand helpers beyond the basic scene-cycle API.
+
+### Scene and Part Management
+
+```python
+# Scene queries
+scene_names = app.scene_names()       # list of all registered scene names
+is_known   = app.has_scene("about")   # True if the scene exists
+removed    = app.remove_scene("about") # True when removed (cannot remove active scene)
+active     = app.active_scene_name    # name of the currently active scene
+
+# Part management
+app.register_part(my_part, host=demo)   # register a Part with optional host
+app.unregister_part("my_feature")       # unregister and shutdown; returns bool
+part = app.get_part("my_feature")       # Part instance or None
+names = app.part_names()                # tuple of registered part names in order
+```
+
+### Logic Part Bindings
+
+```python
+app.bind_part_logic("consumer", "logic_part")          # bind consumer to LogicPart
+app.unbind_part_logic("consumer", alias="default")     # remove one binding; returns bool
+name = app.get_part_logic("consumer", alias="default") # provider name or None
+
+# Send a command message from a consumer to its bound LogicPart
+app.send_part_logic_message("consumer", {"command": "reset"})
+```
+
+### Node Search
+
+```python
+# Find the first node with a given control_id in the active (or named) scene
+node = app.find("my_button")
+node = app.find("my_button", scene_name="settings")
+
+# Find all nodes satisfying a predicate
+visible_buttons = app.find_all(lambda n: n.visible and hasattr(n, "on_click"))
+```
+
+### Focus Helpers
+
+```python
+# Focus a control by its control_id; returns True when focused successfully
+focused = app.focus_on("my_button")
+focused = app.focus_on("my_button", scene_name="settings")
+```
+
+### Scene-Specific Services
+
+```python
+# Access a scene's scheduler or graphics factory by name
+scheduler  = app.get_scene_scheduler("main")
+factory    = app.get_scene_graphics_factory("main")
+
+# Font role queries for the active (or named) scene
+roles = app.font_roles()               # tuple of registered role names
+roles = app.font_roles(scene_name="main")
+
+# Window tiling helpers
+app.tile_windows()                     # immediately relayout all visible windows
+settings = app.read_window_tiling_settings()  # current tiling configuration dict
 ```
 
 ## Contributing
