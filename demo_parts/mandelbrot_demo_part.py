@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from shared.part_lifecycle import Part
+from shared.part_lifecycle import LogicPart, RoutedMessagePart
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -68,7 +68,96 @@ __all__ = [
 ]
 
 
-class MandelbrotRenderFeature(Part):
+_MANDEL_LOGIC_PRIMARY = "mandelbrot_logic_primary"
+_MANDEL_LOGIC_CAN1 = "mandelbrot_logic_can1"
+_MANDEL_LOGIC_CAN2 = "mandelbrot_logic_can2"
+_MANDEL_LOGIC_CAN3 = "mandelbrot_logic_can3"
+_MANDEL_LOGIC_CAN4 = "mandelbrot_logic_can4"
+
+
+class MandelbrotLogicPart(LogicPart):
+    """Domain logic provider for Mandelbrot pixel and algorithm calculations."""
+
+    def __init__(self, name: str = _MANDEL_LOGIC_PRIMARY, *, scene_name: str = "main") -> None:
+        super().__init__(name, scene_name=scene_name)
+        self.mandel_cols = (
+            (66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
+            (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
+            (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
+            (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3),
+        )
+        self.max_iter = 96
+
+    def bind_runtime(self, _host) -> None:
+        if self._part_manager is None:
+            return
+        self._part_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
+        self._part_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
+
+    def mandel_col(self, k: int) -> Tuple[int, int, int]:
+        if k >= self.max_iter - 1:
+            return (0, 0, 0)
+        return self.mandel_cols[k % len(self.mandel_cols)]
+
+    @staticmethod
+    def mandel_viewport(width: int, height: int) -> Tuple[complex, float]:
+        center = -0.7 + 0.0j
+        extent = 2.5 + 2.5j
+        scale = max((extent / width).real, (extent / height).imag)
+        return center, scale
+
+    def mandel_pixel(self, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
+        c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
+        z = 0j
+        for k in range(self.max_iter):
+            z = z * z + c
+            if (z * z.conjugate()).real > 4.0:
+                return k
+        return self.max_iter - 1
+
+    def run_iterative_task(self, scheduler, task_id, params):
+        width, height = params["size"]
+        center = params["center"]
+        scale = params["scale"]
+        for y in range(height):
+            row = [self.mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
+            scheduler.send_message(task_id, (y, row))
+        return None
+
+    def _recursive_fill(self, scheduler, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
+        if w <= 0 or h <= 0:
+            return
+        tl = self.mandel_pixel(x, y, width, height, center, scale)
+        tr = self.mandel_pixel(x + w - 1, y, width, height, center, scale)
+        bl = self.mandel_pixel(x, y + h - 1, width, height, center, scale)
+        br = self.mandel_pixel(x + w - 1, y + h - 1, width, height, center, scale)
+        if w <= 4 or h <= 4:
+            values = []
+            for yy in range(y, y + h):
+                for xx in range(x, x + w):
+                    values.append(self.mandel_pixel(xx, yy, width, height, center, scale))
+            scheduler.send_message(task_id, (x, y, w, h, values))
+            return
+        if tl == tr == bl == br:
+            scheduler.send_message(task_id, (x, y, w, h, tl))
+            return
+        hw = w // 2
+        hh = h // 2
+        self._recursive_fill(scheduler, task_id, x, y, hw, hh, width, height, center, scale)
+        self._recursive_fill(scheduler, task_id, x + hw, y, w - hw, hh, width, height, center, scale)
+        self._recursive_fill(scheduler, task_id, x, y + hh, hw, h - hh, width, height, center, scale)
+        self._recursive_fill(scheduler, task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
+
+    def run_recursive_task(self, scheduler, task_id, params):
+        width, height = params["size"]
+        center = params["center"]
+        scale = params["scale"]
+        rect = Rect(params.get("rect", Rect(0, 0, width, height)))
+        self._recursive_fill(scheduler, task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
+        return None
+
+
+class MandelbrotRenderFeature(RoutedMessagePart):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
     HOST_REQUIREMENTS = {
@@ -78,6 +167,11 @@ class MandelbrotRenderFeature(Part):
 
     FAILURE_PREVIEW_MIN = 1
     FAILURE_PREVIEW_MAX = 20
+    LOGIC_ALIAS_PRIMARY = "primary"
+    LOGIC_ALIAS_CAN1 = "can1"
+    LOGIC_ALIAS_CAN2 = "can2"
+    LOGIC_ALIAS_CAN3 = "can3"
+    LOGIC_ALIAS_CAN4 = "can4"
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")
@@ -106,6 +200,18 @@ class MandelbrotRenderFeature(Part):
         self.status_scope = MANDEL_STATUS_SCOPE
         self.status_bus_ready = False
         self.status_subscription = None
+        self._task_logic_alias = {
+            "iter": self.LOGIC_ALIAS_PRIMARY,
+            "recu": self.LOGIC_ALIAS_PRIMARY,
+            "1": self.LOGIC_ALIAS_PRIMARY,
+            "2": self.LOGIC_ALIAS_PRIMARY,
+            "3": self.LOGIC_ALIAS_PRIMARY,
+            "4": self.LOGIC_ALIAS_PRIMARY,
+            "can1": self.LOGIC_ALIAS_CAN1,
+            "can2": self.LOGIC_ALIAS_CAN2,
+            "can3": self.LOGIC_ALIAS_CAN3,
+            "can4": self.LOGIC_ALIAS_CAN4,
+        }
 
     def build(self, demo) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
@@ -133,6 +239,7 @@ class MandelbrotRenderFeature(Part):
         self.demo = demo  # Store demo reference
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
+        self._bind_logic_aliases()
         self.scheduler.set_message_dispatch_limit(256)
         demo.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self.adjust_failure_preview_limit(demo, -1))
         demo.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self.adjust_failure_preview_limit(demo, 1))
@@ -144,6 +251,43 @@ class MandelbrotRenderFeature(Part):
             scope=self.status_scope,
         )
         self.status_bus_ready = True
+
+    def _bind_logic_aliases(self) -> None:
+        bindings = {
+            self.LOGIC_ALIAS_PRIMARY: _MANDEL_LOGIC_PRIMARY,
+            self.LOGIC_ALIAS_CAN1: _MANDEL_LOGIC_CAN1,
+            self.LOGIC_ALIAS_CAN2: _MANDEL_LOGIC_CAN2,
+            self.LOGIC_ALIAS_CAN3: _MANDEL_LOGIC_CAN3,
+            self.LOGIC_ALIAS_CAN4: _MANDEL_LOGIC_CAN4,
+        }
+        for alias, provider_name in bindings.items():
+            if self.logic_part_name(alias=alias) is None:
+                self.bind_logic_part(provider_name, alias=alias)
+
+    def _resolve_logic_part(self, alias: str) -> Optional[MandelbrotLogicPart]:
+        if self._part_manager is None:
+            return None
+        provider_name = self.logic_part_name(alias=alias)
+        if provider_name is None:
+            return None
+        provider = self._part_manager.get(provider_name)
+        if isinstance(provider, MandelbrotLogicPart):
+            return provider
+        return None
+
+    def _run_logic_runnable(self, alias: str, runnable_name: str, task_id: str, params):
+        demo = self.demo
+        if demo is None:
+            return False
+        provider_name = self.logic_part_name(alias=alias)
+        if provider_name is None:
+            return False
+        try:
+            scheduler = self._get_scheduler(demo)
+            demo.app.run_part_runnable(provider_name, runnable_name, scheduler, task_id, params)
+            return True
+        except KeyError:
+            return False
 
     def shutdown_runtime(self, demo) -> None:
         """Unsubscribe runtime resources created by bind_runtime."""
@@ -397,12 +541,18 @@ class MandelbrotRenderFeature(Part):
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
         """Map an iteration count to the Mandelbrot palette color."""
+        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
+        if logic is not None:
+            return logic.mandel_col(k)
         if k >= self.max_iter - 1:
             return (0, 0, 0)
         return self.mandel_cols[k % len(self.mandel_cols)]
 
     def mandel_viewport(self, _demo, width: int, height: int) -> Tuple[complex, float]:
         """Return viewport center and scale for the requested render dimensions."""
+        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
+        if logic is not None:
+            return logic.mandel_viewport(width, height)
         center = -0.7 + 0.0j
         extent = 2.5 + 2.5j
         scale = max((extent / width).real, (extent / height).imag)
@@ -410,6 +560,9 @@ class MandelbrotRenderFeature(Part):
 
     def mandel_pixel(self, _demo, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
         """Compute Mandelbrot iteration count for one pixel coordinate."""
+        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
+        if logic is not None:
+            return logic.mandel_pixel(px, py, width, height, center, scale)
         c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
         z = 0j
         for k in range(self.max_iter):
@@ -546,6 +699,8 @@ class MandelbrotRenderFeature(Part):
 
     def iterative_task(self, demo, task_id, params):
         """Worker entrypoint for iterative full-frame scanline rendering."""
+        if self._run_logic_runnable(self.LOGIC_ALIAS_PRIMARY, "iterative_task", str(task_id), params):
+            return None
         scheduler = self._get_scheduler(demo)
         width, height = params["size"]
         center = params["center"]
@@ -557,6 +712,11 @@ class MandelbrotRenderFeature(Part):
 
     def recursive_fill(self, demo, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
         """Recursively subdivide a rectangle and emit fill/pixel payload messages."""
+        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
+        if logic is not None:
+            scheduler = self._get_scheduler(demo)
+            logic._recursive_fill(scheduler, task_id, x, y, w, h, width, height, center, scale)
+            return
         scheduler = self._get_scheduler(demo)
         if w <= 0 or h <= 0:
             return
@@ -583,6 +743,8 @@ class MandelbrotRenderFeature(Part):
 
     def recursive_task(self, demo, task_id, params):
         """Worker entrypoint for recursive rendering over a requested rectangle."""
+        if self._run_logic_runnable(self.LOGIC_ALIAS_PRIMARY, "recursive_task", str(task_id), params):
+            return None
         width, height = params["size"]
         center = params["center"]
         scale = params["scale"]
@@ -590,16 +752,31 @@ class MandelbrotRenderFeature(Part):
         self.recursive_fill(demo, task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
         return None
 
-    def queue_recursive_task(self, demo, task_id: str, rect: Rect, size: Tuple[int, int], center: complex, scale: float) -> None:
+    def queue_recursive_task(
+        self,
+        demo,
+        task_id: str,
+        rect: Rect,
+        size: Tuple[int, int],
+        center: complex,
+        scale: float,
+        *,
+        logic_alias: str,
+    ) -> None:
         """Queue one recursive render task and track its task id as active."""
         scheduler = self._get_scheduler(demo)
         scheduler.add_task(
             task_id,
-            lambda callback_task_id, params: self.recursive_task(demo, callback_task_id, params),
+            lambda callback_task_id, params: self._run_recursive_task_for_alias(demo, logic_alias, callback_task_id, params),
             parameters={"size": size, "center": center, "scale": scale, "rect": Rect(rect)},
             message_method=self.make_progress_handler(demo, task_id),
         )
         self.task_ids.add(task_id)
+
+    def _run_recursive_task_for_alias(self, demo, logic_alias: str, task_id, params):
+        if self._run_logic_runnable(logic_alias, "recursive_task", str(task_id), params):
+            return None
+        return self.recursive_task(demo, task_id, params)
 
     def launch_iterative(self, demo) -> None:
         """Launch iterative render mode when no Mandelbrot task is already running."""
@@ -628,7 +805,15 @@ class MandelbrotRenderFeature(Part):
         self.prepare_single_canvas_run(demo)
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
-        self.queue_recursive_task(demo, "recu", Rect(0, 0, width, height), (width, height), center, scale)
+        self.queue_recursive_task(
+            demo,
+            "recu",
+            Rect(0, 0, width, height),
+            (width, height),
+            center,
+            scale,
+            logic_alias=self.LOGIC_ALIAS_PRIMARY,
+        )
         self.running_mode = "running recursive"
         self.publish_event(MANDEL_KIND_RUNNING_RECURSIVE)
         self.publish_running_status()
@@ -643,10 +828,42 @@ class MandelbrotRenderFeature(Part):
         center, scale = self.mandel_viewport(demo, width, height)
         left_w, top_h = width // 2, height // 2
         right_w, bottom_h = width - left_w, height - top_h
-        self.queue_recursive_task(demo, "1", Rect(0, 0, left_w, top_h), (width, height), center, scale)
-        self.queue_recursive_task(demo, "2", Rect(left_w, 0, right_w, top_h), (width, height), center, scale)
-        self.queue_recursive_task(demo, "3", Rect(0, top_h, left_w, bottom_h), (width, height), center, scale)
-        self.queue_recursive_task(demo, "4", Rect(left_w, top_h, right_w, bottom_h), (width, height), center, scale)
+        self.queue_recursive_task(
+            demo,
+            "1",
+            Rect(0, 0, left_w, top_h),
+            (width, height),
+            center,
+            scale,
+            logic_alias=self.LOGIC_ALIAS_PRIMARY,
+        )
+        self.queue_recursive_task(
+            demo,
+            "2",
+            Rect(left_w, 0, right_w, top_h),
+            (width, height),
+            center,
+            scale,
+            logic_alias=self.LOGIC_ALIAS_PRIMARY,
+        )
+        self.queue_recursive_task(
+            demo,
+            "3",
+            Rect(0, top_h, left_w, bottom_h),
+            (width, height),
+            center,
+            scale,
+            logic_alias=self.LOGIC_ALIAS_PRIMARY,
+        )
+        self.queue_recursive_task(
+            demo,
+            "4",
+            Rect(left_w, top_h, right_w, bottom_h),
+            (width, height),
+            center,
+            scale,
+            logic_alias=self.LOGIC_ALIAS_PRIMARY,
+        )
         self.running_mode = "running 1M 4Tasks"
         self.publish_event(MANDEL_KIND_RUNNING_ONE_SPLIT)
         self.publish_running_status()
@@ -660,7 +877,15 @@ class MandelbrotRenderFeature(Part):
         width, height = self.split_canvases["can1"].canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
         for task_id in ("can1", "can2", "can3", "can4"):
-            self.queue_recursive_task(demo, task_id, Rect(0, 0, width, height), (width, height), center, scale)
+            self.queue_recursive_task(
+                demo,
+                task_id,
+                Rect(0, 0, width, height),
+                (width, height),
+                center,
+                scale,
+                logic_alias=self._task_logic_alias[task_id],
+            )
         self.running_mode = "running 4M 4Tasks"
         self.publish_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
         self.publish_running_status()

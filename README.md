@@ -89,9 +89,9 @@ A feature is a `Part` with optional hooks:
 
 Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and are validated before invocation.
 
-### Part Types: `Part`, `LogicPart`, and `ScreenPart`
+### Part Types: `Part`, `RoutedMessagePart`, `LogicPart`, and `ScreenPart`
 
-There are three part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
+There are four part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
 
 #### `Part` — General-purpose feature unit
 
@@ -102,12 +102,12 @@ Use `Part` for features that:
 - coordinate preamble, event routing, and postamble for those controls
 - communicate through the scheduler, event bus, or part messaging
 
-The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `Part`. Each owns a `WindowControl` containing a `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the Part itself is responsible for wiring and orchestration, not raw pixel output.
+The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `RoutedMessagePart`. Each owns a `WindowControl` containing `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the part itself is responsible for wiring and orchestration, not raw pixel output.
 
 ```python
-from shared.part_lifecycle import Part
+from shared.part_lifecycle import RoutedMessagePart
 
-class LifeSimulationFeature(Part):
+class LifeSimulationFeature(RoutedMessagePart):
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
         "bind_runtime": ("app",),
@@ -129,7 +129,7 @@ class LifeSimulationFeature(Part):
 ```
 
 ```python
-class MandelbrotRenderFeature(Part):
+class MandelbrotRenderFeature(RoutedMessagePart):
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
         "bind_runtime": ("app",),
@@ -161,6 +161,8 @@ Private and shared logic are both supported:
 - shared: bind multiple consumers to the same logic part under their own aliases
 
 `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
+
+`MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicPart` providers (one primary logic part plus split-canvas logic parts), while the render part owns control flow and payload-to-canvas drawing.
 
 #### `RoutedMessagePart` — Topic-routed message dispatch
 
@@ -874,7 +876,7 @@ Use `ObservableValue` to create reactive data that automatically notifies subscr
 from gui import ObservableValue, PresentationModel
 
 # Create an observable value
-count = ObservableValue(initial_value=0)
+count = ObservableValue(0)
 
 # Subscribe to changes; subscribe() returns an unsubscribe callable
 def on_count_changed(new_value):
@@ -1129,6 +1131,49 @@ class MyFeature(Part):
         host.app.style_label(self.title_label, size=20, role=heading_role)
 ```
 
+### LogicPart Runnables for Scheduler Workers
+
+For compute-heavy features, keep scheduler control flow in a render part and move pixel/algorithm work into one or more `LogicPart` providers. Register worker entrypoints as named runnables in the logic part, then invoke them from scheduler tasks via `app.run_part_runnable(...)`.
+
+```python
+from shared.part_lifecycle import LogicPart, RoutedMessagePart
+
+class MandelbrotLogicPart(LogicPart):
+    def bind_runtime(self, _host) -> None:
+        # Expose worker entrypoints to other parts.
+        self._part_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
+        self._part_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
+
+    def run_iterative_task(self, scheduler, task_id, params):
+        ...  # emits scheduler.send_message(task_id, payload)
+
+class MandelbrotRenderFeature(RoutedMessagePart):
+    def bind_runtime(self, demo) -> None:
+        # Bind aliases so one render part can target multiple logic providers.
+        self.bind_logic_part("mandelbrot_logic_primary", alias="primary")
+        self.bind_logic_part("mandelbrot_logic_can1", alias="can1")
+
+    def _run_logic(self, demo, alias: str, runnable: str, task_id: str, params):
+        provider_name = self.logic_part_name(alias=alias)
+        scheduler = demo.app.get_scene_scheduler("main")
+        demo.app.run_part_runnable(provider_name, runnable, scheduler, task_id, params)
+
+    def launch_recursive(self, demo):
+        scheduler = demo.app.get_scene_scheduler("main")
+        scheduler.add_task(
+            "recu",
+            lambda task_id, params: self._run_logic(demo, "primary", "recursive_task", task_id, params),
+            parameters={...},
+            message_method=self.make_progress_handler(demo, "recu"),
+        )
+```
+
+This pattern keeps concerns clean:
+
+- render part: window/canvas state, launch modes, status flow, payload painting
+- logic part(s): viewport math, pixel function, recursive/iterative algorithms
+- scheduler: task lifecycle, progress/failure events, main-thread message delivery
+
 ### Scene Transitions
 
 Switch between scenes smoothly.
@@ -1142,7 +1187,7 @@ app.create_scene("about")
 # Register parts for each scene
 main_parts = [Feature1(), Feature2()]
 for part in main_parts:
-    app.register_part(part, host=demo, scene_name="main")
+    app.register_part(part, host=demo)
 
 # Build and bind parts for a scene
 app.switch_scene("main")
@@ -1159,13 +1204,10 @@ app.switch_scene("settings")
 Perform setup/cleanup at key points in the application lifecycle.
 
 ```python
-def on_scene_start(host):
+def on_scene_start():
     print("Scene is now active")
 
-def on_scene_update(host, dt):
-    print(f"Frame time: {dt}")
-
-def on_scene_end(host):
+def on_scene_end():
     print("Scene is no longer active")
 
 app.set_screen_lifecycle(
