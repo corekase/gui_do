@@ -88,7 +88,7 @@ class MandelbrotLogicPart(LogicPart):
             (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
             (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3),
         )
-        self.max_iter = 96
+        self.max_iter = 48
 
     def bind_runtime(self, _host) -> None:
         if self._part_manager is None:
