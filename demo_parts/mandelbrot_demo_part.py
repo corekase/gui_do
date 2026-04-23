@@ -78,6 +78,8 @@ _MANDEL_LOGIC_CAN4 = "mandelbrot_logic_can4"
 class MandelbrotLogicPart(LogicPart):
     """Domain logic provider for Mandelbrot pixel and algorithm calculations."""
 
+    RECURSIVE_LEAF_SPAN = 8
+
     def __init__(self, name: str = _MANDEL_LOGIC_PRIMARY, *, scene_name: str = "main") -> None:
         super().__init__(name, scene_name=scene_name)
         self.mandel_cols = (
@@ -127,19 +129,12 @@ class MandelbrotLogicPart(LogicPart):
     def _recursive_fill(self, scheduler, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
         if w <= 0 or h <= 0:
             return
-        tl = self.mandel_pixel(x, y, width, height, center, scale)
-        tr = self.mandel_pixel(x + w - 1, y, width, height, center, scale)
-        bl = self.mandel_pixel(x, y + h - 1, width, height, center, scale)
-        br = self.mandel_pixel(x + w - 1, y + h - 1, width, height, center, scale)
-        if w <= 4 or h <= 4:
+        if w <= self.RECURSIVE_LEAF_SPAN or h <= self.RECURSIVE_LEAF_SPAN:
             values = []
             for yy in range(y, y + h):
                 for xx in range(x, x + w):
                     values.append(self.mandel_pixel(xx, yy, width, height, center, scale))
             scheduler.send_message(task_id, (x, y, w, h, values))
-            return
-        if tl == tr == bl == br:
-            scheduler.send_message(task_id, (x, y, w, h, tl))
             return
         hw = w // 2
         hh = h // 2
@@ -172,6 +167,8 @@ class MandelbrotRenderFeature(RoutedMessagePart):
     LOGIC_ALIAS_CAN2 = "can2"
     LOGIC_ALIAS_CAN3 = "can3"
     LOGIC_ALIAS_CAN4 = "can4"
+    DEFAULT_MESSAGE_DISPATCH_LIMIT = 256
+    BUSY_MESSAGE_DISPATCH_LIMIT = 64
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")
@@ -193,6 +190,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         self.status_scope = MANDEL_STATUS_SCOPE
         self.status_bus_ready = False
         self.status_subscription = None
+        self._busy_dispatch_mode = False
         self._task_logic_alias = {
             "can1": self.LOGIC_ALIAS_CAN1,
             "can2": self.LOGIC_ALIAS_CAN2,
@@ -227,7 +225,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
         self._bind_logic_aliases()
-        self.scheduler.set_message_dispatch_limit(256)
+        self._set_busy_dispatch_mode(False)
         demo.app.actions.register_action("mandel_failure_preview_decrease", lambda _event: self.adjust_failure_preview_limit(demo, -1))
         demo.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self.adjust_failure_preview_limit(demo, 1))
         demo.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
@@ -282,6 +280,20 @@ class MandelbrotRenderFeature(RoutedMessagePart):
             demo.app.events.unsubscribe(self.status_subscription)
             self.status_subscription = None
         self.status_bus_ready = False
+        self._set_busy_dispatch_mode(False)
+
+    def _set_busy_dispatch_mode(self, busy: bool) -> None:
+        scheduler = self.scheduler
+        if scheduler is None:
+            return
+        target_busy = bool(busy)
+        if target_busy == self._busy_dispatch_mode:
+            return
+        if target_busy:
+            scheduler.set_message_dispatch_limit(self.BUSY_MESSAGE_DISPATCH_LIMIT)
+        else:
+            scheduler.set_message_dispatch_limit(self.DEFAULT_MESSAGE_DISPATCH_LIMIT)
+        self._busy_dispatch_mode = target_busy
 
     def _get_scheduler(self, demo):
         """Resolve and memoize the scene scheduler used by render tasks."""
@@ -371,41 +383,89 @@ class MandelbrotRenderFeature(RoutedMessagePart):
                 use_frame_backdrop=True,
             )
         )
-        left = mandel_rect.left
-        top = mandel_rect.top
-        canvas_size = 580
-        canvas_x = left + 20
-        canvas_y = top + 54
-        split_gap = 6
-        split_size = (canvas_size - split_gap) // 2
-        controls_y = canvas_y + canvas_size + 12
-        status_y = controls_y + 38
+        content_rect = self.window.content_rect()
+        padding = 8
 
+        # Help label at top
+        help_rect = Rect(content_rect.left + padding, content_rect.top + 6, content_rect.width - padding * 2, 20)
         self.help_label = demo.app.style_label(
             self.window.add(
                 label_control_cls(
                     "mandel_help",
-                    Rect(left + 20, top + 30, 590, 20),
+                    help_rect,
                     self.format_help_text(),
                 )
             ),
             size=14,
             role=self.font_role("caption"),
         )
-        self.primary_canvas = self.window.add(canvas_control_cls("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
-        canvas1 = self.window.add(canvas_control_cls("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
-        canvas2 = self.window.add(canvas_control_cls("can2", Rect(canvas_x + split_size + split_gap, canvas_y, split_size, split_size), max_events=32))
-        canvas3 = self.window.add(canvas_control_cls("can3", Rect(canvas_x, canvas_y + split_size + split_gap, split_size, split_size), max_events=32))
-        canvas4 = self.window.add(
-            canvas_control_cls("can4", Rect(canvas_x + split_size + split_gap, canvas_y + split_size + split_gap, split_size, split_size), max_events=32)
+
+        # Bottom control and status heights
+        control_height = 30
+        control_spacing = 8
+        status_height = 20
+        controls_and_status_height = control_height + status_height + 12
+
+        # Available space for canvases
+        canvas_area_top = help_rect.bottom + 10
+        canvas_area_bottom = content_rect.bottom - padding - controls_and_status_height
+        canvas_area_height = canvas_area_bottom - canvas_area_top
+        canvas_area_width = content_rect.width - padding * 2
+
+        # Canvas layout
+        grid_gap = 6
+        split_size = (canvas_area_width - grid_gap) // 2
+
+        # Primary canvas (full width)
+        primary_canvas_rect = Rect(
+            content_rect.left + padding,
+            canvas_area_top,
+            canvas_area_width,
+            canvas_area_height
         )
+        self.primary_canvas = self.window.add(
+            canvas_control_cls("mandel_canvas", primary_canvas_rect, max_events=128)
+        )
+
+        # Split canvases in 2x2 grid
+        canvas1_rect = Rect(
+            content_rect.left + padding,
+            canvas_area_top,
+            split_size,
+            (canvas_area_height - grid_gap) // 2
+        )
+        canvas2_rect = Rect(
+            canvas1_rect.right + grid_gap,
+            canvas_area_top,
+            split_size,
+            (canvas_area_height - grid_gap) // 2
+        )
+        canvas3_rect = Rect(
+            content_rect.left + padding,
+            canvas1_rect.bottom + grid_gap,
+            split_size,
+            (canvas_area_height - grid_gap) // 2
+        )
+        canvas4_rect = Rect(
+            canvas1_rect.right + grid_gap,
+            canvas1_rect.bottom + grid_gap,
+            split_size,
+            (canvas_area_height - grid_gap) // 2
+        )
+
+        canvas1 = self.window.add(canvas_control_cls("can1", canvas1_rect, max_events=32))
+        canvas2 = self.window.add(canvas_control_cls("can2", canvas2_rect, max_events=32))
+        canvas3 = self.window.add(canvas_control_cls("can3", canvas3_rect, max_events=32))
+        canvas4 = self.window.add(canvas_control_cls("can4", canvas4_rect, max_events=32))
         self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
 
+        # Controls at bottom, aligned with canvas grid
+        controls_y = canvas_area_bottom + 6
         demo.app.layout.set_linear_properties(
-            anchor=(left + 20, controls_y),
+            anchor=(content_rect.left + padding, controls_y),
             item_width=112,
-            item_height=30,
-            spacing=8,
+            item_height=control_height,
+            spacing=control_spacing,
             horizontal=True,
         )
         mandel_reset_rect = demo.app.layout.next_linear()
@@ -436,10 +496,12 @@ class MandelbrotRenderFeature(RoutedMessagePart):
             mandel_four_split_button,
         )
 
+        # Status label below controls, aligned with left edge
+        status_y = controls_y + control_height + 6
         default_status = self.status_text
         self.status_label = demo.app.style_label(
             self.window.add(
-                label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), default_status)
+                label_control_cls("mandel_status", Rect(content_rect.left + padding, status_y, canvas_area_width, status_height), default_status)
             ),
             role=self.font_role("status"),
         )
@@ -660,6 +722,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         scheduler.remove_tasks(*self.task_id_pool)
         self.task_ids.clear()
         self.running_mode = None
+        self._set_busy_dispatch_mode(False)
         self.show_single_canvas(demo)
         self.set_task_buttons_disabled(demo, False)
         self.publish_event(MANDEL_KIND_CLEARED)
@@ -699,6 +762,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(demo)
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
@@ -718,6 +782,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(demo)
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
@@ -739,6 +804,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(demo)
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
@@ -789,6 +855,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         scheduler = self._get_scheduler(demo)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_dispatch_mode(True)
         self.prepare_split_canvas_run(demo)
         width, height = self.split_canvases["can1"].canvas.get_size()
         center, scale = self.mandel_viewport(demo, width, height)
@@ -830,6 +897,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
             self.publish_event(MANDEL_KIND_FAILED, self.format_failure_summary(failed_details))
 
         busy = scheduler.tasks_busy_match_any(*self.task_id_pool)
+        self._set_busy_dispatch_mode(busy)
         self.set_task_buttons_disabled(demo, busy)
         if busy:
             self.publish_running_status()

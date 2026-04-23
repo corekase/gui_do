@@ -104,6 +104,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
             def clear_events(self):
                 return None
 
+            def set_message_dispatch_limit(self, _limit):
+                return None
+
         mandel_part.scheduler = _BusyScheduler()
 
         demo._mandel_feature.update_events()
@@ -130,6 +133,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
                 return None
 
             def pop_result(self, _task_id, _default):
+                return None
+
+            def set_message_dispatch_limit(self, _limit):
                 return None
 
         mandel_part.scheduler = _FinishedScheduler()
@@ -160,6 +166,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
             def clear_events(self):
                 return None
 
+            def set_message_dispatch_limit(self, _limit):
+                return None
+
         mandel_part.scheduler = _FailedScheduler()
 
         demo._mandel_feature.update_events()
@@ -182,6 +191,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
                 return False
 
             def clear_events(self):
+                return None
+
+            def set_message_dispatch_limit(self, _limit):
                 return None
 
         mandel_part.scheduler = _SingleFailedScheduler()
@@ -209,6 +221,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
                 return False
 
             def clear_events(self):
+                return None
+
+            def set_message_dispatch_limit(self, _limit):
                 return None
 
         mandel_part.scheduler = _UnorderedFailedScheduler()
@@ -258,6 +273,9 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
                 return False
 
             def clear_events(self):
+                return None
+
+            def set_message_dispatch_limit(self, _limit):
                 return None
 
         mandel_part.scheduler = _ManyFailedScheduler()
