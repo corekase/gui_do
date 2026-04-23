@@ -14,7 +14,6 @@ from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
-    import pygame
     from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
@@ -79,9 +78,6 @@ class ScrollbarControl(UiNode):
 
     def _page_step(self) -> int:
         return max(self.step, int(round(self.viewport_size * 0.9)))
-
-    def _nudge(self, delta: int) -> None:
-        self._set_offset(self.offset + int(delta))
 
     def set_offset(self, offset: int) -> bool:
         """Set offset programmatically with clamp and on_change callback semantics."""

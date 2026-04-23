@@ -14,7 +14,6 @@ from ..core.ui_node import UiNode
 from ..layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
-    import pygame
     from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
@@ -98,9 +97,6 @@ class SliderControl(UiNode):
     def _keyboard_step(self) -> float:
         span = self.maximum - self.minimum
         return max(1.0, abs(span) * 0.05)
-
-    def _nudge(self, delta: float) -> None:
-        self._set_value(self.value + float(delta))
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""

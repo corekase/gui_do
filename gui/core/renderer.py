@@ -33,5 +33,4 @@ class Renderer:
         draw_x = int(anchor[0]) - int(hotspot[0])
         draw_y = int(anchor[1]) - int(hotspot[1])
         surface.blit(cursor_surface, (draw_x, draw_y))
-        if app is not None:
-            app.invalidation.end_frame()
+        app.invalidation.end_frame()

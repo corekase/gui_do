@@ -1,8 +1,6 @@
 """Focus visualization with dashed rectangles and smooth fade-out."""
 from __future__ import annotations
 
-from typing import Optional
-
 import pygame
 
 
@@ -17,8 +15,6 @@ class FocusVisualizer:
     # Timing constants (in seconds)
     HOLD_TIME = 1.0  # Display for 1 second before starting fade
     FADE_TIME = 0.5  # Fade out over 0.5 seconds
-    FADE_STEPS = 10  # Smooth fade in 10 steps
-    FADE_STEP_TIME = FADE_TIME / FADE_STEPS  # Time per fade step
 
     # Dashed rectangle rendering
     DASH_WIDTH = 2  # Width of dashes in pixels
@@ -86,29 +82,15 @@ class FocusVisualizer:
         """Draw focus rectangles for nodes currently showing/fading hints."""
         # Draw the current hint
         if self._current_hint_node is not None:
-            if self._current_hint_elapsed < self.HOLD_TIME:
-                # Still in hold phase, draw at full opacity
-                alpha = 1.0
-            else:
-                # In fade phase, compute alpha based on fade elapsed time
-                fade_elapsed = self._current_hint_elapsed - self.HOLD_TIME
-                fade_progress = fade_elapsed / self.FADE_TIME
-                alpha = 1.0 - fade_progress
-            self._draw_dashed_rect(
-                surface,
-                self._current_hint_node,
-                alpha=alpha,
-                theme=theme,
-            )
+            self._draw_dashed_rect(surface, self._current_hint_node, theme=theme)
 
     def _draw_dashed_rect(
         self,
         surface: "pygame.Surface",
         node,
-        alpha: float,
         theme,
     ) -> None:
-        """Draw a dashed rectangle around a node's draw_rect with the given alpha."""
+        """Draw a dashed rectangle around a node's rect."""
         if not node.visible:
             return
 
@@ -119,16 +101,8 @@ class FocusVisualizer:
         # Calculate focus rectangle (with padding)
         focus_rect = rect.inflate(2 * self.PADDING, 2 * self.PADDING)
 
-        # Get focus color (use highlight color with alpha)
-        focus_color = theme.highlight
-        if alpha < 1.0:
-            # Apply alpha to the color
-            focus_color_with_alpha = (*focus_color, int(255 * alpha))
-        else:
-            focus_color_with_alpha = (*focus_color, 255)
-
         # Draw dashed rectangle
-        self._draw_dashed_rectangle(surface, focus_rect, focus_color_with_alpha)
+        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight)
 
     def _draw_dashed_rectangle(
         self,

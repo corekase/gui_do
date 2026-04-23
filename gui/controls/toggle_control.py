@@ -8,7 +8,6 @@ from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
-    import pygame
     from ..theme.color_theme import ColorTheme
 
 

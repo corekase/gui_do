@@ -449,9 +449,10 @@ from gui import ButtonControl, ToggleControl, LabelControl
 
 # Add a button
 button = parent.add(
-    ButtonControl("btn_id", rect, "Button Text", on_click=callback, style="angle")
+    ButtonControl("btn_id", rect, "Button Text", on_click=callback, style="angle", font_role="body")
 )
 # style controls visual shape; built-in values: "box" (default), "angle"
+# font_role must be a registered font role name (default: "body")
 
 # Add a toggle (state-tracking button)
 toggle = parent.add(
@@ -513,7 +514,9 @@ node.rect                   # pygame.Rect; mutable geometry
 # Focus and accessibility
 node.tab_index              # int; -1 = not focusable, >= 0 = participates in Tab order
 node.focused                # bool property; True when this node holds keyboard focus
-node.accepts_focus()        # True when tab_index >= 0
+node.accepts_focus()        # True when tab_index >= 0 (controls keyboard Tab traversal)
+node.accepts_mouse_focus()  # True when a mouse click should transfer focus; defaults to accepts_focus()
+                            # LabelControl returns False — clicks never steal focus from other controls
 node.set_tab_index(n)       # set the tab order index
 node.set_accessibility(role="button", label="Save File")
 
@@ -577,6 +580,8 @@ label.align = "center"      # "left", "center", or "right"
 # Convenience helper from GuiApplication
 app.style_label(label, size=14, role="body")
 ```
+
+Clicking a `LabelControl` never steals or clears keyboard focus — labels are informational and opt out of mouse-click focus acquisition.
 
 ### Slider Control
 
@@ -670,7 +675,8 @@ from gui import ButtonGroupControl
 
 # Create one ButtonGroupControl per option, sharing the same group name.
 btn_a = parent.add(
-    ButtonGroupControl("option_a", rect_a, group="view_mode", text="List", selected=True)
+    ButtonGroupControl("option_a", rect_a, group="view_mode", text="List", selected=True,
+                       on_activate=lambda: print("List selected"))
 )
 btn_b = parent.add(
     ButtonGroupControl("option_b", rect_b, group="view_mode", text="Grid")
@@ -686,9 +692,15 @@ if btn_a.pushed:
 # Query the selected control_id for the whole group
 selected_id = btn_a.button_id  # returns the control_id of whichever is selected
 
+# Replace or remove the activation callback at runtime
+btn_a.set_on_activate(lambda: print("New callback"))
+btn_a.set_on_activate(None)   # remove callback
+
 # Clear stale group entries between independent app instances (e.g., in tests)
 ButtonGroupControl.clear_group_registry("view_mode")
 ```
+
+`on_activate` fires each time a button in the group is selected — whether by mouse click or keyboard. Keyboard: when a `ButtonGroupControl` has focus, `Space` or `Return` activates it (selects it and fires `on_activate`).
 
 ### Image Control
 
@@ -1012,6 +1024,8 @@ input_field.set_tab_index(2)
 # Tab key navigates in order; Shift+Tab goes backward
 # Focus ring wraps at boundaries
 ```
+
+**Hint-aware cycling:** The first `Tab` press establishes focus context and shows the visual focus indicator on the current (or first) focusable node without moving focus. Subsequent `Tab` presses cycle through nodes in tab-index order. This means users always see the current focused control before cycling away from it.
 
 ### Focus Management
 
