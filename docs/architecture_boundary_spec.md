@@ -4,11 +4,19 @@
 
 This document defines hard package boundaries between reusable framework code and demo-specific code.
 
+It complements the public API and event-system specs by keeping framework contracts reusable and demo schemas isolated.
+
 ## Boundary Rule
 
 - `gui/` is framework/runtime package code and must not depend on `demo_parts/`.
 - `demo_parts/` contains demo-specific contracts and must remain independent from `gui/` imports.
 - Active demo entrypoints (`*_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports, keep named imports without aliases, and use a single `from gui import (...)` block.
+
+Boundary intent:
+
+- Keep `gui/` independently reusable in non-demo applications.
+- Allow demo schema evolution inside `demo_parts/` without leaking symbols into `gui.__all__`.
+- Keep demo entrypoints readable and enforceable via one canonical gui-root import block.
 
 Rebase status:
 
@@ -47,6 +55,8 @@ python -m pytest -q tests/test_boundary_contracts.py
 ## Notes
 
 This separation prevents demo implementation details from leaking into the reusable framework API and allows future demos to define their own contracts without modifying `gui` internals.
+
+Operationally, boundary tests are treated as release gates for import hygiene and docs parity.
 
 Related documents:
 

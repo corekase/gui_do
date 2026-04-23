@@ -4,6 +4,12 @@
 
 This document defines the supported public surface of the `gui` package and the strict contracts expected by runtime components.
 
+Terminology in this document aligns with README and architecture docs:
+
+- `strict contracts`: no compatibility/fallback behavior in core dispatch and rendering paths.
+- `scene isolation`: only the active scene executes scene-contained runtime updates.
+- `demo boundary`: demo-only schemas stay outside `gui.__all__`.
+
 ## Public Exports
 
 The package exports the following symbols via `gui/__init__.py`:
@@ -56,6 +62,12 @@ This `gui.__all__` export set is treated as an exact, locked public surface and 
 
 All event dispatch paths use canonical `GuiEvent` objects.
 
+Ingress normalization contract:
+
+- Raw `pygame` events are normalized at framework ingress only.
+- Runtime routing, controls, and helpers consume canonical `GuiEvent` instances.
+- Pointer paths preserve both logical and raw coordinates via `pos/rel` and `raw_pos/raw_rel`.
+
 Required event consumption patterns:
 
 - Semantic checks:
@@ -77,6 +89,8 @@ Required event consumption patterns:
 
 Raw `pygame` events are normalized only at ingress through `EventManager` and `GuiApplication.process_event`.
 
+See `docs/event_system_spec.md` for the detailed event object shape and dispatch flow.
+
 ## Node Contract
 
 All nodes derive from `UiNode` and follow these role hooks:
@@ -92,6 +106,8 @@ Container traversal relies on explicit `children` (no duck-typed discovery).
 
 Control drawing requires a canonical `ColorTheme` with a bound `graphics_factory` and a role-based `FontManager` (`theme.fonts`).
 
+Font roles are explicit contracts at runtime; controls render against configured role names instead of runtime global font switching behavior.
+
 No fallback render paths are part of the public contract.
 
 ## Contract Policy
@@ -101,6 +117,8 @@ The package is strict by design:
 - No fallback layers.
 - No duck-typed fallback pathways in core dispatch and control rendering.
 - No optional graphics-factory rendering behavior.
+
+In addition, runtime behavior is intentionally deterministic under load (for example scheduler fairness guards are configured in app runtime setup rather than implicit best-effort behavior).
 
 New APIs must preserve these strict-contract principles.
 

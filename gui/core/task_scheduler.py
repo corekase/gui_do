@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -72,6 +74,7 @@ class TaskScheduler:
 
         self._task_messages: Deque[_TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
+        self._message_dispatch_time_budget_ms: Optional[float] = None
         self._message_ingest_limit: Optional[int] = 256
         self._max_queued_messages_per_task: Optional[int] = 512
 
@@ -81,6 +84,19 @@ class TaskScheduler:
 
         self._failed_events: List[TaskEvent] = []
         self._finished_events: List[TaskEvent] = []
+
+    @staticmethod
+    def recommended_worker_count(logical_cpus: Optional[int] = None, reserve_for_ui: int = 1, cap: int = 4) -> int:
+        """Return a conservative worker count that keeps capacity for the UI loop."""
+        cpu_count = os.cpu_count() if logical_cpus is None else logical_cpus
+        try:
+            normalized = int(cpu_count) if cpu_count is not None else cap
+        except (TypeError, ValueError):
+            normalized = cap
+        normalized = max(1, normalized)
+        reserved = max(0, int(reserve_for_ui))
+        max_cap = max(1, int(cap))
+        return max(1, min(max_cap, normalized - reserved))
 
     def shutdown(self) -> None:
         with self._lock:
@@ -279,6 +295,19 @@ class TaskScheduler:
         with self._lock:
             return self._message_dispatch_limit
 
+    def set_message_dispatch_time_budget_ms(self, budget_ms: Optional[float]) -> None:
+        if budget_ms is not None:
+            if not isinstance(budget_ms, (int, float)):
+                raise ValueError(f"budget_ms must be number or None, got: {type(budget_ms).__name__}")
+            if budget_ms <= 0:
+                raise ValueError(f"budget_ms must be > 0, got: {budget_ms}")
+        with self._lock:
+            self._message_dispatch_time_budget_ms = None if budget_ms is None else float(budget_ms)
+
+    def get_message_dispatch_time_budget_ms(self) -> Optional[float]:
+        with self._lock:
+            return self._message_dispatch_time_budget_ms
+
     def set_message_ingest_limit(self, max_messages_per_update: Optional[int]) -> None:
         if max_messages_per_update is not None:
             if not isinstance(max_messages_per_update, int):
@@ -440,20 +469,22 @@ class TaskScheduler:
                 self._task_messages.append(message)
 
     def _dispatch_messages(self) -> None:
-        pending_messages: List[_TaskMessage] = []
-        with self._lock:
-            if not self._task_messages:
-                return
-            if self._message_dispatch_limit is None:
-                pending_messages = list(self._task_messages)
-                self._task_messages.clear()
-            else:
-                for _ in range(self._message_dispatch_limit):
-                    if not self._task_messages:
-                        break
-                    pending_messages.append(self._task_messages.popleft())
+        dispatch_start = time.perf_counter()
+        dispatched_count = 0
+        while True:
+            with self._lock:
+                if not self._task_messages:
+                    return
+                if self._message_dispatch_limit is not None and dispatched_count >= self._message_dispatch_limit:
+                    return
+                if (
+                    self._message_dispatch_time_budget_ms is not None
+                    and dispatched_count > 0
+                    and ((time.perf_counter() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
+                ):
+                    return
+                message = self._task_messages.popleft()
 
-        for message in pending_messages:
             with self._lock:
                 if self._task_generation.get(message.task_id) != message.generation:
                     self._decrement_message_count_locked(message.task_id)
@@ -469,6 +500,7 @@ class TaskScheduler:
             finally:
                 with self._lock:
                     self._decrement_message_count_locked(message.task_id)
+            dispatched_count += 1
 
     def _drain_failures(self) -> None:
         while True:

@@ -5,6 +5,8 @@
 This specification defines the canonical event object model and routing flow for the `gui` package.
 It replaces ad hoc direct usage of raw `pygame` events in app-level dispatch with normalized `GuiEvent` objects.
 
+Terminology mirrors README/public API docs: canonical events at ingress, strict contracts in dispatch, and scene-aware routing behavior.
+
 ## Goals
 
 - Provide one event shape throughout GUI internals.
@@ -108,6 +110,11 @@ App pipeline (`GuiApplication.process_event`) must execute in this order:
 9. Route non-key events to screen handler first; if unhandled, dispatch to scene graph.
    - when `default_prevented` or `propagation_stopped` is set, fallback dispatch is suppressed.
 
+Scene containment note:
+
+- Event routing is always evaluated against the active scene graph.
+- Scene-scoped screen lifecycle layers are applied only when their `scene_name` matches the active scene.
+
 ## Routed Phase Behavior
 
 Scene routing executes in three phases for each event:
@@ -132,6 +139,11 @@ Propagation and default semantics:
 - Prefer semantic helper checks in application/demo code to avoid manual `getattr(event, ...)` probing.
 - Synthetic internal events should use `GuiEvent` directly rather than fabricating `pygame.event.Event` objects.
 - Event objects should remain immutable-by-convention after dispatch creation; transform steps should replace fields explicitly.
+
+Focus and keyboard ownership note:
+
+- Mouse click focus paths can suppress focus-hint visualization (`show_hint=False`) while keyboard traversal keeps hint visualization enabled.
+- Keyboard routing precedence is active focused/visible/enabled target first, then screen fallback.
 
 ## Completion Criteria
 

@@ -47,6 +47,10 @@ class PartUiTypes:
 class GuiApplication:
     """Application facade for scene, input, capture, and rendering."""
 
+    _SCHEDULER_DISPATCH_BUDGET_FRACTION = 0.12
+    _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.5
+    _SCHEDULER_DISPATCH_BUDGET_MAX_MS = 4.0
+
     def __init__(self, surface: pygame.Surface) -> None:
         self.surface = surface
         self.input_state = InputState()
@@ -180,9 +184,12 @@ class GuiApplication:
         theme.graphics_factory = factory
         pristine = pygame.Surface(self.surface.get_size())
         pristine.fill((0, 0, 0))
+        scheduler = TaskScheduler(max_workers=TaskScheduler.recommended_worker_count())
+        # Seed with the nominal 60 FPS frame budget; update() recalculates per-frame.
+        scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(1.0 / 60.0))
         return {
             "scene": scene,
-            "scheduler": TaskScheduler(),
+            "scheduler": scheduler,
             "timers": Timers(),
             "theme": theme,
             "graphics_factory": factory,
@@ -257,6 +264,7 @@ class GuiApplication:
         self.focus_visualizer.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
         runtime["timers"].update(dt_seconds)
+        runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
         runtime["scheduler"].update()
         runtime["scene"].update(dt_seconds)
         self.invalidation.invalidate_all()
@@ -264,6 +272,17 @@ class GuiApplication:
         if self._screen_postamble is not None:
             self._screen_postamble()
         self.parts.update_parts()
+
+    def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
+        dt_ms = max(0.0, float(dt_seconds)) * 1000.0
+        target_ms = dt_ms * self._SCHEDULER_DISPATCH_BUDGET_FRACTION
+        min_ms = self._SCHEDULER_DISPATCH_BUDGET_MIN_MS
+        max_ms = self._SCHEDULER_DISPATCH_BUDGET_MAX_MS
+        if target_ms < min_ms:
+            return min_ms
+        if target_ms > max_ms:
+            return max_ms
+        return target_ms
 
     def shutdown(self) -> None:
         """Release runtime services."""
