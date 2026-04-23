@@ -141,7 +141,6 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         part.canvas = _CanvasStub([_Packet(local_pos=(10, 10), button=1)])
         part.toggle = SimpleNamespace(pushed=False)
         part.zoom_slider = SimpleNamespace(value=5.0)
-        part.zoom_label = SimpleNamespace(text="")
         part.life_origin = [0.0, 0.0]
         part.life_cell_size = 10
 
@@ -156,7 +155,6 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         part.canvas = _CanvasStub([])
         part.toggle = SimpleNamespace(pushed=False)
         part.zoom_slider = SimpleNamespace(value=5.0)
-        part.zoom_label = SimpleNamespace(text="")
 
         part.enqueue_message({"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}})
 
@@ -173,7 +171,6 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         part.canvas = _CanvasStub([])
         part.toggle = SimpleNamespace(pushed=False)
         part.zoom_slider = SimpleNamespace(value=5.0)
-        part.zoom_label = SimpleNamespace(text="")
         part.life_cells = {(9, 9)}
 
         part.enqueue_message({"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"})
@@ -241,7 +238,6 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
             button_control_cls=_WidgetStub,
             toggle_control_cls=_WidgetStub,
             slider_control_cls=_SliderStub,
-            label_control_cls=_LabelStub,
             layout_axis_cls=SimpleNamespace(HORIZONTAL="h"),
         )
 

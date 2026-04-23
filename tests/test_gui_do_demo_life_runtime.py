@@ -80,11 +80,9 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo._life_feature = life_part
         # Set up UI elements on demo
         demo.life_zoom_slider = SimpleNamespace(value=5.0)
-        demo.life_zoom_label = SimpleNamespace(text="Zoom 12")
         demo.life_canvas = _LifeCanvasStub([])
         demo.life_toggle = SimpleNamespace(pushed=False)
         life_part.zoom_slider = demo.life_zoom_slider
-        life_part.zoom_label = demo.life_zoom_label
         life_part.canvas = demo.life_canvas
         life_part.toggle = demo.life_toggle
         # Set the demo reference on the part so it can access UI elements
@@ -107,15 +105,17 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
 
         self.assertEqual(demo._life_feature.life_zoom_slider_last_value, 6)
         self.assertEqual(demo._life_feature.life_cell_size, 14)
-        self.assertEqual(demo.life_zoom_label.text, "Zoom 14")
+        self.assertEqual(demo.life_zoom_slider.value, 6.0)
 
-    def test_life_reset_sets_zoom_label_to_default(self) -> None:
+    def test_life_reset_restores_default_zoom_state(self) -> None:
         demo = self._make_demo_stub()
-        demo.life_zoom_label.text = "Zoom 18"
+        demo._life_feature.life_cell_size = 18
+        demo.life_zoom_slider.value = 8.0
 
         demo._life_feature.life_reset()
 
-        self.assertEqual(demo.life_zoom_label.text, "Zoom 12")
+        self.assertEqual(demo._life_feature.life_cell_size, 12)
+        self.assertEqual(demo.life_zoom_slider.value, 5.0)
 
     def test_update_life_uses_local_packet_position_when_available(self) -> None:
         demo = self._make_demo_stub()

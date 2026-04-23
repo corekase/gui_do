@@ -117,7 +117,6 @@ class LifeSimulationFeature(RoutedMessagePart):
         self.reset_button = None
         self.toggle = None
         self.zoom_slider = None
-        self.zoom_label = None
 
     def build(self, demo) -> None:
         """Build the Life feature UI using the application's configured UI types."""
@@ -127,7 +126,6 @@ class LifeSimulationFeature(RoutedMessagePart):
             {
                 "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
                 "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "annotation": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
             },
             scene_name="main",
         )
@@ -138,7 +136,6 @@ class LifeSimulationFeature(RoutedMessagePart):
             button_control_cls=ui.button_control_cls,
             toggle_control_cls=ui.toggle_control_cls,
             slider_control_cls=ui.slider_control_cls,
-            label_control_cls=ui.label_control_cls,
             layout_axis_cls=ui.layout_axis_cls,
         )
 
@@ -214,7 +211,6 @@ class LifeSimulationFeature(RoutedMessagePart):
         button_control_cls,
         toggle_control_cls,
         slider_control_cls,
-        label_control_cls,
         layout_axis_cls,
     ) -> None:
         """Create the Life window, canvas, and interaction controls."""
@@ -239,25 +235,32 @@ class LifeSimulationFeature(RoutedMessagePart):
         height = content_rect.height
         widget_height = 28
         padding = 10
-
-        self.canvas = self.window.add(
-            canvas_control_cls("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), height - (widget_height * 2)), max_events=256)
-        )
+        controls_gap = padding
+        control_spacing = 12
 
         controls_y = top + height - widget_height - padding
+        canvas_height = max(1, controls_y - controls_gap - (top + padding))
 
+        self.canvas = self.window.add(
+            canvas_control_cls("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), canvas_height), max_events=256)
+        )
+
+        row_width = max(1, width - (padding * 2))
+        slot_count = 4
+        slot_width = max(1, (row_width - (control_spacing * (slot_count - 1))) // slot_count)
+        strip_width = (slot_width * slot_count) + (control_spacing * (slot_count - 1))
+        strip_left = left + padding + max(0, (row_width - strip_width) // 2)
         demo.app.layout.set_linear_properties(
-            anchor=(left + padding, controls_y),
-            item_width=100,
+            anchor=(strip_left, controls_y),
+            item_width=slot_width,
             item_height=widget_height,
-            spacing=12,
+            spacing=control_spacing,
             horizontal=True,
         )
         life_reset_rect = demo.app.layout.next_linear()
         life_toggle_rect = demo.app.layout.next_linear()
         zoom_slider_slot_1 = demo.app.layout.next_linear()
         zoom_slider_slot_2 = demo.app.layout.next_linear()
-        zoom_label_slot = demo.app.layout.next_linear()
 
         self.reset_button = self.window.add(
             button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle", font_role=self.font_role("control"))
@@ -288,18 +291,8 @@ class LifeSimulationFeature(RoutedMessagePart):
             )
         )
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
-        zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
-        self.zoom_label = demo.app.style_label(
-            self.window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12")),
-            role=self.font_role("annotation"),
-        )
         self.life_reset()
         self.window.visible = False
-
-    def set_life_zoom_label(self) -> None:
-        """Refresh the Life zoom label text from the effective cell size."""
-        zoom_level = max(2, int(round(self.life_cell_size)))
-        self.zoom_label.text = f"Zoom {zoom_level}"
 
     def life_reset(self) -> None:
         """Reset simulation state, viewport origin, zoom level, and run toggle."""
@@ -307,7 +300,6 @@ class LifeSimulationFeature(RoutedMessagePart):
         self.life_cell_size = 12
         self.zoom_slider.value = 5.0
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
-        self.set_life_zoom_label()
         self.toggle.pushed = False
         if not self._send_life_logic_command("reset"):
             self.life_cells = set(_LIFE_DEFAULT_SEED)
@@ -325,7 +317,6 @@ class LifeSimulationFeature(RoutedMessagePart):
         slider_value = max(0, min(11, (clamped_size // 2) - 1))
         self.zoom_slider.value = float(slider_value)
         self.life_zoom_slider_last_value = int(slider_value)
-        self.set_life_zoom_label()
 
     def life_window_preamble(self) -> None:
         """Window preamble hook that reconciles zoom changes from slider position."""
