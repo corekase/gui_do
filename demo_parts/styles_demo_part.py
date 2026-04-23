@@ -20,16 +20,16 @@ class StylesShowcaseFeature(Part):
 
     WINDOW_TITLEBAR_HEIGHT = 28
 
-    COLUMN_WIDTH = 120
-    COLUMN_GAP = 12
-    HEADING_HEIGHT = 28
+    COLUMN_WIDTH = 100
+    COLUMN_GAP = 4
+    HEADING_HEIGHT = 24
     CONTROL_HEIGHT = 30
     CONTROL_GAP = 8
     FOOTER_HEIGHT = 22
     PADDING_X = 16
     PADDING_Y = 14
-    HEADING_GAP = 10
-    FOOTER_GAP = 12
+    HEADING_GAP = 4
+    FOOTER_GAP = 4
 
     CENTERED_STYLES = ("radio", "check")
     CENTERED_STYLE_WIDTH = 96
@@ -221,8 +221,8 @@ class StylesShowcaseFeature(Part):
         self.window.visible = False
 
     def _format_group_info(self, column_index: int, row_index: int) -> str:
-        group_short = f"G{int(column_index) + 1}"
-        id_short = f"I{int(row_index) + 1}"
+        group_short = f"{int(column_index) + 1}"
+        id_short = f"{int(row_index) + 1}"
         return f"Gr: {group_short} ID: {id_short}"
 
     def _styled_grid_rect(self, demo, column_index: int, row_index: int, style_name: str) -> Rect:
