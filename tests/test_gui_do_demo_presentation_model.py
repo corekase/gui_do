@@ -306,7 +306,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         mandel_part.failure_preview_limit = 5
         demo._mandel_feature = mandel_part
 
-        text = demo._mandel_feature.format_help_text(demo)
+        text = demo._mandel_feature.format_help_text()
 
         self.assertIn("Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks", text)
         self.assertIn("Failure preview [ ]: 5", text)

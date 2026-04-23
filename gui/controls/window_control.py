@@ -31,7 +31,6 @@ class WindowControl(UiNode):
         super().__init__(control_id, rect)
         self.title = title
         self.titlebar_height = max(18, int(titlebar_height))
-        self._title_font_role = "title"
         self.title_font_role = title_font_role
         self.children: List[UiNode] = []
         self._active = False
@@ -52,11 +51,6 @@ class WindowControl(UiNode):
         self._pristine_scaled_size = (0, 0)
         self._frame_visuals = None
         self._frame_visual_size = (0, 0)
-
-    def set_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
-        self._preamble = preamble
-        self._event_handler = event_handler
-        self._postamble = postamble
 
     @property
     def title_font_role(self) -> str:

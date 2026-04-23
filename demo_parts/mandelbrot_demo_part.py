@@ -194,15 +194,15 @@ class MandelbrotRenderFeature(Part):
         self.last_status_sent = status_text
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
 
-    def format_help_text(self, demo) -> str:
+    def format_help_text(self) -> str:
         """Return help text showing render modes and failure-preview shortcut state."""
         return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"
 
     def set_help_label(self, demo) -> None:
         """Refresh the Mandelbrot help label text."""
-        self.help_label.text = self.format_help_text(demo)
+        self.help_label.text = self.format_help_text()
 
-    def _set_status_text(self, demo, text: str) -> None:
+    def _set_status_text(self, text: str) -> None:
         """Set canonical status text and keep status label in sync."""
         normalized = str(text)
         self.status_text = normalized
@@ -261,7 +261,7 @@ class MandelbrotRenderFeature(Part):
                 label_control_cls(
                     "mandel_help",
                     Rect(left + 20, top + 30, 590, 20),
-                    self.format_help_text(demo),
+                    self.format_help_text(),
                 )
             ),
             size=14,
@@ -328,14 +328,9 @@ class MandelbrotRenderFeature(Part):
         self.clear(demo)
         self.window.visible = False
 
-    @staticmethod
-    def on_status_changed(demo, text: str) -> None:
-        """Direct status-label setter used by tests and optional host hooks."""
-        demo._mandel_part().status_label.text = text
-
     def on_status_event(self, demo, payload) -> None:
         """Handle status-bus events and render normalized status text."""
-        self._set_status_text(demo, self.format_status(demo, MandelStatusEvent.from_payload(payload)))
+        self._set_status_text(self.format_status(demo, MandelStatusEvent.from_payload(payload)))
 
     @staticmethod
     def format_status(_demo, payload) -> str:
@@ -370,7 +365,7 @@ class MandelbrotRenderFeature(Part):
         formatted_status = self.format_status(demo, event)
         # Keep local status in sync before publishing so repeated frame checks do not
         # republish identical running-status events while tasks are still busy.
-        self._set_status_text(demo, formatted_status)
+        self._set_status_text(formatted_status)
         bus_ready = bool(self.status_bus_ready)
         if bus_ready:
             demo.app.events.publish(self.status_topic, payload, scope=self.status_scope)

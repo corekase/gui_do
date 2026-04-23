@@ -218,7 +218,7 @@ class LifeSimulationFeature(Part):
                 count += 1
         return count
 
-    def life_step(self, demo) -> None:
+    def life_step(self) -> None:
         """Advance the simulation by one generation using Conway rules."""
         new_life: Set[Tuple[int, int]] = set()
         for cell in self.life_cells:
@@ -231,7 +231,7 @@ class LifeSimulationFeature(Part):
                     new_life.add(n_cell)
         self.life_cells = new_life
 
-    def zoom_life_view_about(self, demo, anchor_local: Tuple[float, float], new_size: int) -> None:
+    def zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
         """Zoom around a local canvas anchor while preserving the anchored world point."""
         old_size = max(2, int(round(self.life_cell_size)))
         clamped_size = max(2, min(24, int(new_size)))
@@ -266,7 +266,7 @@ class LifeSimulationFeature(Part):
             return
         self.life_zoom_slider_last_value = slider_value
         center_local = (self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0)
-        self.zoom_life_view_about(self.demo, center_local, new_size)
+        self.zoom_life_view_about(center_local, new_size)
 
     def life_window_event_handler(self, event) -> bool:
         """Handle drag, click, and wheel interactions routed to the Life window."""
@@ -312,7 +312,7 @@ class LifeSimulationFeature(Part):
                     anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
                 else:
                     anchor_local = (pointer_pos[0] - canvas.rect.left, pointer_pos[1] - canvas.rect.top)
-                self.zoom_life_view_about(demo, anchor_local, self.life_cell_size + (event.wheel_delta * 2))
+                self.zoom_life_view_about(anchor_local, self.life_cell_size + (event.wheel_delta * 2))
                 return True
 
         return False
@@ -350,7 +350,7 @@ class LifeSimulationFeature(Part):
                 self.life_cells.add(cell)
 
         if toggle.pushed:
-            self.life_step(demo)
+            self.life_step()
 
         cell_size = max(2, int(round(self.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)
