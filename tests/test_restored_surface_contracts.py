@@ -1,5 +1,6 @@
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pygame
@@ -26,6 +27,7 @@ from gui import (
     WindowTilingManager,
 )
 from gui.core.ui_node import UiNode
+from shared.part_lifecycle import Part
 
 
 class RestoredSurfaceContractsTests(unittest.TestCase):
@@ -134,6 +136,164 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             self.assertEqual(settings["padding"], 9)
             self.assertTrue(settings["avoid_task_panel"])
             self.assertTrue(settings["center_on_failure"])
+        finally:
+            pygame.quit()
+
+    def test_build_parts_primes_window_registration_for_all_scenes(self) -> None:
+        class _SceneWindowsPart(Part):
+            def __init__(self) -> None:
+                super().__init__("scene_windows_part")
+                self.main_window = None
+                self.showcase_window = None
+
+            def build(self, host) -> None:
+                self.main_window = host.main_root.add(WindowControl("part_main", Rect(20, 20, 180, 120), "Main"))
+                self.showcase_window = host.showcase_root.add(
+                    WindowControl("part_showcase", Rect(25, 25, 180, 120), "Showcase")
+                )
+
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((900, 700)))
+            app.create_scene("main")
+            app.create_scene("control_showcase")
+            host = SimpleNamespace(
+                app=app,
+                main_root=app.add(PanelControl("main_root", Rect(0, 0, 900, 700)), scene_name="main"),
+                showcase_root=app.add(
+                    PanelControl("showcase_root", Rect(0, 0, 900, 700)),
+                    scene_name="control_showcase",
+                ),
+            )
+
+            part = _SceneWindowsPart()
+            app.register_part(part, host=host)
+            app.build_parts(host)
+
+            app.switch_scene("main")
+            self.assertEqual(app.window_tiling._registration_order.get(part.main_window), 0)
+
+            app.switch_scene("control_showcase")
+            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_window), 0)
+        finally:
+            pygame.quit()
+
+    def test_registration_order_stays_deterministic_across_visibility_toggle_order(self) -> None:
+        class _ThreeWindowsPart(Part):
+            def __init__(self) -> None:
+                super().__init__("three_windows_part")
+                self.w1 = None
+                self.w2 = None
+                self.w3 = None
+
+            def build(self, host) -> None:
+                self.w1 = host.main_root.add(WindowControl("part_w1", Rect(20, 20, 180, 120), "W1"))
+                self.w2 = host.main_root.add(WindowControl("part_w2", Rect(30, 30, 180, 120), "W2"))
+                self.w3 = host.main_root.add(WindowControl("part_w3", Rect(40, 40, 180, 120), "W3"))
+
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((900, 700)))
+            host = SimpleNamespace(
+                app=app,
+                main_root=app.add(PanelControl("main_root", Rect(0, 0, 900, 700)), scene_name="default"),
+            )
+            part = _ThreeWindowsPart()
+            app.register_part(part, host=host)
+            app.build_parts(host)
+
+            registration_order = app.window_tiling._registration_order
+            self.assertEqual(registration_order.get(part.w1), 0)
+            self.assertEqual(registration_order.get(part.w2), 1)
+            self.assertEqual(registration_order.get(part.w3), 2)
+
+            part.w1.visible = False
+            part.w2.visible = False
+            part.w3.visible = False
+
+            part.w3.visible = True
+            part.w1.visible = True
+            part.w2.visible = True
+
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.tile_windows(newly_visible=[part.w3])
+
+            self.assertEqual(registration_order.get(part.w1), 0)
+            self.assertEqual(registration_order.get(part.w2), 1)
+            self.assertEqual(registration_order.get(part.w3), 2)
+
+            visible = app.window_tiling._visible_windows()
+            self.assertEqual(visible, [part.w1, part.w2, part.w3])
+        finally:
+            pygame.quit()
+
+    def test_cross_scene_visibility_toggles_preserve_each_scene_registration_order(self) -> None:
+        class _TwoSceneWindowsPart(Part):
+            def __init__(self) -> None:
+                super().__init__("two_scene_windows_part")
+                self.main_a = None
+                self.main_b = None
+                self.showcase_a = None
+                self.showcase_b = None
+
+            def build(self, host) -> None:
+                self.main_a = host.main_root.add(WindowControl("main_a", Rect(10, 10, 160, 100), "MainA"))
+                self.main_b = host.main_root.add(WindowControl("main_b", Rect(20, 20, 160, 100), "MainB"))
+                self.showcase_a = host.showcase_root.add(
+                    WindowControl("showcase_a", Rect(15, 15, 160, 100), "ShowA")
+                )
+                self.showcase_b = host.showcase_root.add(
+                    WindowControl("showcase_b", Rect(25, 25, 160, 100), "ShowB")
+                )
+
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((900, 700)))
+            app.create_scene("main")
+            app.create_scene("control_showcase")
+            host = SimpleNamespace(
+                app=app,
+                main_root=app.add(PanelControl("main_root", Rect(0, 0, 900, 700)), scene_name="main"),
+                showcase_root=app.add(
+                    PanelControl("showcase_root", Rect(0, 0, 900, 700)),
+                    scene_name="control_showcase",
+                ),
+            )
+
+            part = _TwoSceneWindowsPart()
+            app.register_part(part, host=host)
+            app.build_parts(host)
+
+            app.switch_scene("main")
+            main_order = dict(app.window_tiling._registration_order)
+            self.assertEqual(main_order.get(part.main_a), 0)
+            self.assertEqual(main_order.get(part.main_b), 1)
+
+            app.switch_scene("control_showcase")
+            show_order = dict(app.window_tiling._registration_order)
+            self.assertEqual(show_order.get(part.showcase_a), 0)
+            self.assertEqual(show_order.get(part.showcase_b), 1)
+
+            part.showcase_a.visible = False
+            part.showcase_b.visible = False
+            part.showcase_b.visible = True
+            part.showcase_a.visible = True
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.tile_windows(newly_visible=[part.showcase_b])
+
+            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_a), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_b), 1)
+
+            app.switch_scene("main")
+            part.main_a.visible = False
+            part.main_b.visible = False
+            part.main_b.visible = True
+            part.main_a.visible = True
+            app.set_window_tiling_enabled(True, relayout=False)
+            app.tile_windows(newly_visible=[part.main_b])
+
+            self.assertEqual(app.window_tiling._registration_order.get(part.main_a), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(part.main_b), 1)
         finally:
             pygame.quit()
 

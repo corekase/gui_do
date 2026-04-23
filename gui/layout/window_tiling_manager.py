@@ -46,6 +46,10 @@ class WindowTilingManager:
                 self._registration_order[window] = self._next_order
                 self._next_order += 1
 
+    def prime_registration(self) -> None:
+        """Register current scene windows without performing layout."""
+        self._ensure_registration(self._scene_windows())
+
     def _visible_windows(self) -> List[object]:
         windows = self._scene_windows()
         self._ensure_registration(windows)

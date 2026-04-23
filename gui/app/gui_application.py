@@ -597,8 +597,9 @@ class GuiApplication:
         """Render dedicated screen parts behind scene controls each frame."""
         self.parts.draw_screen_parts(surface, theme)
 
-    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
-        self.window_tiling.set_enabled(enabled, relayout=relayout)
+    def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
+        tiling = self._scenes[self._active_scene_name]["window_tiling"] if scene_name is None else self._scene_runtime(scene_name)["window_tiling"]
+        tiling.set_enabled(enabled, relayout=relayout)
 
     def configure_window_tiling(
         self,
@@ -608,8 +609,10 @@ class GuiApplication:
         avoid_task_panel=None,
         center_on_failure=None,
         relayout: bool = True,
+        scene_name: Optional[str] = None,
     ) -> None:
-        self.window_tiling.configure(
+        tiling = self._scenes[self._active_scene_name]["window_tiling"] if scene_name is None else self._scene_runtime(scene_name)["window_tiling"]
+        tiling.configure(
             gap=gap,
             padding=padding,
             avoid_task_panel=avoid_task_panel,
@@ -743,6 +746,12 @@ class GuiApplication:
     def build_parts(self, host) -> None:
         """Call optional build(host) on all registered parts."""
         self.parts.build_parts(host)
+        self._prime_scene_window_tiling_registrations()
+
+    def _prime_scene_window_tiling_registrations(self) -> None:
+        """Prime per-scene window registration order without forcing relayout."""
+        for runtime in self._scenes.values():
+            runtime["window_tiling"].prime_registration()
 
     def bind_parts_runtime(self, host) -> None:
         """Call optional bind_runtime(host) on all registered parts."""

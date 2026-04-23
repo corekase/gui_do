@@ -75,6 +75,17 @@ Each scene owns its own:
 
 Switching scenes swaps these runtime services through `GuiApplication.switch_scene(...)`.
 
+### Window Tiling Registration
+
+`GuiApplication.build_parts(host)` now primes per-scene window tiling registration order internally.
+
+This means app/demo startup does not need manual pre-registration choreography such as:
+
+- calling `tile_windows()` before first visibility toggles
+- switching scenes solely to pre-register tiling order
+
+Registration order is still deterministic by scene graph creation order, and remains stable across hide/show visibility toggles.
+
 ### Part Lifecycle
 
 A feature is a `Part` with optional hooks:
