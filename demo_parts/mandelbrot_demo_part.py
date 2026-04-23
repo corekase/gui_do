@@ -332,8 +332,8 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         self.update_events()
 
     def format_help_text(self) -> str:
-        """Return help text showing render modes and failure-preview shortcut state."""
-        return f"Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks | Failure preview [ ]: {self.failure_preview_limit}"
+        """Return help text showing the available render modes."""
+        return "Modes: Iterative, Recursive, 1 Mandelbrot 4 Tasks, 4 Mandelbrots 4 Tasks"
 
     def set_help_label(self, host) -> None:
         """Refresh the Mandelbrot help label text."""
@@ -373,7 +373,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
     ) -> None:
         """Create the Mandelbrot window, canvases, controls, and status labels."""
         self.demo = host  # Store host reference for callbacks
-        mandel_rect = host.app.layout.anchored((640, 724), anchor="top_right", margin=(28, 92), use_rect=True)
+        mandel_rect = host.app.layout.anchored((640, 717), anchor="top_right", margin=(28, 92), use_rect=True)
         self.window = host.root.add(
             window_control_cls(
                 "mandel_window",
@@ -387,7 +387,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         padding = 8
 
         # Help label at top
-        help_rect = Rect(content_rect.left + padding, content_rect.top + 6, content_rect.width - padding * 2, 20)
+        help_rect = Rect(content_rect.left + padding, content_rect.top, content_rect.width - padding * 2, 20)
         self.help_label = host.app.style_label(
             self.window.add(
                 label_control_cls(
@@ -404,10 +404,11 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         control_height = 30
         status_height = 20
         controls_and_status_height = control_height + status_height + 12
+        bottom_visual_padding = 5
 
         # Available space for canvases
-        canvas_area_top = help_rect.bottom + 10
-        canvas_area_bottom = content_rect.bottom - padding - controls_and_status_height
+        canvas_area_top = help_rect.bottom
+        canvas_area_bottom = content_rect.bottom - bottom_visual_padding - controls_and_status_height
         canvas_area_height = canvas_area_bottom - canvas_area_top
         canvas_area_width = content_rect.width - padding * 2
 

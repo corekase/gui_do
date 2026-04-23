@@ -301,7 +301,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         demo._mandel_feature.set_failure_preview_limit(demo, 6)
 
-        self.assertIn("Failure preview [ ]: 6", mandel_part.help_label.text)
+        self.assertIn("Modes:", mandel_part.help_label.text)
 
     def test_configured_preview_limit_controls_failure_summary(self) -> None:
         demo, mandel_part = self._make_part()
@@ -318,16 +318,14 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         self.assertEqual(detail, "3 tasks failed - can1: boom; +2 more")
 
-    def test_format_mandel_help_text_includes_modes_and_preview_limit(self) -> None:
+    def test_format_mandel_help_text_includes_modes(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
         mandel_part = MandelbrotRenderFeature()
-        mandel_part.failure_preview_limit = 5
         demo._mandel_feature = mandel_part
 
         text = demo._mandel_feature.format_help_text()
 
-        self.assertIn("Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks", text)
-        self.assertIn("Failure preview [ ]: 5", text)
+        self.assertEqual(text, "Modes: Iterative, Recursive, 1 Mandelbrot 4 Tasks, 4 Mandelbrots 4 Tasks")
 
     def test_adjust_mandel_failure_preview_limit_publishes_status(self) -> None:
         demo, mandel_part = self._make_part()
