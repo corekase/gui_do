@@ -7,6 +7,7 @@ from demo_parts.bouncing_circles_demo_part import BouncingCirclesBackdropFeature
 from gui import (
     GuiApplication,
     PanelControl,
+    LabelControl,
     ButtonControl,
     TaskPanelControl,
     ToggleControl,
@@ -17,6 +18,7 @@ class GuiDoDemo:
     """Interactive demo app showcasing gui_do controls and scene workflows."""
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
+    SCREEN_TITLE_FONT_ROLE = "screen.main.title"
 
     def __init__(self) -> None:
         """Initialize pygame, app services, scene state, and demo UI."""
@@ -69,6 +71,13 @@ class GuiDoDemo:
             system_name="arial",
             scene_name="main",
         )
+        self.app.register_font_role(
+            self.SCREEN_TITLE_FONT_ROLE,
+            size=72,
+            file_path="data/fonts/Gimbot.ttf",
+            system_name="arial",
+            scene_name="main",
+        )
 
     # ---------------------------------------------------------------------
     # Scene construction and widget composition.
@@ -79,6 +88,13 @@ class GuiDoDemo:
         self.root = self.app.add(
             PanelControl("main_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
             scene_name="main",
+        )
+        self.screen_title = self.root.add(
+            self.app.style_label(
+                LabelControl("screen_title", Rect(24, 24, 640, 96), "gui_do"),
+                size=72,
+                role=self.SCREEN_TITLE_FONT_ROLE,
+            )
         )
         self.app.build_parts(self)
         self.life_window = self._life_feature.window
