@@ -64,7 +64,7 @@ class GuiApplication:
         self.scene = active_runtime["scene"]
         self.renderer = Renderer()
         self.scheduler = active_runtime["scheduler"]
-        self.timers = Timers()
+        self.timers = active_runtime["timers"]
         self.layout = LayoutManager()
         self.window_tiling = active_runtime["window_tiling"]
         self.theme = active_runtime["theme"]
@@ -132,9 +132,11 @@ class GuiApplication:
         runtime = self._scenes[name]
         self.scene = runtime["scene"]
         self.scheduler = runtime["scheduler"]
+        self.timers = runtime["timers"]
         self.window_tiling = runtime["window_tiling"]
         self.theme = runtime["theme"]
         self.graphics_factory = runtime["graphics_factory"]
+        self._apply_screen_lifecycle_chain()
 
     @property
     def active_scene_name(self) -> str:
@@ -181,6 +183,7 @@ class GuiApplication:
         return {
             "scene": scene,
             "scheduler": TaskScheduler(),
+            "timers": Timers(),
             "theme": theme,
             "graphics_factory": factory,
             "window_tiling": WindowTilingManager(self, scene=scene),
@@ -201,6 +204,7 @@ class GuiApplication:
         runtime.setdefault("scene_auto_suspended", set())
         if "window_tiling" not in runtime:
             runtime["window_tiling"] = WindowTilingManager(self, scene=runtime["scene"])
+        runtime.setdefault("timers", Timers())
         return runtime
 
     def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:
@@ -250,9 +254,9 @@ class GuiApplication:
         """Update current scene."""
         if self._screen_preamble is not None:
             self._screen_preamble()
-        self.timers.update(dt_seconds)
         self.focus_visualizer.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
+        runtime["timers"].update(dt_seconds)
         runtime["scheduler"].update()
         runtime["scene"].update(dt_seconds)
         self.invalidation.invalidate_all()
@@ -327,16 +331,17 @@ class GuiApplication:
             return True
         return False
 
-    def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
+    def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None) -> None:
         self._screen_lifecycle_base = {
             "preamble": preamble,
             "event_handler": event_handler,
             "postamble": postamble,
+            "scene_name": scene_name,
         }
         self._screen_lifecycle_layers.clear()
         self._apply_screen_lifecycle_chain()
 
-    def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None):
+    def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None):
         """Compose additional lifecycle callbacks without replacing existing ones.
 
         Returns a disposer callback that removes this layer when invoked.
@@ -349,6 +354,7 @@ class GuiApplication:
                 "preamble": preamble,
                 "event_handler": event_handler,
                 "postamble": postamble,
+                "scene_name": scene_name,
             }
         )
         self._apply_screen_lifecycle_chain()
@@ -369,7 +375,11 @@ class GuiApplication:
         return _dispose
 
     def _apply_screen_lifecycle_chain(self) -> None:
-        callbacks = [self._screen_lifecycle_base, *self._screen_lifecycle_layers]
+        callbacks = [
+            entry
+            for entry in [self._screen_lifecycle_base, *self._screen_lifecycle_layers]
+            if self._screen_callback_matches_scene(entry)
+        ]
 
         preambles = [entry.get("preamble") for entry in callbacks if callable(entry.get("preamble"))]
         if not preambles:
@@ -408,6 +418,12 @@ class GuiApplication:
                     callback()
 
             self._screen_postamble = _composed_postamble
+
+    def _screen_callback_matches_scene(self, callback_entry) -> bool:
+        scene_name = callback_entry.get("scene_name")
+        if scene_name is None:
+            return True
+        return str(scene_name) == str(self._active_scene_name)
 
     @staticmethod
     def _clamp_to_rect(pos, rect: Rect):

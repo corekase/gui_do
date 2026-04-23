@@ -12,11 +12,18 @@ class Part:
 
     HOST_REQUIREMENTS: Dict[str, tuple[str, ...]] = {}
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, *, scene_name: Optional[str] = None) -> None:
         normalized = str(name).strip()
         if not normalized:
             raise ValueError("part name must be a non-empty string")
         self.name = normalized
+        if scene_name is None:
+            self.scene_name = None
+        else:
+            normalized_scene_name = str(scene_name).strip()
+            if not normalized_scene_name:
+                raise ValueError("scene_name must be a non-empty string when provided")
+            self.scene_name = normalized_scene_name
         self._part_manager = None
         self._message_queue: Deque[Dict[str, Any]] = deque()
         self._font_roles: Dict[str, str] = {}
@@ -245,6 +252,8 @@ class PartManager:
 
     def handle_event(self, event, host=None) -> bool:
         for part in self._parts.values():
+            if not self._is_part_active_for_scene(part):
+                continue
             host_obj = self._resolve_host(part.name, host)
             if part.handle_event(host_obj, event):
                 return True
@@ -252,11 +261,15 @@ class PartManager:
 
     def update_parts(self, host=None) -> None:
         for part in self._parts.values():
+            if not self._is_part_active_for_scene(part):
+                continue
             host_obj = self._resolve_host(part.name, host)
             part.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
         for part in self._parts.values():
+            if not self._is_part_active_for_scene(part):
+                continue
             host_obj = self._resolve_host(part.name, host)
             part.draw(host_obj, surface, theme)
 
@@ -297,3 +310,9 @@ class PartManager:
         if override_host is not None:
             return override_host
         return self._part_hosts.get(part_name, self.app)
+
+    def _is_part_active_for_scene(self, part: Part) -> bool:
+        scene_name = getattr(part, "scene_name", None)
+        if scene_name is None:
+            return True
+        return str(scene_name) == str(self.app.active_scene_name)

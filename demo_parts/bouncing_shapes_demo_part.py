@@ -38,13 +38,15 @@ class BouncingShapesBackdropFeature(Part):
         circle_count: int = 28,
         diamond_count: int = 0,
         seed: Optional[int] = None,
+        scene_name: str = "main",
+        part_name: str = "bouncing_shapes_backdrop",
     ) -> None:
-        super().__init__("bouncing_shapes_backdrop")
+        super().__init__(part_name, scene_name=scene_name)
         self.circle_count = max(0, int(circle_count))
         self.diamond_count = max(0, int(diamond_count))
         self._rng = random.Random(seed)
         self._shapes: list[ShapeSpriteState] = []
-        self._scene_name = "main"
+        self._scene_name = str(scene_name)
         self._host = None
         self._base_pristine: Optional[pygame.Surface] = None
         self._composed_pristine: Optional[pygame.Surface] = None
@@ -69,6 +71,7 @@ class BouncingShapesBackdropFeature(Part):
         self._lifecycle_dispose = app.chain_screen_lifecycle(
             preamble=self.screen_preamble,
             postamble=self.screen_postamble,
+            scene_name=self._scene_name,
         )
 
     def on_unregister(self, host) -> None:

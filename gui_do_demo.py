@@ -31,35 +31,53 @@ class GuiDoDemo:
         self.app = GuiApplication(self.screen)
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.create_scene("main")
+        self.app.create_scene("control_showcase")
         self.app.switch_scene("main")
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False)
         self.app.set_window_tiling_enabled(True, relayout=False)
 
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
         self._shapes_feature = BouncingShapesBackdropFeature(circle_count=30, diamond_count=12)
+        self._showcase_shapes_feature = BouncingShapesBackdropFeature(
+            circle_count=30,
+            diamond_count=12,
+            scene_name="control_showcase",
+            part_name="bouncing_shapes_backdrop_showcase",
+        )
         self._life_feature = LifeSimulationFeature()
         self._mandel_feature = MandelbrotRenderFeature()
-        self._demo_features = [self._shapes_feature, self._life_feature, self._mandel_feature]
+        self._demo_features = [
+            self._shapes_feature,
+            self._showcase_shapes_feature,
+            self._life_feature,
+            self._mandel_feature,
+        ]
         for feature in self._demo_features:
             self.app.register_part(feature, host=self)
 
         self._build_main_scene()
+        self._build_control_showcase_scene()
         self.app.set_pristine("backdrop.jpg", scene_name="main")
+        self.app.set_pristine("backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.bind_parts_runtime(self)
 
         base_controls = [
             self.exit_button,
+            self.showcase_button,
             self.life_toggle_window,
             self.mandel_toggle_window,
         ]
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
+        self.showcase_back_button.set_tab_index(0)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
+        self.showcase_button.set_accessibility(role="button", label="Showcase")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
+        self.showcase_back_button.set_accessibility(role="button", label="Back")
         self.app.configure_parts_accessibility(self, len(base_controls))
 
     def _register_screen_font_roles(self) -> None:
@@ -72,11 +90,25 @@ class GuiDoDemo:
             scene_name="main",
         )
         self.app.register_font_role(
+            self.TASK_PANEL_CONTROL_FONT_ROLE,
+            size=16,
+            file_path="data/fonts/Ubuntu-B.ttf",
+            system_name="arial",
+            scene_name="control_showcase",
+        )
+        self.app.register_font_role(
             self.SCREEN_TITLE_FONT_ROLE,
             size=72,
             file_path="data/fonts/Gimbot.ttf",
             system_name="arial",
             scene_name="main",
+        )
+        self.app.register_font_role(
+            self.SCREEN_TITLE_FONT_ROLE,
+            size=72,
+            file_path="data/fonts/Gimbot.ttf",
+            system_name="arial",
+            scene_name="control_showcase",
         )
 
     # ---------------------------------------------------------------------
@@ -138,10 +170,20 @@ class GuiDoDemo:
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
+        self.showcase_button = self.task_panel.add(
+            ButtonControl(
+                "showcase",
+                self.app.layout.linear(1),
+                "Showcase",
+                lambda: self.app.switch_scene("control_showcase"),
+                style="angle",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
         self.life_toggle_window = self.task_panel.add(
             ToggleControl(
                 "show_life",
-                self.app.layout.linear(1),
+                self.app.layout.linear(2),
                 "Life",
                 "Life",
                 pushed=False,
@@ -153,7 +195,7 @@ class GuiDoDemo:
         self.mandel_toggle_window = self.task_panel.add(
             ToggleControl(
                 "show_mandel",
-                self.app.layout.linear(2),
+                self.app.layout.linear(3),
                 "Mandelbrot",
                 "Mandelbrot",
                 pushed=False,
@@ -163,6 +205,45 @@ class GuiDoDemo:
             )
         )
         self.app.tile_windows()
+
+    def _build_control_showcase_scene(self) -> None:
+        """Build the control showcase scene and provide a way back to main."""
+        self.control_showcase_root = self.app.add(
+            PanelControl(
+                "control_showcase_root",
+                Rect(0, 0, self.screen_rect.width, self.screen_rect.height),
+                draw_background=False,
+            ),
+            scene_name="control_showcase",
+        )
+        self.control_showcase_title = self.control_showcase_root.add(
+            self.app.style_label(
+                LabelControl("control_showcase_title", Rect(24, 24, 900, 96), "control showcase"),
+                size=72,
+                role=self.SCREEN_TITLE_FONT_ROLE,
+            )
+        )
+        self.showcase_task_panel = self.app.add(
+            TaskPanelControl(
+                "control_showcase_task_panel",
+                Rect(0, self.screen_rect.height - 50, self.screen_rect.width, 50),
+                auto_hide=True,
+                hidden_peek_pixels=6,
+                animation_step_px=8,
+                dock_bottom=True,
+            ),
+            scene_name="control_showcase",
+        )
+        self.showcase_back_button = self.showcase_task_panel.add(
+            ButtonControl(
+                "showcase_back",
+                Rect(16, self.screen_rect.height - 40, 110, 30),
+                "Back",
+                lambda: self.app.switch_scene("main"),
+                style="angle",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
 
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""

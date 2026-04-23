@@ -20,9 +20,9 @@ python gui_do_demo.py
 ```
 
 You'll see an interactive demo with two feature windows and a screen backdrop feature:
-- **Bouncing Shapes Backdrop**: Cached random circles and diamonds are composed in screen preamble and animated in screen postamble with edge-bounce motion
-- **Life**: Conway's Game of Life simulation with drag-pan, click-to-toggle cells, and zoom controls
-- **Mandelbrot**: Real-time Mandelbrot renderer with iterative/recursive modes and split-canvas visualization
+- **Main scene**: `Life` and `Mandelbrot` windows, plus animated bouncing-shapes backdrop and a task panel (`Exit`, `Showcase`, `Life`, `Mandelbrot`)
+- **Control showcase scene**: dedicated scene with its own bouncing-shapes backdrop and task panel `Back` button
+- **Scene switching**: `Showcase` switches `main -> control_showcase`; `Back` switches `control_showcase -> main`
 
 Backdrop/pristine defaults:
 - Scene pristine state defaults to a solid black surface per scene, so `set_pristine(...)` is optional.
@@ -33,6 +33,7 @@ Font roles currently defined by the framework and demo:
 - `body`: framework default body/control text, `Ubuntu-B.ttf`, 16 px
 - `title`: framework default window-title text, `Gimbot.ttf`, 14 px, bold
 - `display`: framework default large display text, `Gimbot.ttf`, 72 px, bold
+- `screen.main.title`: screen title text role used by the demo's scene titles, `Gimbot.ttf`, 72 px
 - `part.life_simulation.window_title`: Life part window title bar, `Gimbot.ttf`, 14 px, bold
 - `part.life_simulation.control`: Life part button/toggle text, `Ubuntu-B.ttf`, 16 px
 - `part.life_simulation.annotation`: Life part label text such as the zoom label, `Ubuntu-B.ttf`, 16 px
@@ -40,12 +41,13 @@ Font roles currently defined by the framework and demo:
 - `part.mandelbrot.control`: Mandelbrot part button text, `Ubuntu-B.ttf`, 16 px
 - `part.mandelbrot.caption`: Mandelbrot part help/caption text, `Ubuntu-B.ttf`, 14 px
 - `part.mandelbrot.status`: Mandelbrot part status line text, `Ubuntu-B.ttf`, 16 px
-- `screen.main.task_panel.control`: scene-owned task panel control text for `Quit`, `Life`, and `Mandelbrot`, `Ubuntu-B.ttf`, 16 px
+- `screen.main.task_panel.control`: scene-owned task panel control text for main (`Exit`, `Showcase`, `Life`, `Mandelbrot`) and control-showcase (`Back`), `Ubuntu-B.ttf`, 16 px
 
 Typography ownership model:
 - Parts register and own their own namespaced font roles during build.
 - Scene-level UI that is not part-owned registers screen-owned roles, such as the task panel controls.
 - Controls render from explicit font-role properties instead of relying on runtime font-switch commands.
+- Scene-contained runtime state is isolated: inactive scenes suspend their scene-contained timers, scheduler activity, scene-scoped part updates, and scene-scoped screen lifecycle callbacks until reactivated.
 
 ### Minimal Runnable Example
 
@@ -119,7 +121,7 @@ pip install -r requirements-ci.txt
 
 Run all tests:
 ```bash
-python -m unittest discover tests -v
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 Run specific test suites:
@@ -258,7 +260,7 @@ class LifeSimulationFeature(Part):
     """Conway's Game of Life with interactive pan, zoom, and cell toggling."""
 
     def __init__(self) -> None:
-        super().__init__("life_simulation")  # Unique name for messaging
+        super().__init__("life_simulation", scene_name="main")  # Unique part name + scene ownership
         self.life_cells = set()
         self.life_origin = [0.0, 0.0]
         self.life_cell_size = 12

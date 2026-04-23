@@ -28,12 +28,14 @@ class _StubApp:
         self._set_pristine_calls += 1
         self._last_pristine = source.copy()
 
-    def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
+    def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name=None) -> None:
+        del scene_name
         self._screen_preamble = preamble
         self._screen_event_handler = event_handler
         self._screen_postamble = postamble
 
-    def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None):
+    def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name=None):
+        del scene_name
         previous_preamble = self._screen_preamble
         previous_postamble = self._screen_postamble
 

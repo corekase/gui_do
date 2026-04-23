@@ -18,7 +18,7 @@ class LifeSimulationFeature(Part):
     }
 
     def __init__(self) -> None:
-        super().__init__("life_simulation")
+        super().__init__("life_simulation", scene_name="main")
         self.neighbours = (
             (-1, -1), (-1, 0), (-1, 1),
             (0, -1),           (0, 1),

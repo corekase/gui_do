@@ -127,6 +127,7 @@ class _StubPart(Part):
         self.bind_calls = 0
         self.shutdown_calls = 0
         self.unregister_calls = 0
+        self.update_calls = 0
 
     def on_register(self, host) -> None:
         self.host_seen = host
@@ -142,6 +143,10 @@ class _StubPart(Part):
     def on_unregister(self, host) -> None:
         del host
         self.unregister_calls += 1
+
+    def on_update(self, host) -> None:
+        del host
+        self.update_calls += 1
 
 
 class PartApiTests(GuiApplicationSceneManagementSetup):
@@ -311,6 +316,56 @@ class ScreenLifecycleChainingTests(GuiApplicationSceneManagementSetup):
 
         self.assertTrue(removed)
         self.assertEqual(order, ["base", "layer2"])
+
+    def test_scene_scoped_screen_lifecycle_runs_only_for_active_scene(self) -> None:
+        order = []
+        self.app.create_scene("alt")
+        self.app.chain_screen_lifecycle(preamble=lambda: order.append("default"), scene_name="default")
+        self.app.chain_screen_lifecycle(preamble=lambda: order.append("alt"), scene_name="alt")
+
+        self.app._screen_preamble()
+        self.app.switch_scene("alt")
+        self.app._screen_preamble()
+
+        self.assertEqual(order, ["default", "alt"])
+
+
+class SceneSuspensionTests(GuiApplicationSceneManagementSetup):
+
+    def test_scene_scoped_part_updates_suspend_when_scene_inactive(self) -> None:
+        self.app.create_scene("alt")
+        default_part = _StubPart("default_part")
+        default_part.scene_name = "default"
+        alt_part = _StubPart("alt_part")
+        alt_part.scene_name = "alt"
+        self.app.register_part(default_part, host=self.app)
+        self.app.register_part(alt_part, host=self.app)
+
+        self.app.parts.update_parts()
+        self.app.switch_scene("alt")
+        self.app.parts.update_parts()
+
+        self.assertEqual(default_part.update_calls, 1)
+        self.assertEqual(alt_part.update_calls, 1)
+
+    def test_scene_timers_are_suspended_until_scene_is_active(self) -> None:
+        self.app.create_scene("alt")
+        default_ticks = []
+        alt_ticks = []
+
+        self.app.timers.add_timer("default_tick", 0.1, lambda: default_ticks.append(True))
+        self.app.switch_scene("alt")
+        self.app.timers.add_timer("alt_tick", 0.1, lambda: alt_ticks.append(True))
+
+        self.app.switch_scene("default")
+        self.app.update(0.11)
+        self.assertEqual(len(default_ticks), 1)
+        self.assertEqual(len(alt_ticks), 0)
+
+        self.app.switch_scene("alt")
+        self.app.update(0.11)
+        self.assertEqual(len(default_ticks), 1)
+        self.assertEqual(len(alt_ticks), 1)
 
 
 if __name__ == "__main__":

@@ -80,7 +80,7 @@ class MandelbrotRenderFeature(Part):
     FAILURE_PREVIEW_MAX = 20
 
     def __init__(self) -> None:
-        super().__init__("mandelbrot")
+        super().__init__("mandelbrot", scene_name="main")
         self.mandel_cols = (
             (66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
             (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
