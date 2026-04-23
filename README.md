@@ -244,7 +244,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
     }
 
     def __init__(self, *, circle_count=28, diamond_count=0, seed=None,
-                 scene_name="main", part_name="bouncing_shapes_backdrop"):
+                 scene_name=None, part_name="bouncing_shapes_backdrop"):
         super().__init__(part_name, scene_name=scene_name)
         # Sprites are fully pre-rendered at init time — draw_screen does
         # zero allocation; it only calls surface.blit() per shape.
@@ -338,6 +338,31 @@ for event in scheduler.get_failed_events():
 
 # Clear both finished and failed notifications for the next frame
 scheduler.clear_events()
+
+# Task lifecycle management
+scheduler.remove_tasks("demo")          # cancel one or more tasks by id
+scheduler.remove_all()                  # cancel all pending/running tasks
+
+# Suspend/resume individual tasks (moves them out of the pending queue)
+scheduler.suspend_tasks("task_a", "task_b")
+scheduler.resume_tasks("task_a")
+scheduler.suspend_all()                 # suspend every pending task at once
+suspended_ids = scheduler.read_suspended()   # list of currently suspended task ids
+count = scheduler.read_suspended_len()
+
+# Pause/resume the entire executor (blocks tasks from starting new work)
+scheduler.set_execution_paused(True)
+is_paused = scheduler.is_execution_paused()
+scheduler.set_execution_paused(False)
+
+# Throttle main-thread message delivery per update() call
+scheduler.set_message_dispatch_limit(50)          # max messages per update()
+scheduler.set_message_dispatch_time_budget_ms(4)  # stop dispatching after 4 ms
+scheduler.set_message_dispatch_limit(None)        # remove limit (deliver all)
+
+# Pick a sensible worker count for the current machine
+workers = TaskScheduler.recommended_worker_count()  # static method
+scheduler = TaskScheduler(max_workers=workers)
 ```
 
 ### Value Change Callbacks
@@ -495,6 +520,40 @@ node.set_accessibility(role="button", label="Save File")
 # Invalidation
 node.invalidate()           # mark as dirty for next draw pass
 ```
+
+### Toggle Control
+
+`ToggleControl` is a two-state button that tracks a `pushed` boolean. It fires `on_toggle(pushed: bool)` each time it changes state.
+
+```python
+from gui import ToggleControl
+
+toggle = parent.add(
+    ToggleControl(
+        "toggle_id",
+        rect,
+        text_on="ON",        # label shown when pushed=True
+        text_off="OFF",      # label shown when pushed=False (defaults to text_on)
+        pushed=False,        # initial state
+        on_toggle=lambda pushed: print(f"State: {pushed}"),
+        style="box",         # built-in values: "box" (default)
+        font_role="body",
+    )
+)
+
+# Read / set state directly
+is_on = toggle.pushed
+toggle.pushed = True
+
+# Replace callback at runtime
+toggle.set_on_toggle(lambda pushed: print(pushed))
+toggle.set_on_toggle(None)   # remove callback
+
+# Font role for rendering
+toggle.font_role = "body"    # must be a registered role name
+```
+
+Keyboard: when the toggle has focus, `Space` or `Return` activates it.
 
 ### Label Control
 
@@ -1096,7 +1155,9 @@ app.layout.set_anchor_bounds(screen.get_rect())
 # Anchor-based positioning
 rect = app.layout.anchored(
     size=(200, 100),
-    anchor="top_right",  # top_left, top_center, top_right, center, etc.
+    anchor="top_right",  # top_left, top_center, top_right,
+                         # center_left, center, center_right,
+                         # bottom_left, bottom_center, bottom_right
     margin=(20, 20),  # (right/left margin, top/bottom margin)
     use_rect=True,  # Return Rect instead of (x, y)
 )
@@ -1302,6 +1363,50 @@ toggle.font_role = "body"
 ```
 
 ## Advanced Patterns
+
+### FontManager
+
+`FontManager` manages named font roles (e.g. `"body"`, `"title"`) and caches loaded `pygame.font.Font` objects. Each scene has its own `FontManager`; access the active scene's instance via `app.fonts`.
+
+```python
+from gui import FontManager
+
+fonts = app.fonts   # active scene's FontManager
+
+# Register or update a role
+fonts.register_role(
+    "heading",
+    size=24,
+    file_path="data/fonts/Ubuntu-B.ttf",   # relative to resource root, or absolute
+    system_name="arial",                   # pygame system-font fallback
+    bold=True,
+    italic=False,
+)
+
+# Load a font object from a registered role
+font = fonts.get_font("heading")        # returns pygame.font.Font at the role's size
+font = fonts.get_font("heading", size=32)  # override size for this call only
+
+# Introspect registered roles
+names = fonts.role_names()              # tuple of all registered role names in order
+exists = fonts.has_role("heading")      # True/False
+rev = fonts.revision                    # int; increments whenever a role changes
+```
+
+The `revision` property is used internally so controls can detect font changes and rebuild their cached bitmaps.
+
+### EventManager
+
+`EventManager` converts raw pygame events to canonical `GuiEvent` objects. It is accessible as `app.event_manager`, but in most cases `GuiApplication.process_event(event)` calls it automatically. Use it directly when you need a standalone conversion outside the main loop.
+
+```python
+from gui import EventManager, GuiEvent
+
+manager = EventManager()
+gui_event: GuiEvent = manager.to_gui_event(raw_pygame_event)
+# pointer_pos can be supplied explicitly if not embedded in the event
+gui_event = manager.to_gui_event(raw_event, pointer_pos=(x, y))
+```
 
 ### Event Bus (Pub-Sub)
 
