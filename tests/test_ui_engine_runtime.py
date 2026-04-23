@@ -6,10 +6,7 @@ from gui.loop.ui_engine import UiEngine
 
 class _StubInputState:
     def __init__(self) -> None:
-        self.begin_frame_calls = 0
-
-    def begin_frame(self) -> None:
-        self.begin_frame_calls += 1
+        pass
 
 
 class _StubApp:
@@ -48,7 +45,6 @@ class UiEngineRuntimeTests(unittest.TestCase):
             frames = engine.run()
 
         self.assertEqual(frames, 0)
-        self.assertEqual(app.input_state.begin_frame_calls, 1)
         self.assertEqual(app.update_calls, 0)
         self.assertEqual(app.draw_calls, 0)
         self.assertEqual(app.shutdown_calls, 1)
@@ -62,7 +58,6 @@ class UiEngineRuntimeTests(unittest.TestCase):
 
         self.assertEqual(frames, 3)
         self.assertTrue(app.running)
-        self.assertEqual(app.input_state.begin_frame_calls, 3)
         self.assertEqual(app.update_calls, 3)
         self.assertEqual(app.draw_calls, 3)
         self.assertEqual(app.shutdown_calls, 1)

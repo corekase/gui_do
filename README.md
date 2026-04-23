@@ -357,6 +357,22 @@ slider = SliderControl(
 )
 ```
 
+`VALUE_CHANGE_CALLBACK_MODES` is a tuple of all valid mode strings: `("compat", "reason-required")`. Use it for validation or to enumerate accepted values.
+
+`ensure_reason_callback(callback)` adapts a legacy value-only callback to one that also accepts a `reason` argument, letting you unify old and new callbacks without branching:
+
+```python
+from gui import ensure_reason_callback, ValueChangeReason
+
+def legacy_on_change(value):          # old one-arg callback
+    print(f"Value: {value}")
+
+adapted = ensure_reason_callback(legacy_on_change)
+# adapted is now callable as adapted(value, reason) with reason silently ignored.
+# Pass None to get None back (no-op adapter).
+adapted = ensure_reason_callback(None)  # returns None
+```
+
 ## Feature Example: Part Registration and Runtime Binding
 
 ```python
@@ -474,9 +490,14 @@ slider = parent.add(
 )
 
 # Programmatic updates
-slider.set_value(75)
-slider.adjust_value(5)   # move by delta, clamped
-slider.value             # read current value
+slider.set_value(75)           # set absolute value, clamped; returns True if changed
+slider.adjust_value(5)         # move by delta, clamped; returns True if changed
+slider.value                   # read current value (plain attribute)
+slider.normalized              # read current value as 0.0–1.0 ratio within range
+
+# Replace callback or mode at runtime
+slider.set_on_change_callback(new_callback)   # validated against current mode
+slider.set_on_change_mode("compat")           # returns normalized mode string
 ```
 
 ### Scrollbar Control
@@ -514,9 +535,13 @@ scrollbar = parent.add(
 )
 
 # Programmatic updates
-scrollbar.set_offset(100)      # absolute position, clamped
-scrollbar.adjust_offset(20)    # relative move, clamped
+scrollbar.set_offset(100)      # absolute position, clamped; returns True if changed
+scrollbar.adjust_offset(20)    # relative move, clamped; returns True if changed
 fraction = scrollbar.scroll_fraction  # 0.0–1.0 normalized position
+
+# Replace callback or mode at runtime
+scrollbar.set_on_change_callback(new_callback)   # validated against current mode
+scrollbar.set_on_change_mode("reason-required")  # returns normalized mode string
 ```
 
 ### Button Group Control
@@ -1235,6 +1260,24 @@ This pattern keeps concerns clean:
 - render part: window/canvas state, launch modes, status flow, payload painting
 - logic part(s): viewport math, pixel function, recursive/iterative algorithms
 - scheduler: task lifecycle, progress/failure events, main-thread message delivery
+
+### InvalidationTracker
+
+`InvalidationTracker` is exported for advanced rendering scenarios. The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, but you can force a full redraw from application code:
+
+```python
+from gui import InvalidationTracker
+
+# Force a full redraw on the next frame (e.g., after a theme change)
+app.invalidation.invalidate_all()
+
+# The renderer calls begin_frame() at the start of each draw pass.
+# Returns (full_redraw: bool, regions: list) — regions is always empty in the current implementation.
+full, regions = app.invalidation.begin_frame()
+
+# end_frame() clears the full-redraw flag after the frame is done.
+app.invalidation.end_frame()
+```
 
 ### Scene Transitions
 

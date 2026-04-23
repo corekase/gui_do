@@ -21,7 +21,6 @@ class UiEngine:
             while self.app.running:
                 if max_frames is not None and frame_count >= max_frames:
                     break
-                self.app.input_state.begin_frame()
                 for event in pygame.event.get():
                     self.app.process_event(event)
                     if not self.app.running:

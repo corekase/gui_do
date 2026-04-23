@@ -5,9 +5,8 @@ class Renderer:
     """Renderer that draws one scene with one color theme."""
 
     def render(self, surface, scene, theme, app=None) -> None:
-        full_redraw = True
         if app is not None:
-            full_redraw, _regions = app.invalidation.begin_frame()
+            app.invalidation.begin_frame()
         restored = False
         if app is not None:
             restored = bool(app.restore_pristine(surface=surface))
