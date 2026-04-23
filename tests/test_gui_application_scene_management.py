@@ -154,6 +154,37 @@ class _StubLogicPart(LogicPart):
         super().__init__(name)
 
 
+class _EchoLogicPart(LogicPart):
+    def __init__(self, name: str = "logic") -> None:
+        super().__init__(name)
+        self._counter = 0
+
+    def on_logic_command(self, _host, sender_name: str, command: str, payload: dict) -> None:
+        if command != "echo":
+            return
+        self._counter += 1
+        self.send_message(
+            sender_name,
+            {
+                "topic": "logic.echo",
+                "count": self._counter,
+                "value": payload.get("value"),
+            },
+        )
+
+
+class _LogicConsumerPart(Part):
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self.received_payloads = []
+
+    def on_update(self, _host) -> None:
+        while self.has_messages():
+            payload = self.pop_message()
+            if isinstance(payload, dict):
+                self.received_payloads.append(payload)
+
+
 class PartApiTests(GuiApplicationSceneManagementSetup):
 
     def test_register_and_get_part(self) -> None:
@@ -223,6 +254,48 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
 
         self.assertTrue(removed)
         self.assertIsNone(self.app.get_part_logic("consumer", alias="life"))
+
+    def test_non_owner_consumer_can_use_logic_part_and_receive_reply(self) -> None:
+        consumer = _LogicConsumerPart("consumer")
+        logic = _EchoLogicPart("logic")
+        self.app.register_part(consumer, host=self.app)
+        self.app.register_part(logic, host=self.app)
+        self.app.bind_part_logic("consumer", "logic", alias="shared")
+
+        sent = self.app.send_part_logic_message("consumer", {"command": "echo", "value": "one"}, alias="shared")
+        self.app.parts.update_parts()
+        self.app.parts.update_parts()
+
+        self.assertTrue(sent)
+        self.assertEqual(1, len(consumer.received_payloads))
+        payload = consumer.received_payloads[0]
+        self.assertEqual("logic.echo", payload["topic"])
+        self.assertEqual("one", payload["value"])
+        self.assertEqual(1, payload["count"])
+        self.assertEqual("logic", payload["_from"])
+        self.assertEqual("consumer", payload["_to"])
+
+    def test_multiple_non_owner_consumers_can_share_one_logic_part(self) -> None:
+        logic = _EchoLogicPart("logic")
+        consumer_a = _LogicConsumerPart("consumer_a")
+        consumer_b = _LogicConsumerPart("consumer_b")
+        self.app.register_part(logic, host=self.app)
+        self.app.register_part(consumer_a, host=self.app)
+        self.app.register_part(consumer_b, host=self.app)
+        self.app.bind_part_logic("consumer_a", "logic", alias="shared")
+        self.app.bind_part_logic("consumer_b", "logic", alias="shared")
+
+        self.assertTrue(self.app.send_part_logic_message("consumer_a", {"command": "echo", "value": "a"}, alias="shared"))
+        self.assertTrue(self.app.send_part_logic_message("consumer_b", {"command": "echo", "value": "b"}, alias="shared"))
+        self.app.parts.update_parts()
+        self.app.parts.update_parts()
+
+        self.assertEqual(1, len(consumer_a.received_payloads))
+        self.assertEqual(1, len(consumer_b.received_payloads))
+        self.assertEqual("a", consumer_a.received_payloads[0]["value"])
+        self.assertEqual("b", consumer_b.received_payloads[0]["value"])
+        self.assertEqual("logic", consumer_a.received_payloads[0]["_from"])
+        self.assertEqual("logic", consumer_b.received_payloads[0]["_from"])
 
     def test_app_shutdown_shuts_down_bound_parts_once(self) -> None:
         part = _StubPart("alpha")

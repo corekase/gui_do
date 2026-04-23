@@ -9,7 +9,7 @@ import pygame
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
 from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
-from shared.part_lifecycle import PartManager
+from shared.part_lifecycle import Part, PartManager
 
 
 class _Packet:
@@ -33,6 +33,23 @@ class _LifeCanvasStub:
         if not self._events:
             return None
         return self._events.pop(0)
+
+
+class _LifeLogicObserverPart(Part):
+    def __init__(self, name: str = "life_observer") -> None:
+        super().__init__(name, scene_name="main")
+        self.last_cells = None
+
+    def on_update(self, _host) -> None:
+        while self.has_messages():
+            payload = self.pop_message()
+            if not isinstance(payload, dict):
+                continue
+            if payload.get("topic") != "life_logic" or payload.get("event") != "state":
+                continue
+            life_cells = payload.get("life_cells")
+            if isinstance(life_cells, set):
+                self.last_cells = set(life_cells)
 
 
 class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
@@ -127,6 +144,28 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo._part_manager.update_parts(demo)
 
         self.assertNotEqual(demo._life_feature.life_cells, expected_seed)
+
+    def test_non_life_part_can_bind_and_use_life_logic_part(self) -> None:
+        app = SimpleNamespace(active_scene_name="main")
+        manager = PartManager(app)
+        logic_part = LifeSimulationLogicPart()
+        observer = _LifeLogicObserverPart()
+        manager.register(logic_part, host=SimpleNamespace())
+        manager.register(observer, host=SimpleNamespace())
+
+        observer.bind_logic_part("life_simulation_logic", alias="life")
+        sent_snapshot = observer.send_logic_message({"command": "snapshot"}, alias="life")
+        manager.update_parts(SimpleNamespace())
+
+        self.assertTrue(sent_snapshot)
+        self.assertIsInstance(observer.last_cells, set)
+        self.assertIn((0, 0), observer.last_cells)
+
+        sent_toggle = observer.send_logic_message({"command": "toggle_cell", "cell": (0, 0)}, alias="life")
+        manager.update_parts(SimpleNamespace())
+
+        self.assertTrue(sent_toggle)
+        self.assertNotIn((0, 0), observer.last_cells)
 
 
 if __name__ == "__main__":
