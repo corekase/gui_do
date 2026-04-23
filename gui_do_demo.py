@@ -51,14 +51,14 @@ class GuiDoDemo:
         self.app.bind_parts_runtime(self)
 
         base_controls = [
-            self.quit_button,
+            self.exit_button,
             self.life_toggle_window,
             self.mandel_toggle_window,
         ]
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
 
-        self.quit_button.set_accessibility(role="button", label="Quit")
+        self.exit_button.set_accessibility(role="button", label="Exit")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
         self.app.configure_parts_accessibility(self, len(base_controls))
@@ -157,11 +157,11 @@ class GuiDoDemo:
             else:
                 _tile_visible_windows()
 
-        self.quit_button = self.task_panel.add(
+        self.exit_button = self.task_panel.add(
             ButtonControl(
-                "quit",
+                "exit",
                 self.app.layout.linear(0),
-                "Quit",
+                "Exit",
                 lambda: setattr(self.app, "running", False),
                 style="angle",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
