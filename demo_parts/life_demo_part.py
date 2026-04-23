@@ -126,6 +126,7 @@ class LifeSimulationFeature(Part):
                 preamble=self.life_window_preamble,
                 event_handler=self.life_window_event_handler,
                 postamble=self.life_window_postamble,
+                use_frame_backdrop=True,
             )
         )
         content_rect = self.window.content_rect()

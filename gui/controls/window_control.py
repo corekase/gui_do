@@ -26,6 +26,7 @@ class WindowControl(UiNode):
         event_handler: Optional[Callable[[object], bool]] = None,
         postamble: Optional[Callable[[], None]] = None,
         title_font_role: str = "title",
+        use_frame_backdrop: bool = False,
     ) -> None:
         super().__init__(control_id, rect)
         self.title = title
@@ -42,7 +43,11 @@ class WindowControl(UiNode):
         self._preamble = preamble
         self._event_handler = event_handler
         self._postamble = postamble
+        self._use_frame_backdrop = bool(use_frame_backdrop)
         self._pristine = None
+        if not self._use_frame_backdrop:
+            self._pristine = pygame.Surface((self.rect.width, self.rect.height))
+            self._pristine.fill((0, 0, 0))
         self._pristine_scaled = None
         self._pristine_scaled_size = (0, 0)
         self._frame_visuals = None

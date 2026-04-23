@@ -244,6 +244,7 @@ class MandelbrotRenderFeature(Part):
                 "Mandelbrot",
                 title_font_role=self.font_role("window_title"),
                 event_handler=lambda event: self.window_event_handler(demo, event),
+                use_frame_backdrop=True,
             )
         )
         left = mandel_rect.left

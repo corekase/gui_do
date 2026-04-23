@@ -75,6 +75,46 @@ class WindowChromeStateTests(unittest.TestCase):
         sample = target.get_at((window.rect.left + 6, window.rect.top + 6))
         self.assertEqual(tuple(sample[:3]), (200, 0, 0))
 
+    def test_restore_pristine_defaults_to_black_before_set_pristine(self) -> None:
+        window = WindowControl("win", Rect(20, 20, 200, 120), "W")
+        target = Surface((320, 200), pygame.SRCALPHA)
+
+        restored = window.restore_pristine(target)
+
+        self.assertTrue(restored)
+        sample = target.get_at(window.rect.topleft)
+        self.assertEqual(tuple(sample[:3]), (0, 0, 0))
+
+    def test_set_pristine_overwrites_default_black_pristine(self) -> None:
+        window = WindowControl("win", Rect(20, 20, 200, 120), "W")
+        source = Surface((16, 16))
+        source.fill((12, 34, 56))
+        window.set_pristine(source)
+        target = Surface((320, 200), pygame.SRCALPHA)
+
+        restored = window.restore_pristine(target)
+
+        self.assertTrue(restored)
+        sample = target.get_at(window.rect.topleft)
+        self.assertEqual(tuple(sample[:3]), (12, 34, 56))
+
+    def test_restore_pristine_returns_false_when_frame_backdrop_mode_is_enabled(self) -> None:
+        window = WindowControl("win", Rect(20, 20, 200, 120), "W", use_frame_backdrop=True)
+        target = Surface((320, 200), pygame.SRCALPHA)
+
+        restored = window.restore_pristine(target)
+
+        self.assertFalse(restored)
+
+    def test_draw_uses_frame_backdrop_when_frame_backdrop_mode_is_enabled(self) -> None:
+        window = WindowControl("win", Rect(20, 20, 200, 120), "W", use_frame_backdrop=True)
+        target = Surface((320, 200), pygame.SRCALPHA)
+
+        window.draw(target, _FakeTheme())
+
+        sample = target.get_at((window.rect.left + 40, window.rect.top + 40))
+        self.assertEqual(tuple(sample[:3]), (20, 20, 20))
+
 
 if __name__ == "__main__":
     unittest.main()

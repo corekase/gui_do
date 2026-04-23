@@ -195,6 +195,38 @@ class PartUiTypesTests(GuiApplicationSceneManagementSetup):
         self.assertIs(ui_types.layout_axis_cls, LayoutAxis)
 
 
+class PristineDefaultsTests(GuiApplicationSceneManagementSetup):
+
+    def test_default_scene_has_black_pristine_surface(self) -> None:
+        target = pygame.Surface(self.surface.get_size())
+
+        restored = self.app.restore_pristine(surface=target)
+
+        self.assertTrue(restored)
+        self.assertEqual(target.get_at((0, 0))[:3], (0, 0, 0))
+
+    def test_new_scene_has_black_pristine_surface(self) -> None:
+        self.app.create_scene("alt")
+        self.app.switch_scene("alt")
+        target = pygame.Surface(self.surface.get_size())
+
+        restored = self.app.restore_pristine(surface=target)
+
+        self.assertTrue(restored)
+        self.assertEqual(target.get_at((0, 0))[:3], (0, 0, 0))
+
+    def test_set_pristine_overwrites_default_surface(self) -> None:
+        source = pygame.Surface((4, 4)).convert()
+        source.fill((12, 34, 56))
+        self.app.set_pristine(source)
+        target = pygame.Surface(self.surface.get_size())
+
+        restored = self.app.restore_pristine(surface=target)
+
+        self.assertTrue(restored)
+        self.assertEqual(target.get_at((0, 0))[:3], (12, 34, 56))
+
+
 class ScreenLifecycleChainingTests(GuiApplicationSceneManagementSetup):
 
     def test_chain_screen_lifecycle_calls_base_then_layers(self) -> None:

@@ -59,20 +59,7 @@ class GuiApplication:
         self.actions = ActionManager()
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
-        default_theme = ColorTheme()
-        default_factory = BuiltInGraphicsFactory(default_theme)
-        default_theme.graphics_factory = default_factory
-        default_scene = Scene()
-        default_window_tiling = WindowTilingManager(self, scene=default_scene)
-        self._scenes = {
-            "default": {
-                "scene": default_scene,
-                "scheduler": TaskScheduler(),
-                "theme": default_theme,
-                "graphics_factory": default_factory,
-                "window_tiling": default_window_tiling,
-            }
-        }
+        self._scenes = {"default": self._create_scene_runtime()}
         self._active_scene_name = "default"
         active_runtime = self._scenes[self._active_scene_name]
         self.scene = active_runtime["scene"]
@@ -193,13 +180,15 @@ class GuiApplication:
         theme = ColorTheme()
         factory = BuiltInGraphicsFactory(theme)
         theme.graphics_factory = factory
+        pristine = pygame.Surface(self.surface.get_size())
+        pristine.fill((0, 0, 0))
         return {
             "scene": scene,
             "scheduler": TaskScheduler(),
             "theme": theme,
             "graphics_factory": factory,
             "window_tiling": WindowTilingManager(self, scene=scene),
-            "screen_pristine": None,
+            "screen_pristine": pristine,
             "screen_pristine_scaled": None,
             "screen_pristine_scaled_size": (0, 0),
             "scene_auto_suspended": set(),

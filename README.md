@@ -24,6 +24,11 @@ You'll see an interactive demo with two feature windows and a screen backdrop fe
 - **Life**: Conway's Game of Life simulation with drag-pan, click-to-toggle cells, and zoom controls
 - **Mandelbrot**: Real-time Mandelbrot renderer with iterative/recursive modes and split-canvas visualization
 
+Backdrop/pristine defaults:
+- Scene pristine state defaults to a solid black surface per scene, so `set_pristine(...)` is optional.
+- Calling `GuiApplication.set_pristine(...)` still overwrites that same scene backing surface.
+- `WindowControl` defaults to black pristine backing (`use_frame_backdrop=False`), and can opt into legacy frame visuals with `use_frame_backdrop=True`.
+
 Font roles currently defined by the framework and demo:
 - `body`: framework default body/control text, `Ubuntu-B.ttf`, 16 px
 - `title`: framework default window-title text, `Gimbot.ttf`, 14 px, bold
@@ -126,7 +131,7 @@ python -m unittest tests.test_pointer_capture_contracts -v
 python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_architecture_boundary_docs_contracts -v
 
 # Demo functionality
-python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_portability tests.test_bouncing_circles_demo_part -v
+python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_gui_portability tests.test_bouncing_circles_demo_part -v
 ```
 
 ### Code Style
@@ -145,6 +150,7 @@ These constraints ensure maintainability and prevent common GUI bugs:
 - **Slider/scrollbar never reposition pointer on release**: This prevents cursor drift at the end of drags.
 - **Release ends capture only**: No cursor reconciliation or mutation logic runs during release.
 - **Normalized event dispatch**: All raw pygame events are normalized to canonical `GuiEvent` objects at framework ingress.
+- **Pristine fallback defaults**: Scene/window pristine restore paths are valid without image loading; explicit pristine assignment remains an overwrite operation.
 
 ## Public API
 
@@ -182,6 +188,7 @@ from demo_parts.mandelbrot_demo_part import MandelStatusEvent
 
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
+- Boundary scope for demo entrypoints is `*_demo.py` (excluding `_pre_rebase*_demo.py` archives).
 - Active demo entrypoints should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
 
 ## Architecture Docs
@@ -246,6 +253,7 @@ def build(self, demo) -> None:
             "life_window",
             Rect(100, 100, 600, 400),
             title="Life Simulation",
+            use_frame_backdrop=True,
         )
     )
 
@@ -599,11 +607,13 @@ def on_post_frame(self, host) -> None:
 Individual controls emit events that parts can consume:
 
 ```python
-# Slider value changes
-def _on_slider_change(self, reason, old_value, new_value):
-    print(f"Slider changed from {old_value} to {new_value}")
+# Slider value changes (strict reason-aware mode)
+def _on_slider_change(self, value, reason):
+    print(f"Slider now {value} via {reason.value}")
 
-slider = self.window.add(SliderControl(..., on_change=self._on_slider_change))
+slider = self.window.add(
+    SliderControl(..., on_change=self._on_slider_change, on_change_mode="reason-required")
+)
 
 # Button clicks
 def _on_button_click(self):
@@ -667,7 +677,7 @@ This section documents the type annotations and patterns used throughout gui_do.
 ### Callback Signatures
 
 - **`OnClickCallback`**: `Callable[[GuiEvent], bool]` - returns True to consume event
-- **`OnValueChangeCallback`**: `Callable[[ValueChangeReason, T, T], None]` - (reason, old_value, new_value)
+- **`OnValueChangeCallback`**: `Callable[[T], None] | Callable[[T, ValueChangeReason], None]` - value-only (compat mode) or value+reason callback
 - **`OnVisibilityChangeCallback`**: `Callable[[bool], None]` - (is_visible)
 - **`OnWindowFocusCallback`**: `Callable[[bool], None]` - (is_focused)
 
@@ -884,16 +894,18 @@ is_focused = control.focused
 
 ### 8. Value Change Reasons
 
-When a control's value changes, the callback receives a `ValueChangeReason` to distinguish user interaction from programmatic updates:
+When a control's value changes, the callback can receive a `ValueChangeReason` to distinguish input sources:
 
 ```python
-def on_slider_change(reason, old_value, new_value):
-    if reason == ValueChangeReason.USER:
+def on_slider_change(value, reason):
+    if reason == ValueChangeReason.MOUSE_DRAG:
         print("User dragged slider")
-    elif reason == ValueChangeReason.API:
-        print("Code called slider.set_value()")
-    elif reason == ValueChangeReason.CALLBACK:
-        print("Value changed by a callback")
+    elif reason == ValueChangeReason.KEYBOARD:
+        print("User changed value from keyboard")
+    elif reason == ValueChangeReason.WHEEL:
+        print("User changed value via wheel")
+    elif reason == ValueChangeReason.PROGRAMMATIC:
+        print("Code changed value via API")
 ```
 
 This allows features to react differently based on the change source.
