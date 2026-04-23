@@ -1,5 +1,5 @@
 from pygame import Rect
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from ..core.ui_node import UiNode
 
@@ -21,6 +21,8 @@ class LabelControl(UiNode):
         if align not in self._VALID_ALIGNS:
             raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}")
         self._align = align
+        self._rendered_surface: Optional["pygame.Surface"] = None
+        self._render_key: Optional[tuple] = None
 
     @property
     def text(self) -> str:
@@ -75,7 +77,14 @@ class LabelControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
-        rendered = theme.render_text(self._text, role=self._font_role, size=self._font_size, color=colour, shadow=True)
+        font_revision = theme.fonts.revision if hasattr(theme, "fonts") else 0
+        render_key = (self._text, self._font_role, self._font_size, colour, font_revision)
+        if self._render_key != render_key:
+            self._rendered_surface = theme.render_text(
+                self._text, role=self._font_role, size=self._font_size, color=colour, shadow=True
+            )
+            self._render_key = render_key
+        rendered = self._rendered_surface
         rw, rh = rendered.get_size()
         y = self.rect.top + max(0, (self.rect.height - rh) // 2)
         if self._align == "center":
