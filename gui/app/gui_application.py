@@ -104,6 +104,7 @@ class GuiApplication:
         }
         self._screen_lifecycle_layers = []
         self._screen_lifecycle_next_layer_id = 1
+        self._screen_lifecycle_active = False
         self._init_cursor_system()
         self._sync_scene_scheduler_activity(self._active_scene_name)
 
@@ -259,17 +260,18 @@ class GuiApplication:
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
-        if self._screen_preamble is not None:
+        if self._screen_lifecycle_active and self._screen_preamble is not None:
             self._screen_preamble()
         self.focus_visualizer.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
         runtime["timers"].update(dt_seconds)
         runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
         runtime["scheduler"].update()
+        self.parts.update_screen_parts(dt_seconds)
         runtime["scene"].update(dt_seconds)
         self.invalidation.invalidate_all()
         self.focus.revalidate_focus(runtime["scene"])
-        if self._screen_postamble is not None:
+        if self._screen_lifecycle_active and self._screen_postamble is not None:
             self._screen_postamble()
         self.parts.update_parts()
 
@@ -336,10 +338,13 @@ class GuiApplication:
                 return True
 
         screen_consumed = False
+        if self.parts.handle_screen_event(logical_event):
+            self.invalidation.invalidate_all()
+            return True
         if self.parts.handle_event(logical_event):
             self.invalidation.invalidate_all()
             return True
-        if self._screen_event_handler is not None:
+        if self._screen_lifecycle_active and self._screen_event_handler is not None:
             screen_consumed = bool(self._screen_event_handler(logical_event))
         if screen_consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
@@ -437,6 +442,8 @@ class GuiApplication:
                     callback()
 
             self._screen_postamble = _composed_postamble
+
+        self._screen_lifecycle_active = bool(preambles or handlers or postambles)
 
     def _screen_callback_matches_scene(self, callback_entry) -> bool:
         scene_name = callback_entry.get("scene_name")
@@ -590,6 +597,10 @@ class GuiApplication:
         runtime = self._scenes[self._active_scene_name]
         self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
         self.parts.draw(self.surface, runtime["theme"])
+
+    def draw_screen_parts(self, surface, theme) -> None:
+        """Render dedicated screen parts behind scene controls each frame."""
+        self.parts.draw_screen_parts(surface, theme)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True) -> None:
         self.window_tiling.set_enabled(enabled, relayout=relayout)

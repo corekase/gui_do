@@ -173,6 +173,19 @@ class Part:
         raise AttributeError(f"{self.__class__.__name__}.{hook_name} requires host fields: {missing_csv}")
 
 
+class ScreenPart(Part):
+    """Part subtype for direct screen event/update/draw integration."""
+
+    def handle_screen_event(self, host, event) -> bool:
+        return False
+
+    def on_screen_update(self, host, dt_seconds: float) -> None:
+        return None
+
+    def draw_screen(self, host, surface, theme) -> None:
+        return None
+
+
 class PartManager:
     """Coordinates lifecycle, messaging, and utility registrations for parts."""
 
@@ -272,6 +285,35 @@ class PartManager:
                 continue
             host_obj = self._resolve_host(part.name, host)
             part.draw(host_obj, surface, theme)
+
+    def handle_screen_event(self, event, host=None) -> bool:
+        for part in self._parts.values():
+            if not isinstance(part, ScreenPart):
+                continue
+            if not self._is_part_active_for_scene(part):
+                continue
+            host_obj = self._resolve_host(part.name, host)
+            if part.handle_screen_event(host_obj, event):
+                return True
+        return False
+
+    def update_screen_parts(self, dt_seconds: float, host=None) -> None:
+        for part in self._parts.values():
+            if not isinstance(part, ScreenPart):
+                continue
+            if not self._is_part_active_for_scene(part):
+                continue
+            host_obj = self._resolve_host(part.name, host)
+            part.on_screen_update(host_obj, dt_seconds)
+
+    def draw_screen_parts(self, surface, theme, host=None) -> None:
+        for part in self._parts.values():
+            if not isinstance(part, ScreenPart):
+                continue
+            if not self._is_part_active_for_scene(part):
+                continue
+            host_obj = self._resolve_host(part.name, host)
+            part.draw_screen(host_obj, surface, theme)
 
     def build_parts(self, host) -> None:
         for part in self._parts.values():

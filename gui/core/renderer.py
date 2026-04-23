@@ -16,6 +16,8 @@ class Renderer:
             if theme.background_bitmap is not None:
                 scaled = pygame.transform.smoothscale(theme.background_bitmap, surface.get_size())
                 surface.blit(scaled, (0, 0))
+        if app is not None:
+            app.draw_screen_parts(surface, theme)
         scene.draw(surface, theme)
         # Draw focus visualization (dashed rectangles) after scene, before cursor
         if app is not None:

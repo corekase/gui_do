@@ -9,7 +9,7 @@ from typing import Optional
 
 import pygame
 
-from shared.part_lifecycle import Part
+from shared.part_lifecycle import ScreenPart
 
 
 @dataclass
@@ -25,8 +25,8 @@ class ShapeSpriteState:
     dy: float
 
 
-class BouncingShapesBackdropFeature(Part):
-    """Render and animate cached random circles/diamonds as a moving backdrop."""
+class BouncingShapesBackdropFeature(ScreenPart):
+    """Render and animate cached random circles/diamonds directly on screen."""
 
     HOST_REQUIREMENTS = {
         "bind_runtime": ("app", "screen_rect"),
@@ -48,56 +48,22 @@ class BouncingShapesBackdropFeature(Part):
         self._shapes: list[ShapeSpriteState] = []
         self._scene_name = str(scene_name)
         self._host = None
-        self._base_pristine: Optional[pygame.Surface] = None
-        self._composed_pristine: Optional[pygame.Surface] = None
-        self._lifecycle_dispose = None
         self._create_shapes()
         self._rng.shuffle(self._shapes)
 
     def bind_runtime(self, demo) -> None:
-        """Install composed screen lifecycle callbacks for shape rendering/motion."""
-        if self._lifecycle_dispose is not None:
-            return
+        """Bind host services and initialize random positions using screen bounds."""
         self._host = demo
-        app = demo.app
         width, height = demo.screen_rect.size
-        self._base_pristine = pygame.Surface((width, height)).convert()
-        restored = app.restore_pristine(scene_name=self._scene_name, surface=self._base_pristine)
-        if not restored:
-            self._base_pristine.fill(app.theme.background)
-        self._composed_pristine = self._base_pristine.copy()
         self._randomize_positions(width, height)
 
-        self._lifecycle_dispose = app.chain_screen_lifecycle(
-            preamble=self.screen_preamble,
-            postamble=self.screen_postamble,
-            scene_name=self._scene_name,
-        )
-
-    def on_unregister(self, host) -> None:
-        """Detach lifecycle composition hooks when the part is unregistered."""
-        if self._lifecycle_dispose is None:
+    def on_screen_update(self, host, dt_seconds: float) -> None:
+        """Advance shape positions and bounce off active screen boundaries."""
+        del dt_seconds
+        if host is None or not hasattr(host, "screen_rect"):
             return
-        self._lifecycle_dispose()
-        self._lifecycle_dispose = None
-
-    def screen_preamble(self) -> None:
-        """Compose the current backdrop frame by drawing cached shape sprites."""
-        if self._host is None or self._base_pristine is None or self._composed_pristine is None:
-            return
-        self._composed_pristine.blit(self._base_pristine, (0, 0))
-        for shape in self._shapes:
-            left = int(round(shape.x - shape.radius))
-            top = int(round(shape.y - shape.radius))
-            self._composed_pristine.blit(shape.sprite, (left, top))
-        self._host.app.set_pristine(self._composed_pristine, scene_name=self._scene_name)
-
-    def screen_postamble(self) -> None:
-        """Advance shape positions and bounce off the screen boundaries."""
-        if self._host is None:
-            return
-        width = int(self._host.screen_rect.width)
-        height = int(self._host.screen_rect.height)
+        width = int(host.screen_rect.width)
+        height = int(host.screen_rect.height)
         for shape in self._shapes:
             shape.x += shape.dx
             shape.y += shape.dy
@@ -115,6 +81,14 @@ class BouncingShapesBackdropFeature(Part):
             elif shape.y + shape.radius >= height:
                 shape.y = float(height - shape.radius)
                 shape.dy = -abs(shape.dy)
+
+    def draw_screen(self, host, surface, theme) -> None:
+        """Draw current shape sprites on the already-restored frame surface."""
+        del host, theme
+        for shape in self._shapes:
+            left = int(round(shape.x - shape.radius))
+            top = int(round(shape.y - shape.radius))
+            surface.blit(shape.sprite, (left, top))
 
     def _create_shapes(self) -> None:
         """Create cached circle and diamond sprite/motion states at init time."""
