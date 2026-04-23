@@ -25,10 +25,13 @@ class WindowControl(UiNode):
         preamble: Optional[Callable[[], None]] = None,
         event_handler: Optional[Callable[[object], bool]] = None,
         postamble: Optional[Callable[[], None]] = None,
+        title_font_role: str = "title",
     ) -> None:
         super().__init__(control_id, rect)
         self.title = title
         self.titlebar_height = max(18, int(titlebar_height))
+        self._title_font_role = "title"
+        self.title_font_role = title_font_role
         self.children: List[UiNode] = []
         self._active = False
         self.parent: Optional[UiNode] = None
@@ -49,6 +52,17 @@ class WindowControl(UiNode):
         self._preamble = preamble
         self._event_handler = event_handler
         self._postamble = postamble
+
+    @property
+    def title_font_role(self) -> str:
+        return self._title_font_role
+
+    @title_font_role.setter
+    def title_font_role(self, value: str) -> None:
+        next_role = str(value).strip()
+        if not next_role:
+            raise ValueError("title_font_role must be a non-empty string")
+        self._title_font_role = next_role
 
     def is_window(self) -> bool:
         return True
@@ -257,13 +271,28 @@ class WindowControl(UiNode):
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
+        revision_reader = getattr(factory, "font_revision", None)
+        font_revision = int(revision_reader()) if callable(revision_reader) else 0
         if not self.restore_pristine(surface):
             self._draw_default_window_background(surface, theme, factory)
-        if self._chrome is None or self._chrome_size != (self.rect.width, self.titlebar_height, self.title):
-            self._chrome = factory.build_window_chrome_visuals(self.rect.width, self.titlebar_height, self.title)
+        chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
+        if self._chrome is None or self._chrome_size != chrome_key:
+            try:
+                self._chrome = factory.build_window_chrome_visuals(
+                    self.rect.width,
+                    self.titlebar_height,
+                    self.title,
+                    title_font_role=self.title_font_role,
+                )
+            except TypeError:
+                self._chrome = factory.build_window_chrome_visuals(
+                    self.rect.width,
+                    self.titlebar_height,
+                    self.title,
+                )
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(18, chrome_height)
-            self._chrome_size = (self.rect.width, self.titlebar_height, self.title)
+            self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
         title_bitmap = self._chrome.title_bar_active if self.active else self._chrome.title_bar_inactive
         title_rect = self.title_bar_rect()
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)

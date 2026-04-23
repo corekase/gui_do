@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from math import cos, radians, sin
-from typing import Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import pygame
 from pygame import Rect, Surface
@@ -37,36 +37,16 @@ class BuiltInGraphicsFactory:
 
     def __init__(self, theme) -> None:
         self.theme = theme
-        self._fonts: Dict[str, pygame.font.Font] = {
-            "normal": theme.get_font(16, title=False),
-            "titlebar": theme.get_font(14, title=True),
-            "gui_do": theme.get_font(72, title=True),
-        }
-        self._font_stack = ["normal"]
+        self.fonts = theme.fonts
 
-    def get_current_font_name(self) -> str:
-        return self._font_stack[-1]
+    def font_revision(self) -> int:
+        return self.fonts.revision
 
-    def set_font(self, name: str) -> None:
-        if name not in self._fonts:
-            raise ValueError(f"unknown font name: {name}")
-        self._font_stack.append(name)
-
-    def set_last_font(self) -> None:
-        if len(self._font_stack) > 1:
-            self._font_stack.pop()
-
-    def render_text(self, text: str, colour=None, shadow: bool = False) -> Surface:
+    def render_text(self, text: str, colour=None, shadow: bool = False, role_name: str = "body") -> Surface:
         text_colour = self.theme.text if colour is None else colour
-        font = self._fonts[self._font_stack[-1]]
-        text_bitmap = font.render(text, True, text_colour)
         if not shadow:
-            return text_bitmap
-        shadow_bitmap = font.render(text, True, self.theme.shadow)
-        out = Surface((text_bitmap.get_width() + 1, text_bitmap.get_height() + 1), pygame.SRCALPHA)
-        out.blit(shadow_bitmap, (1, 1))
-        out.blit(text_bitmap, (0, 0))
-        return out
+            return self.fonts.render_text(text, text_colour, role_name=role_name)
+        return self.fonts.render_text_with_shadow(text, text_colour, self.theme.shadow, role_name=role_name)
 
     @staticmethod
     def _centre(bigger: int, smaller: int) -> int:
@@ -127,11 +107,11 @@ class BuiltInGraphicsFactory:
             return visuals.hover
         return visuals.idle
 
-    def _draw_built_in_button_surface(self, text: str, rect: Rect, state: str, highlight: bool = False) -> Surface:
+    def _draw_built_in_button_surface(self, text: str, rect: Rect, state: str, *, font_role: str = "body", highlight: bool = False) -> Surface:
         width, height = rect.size
         surface = Surface((width, height)).convert()
         draw_box_bitmap(surface, state, Rect(0, 0, width, height), BUILT_IN_COLOURS)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=highlight)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=highlight, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2 - 1))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -185,19 +165,19 @@ class BuiltInGraphicsFactory:
         line(surface, border, (width - 1, radius), (width - 1, height - radius), 1)
         self._flood_fill(surface, (width // 2, height // 2), background)
 
-    def _draw_round_button_surface(self, text: str, rect: Rect, state: str, highlight: bool = False) -> Surface:
+    def _draw_round_button_surface(self, text: str, rect: Rect, state: str, *, font_role: str = "body", highlight: bool = False) -> Surface:
         width, height = rect.size
         surface = Surface((width, height), pygame.SRCALPHA).convert_alpha()
         self._draw_rounded_state(surface, state)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2))
         surface.blit(text_bitmap, text_rect)
         return surface
 
-    def _draw_angle_button_surface(self, text: str, rect: Rect, state: str, highlight: bool = False) -> Surface:
+    def _draw_angle_button_surface(self, text: str, rect: Rect, state: str, *, font_role: str = "body", highlight: bool = False) -> Surface:
         width, height = rect.size
         surface = self._draw_angle_state((width, height), state)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -223,8 +203,8 @@ class BuiltInGraphicsFactory:
             complete.blit(smoothscale(glyph, (size, size)), (0, 0))
         return complete
 
-    def _draw_check_style_surface(self, text: str, rect: Rect, state: int, highlight: bool = False) -> Surface:
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True)
+    def _draw_check_style_surface(self, text: str, rect: Rect, state: int, *, font_role: str = "body", highlight: bool = False) -> Surface:
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
         y_offset = self._centre(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
@@ -232,8 +212,8 @@ class BuiltInGraphicsFactory:
         complete.blit(text_bitmap, (text_height + 2, y_offset))
         return complete
 
-    def _draw_radio_style_surface(self, text: str, rect: Rect, col1, col2, highlight: bool = False) -> Surface:
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True)
+    def _draw_radio_style_surface(self, text: str, rect: Rect, col1, col2, *, font_role: str = "body", highlight: bool = False) -> Surface:
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
         y_offset = self._centre(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
@@ -242,40 +222,40 @@ class BuiltInGraphicsFactory:
         complete.blit(text_bitmap, (text_height + 2, y_offset))
         return complete
 
-    def _draw_radio_pushbutton(self, text: str, rect: Rect, col1, col2, highlight: bool = False) -> Surface:
-        return self._draw_radio_style_surface(text, rect, col1, col2, highlight=highlight)
+    def _draw_radio_pushbutton(self, text: str, rect: Rect, col1, col2, *, font_role: str = "body", highlight: bool = False) -> Surface:
+        return self._draw_radio_style_surface(text, rect, col1, col2, font_role=font_role, highlight=highlight)
 
-    def build_interactive_visuals(self, style: str, text: str, rect: Rect) -> InteractiveVisuals:
+    def build_interactive_visuals(self, style: str, text: str, rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
         style_key = (style or "box").lower()
         if style_key == "radio":
-            idle = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["dark"], highlight=False)
-            hover = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], highlight=False)
-            armed = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["highlight"], BUILT_IN_COLOURS["dark"], highlight=True)
+            idle = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=False)
+            hover = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], font_role=font_role, highlight=False)
+            armed = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["highlight"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=True)
         elif style_key == "round":
-            idle = self._draw_round_button_surface(text, rect, "idle", highlight=False)
-            hover = self._draw_round_button_surface(text, rect, "hover", highlight=False)
-            armed = self._draw_round_button_surface(text, rect, "armed", highlight=True)
+            idle = self._draw_round_button_surface(text, rect, "idle", font_role=font_role, highlight=False)
+            hover = self._draw_round_button_surface(text, rect, "hover", font_role=font_role, highlight=False)
+            armed = self._draw_round_button_surface(text, rect, "armed", font_role=font_role, highlight=True)
         elif style_key == "angle":
-            idle = self._draw_angle_button_surface(text, rect, "idle", highlight=False)
-            hover = self._draw_angle_button_surface(text, rect, "hover", highlight=False)
-            armed = self._draw_angle_button_surface(text, rect, "armed", highlight=True)
+            idle = self._draw_angle_button_surface(text, rect, "idle", font_role=font_role, highlight=False)
+            hover = self._draw_angle_button_surface(text, rect, "hover", font_role=font_role, highlight=False)
+            armed = self._draw_angle_button_surface(text, rect, "armed", font_role=font_role, highlight=True)
         elif style_key == "check":
-            idle = self._draw_check_style_surface(text, rect, 0, highlight=False)
-            hover = self._draw_check_style_surface(text, rect, 1, highlight=False)
-            armed = self._draw_check_style_surface(text, rect, 2, highlight=True)
+            idle = self._draw_check_style_surface(text, rect, 0, font_role=font_role, highlight=False)
+            hover = self._draw_check_style_surface(text, rect, 1, font_role=font_role, highlight=False)
+            armed = self._draw_check_style_surface(text, rect, 2, font_role=font_role, highlight=True)
         else:
-            idle = self._draw_built_in_button_surface(text, rect, "idle", highlight=False)
-            hover = self._draw_built_in_button_surface(text, rect, "hover", highlight=False)
-            armed = self._draw_built_in_button_surface(text, rect, "armed", highlight=True)
+            idle = self._draw_built_in_button_surface(text, rect, "idle", font_role=font_role, highlight=False)
+            hover = self._draw_built_in_button_surface(text, rect, "hover", font_role=font_role, highlight=False)
+            armed = self._draw_built_in_button_surface(text, rect, "armed", font_role=font_role, highlight=True)
 
         disabled = self.build_disabled_bitmap(idle)
         hidden = self.build_hidden_bitmap((idle.get_width(), idle.get_height()))
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, hidden=hidden, hit_rect=Rect(rect))
 
-    def build_toggle_visuals(self, style: str, pushed_text: str, raised_text: Optional[str], rect: Rect) -> InteractiveVisuals:
+    def build_toggle_visuals(self, style: str, pushed_text: str, raised_text: Optional[str], rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
         raised = pushed_text if raised_text is None else raised_text
-        idle_set = self.build_interactive_visuals(style, raised, rect)
-        armed_set = self.build_interactive_visuals(style, pushed_text, rect)
+        idle_set = self.build_interactive_visuals(style, raised, rect, font_role=font_role)
+        armed_set = self.build_interactive_visuals(style, pushed_text, rect, font_role=font_role)
         return InteractiveVisuals(
             idle=idle_set.idle,
             hover=idle_set.hover,
@@ -326,8 +306,8 @@ class BuiltInGraphicsFactory:
         draw_rect(surface, BUILT_IN_COLOURS["none"], panel2, 1)
         return surface
 
-    def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str) -> WindowChromeVisuals:
-        title_font = self._fonts["titlebar"]
+    def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str, *, title_font_role: str = "title") -> WindowChromeVisuals:
+        title_font = self.fonts.get_font(title_font_role)
         font_based_height = max(18, title_font.get_linesize() + 8)
         chrome_height = max(2, font_based_height)
 
@@ -353,14 +333,8 @@ class BuiltInGraphicsFactory:
             Rect(0, 0, width, chrome_height),
         )
 
-        old_font = self.get_current_font_name()
-        self.set_font("titlebar")
-        try:
-            inactive_text = self.render_text(title, colour=self.theme.text, shadow=True)
-            active_text = self.render_text(title, colour=self.theme.highlight, shadow=True)
-        finally:
-            while self.get_current_font_name() != old_font:
-                self.set_last_font()
+        inactive_text = self.render_text(title, colour=self.theme.text, shadow=True, role_name=title_font_role)
+        active_text = self.render_text(title, colour=self.theme.highlight, shadow=True, role_name=title_font_role)
 
         inactive_y = self._centre(chrome_height, inactive_text.get_rect().height)
         active_y = self._centre(chrome_height, active_text.get_rect().height)

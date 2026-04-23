@@ -10,6 +10,7 @@ from gui import EventBus
 from gui import EventPhase
 from gui import EventType
 from gui import FocusManager
+from gui import FontManager
 from gui import GuiEvent
 from gui import InvalidationTracker
 from gui import ensure_reason_callback
@@ -29,6 +30,7 @@ class PublicApiExportsTests(unittest.TestCase):
         self.assertTrue(callable(ActionManager))
         self.assertTrue(callable(EventBus))
         self.assertTrue(callable(FocusManager))
+        self.assertTrue(callable(FontManager))
         self.assertTrue(callable(InvalidationTracker))
         self.assertTrue(callable(ObservableValue))
         self.assertTrue(callable(PresentationModel))

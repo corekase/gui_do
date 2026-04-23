@@ -159,6 +159,15 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.app.register_part_runnable("worker", "sum", lambda x, y: x + y)
         self.assertEqual(7, self.app.run_part_runnable("worker", "sum", 3, 4))
 
+    def test_part_font_role_helper_registers_namespaced_role(self) -> None:
+        part = _StubPart("alpha")
+
+        role_name = part.register_font_role(self.app, "window_title", size=18)
+
+        self.assertEqual("part.alpha.window_title", role_name)
+        self.assertEqual("part.alpha.window_title", part.font_role("window_title"))
+        self.assertTrue(self.app.theme.fonts.has_role("part.alpha.window_title"))
+
     def test_app_run_delegates_to_ui_engine(self) -> None:
         with patch("gui.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
             frames = self.app.run(target_fps=75, max_frames=3)

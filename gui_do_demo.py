@@ -15,6 +15,8 @@ from gui import (
 class GuiDoDemo:
     """Interactive demo app showcasing gui_do controls and scene workflows."""
 
+    TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
+
     def __init__(self) -> None:
         """Initialize pygame, app services, scene state, and demo UI."""
         pygame.init()
@@ -79,11 +81,22 @@ class GuiDoDemo:
             part.demo = self  # Ensure part has access to demo for callbacks
         return part
 
+    def _register_screen_font_roles(self) -> None:
+        """Register screen-owned font roles for non-part scene composition."""
+        self.app.register_font_role(
+            self.TASK_PANEL_CONTROL_FONT_ROLE,
+            size=16,
+            file_path="data/fonts/Ubuntu-B.ttf",
+            system_name="arial",
+            scene_name="main",
+        )
+
     # ---------------------------------------------------------------------
     # Scene construction and widget composition.
     # ---------------------------------------------------------------------
     def _build_main_scene(self) -> None:
         """Build root scene container, windows, and bottom task panel controls."""
+        self._register_screen_font_roles()
         self.root = self.app.add(
             PanelControl("main_root", Rect(0, 0, self.screen_rect.width, self.screen_rect.height), draw_background=False),
             scene_name="main",
@@ -141,6 +154,7 @@ class GuiDoDemo:
                 "Quit",
                 lambda: setattr(self.app, "running", False),
                 style="angle",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         self.life_toggle_window = self.task_panel.add(
@@ -152,6 +166,7 @@ class GuiDoDemo:
                 pushed=True,
                 on_toggle=_on_life_toggle,
                 style="round",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         self.mandel_toggle_window = self.task_panel.add(
@@ -163,6 +178,7 @@ class GuiDoDemo:
                 pushed=True,
                 on_toggle=_on_mandel_toggle,
                 style="round",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         _tile_visible_windows()

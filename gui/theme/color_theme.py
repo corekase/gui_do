@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Tuple
+
+from ..graphics.built_in_definitions import BUILT_IN_COLOURS
+from ..core.font_manager import FontManager
 
 import pygame
 
-from ..graphics.built_in_definitions import BUILT_IN_COLOURS
-
 
 class ColorTheme:
-    """Classic gui_do-inspired palette, fonts, and text helper."""
+    """Classic gui_do-inspired palette and text services."""
 
     def __init__(self) -> None:
         # Literal palette from the built-in widget base.
@@ -29,9 +29,10 @@ class ColorTheme:
         self.button = self.medium
         self.button_hover = self.light
 
-        self._font_path_main = self._resource_path("data", "fonts", "Ubuntu-B.ttf")
-        self._font_path_title = self._resource_path("data", "fonts", "Gimbot.ttf")
-        self._font_cache: Dict[Tuple[str, int], pygame.font.Font] = {}
+        self.fonts = FontManager(resource_root=Path(__file__).resolve().parents[2])
+        self.fonts.register_role("body", file_path="data/fonts/Ubuntu-B.ttf", size=16, system_name="arial")
+        self.fonts.register_role("title", file_path="data/fonts/Gimbot.ttf", size=14, system_name="arial", bold=True)
+        self.fonts.register_role("display", file_path="data/fonts/Gimbot.ttf", size=72, system_name="arial", bold=True)
         self._background_bitmap = self._load_background_bitmap()
 
     def _resource_path(self, *parts: str) -> str:
@@ -49,27 +50,31 @@ class ColorTheme:
     def background_bitmap(self):
         return self._background_bitmap
 
-    def get_font(self, size: int, title: bool = False) -> pygame.font.Font:
-        key = ("title" if title else "main", int(size))
-        cached = self._font_cache.get(key)
-        if cached is not None:
-            return cached
-        path = self._font_path_title if title else self._font_path_main
-        try:
-            font = pygame.font.Font(path, int(size))
-        except Exception:
-            font = pygame.font.SysFont("arial", int(size), bold=title)
-        self._font_cache[key] = font
-        return font
-
-    def render_text(self, text: str, size: int = 16, title: bool = False, color=None, shadow: bool = True):
+    def render_text(self, text: str, *, role: str = "body", size: int | None = None, color=None, shadow: bool = True):
         text_color = self.text if color is None else color
-        font = self.get_font(size=size, title=title)
         if not shadow:
-            return font.render(text, True, text_color)
-        text_bitmap = font.render(text, True, text_color)
-        shadow_bitmap = font.render(text, True, self.shadow)
-        out = pygame.Surface((text_bitmap.get_width() + 1, text_bitmap.get_height() + 1), pygame.SRCALPHA)
-        out.blit(shadow_bitmap, (1, 1))
-        out.blit(text_bitmap, (0, 0))
-        return out
+            return self.fonts.render_text(text, text_color, role_name=role, size=size)
+        return self.fonts.render_text_with_shadow(text, text_color, self.shadow, role_name=role, size=size)
+
+    def register_font_role(
+        self,
+        role_name: str,
+        *,
+        size: int,
+        file_path=None,
+        system_name=None,
+        bold: bool = False,
+        italic: bool = False,
+    ) -> None:
+        """Create or update which typeface and size a named role uses."""
+        self.fonts.register_role(
+            role_name,
+            size=size,
+            file_path=file_path,
+            system_name=system_name,
+            bold=bold,
+            italic=italic,
+        )
+
+    def font_roles(self) -> tuple[str, ...]:
+        return self.fonts.role_names()

@@ -23,7 +23,25 @@ You'll see an interactive demo with two feature windows:
 - **Life**: Conway's Game of Life simulation with drag-pan, click-to-toggle cells, and zoom controls
 - **Mandelbrot**: Real-time Mandelbrot renderer with iterative/recursive modes and split-canvas visualization
 
-### Your First GUI App
+Font roles currently defined by the framework and demo:
+- `body`: framework default body/control text, `Ubuntu-B.ttf`, 16 px
+- `title`: framework default window-title text, `Gimbot.ttf`, 14 px, bold
+- `display`: framework default large display text, `Gimbot.ttf`, 72 px, bold
+- `part.life_simulation.window_title`: Life part window title bar, `Gimbot.ttf`, 14 px, bold
+- `part.life_simulation.control`: Life part button/toggle text, `Ubuntu-B.ttf`, 16 px
+- `part.life_simulation.annotation`: Life part label text such as the zoom label, `Ubuntu-B.ttf`, 16 px
+- `part.mandelbrot.window_title`: Mandelbrot part window title bar, `Gimbot.ttf`, 14 px, bold
+- `part.mandelbrot.control`: Mandelbrot part button text, `Ubuntu-B.ttf`, 16 px
+- `part.mandelbrot.caption`: Mandelbrot part help/caption text, `Ubuntu-B.ttf`, 14 px
+- `part.mandelbrot.status`: Mandelbrot part status line text, `Ubuntu-B.ttf`, 16 px
+- `screen.main.task_panel.control`: scene-owned task panel control text for `Quit`, `Life`, and `Mandelbrot`, `Ubuntu-B.ttf`, 16 px
+
+Typography ownership model:
+- Parts register and own their own namespaced font roles during build.
+- Scene-level UI that is not part-owned registers screen-owned roles, such as the task panel controls.
+- Controls render from explicit font-role properties instead of relying on runtime font-switch commands.
+
+### Minimal Runnable Example
 
 ```python
 import pygame
@@ -47,38 +65,24 @@ root = app.add(
     scene_name="main",
 )
 
-label = app.add(
+label = root.add(
     LabelControl("label", Rect(10, 10, 300, 30), text="Hello, gui_do!"),
-    scene_name="main",
-    parent="root",
 )
+app.style_label(label, size=18, role="body")
 
-def on_quit(_event):
-    app.running = False
+def on_quit():
+    app.quit()
 
-button = app.add(
+button = root.add(
     ButtonControl("quit", Rect(10, 50, 100, 30), text="Quit"),
-    scene_name="main",
-    parent="root",
 )
-button.on_click(on_quit)
+button.set_on_click(on_quit)
 
-app.actions.register_action("exit", on_quit)
+app.actions.register_action("exit", lambda _event: (app.quit() or True))
 app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
 
-# Run the app
-clock = pygame.time.Clock()
-while app.running:
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            app.running = False
-        app.process_event(event)
-
-    app.update()
-    app.draw()
-    pygame.display.flip()
-    clock.tick(60)
+# Run the app through gui_do-managed lifecycle
+app.run(target_fps=60)
 
 pygame.quit()
 ```
@@ -162,6 +166,7 @@ from gui import (
     WindowControl,
     LayoutAxis,
     LayoutManager,
+    FontManager,
     TaskEvent,
     TaskScheduler,
     Timers,
@@ -235,50 +240,44 @@ def build(self, demo) -> None:
     ui = demo.app.read_part_ui_types()
 
     # Create the window that will contain Life controls
-    self.window = demo.app.add(
+    self.window = demo.root.add(
         ui.window_control_cls(
             "life_window",
             Rect(100, 100, 600, 400),
             title="Life Simulation",
-        ),
-        scene_name="main",
+        )
     )
 
     # Create the canvas for rendering the game grid
-    self.canvas = demo.app.add(
+    self.canvas = self.window.add(
         ui.canvas_control_cls(
             "life_canvas",
             Rect(0, 0, 500, 350),
-        ),
-        scene_name="main",
-        parent="life_window",
+        )
     )
 
     # Add control buttons
-    self.reset_button = demo.app.add(
+    self.reset_button = self.window.add(
         ui.button_control_cls(
             "life_reset",
             Rect(10, 360, 100, 30),
             text="Reset",
-        ),
-        scene_name="main",
-        parent="life_window",
+            on_click=self._on_reset_clicked,
+        )
     )
-    self.reset_button.on_click(self._on_reset_clicked)
 
     # Add a slider for zoom control
-    self.zoom_slider = demo.app.add(
+    self.zoom_slider = self.window.add(
         ui.slider_control_cls(
             "life_zoom",
             Rect(120, 360, 200, 30),
-            min_value=1,
-            max_value=20,
+            LayoutAxis.HORIZONTAL,
+            1,
+            20,
             value=5,
-        ),
-        scene_name="main",
-        parent="life_window",
+            on_change=self._on_zoom_slider_changed,
+        )
     )
-    self.zoom_slider.on_value_change(self._on_zoom_slider_changed)
 ```
 
 ### Step 3: Bind Runtime Services
@@ -418,23 +417,15 @@ The gui_do framework uses a strict part-based lifecycle to manage feature compos
 
 ### GUI Application Lifecycle
 
-The main application loop follows this flow:
+The managed `app.run()` loop performs this flow internally:
 
 ```python
-while app.running:
-    # 1. Process pygame events
-    for event in pygame.event.get():
-        app.process_event(event)  # Normalize to GuiEvent, route to controls
-
-    # 2. Update all parts and controls
-    app.update()  # Calls on_update() on all parts after processing input and controls
-
-    # 3. Draw the scene
-    app.draw()  # Renders all controls, then calls draw() on all parts
-
-    pygame.display.flip()
-    clock.tick(60)
+# After scene construction and runtime binding:
+app.run(target_fps=60)
 ```
+
+Internally, the managed loop processes pygame events, updates controls and parts,
+draws the active scene, and presents the frame.
 
 ### Part Lifecycle Hooks
 
@@ -449,15 +440,13 @@ Every `Part` subclass can implement these lifecycle methods (all optional):
 **Signature**:
 ```python
 def build(self, host) -> None:
-    # Create controls
-    self.button = host.app.add(ButtonControl(...), scene_name="main", parent="window")
-    # Wire handlers
-    self.button.on_click(self._on_button_clicked)
+    # Create controls under an existing container/window
+    self.button = self.window.add(ButtonControl(..., on_click=self._on_button_clicked))
 ```
 
 **Common patterns**:
-- Create all UI controls via `host.app.add(...)`
-- Register event handlers using `control.on_click()`, `control.on_value_change()`, etc.
+- Create root scene nodes via `host.app.add(...)`, then attach child controls with `container.add(...)`
+- Pass callbacks in constructors when available, or use current setters such as `set_on_click()`
 - Store references to controls as instance attributes for later access
 
 #### `bind_runtime(host)`
@@ -578,15 +567,13 @@ Individual controls emit events that parts can consume:
 def _on_slider_change(self, reason, old_value, new_value):
     print(f"Slider changed from {old_value} to {new_value}")
 
-slider = host.app.add(SliderControl(...), parent=self.window)
-slider.on_value_change(self._on_slider_change)
+slider = self.window.add(SliderControl(..., on_change=self._on_slider_change))
 
 # Button clicks
-def _on_button_click(self, event):
+def _on_button_click(self):
     print("Button clicked")
 
-button = host.app.add(ButtonControl(...), parent=self.window)
-button.on_click(self._on_button_click)
+button = self.window.add(ButtonControl(..., on_click=self._on_button_click))
 
 # Canvas events
 while self.canvas.has_events():
@@ -812,7 +799,7 @@ Gui_do supports multiple scenes and window tiling.
 
 **Tiling**: Call `app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True)` to enable automatic window arrangement.
 
-**Window Focus**: Only one window is "active" at a time (receives keyboard input). Use `app.focus_manager.request_focus(window)` to change which window is active.
+**Window Focus**: Only one window is "active" at a time (receives keyboard input). Use `app.focus.request_focus(window)` to change which window is active.
 
 ### 6. Layout Management
 
@@ -839,7 +826,7 @@ app.layout.linear(buttons, axis=LayoutAxis.HORIZONTAL, gap=5)
 
 Every control goes through these phases:
 
-1. **Creation**: `app.add(ControlClass(...), parent=parent_name)`
+1. **Creation**: Create root scene nodes with `app.add(...)`, then attach child controls with `container.add(...)`
 2. **Attachment**: Control is added to scene graph
 3. **Event Input**: Control receives events during `app.process_event()`
 4. **Update**: Control's internal state updates during `app.update()`
@@ -855,8 +842,8 @@ control.visible = True   # Show
 
 **Focus**: Only the focused control (or its active window) receives keyboard input:
 ```python
-app.focus_manager.request_focus(control)
-is_focused = control.is_focused()
+app.focus.request_focus(control)
+is_focused = control.focused
 ```
 
 ### 8. Value Change Reasons

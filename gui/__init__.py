@@ -36,6 +36,7 @@ from .core.action_manager import ActionManager
 from .core.event_manager import EventManager
 from .core.event_bus import EventBus
 from .core.focus_manager import FocusManager
+from .core.font_manager import FontManager
 from .core.gui_event import EventPhase, EventType, GuiEvent
 from .core.value_change_callback import VALUE_CHANGE_CALLBACK_MODES
 from .core.value_change_callback import ValueChangeCallback
@@ -74,6 +75,7 @@ __all__ = [
     "EventManager",
     "EventBus",
     "FocusManager",
+    "FontManager",
     "EventPhase",
     "EventType",
     "GuiEvent",

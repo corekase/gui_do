@@ -24,6 +24,7 @@ class ToggleControl(UiNode):
         pushed: bool = False,
         on_toggle: Optional[Callable[[bool], None]] = None,
         style: str = "box",
+        font_role: str = "body",
     ) -> None:
         super().__init__(control_id, rect)
         self.text_on = text_on
@@ -31,9 +32,22 @@ class ToggleControl(UiNode):
         self.pushed = bool(pushed)
         self.on_toggle = on_toggle
         self.style = style
+        self._font_role = "body"
+        self.font_role = font_role
         self.hovered = False
         self._visuals = None
         self._visual_key = None
+
+    @property
+    def font_role(self) -> str:
+        return self._font_role
+
+    @font_role.setter
+    def font_role(self, value: str) -> None:
+        next_role = str(value).strip()
+        if not next_role:
+            raise ValueError("font_role must be a non-empty string")
+        self._font_role = next_role
 
     def _commit_toggle(self) -> None:
         self.pushed = not self.pushed
@@ -77,9 +91,11 @@ class ToggleControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
-        visual_key = (self.style, self.text_on, self.text_off, self.rect.width, self.rect.height)
+        revision_reader = getattr(factory, "font_revision", None)
+        font_revision = int(revision_reader()) if callable(revision_reader) else 0
+        visual_key = (self.style, self.text_on, self.text_off, self.font_role, self.rect.width, self.rect.height, font_revision)
         if self._visuals is None or self._visual_key != visual_key:
-            self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect)
+            self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect, font_role=self.font_role)
             self._visual_key = visual_key
         selected = factory.resolve_visual_state(
             self._visuals,

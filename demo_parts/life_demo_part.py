@@ -37,6 +37,15 @@ class LifeSimulationFeature(Part):
     def build(self, demo) -> None:
         """Build the Life feature UI using the application's configured UI types."""
         ui = demo.app.read_part_ui_types()
+        self.register_font_roles(
+            demo,
+            {
+                "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
+                "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "annotation": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+            },
+            scene_name="main",
+        )
         self.build_window(
             demo,
             window_control_cls=ui.window_control_cls,
@@ -113,6 +122,7 @@ class LifeSimulationFeature(Part):
                 "life_window",
                 life_rect,
                 "Conway's Game of Life",
+                title_font_role=self.font_role("window_title"),
                 preamble=self.life_window_preamble,
                 event_handler=self.life_window_event_handler,
                 postamble=self.life_window_postamble,
@@ -146,7 +156,7 @@ class LifeSimulationFeature(Part):
         zoom_label_slot = demo.app.layout.next_linear()
 
         self.reset_button = self.window.add(
-            button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle")
+            button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle", font_role=self.font_role("control"))
         )
         self.toggle = self.window.add(
             toggle_control_cls(
@@ -156,6 +166,7 @@ class LifeSimulationFeature(Part):
                 "Start",
                 pushed=False,
                 style="round",
+                font_role=self.font_role("control"),
             )
         )
 
@@ -175,7 +186,8 @@ class LifeSimulationFeature(Part):
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         zoom_label_rect = Rect(zoom_label_slot.left + 24, controls_y + 6, 76, 20)
         self.zoom_label = demo.app.style_label(
-            self.window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12"))
+            self.window.add(label_control_cls("life_zoom_label", zoom_label_rect, "Zoom 12")),
+            role=self.font_role("annotation"),
         )
         self.life_reset()
         self.window.visible = False

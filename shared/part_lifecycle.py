@@ -17,6 +17,7 @@ class Part:
         self.name = normalized
         self._part_manager = None
         self._message_queue: Deque[Dict[str, Any]] = deque()
+        self._font_roles: Dict[str, str] = {}
 
     def on_register(self, host) -> None:
         return None
@@ -64,6 +65,74 @@ class Part:
 
     def clear_messages(self) -> None:
         self._message_queue.clear()
+
+    def register_font_role(
+        self,
+        host,
+        role_name: str,
+        *,
+        size: int,
+        file_path: Optional[str] = None,
+        system_name: Optional[str] = None,
+        bold: bool = False,
+        italic: bool = False,
+        scene_name: Optional[str] = None,
+    ) -> str:
+        """Register one namespaced font role owned by this part."""
+        local_name = self._normalize_font_role_name(role_name)
+        app = self._resolve_app(host)
+        qualified_name = f"part.{self.name}.{local_name}"
+        app.register_font_role(
+            qualified_name,
+            size=size,
+            file_path=file_path,
+            system_name=system_name,
+            bold=bold,
+            italic=italic,
+            scene_name=scene_name,
+        )
+        self._font_roles[local_name] = qualified_name
+        return qualified_name
+
+    def register_font_roles(self, host, roles: Dict[str, Dict[str, Any]], *, scene_name: Optional[str] = None) -> Dict[str, str]:
+        """Register multiple namespaced font roles owned by this part."""
+        registered: Dict[str, str] = {}
+        for role_name, spec in dict(roles).items():
+            if not isinstance(spec, dict):
+                raise TypeError("font role definitions must be dictionaries")
+            registered[role_name] = self.register_font_role(
+                host,
+                role_name,
+                size=spec["size"],
+                file_path=spec.get("file_path"),
+                system_name=spec.get("system_name"),
+                bold=bool(spec.get("bold", False)),
+                italic=bool(spec.get("italic", False)),
+                scene_name=scene_name,
+            )
+        return registered
+
+    def font_role(self, role_name: str) -> str:
+        """Resolve a local part font role name to its registered global role."""
+        local_name = self._normalize_font_role_name(role_name)
+        qualified_name = self._font_roles.get(local_name)
+        if qualified_name is None:
+            raise KeyError(f"unknown part font role: {self.name}.{local_name}")
+        return qualified_name
+
+    @staticmethod
+    def _normalize_font_role_name(role_name: str) -> str:
+        normalized = str(role_name).strip()
+        if not normalized:
+            raise ValueError("font role name must be a non-empty string")
+        return normalized
+
+    @staticmethod
+    def _resolve_app(host):
+        app = getattr(host, "app", host)
+        if not hasattr(app, "register_font_role"):
+            raise AttributeError("host does not expose an application with register_font_role()")
+        return app
 
 
 class PartManager:

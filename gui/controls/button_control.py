@@ -16,15 +16,36 @@ if TYPE_CHECKING:
 class ButtonControl(UiNode):
     """Clickable push button control."""
 
-    def __init__(self, control_id: str, rect: Rect, text: str, on_click: Optional[Callable[[], None]] = None, style: str = "box") -> None:
+    def __init__(
+        self,
+        control_id: str,
+        rect: Rect,
+        text: str,
+        on_click: Optional[Callable[[], None]] = None,
+        style: str = "box",
+        font_role: str = "body",
+    ) -> None:
         super().__init__(control_id, rect)
         self.text = text
         self.on_click = on_click
         self.style = style
+        self._font_role = "body"
+        self.font_role = font_role
         self.hovered = False
         self.pressed = False
         self._visuals = None
         self._visual_key = None
+
+    @property
+    def font_role(self) -> str:
+        return self._font_role
+
+    @font_role.setter
+    def font_role(self, value: str) -> None:
+        next_role = str(value).strip()
+        if not next_role:
+            raise ValueError("font_role must be a non-empty string")
+        self._font_role = next_role
 
     def _invoke_click(self) -> None:
         if self.on_click is not None:
@@ -79,9 +100,11 @@ class ButtonControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
-        visual_key = (self.style, self.text, self.rect.width, self.rect.height)
+        revision_reader = getattr(factory, "font_revision", None)
+        font_revision = int(revision_reader()) if callable(revision_reader) else 0
+        visual_key = (self.style, self.text, self.font_role, self.rect.width, self.rect.height, font_revision)
         if self._visuals is None or self._visual_key != visual_key:
-            self._visuals = factory.build_interactive_visuals(self.style, self.text, self.rect)
+            self._visuals = factory.build_interactive_visuals(self.style, self.text, self.rect, font_role=self.font_role)
             self._visual_key = visual_key
         selected = factory.resolve_visual_state(
             self._visuals,

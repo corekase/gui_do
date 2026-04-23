@@ -15,11 +15,11 @@ class _FakeTheme:
         self.medium = (80, 90, 100)
         self.last_call = None
 
-    def render_text(self, text: str, size: int = 16, title: bool = False, color=None, shadow: bool = True):
+    def render_text(self, text: str, *, role: str = "body", size: int = 16, color=None, shadow: bool = True):
         self.last_call = {
             "text": text,
+            "role": role,
             "size": size,
-            "title": title,
             "color": color,
             "shadow": shadow,
         }
@@ -36,10 +36,10 @@ class LabelControlRuntimeTests(unittest.TestCase):
     def tearDown(self) -> None:
         pygame.quit()
 
-    def test_draw_uses_text_size_and_title_flags(self) -> None:
+    def test_draw_uses_font_role_and_font_size(self) -> None:
         label = LabelControl("lbl", Rect(10, 10, 100, 20), "Hello")
-        label.text_size = 24
-        label.title = True
+        label.font_size = 24
+        label.font_role = "title"
         theme = _FakeTheme()
         target = Surface((120, 80), pygame.SRCALPHA)
 
@@ -47,8 +47,8 @@ class LabelControlRuntimeTests(unittest.TestCase):
 
         self.assertIsNotNone(theme.last_call)
         self.assertEqual(theme.last_call["text"], "Hello")
+        self.assertEqual(theme.last_call["role"], "title")
         self.assertEqual(theme.last_call["size"], 24)
-        self.assertTrue(theme.last_call["title"])
         self.assertEqual(theme.last_call["color"], theme.text)
 
     def test_disabled_label_uses_medium_colour(self) -> None:
@@ -70,11 +70,11 @@ class LabelControlRuntimeTests(unittest.TestCase):
         self.assertTrue(label.dirty)
 
         label.clear_dirty()
-        label.title = True
+        label.font_role = "title"
         self.assertTrue(label.dirty)
 
         label.clear_dirty()
-        label.text_size = 22
+        label.font_size = 22
         self.assertTrue(label.dirty)
 
 

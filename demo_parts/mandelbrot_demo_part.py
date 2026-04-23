@@ -106,6 +106,16 @@ class MandelbrotRenderFeature(Part):
     def build(self, demo) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
         ui = demo.app.read_part_ui_types()
+        self.register_font_roles(
+            demo,
+            {
+                "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
+                "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "caption": {"size": 14, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "status": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+            },
+            scene_name="main",
+        )
         self.build_window(
             demo,
             window_control_cls=ui.window_control_cls,
@@ -232,6 +242,7 @@ class MandelbrotRenderFeature(Part):
                 "mandel_window",
                 mandel_rect,
                 "Mandelbrot",
+                title_font_role=self.font_role("window_title"),
                 event_handler=lambda event: self.window_event_handler(demo, event),
             )
         )
@@ -252,7 +263,9 @@ class MandelbrotRenderFeature(Part):
                     Rect(left + 20, top + 30, 590, 20),
                     self.format_help_text(demo),
                 )
-            )
+            ),
+            size=14,
+            role=self.font_role("caption"),
         )
         self.primary_canvas = self.window.add(canvas_control_cls("mandel_canvas", Rect(canvas_x, canvas_y, canvas_size, canvas_size), max_events=128))
         canvas1 = self.window.add(canvas_control_cls("can1", Rect(canvas_x, canvas_y, split_size, split_size), max_events=32))
@@ -277,19 +290,19 @@ class MandelbrotRenderFeature(Part):
         mandel_four_split_rect = demo.app.layout.next_linear()
 
         self.reset_button = self.window.add(
-            button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(demo), style="angle")
+            button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(demo), style="angle", font_role=self.font_role("control"))
         )
         mandel_iter_button = self.window.add(
-            button_control_cls("mandel_iter", mandel_iter_rect, "Iterative", lambda: self.launch_iterative(demo), style="round")
+            button_control_cls("mandel_iter", mandel_iter_rect, "Iterative", lambda: self.launch_iterative(demo), style="round", font_role=self.font_role("control"))
         )
         mandel_recur_button = self.window.add(
-            button_control_cls("mandel_recur", mandel_recur_rect, "Recursive", lambda: self.launch_recursive(demo), style="round")
+            button_control_cls("mandel_recur", mandel_recur_rect, "Recursive", lambda: self.launch_recursive(demo), style="round", font_role=self.font_role("control"))
         )
         mandel_one_split_button = self.window.add(
-            button_control_cls("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", lambda: self.launch_one_split(demo), style="round")
+            button_control_cls("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", lambda: self.launch_one_split(demo), style="round", font_role=self.font_role("control"))
         )
         mandel_four_split_button = self.window.add(
-            button_control_cls("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", lambda: self.launch_four_split(demo), style="round")
+            button_control_cls("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", lambda: self.launch_four_split(demo), style="round", font_role=self.font_role("control"))
         )
         self.task_buttons = (
             mandel_iter_button,
@@ -302,7 +315,8 @@ class MandelbrotRenderFeature(Part):
         self.status_label = demo.app.style_label(
             self.window.add(
                 label_control_cls("mandel_status", Rect(left + 20, status_y, 590, 20), default_status)
-            )
+            ),
+            role=self.font_role("status"),
         )
         self.status_text = default_status
 

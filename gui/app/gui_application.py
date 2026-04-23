@@ -11,6 +11,7 @@ from ..core.pointer_capture import PointerCapture
 from ..core.keyboard_manager import KeyboardManager
 from ..core.focus_manager import FocusManager
 from ..core.action_manager import ActionManager
+from ..core.font_manager import FontManager
 from ..core.event_bus import EventBus
 from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
@@ -120,10 +121,10 @@ class GuiApplication:
         """Return GUI constructor classes used by part build routines."""
         return self._part_ui_types
 
-    def style_label(self, label, size: int = 16):
+    def style_label(self, label, size: int = 16, role: str = "body"):
         """Apply consistent demo-friendly defaults to a label-like control."""
-        label.title = False
-        label.text_size = int(size)
+        label.font_role = str(role)
+        label.font_size = int(size)
         return label
 
     def create_scene(self, name: str) -> Scene:
@@ -176,6 +177,9 @@ class GuiApplication:
 
     def get_scene_graphics_factory(self, name: str) -> BuiltInGraphicsFactory:
         return self._scene_runtime(name)["graphics_factory"]
+
+    def get_scene_font_manager(self, name: str) -> FontManager:
+        return self._scene_runtime(name)["theme"].fonts
 
     def _create_scene_runtime(self):
         scene = Scene()
@@ -507,6 +511,32 @@ class GuiApplication:
 
     def read_window_tiling_settings(self):
         return self.window_tiling.read_settings()
+
+    def register_font_role(
+        self,
+        role_name: str,
+        *,
+        size: int,
+        file_path: Optional[str] = None,
+        system_name: Optional[str] = None,
+        bold: bool = False,
+        italic: bool = False,
+        scene_name: Optional[str] = None,
+    ) -> None:
+        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+        runtime["theme"].register_font_role(
+            role_name,
+            size=size,
+            file_path=file_path,
+            system_name=system_name,
+            bold=bold,
+            italic=italic,
+        )
+        self.invalidation.invalidate_all()
+
+    def font_roles(self, scene_name: Optional[str] = None) -> tuple[str, ...]:
+        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+        return runtime["theme"].font_roles()
 
     # --- Convenience helpers ---
 

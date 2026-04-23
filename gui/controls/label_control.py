@@ -16,8 +16,8 @@ class LabelControl(UiNode):
     def __init__(self, control_id: str, rect: Rect, text: str, align: str = "left") -> None:
         super().__init__(control_id, rect)
         self._text = str(text)
-        self._title = False
-        self._text_size = 16
+        self._font_role = "body"
+        self._font_size = 16
         if align not in self._VALID_ALIGNS:
             raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}")
         self._align = align
@@ -35,27 +35,29 @@ class LabelControl(UiNode):
         self.invalidate()
 
     @property
-    def title(self) -> bool:
-        return self._title
+    def font_role(self) -> str:
+        return self._font_role
 
-    @title.setter
-    def title(self, value: bool) -> None:
-        next_title = bool(value)
-        if self._title == next_title:
+    @font_role.setter
+    def font_role(self, value: str) -> None:
+        next_role = str(value).strip()
+        if not next_role:
+            raise ValueError("font_role must be a non-empty string")
+        if self._font_role == next_role:
             return
-        self._title = next_title
+        self._font_role = next_role
         self.invalidate()
 
     @property
-    def text_size(self) -> int:
-        return self._text_size
+    def font_size(self) -> int:
+        return self._font_size
 
-    @text_size.setter
-    def text_size(self, value: int) -> None:
+    @font_size.setter
+    def font_size(self, value: int) -> None:
         next_size = max(1, int(value))
-        if self._text_size == next_size:
+        if self._font_size == next_size:
             return
-        self._text_size = next_size
+        self._font_size = next_size
         self.invalidate()
 
     @property
@@ -73,7 +75,7 @@ class LabelControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
-        rendered = theme.render_text(self._text, size=self._text_size, title=self._title, color=colour, shadow=True)
+        rendered = theme.render_text(self._text, role=self._font_role, size=self._font_size, color=colour, shadow=True)
         rw, rh = rendered.get_size()
         y = self.rect.top + max(0, (self.rect.height - rh) // 2)
         if self._align == "center":

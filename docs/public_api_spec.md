@@ -31,6 +31,7 @@ The package exports the following symbols via `gui/__init__.py`:
 - `EventManager`
 - `EventBus`
 - `FocusManager`
+- `FontManager`
 - `EventPhase`
 - `EventType`
 - `GuiEvent`
@@ -89,7 +90,7 @@ Container traversal relies on explicit `children` (no duck-typed discovery).
 
 ## Theme/Rendering Contract
 
-Control drawing requires a canonical `ColorTheme` with a bound `graphics_factory`.
+Control drawing requires a canonical `ColorTheme` with a bound `graphics_factory` and a role-based `FontManager` (`theme.fonts`).
 
 No fallback render paths are part of the public contract.
 
