@@ -402,7 +402,6 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
         # Bottom control and status heights
         control_height = 30
-        control_spacing = 8
         status_height = 20
         controls_and_status_height = control_height + status_height + 12
 
@@ -459,20 +458,29 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         canvas4 = self.window.add(canvas_control_cls("can4", canvas4_rect, max_events=32))
         self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
 
-        # Controls at bottom, aligned with canvas grid
+        # Controls at bottom: evenly divide a padded strip across all controls,
+        # then center each control inside its slot with extra inner spacing.
         controls_y = canvas_area_bottom + 6
-        demo.app.layout.set_linear_properties(
-            anchor=(content_rect.left + padding, controls_y),
-            item_width=112,
-            item_height=control_height,
-            spacing=control_spacing,
-            horizontal=True,
-        )
-        mandel_reset_rect = demo.app.layout.next_linear()
-        mandel_iter_rect = demo.app.layout.next_linear()
-        mandel_recur_rect = demo.app.layout.next_linear()
-        mandel_one_split_rect = demo.app.layout.next_linear()
-        mandel_four_split_rect = demo.app.layout.next_linear()
+        control_count = 5
+        row_strip_padding = 12
+        slot_inner_padding = 8
+        strip_left = content_rect.left + padding + row_strip_padding
+        strip_width = max(1, canvas_area_width - (row_strip_padding * 2))
+        slot_width = strip_width / float(control_count)
+
+        def control_rect_at(index: int) -> Rect:
+            slot_left = strip_left + int(round(slot_width * index))
+            next_slot_left = strip_left + int(round(slot_width * (index + 1)))
+            slot_pixel_width = max(1, next_slot_left - slot_left)
+            control_width = max(1, slot_pixel_width - (slot_inner_padding * 2))
+            control_left = slot_left + ((slot_pixel_width - control_width) // 2)
+            return Rect(control_left, controls_y, control_width, control_height)
+
+        mandel_reset_rect = control_rect_at(0)
+        mandel_iter_rect = control_rect_at(1)
+        mandel_recur_rect = control_rect_at(2)
+        mandel_one_split_rect = control_rect_at(3)
+        mandel_four_split_rect = control_rect_at(4)
 
         self.reset_button = self.window.add(
             button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(demo), style="angle", font_role=self.font_role("control"))
