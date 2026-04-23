@@ -142,25 +142,25 @@ class MandelbrotRenderFeature(Part):
         ...
 ```
 
-    #### `LogicPart` — Domain logic service behind message commands
+#### `LogicPart` — Domain logic service behind message commands
 
-    `LogicPart` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic part responds with result/state messages.
+`LogicPart` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic part responds with result/state messages.
 
-    This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic part defines its own command/data protocol.
+This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic part defines its own command/data protocol.
 
-    API helpers:
+API helpers:
 
-    - `Part.bind_logic_part(logic_part_name, alias="default")`
-    - `Part.send_logic_message(message, alias="default")`
-    - `GuiApplication.bind_part_logic(...)`
-    - `GuiApplication.send_part_logic_message(...)`
+- `Part.bind_logic_part(logic_part_name, alias="default")`
+- `Part.send_logic_message(message, alias="default")`
+- `GuiApplication.bind_part_logic(...)`
+- `GuiApplication.send_part_logic_message(...)`
 
-    Private and shared logic are both supported:
+Private and shared logic are both supported:
 
-    - private: bind one consumer to a dedicated logic part
-    - shared: bind multiple consumers to the same logic part under their own aliases
+- private: bind one consumer to a dedicated logic part
+- shared: bind multiple consumers to the same logic part under their own aliases
 
-    `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
+`LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
 
 #### `ScreenPart` — Direct screen drawing with frame synchronisation
 
