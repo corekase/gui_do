@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from demo_parts.bouncing_circles_demo_part import BouncingCirclesBackdropFeature
+from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
 from demo_parts.life_demo_part import LifeSimulationFeature
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 from shared.part_lifecycle import PartManager
@@ -41,11 +41,11 @@ class DemoPartsHostContractTests(unittest.TestCase):
             manager.bind_runtime(SimpleNamespace())
 
     def test_bouncing_bind_runtime_requires_screen_rect(self) -> None:
-        part = BouncingCirclesBackdropFeature()
+        part = BouncingShapesBackdropFeature()
         manager = PartManager(SimpleNamespace())
         manager.register(part)
 
-        with self.assertRaisesRegex(AttributeError, "BouncingCirclesBackdropFeature.bind_runtime requires host fields: screen_rect"):
+        with self.assertRaisesRegex(AttributeError, "BouncingShapesBackdropFeature.bind_runtime requires host fields: screen_rect"):
             manager.bind_runtime(SimpleNamespace(app=SimpleNamespace()))
 
 

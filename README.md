@@ -20,7 +20,7 @@ python gui_do_demo.py
 ```
 
 You'll see an interactive demo with two feature windows and a screen backdrop feature:
-- **Bouncing Circles Backdrop**: Cached random circles are composed in screen preamble and animated in screen postamble with edge-bounce motion
+- **Bouncing Shapes Backdrop**: Cached random circles and diamonds are composed in screen preamble and animated in screen postamble with edge-bounce motion
 - **Life**: Conway's Game of Life simulation with drag-pan, click-to-toggle cells, and zoom controls
 - **Mandelbrot**: Real-time Mandelbrot renderer with iterative/recursive modes and split-canvas visualization
 
@@ -131,7 +131,7 @@ python -m unittest tests.test_pointer_capture_contracts -v
 python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_architecture_boundary_docs_contracts -v
 
 # Demo functionality
-python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_gui_portability tests.test_bouncing_circles_demo_part -v
+python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_gui_portability tests.test_bouncing_shapes_demo_part -v
 ```
 
 ### Code Style
@@ -247,7 +247,7 @@ Host contract for demo parts:
 - Host requirements are declared on each part via `Part.HOST_REQUIREMENTS` and validated automatically by `PartManager` before `build`, `bind_runtime`, and `configure_accessibility`.
 - Build hooks require host fields `app` and `root`.
 - Runtime bind hooks require host field `app`.
-- `BouncingCirclesBackdropFeature.bind_runtime(...)` also requires `screen_rect`.
+- `BouncingShapesBackdropFeature.bind_runtime(...)` also requires `screen_rect`.
 
 ### Step 1: Define Your Feature Class
 

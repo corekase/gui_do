@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 from demo_parts.life_demo_part import LifeSimulationFeature
-from demo_parts.bouncing_circles_demo_part import BouncingCirclesBackdropFeature
+from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
 
 from gui import (
     GuiApplication,
@@ -36,10 +36,10 @@ class GuiDoDemo:
         self.app.set_window_tiling_enabled(True, relayout=False)
 
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
-        self._circles_feature = BouncingCirclesBackdropFeature(circle_count=30)
+        self._shapes_feature = BouncingShapesBackdropFeature(circle_count=30, diamond_count=12)
         self._life_feature = LifeSimulationFeature()
         self._mandel_feature = MandelbrotRenderFeature()
-        self._demo_features = [self._circles_feature, self._life_feature, self._mandel_feature]
+        self._demo_features = [self._shapes_feature, self._life_feature, self._mandel_feature]
         for feature in self._demo_features:
             self.app.register_part(feature, host=self)
 

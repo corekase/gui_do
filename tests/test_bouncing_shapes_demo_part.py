@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from demo_parts.bouncing_circles_demo_part import BouncingCirclesBackdropFeature
+from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
 
 
 class _StubApp:
@@ -73,7 +73,7 @@ class _StubApp:
         return _dispose
 
 
-class BouncingCirclesBackdropFeatureTests(unittest.TestCase):
+class BouncingShapesBackdropFeatureTests(unittest.TestCase):
     def setUp(self) -> None:
         pygame.init()
         pygame.display.set_mode((16, 16))
@@ -82,17 +82,33 @@ class BouncingCirclesBackdropFeatureTests(unittest.TestCase):
         pygame.quit()
 
     def test_init_creates_requested_circle_count_with_cached_sprites(self) -> None:
-        part = BouncingCirclesBackdropFeature(circle_count=12, seed=7)
+        part = BouncingShapesBackdropFeature(circle_count=12, seed=7)
 
-        self.assertEqual(len(part._circles), 12)
-        self.assertTrue(all(circle.sprite is not None for circle in part._circles))
+        self.assertEqual(len(part._shapes), 12)
+        self.assertTrue(all(shape.sprite is not None for shape in part._shapes))
+
+    def test_init_supports_diamond_count_and_combines_shape_total(self) -> None:
+        part = BouncingShapesBackdropFeature(circle_count=5, diamond_count=7, seed=11)
+
+        self.assertEqual(part.circle_count, 5)
+        self.assertEqual(part.diamond_count, 7)
+        self.assertEqual(len(part._shapes), 12)
+
+    def test_init_randomizes_mixed_shape_draw_order(self) -> None:
+        part = BouncingShapesBackdropFeature(circle_count=8, diamond_count=8, seed=19)
+        kinds = [shape.kind for shape in part._shapes]
+
+        self.assertIn("circle", kinds)
+        self.assertIn("diamond", kinds)
+        self.assertNotEqual(kinds[:8], ["circle"] * 8)
+        self.assertNotEqual(kinds[:8], ["diamond"] * 8)
 
     def test_screen_postamble_bounces_circle_at_edge(self) -> None:
-        part = BouncingCirclesBackdropFeature(circle_count=1, seed=3)
+        part = BouncingShapesBackdropFeature(circle_count=1, seed=3)
         host = SimpleNamespace(app=_StubApp((120, 80)), screen_rect=pygame.Rect(0, 0, 120, 80))
         part.bind_runtime(host)
 
-        circle = part._circles[0]
+        circle = part._shapes[0]
         circle.radius = 10
         circle.x = 10.0
         circle.y = 20.0
@@ -105,7 +121,7 @@ class BouncingCirclesBackdropFeatureTests(unittest.TestCase):
         self.assertEqual(circle.x, 10.0)
 
     def test_screen_preamble_composes_and_sets_pristine(self) -> None:
-        part = BouncingCirclesBackdropFeature(circle_count=2, seed=9)
+        part = BouncingShapesBackdropFeature(circle_count=2, seed=9)
         app = _StubApp((200, 140))
         host = SimpleNamespace(app=app, screen_rect=pygame.Rect(0, 0, 200, 140))
         part.bind_runtime(host)
@@ -116,7 +132,7 @@ class BouncingCirclesBackdropFeatureTests(unittest.TestCase):
         self.assertIsNotNone(app._last_pristine)
 
     def test_unregister_disposes_lifecycle_chain(self) -> None:
-        part = BouncingCirclesBackdropFeature(circle_count=1, seed=1)
+        part = BouncingShapesBackdropFeature(circle_count=1, seed=1)
         app = _StubApp((200, 140))
         host = SimpleNamespace(app=app, screen_rect=pygame.Rect(0, 0, 200, 140))
 
