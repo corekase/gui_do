@@ -912,9 +912,28 @@ from gui import ActionManager
 app.actions.register_action("zoom_in", lambda event: (print("Zooming in"), True))
 app.actions.register_action("zoom_out", lambda event: (print("Zooming out"), True))
 
+# Unregister an action
+app.actions.unregister_action("zoom_out")
+
+# Check registration and enumerate
+if app.actions.has_action("zoom_in"):
+    print("zoom_in is registered")
+all_names = app.actions.registered_actions()   # sorted list of all registered names
+
 # Bind keys to actions (scene-scoped or global)
 app.actions.bind_key(pygame.K_PLUS, "zoom_in", scene="main")
 app.actions.bind_key(pygame.K_MINUS, "zoom_out", scene="main")
+
+# window_only=True restricts the binding to when a window has keyboard focus
+app.actions.bind_key(pygame.K_DELETE, "delete_item", scene="main", window_only=True)
+
+# Remove a specific binding
+app.actions.unbind_key(pygame.K_MINUS, "zoom_out", scene="main")  # returns True if removed
+
+# Inspect all bindings for an action
+bindings = app.actions.bindings_for_action("zoom_in")
+for binding in bindings:
+    print(f"  key={binding.key} scene={binding.scene} window_only={binding.window_only}")
 ```
 
 ## Focus and Keyboard Input
@@ -948,6 +967,7 @@ focus_manager = app.focus
 # Query focus
 current_node = focus_manager.focused_node          # currently focused UiNode, or None
 current_id = focus_manager.focused_control_id      # control_id string, or None
+has_any    = focus_manager.has_focus               # bool; True when any node holds focus
 
 # Set focus programmatically
 focus_manager.set_focus(node, show_hint=True)                  # focus a specific node
@@ -955,6 +975,16 @@ focus_manager.set_focus_by_id(app.scene, "my_button")          # focus by contro
 
 # Clear focus
 focus_manager.clear_focus()
+
+# Cycle focus (Tab-style traversal); returns True when focus moved
+focus_manager.cycle_focus(app.scene, forward=True)             # forward = Tab
+focus_manager.cycle_focus(app.scene, forward=False)            # backward = Shift+Tab
+# Optionally scope traversal to nodes inside a specific window
+focus_manager.cycle_focus(app.scene, forward=True, window=my_window)
+
+# Count focusable nodes (respects visibility, enabled state, and tab_index)
+count = focus_manager.focusable_count(app.scene)               # int
+count = focus_manager.focusable_count(app.scene, window=my_window)  # scoped to window
 ```
 
 ### Accessibility Configuration
@@ -1018,22 +1048,39 @@ window.restore_pristine(surface)
 
 ### Automatic Window Tiling
 
-The framework includes automatic layout for multiple windows.
+The framework includes automatic layout for multiple windows. Both `configure_window_tiling` and `set_window_tiling_enabled` accept an optional `scene_name` parameter so non-active scenes can be configured without switching scenes first.
+
+`build_parts(host)` automatically primes the per-scene tiling registration order for all scenes after building parts, so no manual pre-registration ceremony (calling `tile_windows()` before first visibility toggles) is needed.
 
 ```python
-# Enable automatic tiling
+# Configure tiling for the active scene or a named non-active scene
 app.configure_window_tiling(
-    gap=16,  # Pixels between windows
-    padding=16,  # Pixels from screen edge
-    avoid_task_panel=True,  # Don't overlap task panel
-    center_on_failure=True,  # Center window if tiling fails
-    relayout=False,  # Immediately relayout existing windows
+    gap=16,                  # pixels between windows
+    padding=16,              # pixels from screen edge
+    avoid_task_panel=True,   # exclude the task panel area from the work region
+    center_on_failure=True,  # center window when tiling cannot fit all windows
+    relayout=False,          # trigger immediate relayout when True
+    scene_name="main",       # optional: target a non-active scene
 )
 
-app.set_window_tiling_enabled(True)
+app.set_window_tiling_enabled(True, relayout=False, scene_name="main")
+
+# Trigger tiling immediately after visibility changes
+app.tile_windows()                           # relayout all visible windows
+app.tile_windows(newly_visible=[window])     # hint: only place the newly shown window
+
+# Read current tiling configuration
+settings = app.read_window_tiling_settings()  # dict of current settings
 
 # Disable tiling
 app.set_window_tiling_enabled(False)
+```
+
+`WindowTilingManager` is also accessible directly; `prime_registration()` locks the registration order for all windows currently in the scene without triggering a relayout:
+
+```python
+tiler = app.window_tiling   # active scene's WindowTilingManager
+tiler.prime_registration()  # stamp registration order now; idempotent for existing windows
 ```
 
 ### Layout System
@@ -1061,6 +1108,8 @@ app.layout.set_linear_properties(
     item_height=32,
     spacing=10,
     horizontal=True,
+    wrap_count=0,     # optional: wrap after N items (0 = no wrap)
+    use_rect=True,    # True = return Rect; False = return (x, y)
 )
 
 # Get next position in linear layout (auto-advances cursor)
@@ -1070,6 +1119,24 @@ rect2 = app.layout.next_linear()
 # Or access by explicit index (does not advance cursor)
 rect_at_0 = app.layout.linear(0)
 rect_at_3 = app.layout.linear(3)
+
+# Grid layout (rows and columns)
+app.layout.set_grid_properties(
+    anchor=(40, 40),
+    item_width=160,
+    item_height=120,
+    column_spacing=12,
+    row_spacing=12,
+    use_rect=True,
+)
+
+# Access by explicit column/row (supports column_span and row_span)
+rect_0_0 = app.layout.gridded(column=0, row=0)
+rect_wide = app.layout.gridded(column=1, row=0, column_span=2)  # spans 2 columns
+
+# Or advance through cells automatically (left→right, top→bottom)
+rect_a = app.layout.next_gridded(columns=3)  # pass the column count for wrapping
+rect_b = app.layout.next_gridded(columns=3)
 ```
 
 ## Observable Values and Data Binding
@@ -1350,10 +1417,10 @@ For compute-heavy features, keep scheduler control flow in a render part and mov
 from shared.part_lifecycle import LogicPart, RoutedMessagePart
 
 class MandelbrotLogicPart(LogicPart):
-    def bind_runtime(self, _host) -> None:
-        # Expose worker entrypoints to other parts.
-        self._part_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
-        self._part_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
+    def bind_runtime(self, host) -> None:
+        # Expose worker entrypoints via the public GuiApplication API.
+        host.app.register_part_runnable(self.name, "iterative_task", self.run_iterative_task)
+        host.app.register_part_runnable(self.name, "recursive_task", self.run_recursive_task)
 
     def run_iterative_task(self, scheduler, task_id, params):
         ...  # emits scheduler.send_message(task_id, payload)
@@ -1440,18 +1507,27 @@ app.invalidation.end_frame()
 Switch between scenes smoothly.
 
 ```python
-# Create multiple scenes
+# Create scenes — note: create_scene() does NOT make the scene active.
+# call switch_scene() to activate the intended startup scene.
 app.create_scene("main")
 app.create_scene("settings")
 app.create_scene("about")
+
+# Configure non-active scenes directly using scene_name= (no switch needed)
+app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True,
+                             center_on_failure=True, relayout=False,
+                             scene_name="settings")
+app.set_window_tiling_enabled(True, relayout=False, scene_name="settings")
+
+# Activate the startup scene
+app.switch_scene("main")
 
 # Register parts for each scene
 main_parts = [Feature1(), Feature2()]
 for part in main_parts:
     app.register_part(part, host=demo)
 
-# Build and bind parts for a scene
-app.switch_scene("main")
+# Build and bind parts — build_parts() also auto-primes tiling registration
 app.build_parts(demo)
 app.bind_parts_runtime(demo)
 
@@ -1583,7 +1659,19 @@ roles = app.font_roles(scene_name="main")
 
 # Window tiling helpers
 app.tile_windows()                     # immediately relayout all visible windows
+app.tile_windows(newly_visible=[win])  # hint which window was just made visible
 settings = app.read_window_tiling_settings()  # current tiling configuration dict
+
+# Scene backdrop (pristine background image blit before every frame)
+# source can be a path string (relative to data/images/), a pygame.Surface, or None
+app.set_pristine("backdrop.jpg", scene_name="main")        # load from data/images/
+app.set_pristine(my_surface, scene_name="main")            # use an existing Surface
+app.set_pristine(None, scene_name="main")                  # clear backdrop
+app.restore_pristine()                                     # blit active scene backdrop to display
+app.restore_pristine(scene_name="main", surface=my_surf)   # blit to a specific surface
+
+# Coordinate conversion
+local_pos = app.convert_to_window(screen_pos, window)  # convert (x,y) to window-local coords
 ```
 
 ## UiEngine Standalone Usage
