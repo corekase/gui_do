@@ -182,7 +182,7 @@ from demo_parts.mandelbrot_demo_part import MandelStatusEvent
 
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
-- Active demo entrypoints (`*_demo.py`, excluding archived `_pre_rebase*_demo.py`) should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
+- Active demo entrypoints should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
 
 ## Architecture Docs
 
