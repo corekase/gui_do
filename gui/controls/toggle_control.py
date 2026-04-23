@@ -8,6 +8,7 @@ from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
+    from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
 
@@ -69,7 +70,7 @@ class ToggleControl(UiNode):
             self.hovered = False
         super()._on_visibility_changed(old_visible, new_visible)
 
-    def handle_event(self, event: GuiEvent, _app) -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             return False
@@ -80,6 +81,8 @@ class ToggleControl(UiNode):
         if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
             return False
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
+            if getattr(app, "focus_visualizer", None) is not None:
+                app.focus_visualizer.refresh_focus_hint(self)
             self._commit_toggle()
             return True
         if event.is_mouse_down(1):

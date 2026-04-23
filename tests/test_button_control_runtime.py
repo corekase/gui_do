@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import ButtonControl, GuiApplication, PanelControl, WindowControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ButtonControlRuntimeTests(unittest.TestCase):
@@ -32,6 +33,29 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_space)
         self.assertEqual(len(fired), 2)
         self.assertFalse(control.pressed)
+
+    def test_keyboard_activation_refreshes_focus_hint_with_shared_timeout(self) -> None:
+        fired = []
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))
+        control.set_tab_index(0)
+
+        # Mouse-style focus assignment suppresses hint visibility.
+        self.app.focus.set_focus(control, show_hint=False)
+        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(fired, [True])
+        self.assertIs(self.app.focus_visualizer._current_hint_node, control)
+        self.assertEqual(self.app.focus_visualizer._current_hint_elapsed, 0.0)
+
+        almost_timeout = FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01
+        self.app.focus_visualizer.update(almost_timeout)
+        self.assertIs(self.app.focus_visualizer._current_hint_node, control)
+
+        self.app.focus_visualizer.update(0.02)
+        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
 
     def test_keyboard_activation_ignored_when_disabled(self) -> None:
         fired = []

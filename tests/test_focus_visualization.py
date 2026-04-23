@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui.core.focus_visualizer import FocusVisualizer
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 from gui.core.focus_manager import FocusManager
 from gui.core.ui_node import UiNode
 from gui.theme.color_theme import ColorTheme
@@ -51,6 +52,10 @@ class FocusVisualizerStateTests(unittest.TestCase):
         self.visualizer.clear_focus_hint()
         self.assertIsNone(self.visualizer._current_hint_node)
         self.assertEqual(self.visualizer._current_hint_elapsed, 0.0)
+
+    def test_hint_timeout_uses_shared_constant(self) -> None:
+        self.assertEqual(self.visualizer.HINT_TIMEOUT_SECONDS, FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS)
+        self.assertEqual(self.visualizer.HINT_TIMEOUT_SECONDS, self.visualizer.HOLD_TIME + self.visualizer.FADE_TIME)
 
 
 class FocusVisualizerTimingTests(unittest.TestCase):

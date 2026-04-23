@@ -68,7 +68,7 @@ class ButtonControl(UiNode):
             self.pressed = False
         super()._on_visibility_changed(old_visible, new_visible)
 
-    def handle_event(self, event: GuiEvent, _app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             self.pressed = False
@@ -78,6 +78,8 @@ class ButtonControl(UiNode):
             return False
 
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
+            if getattr(app, "focus_visualizer", None) is not None:
+                app.focus_visualizer.refresh_focus_hint(self)
             self._invoke_click()
             return True
 

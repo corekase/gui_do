@@ -146,6 +146,7 @@ Focus and keyboard ownership note:
 - Mouse click focus paths can suppress focus-hint visualization (`show_hint=False`) while keyboard traversal keeps hint visualization enabled.
 - Keyboard routing precedence is active focused/visible/enabled target first, then screen fallback.
 - Focus traversal must reconcile hover flags from live pointer position while cycling; if the pointer has moved off a control during the hint window, that control returns to idle (non-hover) state.
+- Button and toggle-button activation from focused keyboard events (`Return`/`Space`) must show a focus hint and use the same timeout constant as focus traversal hinting.
 
 ## Completion Criteria
 

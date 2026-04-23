@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import pygame
 
+from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+
 
 class FocusVisualizer:
     """Manages visual focus indicators (dashed rectangles) with timing and fade-out.
@@ -15,6 +17,7 @@ class FocusVisualizer:
     # Timing constants (in seconds)
     HOLD_TIME = 1.0  # Display for 1 second before starting fade
     FADE_TIME = 0.5  # Fade out over 0.5 seconds
+    HINT_TIMEOUT_SECONDS = FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
     # Dashed rectangle rendering
     DASH_WIDTH = 2  # Width of dashes in pixels
@@ -72,7 +75,7 @@ class FocusVisualizer:
         # Update the currently-hinting node's hold/fade state
         if self._current_hint_node is not None:
             self._current_hint_elapsed += dt_seconds
-            total_time = self.HOLD_TIME + self.FADE_TIME
+            total_time = self.HINT_TIMEOUT_SECONDS
             if self._current_hint_elapsed >= total_time:
                 # Hold and fade-out complete, clear this hint
                 self._current_hint_node = None
