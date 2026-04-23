@@ -48,6 +48,7 @@ Canonical event object used by the app pipeline:
 - `button: Optional[int]`
 - `wheel_x: int`
 - `wheel_y: int`
+- `mod: int` (keyboard modifier bitmask; non-zero on key events with active modifiers)
 - `text: Optional[str]`
 - `widget_id: Optional[str]`
 - `group: Optional[str]`

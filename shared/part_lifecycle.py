@@ -177,7 +177,7 @@ class Part:
 
     def host_requirements_for(self, hook_name: str) -> tuple[str, ...]:
         """Return required host field names for a lifecycle hook."""
-        requirements = dict(getattr(self, "HOST_REQUIREMENTS", {}))
+        requirements = dict(self.HOST_REQUIREMENTS)
         required = requirements.get(str(hook_name), ())
         return tuple(str(name) for name in required)
 
@@ -458,7 +458,7 @@ class PartManager:
         return self._part_hosts.get(part_name, self.app)
 
     def _is_part_active_for_scene(self, part: Part) -> bool:
-        scene_name = getattr(part, "scene_name", None)
+        scene_name = part.scene_name
         if scene_name is None:
             return True
         return str(scene_name) == str(self.app.active_scene_name)

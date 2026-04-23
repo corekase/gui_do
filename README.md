@@ -415,6 +415,7 @@ from gui import ButtonControl, ToggleControl, LabelControl
 button = parent.add(
     ButtonControl("btn_id", rect, "Button Text", on_click=callback, style="angle")
 )
+# style controls visual shape; built-in values: "box" (default), "angle"
 
 # Add a toggle (state-tracking button)
 toggle = parent.add(
@@ -425,6 +426,7 @@ toggle = parent.add(
         "Off",  # text_off: label shown when pushed=False
         pushed=False,
         on_toggle=lambda pushed: print(f"Toggled: {pushed}"),
+        # style controls visual shape; built-in values: "box" (default)
     )
 )
 
@@ -437,6 +439,50 @@ button.set_on_click(lambda: print("new callback"))
 button.set_on_click(None)     # remove callback
 toggle.set_on_toggle(lambda pushed: print(pushed))
 toggle.set_on_toggle(None)    # remove callback
+```
+
+### UiNode Common API
+
+All controls inherit from `UiNode`. These properties and methods are available on every control.
+
+```python
+# Visibility and enabled state
+node.visible = False        # hide (triggers on_visibility_changed hook)
+node.enabled = False        # disable (triggers on_enabled_changed hook)
+node.show()                 # equivalent to node.visible = True
+node.hide()                 # equivalent to node.visible = False
+node.enable()               # equivalent to node.enabled = True
+node.disable()              # equivalent to node.enabled = False
+
+# Geometry helpers (all call invalidate() after mutation)
+node.set_pos(x, y)          # move top-left corner
+node.resize(width, height)  # resize without moving
+node.set_rect(rect)         # replace rect entirely
+
+# Tree traversal
+node.parent                 # immediate parent UiNode, or None
+node.children               # list of direct children
+node.ancestors()            # generator from parent to root
+node.is_root()              # True when node has no parent
+node.depth()                # int; 0 for root nodes
+node.sibling_index()        # position among parent.children
+node.find_descendant("id")              # first BFS match by control_id, or None
+node.find_descendants(predicate)        # list of all BFS matches by predicate
+node.find_descendants_of_type(cls)      # list of all BFS matches by type
+
+# Identifiers and layout
+node.control_id             # str; unique identifier within the scene
+node.rect                   # pygame.Rect; mutable geometry
+
+# Focus and accessibility
+node.tab_index              # int; -1 = not focusable, >= 0 = participates in Tab order
+node.focused                # bool property; True when this node holds keyboard focus
+node.accepts_focus()        # True when tab_index >= 0
+node.set_tab_index(n)       # set the tab order index
+node.set_accessibility(role="button", label="Save File")
+
+# Invalidation
+node.invalidate()           # mark as dirty for next draw pass
 ```
 
 ### Label Control
@@ -492,6 +538,7 @@ slider = parent.add(
 # Programmatic updates
 slider.set_value(75)           # set absolute value, clamped; returns True if changed
 slider.adjust_value(5)         # move by delta, clamped; returns True if changed
+slider.set_normalized(0.5)     # set from a 0.0–1.0 ratio; returns True if changed
 slider.value                   # read current value (plain attribute)
 slider.normalized              # read current value as 0.0–1.0 ratio within range
 
@@ -657,9 +704,12 @@ button = window.add(
 )
 
 # Query window state
-is_active = window.is_active()
-window_rect = window.get_window_rect()
-content_rect = window.content_rect()
+is_active = window.active          # bool property
+window_rect = window.rect          # full rect including title bar
+content_rect = window.content_rect()     # excludes title bar
+
+# Close (hide) the window
+window.close()
 ```
 
 ### Panel Control
@@ -756,27 +806,80 @@ pygame.draw.circle(canvas_surface, (255, 0, 0), (100, 100), 50)
 
 The framework uses canonical `GuiEvent` objects with three-phase dispatch: capture, target, and bubble.
 
-### Event Phases and Propagation
+### GuiEvent Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `kind` | `EventType` | Semantic event type enum |
+| `type` | `int` | Raw pygame event type integer |
+| `key` | `Optional[int]` | Keyboard key code (key events only) |
+| `mod` | `int` | Keyboard modifier bitmask; non-zero on key events with active modifiers (e.g. `pygame.KMOD_SHIFT`) |
+| `pos` | `Optional[tuple]` | Logical pointer position (screen coordinates, lock-adjusted) |
+| `rel` | `Optional[tuple]` | Logical motion delta |
+| `raw_pos` | `Optional[tuple]` | Raw pygame position before lock adjustment |
+| `raw_rel` | `Optional[tuple]` | Raw pygame motion delta |
+| `button` | `Optional[int]` | Mouse button index (1=left, 2=middle, 3=right) |
+| `wheel_x` | `int` | Horizontal wheel delta |
+| `wheel_y` | `int` | Vertical wheel delta |
+| `text` | `Optional[str]` | Text input character (TEXT_INPUT events) |
+| `widget_id` | `Optional[str]` | Widget control_id for widget events |
+| `task_panel` | `bool` | True when event originates in the task panel |
+| `task_id` | `Optional[Hashable]` | Scheduler task id for task events |
+| `error` | `Optional[str]` | Error message for failed task events |
+| `phase` | `EventPhase` | Current dispatch phase (CAPTURE/TARGET/BUBBLE) |
+| `propagation_stopped` | `bool` | True if `stop_propagation()` was called |
+| `default_prevented` | `bool` | True if `prevent_default()` was called |
+
+### GuiEvent Helper Methods
 
 ```python
 from gui import GuiEvent, EventPhase, EventType
+import pygame
 
-def handle_event(event):
-    # Check event type
-    if event.kind == EventType.MOUSE_BUTTON_DOWN:
-        print(f"Mouse button {event.button} pressed at {event.pos}")
-    elif event.kind == EventType.KEY_DOWN:
-        print(f"Key {event.key} pressed")
+def handle_event(event: GuiEvent) -> bool:
+    # --- Type checks ---
+    event.is_quit()                          # True for QUIT events
+    event.is_kind(EventType.KEY_DOWN, EventType.KEY_UP)  # True if kind is any of the args
 
-    # Stop propagation to parent containers
-    event.stop_propagation()
+    # --- Key events ---
+    event.is_key_down()                      # True for any KEY_DOWN
+    event.is_key_down(pygame.K_ESCAPE)       # True for Escape key down
+    event.is_key_up(pygame.K_RETURN)         # True for Enter key up
+    event.is_text_event()                    # True for TEXT_INPUT or TEXT_EDITING
 
-    # Prevent default browser/system behavior
-    event.prevent_default()
+    # Modifier bitmask — use pygame constants
+    if event.mod & pygame.KMOD_SHIFT:
+        print("Shift held")
+    if event.mod & pygame.KMOD_CTRL:
+        print("Ctrl held")
 
-    # Return True to consume event
-    return True
-```
+    # --- Mouse button events ---
+    event.is_mouse_down()                    # any button down
+    event.is_mouse_down(1)                   # left button down
+    event.is_mouse_up(3)                     # right button up
+    event.is_left_down()                     # left button down (equivalent to is_mouse_down(1))
+    event.is_left_up()                       # left button up
+    event.is_right_down()                    # right button down
+    event.is_right_up()                      # right button up
+    event.is_middle_down()                   # middle button down
+    event.is_middle_up()                     # middle button up
+
+    # --- Mouse motion / wheel ---
+    event.is_mouse_motion()                  # True for MOUSE_MOTION
+    event.is_mouse_wheel()                   # True for MOUSE_WHEEL
+    event.wheel_delta                        # int; wheel_y (vertical scroll delta)
+
+    # --- Geometry ---
+    event.collides(rect)                     # True if pos is inside rect
+
+    # --- Propagation ---
+    event.stop_propagation()                 # halt dispatch to parent containers
+    event.prevent_default()                  # suppress default framework behavior
+
+    # --- Cloning ---
+    copy = event.clone()                     # shallow copy with independent propagation state
+
+    return True  # consumed
 
 ### Routed Event Flow
 
@@ -885,9 +988,16 @@ window = panel.add(
 button = window.add(ButtonControl("btn", inner_rect, "Click me"))
 
 # Query window state
-is_active = window.is_active()
-window_rect = window.get_window_rect()   # includes title bar
-content_rect = window.content_rect()     # excludes title bar
+is_active = window.active                    # bool property; read/write
+window_rect = window.rect                    # full rect including title bar
+content_rect = window.content_rect()         # excludes title bar
+title_bar_rect = window.title_bar_rect()     # just the title bar area
+
+# Programmatic close (hides the window, releasing active state)
+window.close()
+
+# Move window by a pixel delta
+window.move_by(dx=10, dy=0)
 
 # Pristine backdrop (restore background image before drawing)
 window.set_pristine(my_surface)
@@ -1132,8 +1242,10 @@ sub2 = bus.subscribe("data_ready", handler, scope="life_scene")
 # Publish to all matching subscribers
 bus.publish("status_changed", {"message": "Ready"})
 
-# Publish to subscribers in a specific scope only
+# Publish with a scope: delivers to unscoped subscribers AND scope-matched subscribers
 bus.publish("data_ready", result, scope="life_scene")
+# Publish with no scope (default): delivers ONLY to unscoped subscribers
+bus.publish("status_changed", {"message": "Ready"})
 
 # Unsubscribe one subscription
 bus.unsubscribe(sub)
@@ -1261,9 +1373,41 @@ This pattern keeps concerns clean:
 - logic part(s): viewport math, pixel function, recursive/iterative algorithms
 - scheduler: task lifecycle, progress/failure events, main-thread message delivery
 
-### InvalidationTracker
+### Pointer and Input Lock
 
-`InvalidationTracker` is exported for advanced rendering scenarios. The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, but you can force a full redraw from application code:
+`GuiApplication` supports two lock modes for pointer-intensive interactions (canvas dragging, first-person input):
+
+**Area lock** — clamp the pointer inside a rectangular region.
+
+```python
+# Confine pointer to a rect (clamped in process_event before dispatch)
+app.set_lock_area(some_rect)
+
+# Release area lock
+app.set_lock_area(None)
+```
+
+**Point lock** — stationary logical cursor with relative motion deltas (first-person / drag-canvas pattern).
+
+```python
+# Engage point lock; pointer renders at lock_point_pos; motion recalculated as deltas
+app.set_lock_point(locking_object, point=(cx, cy))  # point defaults to screen center
+
+# Read motion delta from a motion event while locked
+delta = app.get_lock_point_motion_delta(event)  # (dx, dy) or None if not locked/not motion
+
+# Release point lock; hardware cursor warps back to lock_point_pos
+app.set_lock_point(None)
+
+# Query lock state
+if app.mouse_point_locked:
+    cx, cy = app.lock_point_pos   # position where virtual cursor is drawn
+
+# Read current logical pointer position (lock-adjusted, always up to date)
+x, y = app.logical_pointer_pos
+```
+
+### InvalidationTracker The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, but you can force a full redraw from application code:
 
 ```python
 from gui import InvalidationTracker
@@ -1432,7 +1576,17 @@ settings = app.read_window_tiling_settings()  # current tiling configuration dic
 
 ## UiEngine Standalone Usage
 
-`app.run()` is the preferred entry point and manages `UiEngine` internally. Use `UiEngine` directly only when you need frame-level control (for example, to impose a maximum frame count in tests or to drive the loop from an outer runner).
+`app.run()` is the preferred entry point and manages `UiEngine` internally. `app.run()` accepts `target_fps` and an optional `max_frames` limit (useful in tests), and returns the number of frames processed.
+
+```python
+# Standard usage
+frames = app.run(target_fps=60)
+
+# Bounded run — exits after at most N frames
+frames = app.run(target_fps=60, max_frames=300)
+```
+
+Use `UiEngine` directly only when you need frame-level control from an outer runner.
 
 ```python
 from gui import UiEngine

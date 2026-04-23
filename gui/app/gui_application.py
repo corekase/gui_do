@@ -206,19 +206,12 @@ class GuiApplication:
         if runtime is None:
             runtime = self._create_scene_runtime()
             self._scenes[name] = runtime
-        runtime.setdefault("screen_pristine", None)
-        runtime.setdefault("screen_pristine_scaled", None)
-        runtime.setdefault("screen_pristine_scaled_size", (0, 0))
-        runtime.setdefault("scene_auto_suspended", set())
-        if "window_tiling" not in runtime:
-            runtime["window_tiling"] = WindowTilingManager(self, scene=runtime["scene"])
-        runtime.setdefault("timers", Timers())
         return runtime
 
     def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:
         for scene_name, runtime in self._scenes.items():
             scheduler = runtime["scheduler"]
-            auto_suspended = runtime.setdefault("scene_auto_suspended", set())
+            auto_suspended = runtime["scene_auto_suspended"]
             if scene_name == active_scene_name:
                 scheduler.set_execution_paused(False)
                 if auto_suspended:
@@ -307,10 +300,9 @@ class GuiApplication:
         self.input_state.update_from_event(gui_event)
         if gui_event.kind == EventType.MOUSE_WHEEL:
             wheel_pos = pygame.mouse.get_pos()
-            if isinstance(wheel_pos, tuple) and len(wheel_pos) == 2:
-                self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
-                self.input_state.pointer_pos = self._logical_pointer_pos
-                gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
+            self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
+            self.input_state.pointer_pos = self._logical_pointer_pos
+            gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
         raw_pos = gui_event.pos
         if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
             self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))

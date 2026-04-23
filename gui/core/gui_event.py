@@ -57,6 +57,7 @@ class GuiEvent:
     button: Optional[int] = None
     wheel_x: int = 0
     wheel_y: int = 0
+    mod: int = 0
     text: Optional[str] = None
     widget_id: Optional[str] = None
     group: Optional[str] = None
@@ -175,6 +176,9 @@ class GuiEvent:
         if key is not None:
             key = int(key)
 
+        mod_raw = payload.get("mod")
+        mod = int(mod_raw) if mod_raw is not None else 0
+
         button = payload.get("button")
         if button is not None:
             button = int(button)
@@ -192,6 +196,7 @@ class GuiEvent:
             button=button,
             wheel_x=wheel_x,
             wheel_y=wheel_y,
+            mod=mod,
             text=text,
             source_event=event,
         )
