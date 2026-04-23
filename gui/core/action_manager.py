@@ -65,7 +65,7 @@ class ActionManager:
     def trigger_from_event(self, event, app) -> bool:
         if event.kind is not EventType.KEY_DOWN or event.key is None:
             return False
-        scene_name = getattr(app, "active_scene_name", None)
+        scene_name = app.active_scene_name
         has_window = bool(app.scene.active_window())
 
         candidates = [

@@ -1,5 +1,6 @@
 import os
 import unittest
+from types import SimpleNamespace
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -14,6 +15,7 @@ class _FakeTheme:
         self.text = (10, 20, 30)
         self.medium = (80, 90, 100)
         self.last_call = None
+        self.fonts = SimpleNamespace(revision=0)
 
     def render_text(self, text: str, *, role: str = "body", size: int = 16, color=None, shadow: bool = True):
         self.last_call = {

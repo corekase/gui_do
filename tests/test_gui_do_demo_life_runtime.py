@@ -69,39 +69,39 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo = self._make_demo_stub()
         demo.life_zoom_slider.value = 7.0
 
-        demo._life_part().life_window_preamble()
+        demo._life_feature.life_window_preamble()
 
-        self.assertEqual(demo._life_part().life_zoom_slider_last_value, 7)
-        self.assertEqual(demo._life_part().life_cell_size, 16)
+        self.assertEqual(demo._life_feature.life_zoom_slider_last_value, 7)
+        self.assertEqual(demo._life_feature.life_cell_size, 16)
 
     def test_slider_callback_applies_zoom_change(self) -> None:
         demo = self._make_demo_stub()
 
-        demo._life_part().on_life_zoom_slider_changed(6.0)
+        demo._life_feature.on_life_zoom_slider_changed(6.0)
 
-        self.assertEqual(demo._life_part().life_zoom_slider_last_value, 6)
-        self.assertEqual(demo._life_part().life_cell_size, 14)
+        self.assertEqual(demo._life_feature.life_zoom_slider_last_value, 6)
+        self.assertEqual(demo._life_feature.life_cell_size, 14)
         self.assertEqual(demo.life_zoom_label.text, "Zoom 14")
 
     def test_life_reset_sets_zoom_label_to_default(self) -> None:
         demo = self._make_demo_stub()
         demo.life_zoom_label.text = "Zoom 18"
 
-        demo._life_part().life_reset()
+        demo._life_feature.life_reset()
 
         self.assertEqual(demo.life_zoom_label.text, "Zoom 12")
 
     def test_update_life_uses_local_packet_position_when_available(self) -> None:
         demo = self._make_demo_stub()
-        demo._life_part().life_cell_size = 10
+        demo._life_feature.life_cell_size = 10
         demo.life_canvas = _LifeCanvasStub([
             _Packet(local_pos=(15, 15), pos=(200, 200), button=1),
         ])
-        demo._life_part().canvas = demo.life_canvas
+        demo._life_feature.canvas = demo.life_canvas
 
-        demo._life_part().update_life()
+        demo._life_feature.update_life()
 
-        self.assertIn((1, 1), demo._life_part().life_cells)
+        self.assertIn((1, 1), demo._life_feature.life_cells)
 
 
 if __name__ == "__main__":

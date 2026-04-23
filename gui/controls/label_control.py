@@ -77,7 +77,7 @@ class LabelControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
-        font_revision = theme.fonts.revision if hasattr(theme, "fonts") else 0
+        font_revision = theme.fonts.revision
         render_key = (self._text, self._font_role, self._font_size, colour, font_revision)
         if self._render_key != render_key:
             self._rendered_surface = theme.render_text(

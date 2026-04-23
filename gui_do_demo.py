@@ -22,10 +22,7 @@ class GuiDoDemo:
         """Initialize pygame, app services, scene state, and demo UI."""
         pygame.init()
         flags = pygame.FULLSCREEN | pygame.SCALED
-        try:
-            self.screen = pygame.display.set_mode((1920, 1080), flags=flags, vsync=1)
-        except TypeError:
-            self.screen = pygame.display.set_mode((1920, 1080), flags=flags)
+        self.screen = pygame.display.set_mode((1920, 1080), flags=flags, vsync=1)
         pygame.display.set_caption("gui_do demo")
 
         self.screen_rect = self.screen.get_rect()
@@ -63,34 +60,6 @@ class GuiDoDemo:
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
         self.app.configure_parts_accessibility(self, len(base_controls))
 
-    def _life_part(self):
-        """Return the Life feature instance, creating/wiring it on demand."""
-        part = getattr(self, "_life_feature", None)
-        if part is None:
-            part = LifeSimulationFeature()
-            self._life_feature = part
-        if getattr(part, "demo", None) is None:
-            part.demo = self  # Ensure part has access to demo for callbacks
-        return part
-
-    def _circles_part(self):
-        """Return the circles backdrop feature, creating one when absent."""
-        part = getattr(self, "_circles_feature", None)
-        if part is None:
-            part = BouncingCirclesBackdropFeature(circle_count=30)
-            self._circles_feature = part
-        return part
-
-    def _mandel_part(self):
-        """Return the Mandelbrot feature instance, creating/wiring it on demand."""
-        part = getattr(self, "_mandel_feature", None)
-        if part is None:
-            part = MandelbrotRenderFeature()
-            self._mandel_feature = part
-        if getattr(part, "demo", None) is None:
-            part.demo = self  # Ensure part has access to demo for callbacks
-        return part
-
     def _register_screen_font_roles(self) -> None:
         """Register screen-owned font roles for non-part scene composition."""
         self.app.register_font_role(
@@ -112,8 +81,8 @@ class GuiDoDemo:
             scene_name="main",
         )
         self.app.build_parts(self)
-        self.life_window = self._life_part().window
-        self.mandel_window = self._mandel_part().window
+        self.life_window = self._life_feature.window
+        self.mandel_window = self._mandel_feature.window
         self.life_window.visible = False
         self.mandel_window.visible = False
         self.task_panel = self.app.add(
@@ -196,7 +165,7 @@ class GuiDoDemo:
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""
         self.app.run(target_fps=120)
-        self._mandel_part().shutdown_runtime(self)
+        self._mandel_feature.shutdown_runtime(self)
         pygame.quit()
 
 

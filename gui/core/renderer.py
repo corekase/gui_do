@@ -6,7 +6,7 @@ class Renderer:
 
     def render(self, surface, scene, theme, app=None) -> None:
         full_redraw = True
-        if app is not None and hasattr(app, "invalidation"):
+        if app is not None:
             full_redraw, _regions = app.invalidation.begin_frame()
         restored = False
         if app is not None:
@@ -18,7 +18,7 @@ class Renderer:
                 surface.blit(scaled, (0, 0))
         scene.draw(surface, theme)
         # Draw focus visualization (dashed rectangles) after scene, before cursor
-        if app is not None and hasattr(app, "focus_visualizer"):
+        if app is not None:
             app.focus_visualizer.draw_hints(surface, theme)
         if app is None:
             return
@@ -32,5 +32,5 @@ class Renderer:
         draw_x = int(anchor[0]) - int(hotspot[0])
         draw_y = int(anchor[1]) - int(hotspot[1])
         surface.blit(cursor_surface, (draw_x, draw_y))
-        if app is not None and hasattr(app, "invalidation"):
+        if app is not None:
             app.invalidation.end_frame()

@@ -134,17 +134,16 @@ class MandelbrotRenderFeature(Part):
         demo.app.actions.register_action("mandel_failure_preview_increase", lambda _event: self.adjust_failure_preview_limit(demo, 1))
         demo.app.actions.bind_key(pygame.K_LEFTBRACKET, "mandel_failure_preview_decrease", scene="main")
         demo.app.actions.bind_key(pygame.K_RIGHTBRACKET, "mandel_failure_preview_increase", scene="main")
-        if hasattr(demo.app, "events") and hasattr(demo.app.events, "subscribe"):
-            self.status_subscription = demo.app.events.subscribe(
-                self.status_topic,
-                lambda payload: self.on_status_event(demo, payload),
-                scope=self.status_scope,
-            )
-            self.status_bus_ready = True
+        self.status_subscription = demo.app.events.subscribe(
+            self.status_topic,
+            lambda payload: self.on_status_event(demo, payload),
+            scope=self.status_scope,
+        )
+        self.status_bus_ready = True
 
     def shutdown_runtime(self, demo) -> None:
         """Unsubscribe runtime resources created by bind_runtime."""
-        if self.status_subscription is not None and hasattr(demo.app, "events") and hasattr(demo.app.events, "unsubscribe"):
+        if self.status_subscription is not None:
             demo.app.events.unsubscribe(self.status_subscription)
             self.status_subscription = None
         self.status_bus_ready = False
@@ -152,7 +151,7 @@ class MandelbrotRenderFeature(Part):
     def _get_scheduler(self, demo):
         """Resolve and memoize the scene scheduler used by render tasks."""
         scheduler = self.scheduler
-        if scheduler is None and hasattr(demo, "app") and hasattr(demo.app, "get_scene_scheduler"):
+        if scheduler is None:
             scheduler = demo.app.get_scene_scheduler("main")
         if scheduler is None:
             raise AttributeError("Mandelbrot scheduler is not available")
@@ -366,11 +365,6 @@ class MandelbrotRenderFeature(Part):
         part = self
         if kind in (MANDEL_KIND_CLEARED, MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED):
             part.running_mode = None
-        publisher = getattr(demo, "_publish_mandel_event", None)
-        # Honor explicit test/runtime overrides without recursing into the default bound method.
-        if callable(publisher) and getattr(publisher, "__self__", None) is not demo:
-            publisher(kind, detail)
-            return
         event = MandelStatusEvent(kind=str(kind), detail=None if detail is None else str(detail))
         payload = event.to_payload()
         formatted_status = self.format_status(demo, event)
@@ -378,7 +372,7 @@ class MandelbrotRenderFeature(Part):
         # republish identical running-status events while tasks are still busy.
         self._set_status_text(demo, formatted_status)
         bus_ready = bool(self.status_bus_ready)
-        if bus_ready and hasattr(demo.app, "events") and hasattr(demo.app.events, "publish"):
+        if bus_ready:
             demo.app.events.publish(self.status_topic, payload, scope=self.status_scope)
             return
 

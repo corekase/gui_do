@@ -25,7 +25,7 @@ class FocusManager:
         """Return the ``control_id`` of the currently focused node, or ``None``."""
         if self._focused_node is None:
             return None
-        return getattr(self._focused_node, "control_id", None)
+        return self._focused_node.control_id
 
     def clear_focus(self) -> None:
         self.set_focus(None)
@@ -53,7 +53,7 @@ class FocusManager:
         ``False`` otherwise (missing, hidden, disabled, or non-focusable).
         """
         for node in scene._walk_nodes():
-            if getattr(node, "control_id", None) != control_id:
+            if node.control_id != control_id:
                 continue
             if not node.visible or not node.enabled or not node.accepts_focus():
                 return False
@@ -136,7 +136,7 @@ class FocusManager:
             self.clear_focus()
             return
 
-        focused_tab = getattr(focused, "tab_index", -1)
+        focused_tab = focused.tab_index
         for candidate in candidates:
             if candidate.tab_index >= focused_tab:
                 self.set_focus(candidate, show_hint=False)
@@ -148,7 +148,7 @@ class FocusManager:
         """Walk ancestors to find the nearest enclosing WindowControl, or None."""
         current = node.parent
         while current is not None:
-            if hasattr(current, "titlebar_height"):
+            if current.is_window():
                 return current
             current = current.parent
         return None

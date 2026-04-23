@@ -26,6 +26,7 @@ from gui import (
     WindowControl,
     WindowTilingManager,
 )
+from gui.core.ui_node import UiNode
 
 
 class RestoredSurfaceContractsTests(unittest.TestCase):
@@ -270,10 +271,9 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         try:
             app = GuiApplication(Surface((300, 200)))
 
-            class Probe:
+            class Probe(UiNode):
                 def __init__(self):
-                    self.visible = True
-                    self.enabled = True
+                    super().__init__("probe", Rect(0, 0, 300, 200))
                     self.captured = None
 
                 def handle_event(self, event, _app):
@@ -285,12 +285,6 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
                             "raw_rel": getattr(event, "raw_rel", None),
                         }
                     return False
-
-                def update(self, _dt):
-                    return None
-
-                def draw(self, _surface, _theme):
-                    return None
 
             probe = app.add(Probe())
             lock_point = (120, 90)
@@ -334,10 +328,9 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         try:
             app = GuiApplication(Surface((300, 200)))
 
-            class Probe:
+            class Probe(UiNode):
                 def __init__(self):
-                    self.visible = True
-                    self.enabled = True
+                    super().__init__("probe", Rect(0, 0, 300, 200))
                     self.captured = None
 
                 def handle_event(self, event, _app):
@@ -347,12 +340,6 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
                             "raw_pos": getattr(event, "raw_pos", None),
                         }
                     return False
-
-                def update(self, _dt):
-                    return None
-
-                def draw(self, _surface, _theme):
-                    return None
 
             probe = app.add(Probe())
             app.pointer_capture.begin("probe", Rect(0, 0, 100, 80))
@@ -388,10 +375,9 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             app.create_scene("life")
             app.create_scene("mandel")
 
-            class Probe:
+            class Probe(UiNode):
                 def __init__(self):
-                    self.visible = True
-                    self.enabled = True
+                    super().__init__("probe", Rect(0, 0, 320, 180))
                     self.event_count = 0
                     self.update_count = 0
                     self.draw_count = 0

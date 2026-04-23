@@ -25,6 +25,18 @@ class Part:
     def on_unregister(self, host) -> None:
         return None
 
+    def build(self, host) -> None:
+        return None
+
+    def bind_runtime(self, host) -> None:
+        return None
+
+    def configure_accessibility(self, host, tab_index_start: int) -> int:
+        return int(tab_index_start)
+
+    def shutdown_runtime(self, host) -> None:
+        return None
+
     def handle_event(self, host, event) -> bool:
         return False
 
@@ -231,22 +243,16 @@ class PartManager:
 
     def build_parts(self, host) -> None:
         for part in self._parts.values():
-            build = getattr(part, "build", None)
-            if callable(build):
-                build(host)
+            part.build(host)
 
     def bind_runtime(self, host) -> None:
         for part in self._parts.values():
-            bind = getattr(part, "bind_runtime", None)
-            if callable(bind):
-                bind(host)
+            part.bind_runtime(host)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         next_index = int(tab_index_start)
         for part in self._parts.values():
-            configure = getattr(part, "configure_accessibility", None)
-            if callable(configure):
-                next_index = int(configure(host, next_index))
+            next_index = int(part.configure_accessibility(host, next_index))
         return next_index
 
     def _require_part(self, part_name: str) -> Part:

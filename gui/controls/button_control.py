@@ -100,8 +100,7 @@ class ButtonControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
-        revision_reader = getattr(factory, "font_revision", None)
-        font_revision = int(revision_reader()) if callable(revision_reader) else 0
+        font_revision = factory.font_revision()
         visual_key = (self.style, self.text, self.font_role, self.rect.width, self.rect.height, font_revision)
         if self._visuals is None or self._visual_key != visual_key:
             self._visuals = factory.build_interactive_visuals(self.style, self.text, self.rect, font_role=self.font_role)

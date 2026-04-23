@@ -96,8 +96,6 @@ class FocusVisualizer:
         theme,
     ) -> None:
         """Draw a dashed rectangle around a node's draw_rect with the given alpha."""
-        if not hasattr(node, "rect") or not hasattr(node, "visible"):
-            return
         if not node.visible:
             return
 

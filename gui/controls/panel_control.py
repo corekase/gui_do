@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from ..core.gui_event import EventPhase, GuiEvent
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -117,7 +117,7 @@ class PanelControl(UiNode):
             self._set_window_active_state(window, False)
             return
         if not new_enabled:
-            was_active = bool(getattr(window, "active", False))
+            was_active = bool(window.active)
             if self._drag_window is window:
                 self._pending_capture_release_owner_id = window.control_id
                 self._drag_window = None
@@ -133,7 +133,7 @@ class PanelControl(UiNode):
             return
         active_window = None
         for child in reversed(self.children):
-            if child.visible and child.enabled and self._is_window_like(child) and getattr(child, "active", False):
+            if child.visible and child.enabled and self._is_window_like(child) and child.active:
                 active_window = child
                 break
         if active_window is None:
@@ -172,10 +172,8 @@ class PanelControl(UiNode):
         """Attach one child control and return it."""
         child.parent = self
         self.children.append(child)
-        if hasattr(child, "on_mount"):
-            child.on_mount(self)
-        if hasattr(child, "invalidate"):
-            child.invalidate()
+        child.on_mount(self)
+        child.invalidate()
         return child
 
     @property
@@ -209,7 +207,7 @@ class PanelControl(UiNode):
             return False
 
         was_window = self._is_window_like(child)
-        was_active_window = bool(was_window and getattr(child, "active", False))
+        was_active_window = bool(was_window and child.active)
 
         if self._drag_window is child:
             self._pending_capture_release_owner_id = child.control_id
@@ -228,13 +226,10 @@ class PanelControl(UiNode):
                 self._set_active_window(next_window)
 
         child.parent = None
-        if hasattr(child, "on_unmount"):
-            child.on_unmount(self)
+        child.on_unmount(self)
         if dispose:
-            if hasattr(child, "dispose"):
-                child.dispose()
-        if hasattr(self, "invalidate"):
-            self.invalidate()
+            child.dispose()
+        self.invalidate()
         return True
 
     def update(self, dt_seconds: float) -> None:
@@ -244,11 +239,7 @@ class PanelControl(UiNode):
 
     @staticmethod
     def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
-        if hasattr(child, "handle_routed_event"):
-            return bool(child.handle_routed_event(event, app))
-        if event.phase is EventPhase.TARGET and hasattr(child, "handle_event"):
-            return bool(child.handle_event(event, app))
-        return False
+        return bool(child.handle_routed_event(event, app))
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
         ordered = list(reversed(self.children)) if reverse else list(self.children)

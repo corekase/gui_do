@@ -4,7 +4,7 @@ import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
-from ..core.gui_event import EventPhase, GuiEvent
+from ..core.gui_event import GuiEvent
 from ..core.ui_node import UiNode
 from ..graphics import load_pristine_surface
 
@@ -174,10 +174,8 @@ class WindowControl(UiNode):
     def add(self, child: UiNode) -> UiNode:
         child.parent = self
         self.children.append(child)
-        if hasattr(child, "on_mount"):
-            child.on_mount(self)
-        if hasattr(child, "invalidate"):
-            child.invalidate()
+        child.on_mount(self)
+        child.invalidate()
         return child
 
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
@@ -185,13 +183,10 @@ class WindowControl(UiNode):
             return False
         self.children.remove(child)
         child.parent = None
-        if hasattr(child, "on_unmount"):
-            child.on_unmount(self)
+        child.on_unmount(self)
         if dispose:
-            if hasattr(child, "dispose"):
-                child.dispose()
-        if hasattr(self, "invalidate"):
-            self.invalidate()
+            child.dispose()
+        self.invalidate()
         return True
 
     def clear_children(self, *, dispose: bool = False) -> int:
@@ -238,11 +233,7 @@ class WindowControl(UiNode):
 
     @staticmethod
     def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
-        if hasattr(child, "handle_routed_event"):
-            return bool(child.handle_routed_event(event, app))
-        if event.phase is EventPhase.TARGET and hasattr(child, "handle_event"):
-            return bool(child.handle_event(event, app))
-        return False
+        return bool(child.handle_routed_event(event, app))
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
         ordered = list(reversed(self.children)) if reverse else list(self.children)
@@ -276,25 +267,17 @@ class WindowControl(UiNode):
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
-        revision_reader = getattr(factory, "font_revision", None)
-        font_revision = int(revision_reader()) if callable(revision_reader) else 0
+        font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
             self._draw_default_window_background(surface, theme, factory)
         chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
         if self._chrome is None or self._chrome_size != chrome_key:
-            try:
-                self._chrome = factory.build_window_chrome_visuals(
-                    self.rect.width,
-                    self.titlebar_height,
-                    self.title,
-                    title_font_role=self.title_font_role,
-                )
-            except TypeError:
-                self._chrome = factory.build_window_chrome_visuals(
-                    self.rect.width,
-                    self.titlebar_height,
-                    self.title,
-                )
+            self._chrome = factory.build_window_chrome_visuals(
+                self.rect.width,
+                self.titlebar_height,
+                self.title,
+                title_font_role=self.title_font_role,
+            )
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(18, chrome_height)
             self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)

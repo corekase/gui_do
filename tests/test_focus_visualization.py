@@ -122,10 +122,12 @@ class FocusVisualizerDrawingTests(unittest.TestCase):
         self.visualizer.set_focus_hint(node)
         self.visualizer.draw_hints(self.surface, self.theme)  # Must not raise
 
-    def test_draw_hints_skips_missing_rect(self) -> None:
-        node = SimpleNamespace(control_id="n", visible=True)
+    def test_draw_hints_skips_node_with_degenerate_rect(self) -> None:
+        node = UiNode("n", Rect(0, 0, 1, 1))
         self.visualizer.set_focus_hint(node)
-        self.visualizer.draw_hints(self.surface, self.theme)  # Must not raise
+        with patch("pygame.draw.line") as mock_line:
+            self.visualizer.draw_hints(self.surface, self.theme)
+            mock_line.assert_not_called()
 
     def test_draw_dashed_rect_draws_lines(self) -> None:
         rect = Rect(10, 10, 100, 100)

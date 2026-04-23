@@ -24,7 +24,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         part.status_bus_ready = True
         demo.app.events.subscribe(part.status_topic, lambda payload: part.on_status_event(demo, payload), scope=part.status_scope)
 
-        demo._mandel_part().publish_event("status", "Mandelbrot: event-bus")
+        demo._mandel_feature.publish_event("status", "Mandelbrot: event-bus")
 
         self.assertEqual(part.status_text, "Mandelbrot: event-bus")
 
@@ -32,15 +32,16 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         demo, part = self._make_part()
         part.status_bus_ready = False
 
-        demo._mandel_part().publish_event("status", "Mandelbrot: direct")
+        demo._mandel_feature.publish_event("status", "Mandelbrot: direct")
 
         self.assertEqual(part.status_text, "Mandelbrot: direct")
 
     def test_format_mandel_status_maps_typed_payloads(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo._mandel_feature = MandelbrotRenderFeature()
 
-        self.assertEqual(demo._mandel_part().format_status(demo, {"kind": MANDEL_KIND_RUNNING_ITERATIVE}), "Mandelbrot: running iterative")
-        self.assertEqual(demo._mandel_part().format_status(demo, {"kind": "failed", "detail": "boom"}), "Mandelbrot failed: boom")
+        self.assertEqual(demo._mandel_feature.format_status(demo, {"kind": MANDEL_KIND_RUNNING_ITERATIVE}), "Mandelbrot: running iterative")
+        self.assertEqual(demo._mandel_feature.format_status(demo, {"kind": "failed", "detail": "boom"}), "Mandelbrot failed: boom")
 
     def test_mandel_status_event_round_trip_payload(self) -> None:
         event = MandelStatusEvent(kind="status", detail="hello")
@@ -56,7 +57,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         mandel_part.task_ids = {"iter", "aux"}
         mandel_part.status_bus_ready = False
 
-        demo._mandel_part().publish_running_status()
+        demo._mandel_feature.publish_running_status()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot: running iterative (2 tasks)")
 
@@ -80,8 +81,8 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         mandel_part.help_label = SimpleNamespace(text="")
         demo._mandel_feature = mandel_part
 
-        demo._mandel_part().publish_running_status()
-        demo._mandel_part().publish_running_status()
+        demo._mandel_feature.publish_running_status()
+        demo._mandel_feature.publish_running_status()
 
         self.assertEqual(len(publish_calls), 1)
 
@@ -105,7 +106,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _BusyScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot: running iterative (1 task)")
 
@@ -133,10 +134,10 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _FinishedScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot: complete")
-        self.assertIsNone(demo._mandel_part().running_mode)
+        self.assertIsNone(demo._mandel_feature.running_mode)
 
     def test_update_mandel_events_aggregates_multiple_failures(self) -> None:
         demo, mandel_part = self._make_part()
@@ -161,7 +162,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _FailedScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot failed: 2 tasks failed - can1: boom; can2: bang")
 
@@ -185,7 +186,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _SingleFailedScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot failed: iter: boom")
 
@@ -212,7 +213,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _UnorderedFailedScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot failed: 2 tasks failed - can1: boom; can2: bang")
 
@@ -223,7 +224,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         demo._mandel_feature = mandel_part
 
         mandel_part.demo = demo
-        detail = demo._mandel_part().format_failure_summary(
+        detail = demo._mandel_feature.format_failure_summary(
             [
                 ("can1", "boom"),
                 ("can2", "bang"),
@@ -261,35 +262,35 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel_part.scheduler = _ManyFailedScheduler()
 
-        demo._mandel_part().update_events()
+        demo._mandel_feature.update_events()
 
         self.assertEqual(mandel_part.status_text, "Mandelbrot failed: 4 tasks failed - can1: boom; can2: bang; +2 more")
 
     def test_set_mandel_failure_preview_limit_clamps_and_returns_value(self) -> None:
         demo, _mandel_part = self._make_part()
 
-        low = demo._mandel_part().set_failure_preview_limit(demo, 0)
-        high = demo._mandel_part().set_failure_preview_limit(demo, 999)
-        normal = demo._mandel_part().set_failure_preview_limit(demo, 4)
+        low = demo._mandel_feature.set_failure_preview_limit(demo, 0)
+        high = demo._mandel_feature.set_failure_preview_limit(demo, 999)
+        normal = demo._mandel_feature.set_failure_preview_limit(demo, 4)
 
         self.assertEqual(low, 1)
         self.assertEqual(high, 20)
         self.assertEqual(normal, 4)
-        self.assertEqual(demo._mandel_part().failure_preview_limit, 4)
+        self.assertEqual(demo._mandel_feature.failure_preview_limit, 4)
 
     def test_set_mandel_failure_preview_limit_refreshes_help_label_when_available(self) -> None:
         demo, mandel_part = self._make_part()
 
-        demo._mandel_part().set_failure_preview_limit(demo, 6)
+        demo._mandel_feature.set_failure_preview_limit(demo, 6)
 
         self.assertIn("Failure preview [ ]: 6", mandel_part.help_label.text)
 
     def test_configured_preview_limit_controls_failure_summary(self) -> None:
         demo, mandel_part = self._make_part()
-        demo._mandel_part().set_failure_preview_limit(demo, 1)
+        demo._mandel_feature.set_failure_preview_limit(demo, 1)
 
         mandel_part.demo = demo
-        detail = demo._mandel_part().format_failure_summary(
+        detail = demo._mandel_feature.format_failure_summary(
             [
                 ("can1", "boom"),
                 ("can2", "bang"),
@@ -305,7 +306,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         mandel_part.failure_preview_limit = 5
         demo._mandel_feature = mandel_part
 
-        text = demo._mandel_part().format_help_text(demo)
+        text = demo._mandel_feature.format_help_text(demo)
 
         self.assertIn("Modes: Iterative, Recursive, 1M 4Tasks, 4M 4Tasks", text)
         self.assertIn("Failure preview [ ]: 5", text)
@@ -314,20 +315,20 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         demo, mandel_part = self._make_part()
         mandel_part.failure_preview_limit = 3
 
-        consumed = demo._mandel_part().adjust_failure_preview_limit(demo, 1)
+        consumed = demo._mandel_feature.adjust_failure_preview_limit(demo, 1)
 
         self.assertTrue(consumed)
-        self.assertEqual(demo._mandel_part().failure_preview_limit, 4)
+        self.assertEqual(demo._mandel_feature.failure_preview_limit, 4)
         self.assertEqual(mandel_part.status_text, "Mandelbrot failure preview limit: 4")
 
     def test_adjust_mandel_failure_preview_limit_reports_bound(self) -> None:
         demo, mandel_part = self._make_part()
         mandel_part.failure_preview_limit = 1
 
-        consumed = demo._mandel_part().adjust_failure_preview_limit(demo, -1)
+        consumed = demo._mandel_feature.adjust_failure_preview_limit(demo, -1)
 
         self.assertTrue(consumed)
-        self.assertEqual(demo._mandel_part().failure_preview_limit, 1)
+        self.assertEqual(demo._mandel_feature.failure_preview_limit, 1)
         self.assertEqual(mandel_part.status_text, "Mandelbrot failure preview limit: 1 (at bound)")
 
     def test_mandel_part_posts_status_message_to_life_part(self) -> None:

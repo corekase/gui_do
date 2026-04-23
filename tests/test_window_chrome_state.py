@@ -26,7 +26,11 @@ class _FakeFactory:
         return visuals.idle
 
     @staticmethod
-    def build_window_chrome_visuals(width: int, titlebar_height: int, title: str):
+    def font_revision() -> int:
+        return 0
+
+    @staticmethod
+    def build_window_chrome_visuals(width: int, titlebar_height: int, title: str, *, title_font_role: str = "title"):
         del titlebar_height, title
         inactive = Surface((width, 24), pygame.SRCALPHA)
         inactive.fill((200, 0, 0, 255))

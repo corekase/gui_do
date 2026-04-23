@@ -15,21 +15,21 @@ class KeyboardManager:
         return event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING)
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
-        if event.is_key_down(pygame.K_TAB) and hasattr(app, "focus"):
-            modifiers = int(getattr(getattr(event, "source_event", None), "mod", 0))
+        if event.is_key_down(pygame.K_TAB):
+            modifiers = int(getattr(event.source_event, "mod", 0))
             shift_pressed = bool(modifiers & pygame.KMOD_SHIFT)
             focus_scope = scene.active_window()
             if app.focus.cycle_focus(scene, forward=not shift_pressed, window=focus_scope):
                 event.prevent_default()
                 event.stop_propagation()
                 return True
-        if hasattr(app, "actions") and app.actions.trigger_from_event(event, app):
+        if app.actions.trigger_from_event(event, app):
             event.prevent_default()
             event.stop_propagation()
             return True
         if event.default_prevented or event.propagation_stopped:
             return True
-        if hasattr(app, "focus") and app.focus.route_key_event(event, app):
+        if app.focus.route_key_event(event, app):
             event.prevent_default()
             event.stop_propagation()
             return True

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
 from enum import Enum
 from typing import Hashable, Optional, Tuple
@@ -141,7 +142,6 @@ class GuiEvent:
 
     def clone(self) -> "GuiEvent":
         """Return a shallow copy of this event with an independent propagation state."""
-        import dataclasses
         return dataclasses.replace(self)
 
     @property

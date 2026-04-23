@@ -164,6 +164,7 @@ from gui import (
     ArrowBoxControl,
     ButtonGroupControl,
     CanvasControl,
+    CanvasEventPacket,
     FrameControl,
     ImageControl,
     SliderControl,
@@ -173,10 +174,28 @@ from gui import (
     WindowControl,
     LayoutAxis,
     LayoutManager,
+    WindowTilingManager,
+    ActionManager,
+    EventManager,
+    EventBus,
+    FocusManager,
     FontManager,
+    EventPhase,
+    EventType,
+    GuiEvent,
+    VALUE_CHANGE_CALLBACK_MODES,
+    ValueChangeCallbackMode,
+    ValueChangeCallback,
+    ensure_reason_callback,
+    normalize_value_change_callback_mode,
+    ValueChangeReason,
+    InvalidationTracker,
+    ObservableValue,
+    PresentationModel,
     TaskEvent,
     TaskScheduler,
     Timers,
+    BuiltInGraphicsFactory,
     ColorTheme,
 )
 
@@ -334,8 +353,10 @@ The `on_update()` hook runs every frame and processes events:
 def on_update(self, host) -> None:
     """Run Life simulation update and consume canvas events."""
     # Drain canvas events (mouse clicks, drags, wheel)
-    while self.canvas.has_events():
-        event = self.canvas.pop_event()
+    while True:
+        event = self.canvas.read_event()
+        if event is None:
+            break
         self._handle_canvas_event(event)
 
     # Apply Conway's Game of Life rules
@@ -541,8 +562,10 @@ def configure_accessibility(self, host, tab_index_start: int) -> int:
 def on_update(self, host) -> None:
     """Drain events, update state, publish messages."""
     # Process control events
-    while self.canvas.has_events():
-        event = self.canvas.pop_event()
+    while True:
+        event = self.canvas.read_event()
+        if event is None:
+            break
         self._handle_event(event)
 
     # Update feature state
@@ -558,7 +581,7 @@ def on_update(self, host) -> None:
 ```
 
 **Common patterns**:
-- Drain canvas events with `canvas.has_events()` / `canvas.pop_event()`
+- Drain canvas events with `canvas.read_event()` (returns `None` when the queue is empty)
 - Update internal state (simulation, calculations)
 - Render to canvas with `canvas.fill()`, `canvas.draw_line()`, etc.
 - Publish status via `self.send_message(target_part_name, message_dict)`
@@ -622,8 +645,10 @@ def _on_button_click(self):
 button = self.window.add(ButtonControl(..., on_click=self._on_button_click))
 
 # Canvas events
-while self.canvas.has_events():
-    event = self.canvas.pop_event()
+while True:
+    event = self.canvas.read_event()
+    if event is None:
+        break
     if event.is_mouse_down():
         print(f"Clicked at {event.pos}")
     elif event.is_mouse_motion():

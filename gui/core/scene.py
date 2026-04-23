@@ -19,21 +19,17 @@ class Scene:
     def add(self, node: UiNode) -> UiNode:
         self.nodes.append(node)
         node.parent = None
-        if hasattr(node, "on_mount"):
-            node.on_mount(None)
-        if hasattr(node, "invalidate"):
-            node.invalidate()
+        node.on_mount(None)
+        node.invalidate()
         return node
 
     def remove(self, node: UiNode, *, dispose: bool = False) -> bool:
         if node not in self.nodes:
             return False
         self.nodes.remove(node)
-        if hasattr(node, "on_unmount"):
-            node.on_unmount(None)
+        node.on_unmount(None)
         if dispose:
-            if hasattr(node, "dispose"):
-                node.dispose()
+            node.dispose()
         return True
 
     def update(self, dt_seconds: float) -> None:
@@ -129,12 +125,8 @@ class Scene:
         return False
 
     @staticmethod
-    def _dispatch_node_event(node, event: GuiEvent, app: "GuiApplication") -> bool:
-        if hasattr(node, "handle_routed_event"):
-            return bool(node.handle_routed_event(event, app))
-        if event.phase is EventPhase.TARGET and hasattr(node, "handle_event"):
-            return bool(node.handle_event(event, app))
-        return False
+    def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
+        return bool(node.handle_routed_event(event, app))
 
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):

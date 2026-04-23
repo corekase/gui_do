@@ -300,14 +300,6 @@ class LifeSimulationFeature(Part):
             self.life_origin[1] -= delta[1]
             return True
 
-        if event.is_mouse_down(4) or event.is_mouse_down(5):
-            pos = event.pos
-            if pos is not None and canvas.rect.collidepoint(pos):
-                wheel_step = 1 if event.button == 4 else -1
-                anchor_local = (pos[0] - canvas.rect.left, pos[1] - canvas.rect.top)
-                self.zoom_life_view_about(demo, anchor_local, self.life_cell_size + (wheel_step * 2))
-                return True
-
         if event.is_mouse_wheel():
             pointer_pos = demo.app.lock_point_pos if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None else event.pos
             if pointer_pos is not None and canvas.rect.collidepoint(pointer_pos):
