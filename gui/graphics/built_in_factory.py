@@ -111,7 +111,7 @@ class BuiltInGraphicsFactory:
         width, height = rect.size
         surface = Surface((width, height)).convert()
         draw_box_bitmap(surface, state, Rect(0, 0, width, height), BUILT_IN_COLOURS)
-        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=highlight, role_name=font_role)
+        text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         text_rect = text_bitmap.get_rect(center=(width // 2, height // 2 - 1))
         surface.blit(text_bitmap, text_rect)
         return surface
@@ -230,7 +230,7 @@ class BuiltInGraphicsFactory:
         if style_key == "radio":
             idle = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=False)
             hover = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["none"], font_role=font_role, highlight=False)
-            armed = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["highlight"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=True)
+            armed = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["highlight"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=False)
         elif style_key == "round":
             idle = self._draw_round_button_surface(text, rect, "idle", font_role=font_role, highlight=False)
             hover = self._draw_round_button_surface(text, rect, "hover", font_role=font_role, highlight=False)
@@ -242,7 +242,7 @@ class BuiltInGraphicsFactory:
         elif style_key == "check":
             idle = self._draw_check_style_surface(text, rect, 0, font_role=font_role, highlight=False)
             hover = self._draw_check_style_surface(text, rect, 1, font_role=font_role, highlight=False)
-            armed = self._draw_check_style_surface(text, rect, 2, font_role=font_role, highlight=True)
+            armed = self._draw_check_style_surface(text, rect, 2, font_role=font_role, highlight=False)
         else:
             idle = self._draw_built_in_button_surface(text, rect, "idle", font_role=font_role, highlight=False)
             hover = self._draw_built_in_button_surface(text, rect, "hover", font_role=font_role, highlight=False)
