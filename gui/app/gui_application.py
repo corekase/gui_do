@@ -11,7 +11,6 @@ from ..core.pointer_capture import PointerCapture
 from ..core.keyboard_manager import KeyboardManager
 from ..core.focus_manager import FocusManager
 from ..core.action_manager import ActionManager
-from ..core.font_manager import FontManager
 from ..core.event_bus import EventBus
 from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
@@ -171,9 +170,6 @@ class GuiApplication:
 
     def get_scene_graphics_factory(self, name: str) -> BuiltInGraphicsFactory:
         return self._scene_runtime(name)["graphics_factory"]
-
-    def get_scene_font_manager(self, name: str) -> FontManager:
-        return self._scene_runtime(name)["theme"].fonts
 
     def _create_scene_runtime(self):
         scene = Scene()
@@ -677,14 +673,6 @@ class GuiApplication:
     def send_part_message(self, sender_name: str, target_part_name: str, message: dict) -> bool:
         """Send dictionary message between registered parts by name."""
         return self.parts.send_message(sender_name, target_part_name, message)
-
-    def register_part_scene_node(self, part_name: str, node, scene_name: Optional[str] = None):
-        """Attach a scene node on behalf of a registered part."""
-        return self.parts.register_scene_node(part_name, node, scene_name=scene_name)
-
-    def register_part_window(self, part_name: str, window, scene_name: Optional[str] = None):
-        """Attach a window node on behalf of a registered part."""
-        return self.parts.register_window(part_name, window, scene_name=scene_name)
 
     def register_part_runnable(self, part_name: str, runnable_name: str, runnable) -> None:
         """Register a callable runnable under a registered part name."""

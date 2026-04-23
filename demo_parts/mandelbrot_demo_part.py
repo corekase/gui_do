@@ -242,7 +242,6 @@ class MandelbrotRenderFeature(Part):
                 mandel_rect,
                 "Mandelbrot",
                 title_font_role=self.font_role("window_title"),
-                event_handler=lambda event: self.window_event_handler(demo, event),
                 use_frame_backdrop=True,
             )
         )
@@ -405,11 +404,6 @@ class MandelbrotRenderFeature(Part):
         if remaining > 0:
             summary = f"{summary}; +{remaining} more"
         return f"{len(failed_details)} tasks failed - {summary}"
-
-    @staticmethod
-    def window_event_handler(_demo, event) -> bool:
-        """Window-level event hook; retained for explicit extension seam."""
-        return False
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
         """Map an iteration count to the Mandelbrot palette color."""

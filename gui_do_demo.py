@@ -104,27 +104,13 @@ class GuiDoDemo:
             horizontal=True,
         )
 
-        def _tile_visible_windows(newly_visible=None) -> None:
-            if not self.app.read_window_tiling_settings().get("enabled", False):
-                return
-            if newly_visible is None:
-                windows = [self.life_window, self.mandel_window]
-                newly_visible = [window for window in windows if window.visible]
-            self.app.tile_windows(newly_visible=newly_visible)
-
         def _on_life_toggle(pushed: bool) -> None:
             self.life_window.visible = bool(pushed)
-            if pushed:
-                _tile_visible_windows(newly_visible=[self.life_window])
-            else:
-                _tile_visible_windows()
+            self.app.tile_windows(newly_visible=[self.life_window] if pushed else None)
 
         def _on_mandel_toggle(pushed: bool) -> None:
             self.mandel_window.visible = bool(pushed)
-            if pushed:
-                _tile_visible_windows(newly_visible=[self.mandel_window])
-            else:
-                _tile_visible_windows()
+            self.app.tile_windows(newly_visible=[self.mandel_window] if pushed else None)
 
         self.exit_button = self.task_panel.add(
             ButtonControl(
@@ -160,7 +146,7 @@ class GuiDoDemo:
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
-        _tile_visible_windows()
+        self.app.tile_windows()
 
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""

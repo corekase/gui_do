@@ -10,15 +10,6 @@ Geometry = Union[Rect, Tuple[int, int]]
 
 
 @dataclass
-class _GridConfig:
-    anchor: Tuple[int, int] = (0, 0)
-    width: int = 100
-    height: int = 40
-    spacing: int = 8
-    use_rect: bool = True
-
-
-@dataclass
 class _LinearConfig:
     anchor: Tuple[int, int] = (0, 0)
     width: int = 100
@@ -33,27 +24,9 @@ class LayoutManager:
     """Grid, linear, and anchor layout helpers for controls."""
 
     def __init__(self) -> None:
-        self._grid = _GridConfig()
         self._linear = _LinearConfig()
         self._linear_cursor = 0
         self._anchor_bounds = Rect(0, 0, 1, 1)
-
-    def set_grid_properties(
-        self,
-        anchor: Tuple[int, int],
-        width: int,
-        height: int,
-        spacing: int,
-        use_rect: bool = True,
-    ) -> None:
-        self._grid = _GridConfig(anchor, int(width), int(height), int(spacing), bool(use_rect))
-
-    def gridded(self, x: int, y: int) -> Geometry:
-        gx = self._grid.anchor[0] + (x * (self._grid.width + self._grid.spacing))
-        gy = self._grid.anchor[1] + (y * (self._grid.height + self._grid.spacing))
-        if self._grid.use_rect:
-            return Rect(gx, gy, self._grid.width, self._grid.height)
-        return (gx, gy)
 
     def set_linear_properties(
         self,
@@ -86,9 +59,6 @@ class LayoutManager:
         geo = self.linear(self._linear_cursor)
         self._linear_cursor += 1
         return geo
-
-    def reset_linear_cursor(self) -> None:
-        self._linear_cursor = 0
 
     def set_anchor_bounds(self, bounds: Rect) -> None:
         self._anchor_bounds = Rect(bounds)
@@ -127,10 +97,3 @@ class LayoutManager:
         if use_rect:
             return rect
         return rect.topleft
-
-    def place_gui_object(self, gui_object, geometry: Geometry):
-        if isinstance(geometry, Rect):
-            gui_object.rect = Rect(geometry)
-        else:
-            gui_object.rect.topleft = geometry
-        return gui_object

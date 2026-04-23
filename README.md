@@ -77,14 +77,14 @@ label = root.add(
 app.style_label(label, size=18, role="body")
 
 def on_quit():
-    app.quit()
+    app.running = False
 
 button = root.add(
     ButtonControl("quit", Rect(10, 50, 100, 30), text="Quit"),
 )
 button.set_on_click(on_quit)
 
-app.actions.register_action("exit", lambda _event: (app.quit() or True))
+app.actions.register_action("exit", lambda _event: (setattr(app, "running", False) or True))
 app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
 
 # Run the app through gui_do-managed lifecycle
@@ -251,6 +251,7 @@ class LifeSimulationFeature(Part):
         self.life_cells = set()
         self.life_origin = [0.0, 0.0]
         self.life_cell_size = 12
+        self._right_dragging = False
         self.demo = None
         self.window = None
         self.canvas = None
@@ -367,20 +368,26 @@ def on_update(self, host) -> None:
 
 def _handle_canvas_event(self, event) -> None:
     """Process canvas mouse events: drag to pan, click to toggle cells."""
-    if event.is_mouse_motion():
-        # Right-click drag pans the view
-        if event.buttons[2]:  # Right mouse button
-            self.life_origin[0] -= event.rel[0]
-            self.life_origin[1] -= event.rel[1]
+    if event.is_right_down():
+        # Right-click begins a pan drag
+        self._right_dragging = True
 
-    elif event.is_mouse_down():
+    elif event.is_mouse_up(3):
+        # Right-click release ends the pan drag
+        self._right_dragging = False
+
+    elif event.is_mouse_motion() and self._right_dragging:
+        # Pan while right button is held
+        self.life_origin[0] -= event.rel[0]
+        self.life_origin[1] -= event.rel[1]
+
+    elif event.is_left_down():
         # Left-click toggles a cell
-        if event.button == 1:
-            cell = self._screen_pos_to_cell(event.pos)
-            if cell in self.life_cells:
-                self.life_cells.remove(cell)
-            else:
-                self.life_cells.add(cell)
+        cell = self._screen_pos_to_cell(event.pos)
+        if cell in self.life_cells:
+            self.life_cells.remove(cell)
+        else:
+            self.life_cells.add(cell)
 
     elif event.is_mouse_wheel():
         # Scroll wheel zooms
@@ -524,8 +531,8 @@ def build(self, host) -> None:
 ```python
 def bind_runtime(self, host) -> None:
     self.scheduler = host.app.get_scene_scheduler("main")
-    self.event_bus = host.app.get_event_bus()
-    self.scheduler.subscribe(self._on_task_complete)
+    self.event_bus = host.app.events  # EventBus for publish/subscribe messaging
+    self.scheduler.set_message_dispatch_limit(256)
 ```
 
 **Why separate from build?**: Some services are not available until the scene is fully constructed.
@@ -615,8 +622,8 @@ self.send_message("mandelbrot_part", {
     "population": 1234,
 })
 
-# In another part, consume it
-def on_post_frame(self, host) -> None:
+# In another part, consume it in on_update (called every frame)
+def on_update(self, host) -> None:
     while self.has_messages():
         msg = self.pop_message()
         if msg.get("topic") == "life_status":
@@ -701,16 +708,15 @@ This section documents the type annotations and patterns used throughout gui_do.
 
 ### Callback Signatures
 
-- **`OnClickCallback`**: `Callable[[GuiEvent], bool]` - returns True to consume event
-- **`OnValueChangeCallback`**: `Callable[[T], None] | Callable[[T, ValueChangeReason], None]` - value-only (compat mode) or value+reason callback
-- **`OnVisibilityChangeCallback`**: `Callable[[bool], None]` - (is_visible)
-- **`OnWindowFocusCallback`**: `Callable[[bool], None]` - (is_focused)
+- **`OnClickCallback`**: `Callable[[], None]` - no arguments; called when button/toggle is activated by mouse or keyboard
+- **`OnValueChangeCallback`**: `Callable[[T], None] | Callable[[T, ValueChangeReason], None]` - value-only (compat mode) or value+reason callback; mode controlled by `on_change_mode` constructor arg
+- **`OnToggleCallback`**: `Callable[[bool], None]` - receives new pushed state
 
 ### Layout & Geometry
 
 - **`Rect`**: pygame.Rect - position and size (x, y, width, height)
-- **`LayoutAxis`**: Enum (HORIZONTAL, VERTICAL) - axis for layout calculations
-- **`AnchorPoint`**: Enum (TOP_LEFT, CENTER, BOTTOM_RIGHT, etc.) - anchor reference for positioning
+- **`LayoutAxis`**: Enum (HORIZONTAL, VERTICAL) - axis for slider/scrollbar orientation
+- **Anchor strings**: `"center"`, `"top_left"`, `"top_center"`, `"top_right"`, `"center_left"`, `"center_right"`, `"bottom_left"`, `"bottom_center"`, `"bottom_right"` — passed to `app.layout.anchored()`
 
 ### Collections & Containers
 
@@ -722,23 +728,31 @@ This section documents the type annotations and patterns used throughout gui_do.
 ### Observable Values
 
 - **`ObservableValue[T]`**: Wrapper that publishes change events
-  - `value.get() -> T`
-  - `value.set(new_value: T) -> None`
-  - `value.subscribe(callback: Callable[[T, T], None]) -> None`
+  - `obs.value` → current value (property)
+  - `obs.value = new_value` → set and notify observers
+  - `obs.set_silently(new_value)` → update without notifying
+  - `obs.force_notify()` → notify observers with current value even if unchanged
+  - `dispose = obs.subscribe(callback: Callable[[T], None])` → call `dispose()` to unsubscribe
 
 ### Task Scheduler
 
-- **`TaskEvent`**: Event emitted by `TaskScheduler`
-  - `event.task_id`: str - unique task identifier
-  - `event.is_complete()`: bool - True if task finished
-  - `event.is_failure()`: bool - True if task failed
-  - `event.result`: Any - task result (if complete)
-  - `event.failure_reason`: str - error message (if failed)
+- **`TaskEvent`**: Event produced by `TaskScheduler` completion/failure
+  - `event.task_id`: Hashable - unique task identifier
+  - `event.operation`: str - `"finished"` or `"failed"`
+  - `event.error`: Optional[str] - error message when `operation == "failed"`, else `None`
 
-- **`TaskScheduler`**: Service for background task management
-  - `schedule_task(task_id, task_fn, callback=None) -> None`
-  - `await_task(task_id, timeout_ms=None) -> TaskEvent`
-  - `has_task(task_id) -> bool`
+- **`TaskScheduler`**: Threaded background task runner
+  - `add_task(task_id, logic, parameters=None, message_method=None) -> None` — schedule a task; `message_method` is called on the main thread as the task sends incremental results
+  - `remove_tasks(*task_ids) -> None` — cancel pending tasks
+  - `get_finished_events() -> List[TaskEvent]` — read accumulated completion events
+  - `get_failed_events() -> List[TaskEvent]` — read accumulated failure events
+  - `clear_finished_events() -> None`
+  - `clear_failed_events() -> None`
+  - `tasks_active() -> bool` — True while any task is pending or running
+  - `tasks_busy() -> bool` — True while active or unread messages remain
+  - `suspend_tasks(*task_ids) -> None` / `resume_tasks(*task_ids) -> None`
+  - `suspend_all() -> None` / `resume_all() -> None`
+  - `task_count() -> int` / `pending_count() -> int` / `running_count() -> int`
 
 ### Color & Theme
 
@@ -748,10 +762,7 @@ This section documents the type annotations and patterns used throughout gui_do.
 
 ### Pointer Capture
 
-- **`PointerCapture`**: Manages drag lock areas
-  - `capture.acquire(node, lock_rect: Rect) -> bool`
-  - `capture.release(node) -> bool`
-  - `capture.is_captured(node) -> bool`
+Pointer capture is managed internally by the framework and controls. During a drag, the active control acquires a lock area and all motion events are routed to that control until release. This is not a public API surface — controls handle this automatically.
 
 ## Major Concepts Explained
 
@@ -813,25 +824,14 @@ One of gui_do's key features is reliable drag handling without cursor drift.
 **The Problem**: During a drag, the cursor can jump if logic reconciles pointer positions incorrectly, especially on release.
 
 **The Solution: Pointer Capture**:
-1. When a control starts a drag (e.g., slider handle), it acquires a **lock area** via `PointerCapture`
+1. When a control starts a drag (e.g., slider handle), it acquires a **lock area** internally via `PointerCapture`
 2. All subsequent motion uses coordinates from the locked area **only** (ignoring cursor position outside)
 3. On release, capture simply ends; no cursor mutation occurs
 4. This removes drift bugs entirely
 
-**In Code**:
-```python
-# Slider acquires capture during left-press on handle
-capture_rect = Rect(handle.x - 10, handle.y - 10, handle.width + 20, handle.height + 20)
-app.pointer_capture.acquire(self, capture_rect)
-
-# Motion handler uses captured coordinates
-if app.pointer_capture.is_captured(self):
-    pos = app.input_state.pos  # Locked position, safe to use
-    self._update_slider_from_position(pos)
-
-# Release just ends capture; no cursor repositioning
-app.pointer_capture.release(self)
-```
+Controls (sliders, scrollbars, canvases) manage pointer capture automatically. The framework guarantees that:
+- Slider/scrollbar release never repositions the pointer
+- Drag tracking ends cleanly on mouse-up even if the cursor has left the control bounds
 
 ### 4. Scheduler & Asynchronous Tasks
 
@@ -845,19 +845,27 @@ The `TaskScheduler` enables background work without blocking the UI.
 **Pattern**:
 ```python
 def launch_render(self):
-    def render_task():
-        # Long-running computation
-        return mandelbrot_pixels
+    def render_task(send):
+        # Long-running computation; publish incremental results via send()
+        pixels = compute_mandelbrot()
+        send(pixels)  # Routed to message_method on the main thread
 
-    callback = lambda event: self._on_render_complete(event)
-    self.scheduler.schedule_task("render_1", render_task, callback)
-
-def _on_render_complete(self, event):
-    if event.is_failure():
-        print(f"Render failed: {event.failure_reason}")
-    else:
-        pixels = event.result
+    def on_progress(pixels):
+        # Called on the main thread each frame as messages arrive
         self._apply_pixels_to_canvas(pixels)
+
+    self.scheduler.add_task("render_1", render_task, message_method=on_progress)
+
+def on_update(self, host) -> None:
+    # Poll completion and failure events each frame
+    for event in self.scheduler.get_finished_events():
+        if event.task_id == "render_1":
+            print("Render complete")
+    self.scheduler.clear_finished_events()
+
+    for event in self.scheduler.get_failed_events():
+        print(f"Render failed: {event.task_id}: {event.error}")
+    self.scheduler.clear_failed_events()
 ```
 
 ### 5. Scene & Window Management
@@ -870,27 +878,39 @@ Gui_do supports multiple scenes and window tiling.
 
 **Tiling**: Call `app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True)` to enable automatic window arrangement.
 
-**Window Focus**: Only one window is "active" at a time (receives keyboard input). Use `app.focus.request_focus(window)` to change which window is active.
+**Window Focus**: Only one window is "active" at a time (receives keyboard input). Use `app.focus.set_focus(node)` to change which control receives keyboard input.
 
 ### 6. Layout Management
 
 The `LayoutManager` handles control positioning and sizing.
 
-**Anchoring**: Controls can be anchored relative to their parent or the screen:
+**Anchored Layout**: Place a control relative to the screen or a bounding rectangle:
 ```python
-app.layout.anchor(control, point=AnchorPoint.CENTER, offset=(0, 0))
+app.layout.set_anchor_bounds(screen_rect)  # Set reference bounds
+rect = app.layout.anchored((300, 40), anchor="center")          # Center
+rect = app.layout.anchored((200, 30), anchor="bottom_right", margin=(16, 16))
+# anchor values: "center", "top_left", "top_center", "top_right",
+#                "center_left", "center_right",
+#                "bottom_left", "bottom_center", "bottom_right"
 ```
 
-**Grid Layout**: Arrange controls in a grid:
+**Linear Layout**: Position controls in a row or column using index-based slots:
 ```python
-children = [button1, button2, button3, button4]
-app.layout.grid(children, cols=2, gap=10, padding=5)
-```
+# Configure slot size and spacing
+app.layout.set_linear_properties(
+    anchor=(16, screen_rect.height - 40),
+    item_width=110,
+    item_height=30,
+    spacing=10,
+    horizontal=True,
+)
 
-**Linear Layout**: Arrange controls in a row or column:
-```python
-buttons = [save_btn, cancel_btn, delete_btn]
-app.layout.linear(buttons, axis=LayoutAxis.HORIZONTAL, gap=5)
+# Retrieve slot rects by index
+rect0 = app.layout.linear(0)  # first slot Rect
+rect1 = app.layout.linear(1)  # second slot Rect
+
+# Or use an auto-advancing cursor
+rect = app.layout.next_linear()  # advances internal cursor each call
 ```
 
 ### 7. Control Lifecycle
@@ -937,18 +957,20 @@ This allows features to react differently based on the change source.
 
 ### 9. Color Theme & Graphics Factory
 
-The framework uses pluggable rendering via `ColorTheme`:
+The framework uses pluggable rendering via `ColorTheme`. Each scene has its own theme accessible via `app.theme`:
 
 ```python
-theme = ColorTheme()
-theme.set_color("button_bg", pygame.Color(50, 50, 50))
-theme.set_color("button_fg", pygame.Color(200, 200, 200))
-theme.graphics_factory = BuiltInGraphicsFactory()
+# Access the active scene's theme
+app.theme.set_color("button_bg", pygame.Color(50, 50, 50))
 
-app = GuiApplication(screen, theme=theme)
+# Access the active scene's graphics factory
+app.graphics_factory  # BuiltInGraphicsFactory instance
+
+# Fonts are managed through the theme's FontManager
+app.theme.fonts.get_font(role="body")
 ```
 
-Custom rendering is possible by providing a `graphics_factory` with custom draw functions.
+Custom rendering is possible by providing a custom `BuiltInGraphicsFactory` subclass to a scene's theme.
 
 ---
 

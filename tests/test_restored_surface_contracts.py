@@ -1,6 +1,5 @@
 import time
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pygame
@@ -44,11 +43,8 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         self.assertIsNotNone(TaskScheduler)
         self.assertIsNotNone(TaskEvent)
 
-    def test_layout_manager_grid_linear_anchor_and_place(self) -> None:
+    def test_layout_manager_linear_and_anchor(self) -> None:
         manager = LayoutManager()
-        manager.set_grid_properties(anchor=(10, 20), width=30, height=40, spacing=5, use_rect=True)
-        self.assertEqual(manager.gridded(2, 1), Rect(80, 65, 30, 40))
-
         manager.set_linear_properties(anchor=(5, 6), item_width=10, item_height=11, spacing=2, horizontal=True, wrap_count=2, use_rect=True)
         self.assertEqual(manager.linear(0), Rect(5, 6, 10, 11))
         self.assertEqual(manager.linear(1), Rect(17, 6, 10, 11))
@@ -59,10 +55,6 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         self.assertEqual(manager.anchored((20, 10), anchor="top_center", margin=(0, 4), use_rect=True), Rect(90, 4, 20, 10))
         self.assertEqual(manager.linear(2), Rect(5, 19, 10, 11))
         self.assertEqual(manager.next_linear(), Rect(5, 6, 10, 11))
-
-        node = SimpleNamespace(rect=Rect(0, 0, 1, 1))
-        manager.place_gui_object(node, Rect(7, 8, 9, 10))
-        self.assertEqual(node.rect, Rect(7, 8, 9, 10))
 
     def test_window_tiling_api_tiles_non_overlapping_windows(self) -> None:
         pygame.init()

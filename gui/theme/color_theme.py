@@ -21,14 +21,6 @@ class ColorTheme:
         self.text = BUILT_IN_COLOURS["text"]
         self.shadow = BUILT_IN_COLOURS["none"]
 
-        # Shared aliases used by controls.
-        self.panel = self.medium
-        self.track = self.dark
-        self.handle = self.light
-        self.handle_active = self.highlight
-        self.button = self.medium
-        self.button_hover = self.light
-
         self.fonts = FontManager(resource_root=Path(__file__).resolve().parents[2])
         self.fonts.register_role("body", file_path="data/fonts/Ubuntu-B.ttf", size=16, system_name="arial")
         self.fonts.register_role("title", file_path="data/fonts/Gimbot.ttf", size=14, system_name="arial", bold=True)

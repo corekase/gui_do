@@ -199,14 +199,6 @@ class PartManager:
         target.enqueue_message(payload)
         return True
 
-    def register_scene_node(self, part_name: str, node, scene_name: Optional[str] = None):
-        self._require_part(part_name)
-        return self.app.add(node, scene_name=scene_name)
-
-    def register_window(self, part_name: str, window, scene_name: Optional[str] = None):
-        self._require_part(part_name)
-        return self.app.add(window, scene_name=scene_name)
-
     def register_runnable(self, part_name: str, runnable_name: str, runnable: Callable[..., Any]) -> None:
         self._require_part(part_name)
         if not callable(runnable):
