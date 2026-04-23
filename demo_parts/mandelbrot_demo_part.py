@@ -175,13 +175,6 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")
-        self.mandel_cols = (
-            (66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
-            (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
-            (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
-            (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3),
-        )
-        self.max_iter = 96
         self.task_ids = set()
         self.task_id_pool = ("iter", "recu", "1", "2", "3", "4", "can1", "can2", "can3", "can4")
         self.running_mode = None
@@ -201,12 +194,6 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         self.status_bus_ready = False
         self.status_subscription = None
         self._task_logic_alias = {
-            "iter": self.LOGIC_ALIAS_PRIMARY,
-            "recu": self.LOGIC_ALIAS_PRIMARY,
-            "1": self.LOGIC_ALIAS_PRIMARY,
-            "2": self.LOGIC_ALIAS_PRIMARY,
-            "3": self.LOGIC_ALIAS_PRIMARY,
-            "4": self.LOGIC_ALIAS_PRIMARY,
             "can1": self.LOGIC_ALIAS_CAN1,
             "can2": self.LOGIC_ALIAS_CAN2,
             "can3": self.LOGIC_ALIAS_CAN3,
@@ -541,35 +528,15 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
         """Map an iteration count to the Mandelbrot palette color."""
-        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
-        if logic is not None:
-            return logic.mandel_col(k)
-        if k >= self.max_iter - 1:
-            return (0, 0, 0)
-        return self.mandel_cols[k % len(self.mandel_cols)]
+        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_col(k)
 
     def mandel_viewport(self, _demo, width: int, height: int) -> Tuple[complex, float]:
         """Return viewport center and scale for the requested render dimensions."""
-        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
-        if logic is not None:
-            return logic.mandel_viewport(width, height)
-        center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        scale = max((extent / width).real, (extent / height).imag)
-        return center, scale
+        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_viewport(width, height)
 
     def mandel_pixel(self, _demo, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
         """Compute Mandelbrot iteration count for one pixel coordinate."""
-        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
-        if logic is not None:
-            return logic.mandel_pixel(px, py, width, height, center, scale)
-        c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
-        z = 0j
-        for k in range(self.max_iter):
-            z = z * z + c
-            if (z * z.conjugate()).real > 4.0:
-                return k
-        return self.max_iter - 1
+        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_pixel(px, py, width, height, center, scale)
 
     def clear_surfaces(self, demo) -> None:
         """Clear all Mandelbrot canvases to the theme medium background color."""
@@ -699,57 +666,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
     def iterative_task(self, demo, task_id, params):
         """Worker entrypoint for iterative full-frame scanline rendering."""
-        if self._run_logic_runnable(self.LOGIC_ALIAS_PRIMARY, "iterative_task", str(task_id), params):
-            return None
-        scheduler = self._get_scheduler(demo)
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        for y in range(height):
-            row = [self.mandel_pixel(demo, x, y, width, height, center, scale) for x in range(width)]
-            scheduler.send_message(task_id, (y, row))
-        return None
-
-    def recursive_fill(self, demo, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
-        """Recursively subdivide a rectangle and emit fill/pixel payload messages."""
-        logic = self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY)
-        if logic is not None:
-            scheduler = self._get_scheduler(demo)
-            logic._recursive_fill(scheduler, task_id, x, y, w, h, width, height, center, scale)
-            return
-        scheduler = self._get_scheduler(demo)
-        if w <= 0 or h <= 0:
-            return
-        tl = self.mandel_pixel(demo, x, y, width, height, center, scale)
-        tr = self.mandel_pixel(demo, x + w - 1, y, width, height, center, scale)
-        bl = self.mandel_pixel(demo, x, y + h - 1, width, height, center, scale)
-        br = self.mandel_pixel(demo, x + w - 1, y + h - 1, width, height, center, scale)
-        if w <= 4 or h <= 4:
-            values = []
-            for yy in range(y, y + h):
-                for xx in range(x, x + w):
-                    values.append(self.mandel_pixel(demo, xx, yy, width, height, center, scale))
-            scheduler.send_message(task_id, (x, y, w, h, values))
-            return
-        if tl == tr == bl == br:
-            scheduler.send_message(task_id, (x, y, w, h, tl))
-            return
-        hw = w // 2
-        hh = h // 2
-        self.recursive_fill(demo, task_id, x, y, hw, hh, width, height, center, scale)
-        self.recursive_fill(demo, task_id, x + hw, y, w - hw, hh, width, height, center, scale)
-        self.recursive_fill(demo, task_id, x, y + hh, hw, h - hh, width, height, center, scale)
-        self.recursive_fill(demo, task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
-
-    def recursive_task(self, demo, task_id, params):
-        """Worker entrypoint for recursive rendering over a requested rectangle."""
-        if self._run_logic_runnable(self.LOGIC_ALIAS_PRIMARY, "recursive_task", str(task_id), params):
-            return None
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        rect = Rect(params.get("rect", Rect(0, 0, width, height)))
-        self.recursive_fill(demo, task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
+        self._run_logic_runnable(self.LOGIC_ALIAS_PRIMARY, "iterative_task", str(task_id), params)
         return None
 
     def queue_recursive_task(
@@ -774,9 +691,8 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         self.task_ids.add(task_id)
 
     def _run_recursive_task_for_alias(self, demo, logic_alias: str, task_id, params):
-        if self._run_logic_runnable(logic_alias, "recursive_task", str(task_id), params):
-            return None
-        return self.recursive_task(demo, task_id, params)
+        self._run_logic_runnable(logic_alias, "recursive_task", str(task_id), params)
+        return None
 
     def launch_iterative(self, demo) -> None:
         """Launch iterative render mode when no Mandelbrot task is already running."""
