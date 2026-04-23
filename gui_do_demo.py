@@ -91,7 +91,7 @@ class GuiDoDemo:
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
         self.showcase_exit_button.set_tab_index(0)
-        self.showcase_back_button.set_tab_index(1)
+        self.showcase_apps_button.set_tab_index(1)
         self.showcase_styles_toggle.set_tab_index(2)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
@@ -99,7 +99,7 @@ class GuiDoDemo:
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
         self.showcase_exit_button.set_accessibility(role="button", label="Exit")
-        self.showcase_back_button.set_accessibility(role="button", label="Back")
+        self.showcase_apps_button.set_accessibility(role="button", label="Apps")
         self.showcase_styles_toggle.set_accessibility(role="toggle", label="Show Styles window")
         self.app.configure_parts_accessibility(self, len(base_controls))
 
@@ -274,11 +274,11 @@ class GuiDoDemo:
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
-        self.showcase_back_button = self.showcase_task_panel.add(
+        self.showcase_apps_button = self.showcase_task_panel.add(
             ButtonControl(
-                "showcase_back",
+                "showcase_apps",
                 self.app.layout.linear(1),
-                "Back",
+                "Apps",
                 lambda: self.app.switch_scene("main"),
                 style="angle",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
