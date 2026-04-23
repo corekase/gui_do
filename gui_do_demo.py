@@ -2,6 +2,7 @@ import pygame
 from pygame import Rect
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
 from demo_parts.life_demo_part import LifeSimulationFeature
+from demo_parts.bouncing_circles_demo_part import BouncingCirclesBackdropFeature
 
 from gui import (
     GuiApplication,
@@ -36,9 +37,10 @@ class GuiDoDemo:
         self.app.set_window_tiling_enabled(True, relayout=False)
 
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
+        self._circles_feature = BouncingCirclesBackdropFeature(circle_count=30)
         self._life_feature = LifeSimulationFeature()
         self._mandel_feature = MandelbrotRenderFeature()
-        self._demo_features = [self._life_feature, self._mandel_feature]
+        self._demo_features = [self._circles_feature, self._life_feature, self._mandel_feature]
         for feature in self._demo_features:
             self.app.register_part(feature, host=self)
 
@@ -69,6 +71,14 @@ class GuiDoDemo:
             self._life_feature = part
         if getattr(part, "demo", None) is None:
             part.demo = self  # Ensure part has access to demo for callbacks
+        return part
+
+    def _circles_part(self):
+        """Return the circles backdrop feature, creating one when absent."""
+        part = getattr(self, "_circles_feature", None)
+        if part is None:
+            part = BouncingCirclesBackdropFeature(circle_count=30)
+            self._circles_feature = part
         return part
 
     def _mandel_part(self):

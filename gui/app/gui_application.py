@@ -107,6 +107,13 @@ class GuiApplication:
         self._screen_preamble: Optional[Callable[[], None]] = None
         self._screen_event_handler: Optional[Callable[[object], bool]] = None
         self._screen_postamble: Optional[Callable[[], None]] = None
+        self._screen_lifecycle_base = {
+            "preamble": None,
+            "event_handler": None,
+            "postamble": None,
+        }
+        self._screen_lifecycle_layers = []
+        self._screen_lifecycle_next_layer_id = 1
         self._init_cursor_system()
         self._sync_scene_scheduler_activity(self._active_scene_name)
 
@@ -335,9 +342,86 @@ class GuiApplication:
         return False
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None) -> None:
-        self._screen_preamble = preamble
-        self._screen_event_handler = event_handler
-        self._screen_postamble = postamble
+        self._screen_lifecycle_base = {
+            "preamble": preamble,
+            "event_handler": event_handler,
+            "postamble": postamble,
+        }
+        self._screen_lifecycle_layers.clear()
+        self._apply_screen_lifecycle_chain()
+
+    def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None):
+        """Compose additional lifecycle callbacks without replacing existing ones.
+
+        Returns a disposer callback that removes this layer when invoked.
+        """
+        layer_id = self._screen_lifecycle_next_layer_id
+        self._screen_lifecycle_next_layer_id += 1
+        self._screen_lifecycle_layers.append(
+            {
+                "id": layer_id,
+                "preamble": preamble,
+                "event_handler": event_handler,
+                "postamble": postamble,
+            }
+        )
+        self._apply_screen_lifecycle_chain()
+
+        def _dispose() -> bool:
+            removed = False
+            retained_layers = []
+            for layer in self._screen_lifecycle_layers:
+                if layer.get("id") == layer_id:
+                    removed = True
+                    continue
+                retained_layers.append(layer)
+            if removed:
+                self._screen_lifecycle_layers = retained_layers
+                self._apply_screen_lifecycle_chain()
+            return removed
+
+        return _dispose
+
+    def _apply_screen_lifecycle_chain(self) -> None:
+        callbacks = [self._screen_lifecycle_base, *self._screen_lifecycle_layers]
+
+        preambles = [entry.get("preamble") for entry in callbacks if callable(entry.get("preamble"))]
+        if not preambles:
+            self._screen_preamble = None
+        elif len(preambles) == 1:
+            self._screen_preamble = preambles[0]
+        else:
+            def _composed_preamble() -> None:
+                for callback in preambles:
+                    callback()
+
+            self._screen_preamble = _composed_preamble
+
+        handlers = [entry.get("event_handler") for entry in callbacks if callable(entry.get("event_handler"))]
+        if not handlers:
+            self._screen_event_handler = None
+        elif len(handlers) == 1:
+            self._screen_event_handler = handlers[0]
+        else:
+            def _composed_event_handler(event) -> bool:
+                for callback in handlers:
+                    if bool(callback(event)):
+                        return True
+                return False
+
+            self._screen_event_handler = _composed_event_handler
+
+        postambles = [entry.get("postamble") for entry in callbacks if callable(entry.get("postamble"))]
+        if not postambles:
+            self._screen_postamble = None
+        elif len(postambles) == 1:
+            self._screen_postamble = postambles[0]
+        else:
+            def _composed_postamble() -> None:
+                for callback in postambles:
+                    callback()
+
+            self._screen_postamble = _composed_postamble
 
     @staticmethod
     def _clamp_to_rect(pos, rect: Rect):

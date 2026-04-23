@@ -19,7 +19,8 @@ pip install pygame numpy
 python gui_do_demo.py
 ```
 
-You'll see an interactive demo with two feature windows:
+You'll see an interactive demo with two feature windows and a screen backdrop feature:
+- **Bouncing Circles Backdrop**: Cached random circles are composed in screen preamble and animated in screen postamble with edge-bounce motion
 - **Life**: Conway's Game of Life simulation with drag-pan, click-to-toggle cells, and zoom controls
 - **Mandelbrot**: Real-time Mandelbrot renderer with iterative/recursive modes and split-canvas visualization
 
@@ -125,7 +126,7 @@ python -m unittest tests.test_pointer_capture_contracts -v
 python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_architecture_boundary_docs_contracts -v
 
 # Demo functionality
-python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_portability -v
+python -m unittest tests.test_gui_do_demo_life_runtime tests.test_gui_do_demo_presentation_model tests.test_demo_parts_portability tests.test_bouncing_circles_demo_part -v
 ```
 
 ### Code Style
@@ -397,8 +398,8 @@ class GuiDoDemo:
         # Build the scene
         self._build_main_scene()
 
-        # Configure the feature's accessibilty and bind runtime services
-        self.app.configure_parts_accessibility(self, num_controls=3)
+        # Configure the feature's accessibility and bind runtime services
+        self.app.configure_parts_accessibility(self, tab_index_start=3)
         self.app.bind_parts_runtime(self)
 
     def _build_main_scene(self) -> None:
@@ -426,6 +427,41 @@ app.run(target_fps=60)
 
 Internally, the managed loop processes pygame events, updates controls and parts,
 draws the active scene, and presents the frame.
+
+### Screen Lifecycle Composition
+
+Use screen lifecycle callbacks when a feature needs per-frame behavior at the screen level
+(for example backdrop composition before draw, or motion updates after update).
+
+`GuiApplication.set_screen_lifecycle(...)` sets the base callbacks.
+
+`GuiApplication.chain_screen_lifecycle(...)` appends callbacks on top of the base and returns
+a dispose function that removes just that chained layer.
+
+```python
+# Base lifecycle (optional)
+app.set_screen_lifecycle(
+    preamble=base_preamble,
+    event_handler=base_screen_handler,
+    postamble=base_postamble,
+)
+
+# Add a composed layer (for example, from a Part.bind_runtime)
+dispose = app.chain_screen_lifecycle(
+    preamble=feature_preamble,
+    event_handler=feature_screen_handler,
+    postamble=feature_postamble,
+)
+
+# Later, remove only this layer
+dispose()
+```
+
+Chaining semantics:
+- Preamble order: base first, then chained layers in registration order
+- Event-handler order: base first, then chained layers until one returns `True`
+- Postamble order: base first, then chained layers in registration order
+- Calling `set_screen_lifecycle(...)` resets base callbacks and clears chained layers
 
 ### Part Lifecycle Hooks
 

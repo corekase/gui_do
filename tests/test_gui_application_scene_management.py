@@ -1,5 +1,6 @@
 """Tests for GuiApplication scene management APIs: scene_names, has_scene, remove_scene."""
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pygame
@@ -192,6 +193,55 @@ class PartUiTypesTests(GuiApplicationSceneManagementSetup):
         self.assertIs(ui_types.slider_control_cls, SliderControl)
         self.assertIs(ui_types.toggle_control_cls, ToggleControl)
         self.assertIs(ui_types.layout_axis_cls, LayoutAxis)
+
+
+class ScreenLifecycleChainingTests(GuiApplicationSceneManagementSetup):
+
+    def test_chain_screen_lifecycle_calls_base_then_layers(self) -> None:
+        order = []
+        self.app.set_screen_lifecycle(
+            preamble=lambda: order.append("base_pre"),
+            postamble=lambda: order.append("base_post"),
+        )
+        self.app.chain_screen_lifecycle(
+            preamble=lambda: order.append("layer1_pre"),
+            postamble=lambda: order.append("layer1_post"),
+        )
+        self.app.chain_screen_lifecycle(
+            preamble=lambda: order.append("layer2_pre"),
+            postamble=lambda: order.append("layer2_post"),
+        )
+
+        self.app._screen_preamble()
+        self.app._screen_postamble()
+
+        self.assertEqual(
+            order,
+            ["base_pre", "layer1_pre", "layer2_pre", "base_post", "layer1_post", "layer2_post"],
+        )
+
+    def test_chain_screen_lifecycle_event_handler_short_circuits_on_consumed(self) -> None:
+        calls = []
+        self.app.set_screen_lifecycle(event_handler=lambda _event: (calls.append("base") or False))
+        self.app.chain_screen_lifecycle(event_handler=lambda _event: (calls.append("layer1") or True))
+        self.app.chain_screen_lifecycle(event_handler=lambda _event: (calls.append("layer2") or False))
+
+        consumed = self.app._screen_event_handler(SimpleNamespace())
+
+        self.assertTrue(consumed)
+        self.assertEqual(calls, ["base", "layer1"])
+
+    def test_chain_screen_lifecycle_dispose_removes_only_target_layer(self) -> None:
+        order = []
+        self.app.set_screen_lifecycle(preamble=lambda: order.append("base"))
+        dispose_layer_1 = self.app.chain_screen_lifecycle(preamble=lambda: order.append("layer1"))
+        self.app.chain_screen_lifecycle(preamble=lambda: order.append("layer2"))
+
+        removed = dispose_layer_1()
+        self.app._screen_preamble()
+
+        self.assertTrue(removed)
+        self.assertEqual(order, ["base", "layer2"])
 
 
 if __name__ == "__main__":
