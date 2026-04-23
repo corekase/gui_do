@@ -46,22 +46,16 @@ class BouncingShapesBackdropFeature(ScreenPart):
         self.diamond_count = max(0, int(diamond_count))
         self._rng = random.Random(seed)
         self._shapes: list[ShapeSpriteState] = []
-        self._scene_name = str(scene_name)
-        self._host = None
         self._create_shapes()
         self._rng.shuffle(self._shapes)
 
     def bind_runtime(self, demo) -> None:
-        """Bind host services and initialize random positions using screen bounds."""
-        self._host = demo
+        """Initialize random shape positions using screen bounds from the host."""
         width, height = demo.screen_rect.size
         self._randomize_positions(width, height)
 
-    def on_screen_update(self, host, dt_seconds: float) -> None:
+    def on_screen_update(self, host, _dt_seconds: float) -> None:
         """Advance shape positions and bounce off active screen boundaries."""
-        del dt_seconds
-        if host is None or not hasattr(host, "screen_rect"):
-            return
         width = int(host.screen_rect.width)
         height = int(host.screen_rect.height)
         for shape in self._shapes:
@@ -82,9 +76,8 @@ class BouncingShapesBackdropFeature(ScreenPart):
                 shape.y = float(height - shape.radius)
                 shape.dy = -abs(shape.dy)
 
-    def draw_screen(self, host, surface, theme) -> None:
+    def draw_screen(self, _host, surface, _theme) -> None:
         """Draw current shape sprites on the already-restored frame surface."""
-        del host, theme
         for shape in self._shapes:
             left = int(round(shape.x - shape.radius))
             top = int(round(shape.y - shape.radius))
@@ -173,7 +166,3 @@ class BouncingShapesBackdropFeature(ScreenPart):
             max_y = max(min_y, int(height) - shape.radius)
             shape.x = float(self._rng.randint(min_x, max_x))
             shape.y = float(self._rng.randint(min_y, max_y))
-
-
-# Backward-compatible alias for existing imports.
-BouncingCirclesBackdropFeature = BouncingShapesBackdropFeature

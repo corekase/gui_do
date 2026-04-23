@@ -344,8 +344,8 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         manager.register(life, host=demo)
         manager.register(mandel, host=demo)
 
-        mandel.on_post_frame(demo)
-        life.on_post_frame(demo)
+        mandel.on_update(demo)
+        life.on_update(demo)
 
         self.assertEqual(life.last_mandel_status, "Mandelbrot: idle")
 

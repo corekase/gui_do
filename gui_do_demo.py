@@ -46,13 +46,12 @@ class GuiDoDemo:
         )
         self._life_feature = LifeSimulationFeature()
         self._mandel_feature = MandelbrotRenderFeature()
-        self._demo_features = [
+        for feature in [
             self._shapes_feature,
             self._showcase_shapes_feature,
             self._life_feature,
             self._mandel_feature,
-        ]
-        for feature in self._demo_features:
+        ]:
             self.app.register_part(feature, host=self)
 
         self._build_main_scene()

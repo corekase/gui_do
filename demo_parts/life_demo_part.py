@@ -89,7 +89,7 @@ class LifeSimulationFeature(Part):
             next_index += 1
         return next_index
 
-    def on_post_frame(self, demo) -> None:
+    def on_update(self, _host) -> None:
         """Consume cross-part status messages published by the Mandelbrot feature."""
         latest_status = None
         while self.has_messages():
@@ -102,10 +102,6 @@ class LifeSimulationFeature(Part):
                 latest_status = str(payload["status"])
         if latest_status is not None:
             self.last_mandel_status = latest_status
-
-    def on_update(self, host) -> None:
-        """Part lifecycle on_update hook delegated from the host application."""
-        self.on_post_frame(host)
 
     def build_window(
         self,

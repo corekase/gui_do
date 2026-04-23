@@ -185,7 +185,7 @@ class MandelbrotRenderFeature(Part):
             next_index += 1
         return next_index
 
-    def on_post_frame(self, demo) -> None:
+    def on_update(self, _host) -> None:
         """Publish post-frame status updates and cross-part status messages."""
         self.update_events()
         status_text = str(self.status_text)
@@ -193,10 +193,6 @@ class MandelbrotRenderFeature(Part):
             return
         self.last_status_sent = status_text
         self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
-
-    def on_update(self, host) -> None:
-        """Part lifecycle on_update hook delegated from the host application."""
-        self.on_post_frame(host)
 
     def format_help_text(self, demo) -> str:
         """Return help text showing render modes and failure-preview shortcut state."""
