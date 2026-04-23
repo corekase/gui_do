@@ -71,6 +71,9 @@ class FocusManager:
         if not target.visible or not target.enabled:
             self.clear_focus()
             return False
+        if not self._is_focus_window_context_valid(target):
+            self.clear_focus()
+            return False
         return bool(target.handle_event(event, app))
 
     @staticmethod
@@ -87,6 +90,8 @@ class FocusManager:
         for node in scene._walk_nodes():
             if not node.visible or not node.enabled or not node.accepts_focus():
                 continue
+            if not self._is_focus_window_context_valid(node):
+                continue
             if window is not None and not self._is_descendant(node, window):
                 continue
             ordered.append(node)
@@ -94,6 +99,10 @@ class FocusManager:
         return ordered
 
     def cycle_focus(self, scene, *, forward: bool = True, window=None) -> bool:
+        focused = self._focused_node
+        if focused is not None and not self._is_focus_window_context_valid(focused):
+            self.clear_focus()
+
         candidates = self._focusable_nodes(scene, window=window)
         if not candidates:
             self.clear_focus()
@@ -138,6 +147,9 @@ class FocusManager:
         focused = self._focused_node
         if focused is None:
             return
+        if not self._is_focus_window_context_valid(focused):
+            self.clear_focus()
+            return
         if focused.visible and focused.enabled and focused.accepts_focus():
             return  # still valid, nothing to do
 
@@ -164,6 +176,13 @@ class FocusManager:
                 return current
             current = current.parent
         return None
+
+    def _is_focus_window_context_valid(self, node) -> bool:
+        """Return whether *node* is eligible for focus given ancestor window state."""
+        window = self._find_ancestor_window(node)
+        if window is None:
+            return True
+        return bool(window.visible and window.enabled and window.active)
 
     @property
     def has_focus(self) -> bool:

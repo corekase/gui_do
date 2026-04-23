@@ -101,6 +101,25 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_focus_clears_when_owning_window_becomes_inactive(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            win = root.add(WindowControl("win", Rect(10, 10, 240, 140), "Win"))
+            first = win.add(_FocusableProbe("first", Rect(20, 40, 80, 20), tab_index=0))
+            win.active = True
+
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, first)
+
+            win.active = False
+            app.update(0.016)
+
+            self.assertIsNone(app.focus.focused_node)
+        finally:
+            pygame.quit()
+
     def test_bound_action_executes_before_screen_handler(self) -> None:
         pygame.init()
         try:

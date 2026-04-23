@@ -113,6 +113,7 @@ class RevalidateFocusWindowScopeTests(unittest.TestCase):
 
     def _build(self):
         window = WindowControl("win", Rect(0, 0, 400, 300), "Win")
+        window.active = True
         btn_a = window.add(ButtonControl("a", Rect(10, 10, 80, 30), "A"))
         btn_b = window.add(ButtonControl("b", Rect(10, 50, 80, 30), "B"))
         btn_a.set_tab_index(0)
