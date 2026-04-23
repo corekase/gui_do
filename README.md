@@ -21,7 +21,7 @@ python gui_do_demo.py
 The demo ships with two scenes:
 
 - `main`: Life + Mandelbrot windows, animated backdrop, task panel (`Exit`, `Showcase`, `Life`, `Mandelbrot`)
-- `control_showcase`: dedicated showcase scene with its own backdrop and a `Back` task-panel button
+- `control_showcase`: dedicated showcase scene with its own backdrop and an `Apps` task-panel button
 
 ## Minimal Runnable Example
 
@@ -1026,6 +1026,8 @@ input_field.set_tab_index(2)
 ```
 
 **Hint-aware cycling:** The first `Tab` press establishes focus context and shows the visual focus indicator on the current (or first) focusable node without moving focus. Subsequent `Tab` presses cycle through nodes in tab-index order. This means users always see the current focused control before cycling away from it.
+
+**Active-window scope rule:** Tab traversal and focused-key routing are scoped to active windows. Controls inside inactive windows are excluded from focus candidates. If the currently focused control belongs to a window that becomes inactive, focus is cleared automatically until a valid active-scope target is focused again.
 
 ### Focus Management
 
