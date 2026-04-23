@@ -13,7 +13,7 @@ from gui.controls.canvas_control import CanvasControl
 from gui.controls.slider_control import SliderControl
 from gui.controls.toggle_control import ToggleControl
 from gui.layout.layout_axis import LayoutAxis
-from shared.part_lifecycle import LogicPart, Part
+from shared.part_lifecycle import LogicPart, Part, RoutedMessagePart
 
 
 def _make_app() -> GuiApplication:
@@ -185,6 +185,20 @@ class _LogicConsumerPart(Part):
                 self.received_payloads.append(payload)
 
 
+class _RoutedCapturePart(RoutedMessagePart):
+    def __init__(self, name: str = "routed") -> None:
+        super().__init__(name)
+        self.seen = []
+
+    def message_handlers(self):
+        return {
+            "alpha": self._on_alpha,
+        }
+
+    def _on_alpha(self, _host, sender_name: str, payload: dict) -> None:
+        self.seen.append((sender_name, payload.get("value")))
+
+
 class PartApiTests(GuiApplicationSceneManagementSetup):
 
     def test_register_and_get_part(self) -> None:
@@ -323,6 +337,28 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
 
         self.assertEqual(12, frames)
         run_mock.assert_called_once_with(max_frames=3)
+
+    def test_routed_message_part_dispatches_registered_topics(self) -> None:
+        routed = _RoutedCapturePart("routed")
+        sender = _StubPart("sender")
+        self.app.register_part(routed, host=self.app)
+        self.app.register_part(sender, host=self.app)
+
+        self.assertTrue(self.app.send_part_message("sender", "routed", {"topic": "alpha", "value": 7}))
+        self.app.parts.update_parts()
+
+        self.assertEqual(routed.seen, [("sender", 7)])
+
+    def test_routed_message_part_ignores_unknown_topics(self) -> None:
+        routed = _RoutedCapturePart("routed")
+        sender = _StubPart("sender")
+        self.app.register_part(routed, host=self.app)
+        self.app.register_part(sender, host=self.app)
+
+        self.assertTrue(self.app.send_part_message("sender", "routed", {"topic": "beta", "value": 3}))
+        self.app.parts.update_parts()
+
+        self.assertEqual(routed.seen, [])
 
 
 class PartUiTypesTests(GuiApplicationSceneManagementSetup):

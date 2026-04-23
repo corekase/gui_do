@@ -167,6 +167,32 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         self.assertTrue(sent_toggle)
         self.assertNotIn((0, 0), observer.last_cells)
 
+    def test_update_life_message_drain_is_lifecycle_owned_when_registered(self) -> None:
+        demo = self._make_demo_stub()
+        demo._life_feature.life_cells = set()
+        demo._life_feature.enqueue_message({
+            "topic": "life_logic",
+            "event": "state",
+            "life_cells": {(2, 3)},
+        })
+
+        demo._life_feature.update_life()
+
+        self.assertEqual(demo._life_feature.life_cells, set())
+
+        demo._part_manager.update_parts(demo)
+
+        self.assertEqual(demo._life_feature.life_cells, {(2, 3)})
+
+    def test_life_part_ignores_unrelated_topics(self) -> None:
+        demo = self._make_demo_stub()
+        demo._life_feature.life_cells = {(7, 7)}
+        demo._life_feature.enqueue_message({"topic": "other", "status": "ignore"})
+
+        demo._part_manager.update_parts(demo)
+
+        self.assertEqual(demo._life_feature.life_cells, {(7, 7)})
+
 
 if __name__ == "__main__":
     unittest.main()

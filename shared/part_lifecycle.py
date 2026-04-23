@@ -223,6 +223,35 @@ class LogicPart(Part):
             self.on_logic_command(host, str(message.get("_from", "")), command, message)
 
 
+class RoutedMessagePart(Part):
+    """Part subtype that routes queued messages by a canonical topic key."""
+
+    MESSAGE_TOPIC_KEY = "topic"
+
+    def message_handlers(self) -> Dict[str, Callable[[Any, str, Dict[str, Any]], None]]:
+        """Return mapping of topic names to message handlers."""
+        return {}
+
+    def on_message(self, host, sender_name: str, topic: str, payload: Dict[str, Any]) -> None:
+        """Handle one routed message; unresolved topics are ignored by default."""
+        handlers = self.message_handlers()
+        handler = handlers.get(str(topic))
+        if handler is None:
+            return
+        handler(host, str(sender_name), payload)
+
+    def on_update(self, host) -> None:
+        topic_key = str(self.MESSAGE_TOPIC_KEY)
+        while self.has_messages():
+            message = self.pop_message()
+            if not isinstance(message, dict):
+                continue
+            topic = message.get(topic_key)
+            if not isinstance(topic, str):
+                continue
+            self.on_message(host, str(message.get("_from", "")), topic, message)
+
+
 class PartManager:
     """Coordinates lifecycle, messaging, and utility registrations for parts."""
 

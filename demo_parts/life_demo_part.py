@@ -6,10 +6,18 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from shared.part_lifecycle import LogicPart, Part
+from shared.part_lifecycle import LogicPart, RoutedMessagePart
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
+
+_KEY_TOPIC = "topic"
+_KEY_EVENT = "event"
+_KEY_COMMAND = "command"
+_KEY_LIFE_CELLS = "life_cells"
+
+_LIFE_EVENT_STATE = "state"
+
 _LIFE_DEFAULT_SEED: Set[Tuple[int, int]] = {
     (0, 0),
     (1, 0),
@@ -78,14 +86,14 @@ class LifeSimulationLogicPart(LogicPart):
         self.send_message(
             target_part_name,
             {
-                "topic": _LIFE_LOGIC_TOPIC,
-                "event": "state",
-                "life_cells": set(self.life_cells),
+                _KEY_TOPIC: _LIFE_LOGIC_TOPIC,
+                _KEY_EVENT: _LIFE_EVENT_STATE,
+                _KEY_LIFE_CELLS: set(self.life_cells),
             },
         )
 
 
-class LifeSimulationFeature(Part):
+class LifeSimulationFeature(RoutedMessagePart):
     """Build and run the Conway's Game of Life feature window and interactions."""
 
     HOST_REQUIREMENTS = {
@@ -110,7 +118,6 @@ class LifeSimulationFeature(Part):
         self.toggle = None
         self.zoom_slider = None
         self.zoom_label = None
-        self.last_mandel_status = None
 
     def build(self, demo) -> None:
         """Build the Life feature UI using the application's configured UI types."""
@@ -165,38 +172,35 @@ class LifeSimulationFeature(Part):
             next_index += 1
         return next_index
 
-    def on_update(self, _host) -> None:
-        """Consume cross-part updates (Mandel status + Life logic snapshots)."""
-        self._consume_part_messages()
+    def message_handlers(self):
+        """Route lifecycle part messages by canonical topic."""
+        return {
+            _LIFE_LOGIC_TOPIC: self._handle_life_logic_message,
+        }
 
-    def _consume_part_messages(self) -> None:
-        latest_status = None
-        while self.has_messages():
-            payload = self.pop_message()
-            if not isinstance(payload, dict):
-                continue
-            if payload.get("topic") == _LIFE_LOGIC_TOPIC and payload.get("event") == "state":
-                cells = payload.get("life_cells")
-                if isinstance(cells, set):
-                    self.life_cells = {(int(x), int(y)) for (x, y) in cells}
-                elif isinstance(cells, (tuple, list)):
-                    normalized: Set[Tuple[int, int]] = set()
-                    for candidate in cells:
-                        if isinstance(candidate, tuple) and len(candidate) == 2:
-                            normalized.add((int(candidate[0]), int(candidate[1])))
-                    self.life_cells = normalized
-                continue
-            if payload.get("topic") != "mandelbrot_status":
-                continue
-            if "status" in payload:
-                latest_status = str(payload["status"])
-        if latest_status is not None:
-            self.last_mandel_status = latest_status
+    def _handle_life_logic_message(self, _host, _sender_name: str, payload: Dict[str, Any]) -> None:
+        if payload.get(_KEY_EVENT) != _LIFE_EVENT_STATE:
+            return
+        cells = payload.get(_KEY_LIFE_CELLS)
+        normalized = self._normalize_life_cells_payload(cells)
+        if normalized is not None:
+            self.life_cells = normalized
+
+    def _normalize_life_cells_payload(self, cells: Any) -> Set[Tuple[int, int]] | None:
+        if isinstance(cells, set):
+            return {(int(x), int(y)) for (x, y) in cells}
+        if isinstance(cells, (tuple, list)):
+            normalized: Set[Tuple[int, int]] = set()
+            for candidate in cells:
+                if isinstance(candidate, tuple) and len(candidate) == 2:
+                    normalized.add((int(candidate[0]), int(candidate[1])))
+            return normalized
+        return None
 
     def _send_life_logic_command(self, command: str, **extra: Any) -> bool:
         message: Dict[str, Any] = {
-            "topic": _LIFE_LOGIC_TOPIC,
-            "command": str(command),
+            _KEY_TOPIC: _LIFE_LOGIC_TOPIC,
+            _KEY_COMMAND: str(command),
         }
         message.update(extra)
         return self.send_logic_message(message, alias=self.LOGIC_ALIAS)
@@ -403,7 +407,6 @@ class LifeSimulationFeature(Part):
         demo = self.demo
         canvas = self.canvas
         toggle = self.toggle
-        self._consume_part_messages()
         while True:
             packet = canvas.read_event()
             if packet is None:
@@ -431,8 +434,6 @@ class LifeSimulationFeature(Part):
         if toggle.pushed:
             if not self._send_life_logic_command("next"):
                 self.life_cells = _next_life_cycle(self.life_cells)
-
-        self._consume_part_messages()
 
         cell_size = max(2, int(round(self.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)

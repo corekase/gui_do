@@ -106,7 +106,6 @@ class MandelbrotRenderFeature(Part):
         self.status_scope = MANDEL_STATUS_SCOPE
         self.status_bus_ready = False
         self.status_subscription = None
-        self.last_status_sent = None
 
     def build(self, demo) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
@@ -186,13 +185,8 @@ class MandelbrotRenderFeature(Part):
         return next_index
 
     def on_update(self, _host) -> None:
-        """Publish post-frame status updates and cross-part status messages."""
+        """Publish post-frame status updates for Mandelbrot state."""
         self.update_events()
-        status_text = str(self.status_text)
-        if status_text == self.last_status_sent:
-            return
-        self.last_status_sent = status_text
-        self.send_message("life_simulation", {"topic": "mandelbrot_status", "status": status_text})
 
     def format_help_text(self) -> str:
         """Return help text showing render modes and failure-preview shortcut state."""

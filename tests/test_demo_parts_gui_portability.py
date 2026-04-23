@@ -149,6 +149,39 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
 
         self.assertIn((1, 1), part.life_cells)
 
+    def test_life_part_messages_are_consumed_in_on_update(self) -> None:
+        part = LifeSimulationFeature()
+        host = SimpleNamespace(app=SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0))))
+        part.demo = host
+        part.canvas = _CanvasStub([])
+        part.toggle = SimpleNamespace(pushed=False)
+        part.zoom_slider = SimpleNamespace(value=5.0)
+        part.zoom_label = SimpleNamespace(text="")
+
+        part.enqueue_message({"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}})
+
+        part.update_life()
+        self.assertEqual(part.life_cells, set())
+
+        part.on_update(host)
+        self.assertEqual(part.life_cells, {(4, 5)})
+
+    def test_life_part_ignores_unregistered_message_topics(self) -> None:
+        part = LifeSimulationFeature()
+        host = SimpleNamespace(app=SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0))))
+        part.demo = host
+        part.canvas = _CanvasStub([])
+        part.toggle = SimpleNamespace(pushed=False)
+        part.zoom_slider = SimpleNamespace(value=5.0)
+        part.zoom_label = SimpleNamespace(text="")
+        part.life_cells = {(9, 9)}
+
+        part.enqueue_message({"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"})
+
+        part.on_update(host)
+
+        self.assertEqual(part.life_cells, {(9, 9)})
+
     def test_life_accessibility_uses_part_owned_controls(self) -> None:
         part = LifeSimulationFeature()
         part.reset_button = _A11yControl()
