@@ -59,6 +59,29 @@ class FontManagerRoleTests(unittest.TestCase):
         font_after = manager.get_font("body")
         self.assertIsNot(font_before, font_after)
 
+    def test_font_instance_exposes_size_properties(self) -> None:
+        manager = FontManager()
+        manager.register_role("body", size=16)
+
+        instance = manager.font_instance("body")
+
+        self.assertEqual(instance.role_name, "body")
+        self.assertEqual(instance.point_size, 16)
+        self.assertGreater(instance.line_height, 0)
+
+    def test_font_instance_text_surface_size_includes_shadow_padding(self) -> None:
+        manager = FontManager()
+        manager.register_role("body", size=16)
+
+        instance = manager.font_instance("body")
+        plain_w, plain_h = instance.text_surface_size("Hello", shadow=False)
+        shadow_w, shadow_h = instance.text_surface_size("Hello", shadow=True)
+
+        self.assertGreater(plain_w, 0)
+        self.assertGreater(plain_h, 0)
+        self.assertGreaterEqual(shadow_w, plain_w)
+        self.assertGreaterEqual(shadow_h, plain_h)
+
     def test_unknown_role_raises(self) -> None:
         manager = FontManager()
         manager.register_role("body", size=16)

@@ -17,6 +17,38 @@ class _FontRole:
     italic: bool
 
 
+class _FontInstance:
+    """Bound view over a resolved role/font size with measurement helpers."""
+
+    def __init__(self, role: _FontRole, font: pygame.font.Font, size: int) -> None:
+        self._role = role
+        self._font = font
+        self._size = int(size)
+
+    @property
+    def role_name(self) -> str:
+        return self._role.name
+
+    @property
+    def point_size(self) -> int:
+        return self._size
+
+    @property
+    def line_height(self) -> int:
+        return int(self._font.get_height())
+
+    def text_size(self, text: str) -> tuple[int, int]:
+        return self._font.size(str(text))
+
+    def text_surface_size(self, text: str, *, shadow: bool = False, shadow_offset: tuple[int, int] = (1, 1)) -> tuple[int, int]:
+        width, height = self.text_size(text)
+        if not shadow:
+            return int(width), int(height)
+        offset_x = max(0, int(shadow_offset[0]))
+        offset_y = max(0, int(shadow_offset[1]))
+        return int(width + offset_x), int(height + offset_y)
+
+
 class FontManager:
     """Role-based font registry and cache.
 
@@ -112,6 +144,12 @@ class FontManager:
 
         self._font_cache[cache_key] = loaded
         return loaded
+
+    def font_instance(self, role_name: str, *, size: Optional[int] = None) -> _FontInstance:
+        role = self._resolve_role(role_name)
+        resolved_size = role.size if size is None else max(1, int(size))
+        font = self.get_font(role.name, size=resolved_size)
+        return _FontInstance(role=role, font=font, size=resolved_size)
 
     def render_text(self, text: str, color, *, role_name: str, size: Optional[int] = None) -> pygame.Surface:
         font = self.get_font(role_name, size=size)

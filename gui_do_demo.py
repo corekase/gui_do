@@ -134,6 +134,29 @@ class GuiDoDemo:
             scene_name="control_showcase",
         )
 
+    def _make_sized_title_label(
+        self,
+        control_id: str,
+        text: str,
+        left: int,
+        top: int,
+        *,
+        fallback_size: tuple[int, int],
+    ) -> LabelControl:
+        """Create a styled title label whose rect matches the rendered text surface size."""
+        label = self.app.style_label(
+            LabelControl(control_id, Rect(left, top, int(fallback_size[0]), int(fallback_size[1])), text),
+            size=64,
+            role=self.SCREEN_TITLE_FONT_ROLE,
+        )
+        if self.app.theme.fonts.has_role(label.font_role):
+            font = self.app.theme.fonts.font_instance(
+                label.font_role,
+                size=label.font_size,
+            )
+            label.rect.size = font.text_surface_size(label.text, shadow=True)
+        return label
+
     # ---------------------------------------------------------------------
     # Scene construction and widget composition.
     # ---------------------------------------------------------------------
@@ -145,11 +168,7 @@ class GuiDoDemo:
             scene_name="main",
         )
         self.screen_title = self.root.add(
-            self.app.style_label(
-                LabelControl("screen_title", Rect(24, 24, 640, 96), "gui_do"),
-                size=72,
-                role=self.SCREEN_TITLE_FONT_ROLE,
-            )
+            self._make_sized_title_label("screen_title", "gui_do", 24, 24, fallback_size=(640, 96))
         )
         self.task_panel = self.app.add(
             TaskPanelControl(
@@ -235,10 +254,12 @@ class GuiDoDemo:
             scene_name="control_showcase",
         )
         self.control_showcase_title = self.control_showcase_root.add(
-            self.app.style_label(
-                LabelControl("control_showcase_title", Rect(24, 24, 900, 96), "control showcase"),
-                size=72,
-                role=self.SCREEN_TITLE_FONT_ROLE,
+            self._make_sized_title_label(
+                "control_showcase_title",
+                "Control Showcase",
+                24,
+                24,
+                fallback_size=(900, 96),
             )
         )
         self.showcase_task_panel = self.app.add(
