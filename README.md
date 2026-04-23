@@ -880,6 +880,7 @@ def handle_event(event: GuiEvent) -> bool:
     copy = event.clone()                     # shallow copy with independent propagation state
 
     return True  # consumed
+```
 
 ### Routed Event Flow
 
