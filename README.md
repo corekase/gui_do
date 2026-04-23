@@ -61,23 +61,6 @@ app.run(target_fps=60)
 pygame.quit()
 ```
 
-## What Changed Recently
-
-This repository has moved to a stricter, explicitly documented contract model.
-
-- Public API export surface is exact and locked by tests.
-- Scene runtime is isolated by default:
-  - inactive scenes suspend their scheduler execution
-  - inactive scenes suspend scene timers
-  - scene-scoped parts and screen lifecycle callbacks run only in their active scene
-- Part lifecycle is framework-managed:
-  - `bind_runtime(...)` is tracked centrally
-  - `shutdown_runtime(...)` runs on unregister and app shutdown
-- Scheduler fairness was hardened for low-core machines:
-  - worker count uses `TaskScheduler.recommended_worker_count()`
-  - per-frame message-dispatch budget is FPS-aware (`~12%` of frame time, clamped to `0.5-4.0 ms`)
-- Input paths use canonical `GuiEvent` normalization at ingress.
-
 ## Core Runtime Concepts
 
 ### Scene Model
