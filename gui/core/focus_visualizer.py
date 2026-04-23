@@ -55,6 +55,19 @@ class FocusVisualizer:
         self._current_hint_node = None
         self._current_hint_elapsed = 0.0
 
+    def has_active_hint(self) -> bool:
+        """Return True when a focus hint is currently visible or fading."""
+        return self._current_hint_node is not None
+
+    def refresh_focus_hint(self, node=None) -> bool:
+        """Restart hint timing for *node* (or current hint node when omitted)."""
+        target = self._current_hint_node if node is None else node
+        if target is None:
+            return False
+        self._current_hint_node = target
+        self._current_hint_elapsed = 0.0
+        return True
+
     def update(self, dt_seconds: float) -> None:
         """Update fade-out state. Call from app's update loop."""
         if dt_seconds <= 0:

@@ -62,7 +62,7 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
-    def test_shift_tab_with_no_prior_focus_keeps_focus_none(self) -> None:
+    def test_shift_tab_with_no_prior_focus_sets_first_focus(self) -> None:
         pygame.init()
         try:
             app = GuiApplication(Surface((320, 180)))
@@ -78,8 +78,8 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
             )
 
             self.assertTrue(consumed)
-            self.assertIsNone(app.focus.focused_node)
-            self.assertFalse(first.focused)
+            self.assertIs(app.focus.focused_node, first)
+            self.assertTrue(first.focused)
         finally:
             pygame.quit()
 

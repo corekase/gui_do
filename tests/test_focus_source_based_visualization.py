@@ -194,7 +194,7 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         self.assertIsNone(self.app.focus_visualizer._current_hint_node)
 
     def test_switch_from_mouse_to_keyboard_shows_hint(self) -> None:
-        """After focusing with mouse, Tab shows the focus hint."""
+        """After mouse focus with no hint, first Tab shows hint on current focus."""
         # Click button1 (no hint)
         self.app.process_event(
             pygame.event.Event(
@@ -204,7 +204,7 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         )
         self.assertIsNone(self.app.focus_visualizer._current_hint_node)
 
-        # Press Tab to cycle to button2 (shows hint)
+        # First Tab shows the hint on the current focus target (no advance yet)
         self.app.process_event(
             pygame.event.Event(
                 pygame.KEYDOWN,
@@ -212,7 +212,16 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
             )
         )
 
-        # Button2 should be focused and hint should be shown
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertIs(self.app.focus_visualizer._current_hint_node, self.button1)
+
+        # While hint is active, next Tab advances focus and resets hint to the new target.
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_TAB},
+            )
+        )
         self.assertIs(self.app.focus.focused_node, self.button2)
         self.assertIs(self.app.focus_visualizer._current_hint_node, self.button2)
 

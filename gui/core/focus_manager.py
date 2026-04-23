@@ -100,21 +100,33 @@ class FocusManager:
             return False
 
         focused = self._focused_node
-        if focused is None:
-            # Keep focus unset for reverse traversal until focus is explicitly established.
-            if not forward:
-                return False
-            self.set_focus(candidates[0])
+        hint_active = self._visualizer is not None and self._visualizer.has_active_hint()
+
+        # When the graphical hint is not active, establish/refresh the current focus context.
+        # This consumes the cycle key without advancing focus, so the next cycle event can move.
+        if not hint_active:
+            if focused is None or focused not in candidates:
+                self.set_focus(candidates[0], show_hint=True)
+                return True
+            if self._visualizer is not None:
+                self._visualizer.refresh_focus_hint(focused)
             return True
-        if focused not in candidates:
+
+        # Hint is active: cycle to the next/previous focus target.
+        if focused is None or focused not in candidates:
             next_index = 0 if forward else (len(candidates) - 1)
-            self.set_focus(candidates[next_index])
+            self.set_focus(candidates[next_index], show_hint=True)
             return True
 
         current_index = candidates.index(focused)
         offset = 1 if forward else -1
         next_index = (current_index + offset) % len(candidates)
-        self.set_focus(candidates[next_index])
+        next_node = candidates[next_index]
+        if next_node is focused:
+            if self._visualizer is not None:
+                self._visualizer.refresh_focus_hint(next_node)
+            return True
+        self.set_focus(next_node, show_hint=True)
         return True
 
     def revalidate_focus(self, scene) -> None:
