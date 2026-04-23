@@ -26,6 +26,7 @@ jobs:
             python-version: "3.11"
     env:
       SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
       PYGAME_HIDE_SUPPORT_PROMPT: "1"
     steps:
       - name: Checkout
