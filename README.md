@@ -89,6 +89,123 @@ A feature is a `Part` with optional hooks:
 
 Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and are validated before invocation.
 
+### Part Types: `Part` vs `ScreenPart`
+
+There are two part base classes in `shared.part_lifecycle`. Choosing between them depends on what a feature draws and where it draws it.
+
+#### `Part` — General-purpose feature unit
+
+`Part` is the standard base for features that build and manage controls (windows, buttons, canvases, sliders, etc.) on a scene. Its lifecycle hooks integrate directly with `GuiApplication` scene management: `build` creates controls, `bind_runtime` wires services, `on_update` runs frame logic, and `draw` renders into its own controls rather than directly onto the screen surface.
+
+Use `Part` for features that:
+- own a window or other UI structure on the scene
+- coordinate preamble, event routing, and postamble for those controls
+- communicate through the scheduler, event bus, or part messaging
+
+The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `Part`. Each owns a `WindowControl` containing a `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the Part itself is responsible for wiring and orchestration, not raw pixel output.
+
+```python
+from shared.part_lifecycle import Part
+
+class LifeSimulationFeature(Part):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "root"),
+        "bind_runtime": ("app",),
+    }
+
+    def __init__(self):
+        super().__init__("life_simulation", scene_name="main")
+        self.scheduler = None
+        self.window = None
+        self.canvas = None
+
+    def build(self, demo) -> None:
+        # Creates a WindowControl with canvas + buttons under demo.root.
+        # The Part orchestrates layout and events; the controls handle drawing.
+        ...
+
+    def bind_runtime(self, demo) -> None:
+        self.scheduler = demo.app.get_scene_scheduler("main")
+```
+
+```python
+class MandelbrotRenderFeature(Part):
+    HOST_REQUIREMENTS = {
+        "build": ("app", "root"),
+        "bind_runtime": ("app",),
+    }
+
+    def __init__(self):
+        super().__init__("mandelbrot_render", scene_name="main")
+        # Owns render-mode toggles, status label, scheduler tasks, and
+        # a canvas window — all standard controls; no raw screen blitting.
+        ...
+```
+
+#### `ScreenPart` — Direct screen drawing with frame synchronisation
+
+`ScreenPart` is a `Part` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
+
+- `handle_screen_event(host, event) -> bool` — receives raw events before controls
+- `on_screen_update(host, dt_seconds)` — called once per frame with elapsed time
+- `draw_screen(host, surface, theme)` — blits directly onto the full-screen surface
+
+This matters for performance. A standard `Part` drawing onto the screen via `draw(...)` enters the full GUI widget rendering pipeline: hit testing, invalidation tracking, and compositor layering all run even when only a background animation needs to repaint. For an animated backdrop with dozens of sprites updated every frame, that overhead is measurable.
+
+`ScreenPart` bypasses the widget pipeline entirely for its drawing path. `draw_screen` receives the already-restored pristine surface and blits cached sprites directly, keeping the path as thin as a raw pygame `surface.blit` call. The pre-cached sprite approach (surfaces created once at init time) keeps `draw_screen` allocation-free and avoids per-frame `pygame.draw` calls.
+
+The demo's `BouncingShapesBackdropFeature` extends `ScreenPart` for exactly this reason: it renders many translucent animated circles and diamonds as a fullscreen backdrop every frame, and any per-frame widget pipeline overhead would compound noticeably at 60 fps.
+
+```python
+from shared.part_lifecycle import ScreenPart
+
+class BouncingShapesBackdropFeature(ScreenPart):
+    HOST_REQUIREMENTS = {
+        "bind_runtime": ("app", "screen_rect"),
+    }
+
+    def __init__(self, *, circle_count=28, diamond_count=0, seed=None,
+                 scene_name="main", part_name="bouncing_shapes_backdrop"):
+        super().__init__(part_name, scene_name=scene_name)
+        # Sprites are fully pre-rendered at init time — draw_screen does
+        # zero allocation; it only calls surface.blit() per shape.
+        self._shapes = self._create_shapes(circle_count, diamond_count)
+
+    def bind_runtime(self, demo) -> None:
+        # Randomise starting positions once the screen rect is known.
+        width, height = demo.screen_rect.size
+        self._randomize_positions(width, height)
+
+    def on_screen_update(self, host, dt_seconds: float) -> None:
+        # Advance every shape position and bounce off screen edges.
+        # Called by the screen lifecycle layer, not the widget tree.
+        for shape in self._shapes:
+            shape.x += shape.dx
+            shape.y += shape.dy
+            # ... edge bounce logic ...
+
+    def draw_screen(self, _host, surface, _theme) -> None:
+        # Blit pre-cached sprites directly onto the full-screen surface.
+        # No widget pipeline overhead — this is the performance-critical path.
+        for shape in self._shapes:
+            left = int(round(shape.x - shape.radius))
+            top = int(round(shape.y - shape.radius))
+            surface.blit(shape.sprite, (left, top))
+```
+
+#### Choosing between `Part` and `ScreenPart`
+
+| Scenario | Use |
+|---|---|
+| Owns windows, buttons, or other controls on the scene | `Part` |
+| Wires preamble / event routing / postamble for controls | `Part` |
+| Uses scheduler, event bus, or part messaging | `Part` |
+| Draws a fullscreen or large background animation every frame | `ScreenPart` |
+| Needs raw per-frame `dt_seconds` for physics/animation | `ScreenPart` |
+| Requires bypassing the widget pipeline for performance | `ScreenPart` |
+
+A `ScreenPart` can still declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle — it just adds the three screen-layer hooks on top.
+
 ### Screen Lifecycle Composition
 
 Use screen lifecycle callbacks for scene-level behavior composition.
