@@ -263,6 +263,7 @@ class GuiApplication:
 
     def shutdown(self) -> None:
         """Release runtime services."""
+        self.parts.shutdown_runtime()
         seen = set()
         for runtime in self._scenes.values():
             scheduler = runtime["scheduler"]

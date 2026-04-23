@@ -12,6 +12,11 @@ from shared.part_lifecycle import Part
 class LifeSimulationFeature(Part):
     """Build and run the Conway's Game of Life feature window and interactions."""
 
+    HOST_REQUIREMENTS = {
+        "build": ("app", "root"),
+        "bind_runtime": ("app",),
+    }
+
     def __init__(self) -> None:
         super().__init__("life_simulation")
         self.neighbours = (

@@ -167,7 +167,6 @@ class GuiDoDemo:
     def run(self) -> None:
         """Run demo engine and perform shutdown cleanup on exit."""
         self.app.run(target_fps=120)
-        self._mandel_feature.shutdown_runtime(self)
         pygame.quit()
 
 

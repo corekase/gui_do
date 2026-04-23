@@ -71,6 +71,11 @@ __all__ = [
 class MandelbrotRenderFeature(Part):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
+    HOST_REQUIREMENTS = {
+        "build": ("app", "root"),
+        "bind_runtime": ("app",),
+    }
+
     FAILURE_PREVIEW_MIN = 1
     FAILURE_PREVIEW_MAX = 20
 

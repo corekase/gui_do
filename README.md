@@ -228,6 +228,11 @@ python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_expor
 
 This tutorial walks through the Life feature implementation to show how to build, compose, and integrate a feature into the gui_do framework.
 
+Requirement:
+- Parts must be reusable in new gui_do projects with minimal wiring.
+- Lifecycle ownership is framework-managed: `app.bind_parts_runtime(host)` binds part runtime hooks, and app shutdown/unregister paths invoke part `shutdown_runtime(...)` automatically.
+- Demo parts use an explicit host-field contract and fail fast with clear errors when required host fields are missing.
+
 ### Overview: The Part Lifecycle
 
 Every feature in gui_do is a `Part` subclass. Parts follow a standardized lifecycle:
@@ -237,6 +242,12 @@ Every feature in gui_do is a `Part` subclass. Parts follow a standardized lifecy
 3. **`configure_accessibility(demo, tab_index_start)`**: Set up keyboard navigation and accessibility metadata
 4. **`on_update(demo)`**: Process cross-part messages and state updates (called every frame by `app.update()`)
 5. **`shutdown_runtime(demo)`** (optional): Cleanup when the app shuts down
+
+Host contract for demo parts:
+- Host requirements are declared on each part via `Part.HOST_REQUIREMENTS` and validated automatically by `PartManager` before `build`, `bind_runtime`, and `configure_accessibility`.
+- Build hooks require host fields `app` and `root`.
+- Runtime bind hooks require host field `app`.
+- `BouncingCirclesBackdropFeature.bind_runtime(...)` also requires `screen_rect`.
 
 ### Step 1: Define Your Feature Class
 

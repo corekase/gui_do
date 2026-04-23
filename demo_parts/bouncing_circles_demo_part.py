@@ -27,6 +27,10 @@ class CircleSpriteState:
 class BouncingCirclesBackdropFeature(Part):
     """Render and animate cached random circles as a moving screen backdrop."""
 
+    HOST_REQUIREMENTS = {
+        "bind_runtime": ("app", "screen_rect"),
+    }
+
     def __init__(self, *, circle_count: int = 28, seed: Optional[int] = None) -> None:
         super().__init__("bouncing_circles_backdrop")
         self.circle_count = max(1, int(circle_count))

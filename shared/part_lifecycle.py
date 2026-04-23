@@ -10,6 +10,8 @@ from typing import Any, Callable, Deque, Dict, Iterable, Optional
 class Part:
     """Base unit for managed GUI lifecycle composition."""
 
+    HOST_REQUIREMENTS: Dict[str, tuple[str, ...]] = {}
+
     def __init__(self, name: str) -> None:
         normalized = str(name).strip()
         if not normalized:
@@ -146,6 +148,23 @@ class Part:
             raise AttributeError("host does not expose an application with register_font_role()")
         return app
 
+    def host_requirements_for(self, hook_name: str) -> tuple[str, ...]:
+        """Return required host field names for a lifecycle hook."""
+        requirements = dict(getattr(self, "HOST_REQUIREMENTS", {}))
+        required = requirements.get(str(hook_name), ())
+        return tuple(str(name) for name in required)
+
+    def validate_host_for(self, host, hook_name: str) -> None:
+        """Validate required host fields for one lifecycle hook."""
+        required_fields = self.host_requirements_for(hook_name)
+        if not required_fields:
+            return
+        missing = [name for name in required_fields if not hasattr(host, name)]
+        if not missing:
+            return
+        missing_csv = ", ".join(missing)
+        raise AttributeError(f"{self.__class__.__name__}.{hook_name} requires host fields: {missing_csv}")
+
 
 class PartManager:
     """Coordinates lifecycle, messaging, and utility registrations for parts."""
@@ -155,6 +174,7 @@ class PartManager:
         self._parts: "OrderedDict[str, Part]" = OrderedDict()
         self._part_hosts: Dict[str, object] = {}
         self._runnables: Dict[str, Dict[str, Callable[..., Any]]] = {}
+        self._runtime_bound_parts: set[str] = set()
 
     def register(self, part: Part, host=None) -> Part:
         if not isinstance(part, Part):
@@ -165,17 +185,24 @@ class PartManager:
         self._parts[part.name] = part
         host_obj = self.app if host is None else host
         self._part_hosts[part.name] = host_obj
+        self._runtime_bound_parts.discard(part.name)
         part.on_register(host_obj)
         return part
 
     def unregister(self, name: str, host=None) -> bool:
-        part = self._parts.pop(str(name), None)
+        key = str(name)
+        part = self._parts.get(key)
         if part is None:
             return False
-        host_obj = self._part_hosts.pop(part.name, None)
+        host_obj = self._part_hosts.get(part.name)
         if host_obj is None:
             host_obj = self.app if host is None else host
+        if part.name in self._runtime_bound_parts:
+            part.shutdown_runtime(host_obj)
         part.on_unregister(host_obj)
+        self._parts.pop(key, None)
+        self._part_hosts.pop(part.name, None)
+        self._runtime_bound_parts.discard(part.name)
         part._part_manager = None
         self._runnables.pop(part.name, None)
         return True
@@ -235,15 +262,28 @@ class PartManager:
 
     def build_parts(self, host) -> None:
         for part in self._parts.values():
+            part.validate_host_for(host, "build")
             part.build(host)
 
     def bind_runtime(self, host) -> None:
         for part in self._parts.values():
+            part.validate_host_for(host, "bind_runtime")
             part.bind_runtime(host)
+            self._runtime_bound_parts.add(part.name)
+
+    def shutdown_runtime(self, host=None) -> None:
+        """Call shutdown_runtime(host) for parts with active runtime bindings."""
+        for part in reversed(tuple(self._parts.values())):
+            if part.name not in self._runtime_bound_parts:
+                continue
+            host_obj = self._resolve_host(part.name, host)
+            part.shutdown_runtime(host_obj)
+            self._runtime_bound_parts.discard(part.name)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         next_index = int(tab_index_start)
         for part in self._parts.values():
+            part.validate_host_for(host, "configure_accessibility")
             next_index = int(part.configure_accessibility(host, next_index))
         return next_index
 

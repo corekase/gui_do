@@ -124,9 +124,24 @@ class _StubPart(Part):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.host_seen = None
+        self.bind_calls = 0
+        self.shutdown_calls = 0
+        self.unregister_calls = 0
 
     def on_register(self, host) -> None:
         self.host_seen = host
+
+    def bind_runtime(self, host) -> None:
+        del host
+        self.bind_calls += 1
+
+    def shutdown_runtime(self, host) -> None:
+        del host
+        self.shutdown_calls += 1
+
+    def on_unregister(self, host) -> None:
+        del host
+        self.unregister_calls += 1
 
 
 class PartApiTests(GuiApplicationSceneManagementSetup):
@@ -141,6 +156,17 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.app.register_part(_StubPart("alpha"), host=self.app)
         self.assertTrue(self.app.unregister_part("alpha"))
         self.assertIsNone(self.app.get_part("alpha"))
+
+    def test_unregister_part_shuts_down_bound_runtime(self) -> None:
+        part = _StubPart("alpha")
+        self.app.register_part(part, host=self.app)
+        self.app.bind_parts_runtime(self.app)
+
+        self.assertTrue(self.app.unregister_part("alpha"))
+
+        self.assertEqual(1, part.bind_calls)
+        self.assertEqual(1, part.shutdown_calls)
+        self.assertEqual(1, part.unregister_calls)
 
     def test_send_part_message(self) -> None:
         sender = _StubPart("sender")
@@ -159,6 +185,17 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.app.register_part(_StubPart("worker"), host=self.app)
         self.app.register_part_runnable("worker", "sum", lambda x, y: x + y)
         self.assertEqual(7, self.app.run_part_runnable("worker", "sum", 3, 4))
+
+    def test_app_shutdown_shuts_down_bound_parts_once(self) -> None:
+        part = _StubPart("alpha")
+        self.app.register_part(part, host=self.app)
+        self.app.bind_parts_runtime(self.app)
+
+        self.app.shutdown()
+        self.app.shutdown()
+
+        self.assertEqual(1, part.bind_calls)
+        self.assertEqual(1, part.shutdown_calls)
 
     def test_part_font_role_helper_registers_namespaced_role(self) -> None:
         part = _StubPart("alpha")
