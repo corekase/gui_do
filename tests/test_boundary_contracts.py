@@ -5,7 +5,6 @@ from unittest import mock
 
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
-from tests.contract_test_catalog import PRE_REBASE_DEMO_PREFIX
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 
@@ -46,11 +45,7 @@ class BoundaryContractsTests(unittest.TestCase):
 
     def _active_demo_entrypoints(self, root: Path) -> list[Path]:
         return sorted(
-            (
-                path
-                for path in root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB)
-                if not path.name.startswith(PRE_REBASE_DEMO_PREFIX)
-            ),
+            root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB),
             key=lambda path: path.name,
         )
 
@@ -208,12 +203,11 @@ class BoundaryContractsTests(unittest.TestCase):
             f"found violations: {sorted(set(offenders))}",
         )
 
-    def test_active_demo_entrypoints_exclude_pre_rebase_archives(self) -> None:
+    def test_active_demo_entrypoints_include_current_demo_set(self) -> None:
         root = Path(__file__).resolve().parents[1]
         entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]
 
         self.assertIn("gui_do_demo.py", entrypoint_names)
-        self.assertFalse(any(name.startswith(PRE_REBASE_DEMO_PREFIX) for name in entrypoint_names))
 
     def test_active_demo_entrypoints_match_expected_contract_set(self) -> None:
         root = Path(__file__).resolve().parents[1]

@@ -16,7 +16,6 @@ from tests.contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 from tests.contract_test_catalog import CONTRACT_TEST_MODULES
 from tests.contract_test_catalog import CONTRACT_UNITTEST_COMMAND
 from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
-from tests.contract_test_catalog import PRE_REBASE_DEMO_PREFIX
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
@@ -59,7 +58,6 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertTrue(BOUNDARY_WORKFLOW_STEP_NAME.strip())
         self.assertTrue(ACTIVE_DEMO_ENTRYPOINT_GLOB.strip())
         self.assertTrue(ACTIVE_DEMO_ENTRYPOINTS)
-        self.assertTrue(PRE_REBASE_DEMO_PREFIX.strip())
         self.assertTrue(BOUNDARY_RULE_REQUIRED_PHRASES)
         self.assertEqual(BOUNDARY_WORKFLOW_STEP_NAME, "Run boundary contract tests")
         self.assertEqual(BOUNDARY_PYTEST_COMMAND, "python -m pytest -q tests/test_boundary_contracts.py")
@@ -68,7 +66,6 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertEqual(len(BOUNDARY_RULE_REQUIRED_PHRASES), len(set(BOUNDARY_RULE_REQUIRED_PHRASES)))
         self.assertEqual(len(ACTIVE_DEMO_ENTRYPOINTS), len(set(ACTIVE_DEMO_ENTRYPOINTS)))
         self.assertIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
-        self.assertIn(f"{PRE_REBASE_DEMO_PREFIX}*_demo.py", BOUNDARY_RULE_REQUIRED_PHRASES)
 
         for test_id in BOUNDARY_ENFORCEMENT_TEST_IDS:
             self.assertIn("::", test_id)
@@ -81,14 +78,12 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
 
         for entrypoint in ACTIVE_DEMO_ENTRYPOINTS:
             self.assertTrue(entrypoint.endswith("_demo.py"))
-            self.assertFalse(entrypoint.startswith(PRE_REBASE_DEMO_PREFIX))
 
     def test_active_demo_entrypoints_match_glob_and_prefix_filters(self) -> None:
         root = self._repo_root()
         discovered = tuple(
             path.name
             for path in sorted(root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB), key=lambda path: path.name)
-            if not path.name.startswith(PRE_REBASE_DEMO_PREFIX)
         )
 
         self.assertEqual(discovered, ACTIVE_DEMO_ENTRYPOINTS)

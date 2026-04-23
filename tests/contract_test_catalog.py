@@ -34,17 +34,17 @@ BOUNDARY_ASSET_PATHS = (
 )
 
 ACTIVE_DEMO_ENTRYPOINT_GLOB = "*_demo.py"
-PRE_REBASE_DEMO_PREFIX = "_pre_rebase"
 ACTIVE_DEMO_ENTRYPOINTS = (
     "gui_do_demo.py",
 )
 
 BOUNDARY_RULE_REQUIRED_PHRASES = (
     ACTIVE_DEMO_ENTRYPOINT_GLOB,
-    f"{PRE_REBASE_DEMO_PREFIX}*_demo.py",
     "from gui import ...",
     "without aliases",
     "single from gui import (...) block",
+    "Rebase migration is complete",
+    "no previous-track baggage",
 )
 
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
@@ -198,7 +198,6 @@ README_BOUNDARY_REQUIRED_PHRASES = (
     "gui/",
     "demo_parts/",
     "*_demo.py",
-    "_pre_rebase*_demo.py",
     "from gui import ...",
     "without aliases",
     "single from gui import (...) block",

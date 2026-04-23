@@ -8,7 +8,11 @@ This document defines hard package boundaries between reusable framework code an
 
 - `gui/` is framework/runtime package code and must not depend on `demo_parts/`.
 - `demo_parts/` contains demo-specific contracts and must remain independent from `gui/` imports.
-- Active demo entrypoints (`*_demo.py`, excluding archived `_pre_rebase*_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports, keep named imports without aliases, and use a single `from gui import (...)` block.
+- Active demo entrypoints (`*_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports, keep named imports without aliases, and use a single `from gui import (...)` block.
+
+Rebase status:
+
+- Rebase migration is complete. The repository now documents and enforces only the current gui package contracts with no previous-track baggage.
 
 ## Current Demo Boundary Assets
 

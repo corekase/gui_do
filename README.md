@@ -27,7 +27,7 @@ You'll see an interactive demo with two feature windows and a screen backdrop fe
 Backdrop/pristine defaults:
 - Scene pristine state defaults to a solid black surface per scene, so `set_pristine(...)` is optional.
 - Calling `GuiApplication.set_pristine(...)` still overwrites that same scene backing surface.
-- `WindowControl` defaults to black pristine backing (`use_frame_backdrop=False`), and can opt into legacy frame visuals with `use_frame_backdrop=True`.
+- `WindowControl` defaults to black pristine backing (`use_frame_backdrop=False`), and can opt into frame-backed visuals with `use_frame_backdrop=True`.
 
 Font roles currently defined by the framework and demo:
 - `body`: framework default body/control text, `Ubuntu-B.ttf`, 16 px
@@ -209,7 +209,7 @@ from demo_parts.mandelbrot_demo_part import MandelStatusEvent
 
 - `gui/` contains reusable framework/runtime functionality.
 - `demo_parts/` contains demo-specific contracts and helpers.
-- Boundary scope for demo entrypoints is `*_demo.py` (excluding `_pre_rebase*_demo.py` archives).
+- Boundary scope for demo entrypoints is `*_demo.py`.
 - Active demo entrypoints should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
 
 ## Architecture Docs
@@ -677,7 +677,7 @@ while True:
 
 ### Scene Management
 
-Each app can have multiple scenes, and the framework routes events and updates to the active scene:
+Each app can have multiple scenes, and the framework processes only the active scene at runtime:
 
 ```python
 # Create a scene
@@ -687,12 +687,18 @@ app.create_scene("settings")
 # Switch scenes
 app.switch_scene("settings")
 
-# Access the active scene
-active_scene = app.get_active_scene()
+# Access the active scene name
+active_scene_name = app.active_scene_name
 
 # Get a scheduler for a specific scene
 scheduler = app.get_scene_scheduler("main")
 ```
+
+Active-scene processing contract:
+- Event routing and scene-graph update/draw are active-scene only.
+- Scene-contained scheduler execution is suspended for inactive scenes.
+- Scene-contained timers are suspended for inactive scenes.
+- Scene-scoped part updates and scene-scoped screen lifecycle callbacks run only when their scene is active.
 
 ## Addendum: Typing Legend
 

@@ -8,7 +8,7 @@ It replaces ad hoc direct usage of raw `pygame` events in app-level dispatch wit
 ## Goals
 
 - Provide one event shape throughout GUI internals.
-- Preserve compatibility with existing widget logic that checks `event.type` against `pygame` constants.
+- Preserve strict event-shape guarantees while still exposing raw pygame type where needed.
 - Align key routing with GUI best practice: active/focused window first, then screen fallback.
 - Keep pointer lock and logical pointer transforms explicit and testable.
 
@@ -37,7 +37,7 @@ Semantic categories for GUI-level event intent:
 Canonical event object used by the app pipeline:
 
 - `kind: EventType` semantic type.
-- `type: int` raw `pygame` event type (compatibility field).
+- `type: int` raw `pygame` event type (raw-type field).
 - `key: Optional[int]`
 - `pos: Optional[tuple[int, int]]`
 - `rel: Optional[tuple[int, int]]`
@@ -128,7 +128,7 @@ Propagation and default semantics:
 
 - Widgets and controls should consume `GuiEvent` as the canonical event object.
 - New widget code should prefer semantic checks (`event.kind`) where practical.
-- Existing code paths that rely on `event.type == pygame.*` remain supported for incremental migration.
+- Existing code paths may still rely on `event.type == pygame.*` while all app-level routing remains `GuiEvent`-based.
 - Prefer semantic helper checks in application/demo code to avoid manual `getattr(event, ...)` probing.
 - Synthetic internal events should use `GuiEvent` directly rather than fabricating `pygame.event.Event` objects.
 - Event objects should remain immutable-by-convention after dispatch creation; transform steps should replace fields explicitly.
@@ -140,4 +140,4 @@ The package is considered converted when:
 - app-level event intake normalizes to `GuiEvent` before dispatch,
 - keyboard and scene routing consume normalized events,
 - pointer logicalization preserves raw vs logical coordinates on `GuiEvent`,
-- compatibility with existing controls and tests is maintained.
+- control and test contracts remain stable under the canonical `GuiEvent` pipeline.

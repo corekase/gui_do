@@ -94,11 +94,11 @@ Control drawing requires a canonical `ColorTheme` with a bound `graphics_factory
 
 No fallback render paths are part of the public contract.
 
-## Compatibility Policy
+## Contract Policy
 
 The package is strict by design:
 
-- No compatibility shims.
+- No fallback layers.
 - No duck-typed fallback pathways in core dispatch and control rendering.
 - No optional graphics-factory rendering behavior.
 
