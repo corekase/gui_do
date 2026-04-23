@@ -3,10 +3,86 @@
 from __future__ import annotations
 
 import math
-from typing import Set, Tuple
+from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from shared.part_lifecycle import Part
+from shared.part_lifecycle import LogicPart, Part
+
+
+_LIFE_LOGIC_TOPIC = "life_logic"
+_LIFE_DEFAULT_SEED: Set[Tuple[int, int]] = {
+    (0, 0),
+    (1, 0),
+    (-1, 0),
+    (0, -1),
+    (1, -2),
+}
+_LIFE_NEIGHBOURS = (
+    (-1, -1), (-1, 0), (-1, 1),
+    (0, -1),           (0, 1),
+    (1, -1),  (1, 0),  (1, 1),
+)
+
+
+def _life_population(cells: Set[Tuple[int, int]], cell: Tuple[int, int]) -> int:
+    count = 0
+    for dx, dy in _LIFE_NEIGHBOURS:
+        if (cell[0] + dx, cell[1] + dy) in cells:
+            count += 1
+    return count
+
+
+def _next_life_cycle(cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
+    new_life: Set[Tuple[int, int]] = set()
+    for cell in cells:
+        pop = _life_population(cells, cell)
+        if pop in (2, 3):
+            new_life.add(cell)
+        for dx, dy in _LIFE_NEIGHBOURS:
+            n_cell = (cell[0] + dx, cell[1] + dy)
+            if _life_population(cells, n_cell) == 3:
+                new_life.add(n_cell)
+    return new_life
+
+
+class LifeSimulationLogicPart(LogicPart):
+    """Domain logic service for Conway life cycles."""
+
+    def __init__(self) -> None:
+        super().__init__("life_simulation_logic", scene_name="main")
+        self.life_cells: Set[Tuple[int, int]] = set(_LIFE_DEFAULT_SEED)
+
+    def on_logic_command(self, _host, sender_name: str, command: str, payload: Dict[str, Any]) -> None:
+        if command == "reset":
+            self.life_cells = set(_LIFE_DEFAULT_SEED)
+            self._publish_state(sender_name)
+            return
+        if command == "next":
+            self.life_cells = _next_life_cycle(self.life_cells)
+            self._publish_state(sender_name)
+            return
+        if command == "toggle_cell":
+            cell = payload.get("cell")
+            if isinstance(cell, tuple) and len(cell) == 2:
+                normalized_cell = (int(cell[0]), int(cell[1]))
+                if normalized_cell in self.life_cells:
+                    self.life_cells.remove(normalized_cell)
+                else:
+                    self.life_cells.add(normalized_cell)
+                self._publish_state(sender_name)
+            return
+        if command == "snapshot":
+            self._publish_state(sender_name)
+
+    def _publish_state(self, target_part_name: str) -> None:
+        self.send_message(
+            target_part_name,
+            {
+                "topic": _LIFE_LOGIC_TOPIC,
+                "event": "state",
+                "life_cells": set(self.life_cells),
+            },
+        )
 
 
 class LifeSimulationFeature(Part):
@@ -17,13 +93,10 @@ class LifeSimulationFeature(Part):
         "bind_runtime": ("app",),
     }
 
+    LOGIC_ALIAS = "life"
+
     def __init__(self) -> None:
         super().__init__("life_simulation", scene_name="main")
-        self.neighbours = (
-            (-1, -1), (-1, 0), (-1, 1),
-            (0, -1),           (0, 1),
-            (1, -1),  (1, 0),  (1, 1),
-        )
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0.0, 0.0]
         self.life_cell_size = 12
@@ -67,6 +140,9 @@ class LifeSimulationFeature(Part):
         if self.scheduler is None:
             self.scheduler = demo.app.get_scene_scheduler("main")
         self.scheduler.set_message_dispatch_limit(256)
+        if self.logic_part_name(alias=self.LOGIC_ALIAS) is None:
+            self.bind_logic_part("life_simulation_logic", alias=self.LOGIC_ALIAS)
+        self._send_life_logic_command("snapshot")
 
     def configure_accessibility(self, demo, tab_index_start: int) -> int:
         """Assign accessibility metadata and tab order for Life controls."""
@@ -90,11 +166,25 @@ class LifeSimulationFeature(Part):
         return next_index
 
     def on_update(self, _host) -> None:
-        """Consume cross-part status messages published by the Mandelbrot feature."""
+        """Consume cross-part updates (Mandel status + Life logic snapshots)."""
+        self._consume_part_messages()
+
+    def _consume_part_messages(self) -> None:
         latest_status = None
         while self.has_messages():
             payload = self.pop_message()
             if not isinstance(payload, dict):
+                continue
+            if payload.get("topic") == _LIFE_LOGIC_TOPIC and payload.get("event") == "state":
+                cells = payload.get("life_cells")
+                if isinstance(cells, set):
+                    self.life_cells = {(int(x), int(y)) for (x, y) in cells}
+                elif isinstance(cells, (tuple, list)):
+                    normalized: Set[Tuple[int, int]] = set()
+                    for candidate in cells:
+                        if isinstance(candidate, tuple) and len(candidate) == 2:
+                            normalized.add((int(candidate[0]), int(candidate[1])))
+                    self.life_cells = normalized
                 continue
             if payload.get("topic") != "mandelbrot_status":
                 continue
@@ -102,6 +192,14 @@ class LifeSimulationFeature(Part):
                 latest_status = str(payload["status"])
         if latest_status is not None:
             self.last_mandel_status = latest_status
+
+    def _send_life_logic_command(self, command: str, **extra: Any) -> bool:
+        message: Dict[str, Any] = {
+            "topic": _LIFE_LOGIC_TOPIC,
+            "command": str(command),
+        }
+        message.update(extra)
+        return self.send_logic_message(message, alias=self.LOGIC_ALIAS)
 
     def build_window(
         self,
@@ -201,35 +299,14 @@ class LifeSimulationFeature(Part):
 
     def life_reset(self) -> None:
         """Reset simulation state, viewport origin, zoom level, and run toggle."""
-        self.life_cells.clear()
-        self.life_cells.update({(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)})
         self.life_origin = [self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0]
         self.life_cell_size = 12
         self.zoom_slider.value = 5.0
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         self.set_life_zoom_label()
         self.toggle.pushed = False
-
-    def life_population(self, cell: Tuple[int, int]) -> int:
-        """Return the number of alive neighbours surrounding one cell."""
-        count = 0
-        for dx, dy in self.neighbours:
-            if (cell[0] + dx, cell[1] + dy) in self.life_cells:
-                count += 1
-        return count
-
-    def life_step(self) -> None:
-        """Advance the simulation by one generation using Conway rules."""
-        new_life: Set[Tuple[int, int]] = set()
-        for cell in self.life_cells:
-            pop = self.life_population(cell)
-            if pop in (2, 3):
-                new_life.add(cell)
-            for dx, dy in self.neighbours:
-                n_cell = (cell[0] + dx, cell[1] + dy)
-                if self.life_population(n_cell) == 3:
-                    new_life.add(n_cell)
-        self.life_cells = new_life
+        if not self._send_life_logic_command("reset"):
+            self.life_cells = set(_LIFE_DEFAULT_SEED)
 
     def zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
         """Zoom around a local canvas anchor while preserving the anchored world point."""
@@ -326,6 +403,7 @@ class LifeSimulationFeature(Part):
         demo = self.demo
         canvas = self.canvas
         toggle = self.toggle
+        self._consume_part_messages()
         while True:
             packet = canvas.read_event()
             if packet is None:
@@ -344,13 +422,17 @@ class LifeSimulationFeature(Part):
             cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
             cell = (cell_x, cell_y)
-            if cell in self.life_cells:
-                self.life_cells.remove(cell)
-            else:
-                self.life_cells.add(cell)
+            if not self._send_life_logic_command("toggle_cell", cell=cell):
+                if cell in self.life_cells:
+                    self.life_cells.remove(cell)
+                else:
+                    self.life_cells.add(cell)
 
         if toggle.pushed:
-            self.life_step()
+            if not self._send_life_logic_command("next"):
+                self.life_cells = _next_life_cycle(self.life_cells)
+
+        self._consume_part_messages()
 
         cell_size = max(2, int(round(self.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)

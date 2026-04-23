@@ -721,6 +721,22 @@ class GuiApplication:
         """Send dictionary message between registered parts by name."""
         return self.parts.send_message(sender_name, target_part_name, message)
 
+    def bind_part_logic(self, consumer_part_name: str, logic_part_name: str, *, alias: str = "default") -> None:
+        """Bind a consumer Part to a LogicPart provider under an alias."""
+        self.parts.bind_logic_part(consumer_part_name, logic_part_name, alias=alias)
+
+    def unbind_part_logic(self, consumer_part_name: str, *, alias: str = "default") -> bool:
+        """Remove one logic binding alias from a consumer Part."""
+        return self.parts.unbind_logic_part(consumer_part_name, alias=alias)
+
+    def get_part_logic(self, consumer_part_name: str, *, alias: str = "default"):
+        """Return a bound LogicPart provider name for a consumer alias, or None."""
+        return self.parts.logic_part_name(consumer_part_name, alias=alias)
+
+    def send_part_logic_message(self, consumer_part_name: str, message: dict, *, alias: str = "default") -> bool:
+        """Send a message from a consumer Part to its bound LogicPart alias."""
+        return self.parts.send_logic_message(consumer_part_name, message, alias=alias)
+
     def register_part_runnable(self, part_name: str, runnable_name: str, runnable) -> None:
         """Register a callable runnable under a registered part name."""
         self.parts.register_runnable(part_name, runnable_name, runnable)

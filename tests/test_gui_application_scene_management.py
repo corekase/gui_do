@@ -13,7 +13,7 @@ from gui.controls.canvas_control import CanvasControl
 from gui.controls.slider_control import SliderControl
 from gui.controls.toggle_control import ToggleControl
 from gui.layout.layout_axis import LayoutAxis
-from shared.part_lifecycle import Part
+from shared.part_lifecycle import LogicPart, Part
 
 
 def _make_app() -> GuiApplication:
@@ -149,6 +149,11 @@ class _StubPart(Part):
         self.update_calls += 1
 
 
+class _StubLogicPart(LogicPart):
+    def __init__(self, name: str = "logic") -> None:
+        super().__init__(name)
+
+
 class PartApiTests(GuiApplicationSceneManagementSetup):
 
     def test_register_and_get_part(self) -> None:
@@ -190,6 +195,34 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.app.register_part(_StubPart("worker"), host=self.app)
         self.app.register_part_runnable("worker", "sum", lambda x, y: x + y)
         self.assertEqual(7, self.app.run_part_runnable("worker", "sum", 3, 4))
+
+    def test_bind_logic_and_send_logic_message(self) -> None:
+        consumer = _StubPart("consumer")
+        logic = _StubLogicPart("logic")
+        self.app.register_part(consumer, host=self.app)
+        self.app.register_part(logic, host=self.app)
+
+        self.app.bind_part_logic("consumer", "logic")
+        sent = self.app.send_part_logic_message("consumer", {"command": "snapshot"})
+
+        self.assertTrue(sent)
+        self.assertEqual("logic", self.app.get_part_logic("consumer"))
+        self.assertTrue(logic.has_messages())
+        payload = logic.pop_message()
+        self.assertEqual("consumer", payload["_from"])
+        self.assertEqual("logic", payload["_to"])
+
+    def test_unbind_logic_returns_true_when_alias_present(self) -> None:
+        consumer = _StubPart("consumer")
+        logic = _StubLogicPart("logic")
+        self.app.register_part(consumer, host=self.app)
+        self.app.register_part(logic, host=self.app)
+        self.app.bind_part_logic("consumer", "logic", alias="life")
+
+        removed = self.app.unbind_part_logic("consumer", alias="life")
+
+        self.assertTrue(removed)
+        self.assertIsNone(self.app.get_part_logic("consumer", alias="life"))
 
     def test_app_shutdown_shuts_down_bound_parts_once(self) -> None:
         part = _StubPart("alpha")

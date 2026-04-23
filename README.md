@@ -89,9 +89,9 @@ A feature is a `Part` with optional hooks:
 
 Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and are validated before invocation.
 
-### Part Types: `Part` vs `ScreenPart`
+### Part Types: `Part`, `LogicPart`, and `ScreenPart`
 
-There are two part base classes in `shared.part_lifecycle`. Choosing between them depends on what a feature draws and where it draws it.
+There are three part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
 
 #### `Part` — General-purpose feature unit
 
@@ -141,6 +141,26 @@ class MandelbrotRenderFeature(Part):
         # a canvas window — all standard controls; no raw screen blitting.
         ...
 ```
+
+    #### `LogicPart` — Domain logic service behind message commands
+
+    `LogicPart` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic part responds with result/state messages.
+
+    This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic part defines its own command/data protocol.
+
+    API helpers:
+
+    - `Part.bind_logic_part(logic_part_name, alias="default")`
+    - `Part.send_logic_message(message, alias="default")`
+    - `GuiApplication.bind_part_logic(...)`
+    - `GuiApplication.send_part_logic_message(...)`
+
+    Private and shared logic are both supported:
+
+    - private: bind one consumer to a dedicated logic part
+    - shared: bind multiple consumers to the same logic part under their own aliases
+
+    `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
 
 #### `ScreenPart` — Direct screen drawing with frame synchronisation
 
@@ -198,8 +218,10 @@ class BouncingShapesBackdropFeature(ScreenPart):
 | Scenario | Use |
 |---|---|
 | Owns windows, buttons, or other controls on the scene | `Part` |
+| Encapsulates reusable domain logic behind command messages | `LogicPart` |
 | Wires preamble / event routing / postamble for controls | `Part` |
 | Uses scheduler, event bus, or part messaging | `Part` |
+| Needs to be shared as a logic service by multiple parts | `LogicPart` |
 | Draws a fullscreen or large background animation every frame | `ScreenPart` |
 | Needs raw per-frame `dt_seconds` for physics/animation | `ScreenPart` |
 | Requires bypassing the widget pipeline for performance | `ScreenPart` |

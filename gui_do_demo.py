@@ -1,7 +1,7 @@
 import pygame
 from pygame import Rect
 from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
-from demo_parts.life_demo_part import LifeSimulationFeature
+from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
 from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
 
 from gui import (
@@ -44,11 +44,13 @@ class GuiDoDemo:
             scene_name="control_showcase",
             part_name="bouncing_shapes_backdrop_showcase",
         )
+        self._life_logic_feature = LifeSimulationLogicPart()
         self._life_feature = LifeSimulationFeature()
         self._mandel_feature = MandelbrotRenderFeature()
         for feature in [
             self._shapes_feature,
             self._showcase_shapes_feature,
+            self._life_logic_feature,
             self._life_feature,
             self._mandel_feature,
         ]:

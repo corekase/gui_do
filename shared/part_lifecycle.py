@@ -60,6 +60,26 @@ class Part:
             return False
         return self._part_manager.send_message(self.name, target_part_name, message)
 
+    def bind_logic_part(self, logic_part_name: str, *, alias: str = "default") -> None:
+        if self._part_manager is None:
+            raise RuntimeError("part must be registered before binding logic parts")
+        self._part_manager.bind_logic_part(self.name, logic_part_name, alias=alias)
+
+    def unbind_logic_part(self, *, alias: str = "default") -> bool:
+        if self._part_manager is None:
+            return False
+        return self._part_manager.unbind_logic_part(self.name, alias=alias)
+
+    def logic_part_name(self, *, alias: str = "default") -> Optional[str]:
+        if self._part_manager is None:
+            return None
+        return self._part_manager.logic_part_name(self.name, alias=alias)
+
+    def send_logic_message(self, message: Dict[str, Any], *, alias: str = "default") -> bool:
+        if self._part_manager is None:
+            return False
+        return self._part_manager.send_logic_message(self.name, message, alias=alias)
+
     def enqueue_message(self, message: Dict[str, Any]) -> None:
         if not isinstance(message, dict):
             raise TypeError("part messages must be dictionaries")
@@ -186,6 +206,23 @@ class ScreenPart(Part):
         return None
 
 
+class LogicPart(Part):
+    """Part subtype for domain logic routed through message commands."""
+
+    def on_logic_command(self, host, sender_name: str, command: str, payload: Dict[str, Any]) -> None:
+        return None
+
+    def on_update(self, host) -> None:
+        while self.has_messages():
+            message = self.pop_message()
+            if not isinstance(message, dict):
+                continue
+            command = message.get("command")
+            if not isinstance(command, str):
+                continue
+            self.on_logic_command(host, str(message.get("_from", "")), command, message)
+
+
 class PartManager:
     """Coordinates lifecycle, messaging, and utility registrations for parts."""
 
@@ -195,6 +232,7 @@ class PartManager:
         self._part_hosts: Dict[str, object] = {}
         self._runnables: Dict[str, Dict[str, Callable[..., Any]]] = {}
         self._runtime_bound_parts: set[str] = set()
+        self._logic_bindings: Dict[str, Dict[str, str]] = {}
 
     def register(self, part: Part, host=None) -> Part:
         if not isinstance(part, Part):
@@ -223,6 +261,13 @@ class PartManager:
         self._parts.pop(key, None)
         self._part_hosts.pop(part.name, None)
         self._runtime_bound_parts.discard(part.name)
+        self._logic_bindings.pop(part.name, None)
+        for consumer_name, alias_map in tuple(self._logic_bindings.items()):
+            aliases_to_remove = [alias for alias, provider_name in alias_map.items() if provider_name == part.name]
+            for alias in aliases_to_remove:
+                alias_map.pop(alias, None)
+            if not alias_map:
+                self._logic_bindings.pop(consumer_name, None)
         part._part_manager = None
         self._runnables.pop(part.name, None)
         return True
@@ -255,6 +300,36 @@ class PartManager:
             raise ValueError("runnable_name must be a non-empty string")
         bucket = self._runnables.setdefault(str(part_name), {})
         bucket[name] = runnable
+
+    def bind_logic_part(self, consumer_part_name: str, logic_part_name: str, *, alias: str = "default") -> None:
+        consumer = self._require_part(consumer_part_name)
+        provider = self._require_part(logic_part_name)
+        if not isinstance(provider, LogicPart):
+            raise TypeError(f"part is not a LogicPart: {provider.name}")
+        alias_name = self._normalize_alias(alias)
+        bucket = self._logic_bindings.setdefault(consumer.name, {})
+        bucket[alias_name] = provider.name
+
+    def unbind_logic_part(self, consumer_part_name: str, *, alias: str = "default") -> bool:
+        alias_name = self._normalize_alias(alias)
+        bucket = self._logic_bindings.get(str(consumer_part_name))
+        if not bucket or alias_name not in bucket:
+            return False
+        bucket.pop(alias_name, None)
+        if not bucket:
+            self._logic_bindings.pop(str(consumer_part_name), None)
+        return True
+
+    def logic_part_name(self, consumer_part_name: str, *, alias: str = "default") -> Optional[str]:
+        alias_name = self._normalize_alias(alias)
+        bucket = self._logic_bindings.get(str(consumer_part_name), {})
+        return bucket.get(alias_name)
+
+    def send_logic_message(self, consumer_part_name: str, message: Dict[str, Any], *, alias: str = "default") -> bool:
+        provider_name = self.logic_part_name(consumer_part_name, alias=alias)
+        if provider_name is None:
+            return False
+        return self.send_message(str(consumer_part_name), provider_name, message)
 
     def run(self, part_name: str, runnable_name: str, *args, **kwargs) -> Any:
         part_bucket = self._runnables.get(str(part_name), {})
@@ -358,3 +433,10 @@ class PartManager:
         if scene_name is None:
             return True
         return str(scene_name) == str(self.app.active_scene_name)
+
+    @staticmethod
+    def _normalize_alias(alias: str) -> str:
+        alias_name = str(alias).strip()
+        if not alias_name:
+            raise ValueError("logic binding alias must be a non-empty string")
+        return alias_name

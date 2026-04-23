@@ -8,7 +8,8 @@ import pygame
 
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
-from demo_parts.life_demo_part import LifeSimulationFeature
+from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
+from shared.part_lifecycle import PartManager
 
 
 class _Packet:
@@ -44,18 +45,26 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
 
     def _make_demo_stub(self) -> GuiDoDemo:
         demo = GuiDoDemo.__new__(GuiDoDemo)
+        demo.app = SimpleNamespace(
+            theme=SimpleNamespace(medium=(0, 0, 0)),
+            active_scene_name="main",
+        )
+        demo._part_manager = PartManager(demo.app)
+        life_logic_part = LifeSimulationLogicPart()
+        demo._part_manager.register(life_logic_part, host=demo)
         # Create the life part and configure it
         life_part = LifeSimulationFeature()
         life_part.life_cells = set()
         life_part.life_origin = [0.0, 0.0]
         life_part.life_cell_size = 12
         life_part.life_zoom_slider_last_value = 5
+        demo._part_manager.register(life_part, host=demo)
+        life_part.bind_logic_part("life_simulation_logic", alias=life_part.LOGIC_ALIAS)
         demo._life_feature = life_part
         # Set up UI elements on demo
         demo.life_zoom_slider = SimpleNamespace(value=5.0)
         demo.life_zoom_label = SimpleNamespace(text="Zoom 12")
         demo.life_canvas = _LifeCanvasStub([])
-        demo.app = SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0)))
         demo.life_toggle = SimpleNamespace(pushed=False)
         life_part.zoom_slider = demo.life_zoom_slider
         life_part.zoom_label = demo.life_zoom_label
@@ -100,8 +109,24 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo._life_feature.canvas = demo.life_canvas
 
         demo._life_feature.update_life()
+        demo._part_manager.update_parts(demo)
 
         self.assertIn((1, 1), demo._life_feature.life_cells)
+
+    def test_life_reset_and_next_are_processed_by_logic_part(self) -> None:
+        demo = self._make_demo_stub()
+
+        demo._life_feature.life_reset()
+        demo._part_manager.update_parts(demo)
+
+        expected_seed = {(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)}
+        self.assertEqual(demo._life_feature.life_cells, expected_seed)
+
+        demo.life_toggle.pushed = True
+        demo._life_feature.update_life()
+        demo._part_manager.update_parts(demo)
+
+        self.assertNotEqual(demo._life_feature.life_cells, expected_seed)
 
 
 if __name__ == "__main__":
