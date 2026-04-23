@@ -57,7 +57,7 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
 
         part.styles_window_event_handler(_ClickEvent(second_group_control.rect.center))
 
-        self.assertEqual(first_footer_label.text, "Gr: G1 ID: I2")
+        self.assertEqual(first_footer_label.text, "Gr: 1 ID: 2")
 
     def test_each_group_defaults_to_first_item_selected(self) -> None:
         _app, _demo, part = self._build_part()
@@ -70,7 +70,7 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
             self.assertTrue(group_slice[0].pushed)
             for control in group_slice[1:]:
                 self.assertFalse(control.pushed)
-            self.assertEqual(part.footer_labels[group_index].text, f"Gr: G{group_index + 1} ID: I1")
+            self.assertEqual(part.footer_labels[group_index].text, f"Gr: {group_index + 1} ID: 1")
 
     def test_radio_and_check_controls_are_centered_in_grid_cells(self) -> None:
         app, _demo, part = self._build_part()

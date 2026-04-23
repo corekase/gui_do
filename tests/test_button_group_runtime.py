@@ -43,6 +43,52 @@ class ButtonGroupRuntimeTests(unittest.TestCase):
         self.assertTrue(second.pushed)
         self.assertEqual(ButtonGroupControl._selection_by_group.get("g"), "b")
 
+    def test_keyboard_activation_when_focused_switches_selection(self) -> None:
+        first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
+        second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
+        first.set_tab_index(0)
+        second.set_tab_index(1)
+        self.app.focus.set_focus(second)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertFalse(first.pushed)
+        self.assertTrue(second.pushed)
+        self.assertEqual(ButtonGroupControl._selection_by_group.get("g"), "b")
+
+    def test_keyboard_activation_ignored_when_not_focused(self) -> None:
+        first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
+        second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
+        first.set_tab_index(0)
+        second.set_tab_index(1)
+        self.app.focus.set_focus(first)
+
+        consumed = second.handle_event(
+            self.app.event_manager.to_gui_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN})),
+            self.app,
+        )
+
+        self.assertFalse(consumed)
+        self.assertTrue(first.pushed)
+        self.assertFalse(second.pushed)
+        self.assertEqual(ButtonGroupControl._selection_by_group.get("g"), "a")
+
+    def test_set_on_activate_called_on_keyboard_activation(self) -> None:
+        fired = []
+        first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
+        second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
+        second.set_tab_index(0)
+        second.set_on_activate(lambda: fired.append("hit"))
+        self.app.focus.set_focus(second)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
+
+        self.assertTrue(consumed)
+        self.assertFalse(first.pushed)
+        self.assertTrue(second.pushed)
+        self.assertEqual(fired, ["hit"])
+
 
 if __name__ == "__main__":
     unittest.main()
