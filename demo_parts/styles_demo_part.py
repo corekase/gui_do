@@ -20,30 +20,32 @@ class StylesShowcaseFeature(Part):
 
     WINDOW_TITLEBAR_HEIGHT = 28
 
-    COLUMN_WIDTH = 100
+    COLUMN_WIDTH = 90
     COLUMN_GAP = 4
     HEADING_HEIGHT = 24
     CONTROL_HEIGHT = 30
     CONTROL_GAP = 8
     FOOTER_HEIGHT = 22
-    PADDING_X = 16
-    PADDING_Y = 14
+    PADDING_X = 10
+    TOP_PADDING_Y = 0
+    BOTTOM_PADDING_Y = TOP_PADDING_Y + 4
+    PADDING_Y = TOP_PADDING_Y
     HEADING_GAP = 4
     FOOTER_GAP = 4
 
     CENTERED_STYLES = ("radio", "check")
-    CENTERED_STYLE_WIDTH = 96
+    CENTERED_STYLE_WIDTH = 90
 
     WINDOW_WIDTH = (COLUMN_COUNT * COLUMN_WIDTH) + ((COLUMN_COUNT - 1) * COLUMN_GAP) + (PADDING_X * 2)
     WINDOW_CONTENT_HEIGHT = (
-        PADDING_Y
+        TOP_PADDING_Y
         + HEADING_HEIGHT
         + HEADING_GAP
         + (len(ROW_LABELS) * CONTROL_HEIGHT)
         + ((len(ROW_LABELS) - 1) * CONTROL_GAP)
         + FOOTER_GAP
         + FOOTER_HEIGHT
-        + PADDING_Y
+        + BOTTOM_PADDING_Y
     )
     WINDOW_HEIGHT = WINDOW_TITLEBAR_HEIGHT + WINDOW_CONTENT_HEIGHT
 
@@ -103,7 +105,7 @@ class StylesShowcaseFeature(Part):
         )
 
         content_rect = self.window.content_rect()
-        heading_y = content_rect.top + self.PADDING_Y
+        heading_y = content_rect.top + self.TOP_PADDING_Y
         controls_anchor_y = heading_y + self.HEADING_HEIGHT + self.HEADING_GAP
         footer_y = controls_anchor_y + (len(self.ROW_LABELS) * self.CONTROL_HEIGHT) + ((len(self.ROW_LABELS) - 1) * self.CONTROL_GAP) + self.FOOTER_GAP
 
@@ -161,6 +163,7 @@ class StylesShowcaseFeature(Part):
             group_name = f"styles_group_{column_index + 1}"
 
             for row_index, row_label in enumerate(self.ROW_LABELS):
+                footer_token = self._format_group_info(column_index, row_index)
                 control = self.window.add(
                     button_group_control_cls(
                         f"styles_{slug}_{row_index + 1}",
@@ -169,12 +172,13 @@ class StylesShowcaseFeature(Part):
                         row_label,
                         selected=False,
                         style=style_sequence[row_index],
+                        on_activate=lambda target=footer, token=footer_token: self._update_footer_label(target, token),
                     )
                 )
                 control.set_tab_index(focus_index)
                 focus_index += 1
                 self.group_controls.append(control)
-                self._group_footer_bindings.append((control, footer, self._format_group_info(column_index, row_index)))
+                self._group_footer_bindings.append((control, footer, footer_token))
 
         host.app.style_label(
             self.window.add(label_control_cls("styles_heading_buttons", Rect(content_rect.left + self.PADDING_X + (button_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "Buttons", align="center")),
@@ -233,6 +237,9 @@ class StylesShowcaseFeature(Part):
         x = cell.left + ((cell.width - width) // 2)
         return Rect(x, cell.top, width, cell.height)
 
+    def _update_footer_label(self, footer_label, token: str) -> None:
+        footer_label.text = token
+
     def styles_window_event_handler(self, event) -> bool:
         if not event.is_mouse_down(1):
             return False
@@ -241,6 +248,6 @@ class StylesShowcaseFeature(Part):
             return False
         for control, footer_label, token in self._group_footer_bindings:
             if control.rect.collidepoint(pos):
-                footer_label.text = token
+                self._update_footer_label(footer_label, token)
                 break
         return False

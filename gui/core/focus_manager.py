@@ -98,10 +98,12 @@ class FocusManager:
         ordered.sort(key=lambda node: (node.tab_index, node.control_id))
         return ordered
 
-    def cycle_focus(self, scene, *, forward: bool = True, window=None) -> bool:
+    def cycle_focus(self, scene, *, forward: bool = True, window=None, pointer_pos=None) -> bool:
         focused = self._focused_node
         if focused is not None and not self._is_focus_window_context_valid(focused):
             self.clear_focus()
+
+        self._reconcile_hover_state(scene, pointer_pos=pointer_pos, window=window)
 
         candidates = self._focusable_nodes(scene, window=window)
         if not candidates:
@@ -137,6 +139,32 @@ class FocusManager:
             return True
         self.set_focus(next_node, show_hint=True)
         return True
+
+    def _reconcile_hover_state(self, scene, *, pointer_pos, window=None) -> None:
+        """Normalize hover flags against the latest pointer position during traversal."""
+        if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return
+        x = int(pointer_pos[0])
+        y = int(pointer_pos[1])
+        probe = (x, y)
+
+        for node in scene._walk_nodes():
+            if window is not None and not self._is_descendant(node, window):
+                continue
+
+            wants_hover = bool(node.visible and node.enabled and node.rect.collidepoint(probe))
+
+            if hasattr(node, "hovered"):
+                current = bool(getattr(node, "hovered"))
+                if current != wants_hover:
+                    setattr(node, "hovered", wants_hover)
+                    node.invalidate()
+
+            if hasattr(node, "_hovered"):
+                current_private = bool(getattr(node, "_hovered"))
+                if current_private != wants_hover:
+                    setattr(node, "_hovered", wants_hover)
+                    node.invalidate()
 
     def revalidate_focus(self, scene) -> None:
         """If the focused node is no longer focusable, move to the nearest valid node or clear.

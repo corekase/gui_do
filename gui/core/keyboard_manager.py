@@ -18,7 +18,8 @@ class KeyboardManager:
         if event.is_key_down(pygame.K_TAB):
             shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
             focus_scope = scene.active_window()
-            if app.focus.cycle_focus(scene, forward=not shift_pressed, window=focus_scope):
+            pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
+            if app.focus.cycle_focus(scene, forward=not shift_pressed, window=focus_scope, pointer_pos=pointer_pos):
                 event.prevent_default()
                 event.stop_propagation()
                 return True

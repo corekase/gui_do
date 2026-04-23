@@ -1,6 +1,7 @@
 """Tests for focus visualization based on event source (keyboard vs mouse)."""
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pygame
 from pygame import Rect, Surface
@@ -258,6 +259,36 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         )
 
         self.assertIsNone(self.app.focus.focused_node)
+
+    def test_keyboard_focus_cycle_clears_hover_when_pointer_moved_off_without_motion_event(self) -> None:
+        """Tab cycling must clear stale hover state using live pointer position."""
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEMOTION,
+                {"pos": self.button1.rect.center, "rel": (0, 0), "buttons": (0, 0, 0)},
+            )
+        )
+        self.assertTrue(self.button1.hovered)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_TAB},
+            )
+        )
+        self.assertIs(self.app.focus.focused_node, self.button1)
+
+        off_pos = (self.window.rect.right + 20, self.window.rect.bottom + 20)
+        with patch("pygame.mouse.get_pos", return_value=off_pos):
+            self.app.process_event(
+                pygame.event.Event(
+                    pygame.KEYDOWN,
+                    {"key": pygame.K_TAB},
+                )
+            )
+
+        self.assertFalse(self.button1.hovered)
+        self.assertIs(self.app.focus.focused_node, self.button2)
 
 
 if __name__ == "__main__":

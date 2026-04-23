@@ -16,6 +16,13 @@ def _node(control_id: str, tab_index: int = 0, visible: bool = True, enabled: bo
     return n
 
 
+class _HoverNode(UiNode):
+    def __init__(self, control_id: str, rect: Rect, tab_index: int) -> None:
+        super().__init__(control_id, rect)
+        self.set_tab_index(tab_index)
+        self.hovered = False
+
+
 class FocusedControlIdTests(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -139,6 +146,22 @@ class SetFocusByIdTests(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertIs(self.fm.focused_node, first)
+
+
+class FocusTraversalHoverReconciliationTests(unittest.TestCase):
+
+    def test_cycle_focus_reconciles_stale_hover_to_idle_when_pointer_moved_off(self) -> None:
+        fm = FocusManager()
+        scene = Scene()
+        first = scene.add(_HoverNode("first", Rect(10, 10, 80, 20), tab_index=0))
+        scene.add(_HoverNode("second", Rect(10, 40, 80, 20), tab_index=1))
+
+        first.hovered = True
+
+        consumed = fm.cycle_focus(scene, pointer_pos=(300, 200))
+
+        self.assertTrue(consumed)
+        self.assertFalse(first.hovered)
 
 
 if __name__ == "__main__":
