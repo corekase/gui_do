@@ -65,6 +65,13 @@ class UiNode:
     def accepts_focus(self) -> bool:
         return self.tab_index >= 0
 
+    def accepts_mouse_focus(self) -> bool:
+        """Return whether this node should become focused from mouse clicks.
+
+        Keyboard focus traversal still uses :meth:`accepts_focus`.
+        """
+        return self.accepts_focus()
+
     def set_accessibility(self, *, role: str | None = None, label: str | None = None) -> None:
         if role is not None:
             self.accessibility_role = str(role)

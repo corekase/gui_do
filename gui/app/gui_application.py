@@ -323,8 +323,11 @@ class GuiApplication:
         logical_event = self._logicalize_pointer_event(gui_event)
 
         if logical_event.is_mouse_down(1):
-            # Mouse click focus: don't show graphical hint (show_hint=False)
-            self.focus.set_focus(self.scene.top_focus_target_at(logical_event.pos), show_hint=False)
+            # Mouse click focus: only change focus when a valid mouse-focus target exists.
+            # This keeps informational widgets (e.g. labels) from clearing active focus.
+            target = self.scene.top_focus_target_at(logical_event.pos)
+            if target is not None:
+                self.focus.set_focus(target, show_hint=False)
 
         if self.keyboard.is_key_event(logical_event):
             consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)

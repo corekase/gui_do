@@ -7,6 +7,7 @@ from pygame import Rect, Surface
 
 from gui.app.gui_application import GuiApplication
 from gui.controls.button_control import ButtonControl
+from gui.controls.label_control import LabelControl
 from gui.controls.panel_control import PanelControl
 from gui.controls.window_control import WindowControl
 from gui.core.focus_manager import FocusManager
@@ -224,6 +225,39 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         )
         self.assertIs(self.app.focus.focused_node, self.button2)
         self.assertIs(self.app.focus_visualizer._current_hint_node, self.button2)
+
+    def test_clicking_label_does_not_clear_existing_focus(self) -> None:
+        """Mouse clicking labels must not change active focus."""
+        label = self.window.add(LabelControl("lbl", Rect(40, 130, 180, 40), "Info"))
+        label.set_tab_index(2)  # Even if explicitly focusable, labels must ignore mouse focus.
+
+        self.app.focus.set_focus(self.button1, show_hint=False)
+        self.assertIs(self.app.focus.focused_node, self.button1)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN,
+                {"pos": label.rect.center, "button": 1},
+            )
+        )
+
+        self.assertIs(self.app.focus.focused_node, self.button1)
+
+    def test_clicking_label_with_no_focus_keeps_focus_none(self) -> None:
+        """Clicking labels with no existing focus should not establish focus."""
+        label = self.window.add(LabelControl("lbl", Rect(40, 130, 180, 40), "Info"))
+        label.set_tab_index(2)
+
+        self.assertIsNone(self.app.focus.focused_node)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN,
+                {"pos": label.rect.center, "button": 1},
+            )
+        )
+
+        self.assertIsNone(self.app.focus.focused_node)
 
 
 if __name__ == "__main__":

@@ -24,6 +24,10 @@ class LabelControl(UiNode):
         self._rendered_surface: Optional["pygame.Surface"] = None
         self._render_key: Optional[tuple] = None
 
+    def accepts_mouse_focus(self) -> bool:
+        """Labels are informational and should not steal focus on mouse clicks."""
+        return False
+
     @property
     def text(self) -> str:
         return self._text

@@ -132,7 +132,7 @@ class Scene:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
         for node in reversed(self._walk_nodes()):
-            if node.visible and node.enabled and node.accepts_focus() and node.hit_test(pos):
+            if node.visible and node.enabled and node.accepts_mouse_focus() and node.hit_test(pos):
                 return node
         return None
 
