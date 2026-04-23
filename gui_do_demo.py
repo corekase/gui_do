@@ -79,6 +79,7 @@ class GuiDoDemo:
         self.app.set_pristine("backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
+        self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
         self.app.bind_parts_runtime(self)
 
         base_controls = [
@@ -89,13 +90,15 @@ class GuiDoDemo:
         ]
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
-        self.showcase_back_button.set_tab_index(0)
-        self.showcase_styles_toggle.set_tab_index(1)
+        self.showcase_exit_button.set_tab_index(0)
+        self.showcase_back_button.set_tab_index(1)
+        self.showcase_styles_toggle.set_tab_index(2)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
         self.showcase_button.set_accessibility(role="button", label="Showcase")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
+        self.showcase_exit_button.set_accessibility(role="button", label="Exit")
         self.showcase_back_button.set_accessibility(role="button", label="Back")
         self.showcase_styles_toggle.set_accessibility(role="toggle", label="Show Styles window")
         self.app.configure_parts_accessibility(self, len(base_controls))
@@ -261,10 +264,20 @@ class GuiDoDemo:
             self._styles_feature.window.visible = bool(pushed)
             self.app.tile_windows(newly_visible=[self._styles_feature.window] if pushed else None)
 
+        self.showcase_exit_button = self.showcase_task_panel.add(
+            ButtonControl(
+                "showcase_exit",
+                self.app.layout.linear(0),
+                "Exit",
+                lambda: setattr(self.app, "running", False),
+                style="angle",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
         self.showcase_back_button = self.showcase_task_panel.add(
             ButtonControl(
                 "showcase_back",
-                self.app.layout.linear(0),
+                self.app.layout.linear(1),
                 "Back",
                 lambda: self.app.switch_scene("main"),
                 style="angle",
@@ -274,7 +287,7 @@ class GuiDoDemo:
         self.showcase_styles_toggle = self.showcase_task_panel.add(
             ToggleControl(
                 "show_styles",
-                self.app.layout.linear(1),
+                self.app.layout.linear(2),
                 "Styles",
                 "Styles",
                 pushed=False,
