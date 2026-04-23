@@ -216,6 +216,688 @@ class StatusFeature(Part):
 # app.bind_parts_runtime(demo)
 ```
 
+## Control Widgets Guide
+
+### Common Pattern: Creating and Adding Controls
+
+All controls follow a consistent pattern: create with a unique ID, bounding rect, and options, then add to a parent.
+
+```python
+from gui import ButtonControl, ToggleControl, LabelControl
+
+# Add a button
+button = parent.add(
+    ButtonControl("btn_id", rect, "Button Text", on_click=callback, style="angle")
+)
+
+# Add a toggle (state-tracking button)
+toggle = parent.add(
+    ToggleControl(
+        "toggle_id",
+        rect,
+        "Off",  # label when not pushed
+        "On",   # label when pushed
+        pushed=False,
+        on_toggle=lambda pushed: print(f"Toggled: {pushed}"),
+    )
+)
+
+# Activate/query toggle state
+toggle.pushed = True  # Set state
+is_on = toggle.pushed  # Read state
+```
+
+### Label Control
+
+Display read-only text. Useful for status, titles, and information display.
+
+```python
+from gui import LabelControl
+
+label = parent.add(
+    LabelControl("label_id", rect, "Initial Text")
+)
+
+# Update text
+label.set_label("Updated text")
+
+# Apply styling
+app.style_label(label, size=14, role="body")
+```
+
+### Slider Control
+
+Capture numeric input with mouse drag or keyboard. `SliderControl` and `ScrollbarControl` use the dual-mode value-change callback system.
+
+```python
+from gui import SliderControl, LayoutAxis, ValueChangeReason
+
+def on_value_changed(value, reason):
+    print(f"Value: {value}, Reason: {reason}")
+    if reason == ValueChangeReason.MOUSE_DRAG:
+        print("User is dragging")
+    elif reason == ValueChangeReason.KEYBOARD:
+        print("User pressed arrow keys")
+
+slider = parent.add(
+    SliderControl(
+        "slider_id",
+        rect,
+        axis=LayoutAxis.HORIZONTAL,
+        min_value=0,
+        max_value=100,
+        current_value=50,
+        on_change=on_value_changed,
+        on_change_mode="reason-required",
+    )
+)
+
+# Programmatic updates
+slider.set_value(75)
+slider.value  # Read current value
+```
+
+### Scrollbar Control
+
+Similar to slider but includes increment/decrement arrow buttons at the ends.
+
+```python
+from gui import ScrollbarControl, LayoutAxis, ValueChangeReason
+
+def on_scroll(value, reason):
+    if reason == ValueChangeReason.MOUSE_DRAG:
+        # Thumb drag
+        pass
+    elif reason == ValueChangeReason.ARROW_CLICK:
+        # Arrow button click
+        pass
+
+scrollbar = parent.add(
+    ScrollbarControl(
+        "scrollbar_id",
+        rect,
+        axis=LayoutAxis.VERTICAL,
+        min_value=0,
+        max_value=1000,
+        current_value=0,
+        on_change=on_scroll,
+    )
+)
+```
+
+### Button Group Control
+
+Mutually exclusive selection (radio button behavior).
+
+```python
+from gui import ButtonGroupControl
+
+group = parent.add(
+    ButtonGroupControl(
+        "group_id",
+        rect,
+        options=["Option A", "Option B", "Option C"],
+        on_selection_change=lambda idx: print(f"Selected: {idx}"),
+    )
+)
+
+group.selected_index = 1  # Set selection
+idx = group.selected_index  # Read selection
+```
+
+### Image Control
+
+Display PNG/JPG images scaled to fit a rectangle.
+
+```python
+from gui import ImageControl
+
+image = parent.add(
+    ImageControl("image_id", rect, image_path="data/images/backdrop.jpg")
+)
+
+# Update image
+image.set_image("data/images/new_image.png")
+```
+
+### Frame Control
+
+A decorative border/frame that groups content visually.
+
+```python
+from gui import FrameControl
+
+frame = parent.add(
+    FrameControl("frame_id", rect, frame_type="box")
+)
+
+# Add controls inside the frame
+label = frame.add(
+    LabelControl("label", inner_rect, "Framed Content")
+)
+```
+
+### Arrow Box Control
+
+Clickable arrow buttons (used internally for scrollbars but can be used directly).
+
+```python
+from gui import ArrowBoxControl
+
+up_arrow = parent.add(
+    ArrowBoxControl(
+        "up_arrow",
+        rect,
+        direction="up",
+        on_click=lambda: print("Clicked up"),
+    )
+)
+```
+
+### Window Control
+
+Floating, draggable window with title bar and frame.
+
+```python
+from gui import WindowControl
+
+window = parent.add(
+    WindowControl(
+        "window_id",
+        rect,
+        "Window Title",
+        preamble=None,  # Optional: lifecycle callback before event handling
+        event_handler=None,  # Optional: custom event handler
+        postamble=None,  # Optional: lifecycle callback after event handling
+        use_frame_backdrop=True,
+    )
+)
+
+# Add controls inside the window
+button = window.add(
+    ButtonControl("btn", inner_rect, "Click me")
+)
+
+# Query window state
+is_active = window.is_active()
+window_rect = window.get_window_rect()
+content_rect = window.content_rect()
+```
+
+### Task Panel Control
+
+Application-level control panel (typically at top/bottom of screen). Configured separately via `GuiApplication`.
+
+```python
+# Task panel is created automatically by GuiApplication
+# Configure it in your app setup:
+app.configure_task_panel(
+    height=64,
+    x_position="bottom",  # "top" or "bottom"
+    reveal_on_focus=True,
+    auto_hide=True,
+    auto_hide_timer_ms=3000,
+    step_size=8,
+)
+
+# Add buttons to task panel
+task_panel = app.get_task_panel("main")
+button = task_panel.add(
+    ButtonControl("task_btn", rect, "Task Button")
+)
+```
+
+### Canvas Control
+
+High-performance drawable surface for custom graphics and event handling.
+
+```python
+from gui import CanvasControl, GuiEvent
+
+def on_canvas_event(event):
+    if event.is_mouse_motion():
+        print(f"Mouse at {event.pos}")
+        return True  # Consume event
+    return False
+
+canvas = parent.add(
+    CanvasControl(
+        "canvas_id",
+        rect,
+        max_events=256,  # Event buffer size
+    )
+)
+
+canvas.on_handle_event = on_canvas_event
+
+# In your draw loop:
+def draw_scene(surface, theme):
+    canvas.draw(surface, theme)
+    # Canvas surfaces are cleared each frame
+    canvas_surface = canvas.get_graphics_surface()
+    # Draw custom content to canvas_surface
+```
+
+## Event Handling and Propagation
+
+The framework uses canonical `GuiEvent` objects with three-phase dispatch: capture, target, and bubble.
+
+### Event Phases and Propagation
+
+```python
+from gui import GuiEvent, EventPhase, EventType
+
+def handle_event(event):
+    # Check event type
+    if event.kind == EventType.MOUSE_BUTTON_DOWN:
+        print(f"Mouse button {event.button} pressed at {event.pos}")
+    elif event.kind == EventType.KEY_DOWN:
+        print(f"Key {event.key} pressed")
+
+    # Stop propagation to parent containers
+    event.stop_propagation()
+
+    # Prevent default browser/system behavior
+    event.prevent_default()
+
+    # Return True to consume event
+    return True
+```
+
+### Routed Event Flow
+
+Events traverse the scene graph in three phases:
+
+1. **CAPTURE**: Root → Target (top-down)
+2. **TARGET**: Direct target handling
+3. **BUBBLE**: Target → Root (bottom-up)
+
+Containers automatically propagate events to children. Call `stop_propagation()` to halt traversal.
+
+### Keyboard and Action Handling
+
+```python
+from gui import ActionManager
+
+# Register actions
+app.actions.register_action("zoom_in", lambda event: (print("Zooming in"), True))
+app.actions.register_action("zoom_out", lambda event: (print("Zooming out"), True))
+
+# Bind keys to actions
+app.actions.bind_key(pygame.K_PLUS, "zoom_in", scene="main")
+app.actions.bind_key(pygame.K_MINUS, "zoom_out", scene="main")
+
+# Bind to specific windows
+window = app.get_active_window(scene="main")
+app.actions.bind_key_to_widget(pygame.K_RETURN, "activate", widget=window)
+```
+
+## Focus and Keyboard Input
+
+Focus determines which widget receives keyboard input. The framework automatically manages focus traversal and visualization.
+
+### Tab Traversal
+
+Set tab indices to control keyboard navigation order.
+
+```python
+# During widget creation or after:
+button1.set_tab_index(0)
+button2.set_tab_index(1)
+input_field.set_tab_index(2)
+
+# Tab key navigates in order; Shift+Tab goes backward
+# Focus ring wraps at boundaries
+```
+
+### Focus Management
+
+```python
+from gui import FocusManager
+
+# Get the active focus manager for a scene
+focus_manager = app.get_focus_manager("main")
+
+# Query focus
+current = focus_manager.current()  # Currently focused widget
+# Returns None if no widget is focused
+
+# Set focus programmatically
+focus_manager.set_focus_to(widget)
+
+# Clear focus
+focus_manager.clear_focus()
+
+# Query widget properties
+is_visible = focus_manager.is_widget_visible(widget)
+is_focusable = focus_manager.is_widget_focusable(widget)
+```
+
+### Accessibility Configuration
+
+```python
+# Set accessibility metadata for screen readers
+widget.set_accessibility(
+    role="button",  # button, toggle, slider, textinput, etc.
+    label="Save File",  # Accessible name
+)
+
+# Helper to set tab indices across controls
+next_idx = 0
+for control in [btn1, btn2, inp]:
+    control.set_tab_index(next_idx)
+    next_idx += 1
+```
+
+## Window and Layout Management
+
+### Window Management
+
+Windows are floating containers managed by the application.
+
+```python
+# Get active window in scene
+window = app.get_active_window(scene="main")
+
+# Get all windows
+windows = app.get_all_windows(scene="main")
+
+# Query window state
+is_active = window.is_active()
+rect = window.get_window_rect()
+```
+
+### Automatic Window Tiling
+
+The framework includes automatic layout for multiple windows.
+
+```python
+# Enable automatic tiling
+app.configure_window_tiling(
+    gap=16,  # Pixels between windows
+    padding=16,  # Pixels from screen edge
+    avoid_task_panel=True,  # Don't overlap task panel
+    center_on_failure=True,  # Center window if tiling fails
+    relayout=False,  # Immediately relayout existing windows
+)
+
+app.set_window_tiling_enabled(True)
+
+# Disable tiling
+app.set_window_tiling_enabled(False)
+```
+
+### Layout System
+
+Position widgets using absolute coordinates or anchor-based relative positioning.
+
+```python
+from gui import LayoutAxis
+
+# Set anchor bounds (usually screen rect)
+app.layout.set_anchor_bounds(screen.get_rect())
+
+# Anchor-based positioning
+rect = app.layout.anchored(
+    size=(200, 100),
+    anchor="top_right",  # top_left, top_center, top_right, center, etc.
+    margin=(20, 20),  # (right/left margin, top/bottom margin)
+    use_rect=True,  # Return Rect instead of (x, y)
+)
+
+# Linear layout (horizontal or vertical strips)
+app.layout.set_linear_properties(
+    anchor=(100, 100),
+    item_width=120,
+    item_height=32,
+    spacing=10,
+    horizontal=True,
+)
+
+# Get next position in linear layout
+rect1 = app.layout.next_linear()
+rect2 = app.layout.next_linear()
+```
+
+## Observable Values and Data Binding
+
+Use `ObservableValue` to create reactive data that automatically notifies subscribers when it changes.
+
+```python
+from gui import ObservableValue, PresentationModel
+
+# Create an observable value
+count = ObservableValue(initial_value=0)
+
+# Subscribe to changes
+def on_count_changed(new_value):
+    print(f"Count changed to {new_value}")
+
+count.subscribe(on_count_changed)
+
+# Update value
+count.set(5)  # Triggers subscriber
+
+# Create a presentation model (groups related values)
+class SceneViewModel(PresentationModel):
+    def __init__(self):
+        super().__init__()
+        self.zoom = ObservableValue(1.0)
+        self.rotation = ObservableValue(0.0)
+        self.is_playing = ObservableValue(False)
+
+view_model = SceneViewModel()
+view_model.zoom.subscribe(lambda z: print(f"Zoom: {z}"))
+view_model.is_playing.subscribe(lambda playing: print(f"Playing: {playing}"))
+
+# Update values
+view_model.zoom.set(2.0)
+view_model.is_playing.set(True)
+```
+
+## Canvas and Custom Drawing
+
+The `CanvasControl` provides a drawable surface for custom graphics and interactive content.
+
+```python
+from gui import CanvasControl
+
+def on_canvas_draw(canvas, surface, theme):
+    # Draw custom content
+    pygame.draw.circle(surface, (255, 0, 0), (100, 100), 50)
+
+def on_canvas_event(event):
+    if event.is_mouse_down():
+        print(f"Clicked at {event.pos}")
+        return True  # Consume event
+    return False
+
+canvas = parent.add(
+    CanvasControl("canvas_id", rect, max_events=256)
+)
+
+# Bind event handler
+canvas.on_handle_event = on_canvas_event
+
+# Bind draw handler
+canvas.on_draw = on_canvas_draw
+
+# In main loop, events posted to canvas are accessible via:
+for event in canvas.get_events():
+    handle_canvas_event(event)
+
+# Clear canvas (done automatically each frame)
+canvas.clear_events()
+```
+
+## Task Panel Configuration
+
+The task panel is a special control area (usually at top or bottom) for application-level actions.
+
+```python
+from gui import TaskPanelControl
+
+# Configure task panel in app initialization
+app.configure_task_panel(
+    height=64,  # Height in pixels
+    x_position="bottom",  # "top" or "bottom"
+    reveal_on_focus=True,  # Show when mouse approaches edge
+    auto_hide=True,  # Hide after inactivity
+    auto_hide_timer_ms=3000,  # Milliseconds before hiding
+    step_size=8,  # Animation step size in pixels
+)
+
+# Get task panel to add controls
+task_panel = app.get_task_panel("main")
+
+button = task_panel.add(
+    ButtonControl("exit_btn", rect, "Exit", on_click=app.quit)
+)
+
+button.set_accessibility(role="button", label="Exit application")
+```
+
+## Themes and Styling
+
+Customize appearance using `ColorTheme` and font roles.
+
+```python
+from gui import ColorTheme, BuiltInGraphicsFactory
+
+# Create a custom theme
+theme = ColorTheme(
+    factory=BuiltInGraphicsFactory(),
+    background=(30, 30, 30),  # Dark background
+    foreground=(200, 200, 200),  # Light text
+    accent=(100, 150, 255),  # Blue accent
+    border=(80, 80, 80),  # Gray borders
+)
+
+# Register font roles
+app.register_font_role(
+    role_name="body",
+    size=12,
+    file_path="data/fonts/Ubuntu-Regular.ttf",
+    system_name="arial",
+    scene_name="main",
+)
+
+app.register_font_role(
+    role_name="heading",
+    size=24,
+    file_path="data/fonts/Ubuntu-Bold.ttf",
+    system_name="arial",
+    scene_name="main",
+)
+
+# Apply styling to controls
+app.style_label(label, size=12, role="body")
+app.style_button(button, role="primary")
+```
+
+## Advanced Patterns
+
+### Cross-Part Communication via Messaging
+
+Parts can publish and subscribe to messages.
+
+```python
+from shared.part_lifecycle import Part
+
+class ProducerPart(Part):
+    def on_update(self, host):
+        # Publish a message
+        self.send_message({
+            "topic": "data_update",
+            "data": {"value": 42}
+        })
+
+class ConsumerPart(Part):
+    def on_update(self, host):
+        # Consume messages
+        while self.has_messages():
+            payload = self.pop_message()
+            if payload.get("topic") == "data_update":
+                print(f"Received data: {payload['data']}")
+```
+
+### Scene Transitions
+
+Switch between scenes smoothly.
+
+```python
+# Create multiple scenes
+app.create_scene("main")
+app.create_scene("settings")
+app.create_scene("about")
+
+# Register parts for each scene
+main_parts = [Feature1(), Feature2()]
+for part in main_parts:
+    app.register_part(part, host=demo, scene_name="main")
+
+# Build and bind parts for a scene
+app.switch_scene("main")
+app.build_parts(demo)
+app.bind_parts_runtime(demo)
+
+# Later, switch to a different scene
+app.switch_scene("settings")
+# Previous scene's scheduler and timers are suspended
+```
+
+### Lifecycle Callbacks
+
+Perform setup/cleanup at key points in the application lifecycle.
+
+```python
+def on_scene_start(host):
+    print("Scene is now active")
+
+def on_scene_update(host, dt):
+    print(f"Frame time: {dt}")
+
+def on_scene_end(host):
+    print("Scene is no longer active")
+
+app.set_screen_lifecycle(
+    preamble=on_scene_start,
+    postamble=on_scene_end,
+    scene_name="main",
+)
+```
+
+### Using Timers for Timed Events
+
+The `Timers` service allows scheduling one-shot and repeating timers per scene.
+
+```python
+# Get timers for a scene
+timers = app.get_scene_timers("main")
+
+# Schedule a one-shot timer
+def on_timer_1000ms():
+    print("1 second elapsed")
+
+timers.set_timer(
+    key="my_timer",
+    duration_ms=1000,
+    callback=on_timer_1000ms,
+    repeat=False,  # One-shot
+)
+
+# Schedule a repeating timer
+timers.set_timer(
+    key="repeating",
+    duration_ms=500,
+    callback=lambda: print("Repeating every 500ms"),
+    repeat=True,
+)
+
+# Cancel a timer
+timers.clear_timer("my_timer")
+```
+
 ## Contributing
 
 ### Development Setup
