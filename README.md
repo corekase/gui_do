@@ -1062,6 +1062,36 @@ count = focus_manager.focusable_count(app.scene)               # int
 count = focus_manager.focusable_count(app.scene, window=my_window)  # scoped to window
 ```
 
+### Focus Visualization
+
+`FocusVisualizer` renders a dashed rectangle around the currently focused control and fades it out after `FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS` (1.5 s). It is accessible directly as `app.focus_visualizer`.
+
+```python
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+# 1.5 — shared timeout for both traversal hints and activation hints.
+
+visualizer = app.focus_visualizer
+
+# Show a hint for a specific node (called automatically by FocusManager on focus change)
+visualizer.set_focus_hint(node)                # show hint
+visualizer.set_focus_hint(node, show_hint=False)  # suppress hint (e.g., mouse-click focus)
+
+# Clear the hint immediately (called automatically when focus is cleared)
+visualizer.clear_focus_hint()
+
+# Restart the hint timer for the given node without changing focus.
+# Useful after a keyboard activation to extend hint visibility.
+visualizer.refresh_focus_hint(node)    # True if hint was refreshed, False if no hint active
+visualizer.refresh_focus_hint()        # refresh current hint node (no arg = use current)
+
+# Query
+visualizer.has_active_hint()   # True when a hint is currently visible or fading
+```
+
+**Keyboard activation and focus hints:** Activating a `ButtonControl`, `ToggleControl`, or `ButtonGroupControl` via `Space` or `Return` while focused automatically calls `refresh_focus_hint` so the focus indicator stays visible during the activation — using the same `FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS` timeout as Tab-traversal hints.
+
+**Mouse-click focus:** `set_focus_hint(node, show_hint=False)` is used for mouse-click focus transfers so clicking a button does not re-trigger the visual indicator unnecessarily.
+
 ### Accessibility Configuration
 
 ```python
@@ -1382,12 +1412,20 @@ toggle.font_role = "body"
 
 ### FontManager
 
-`FontManager` manages named font roles (e.g. `"body"`, `"title"`) and caches loaded `pygame.font.Font` objects. Each scene has its own `FontManager`; access the active scene's instance via `app.fonts`.
+`FontManager` manages named font roles (e.g. `"body"`, `"title"`, `"display"`) and caches loaded `pygame.font.Font` objects. Each scene has its own `FontManager`; access the active scene's instance via `app.theme.fonts`.
+
+Three roles are pre-registered by default for every scene:
+
+| Role | Typeface | Default size |
+|---|---|---|
+| `"body"` | Ubuntu-B.ttf / arial | 16 |
+| `"title"` | Gimbot.ttf / arial bold | 14 |
+| `"display"` | Gimbot.ttf / arial bold | 72 |
 
 ```python
 from gui import FontManager
 
-fonts = app.fonts   # active scene's FontManager
+fonts = app.theme.fonts   # active scene's FontManager
 
 # Register or update a role
 fonts.register_role(
@@ -1410,6 +1448,38 @@ rev = fonts.revision                    # int; increments whenever a role change
 ```
 
 The `revision` property is used internally so controls can detect font changes and rebuild their cached bitmaps.
+
+#### FontInstance — measurement and metrics
+
+`font_instance()` returns a bound view over a resolved role+size pair. Use it to measure text geometry without rendering.
+
+```python
+fonts = app.theme.fonts
+
+# Get a bound instance for a registered role (optionally at an overridden size)
+fi = fonts.font_instance("heading")          # at the role's registered size
+fi = fonts.font_instance("heading", size=48) # at an explicit size
+
+# Size and metrics
+fi.point_size    # int; effective point size
+fi.line_height   # int; font line height in pixels (pygame.font.Font.get_height())
+
+# Measure text width/height in pixels
+width, height = fi.text_size("Hello")    # no shadow padding
+
+# Measure including shadow padding (matches what LabelControl renders)
+width, height = fi.text_surface_size("Hello", shadow=True)
+width, height = fi.text_surface_size("Hello", shadow=True, shadow_offset=(2, 2))
+```
+
+Example: size a label's rect to exactly fit its text surface:
+
+```python
+label = root.add(LabelControl("title", Rect(24, 24, 1, 1), "gui_do"))
+app.style_label(label, size=64, role="display")
+fi = app.theme.fonts.font_instance(label.font_role, size=label.font_size)
+label.rect.size = fi.text_surface_size(label.text, shadow=True)
+```
 
 ### EventManager
 
@@ -1858,7 +1928,7 @@ pip install -r requirements-ci.txt
 ### Run Tests
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v
+python -m pytest -q
 ```
 
 ## Public API
