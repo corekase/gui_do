@@ -37,6 +37,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
         *,
         circle_count: int = 28,
         diamond_count: int = 0,
+        square_count: int = 0,
         seed: Optional[int] = None,
         scene_name: Optional[str] = None,
         part_name: str = "bouncing_shapes_backdrop",
@@ -44,6 +45,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
         super().__init__(part_name, scene_name=scene_name)
         self.circle_count = max(0, int(circle_count))
         self.diamond_count = max(0, int(diamond_count))
+        self.square_count = max(0, int(square_count))
         self._rng = random.Random(seed)
         self._shapes: list[ShapeSpriteState] = []
         self._create_shapes()
@@ -84,11 +86,13 @@ class BouncingShapesBackdropFeature(ScreenPart):
             surface.blit(shape.sprite, (left, top))
 
     def _create_shapes(self) -> None:
-        """Create cached circle and diamond sprite/motion states at init time."""
+        """Create cached circle, diamond, and square sprite/motion states at init time."""
         for _ in range(self.circle_count):
             self._shapes.append(self._create_circle_shape())
         for _ in range(self.diamond_count):
             self._shapes.append(self._create_diamond_shape())
+        for _ in range(self.square_count):
+            self._shapes.append(self._create_square_shape())
 
     def _create_circle_shape(self) -> ShapeSpriteState:
         """Create one cached circular sprite with initial velocity."""
@@ -141,6 +145,32 @@ class BouncingShapesBackdropFeature(ScreenPart):
 
         return ShapeSpriteState(
             kind="diamond",
+            radius=radius,
+            sprite=sprite,
+            x=0.0,
+            y=0.0,
+            dx=dx,
+            dy=dy,
+        )
+
+    def _create_square_shape(self) -> ShapeSpriteState:
+        """Create one cached axis-aligned square sprite with velocity."""
+        radius = self._rng.randint(12, 38)
+        diameter = radius * 2
+        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        fill_color = (
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            190,
+        )
+        border_color = (15, 15, 15, 230)
+        pygame.draw.rect(sprite, fill_color, pygame.Rect(0, 0, diameter, diameter))
+        pygame.draw.rect(sprite, border_color, pygame.Rect(0, 0, diameter, diameter), width=2)
+        dx, dy = self._random_velocity()
+
+        return ShapeSpriteState(
+            kind="square",
             radius=radius,
             sprite=sprite,
             x=0.0,

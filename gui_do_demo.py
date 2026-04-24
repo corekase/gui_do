@@ -43,7 +43,7 @@ class GuiDoDemo:
         # Feature registry keeps concerns isolated behind a small lifecycle contract.
         # A single backdrop instance with scene_name=None runs in all scenes so
         # shape positions and velocities are shared and continuous across scene switches.
-        self._shapes_feature = BouncingShapesBackdropFeature(circle_count=30, diamond_count=12)
+        self._shapes_feature = BouncingShapesBackdropFeature(circle_count=30, diamond_count=12, square_count=10)
         self._life_logic_feature = LifeSimulationLogicPart()
         self._life_feature = LifeSimulationFeature()
         self._styles_feature = StylesShowcaseFeature()
