@@ -170,6 +170,92 @@ class ControlsShowcasePartTests(unittest.TestCase):
         self.assertEqual(len(enabled_types), 24)
         self.assertEqual(len(disabled_types), 24)
 
+    def test_configure_accessibility_assigns_enabled_focus_order_in_creation_sequence(self) -> None:
+        _app, host, part = self._build_part()
+
+        next_index = part.configure_accessibility(host, tab_index_start=7)
+
+        focus_controls = list(part._accessibility_focus_controls)
+
+        self.assertTrue(focus_controls)
+        self.assertEqual(focus_controls[0].control_id, "arrow_up_enabled")
+        self.assertEqual(focus_controls[-1].control_id, "v_scrollbar_enabled")
+        expected_ids = [
+            "arrow_up_enabled",
+            "arrow_down_enabled",
+            "arrow_left_enabled",
+            "arrow_right_enabled",
+            "button_enabled",
+            "toggle_enabled",
+            "btn_grp_a1_enabled",
+            "btn_grp_a2_enabled",
+            "btn_grp_a3_enabled",
+            "btn_grp_b1_enabled",
+            "btn_grp_b2_enabled",
+            "btn_grp_b3_enabled",
+            "btn_grp_c1_enabled",
+            "btn_grp_c2_enabled",
+            "btn_grp_c3_enabled",
+            "slider_enabled",
+            "scrollbar_enabled",
+            "v_slider_enabled",
+            "v_scrollbar_enabled",
+        ]
+        self.assertEqual([control.control_id for control in focus_controls], expected_ids)
+        allowed_types = {"ArrowBoxControl", "ButtonControl", "ToggleControl", "ButtonGroupControl", "SliderControl", "ScrollbarControl"}
+        self.assertEqual({control.__class__.__name__ for control in focus_controls}, allowed_types)
+        self.assertEqual(next_index, 7 + len(focus_controls))
+        for offset, control in enumerate(focus_controls):
+            self.assertEqual(control.tab_index, 7 + offset)
+
+        self.assertEqual(part.enabled_blocks[0]["controls"][0].accessibility_role, "button")
+        self.assertEqual(part.enabled_blocks[0]["controls"][0].accessibility_label, "Arrow up")
+        self.assertEqual(part.enabled_blocks[1]["controls"][0].accessibility_role, "button")
+        self.assertEqual(part.enabled_blocks[1]["controls"][0].accessibility_label, "Group A option 1")
+        self.assertEqual(part.enabled_blocks[2]["controls"][0].accessibility_role, "button")
+        self.assertEqual(part.enabled_blocks[2]["controls"][0].accessibility_label, "Showcase button")
+        self.assertEqual(part.enabled_blocks[2]["controls"][1].accessibility_role, "toggle")
+        self.assertEqual(part.enabled_blocks[2]["controls"][1].accessibility_label, "Showcase toggle")
+        self.assertEqual(part.enabled_blocks[3]["controls"][0].accessibility_role, "slider")
+        self.assertEqual(part.enabled_blocks[3]["controls"][0].accessibility_label, "Horizontal slider")
+        self.assertEqual(part.enabled_blocks[3]["controls"][1].accessibility_role, "scrollbar")
+        self.assertEqual(part.enabled_blocks[3]["controls"][1].accessibility_label, "Horizontal scrollbar")
+        self.assertEqual(part.enabled_blocks[4]["controls"][0].accessibility_role, "slider")
+        self.assertEqual(part.enabled_blocks[4]["controls"][0].accessibility_label, "Vertical slider")
+        self.assertEqual(part.enabled_blocks[4]["controls"][1].accessibility_role, "scrollbar")
+        self.assertEqual(part.enabled_blocks[4]["controls"][1].accessibility_label, "Vertical scrollbar")
+
+        explicit_types = (ArrowBoxControl, ButtonControl, ButtonGroupControl, ToggleControl, SliderControl, ScrollbarControl)
+        non_registered_focusables = [
+            control
+            for control in part.enabled_controls
+            if isinstance(control, explicit_types)
+            and control not in focus_controls
+        ]
+        self.assertFalse(non_registered_focusables)
+
+    def test_on_update_sets_initial_focus_to_first_created_enabled_focus_control(self) -> None:
+        app, host, part = self._build_part()
+        part.configure_accessibility(host, tab_index_start=0)
+        app.switch_scene("control_showcase")
+
+        self.assertIsNone(app.focus.focused_node)
+        part.on_update(host)
+
+        self.assertIsNotNone(part._initial_focus_control)
+        self.assertIs(app.focus.focused_node, part._initial_focus_control)
+        self.assertEqual(app.focus.focused_node.control_id, "arrow_up_enabled")
+
+    def test_canvas_panel_and_image_are_not_focus_accessible(self) -> None:
+        _app, _host, part = self._build_part()
+
+        blocked_types = {CanvasControl, PanelControl, ImageControl}
+        blocked = [control for control in part.enabled_controls if type(control) in blocked_types]
+        self.assertTrue(blocked)
+        for control in blocked:
+            self.assertEqual(control.tab_index, -1)
+            self.assertNotIn(control, part._accessibility_focus_controls)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,8 @@ class ControlsShowcasePart(Part):
 
     HOST_REQUIREMENTS = {
         "build": ("app", "control_showcase_root"),
+        "configure_accessibility": ("app",),
+        "on_update": ("app",),
     }
 
     # Section layout constants
@@ -82,6 +84,9 @@ class ControlsShowcasePart(Part):
         self.enabled_title = None
         self.disabled_title = None
         self._image_natural_size: tuple[int, int] | None = None
+        self._accessibility_focus_controls = []
+        self._initial_focus_control = None
+        self._pending_initial_focus = False
 
     def build(self, host) -> None:
         ui = host.app.read_part_ui_types()
@@ -115,6 +120,9 @@ class ControlsShowcasePart(Part):
         self.enabled_controls = []
         self.enabled_control_labels = []
         self.enabled_blocks = []
+        self._accessibility_focus_controls = []
+        self._initial_focus_control = None
+        self._pending_initial_focus = False
         content_rect_top = self._content_rect(self.section_top_rect)
         block_rects_top = self._calculate_block_layout(content_rect_top)
         for block_name, block_rect in zip(self.BLOCK_DEFINITIONS, block_rects_top):
@@ -144,6 +152,65 @@ class ControlsShowcasePart(Part):
             for label in labels:
                 # Labels in disabled section remain enabled
                 host.control_showcase_root.add(label)
+
+        enabled_controls_by_id = {control.control_id: control for control in self.enabled_controls}
+        arrow_up = enabled_controls_by_id["arrow_up_enabled"]
+        arrow_down = enabled_controls_by_id["arrow_down_enabled"]
+        arrow_left = enabled_controls_by_id["arrow_left_enabled"]
+        arrow_right = enabled_controls_by_id["arrow_right_enabled"]
+        button = enabled_controls_by_id["button_enabled"]
+        toggle = enabled_controls_by_id["toggle_enabled"]
+        btn_grp_a1 = enabled_controls_by_id["btn_grp_a1_enabled"]
+        btn_grp_a2 = enabled_controls_by_id["btn_grp_a2_enabled"]
+        btn_grp_a3 = enabled_controls_by_id["btn_grp_a3_enabled"]
+        btn_grp_b1 = enabled_controls_by_id["btn_grp_b1_enabled"]
+        btn_grp_b2 = enabled_controls_by_id["btn_grp_b2_enabled"]
+        btn_grp_b3 = enabled_controls_by_id["btn_grp_b3_enabled"]
+        btn_grp_c1 = enabled_controls_by_id["btn_grp_c1_enabled"]
+        btn_grp_c2 = enabled_controls_by_id["btn_grp_c2_enabled"]
+        btn_grp_c3 = enabled_controls_by_id["btn_grp_c3_enabled"]
+        h_slider = enabled_controls_by_id["slider_enabled"]
+        h_scrollbar = enabled_controls_by_id["scrollbar_enabled"]
+        v_slider = enabled_controls_by_id["v_slider_enabled"]
+        v_scrollbar = enabled_controls_by_id["v_scrollbar_enabled"]
+
+        self._accessibility_focus_controls = [
+            arrow_up, arrow_down, arrow_left, arrow_right,
+            button, toggle,
+            btn_grp_a1, btn_grp_a2, btn_grp_a3,
+            btn_grp_b1, btn_grp_b2, btn_grp_b3,
+            btn_grp_c1, btn_grp_c2, btn_grp_c3,
+            h_slider, h_scrollbar,
+            v_slider, v_scrollbar,
+        ]
+        self._initial_focus_control = self._accessibility_focus_controls[0]
+        self._pending_initial_focus = True
+
+    def configure_accessibility(self, _host, tab_index_start: int) -> int:
+        """Assign tab order for controls registered during UI construction."""
+        next_index = int(tab_index_start)
+        for control in self._accessibility_focus_controls:
+            if not control.visible or not control.enabled:
+                continue
+            control.set_tab_index(next_index)
+            next_index += 1
+        return next_index
+
+    def on_update(self, host) -> None:
+        """Set initial focus to first created enabled focus control once per runtime."""
+        if not self._pending_initial_focus:
+            return
+        if str(host.app.active_scene_name) != str(self.scene_name):
+            return
+        target = self._initial_focus_control
+        if target is None:
+            self._pending_initial_focus = False
+            return
+        if target not in host.app.scene._walk_nodes() or not target.visible or not target.enabled:
+            self._pending_initial_focus = False
+            return
+        host.app.focus.set_focus(target, show_hint=False)
+        self._pending_initial_focus = False
 
     def _default_part_rect(self, host) -> Rect:
         """Compute the showcase rect from host screen bounds for encapsulated layout."""
@@ -395,13 +462,14 @@ class ControlsShowcasePart(Part):
 
         arrows = []
         for name, direction, rect in specs:
-            arrows.append(
-                ui.arrow_box_control_cls(
-                    f"arrow_{name}_{'enabled' if enabled else 'disabled'}",
-                    rect,
-                    direction,
-                )
+            arrow = ui.arrow_box_control_cls(
+                f"arrow_{name}_{'enabled' if enabled else 'disabled'}",
+                rect,
+                direction,
             )
+            if enabled:
+                arrow.set_accessibility(role="button", label=f"Arrow {name}")
+            arrows.append(arrow)
         return arrows
 
     def _build_button_groups(self, ui, content_rect: Rect, enabled: bool) -> list:
@@ -430,6 +498,8 @@ class ControlsShowcasePart(Part):
                     selected=False,
                     style="box",
                 )
+                if enabled:
+                    btn.set_accessibility(role="button", label=f"Group {letter} option {r + 1}")
                 controls.append(btn)
         return controls
 
@@ -447,6 +517,8 @@ class ControlsShowcasePart(Part):
             button_rect,
             "Button",
         )
+        if enabled:
+            button.set_accessibility(role="button", label="Showcase button")
         controls.append(button)
 
         # Toggle
@@ -464,6 +536,8 @@ class ControlsShowcasePart(Part):
             pushed=False,
             style="round",
         )
+        if enabled:
+            toggle.set_accessibility(role="toggle", label="Showcase toggle")
         controls.append(toggle)
 
         return controls
@@ -494,6 +568,8 @@ class ControlsShowcasePart(Part):
             self.SLIDER_MAXIMUM,
             self.SLIDER_DEFAULT_VALUE,
         )
+        if enabled:
+            slider.set_accessibility(role="slider", label="Horizontal slider")
 
         scrollbar = ui.scrollbar_control_cls(
             f"scrollbar_{section}",
@@ -504,6 +580,8 @@ class ControlsShowcasePart(Part):
             offset=self.SCROLLBAR_DEFAULT_OFFSET,
             step=self.SCROLLBAR_STEP,
         )
+        if enabled:
+            scrollbar.set_accessibility(role="scrollbar", label="Horizontal scrollbar")
 
         return [slider, scrollbar]
 
@@ -529,6 +607,8 @@ class ControlsShowcasePart(Part):
             self.SLIDER_MAXIMUM,
             self.SLIDER_DEFAULT_VALUE,
         )
+        if enabled:
+            v_slider.set_accessibility(role="slider", label="Vertical slider")
 
         v_scrollbar = ui.scrollbar_control_cls(
             f"v_scrollbar_{section}",
@@ -539,6 +619,8 @@ class ControlsShowcasePart(Part):
             offset=self.SCROLLBAR_DEFAULT_OFFSET,
             step=self.SCROLLBAR_STEP,
         )
+        if enabled:
+            v_scrollbar.set_accessibility(role="scrollbar", label="Vertical scrollbar")
 
         return [v_slider, v_scrollbar]
 
@@ -550,6 +632,7 @@ class ControlsShowcasePart(Part):
             self.IMAGE_PATH,
             scale=True,
         )
+        image.set_tab_index(-1)
         return [image]
 
     def _build_canvas_panel_block(self, ui, content_rect: Rect, enabled: bool) -> list:
@@ -587,6 +670,7 @@ class ControlsShowcasePart(Part):
             canvas_rect,
             max_events=64,
         )
+        canvas.set_tab_index(-1)
         controls.append(canvas_label)
         controls.append(canvas)
 
@@ -610,6 +694,7 @@ class ControlsShowcasePart(Part):
             panel_rect,
             draw_background=self.PANEL_DRAW_BACKGROUND,
         )
+        panel.set_tab_index(-1)
         controls.append(panel_label)
         controls.append(panel)
 

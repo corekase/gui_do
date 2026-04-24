@@ -93,9 +93,6 @@ class GuiDoDemo:
         ]
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
-        self.showcase_exit_button.set_tab_index(0)
-        self.showcase_apps_button.set_tab_index(1)
-        self.showcase_styles_toggle.set_tab_index(2)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
         self.showcase_button.set_accessibility(role="button", label="Showcase")
