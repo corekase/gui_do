@@ -321,6 +321,37 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_hidden_window_descendants_do_not_capture_mouse_focus_or_tab_scope(self) -> None:
+        """Hidden window children must not be mouse-focus targets or tab candidates."""
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((480, 320)))
+            root = app.add(PanelControl("root", Rect(0, 0, 480, 320)))
+
+            screen_first = root.add(_FocusableProbe("screen_first", Rect(20, 20, 120, 30), tab_index=0))
+            screen_second = root.add(_FocusableProbe("screen_second", Rect(160, 20, 120, 30), tab_index=1))
+
+            win = root.add(WindowControl("hidden_win", Rect(10, 10, 300, 220), "Hidden"))
+            hidden_probe = win.add(_FocusableProbe("hidden_probe", Rect(20, 20, 120, 30), tab_index=0))
+            win.visible = False
+
+            # Click where screen_first and hidden_probe overlap; hidden probe must not receive focus.
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": screen_first.rect.center}))
+            self.assertIs(app.focus.focused_node, screen_first)
+            self.assertFalse(app.focus_visualizer.has_active_hint())
+
+            # First Tab reveals hint on current screen focus.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_first)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+
+            # Next Tab advances within visible screen controls, not hidden window children.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_second)
+            self.assertIsNot(app.focus.focused_node, hidden_probe)
+        finally:
+            pygame.quit()
+
     def test_bound_action_executes_before_screen_handler(self) -> None:
         pygame.init()
         try:

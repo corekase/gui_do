@@ -109,6 +109,16 @@ class Scene:
             current = current.parent
         return False
 
+    @staticmethod
+    def _is_effectively_interactive(node: UiNode) -> bool:
+        """Return True when node and all ancestors are visible/enabled."""
+        current = node
+        while current is not None:
+            if not current.visible or not current.enabled:
+                return False
+            current = current.parent
+        return True
+
     def _clear_active_windows(self) -> None:
         for node in self.nodes:
             node._clear_active_windows()
@@ -152,7 +162,11 @@ class Scene:
         for node in reversed(self._walk_nodes()):
             if top_window is not None and not self._is_descendant_of(node, top_window):
                 continue
-            if node.visible and node.enabled and node.accepts_mouse_focus() and node.hit_test(pos):
+            if (
+                self._is_effectively_interactive(node)
+                and node.accepts_mouse_focus()
+                and node.hit_test(pos)
+            ):
                 return node
         return None
 

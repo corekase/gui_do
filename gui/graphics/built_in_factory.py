@@ -83,7 +83,7 @@ class BuiltInGraphicsFactory:
 
     def build_disabled_bitmap(self, idle_bitmap: Surface) -> Surface:
         out = idle_bitmap.copy()
-        out.fill((191, 191, 191, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        out.fill((160, 160, 160, 255), special_flags=pygame.BLEND_RGBA_MULT)
         return out
 
     def build_hidden_bitmap(self, size: Tuple[int, int]) -> Surface:

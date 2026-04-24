@@ -68,10 +68,14 @@ class ControlsShowcasePartTests(unittest.TestCase):
     def test_mirrored_layout_pairs_disabled_counterparts(self) -> None:
         _app, _host, part = self._build_part()
 
+        allowed_enabled_ids = {"canvas_label_disabled", "panel_label_disabled"}
         self.assertEqual(len(part.enabled_controls), len(part.disabled_controls))
         for enabled_control, disabled_control in zip(part.enabled_controls, part.disabled_controls):
             self.assertIs(type(enabled_control), type(disabled_control))
-            self.assertFalse(disabled_control.enabled)
+            if disabled_control.control_id in allowed_enabled_ids:
+                self.assertTrue(disabled_control.enabled)
+            else:
+                self.assertFalse(disabled_control.enabled)
             self.assertTrue(enabled_control.enabled)
 
     def test_block_labels_are_enabled_in_disabled_section(self) -> None:
@@ -185,8 +189,6 @@ class ControlsShowcasePartTests(unittest.TestCase):
             "arrow_down_enabled",
             "arrow_left_enabled",
             "arrow_right_enabled",
-            "button_enabled",
-            "toggle_enabled",
             "btn_grp_a1_enabled",
             "btn_grp_a2_enabled",
             "btn_grp_a3_enabled",
@@ -196,6 +198,8 @@ class ControlsShowcasePartTests(unittest.TestCase):
             "btn_grp_c1_enabled",
             "btn_grp_c2_enabled",
             "btn_grp_c3_enabled",
+            "button_enabled",
+            "toggle_enabled",
             "slider_enabled",
             "scrollbar_enabled",
             "v_slider_enabled",

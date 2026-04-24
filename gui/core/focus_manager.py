@@ -189,10 +189,20 @@ class FocusManager:
             current = current.parent
         return False
 
+    @staticmethod
+    def _is_effectively_interactive(node) -> bool:
+        """Return True when node and all ancestors are visible and enabled."""
+        current = node
+        while current is not None:
+            if not current.visible or not current.enabled:
+                return False
+            current = current.parent
+        return True
+
     def _focusable_nodes(self, scene, *, window=None) -> list:
         ordered = []
         for node in scene._walk_nodes():
-            if not node.visible or not node.enabled or not node.accepts_focus():
+            if not self._is_effectively_interactive(node) or not node.accepts_focus():
                 continue
             if not self._is_focus_window_context_valid(node):
                 continue

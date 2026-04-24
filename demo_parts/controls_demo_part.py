@@ -147,44 +147,17 @@ class ControlsShowcasePart(Part):
             self.disabled_control_labels.extend(labels)
             self.disabled_blocks.append({"name": block_name, "controls": controls, "labels": labels})
             for control in controls:
-                control.enabled = False
+                if control.control_id not in {"canvas_label_disabled", "panel_label_disabled"}:
+                    control.enabled = False
                 host.control_showcase_root.add(control)
             for label in labels:
                 # Labels in disabled section remain enabled
                 host.control_showcase_root.add(label)
 
-        enabled_controls_by_id = {control.control_id: control for control in self.enabled_controls}
-        arrow_up = enabled_controls_by_id["arrow_up_enabled"]
-        arrow_down = enabled_controls_by_id["arrow_down_enabled"]
-        arrow_left = enabled_controls_by_id["arrow_left_enabled"]
-        arrow_right = enabled_controls_by_id["arrow_right_enabled"]
-        button = enabled_controls_by_id["button_enabled"]
-        toggle = enabled_controls_by_id["toggle_enabled"]
-        btn_grp_a1 = enabled_controls_by_id["btn_grp_a1_enabled"]
-        btn_grp_a2 = enabled_controls_by_id["btn_grp_a2_enabled"]
-        btn_grp_a3 = enabled_controls_by_id["btn_grp_a3_enabled"]
-        btn_grp_b1 = enabled_controls_by_id["btn_grp_b1_enabled"]
-        btn_grp_b2 = enabled_controls_by_id["btn_grp_b2_enabled"]
-        btn_grp_b3 = enabled_controls_by_id["btn_grp_b3_enabled"]
-        btn_grp_c1 = enabled_controls_by_id["btn_grp_c1_enabled"]
-        btn_grp_c2 = enabled_controls_by_id["btn_grp_c2_enabled"]
-        btn_grp_c3 = enabled_controls_by_id["btn_grp_c3_enabled"]
-        h_slider = enabled_controls_by_id["slider_enabled"]
-        h_scrollbar = enabled_controls_by_id["scrollbar_enabled"]
-        v_slider = enabled_controls_by_id["v_slider_enabled"]
-        v_scrollbar = enabled_controls_by_id["v_scrollbar_enabled"]
-
-        self._accessibility_focus_controls = [
-            arrow_up, arrow_down, arrow_left, arrow_right,
-            button, toggle,
-            btn_grp_a1, btn_grp_a2, btn_grp_a3,
-            btn_grp_b1, btn_grp_b2, btn_grp_b3,
-            btn_grp_c1, btn_grp_c2, btn_grp_c3,
-            h_slider, h_scrollbar,
-            v_slider, v_scrollbar,
-        ]
-        self._initial_focus_control = self._accessibility_focus_controls[0]
-        self._pending_initial_focus = True
+        self._accessibility_focus_controls = self._collect_accessibility_focus_controls()
+        if self._accessibility_focus_controls:
+            self._initial_focus_control = self._accessibility_focus_controls[0]
+            self._pending_initial_focus = True
 
     def configure_accessibility(self, _host, tab_index_start: int) -> int:
         """Assign tab order for controls registered during UI construction."""
@@ -438,6 +411,28 @@ class ControlsShowcasePart(Part):
             controls = self._build_canvas_panel_block(ui, content_rect, enabled)
 
         return controls, labels
+
+    @staticmethod
+    def _is_accessibility_focus_control(control) -> bool:
+        """Return True for controls that should participate in keyboard focus hint traversal."""
+        focus_type_names = {
+            "ArrowBoxControl",
+            "ButtonControl",
+            "ToggleControl",
+            "ButtonGroupControl",
+            "SliderControl",
+            "ScrollbarControl",
+        }
+        return control.__class__.__name__ in focus_type_names
+
+    def _collect_accessibility_focus_controls(self) -> list:
+        """Collect focus controls in the same order controls are laid out within enabled blocks."""
+        ordered_controls = []
+        for block in self.enabled_blocks:
+            for control in block["controls"]:
+                if self._is_accessibility_focus_control(control):
+                    ordered_controls.append(control)
+        return ordered_controls
 
     def _build_arrow_cluster(self, ui, content_rect: Rect, enabled: bool) -> list:
         """Build a 2x2 arrow grid in the left-half square of the column."""
