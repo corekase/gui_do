@@ -7,7 +7,6 @@ import pygame
 from pygame import Rect
 
 from gui import ButtonGroupControl, GuiApplication, PanelControl
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ButtonGroupRuntimeTests(unittest.TestCase):
@@ -90,29 +89,21 @@ class ButtonGroupRuntimeTests(unittest.TestCase):
         self.assertTrue(second.pushed)
         self.assertEqual(fired, ["hit"])
 
-    def test_keyboard_activation_refreshes_focus_hint_with_shared_timeout(self) -> None:
+    def test_keyboard_activation_fires_click_and_hint_remains_active(self) -> None:
         first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
         second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
         first.set_tab_index(0)
         second.set_tab_index(1)
 
-        self.app.focus.set_focus(second, show_hint=False)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
-
+        self.app.focus.set_focus(second, via_keyboard=True)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
         consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
 
         self.assertTrue(consumed)
         self.assertFalse(first.pushed)
         self.assertTrue(second.pushed)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, second)
-        self.assertEqual(self.app.focus_visualizer._current_hint_elapsed, 0.0)
-
-        almost_timeout = FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01
-        self.app.focus_visualizer.update(almost_timeout)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, second)
-
-        self.app.focus_visualizer.update(0.02)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+        # Hint remains active (still focused on second).
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
 
 if __name__ == "__main__":

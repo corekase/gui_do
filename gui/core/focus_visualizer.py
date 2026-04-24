@@ -3,21 +3,16 @@ from __future__ import annotations
 
 import pygame
 
-from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
-
 
 class FocusVisualizer:
-    """Manages visual focus indicators (dashed rectangles) with timing and fade-out.
+    """Manages visual focus indicators (dashed rectangles).
 
-    When a control gains focus, a dashed rectangle is drawn around its draw_rect.
-    After 1 second of display, the rectangle fades out smoothly over 0.5 seconds.
-    When focus switches to a new control, the previous hint immediately fades out.
+    Draws a dashed rectangle around the currently focused node on every render
+    pass.  The focused node is read directly from ``app.focus`` at draw time so
+    the hint is always in sync with actual focus state — no separate tracking
+    or timeout is needed.  Painter's draw order (screen roots before windows)
+    handles natural occlusion automatically.
     """
-
-    # Timing constants (in seconds)
-    HOLD_TIME = 1.0  # Display for 1 second before starting fade
-    FADE_TIME = 0.5  # Fade out over 0.5 seconds
-    HINT_TIMEOUT_SECONDS = FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
     # Dashed rectangle rendering
     DASH_WIDTH = 2  # Width of dashes in pixels
@@ -27,65 +22,27 @@ class FocusVisualizer:
 
     def __init__(self, app) -> None:
         self.app = app
-        self._current_hint_node = None  # Node currently showing the focus hint
-        self._current_hint_elapsed = 0.0  # Total time since hint started
-
-    def set_focus_hint(self, node, show_hint: bool = True) -> None:
-        """Start displaying a focus hint for the given node.
-
-        Args:
-            node: The node to show the hint for.
-            show_hint: If True, display the visual hint. If False, no hint is shown.
-                Default is True (show hint).
-
-        When focus switches to a new control, the previous hint is immediately cleared
-        (no fade-out). If show_hint is False, the hint is not displayed at all.
-        """
-        if node is self._current_hint_node:
-            return  # Already showing this hint
-
-        # Start displaying the new hint (old hint immediately clears)
-        # Only store node if we're showing the hint
-        self._current_hint_node = node if show_hint else None
-        self._current_hint_elapsed = 0.0
-
-    def clear_focus_hint(self) -> None:
-        """Immediately clear the current focus hint (typically when focus is lost)."""
-        self._current_hint_node = None
-        self._current_hint_elapsed = 0.0
 
     def has_active_hint(self) -> bool:
-        """Return True when a focus hint is currently visible or fading."""
-        return self._current_hint_node is not None
+        """Return True when a focus hint is currently eligible to draw."""
+        return self._focused_node() is not None
 
-    def refresh_focus_hint(self, node=None) -> bool:
-        """Restart hint timing for *node* (or current hint node when omitted)."""
-        target = self._current_hint_node if node is None else node
-        if target is None:
-            return False
-        self._current_hint_node = target
-        self._current_hint_elapsed = 0.0
-        return True
-
-    def update(self, dt_seconds: float) -> None:
-        """Update fade-out state. Call from app's update loop."""
-        if dt_seconds <= 0:
-            return
-
-        # Update the currently-hinting node's hold/fade state
-        if self._current_hint_node is not None:
-            self._current_hint_elapsed += dt_seconds
-            total_time = self.HINT_TIMEOUT_SECONDS
-            if self._current_hint_elapsed >= total_time:
-                # Hold and fade-out complete, clear this hint
-                self._current_hint_node = None
-                self._current_hint_elapsed = 0.0
+    def _focused_node(self):
+        """Return the currently focused UI node when hint drawing is enabled."""
+        focus = getattr(self.app, "focus", None)
+        if focus is None:
+            return None
+        should_draw = getattr(focus, "should_draw_focus_hint", None)
+        if callable(should_draw) and not should_draw():
+            return None
+        return focus.focused_node
 
     def draw_hints(self, surface: "pygame.Surface", theme) -> None:
-        """Draw focus rectangles for nodes currently showing/fading hints."""
-        # Draw the current hint
-        if self._current_hint_node is not None:
-            self._draw_dashed_rect(surface, self._current_hint_node, theme=theme)
+        """Draw focus hint for the currently focused node."""
+        node = self._focused_node()
+        if node is None:
+            return
+        self._draw_dashed_rect(surface, node, theme=theme)
 
     def draw_hint_for_scene_root(self, surface: "pygame.Surface", theme, root_node) -> None:
         """Draw the current hint only when it belongs to the given scene root subtree.
@@ -93,12 +50,32 @@ class FocusVisualizer:
         This allows hints to be rendered inline with scene root draw order so any later
         top-layer roots (for example active windows) naturally occlude the hint.
         """
-        node = self._current_hint_node
+        node = self._focused_node()
         if node is None:
             return
         if node.root() is not root_node:
             return
+        if self._find_ancestor_window(node) is not None:
+            return
         self._draw_dashed_rect(surface, node, theme=theme)
+
+    def draw_hint_for_window(self, surface: "pygame.Surface", theme, window_node) -> None:
+        """Draw hint when focused node belongs to the given window subtree."""
+        node = self._focused_node()
+        if node is None:
+            return
+        if self._find_ancestor_window(node) is not window_node:
+            return
+        self._draw_dashed_rect(surface, node, theme=theme)
+
+    @staticmethod
+    def _find_ancestor_window(node):
+        current = node.parent
+        while current is not None:
+            if current.is_window():
+                return current
+            current = current.parent
+        return None
 
     def _draw_dashed_rect(
         self,
@@ -106,7 +83,12 @@ class FocusVisualizer:
         node,
         theme,
     ) -> None:
-        """Draw a dashed rectangle around a node's rect."""
+        """Draw a dashed rectangle around a node's rect.
+
+        No explicit occlusion handling is performed here.  Hints are drawn
+        during the scene's per-root draw pass, so any windows rendered
+        afterward will naturally overdraw them via normal painter's-order.
+        """
         if not node.visible:
             return
 
@@ -114,81 +96,32 @@ class FocusVisualizer:
         if rect.width < 2 or rect.height < 2:
             return
 
-        # Calculate focus rectangle (with padding)
         focus_rect = rect.inflate(2 * self.PADDING, 2 * self.PADDING)
-        occluding_rects = self._occluding_window_rects(node, focus_rect)
-
-        # Draw dashed rectangle
-        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight, occluding_rects=occluding_rects)
-
-    def _occluding_window_rects(self, node, focus_rect: "pygame.Rect") -> list["pygame.Rect"]:
-        app = getattr(self, "app", None)
-        scene = getattr(app, "scene", None)
-        if scene is None:
-            return []
-
-        windows_provider = getattr(scene, "_window_nodes", None)
-        if windows_provider is None:
-            return []
-
-        windows = [w for w in windows_provider() if getattr(w, "visible", False) and getattr(w, "enabled", False)]
-        if not windows:
-            return []
-
-        owner_window = self._owner_window(node)
-        if owner_window is None:
-            higher_windows = windows
-        else:
-            try:
-                owner_index = windows.index(owner_window)
-            except ValueError:
-                higher_windows = windows
-            else:
-                higher_windows = windows[owner_index + 1 :]
-
-        return [window.rect for window in higher_windows if window.rect.colliderect(focus_rect)]
-
-    @staticmethod
-    def _owner_window(node):
-        if getattr(node, "is_window", None) is not None and node.is_window():
-            return node
-        parent = getattr(node, "parent", None)
-        while parent is not None:
-            if getattr(parent, "is_window", None) is not None and parent.is_window():
-                return parent
-            parent = parent.parent
-        return None
+        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight)
 
     def _draw_dashed_rectangle(
         self,
         surface: "pygame.Surface",
         rect: "pygame.Rect",
         color,
-        occluding_rects: list["pygame.Rect"] | None = None,
     ) -> None:
         """Draw a dashed rectangle outline."""
         x, y, w, h = rect.x, rect.y, rect.width, rect.height
-        occluders = occluding_rects or []
 
-        # Helper to draw dashes along a line
         def draw_dashes(x1, y1, x2, y2):
             if x1 == x2:  # Vertical line
                 start, end = min(y1, y2), max(y1, y2)
                 pos = start
                 while pos < end:
                     next_pos = min(pos + self.DASH_WIDTH, end)
-                    mid_point = (x1, (pos + next_pos) // 2)
-                    if not any(occ.collidepoint(mid_point) for occ in occluders):
-                        pygame.draw.line(surface, color[:3], (x1, pos), (x1, next_pos), self.LINE_WIDTH)
+                    pygame.draw.line(surface, color[:3], (x1, pos), (x1, next_pos), self.LINE_WIDTH)
                     pos = next_pos + self.GAP_WIDTH
             else:  # Horizontal line
                 start, end = min(x1, x2), max(x1, x2)
                 pos = start
                 while pos < end:
                     next_pos = min(pos + self.DASH_WIDTH, end)
-                    mid_point = ((pos + next_pos) // 2, y1)
-                    if not any(occ.collidepoint(mid_point) for occ in occluders):
-                        pygame.draw.line(surface, color[:3], (pos, y1), (next_pos, y1), self.LINE_WIDTH)
+                    pygame.draw.line(surface, color[:3], (pos, y1), (next_pos, y1), self.LINE_WIDTH)
                     pos = next_pos + self.GAP_WIDTH
 
         # Draw four dashed lines (top, right, bottom, left)

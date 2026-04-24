@@ -630,7 +630,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         if focused not in buttons:
             return
         if self.reset_button.visible and self.reset_button.enabled and self.reset_button.accepts_focus():
-            host.app.focus.set_focus(self.reset_button, show_hint=False)
+            host.app.focus.set_focus(self.reset_button)
             return
         host.app.focus.revalidate_focus(host.app.scene)
 

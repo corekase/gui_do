@@ -81,8 +81,6 @@ class ToggleControl(UiNode):
         if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
             return False
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
-            if getattr(app, "focus_visualizer", None) is not None:
-                app.focus_visualizer.refresh_focus_hint(self)
             self._commit_toggle()
             return True
         if event.is_mouse_down(1):

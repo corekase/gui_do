@@ -209,7 +209,7 @@ class ControlsShowcasePart(Part):
         if target not in host.app.scene._walk_nodes() or not target.visible or not target.enabled:
             self._pending_initial_focus = False
             return
-        host.app.focus.set_focus(target, show_hint=False)
+        host.app.focus.set_focus(target)
         self._pending_initial_focus = False
 
     def _default_part_rect(self, host) -> Rect:

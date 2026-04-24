@@ -101,9 +101,7 @@ class ButtonGroupControl(ToggleControl):
     def button_id(self) -> str:
         return ButtonGroupControl._selection_by_group.get(self.group, self.control_id)
 
-    def _activate(self, app: "GuiApplication", *, show_focus_hint_on_activate: bool = False) -> bool:
-        if show_focus_hint_on_activate and getattr(app, "focus_visualizer", None) is not None:
-            app.focus_visualizer.refresh_focus_hint(self)
+    def _activate(self, app: "GuiApplication") -> bool:
         previous = ButtonGroupControl._selection_by_group.get(self.group)
         if previous != self.control_id or not self.pushed:
             self.pushed = True
@@ -124,7 +122,7 @@ class ButtonGroupControl(ToggleControl):
         if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
             if not self.focused:
                 return False
-            return self._activate(app, show_focus_hint_on_activate=True)
+            return self._activate(app)
 
         if not event.is_mouse_down(1):
             return False

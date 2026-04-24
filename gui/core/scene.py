@@ -92,6 +92,23 @@ class Scene:
                 return True
         return False
 
+    def top_window_at(self, pos) -> UiNode | None:
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return None
+        for window in reversed(self._window_nodes()):
+            if window.visible and window.enabled and window.rect.collidepoint(pos):
+                return window
+        return None
+
+    @staticmethod
+    def _is_descendant_of(node: UiNode, ancestor: UiNode) -> bool:
+        current = node
+        while current is not None:
+            if current is ancestor:
+                return True
+            current = current.parent
+        return False
+
     def _clear_active_windows(self) -> None:
         for node in self.nodes:
             node._clear_active_windows()
@@ -131,14 +148,27 @@ class Scene:
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
+        top_window = self.top_window_at(pos)
         for node in reversed(self._walk_nodes()):
+            if top_window is not None and not self._is_descendant_of(node, top_window):
+                continue
             if node.visible and node.enabled and node.accepts_mouse_focus() and node.hit_test(pos):
                 return node
         return None
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication" | None = None) -> None:
         for node in self.nodes:
-            if node.visible:
-                node.draw(surface, theme)
-                if app is not None:
-                    app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)
+            if not node.visible:
+                continue
+
+            draw_screen_phase = getattr(node, "draw_screen_phase", None)
+            draw_window_phase = getattr(node, "draw_window_phase", None)
+            if app is not None and callable(draw_screen_phase) and callable(draw_window_phase):
+                draw_screen_phase(surface, theme)
+                app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)
+                draw_window_phase(surface, theme, app=app)
+                continue
+
+            node.draw(surface, theme)
+            if app is not None:
+                app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)

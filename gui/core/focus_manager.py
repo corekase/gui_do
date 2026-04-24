@@ -6,8 +6,6 @@ import pygame
 
 from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
-if TYPE_CHECKING:
-    from .focus_visualizer import FocusVisualizer
 
 
 class FocusManager:
@@ -16,9 +14,11 @@ class FocusManager:
     Optionally displays a visual focus indicator via an attached FocusVisualizer.
     """
 
-    def __init__(self, visualizer: Optional["FocusVisualizer"] = None) -> None:
+    def __init__(self) -> None:
         self._focused_node = None
-        self._visualizer = visualizer
+        self._hint_visible = False
+        self._hint_elapsed_seconds = 0.0
+        self._continuous_tab_cycle = False
         self._armed_focus_target = None
         self._armed_focus_elapsed_seconds = 0.0
         self._scope_focus_memory = {"__screen__": None}
@@ -37,23 +37,38 @@ class FocusManager:
     def clear_focus(self) -> None:
         self.set_focus(None)
 
-    def set_focus(self, node, show_hint: bool = True) -> None:
+    def set_focus(self, node, *, via_keyboard: bool = False) -> None:
         previous = self._focused_node
         if previous is node:
+            if node is None:
+                self._hint_visible = False
+                self._hint_elapsed_seconds = 0.0
+                self._continuous_tab_cycle = False
+            elif via_keyboard:
+                self._hint_visible = True
+                self._hint_elapsed_seconds = 0.0
             return
         if previous is not None:
             previous._set_focused(False)
         self._focused_node = node
+        self._hint_visible = bool(node is not None and via_keyboard)
+        self._hint_elapsed_seconds = 0.0
+        if not via_keyboard:
+            self._continuous_tab_cycle = False
         if node is not None:
             node._set_focused(True)
             scope_key = self._scope_key_for_window(self._find_ancestor_window(node))
             self._scope_focus_memory[scope_key] = node
-        # Trigger visual focus indicator
-        if self._visualizer is not None:
-            if node is not None:
-                self._visualizer.set_focus_hint(node, show_hint=show_hint)
-            else:
-                self._visualizer.clear_focus_hint()
+
+    def show_keyboard_hint_for_current_focus(self) -> None:
+        """Expose hint for existing focus due to keyboard interaction."""
+        if self._focused_node is not None:
+            self._hint_visible = True
+            self._hint_elapsed_seconds = 0.0
+
+    def should_draw_focus_hint(self) -> bool:
+        """Return whether the visual focus hint should currently be rendered."""
+        return bool(self._hint_visible and self._focused_node is not None)
 
     @staticmethod
     def _scope_key_for_window(window) -> object:
@@ -69,42 +84,15 @@ class FocusManager:
         self._scope_focus_memory[scope_key] = None
         return None
 
-    @staticmethod
-    def _is_screen_scope_target_occluded_by_window(node, scene) -> bool:
-        """Return True when a screen-scope node is covered by any visible enabled window."""
-        if scene is None:
-            return False
-        owner_window = FocusManager._find_ancestor_window(node)
-        if owner_window is not None:
-            return False
-        windows_provider = getattr(scene, "_window_nodes", None)
-        if windows_provider is None:
-            return False
-        for window in windows_provider():
-            if not (window.visible and window.enabled):
-                continue
-            if window.rect.colliderect(node.rect):
-                return True
-        return False
-
     def _preferred_scope_entry_target(self, *, scene, window, candidates):
         """Pick the initial focus target when entering a scope.
 
-        Prefers remembered targets when they are usable and visually reachable.
-        For screen scope, falls back to the first non-occluded candidate so the
-        focus hint can be seen after scope re-entry.
+        For window scope: prefer remembered target, else first candidate.
+        For screen scope: prefer remembered target, else first candidate.
         """
+        del scene
         remembered = self._remembered_focus_for_scope(window=window, candidates=candidates)
-        if remembered is not None:
-            if window is not None or not self._is_screen_scope_target_occluded_by_window(remembered, scene):
-                return remembered
-
-        if window is None:
-            for candidate in candidates:
-                if not self._is_screen_scope_target_occluded_by_window(candidate, scene):
-                    return candidate
-
-        return candidates[0]
+        return remembered if remembered is not None else candidates[0]
 
     def set_focus_by_id(self, scene, control_id: str) -> bool:
         """Find the first focusable node with *control_id* in *scene* and focus it.
@@ -134,15 +122,22 @@ class FocusManager:
         if not self._is_focus_window_context_valid(target):
             self.clear_focus()
             return False
+        self._hint_visible = True
         if self._try_activate_focused_button(event, app, target):
             return True
         return bool(target.handle_event(event, app))
 
     def update(self, dt_seconds: float) -> None:
         """Advance focus-driven cosmetic states."""
-        if self._armed_focus_target is None:
-            return
         if dt_seconds <= 0.0:
+            return
+
+        if self._hint_visible:
+            self._hint_elapsed_seconds += float(dt_seconds)
+            if self._hint_elapsed_seconds >= FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS:
+                self._hint_visible = False
+
+        if self._armed_focus_target is None:
             return
 
         self._armed_focus_elapsed_seconds += float(dt_seconds)
@@ -168,8 +163,6 @@ class FocusManager:
         if not hasattr(target, "_invoke_click"):
             return False
 
-        if getattr(app, "focus_visualizer", None) is not None:
-            app.focus_visualizer.refresh_focus_hint(target)
         self._begin_focus_activation_visual(target)
         target._invoke_click()
         return True
@@ -218,34 +211,24 @@ class FocusManager:
             return False
 
         focused = self._focused_node
-        hint_active = self._visualizer is not None and self._visualizer.has_active_hint()
 
-        # When the graphical hint is not active, establish/refresh the current focus context.
-        # This consumes the cycle key without advancing focus, so the next cycle event can move.
-        if not hint_active:
-            if focused is None or focused not in candidates:
-                target = self._preferred_scope_entry_target(scene=scene, window=window, candidates=candidates)
-                self.set_focus(target, show_hint=True)
-                return True
-            if self._visualizer is not None:
-                self._visualizer.refresh_focus_hint(focused)
-            return True
-
-        # Hint is active: cycle to the next/previous focus target.
         if focused is None or focused not in candidates:
             target = self._preferred_scope_entry_target(scene=scene, window=window, candidates=candidates)
-            self.set_focus(target, show_hint=True)
+            self.set_focus(target, via_keyboard=True)
+            return True
+
+        # Traversal initiation: with an existing focused node but no visible hint,
+        # first Tab only reveals the hint. A follow-up Tab before timeout cycles.
+        if not self._continuous_tab_cycle and not self._hint_visible:
+            self.show_keyboard_hint_for_current_focus()
             return True
 
         current_index = candidates.index(focused)
         offset = 1 if forward else -1
         next_index = (current_index + offset) % len(candidates)
         next_node = candidates[next_index]
-        if next_node is focused:
-            if self._visualizer is not None:
-                self._visualizer.refresh_focus_hint(next_node)
-            return True
-        self.set_focus(next_node, show_hint=True)
+        self.set_focus(next_node, via_keyboard=True)
+        self._continuous_tab_cycle = True
         return True
 
     def _reconcile_hover_state(self, scene, *, pointer_pos, window=None) -> None:
@@ -299,9 +282,9 @@ class FocusManager:
         focused_tab = focused.tab_index
         for candidate in candidates:
             if candidate.tab_index >= focused_tab:
-                self.set_focus(candidate, show_hint=False)
+                self.set_focus(candidate)
                 return
-        self.set_focus(candidates[0], show_hint=False)
+        self.set_focus(candidates[0])
 
     @staticmethod
     def _find_ancestor_window(node) -> "object | None":

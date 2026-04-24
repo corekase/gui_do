@@ -244,43 +244,81 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
             ButtonGroupControl.clear_group_registry()
             pygame.quit()
 
-    def test_screen_scope_entry_skips_remembered_target_occluded_by_visible_window(self) -> None:
-        """Screen-scope entry should prefer a non-occluded target so hint is visible."""
+    def test_screen_scope_entry_restores_remembered_target_even_if_occluded(self) -> None:
+        """Screen scope entry should preserve remembered accessibility order regardless of overlap."""
         pygame.init()
         try:
-            app = GuiApplication(Surface((420, 280)))
-            root = app.add(PanelControl("root", Rect(0, 0, 420, 280)))
+            app = GuiApplication(Surface((500, 280)))
+            root = app.add(PanelControl("root", Rect(0, 0, 500, 280)))
 
-            screen_visible = root.add(_FocusableProbe("screen_visible", Rect(10, 10, 70, 24), tab_index=0))
-            screen_occluded = root.add(ButtonGroupControl("screen_occluded", Rect(120, 80, 90, 24), "screen_g2", "Occluded", selected=True))
-            screen_occluded.set_tab_index(1)
+            # Three screen controls: first two clear, third sits behind the window.
+            screen_a = root.add(_FocusableProbe("screen_a", Rect(10, 10, 60, 24), tab_index=0))
+            screen_b = root.add(_FocusableProbe("screen_b", Rect(80, 10, 60, 24), tab_index=1))
+            screen_behind = root.add(ButtonGroupControl("screen_behind", Rect(120, 80, 90, 24), "screen_g3", "Behind", selected=True))
+            screen_behind.set_tab_index(2)
+            # screen_after is to the right of the window — not occluded.
+            screen_after = root.add(_FocusableProbe("screen_after", Rect(430, 80, 60, 24), tab_index=3))
 
+            # Window covers only screen_behind.
             win = root.add(WindowControl("styles_like_win", Rect(100, 60, 260, 180), "Styles"))
-            win_probe = win.add(_FocusableProbe("win_probe", Rect(130, 90, 100, 24), tab_index=0))
+            win.add(_FocusableProbe("win_probe", Rect(130, 90, 100, 24), tab_index=0))
 
             # Seed screen scope memory on the occluded screen control.
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
-            self.assertIs(app.focus.focused_node, screen_visible)
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
-            self.assertIs(app.focus.focused_node, screen_occluded)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_behind)
 
-            # Enter window lifecycle and focus inside window scope.
+            # Enter window lifecycle.
             app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": win.title_bar_rect().center}))
             self.assertTrue(win.active)
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
-            self.assertIs(app.focus.focused_node, win_probe)
 
-            # Exit to screen lifecycle; window remains visible and still covers screen_occluded.
-            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (390, 20)}))
+            # Exit to screen lifecycle; window stays visible and covers screen_behind.
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (10, 250)}))
             self.assertFalse(win.active)
             self.assertTrue(win.visible)
 
-            # First Tab should pick the visible screen target, not the occluded remembered one.
+            # First Tab: remembered screen target is restored even when visually covered.
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
-            self.assertIs(app.focus.focused_node, screen_visible)
+            self.assertIs(app.focus.focused_node, screen_behind)
             self.assertTrue(app.focus_visualizer.has_active_hint())
         finally:
             ButtonGroupControl.clear_group_registry()
+            pygame.quit()
+
+    def test_tab_keeps_initiation_gate_when_current_screen_focus_is_occluded(self) -> None:
+        """Occlusion must not bypass first-Tab initiation hint gate."""
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((500, 280)))
+            root = app.add(PanelControl("root", Rect(0, 0, 500, 280)))
+
+            screen_a = root.add(_FocusableProbe("screen_a", Rect(10, 10, 60, 24), tab_index=0))
+            screen_behind = root.add(_FocusableProbe("screen_behind", Rect(120, 80, 90, 24), tab_index=1))
+            screen_after = root.add(_FocusableProbe("screen_after", Rect(430, 80, 60, 24), tab_index=2))
+
+            win = root.add(WindowControl("styles_like_win", Rect(100, 60, 260, 180), "Styles"))
+            win.active = False
+
+            # Seed focus to an occluded screen control without keyboard hint.
+            app.focus.set_focus(screen_behind)
+            self.assertIs(app.focus.focused_node, screen_behind)
+            self.assertFalse(app.focus_visualizer.has_active_hint())
+
+            # First Tab still applies initiation gate: reveal hint only, no movement.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_behind)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+
+            # Next traversal event cycles in canonical order.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_after)
+
+            # Backward traversal returns to the previous control.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT}))
+            self.assertIs(app.focus.focused_node, screen_behind)
+        finally:
             pygame.quit()
 
     def test_bound_action_executes_before_screen_handler(self) -> None:

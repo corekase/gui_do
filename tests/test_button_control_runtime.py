@@ -38,7 +38,7 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         fired = []
         control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))
         control.set_tab_index(0)
-        self.app.focus.set_focus(control, show_hint=False)
+        self.app.focus.set_focus(control)
 
         consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
 
@@ -64,28 +64,19 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertEqual(fired, ["hit"])
 
-    def test_keyboard_activation_refreshes_focus_hint_with_shared_timeout(self) -> None:
+    def test_keyboard_activation_fires_click_and_hint_remains_active(self) -> None:
         fired = []
         control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))
         control.set_tab_index(0)
 
-        # Mouse-style focus assignment suppresses hint visibility.
-        self.app.focus.set_focus(control, show_hint=False)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
-
+        self.app.focus.set_focus(control, via_keyboard=True)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
         consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
 
         self.assertTrue(consumed)
         self.assertEqual(fired, [True])
-        self.assertIs(self.app.focus_visualizer._current_hint_node, control)
-        self.assertEqual(self.app.focus_visualizer._current_hint_elapsed, 0.0)
-
-        almost_timeout = FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01
-        self.app.focus_visualizer.update(almost_timeout)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, control)
-
-        self.app.focus_visualizer.update(0.02)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+        # Hint remains active (still focused on control).
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
     def test_keyboard_activation_ignored_when_disabled(self) -> None:
         fired = []

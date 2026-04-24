@@ -229,7 +229,7 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         btn = win.add(ButtonControl("btn", Rect(100, 90, 80, 30), "OK"))
         btn.set_tab_index(0)
         win.active = True
-        self.app.focus.set_focus(btn, show_hint=False)
+        self.app.focus.set_focus(btn)
         self.assertIs(self.app.focus.focused_node, btn)
 
         self.app.process_event(

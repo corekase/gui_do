@@ -1,6 +1,5 @@
-"""Tests for focus visualization based on event source (keyboard vs mouse)."""
+﻿"""Tests for focus visualization -- hint is keyboard-driven, not mouse-driven."""
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pygame
@@ -13,114 +12,48 @@ from gui.controls.panel_control import PanelControl
 from gui.controls.window_control import WindowControl
 from gui.core.focus_manager import FocusManager
 from gui.core.focus_visualizer import FocusVisualizer
-from gui.core.gui_event import GuiEvent, EventType
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui.core.scene import Scene
 from gui.core.ui_node import UiNode
 
 
-class FocusVisualizerSourceTests(unittest.TestCase):
-    """Test set_focus_hint with show_hint parameter."""
+class FocusVisualizerKeyboardHintTests(unittest.TestCase):
+    """Hint visibility is keyboard-driven even when focus exists."""
 
-    def setUp(self) -> None:
-        self.app = SimpleNamespace()
-        self.visualizer = FocusVisualizer(self.app)
+    def _make(self):
+        manager = FocusManager()
+        app = type("App", (), {"focus": manager})()
+        return FocusVisualizer(app), manager
 
-    def test_set_focus_hint_shows_hint_by_default(self) -> None:
-        """Default behavior shows the hint."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.visualizer.set_focus_hint(node)
-        self.assertIs(self.visualizer._current_hint_node, node)
-        self.assertEqual(self.visualizer._current_hint_elapsed, 0.0)
-
-    def test_set_focus_hint_with_show_hint_true(self) -> None:
-        """Explicitly showing hint stores the node."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.visualizer.set_focus_hint(node, show_hint=True)
-        self.assertIs(self.visualizer._current_hint_node, node)
-
-    def test_set_focus_hint_with_show_hint_false(self) -> None:
-        """When show_hint=False, node is not stored for display."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.visualizer.set_focus_hint(node, show_hint=False)
-        self.assertIsNone(self.visualizer._current_hint_node)
-
-    def test_set_focus_hint_switching_with_show_hint_false(self) -> None:
-        """Switching focus with show_hint=False clears any previous hint."""
-        node1 = UiNode("n1", Rect(0, 0, 100, 100))
-        node2 = UiNode("n2", Rect(100, 0, 100, 100))
-
-        # First focus shows hint
-        self.visualizer.set_focus_hint(node1, show_hint=True)
-        self.assertIs(self.visualizer._current_hint_node, node1)
-
-        # Second focus with show_hint=False clears it
-        self.visualizer.set_focus_hint(node2, show_hint=False)
-        self.assertIsNone(self.visualizer._current_hint_node)
-
-    def test_set_focus_hint_switching_between_show_and_hide(self) -> None:
-        """Can switch between showing and hiding the hint."""
-        node1 = UiNode("n1", Rect(0, 0, 100, 100))
-        node2 = UiNode("n2", Rect(100, 0, 100, 100))
-        node3 = UiNode("n3", Rect(200, 0, 100, 100))
-
-        # Show node1
-        self.visualizer.set_focus_hint(node1, show_hint=True)
-        self.assertIs(self.visualizer._current_hint_node, node1)
-
-        # Hide node2
-        self.visualizer.set_focus_hint(node2, show_hint=False)
-        self.assertIsNone(self.visualizer._current_hint_node)
-
-        # Show node3
-        self.visualizer.set_focus_hint(node3, show_hint=True)
-        self.assertIs(self.visualizer._current_hint_node, node3)
-
-
-class FocusManagerSourceTests(unittest.TestCase):
-    """Test FocusManager passes show_hint parameter correctly."""
-
-    def setUp(self) -> None:
-        self.app = SimpleNamespace()
-        self.visualizer = FocusVisualizer(self.app)
-        self.manager = FocusManager(visualizer=self.visualizer)
-
-    def test_set_focus_shows_hint_by_default(self) -> None:
-        """Default set_focus shows the hint."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.manager.set_focus(node)
-        self.assertIs(self.visualizer._current_hint_node, node)
-
-    def test_set_focus_with_show_hint_false(self) -> None:
-        """set_focus with show_hint=False doesn't show hint."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.manager.set_focus(node, show_hint=False)
-        self.assertIsNone(self.visualizer._current_hint_node)
-
-    def test_set_focus_with_show_hint_true(self) -> None:
-        """set_focus with show_hint=True shows hint."""
-        node = UiNode("n", Rect(0, 0, 100, 100))
-        self.manager.set_focus(node, show_hint=True)
-        self.assertIs(self.visualizer._current_hint_node, node)
-
-    def test_cycle_focus_shows_hint(self) -> None:
-        """cycle_focus (keyboard Tab) shows hint by default."""
-        from gui.core.scene import Scene
-
+    def test_cycle_focus_makes_hint_active(self) -> None:
+        vis, mgr = self._make()
         n1 = UiNode("n1", Rect(0, 0, 100, 100))
         n1.set_tab_index(0)
-        n2 = UiNode("n2", Rect(100, 0, 100, 100))
-        n2.set_tab_index(1)
-
         scene = Scene()
         scene.add(n1)
-        scene.add(n2)
+        mgr.cycle_focus(scene, forward=True)
+        self.assertIs(mgr.focused_node, n1)
+        self.assertTrue(vis.has_active_hint())
 
-        self.manager.cycle_focus(scene, forward=True)
-        # First cycle should show hint
-        self.assertIs(self.visualizer._current_hint_node, n1)
+    def test_set_focus_from_non_keyboard_does_not_show_hint(self) -> None:
+        vis, mgr = self._make()
+        mgr.set_focus(UiNode("n", Rect(0, 0, 100, 100)))
+        self.assertFalse(vis.has_active_hint())
+
+    def test_set_focus_via_keyboard_makes_hint_active(self) -> None:
+        vis, mgr = self._make()
+        mgr.set_focus(UiNode("n", Rect(0, 0, 100, 100)), via_keyboard=True)
+        self.assertTrue(vis.has_active_hint())
+
+    def test_clear_focus_deactivates_hint(self) -> None:
+        vis, mgr = self._make()
+        mgr.set_focus(UiNode("n", Rect(0, 0, 100, 100)))
+        mgr.clear_focus()
+        self.assertFalse(vis.has_active_hint())
 
 
 class MouseClickFocusIntegrationTests(unittest.TestCase):
-    """Integration test: mouse clicks don't show focus hint."""
+    """Integration tests: mouse focus does not activate hint; keyboard does."""
 
     def setUp(self) -> None:
         pygame.init()
@@ -137,109 +70,81 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
     def tearDown(self) -> None:
         pygame.quit()
 
-    def test_mouse_click_does_not_show_focus_hint(self) -> None:
-        """Clicking a button focuses it but doesn't show the focus hint."""
-        # Initially no hint
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+    def test_mouse_click_focuses_without_showing_hint(self) -> None:
+        """Clicking a button focuses it but does not activate the keyboard hint."""
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
 
-        # Click on button1
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN,
-                {"pos": (100, 70), "button": 1},
-            )
-        )
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (100, 70), "button": 1}))
 
-        # Button1 is focused
         self.assertIs(self.app.focus.focused_node, self.button1)
-        # But hint is not shown (because it was a mouse click)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
 
-    def test_keyboard_focus_shows_hint(self) -> None:
-        """Tab key focuses a button and shows the focus hint."""
-        # Initially no hint
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+    def test_keyboard_tab_focuses_and_shows_hint(self) -> None:
+        """Tab key focuses a button; hint is active."""
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
 
-        # Focus button1 via tab
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.KEYDOWN,
-                {"key": pygame.K_TAB},
-            )
-        )
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
 
-        # Button1 should be focused and hint should be shown
         self.assertIs(self.app.focus.focused_node, self.button1)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
-    def test_switch_from_keyboard_to_mouse_clears_hint(self) -> None:
-        """After focusing with Tab, clicking another button clears the hint."""
-        # Focus button1 via tab (shows hint)
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.KEYDOWN,
-                {"key": pygame.K_TAB},
-            )
-        )
-        self.assertIs(self.app.focus_visualizer._current_hint_node, self.button1)
+    def test_tab_after_mouse_click_first_shows_hint_then_advances(self) -> None:
+        """After mouse focus, first Tab reveals hint; second Tab advances focus."""
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (100, 70), "button": 1}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
 
-        # Click button2 (should clear hint)
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN,
-                {"pos": (250, 70), "button": 1},
-            )
-        )
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
-        # Button2 is focused but hint is cleared
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
         self.assertIs(self.app.focus.focused_node, self.button2)
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
-    def test_switch_from_mouse_to_keyboard_shows_hint(self) -> None:
-        """After mouse focus with no hint, first Tab shows hint on current focus."""
-        # Click button1 (no hint)
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN,
-                {"pos": (100, 70), "button": 1},
-            )
-        )
-        self.assertIsNone(self.app.focus_visualizer._current_hint_node)
-
-        # First Tab shows the hint on the current focus target (no advance yet)
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.KEYDOWN,
-                {"key": pygame.K_TAB},
-            )
-        )
-
+    def test_tab_initiation_gate_expires_then_requires_hint_reinit(self) -> None:
+        """If second Tab is late (after timeout), first-Tab hint gate is required again."""
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (100, 70), "button": 1}))
         self.assertIs(self.app.focus.focused_node, self.button1)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, self.button1)
 
-        # While hint is active, next Tab advances focus and resets hint to the new target.
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.KEYDOWN,
-                {"key": pygame.K_TAB},
-            )
-        )
-        self.assertIs(self.app.focus.focused_node, self.button2)
-        self.assertIs(self.app.focus_visualizer._current_hint_node, self.button2)
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
+
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_titlebar_click_does_not_focus_screen_control_under_window(self) -> None:
+        """Mouse focus selection must not fall through top window titlebar to screen controls."""
+        app = GuiApplication(Surface((400, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 400, 300)))
+        under = root.add(ButtonControl("under", Rect(30, 30, 100, 20), "Under"))
+        under.set_tab_index(0)
+        win = root.add(WindowControl("overlay", Rect(20, 20, 260, 180), "Styles"))
+
+        screen_events = []
+        app.set_screen_lifecycle(event_handler=lambda _event: (screen_events.append("screen") or False))
+
+        app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": win.title_bar_rect().center, "button": 1}))
+
+        self.assertTrue(win.active)
+        self.assertIsNone(app.focus.focused_node)
+        self.assertEqual(screen_events, [])
 
     def test_clicking_label_does_not_clear_existing_focus(self) -> None:
         """Mouse clicking labels must not change active focus."""
         label = self.window.add(LabelControl("lbl", Rect(40, 130, 180, 40), "Info"))
-        label.set_tab_index(2)  # Even if explicitly focusable, labels must ignore mouse focus.
+        label.set_tab_index(2)
 
-        self.app.focus.set_focus(self.button1, show_hint=False)
+        self.app.focus.set_focus(self.button1)
         self.assertIs(self.app.focus.focused_node, self.button1)
 
         self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN,
-                {"pos": label.rect.center, "button": 1},
-            )
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": label.rect.center, "button": 1})
         )
 
         self.assertIs(self.app.focus.focused_node, self.button1)
@@ -252,10 +157,7 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         self.assertIsNone(self.app.focus.focused_node)
 
         self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN,
-                {"pos": label.rect.center, "button": 1},
-            )
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": label.rect.center, "button": 1})
         )
 
         self.assertIsNone(self.app.focus.focused_node)
@@ -263,32 +165,74 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
     def test_keyboard_focus_cycle_clears_hover_when_pointer_moved_off_without_motion_event(self) -> None:
         """Tab cycling must clear stale hover state using live pointer position."""
         self.app.process_event(
-            pygame.event.Event(
-                pygame.MOUSEMOTION,
-                {"pos": self.button1.rect.center, "rel": (0, 0), "buttons": (0, 0, 0)},
-            )
+            pygame.event.Event(pygame.MOUSEMOTION, {"pos": self.button1.rect.center, "rel": (0, 0), "buttons": (0, 0, 0)})
         )
         self.assertTrue(self.button1.hovered)
 
-        self.app.process_event(
-            pygame.event.Event(
-                pygame.KEYDOWN,
-                {"key": pygame.K_TAB},
-            )
-        )
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
         self.assertIs(self.app.focus.focused_node, self.button1)
 
         off_pos = (self.window.rect.right + 20, self.window.rect.bottom + 20)
         with patch("pygame.mouse.get_pos", return_value=off_pos):
-            self.app.process_event(
-                pygame.event.Event(
-                    pygame.KEYDOWN,
-                    {"key": pygame.K_TAB},
-                )
-            )
+            self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
 
         self.assertFalse(self.button1.hovered)
         self.assertIs(self.app.focus.focused_node, self.button2)
+
+    def test_screen_hint_drawn_before_window_so_window_implicitly_occludes(self) -> None:
+        """Screen focus hint should be emitted before windows, so windows can overdraw it."""
+        app = GuiApplication(Surface((400, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 400, 300), draw_background=False))
+        screen_btn = root.add(ButtonControl("screen_btn", Rect(40, 40, 120, 30), "Screen"))
+        screen_btn.set_tab_index(0)
+        win = root.add(WindowControl("styles", Rect(20, 20, 260, 180), "Styles"))
+
+        # Seed screen-scope keyboard hint directly.
+        app.focus.set_focus(screen_btn, via_keyboard=True)
+        self.assertIs(app.focus.focused_node, screen_btn)
+        self.assertTrue(app.focus_visualizer.has_active_hint())
+
+        call_order = []
+        def _record_button_draw(_button_self, _surface, _theme):
+            call_order.append("screen")
+
+        def _record_window_draw(_window_self, _surface, _theme):
+            call_order.append("window")
+
+        with patch.object(ButtonControl, "draw", new=_record_button_draw):
+            with patch.object(WindowControl, "draw", new=_record_window_draw):
+                original_screen_hint = app.focus_visualizer.draw_hint_for_scene_root
+
+                def _record_screen_hint(*args, **kwargs):
+                    call_order.append("hint")
+                    return original_screen_hint(*args, **kwargs)
+
+                with patch.object(app.focus_visualizer, "draw_hint_for_scene_root", side_effect=_record_screen_hint) as mock_screen_hint:
+                    app.scene.draw(app.surface, app.theme, app=app)
+                    self.assertGreaterEqual(mock_screen_hint.call_count, 1)
+
+        self.assertIn("hint", call_order)
+        self.assertIn("window", call_order)
+        self.assertLess(call_order.index("hint"), call_order.index("window"))
+
+    def test_window_focus_hint_draws_in_window_phase(self) -> None:
+        """Window-scoped focus hint remains visible by drawing after its window draw."""
+        app = GuiApplication(Surface((400, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 400, 300), draw_background=False))
+        win = root.add(WindowControl("styles", Rect(20, 20, 260, 180), "Styles"))
+        win.active = True
+        win_btn = win.add(ButtonControl("win_btn", Rect(50, 60, 100, 30), "InWin"))
+        win_btn.set_tab_index(0)
+
+        # First Tab focuses first candidate in window scope and shows hint.
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(app.focus.focused_node, win_btn)
+        self.assertTrue(app.focus_visualizer.has_active_hint())
+
+        with patch.object(WindowControl, "draw", return_value=None):
+            with patch.object(app.focus_visualizer, "draw_hint_for_window", wraps=app.focus_visualizer.draw_hint_for_window) as mock_window_hint:
+                app.scene.draw(app.surface, app.theme, app=app)
+                self.assertGreaterEqual(mock_window_hint.call_count, 1)
 
 
 if __name__ == "__main__":

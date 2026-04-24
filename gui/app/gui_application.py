@@ -70,7 +70,7 @@ class GuiApplication:
         self.pointer_capture = PointerCapture()
         self.keyboard = KeyboardManager()
         self.focus_visualizer = FocusVisualizer(self)
-        self.focus = FocusManager(visualizer=self.focus_visualizer)
+        self.focus = FocusManager()
         self.actions = ActionManager()
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
@@ -275,7 +275,6 @@ class GuiApplication:
         """Update current scene."""
         if self._screen_lifecycle_active and self._screen_preamble is not None:
             self._screen_preamble()
-        self.focus_visualizer.update(dt_seconds)
         self.focus.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
         runtime["timers"].update(dt_seconds)
@@ -384,12 +383,18 @@ class GuiApplication:
 
         logical_event = self._logicalize_pointer_event(gui_event)
 
+        pointer_event_in_window = False
+        if logical_event.kind in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP, EventType.MOUSE_MOTION, EventType.MOUSE_WHEEL):
+            pos = logical_event.pos
+            if isinstance(pos, tuple) and len(pos) == 2 and self.scene.top_window_at(pos) is not None:
+                pointer_event_in_window = True
+
         if logical_event.is_mouse_down(1):
             # Mouse click focus: only change focus when a valid mouse-focus target exists.
             # Background clicks intentionally do not mutate focus state.
             target = self.scene.top_focus_target_at(logical_event.pos)
             if target is not None:
-                self.focus.set_focus(target, show_hint=False)
+                self.focus.set_focus(target)
 
         if self.keyboard.is_key_event(logical_event):
             consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
@@ -398,13 +403,13 @@ class GuiApplication:
                 return True
 
         screen_consumed = False
-        if self.parts.handle_screen_event(logical_event):
+        if not pointer_event_in_window and self.parts.handle_screen_event(logical_event):
             self.invalidation.invalidate_all()
             return True
         if self.parts.handle_event(logical_event):
             self.invalidation.invalidate_all()
             return True
-        if self._screen_lifecycle_active and self._screen_event_handler is not None:
+        if not pointer_event_in_window and self._screen_lifecycle_active and self._screen_event_handler is not None:
             screen_consumed = bool(self._screen_event_handler(logical_event))
         if screen_consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()

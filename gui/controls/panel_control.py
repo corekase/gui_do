@@ -329,6 +329,11 @@ class PanelControl(UiNode):
         return self._dispatch_children(event, app, reverse=True)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        self.draw_screen_phase(surface, theme)
+        self.draw_window_phase(surface, theme)
+
+    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        """Draw panel background and non-window children (screen lifecycle layer)."""
         if self.draw_background:
             factory = theme.graphics_factory
             visual_size = (self.rect.width, self.rect.height)
@@ -344,5 +349,18 @@ class PanelControl(UiNode):
             )
             surface.blit(selected, self.rect)
         for child in self.children:
+            if self._is_window_like(child):
+                continue
             if child.visible:
                 child.draw(surface, theme)
+
+    def draw_window_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication" | None = None) -> None:
+        """Draw window children (window lifecycle layer), optionally with per-window hints."""
+        for child in self.children:
+            if not self._is_window_like(child):
+                continue
+            if not child.visible:
+                continue
+            child.draw(surface, theme)
+            if app is not None:
+                app.focus_visualizer.draw_hint_for_window(surface, theme, child)

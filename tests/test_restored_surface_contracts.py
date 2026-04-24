@@ -441,7 +441,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             fired = []
             control = root.add(ButtonControl("b", Rect(10, 10, 80, 30), "B", on_click=lambda: fired.append("hit")))
             control.set_tab_index(0)
-            app.focus.set_focus(control, show_hint=False)
+            app.focus.set_focus(control)
 
             consumed = app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
 
