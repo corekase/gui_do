@@ -99,7 +99,7 @@ class ControlsShowcasePart(Part):
                 align=self.LABEL_ALIGN,
             )
         )
-        self.enabled_title.font_size = 20
+        self.enabled_title.font_size = 22
 
         self.disabled_title = host.control_showcase_root.add(
             ui.label_control_cls(
@@ -109,7 +109,7 @@ class ControlsShowcasePart(Part):
                 align=self.LABEL_ALIGN,
             )
         )
-        self.disabled_title.font_size = 20
+        self.disabled_title.font_size = 22
 
         # Build enabled blocks
         self.enabled_controls = []
@@ -309,7 +309,15 @@ class ControlsShowcasePart(Part):
 
         # Create block label (always enabled, even in disabled section)
         if not has_no_block_label:
-            if is_image_block:
+            if block_name == "vertical_sliders":
+                # Center label above just the slider+scrollbar pair, not the full column
+                v_left_pad = 10
+                v_gap = 10
+                v_track_size = (100 - self.BLOCK_INTERNAL_SPACING) // 2
+                v_pair_width = 2 * v_track_size + v_gap
+                label_rect = Rect(block_rect.left + v_left_pad, block_rect.top, v_pair_width, self.BLOCK_LABEL_HEIGHT)
+                label_align = "center"
+            elif is_image_block:
                 label_rect = Rect(block_rect.left, block_rect.top, block_rect.width, self.BLOCK_LABEL_HEIGHT)
                 label_align = "center"
             else:
@@ -634,6 +642,8 @@ class ControlsShowcasePart(Part):
         # Custom labels for specific blocks
         custom_labels = {
             "buttons_and_indicators": "Button and Toggle Button",
+            "horizontal_sliders": "Horizontal Slider and Scrollbar",
+            "vertical_sliders": "Vertical",
             "image_block": "Image",
         }
         if block_name in custom_labels:
