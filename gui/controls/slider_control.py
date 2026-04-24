@@ -30,12 +30,13 @@ class SliderControl(UiNode):
         return None
 
     def _end_drag(self, app: "GuiApplication", *, sync_pointer: bool = False, release_pos=None) -> None:
-        final_pos = app.logical_pointer_pos if release_pos is None else release_pos
         self.dragging = False
         if app.pointer_capture.is_owned_by(self.control_id):
             app.pointer_capture.end(self.control_id)
         if sync_pointer:
-            app.sync_pointer_to_logical_position(final_pos)
+            final_pos = release_pos if release_pos is not None else getattr(app, "logical_pointer_pos", None)
+            if final_pos is not None and hasattr(app, "sync_pointer_to_logical_position"):
+                app.sync_pointer_to_logical_position(final_pos)
 
     def __init__(
         self,

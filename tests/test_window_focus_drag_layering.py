@@ -224,7 +224,7 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         self.assertTrue(win.active)
 
 
-    def test_background_click_moves_focus_to_screen_lifecycle(self) -> None:
+    def test_background_click_keeps_existing_focus_while_returning_to_screen_lifecycle(self) -> None:
         win = self.root.add(WindowControl("win", Rect(80, 60, 180, 140), "A"))
         btn = win.add(ButtonControl("btn", Rect(100, 90, 80, 30), "OK"))
         btn.set_tab_index(0)
@@ -239,7 +239,8 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
             )
         )
 
-        self.assertIsNone(self.app.focus.focused_node)
+        self.assertFalse(win.active)
+        self.assertIs(self.app.focus.focused_node, btn)
 
     def test_background_click_is_idempotent_when_focus_already_screen_lifecycle(self) -> None:
         win = self.root.add(WindowControl("win", Rect(80, 60, 180, 140), "A"))
