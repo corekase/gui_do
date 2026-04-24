@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl
+from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, WindowControl
 
 
 class ScrollbarControlRuntimeTests(unittest.TestCase):
@@ -113,6 +113,55 @@ class ScrollbarControlRuntimeTests(unittest.TestCase):
 
         self.assertFalse(consumed)
         self.assertEqual(bar.offset, 100)
+
+    def test_screen_scrollbar_drag_ends_when_pointer_enters_window(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        window = self.root.add(WindowControl("win", Rect(120, 60, 120, 80), "Window"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": bar.handle_rect().center, "button": 1}))
+
+        self.assertTrue(bar.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sb"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (20, 20), "buttons": (1, 0, 0)}))
+
+        self.assertFalse(bar.dragging)
+        self.assertFalse(self.app.pointer_capture.is_owned_by("sb"))
+
+    def test_window_scrollbar_drag_does_not_end_from_window_entry_rule(self) -> None:
+        window = self.root.add(WindowControl("win", Rect(20, 20, 220, 120), "Window"))
+        bar = window.add(
+            ScrollbarControl(
+                "sb",
+                Rect(40, 60, 140, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": bar.handle_rect().center, "button": 1}))
+
+        self.assertTrue(bar.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sb"))
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (bar.rect.centerx + 10, bar.rect.centery), "rel": (10, 0), "buttons": (1, 0, 0)}))
+
+        self.assertTrue(consumed)
+        self.assertTrue(bar.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sb"))
 
 
 if __name__ == "__main__":

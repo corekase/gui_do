@@ -21,6 +21,22 @@ if TYPE_CHECKING:
 class ScrollbarControl(UiNode):
     """Viewport scrollbar with captured handle drag and wheel stepping."""
 
+    def _ancestor_window(self):
+        current = self.parent
+        while current is not None:
+            if current.is_window():
+                return current
+            current = current.parent
+        return None
+
+    def _end_drag(self, app: "GuiApplication", *, sync_pointer: bool = False, release_pos=None) -> None:
+        final_pos = app.logical_pointer_pos if release_pos is None else release_pos
+        self.dragging = False
+        if app.pointer_capture.is_owned_by(self.control_id):
+            app.pointer_capture.end(self.control_id)
+        if sync_pointer:
+            app.sync_pointer_to_logical_position(final_pos)
+
     def __init__(
         self,
         control_id: str,
@@ -197,15 +213,12 @@ class ScrollbarControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
-            if self.dragging and app.pointer_capture.is_owned_by(self.control_id):
-                app.pointer_capture.end(self.control_id)
-            self.dragging = False
+            if self.dragging:
+                self._end_drag(app)
             return False
 
         if self.dragging and self._drag_start_programmatic_epoch != self._programmatic_change_epoch:
-            if app.pointer_capture.is_owned_by(self.control_id):
-                app.pointer_capture.end(self.control_id)
-            self.dragging = False
+            self._end_drag(app)
             return False
 
         if not self.focused and (
@@ -262,6 +275,10 @@ class ScrollbarControl(UiNode):
 
         if event.is_mouse_motion() and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
             pointer_pos = app.logical_pointer_pos
+            raw_pointer_pos = event.raw_pos if isinstance(event.raw_pos, tuple) and len(event.raw_pos) == 2 else event.pos
+            if self._ancestor_window() is None and isinstance(raw_pointer_pos, tuple) and len(raw_pointer_pos) == 2 and app.scene._point_in_window(raw_pointer_pos):
+                self._end_drag(app, sync_pointer=True, release_pos=raw_pointer_pos)
+                return False
             self._refresh_drag_lock_rect(app, pointer_pos)
             lock = app.pointer_capture.lock_rect
             if lock is not None:
@@ -305,10 +322,7 @@ class ScrollbarControl(UiNode):
             travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
             self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
             self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
-            release_pos = app.logical_pointer_pos
-            self.dragging = False
-            app.pointer_capture.end(self.control_id)
-            app.sync_pointer_to_logical_position(release_pos)
+            self._end_drag(app, sync_pointer=True)
             return True
 
         if event.is_mouse_wheel() and self.rect.collidepoint(app.logical_pointer_pos):

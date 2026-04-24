@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, SliderControl
+from gui import GuiApplication, LayoutAxis, PanelControl, SliderControl, WindowControl
 
 
 class SliderControlRuntimeTests(unittest.TestCase):
@@ -66,6 +66,35 @@ class SliderControlRuntimeTests(unittest.TestCase):
 
         self.assertFalse(consumed)
         self.assertEqual(slider.value, 50.0)
+
+    def test_screen_slider_drag_ends_when_pointer_enters_window(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        window = self.root.add(WindowControl("win", Rect(120, 60, 100, 80), "Window"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": slider.handle_rect().center, "button": 1}))
+
+        self.assertTrue(slider.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("s"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (20, 20), "buttons": (1, 0, 0)}))
+
+        self.assertFalse(slider.dragging)
+        self.assertFalse(self.app.pointer_capture.is_owned_by("s"))
+
+    def test_window_slider_drag_does_not_end_from_window_entry_rule(self) -> None:
+        window = self.root.add(WindowControl("win", Rect(20, 20, 200, 120), "Window"))
+        slider = window.add(SliderControl("s", Rect(40, 60, 120, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": slider.handle_rect().center, "button": 1}))
+
+        self.assertTrue(slider.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("s"))
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (slider.rect.centerx + 10, slider.rect.centery), "rel": (10, 0), "buttons": (1, 0, 0)}))
+
+        self.assertTrue(consumed)
+        self.assertTrue(slider.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("s"))
 
 
 if __name__ == "__main__":
