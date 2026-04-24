@@ -87,6 +87,19 @@ class FocusVisualizer:
         if self._current_hint_node is not None:
             self._draw_dashed_rect(surface, self._current_hint_node, theme=theme)
 
+    def draw_hint_for_scene_root(self, surface: "pygame.Surface", theme, root_node) -> None:
+        """Draw the current hint only when it belongs to the given scene root subtree.
+
+        This allows hints to be rendered inline with scene root draw order so any later
+        top-layer roots (for example active windows) naturally occlude the hint.
+        """
+        node = self._current_hint_node
+        if node is None:
+            return
+        if node.root() is not root_node:
+            return
+        self._draw_dashed_rect(surface, node, theme=theme)
+
     def _draw_dashed_rect(
         self,
         surface: "pygame.Surface",
@@ -103,18 +116,59 @@ class FocusVisualizer:
 
         # Calculate focus rectangle (with padding)
         focus_rect = rect.inflate(2 * self.PADDING, 2 * self.PADDING)
+        occluding_rects = self._occluding_window_rects(node, focus_rect)
 
         # Draw dashed rectangle
-        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight)
+        self._draw_dashed_rectangle(surface, focus_rect, theme.highlight, occluding_rects=occluding_rects)
+
+    def _occluding_window_rects(self, node, focus_rect: "pygame.Rect") -> list["pygame.Rect"]:
+        app = getattr(self, "app", None)
+        scene = getattr(app, "scene", None)
+        if scene is None:
+            return []
+
+        windows_provider = getattr(scene, "_window_nodes", None)
+        if windows_provider is None:
+            return []
+
+        windows = [w for w in windows_provider() if getattr(w, "visible", False) and getattr(w, "enabled", False)]
+        if not windows:
+            return []
+
+        owner_window = self._owner_window(node)
+        if owner_window is None:
+            higher_windows = windows
+        else:
+            try:
+                owner_index = windows.index(owner_window)
+            except ValueError:
+                higher_windows = windows
+            else:
+                higher_windows = windows[owner_index + 1 :]
+
+        return [window.rect for window in higher_windows if window.rect.colliderect(focus_rect)]
+
+    @staticmethod
+    def _owner_window(node):
+        if getattr(node, "is_window", None) is not None and node.is_window():
+            return node
+        parent = getattr(node, "parent", None)
+        while parent is not None:
+            if getattr(parent, "is_window", None) is not None and parent.is_window():
+                return parent
+            parent = parent.parent
+        return None
 
     def _draw_dashed_rectangle(
         self,
         surface: "pygame.Surface",
         rect: "pygame.Rect",
         color,
+        occluding_rects: list["pygame.Rect"] | None = None,
     ) -> None:
         """Draw a dashed rectangle outline."""
         x, y, w, h = rect.x, rect.y, rect.width, rect.height
+        occluders = occluding_rects or []
 
         # Helper to draw dashes along a line
         def draw_dashes(x1, y1, x2, y2):
@@ -123,14 +177,18 @@ class FocusVisualizer:
                 pos = start
                 while pos < end:
                     next_pos = min(pos + self.DASH_WIDTH, end)
-                    pygame.draw.line(surface, color[:3], (x1, pos), (x1, next_pos), self.LINE_WIDTH)
+                    mid_point = (x1, (pos + next_pos) // 2)
+                    if not any(occ.collidepoint(mid_point) for occ in occluders):
+                        pygame.draw.line(surface, color[:3], (x1, pos), (x1, next_pos), self.LINE_WIDTH)
                     pos = next_pos + self.GAP_WIDTH
             else:  # Horizontal line
                 start, end = min(x1, x2), max(x1, x2)
                 pos = start
                 while pos < end:
                     next_pos = min(pos + self.DASH_WIDTH, end)
-                    pygame.draw.line(surface, color[:3], (pos, y1), (next_pos, y1), self.LINE_WIDTH)
+                    mid_point = ((pos + next_pos) // 2, y1)
+                    if not any(occ.collidepoint(mid_point) for occ in occluders):
+                        pygame.draw.line(surface, color[:3], (pos, y1), (next_pos, y1), self.LINE_WIDTH)
                     pos = next_pos + self.GAP_WIDTH
 
         # Draw four dashed lines (top, right, bottom, left)

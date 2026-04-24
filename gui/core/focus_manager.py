@@ -21,6 +21,7 @@ class FocusManager:
         self._visualizer = visualizer
         self._armed_focus_target = None
         self._armed_focus_elapsed_seconds = 0.0
+        self._scope_focus_memory = {"__screen__": None}
 
     @property
     def focused_node(self):
@@ -45,12 +46,65 @@ class FocusManager:
         self._focused_node = node
         if node is not None:
             node._set_focused(True)
+            scope_key = self._scope_key_for_window(self._find_ancestor_window(node))
+            self._scope_focus_memory[scope_key] = node
         # Trigger visual focus indicator
         if self._visualizer is not None:
             if node is not None:
                 self._visualizer.set_focus_hint(node, show_hint=show_hint)
             else:
                 self._visualizer.clear_focus_hint()
+
+    @staticmethod
+    def _scope_key_for_window(window) -> object:
+        return "__screen__" if window is None else window
+
+    def _remembered_focus_for_scope(self, *, window, candidates):
+        scope_key = self._scope_key_for_window(window)
+        remembered = self._scope_focus_memory.get(scope_key)
+        if remembered is None:
+            return None
+        if remembered in candidates:
+            return remembered
+        self._scope_focus_memory[scope_key] = None
+        return None
+
+    @staticmethod
+    def _is_screen_scope_target_occluded_by_window(node, scene) -> bool:
+        """Return True when a screen-scope node is covered by any visible enabled window."""
+        if scene is None:
+            return False
+        owner_window = FocusManager._find_ancestor_window(node)
+        if owner_window is not None:
+            return False
+        windows_provider = getattr(scene, "_window_nodes", None)
+        if windows_provider is None:
+            return False
+        for window in windows_provider():
+            if not (window.visible and window.enabled):
+                continue
+            if window.rect.colliderect(node.rect):
+                return True
+        return False
+
+    def _preferred_scope_entry_target(self, *, scene, window, candidates):
+        """Pick the initial focus target when entering a scope.
+
+        Prefers remembered targets when they are usable and visually reachable.
+        For screen scope, falls back to the first non-occluded candidate so the
+        focus hint can be seen after scope re-entry.
+        """
+        remembered = self._remembered_focus_for_scope(window=window, candidates=candidates)
+        if remembered is not None:
+            if window is not None or not self._is_screen_scope_target_occluded_by_window(remembered, scene):
+                return remembered
+
+        if window is None:
+            for candidate in candidates:
+                if not self._is_screen_scope_target_occluded_by_window(candidate, scene):
+                    return candidate
+
+        return candidates[0]
 
     def set_focus_by_id(self, scene, control_id: str) -> bool:
         """Find the first focusable node with *control_id* in *scene* and focus it.
@@ -170,7 +224,8 @@ class FocusManager:
         # This consumes the cycle key without advancing focus, so the next cycle event can move.
         if not hint_active:
             if focused is None or focused not in candidates:
-                self.set_focus(candidates[0], show_hint=True)
+                target = self._preferred_scope_entry_target(scene=scene, window=window, candidates=candidates)
+                self.set_focus(target, show_hint=True)
                 return True
             if self._visualizer is not None:
                 self._visualizer.refresh_focus_hint(focused)
@@ -178,8 +233,8 @@ class FocusManager:
 
         # Hint is active: cycle to the next/previous focus target.
         if focused is None or focused not in candidates:
-            next_index = 0 if forward else (len(candidates) - 1)
-            self.set_focus(candidates[next_index], show_hint=True)
+            target = self._preferred_scope_entry_target(scene=scene, window=window, candidates=candidates)
+            self.set_focus(target, show_hint=True)
             return True
 
         current_index = candidates.index(focused)

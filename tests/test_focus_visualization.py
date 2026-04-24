@@ -10,6 +10,7 @@ from gui.core.focus_visualizer import FocusVisualizer
 from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 from gui.core.focus_manager import FocusManager
 from gui.core.ui_node import UiNode
+from gui.core.scene import Scene
 from gui.theme.color_theme import ColorTheme
 
 
@@ -222,6 +223,94 @@ class FocusVisualizerEdgeCasesTests(unittest.TestCase):
         self.visualizer.set_focus_hint(n3)
         self.assertIs(self.visualizer._current_hint_node, n3)
         # n2 is gone, no previous_hint_node tracking
+
+
+class SceneFocusHintOrderingTests(unittest.TestCase):
+    """Regression tests for scene-ordered hint rendering."""
+
+    def test_scene_draw_calls_hint_draw_after_each_visible_root(self) -> None:
+        surface = pygame.Surface((320, 240))
+        theme = ColorTheme()
+        call_order = []
+
+        class _RecordingNode(UiNode):
+            def __init__(self, control_id: str, rect: Rect, marker: str) -> None:
+                super().__init__(control_id, rect)
+                self.marker = marker
+
+            def draw(self, _surface, _theme) -> None:
+                call_order.append(f"draw:{self.marker}")
+
+        root_a = _RecordingNode("root_a", Rect(0, 0, 40, 40), "a")
+        root_b = _RecordingNode("root_b", Rect(50, 0, 40, 40), "b")
+
+        visualizer = MagicMock()
+        visualizer.draw_hint_for_scene_root.side_effect = lambda *_args: call_order.append("hint")
+        app = SimpleNamespace(focus_visualizer=visualizer)
+
+        scene = Scene()
+        scene.add(root_a)
+        scene.add(root_b)
+        scene.draw(surface, theme, app=app)
+
+        self.assertEqual(call_order, ["draw:a", "hint", "draw:b", "hint"])
+
+
+class FocusHintWindowOcclusionTests(unittest.TestCase):
+    """Hints should not render above topmost windows that occlude the target."""
+
+    def test_hint_skips_when_top_window_covers_target_center(self) -> None:
+        class _WindowStub(UiNode):
+            def is_window(self) -> bool:
+                return True
+
+        scene = Scene()
+        target = UiNode("target", Rect(40, 40, 20, 20))
+        window = _WindowStub("win", Rect(0, 0, 120, 120))
+        scene.add(target)
+        scene.add(window)  # topmost, covers target center
+
+        app = SimpleNamespace(scene=scene)
+        visualizer = FocusVisualizer(app)
+        visualizer.set_focus_hint(target)
+
+        surface = pygame.Surface((160, 120))
+        theme = ColorTheme()
+        with patch("pygame.draw.line") as mock_line:
+            visualizer.draw_hints(surface, theme)
+            mock_line.assert_not_called()
+
+    def test_hint_partially_draws_when_window_only_covers_part_of_target(self) -> None:
+        class _WindowStub(UiNode):
+            def is_window(self) -> bool:
+                return True
+
+        target = UiNode("target", Rect(40, 40, 20, 20))
+        theme = ColorTheme()
+        surface = pygame.Surface((160, 120))
+
+        scene_no_window = Scene()
+        scene_no_window.add(target)
+        visualizer_no_window = FocusVisualizer(SimpleNamespace(scene=scene_no_window))
+        visualizer_no_window.set_focus_hint(target)
+        with patch("pygame.draw.line") as full_draw_mock:
+            visualizer_no_window.draw_hints(surface, theme)
+            full_count = full_draw_mock.call_count
+
+        scene_partial_window = Scene()
+        target_partial = UiNode("target_partial", Rect(40, 40, 20, 20))
+        partial_window = _WindowStub("win", Rect(52, 0, 120, 120))
+        scene_partial_window.add(target_partial)
+        scene_partial_window.add(partial_window)
+        visualizer_partial = FocusVisualizer(SimpleNamespace(scene=scene_partial_window))
+        visualizer_partial.set_focus_hint(target_partial)
+        with patch("pygame.draw.line") as partial_draw_mock:
+            visualizer_partial.draw_hints(surface, theme)
+            partial_count = partial_draw_mock.call_count
+
+        self.assertGreater(full_count, 0)
+        self.assertGreater(partial_count, 0)
+        self.assertLess(partial_count, full_count)
 
 
 if __name__ == "__main__":

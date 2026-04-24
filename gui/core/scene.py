@@ -136,7 +136,9 @@ class Scene:
                 return node
         return None
 
-    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication" | None = None) -> None:
         for node in self.nodes:
             if node.visible:
                 node.draw(surface, theme)
+                if app is not None:
+                    app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)

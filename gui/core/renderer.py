@@ -17,10 +17,7 @@ class Renderer:
                 surface.blit(scaled, (0, 0))
         if app is not None:
             app.draw_screen_parts(surface, theme)
-        scene.draw(surface, theme)
-        # Draw focus visualization (dashed rectangles) after scene, before cursor
-        if app is not None:
-            app.focus_visualizer.draw_hints(surface, theme)
+        scene.draw(surface, theme, app=app)
         if app is None:
             return
         cursor_asset = app.get_active_cursor()

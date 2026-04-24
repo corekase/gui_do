@@ -385,14 +385,8 @@ class GuiApplication:
         logical_event = self._logicalize_pointer_event(gui_event)
 
         if logical_event.is_mouse_down(1):
-            pos = logical_event.pos
-            if isinstance(pos, tuple) and len(pos) == 2:
-                if not self.scene._point_in_window(pos) and not self.scene._point_in_task_panel(pos):
-                    # Click outside any window: move focus to the screen lifecycle if not already there.
-                    if self.focus.focused_node is not None:
-                        self.focus.clear_focus()
             # Mouse click focus: only change focus when a valid mouse-focus target exists.
-            # This keeps informational widgets (e.g. labels) from clearing active focus.
+            # Background clicks intentionally do not mutate focus state.
             target = self.scene.top_focus_target_at(logical_event.pos)
             if target is not None:
                 self.focus.set_focus(target, show_hint=False)

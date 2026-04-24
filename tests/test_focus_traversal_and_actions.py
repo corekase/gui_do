@@ -4,6 +4,7 @@ import pygame
 from pygame import Rect, Surface
 
 from gui.app.gui_application import GuiApplication
+from gui.controls.button_group_control import ButtonGroupControl
 from gui.controls.panel_control import PanelControl
 from gui.controls.window_control import WindowControl
 from gui.core.ui_node import UiNode
@@ -118,6 +119,168 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
 
             self.assertIsNone(app.focus.focused_node)
         finally:
+            pygame.quit()
+
+    def test_focus_scope_switch_restores_previous_window_and_screen_targets(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+
+            screen_first = root.add(_FocusableProbe("screen_first", Rect(5, 5, 40, 20), tab_index=0))
+            screen_second = root.add(_FocusableProbe("screen_second", Rect(50, 5, 40, 20), tab_index=1))
+
+            win = root.add(WindowControl("win", Rect(10, 30, 240, 140), "Win"))
+            win_first = win.add(_FocusableProbe("win_first", Rect(20, 40, 80, 20), tab_index=0))
+            win_second = win.add(_FocusableProbe("win_second", Rect(20, 70, 80, 20), tab_index=1))
+            win.active = True
+
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_first)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_second)
+
+            win.active = False
+            app.update(0.016)
+            self.assertIsNone(app.focus.focused_node)
+
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_first)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_second)
+
+            win.active = True
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_second)
+
+            win.active = False
+            app.update(0.016)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_second)
+        finally:
+            pygame.quit()
+
+    def test_screen_scope_memory_restored_after_mouse_click_outside_window(self) -> None:
+        """Clicking on screen background (outside window) then Tab restores last screen-scope focus."""
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((400, 300)))
+            root = app.add(PanelControl("root", Rect(0, 0, 400, 300)))
+
+            # Screen-level controls at the top of the surface
+            screen_first = root.add(_FocusableProbe("screen_first", Rect(5, 5, 40, 20), tab_index=0))
+            screen_second = root.add(_FocusableProbe("screen_second", Rect(50, 5, 40, 20), tab_index=1))
+
+            # Window occupying a lower region that doesn't overlap the background click target
+            win = root.add(WindowControl("win", Rect(10, 50, 240, 200), "Win"))
+            win_first = win.add(_FocusableProbe("win_first", Rect(20, 70, 80, 20), tab_index=0))
+            win.add(_FocusableProbe("win_second", Rect(20, 100, 80, 20), tab_index=1))
+
+            # Tab to screen_second so screen-scope memory is set
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_first)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_second)
+
+            # Activate window via mouse click on its interior (but not on a focusable probe)
+            # Win rect is Rect(10, 50, 240, 200) - titlebar area around (10, 55)
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (15, 55)}))
+            self.assertTrue(win.active)
+
+            # Tab within window scope
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_first)
+
+            # Click on screen background (outside window rect) — position (350, 10) has nothing
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (350, 10)}))
+            self.assertFalse(win.active)
+            self.assertIs(app.focus.focused_node, win_first)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+
+            # Tab should restore the last screen-scope focus (screen_second)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_second)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+        finally:
+            pygame.quit()
+
+    def test_screen_button_group_memory_restored_after_exiting_window_scope(self) -> None:
+        """Returning from a window scope restores a remembered screen-level ButtonGroup target."""
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((420, 280)))
+            root = app.add(PanelControl("root", Rect(0, 0, 420, 280)))
+
+            screen_btn = root.add(_FocusableProbe("screen_btn", Rect(10, 10, 60, 22), tab_index=0))
+            screen_group_a = root.add(ButtonGroupControl("screen_group_a", Rect(90, 10, 70, 24), "screen_g", "A", selected=True))
+            screen_group_b = root.add(ButtonGroupControl("screen_group_b", Rect(170, 10, 70, 24), "screen_g", "B", selected=False))
+            screen_group_a.set_tab_index(1)
+            screen_group_b.set_tab_index(2)
+
+            win = root.add(WindowControl("styles_like_win", Rect(20, 60, 300, 200), "Styles"))
+            win_probe = win.add(_FocusableProbe("win_probe", Rect(40, 90, 100, 24), tab_index=0))
+
+            # Seed screen scope memory on the ButtonGroup target.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_btn)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_group_a)
+
+            # Enter window lifecycle and focus inside the window.
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": win.title_bar_rect().center}))
+            self.assertTrue(win.active)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_probe)
+
+            # Exit to screen lifecycle with a background click (outside any focusable object).
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (390, 20)}))
+            self.assertFalse(win.active)
+
+            # First Tab should resume screen lifecycle at remembered ButtonGroup target.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_group_a)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+        finally:
+            ButtonGroupControl.clear_group_registry()
+            pygame.quit()
+
+    def test_screen_scope_entry_skips_remembered_target_occluded_by_visible_window(self) -> None:
+        """Screen-scope entry should prefer a non-occluded target so hint is visible."""
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((420, 280)))
+            root = app.add(PanelControl("root", Rect(0, 0, 420, 280)))
+
+            screen_visible = root.add(_FocusableProbe("screen_visible", Rect(10, 10, 70, 24), tab_index=0))
+            screen_occluded = root.add(ButtonGroupControl("screen_occluded", Rect(120, 80, 90, 24), "screen_g2", "Occluded", selected=True))
+            screen_occluded.set_tab_index(1)
+
+            win = root.add(WindowControl("styles_like_win", Rect(100, 60, 260, 180), "Styles"))
+            win_probe = win.add(_FocusableProbe("win_probe", Rect(130, 90, 100, 24), tab_index=0))
+
+            # Seed screen scope memory on the occluded screen control.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_visible)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_occluded)
+
+            # Enter window lifecycle and focus inside window scope.
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": win.title_bar_rect().center}))
+            self.assertTrue(win.active)
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, win_probe)
+
+            # Exit to screen lifecycle; window remains visible and still covers screen_occluded.
+            app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 1, "pos": (390, 20)}))
+            self.assertFalse(win.active)
+            self.assertTrue(win.visible)
+
+            # First Tab should pick the visible screen target, not the occluded remembered one.
+            app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            self.assertIs(app.focus.focused_node, screen_visible)
+            self.assertTrue(app.focus_visualizer.has_active_hint())
+        finally:
+            ButtonGroupControl.clear_group_registry()
             pygame.quit()
 
     def test_bound_action_executes_before_screen_handler(self) -> None:
