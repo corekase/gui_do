@@ -104,6 +104,8 @@ class GuiApplication:
         self.running = True
         self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
+        self._pending_warp_target = None
+        self._pending_warp_ignore_budget = 0
         self.mouse_point_locked = False
         self.lock_point_pos = None
         self.locking_object = None
@@ -323,7 +325,51 @@ class GuiApplication:
             self.input_state.pointer_pos = self._logical_pointer_pos
             gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
         raw_pos = gui_event.pos
-        if isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+        if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
+            self._pending_warp_target = None
+            self._pending_warp_ignore_budget = 0
+
+        if (
+            gui_event.kind == EventType.MOUSE_MOTION
+            and self.pointer_capture.lock_rect is not None
+            and self.pointer_capture.use_relative_motion
+            and isinstance(gui_event.rel, tuple)
+            and len(gui_event.rel) == 2
+        ):
+            # During active pointer capture, treat logical cursor as a virtual cursor
+            # advanced by deltas and clamped by lock bounds. This avoids raw absolute
+            # overshoot movement debt while retaining lock-rect constraints.
+            self._logical_pointer_pos = (
+                int(self._logical_pointer_pos[0]) + int(gui_event.rel[0]),
+                int(self._logical_pointer_pos[1]) + int(gui_event.rel[1]),
+            )
+        elif (
+            gui_event.kind == EventType.MOUSE_BUTTON_UP
+            and self.pointer_capture.lock_rect is not None
+            and self.pointer_capture.use_relative_motion
+        ):
+            # In relative-motion capture mode, hardware cursor may be physically
+            # offset from logical drag position. Keep logical position stable on
+            # release so controls do not jump on drag-end.
+            self._logical_pointer_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
+        elif gui_event.kind == EventType.MOUSE_MOTION and self._pending_warp_target is not None and isinstance(raw_pos, tuple) and len(raw_pos) == 2:
+            tx, ty = int(self._pending_warp_target[0]), int(self._pending_warp_target[1])
+            rx, ry = int(raw_pos[0]), int(raw_pos[1])
+            # After a release-time cursor warp, OS/event queues may emit several stale
+            # absolute positions. Keep logical pointer pinned to the warp target
+            # until packets converge (or budget expires) so no position debt accrues.
+            if abs(rx - tx) <= 1 and abs(ry - ty) <= 1:
+                self._pending_warp_target = None
+                self._pending_warp_ignore_budget = 0
+                self._logical_pointer_pos = (rx, ry)
+            elif self._pending_warp_ignore_budget > 0:
+                self._pending_warp_ignore_budget -= 1
+                self._logical_pointer_pos = (tx, ty)
+            else:
+                self._pending_warp_target = None
+                self._pending_warp_ignore_budget = 0
+                self._logical_pointer_pos = (rx, ry)
+        elif isinstance(raw_pos, tuple) and len(raw_pos) == 2:
             self._logical_pointer_pos = (int(raw_pos[0]), int(raw_pos[1]))
         if self.lock_area is not None:
             self._logical_pointer_pos = self._clamp_to_rect(self._logical_pointer_pos, self.lock_area)
@@ -556,6 +602,35 @@ class GuiApplication:
     @property
     def logical_pointer_pos(self):
         return self._logical_pointer_pos
+
+    def set_logical_pointer_position(self, pos, *, apply_constraints: bool = True) -> None:
+        """Set logical pointer position and input state pointer in one place."""
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return
+        logical = (int(pos[0]), int(pos[1]))
+        if apply_constraints:
+            if self.lock_area is not None:
+                logical = self._clamp_to_rect(logical, self.lock_area)
+            if self.pointer_capture.lock_rect is not None:
+                logical = self.pointer_capture.clamp(logical)
+        self._logical_pointer_pos = logical
+        self.input_state.pointer_pos = logical
+        self._last_dispatched_pointer_pos = logical
+
+    def sync_pointer_to_logical_position(self, pos) -> None:
+        """Align both logical pointer state and hidden hardware cursor."""
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return
+        logical = (int(pos[0]), int(pos[1]))
+        # Release uses final in-drag logical position as source of truth.
+        self.set_logical_pointer_position(logical, apply_constraints=False)
+        self._pending_warp_target = logical
+        # Ignore a short burst of stale absolute packets after warp.
+        self._pending_warp_ignore_budget = 8
+        try:
+            pygame.mouse.set_pos(logical)
+        except Exception:
+            pass
 
     def _logicalize_pointer_event(self, event):
         if not event.is_kind(EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):

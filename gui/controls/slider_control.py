@@ -43,6 +43,9 @@ class SliderControl(UiNode):
         self.dragging = False
         self.handle_size = 16
         self._drag_anchor_offset = 0
+        self._drag_handle_axis_pixel = 0
+        self._programmatic_change_epoch = 0
+        self._drag_start_programmatic_epoch = 0
         self._track_visuals = None
         self._handle_visuals = None
         self._track_visuals_size = None
@@ -127,13 +130,15 @@ class SliderControl(UiNode):
         self.value = float(new_value)
         self._clamp_value()
         changed = self.value != old_value
+        if changed and reason == ValueChangeReason.PROGRAMMATIC:
+            self._programmatic_change_epoch += 1
         if changed:
             dispatch_value_change(self.on_change, self.value, reason, mode=self.on_change_mode)
         return changed
 
     def handle_rect(self) -> Rect:
         self._normalize_range()
-        pixel = self._to_pixel(self.value)
+        pixel = self._drag_handle_axis_pixel if self.dragging else self._to_pixel(self.value)
         if self.axis == LayoutAxis.HORIZONTAL:
             return Rect(pixel - (self.handle_size // 2), self.rect.centery - (self.handle_size // 2), self.handle_size, self.handle_size)
         return Rect(self.rect.centerx - (self.handle_size // 2), pixel - (self.handle_size // 2), self.handle_size, self.handle_size)
@@ -141,12 +146,51 @@ class SliderControl(UiNode):
     def _build_lock_rect(self, pointer_pos) -> Rect:
         travel = self._travel_rect()
         if self.axis == LayoutAxis.HORIZONTAL:
-            return Rect(travel.left, pointer_pos[1], travel.width + 1, 1)
-        return Rect(pointer_pos[0], travel.top, 1, travel.height + 1)
+            min_pointer = travel.left + self._drag_anchor_offset - (self.handle_size // 2)
+            max_pointer = travel.right + self._drag_anchor_offset - (self.handle_size // 2)
+            return Rect(min_pointer, pointer_pos[1], max(1, (max_pointer - min_pointer) + 1), 1)
+        min_pointer = travel.top + self._drag_anchor_offset - (self.handle_size // 2)
+        max_pointer = travel.bottom + self._drag_anchor_offset - (self.handle_size // 2)
+        return Rect(pointer_pos[0], min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
+
+    def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos) -> Optional[Rect]:
+        if app.lock_area is None:
+            return None
+        lock = Rect(app.lock_area)
+        if self.axis == LayoutAxis.HORIZONTAL:
+            # Keep pointer/anchor relationship stable while enforcing lock-area limits
+            # for the full handle footprint.
+            min_pointer = int(lock.left + self._drag_anchor_offset)
+            max_pointer = int((lock.right - self.handle_size) + self._drag_anchor_offset)
+            if max_pointer < min_pointer:
+                max_pointer = min_pointer
+            return Rect(min_pointer, int(pointer_pos[1]), max(1, (max_pointer - min_pointer) + 1), 1)
+        min_pointer = int(lock.top + self._drag_anchor_offset)
+        max_pointer = int((lock.bottom - self.handle_size) + self._drag_anchor_offset)
+        if max_pointer < min_pointer:
+            max_pointer = min_pointer
+        return Rect(int(pointer_pos[0]), min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
+
+    def _refresh_drag_lock_rect(self, app: "GuiApplication", pointer_pos) -> None:
+        lock_rect = self._build_lock_rect(pointer_pos)
+        axis_lock = self._lock_area_axis_rect(app, pointer_pos)
+        if axis_lock is not None:
+            clipped = lock_rect.clip(axis_lock)
+            if clipped.width > 0 and clipped.height > 0:
+                lock_rect = clipped
+            else:
+                lock_rect = axis_lock
+        app.pointer_capture.lock_rect = Rect(lock_rect)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             if self.dragging and app.pointer_capture.is_owned_by(self.control_id):
+                app.pointer_capture.end(self.control_id)
+            self.dragging = False
+            return False
+
+        if self.dragging and self._drag_start_programmatic_epoch != self._programmatic_change_epoch:
+            if app.pointer_capture.is_owned_by(self.control_id):
                 app.pointer_capture.end(self.control_id)
             self.dragging = False
             return False
@@ -177,32 +221,74 @@ class SliderControl(UiNode):
             if event.is_key_down(pygame.K_UP):
                 return self._set_value(self.value + step, reason=ValueChangeReason.KEYBOARD)
 
-        raw = event.pos
+        pointer = app.logical_pointer_pos
         if event.is_mouse_down(1):
-            if isinstance(raw, tuple) and len(raw) == 2 and self.handle_rect().collidepoint(raw):
+            if isinstance(pointer, tuple) and len(pointer) == 2 and self.handle_rect().collidepoint(pointer):
                 handle = self.handle_rect()
                 if self.axis == LayoutAxis.HORIZONTAL:
-                    self._drag_anchor_offset = raw[0] - handle.x
+                    self._drag_anchor_offset = pointer[0] - handle.x
                 else:
-                    self._drag_anchor_offset = raw[1] - handle.y
-                app.pointer_capture.begin(self.control_id, self._build_lock_rect(raw))
+                    self._drag_anchor_offset = pointer[1] - handle.y
+                self._refresh_drag_lock_rect(app, pointer)
+                app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
+                pointer_pos = app.logical_pointer_pos
+                pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+                self._drag_handle_axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
+                self._drag_start_programmatic_epoch = self._programmatic_change_epoch
                 self.dragging = True
                 return True
 
         if event.is_mouse_motion() and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
-            pos = app.pointer_capture.clamp(app.input_state.pointer_pos)
-            if self.axis == LayoutAxis.HORIZONTAL:
-                axis_pixel = pos[0] - self._drag_anchor_offset + (self.handle_size // 2)
+            pointer_pos = app.logical_pointer_pos
+            self._refresh_drag_lock_rect(app, pointer_pos)
+            lock = app.pointer_capture.lock_rect
+            if lock is not None:
+                if self.axis == LayoutAxis.HORIZONTAL:
+                    pointer_axis = min(max(int(pointer_pos[0]), lock.left), lock.right - 1)
+                    pointer_pos = (int(pointer_axis), int(lock.top))
+                else:
+                    pointer_axis = min(max(int(pointer_pos[1]), lock.top), lock.bottom - 1)
+                    pointer_pos = (int(lock.left), int(pointer_axis))
+                # Keep rendered cursor anchored without warping hardware every motion event.
+                app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
-                axis_pixel = pos[1] - self._drag_anchor_offset + (self.handle_size // 2)
+                pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+            axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
+            travel = self._travel_rect()
+            if self.axis == LayoutAxis.HORIZONTAL:
+                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.left), travel.right)
+            else:
+                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.top), travel.bottom)
             return self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
+            pointer_pos = app.logical_pointer_pos
+            self._refresh_drag_lock_rect(app, pointer_pos)
+            lock = app.pointer_capture.lock_rect
+            if lock is not None:
+                if self.axis == LayoutAxis.HORIZONTAL:
+                    pointer_axis = min(max(int(pointer_pos[0]), lock.left), lock.right - 1)
+                    pointer_pos = (int(pointer_axis), int(lock.top))
+                else:
+                    pointer_axis = min(max(int(pointer_pos[1]), lock.top), lock.bottom - 1)
+                    pointer_pos = (int(lock.left), int(pointer_axis))
+                app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
+            else:
+                pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+            axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
+            travel = self._travel_rect()
+            if self.axis == LayoutAxis.HORIZONTAL:
+                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.left), travel.right)
+            else:
+                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.top), travel.bottom)
+            self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
+            release_pos = app.logical_pointer_pos
             self.dragging = False
             app.pointer_capture.end(self.control_id)
+            app.sync_pointer_to_logical_position(release_pos)
             return True
 
-        if event.is_mouse_wheel() and self.rect.collidepoint(app.input_state.pointer_pos):
+        if event.is_mouse_wheel() and self.rect.collidepoint(app.logical_pointer_pos):
             return self._set_value(
                 self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)),
                 reason=ValueChangeReason.WHEEL,

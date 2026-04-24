@@ -9,16 +9,18 @@ class PointerCapture:
     def __init__(self) -> None:
         self.owner_id: Optional[str] = None
         self.lock_rect: Optional[Rect] = None
+        self.use_relative_motion: bool = False
 
     @property
     def is_active(self) -> bool:
         """Return True when pointer capture is currently owned by any owner."""
         return self.owner_id is not None
 
-    def begin(self, owner_id: str, lock_rect: Rect) -> None:
+    def begin(self, owner_id: str, lock_rect: Rect, use_relative_motion: bool = False) -> None:
         """Begin pointer capture for one owner within lock rect bounds."""
         self.owner_id = owner_id
         self.lock_rect = Rect(lock_rect)
+        self.use_relative_motion = bool(use_relative_motion)
 
     def end(self, owner_id: str) -> None:
         """End pointer capture for owner if currently active."""
@@ -26,6 +28,7 @@ class PointerCapture:
             return
         self.owner_id = None
         self.lock_rect = None
+        self.use_relative_motion = False
 
     def force_release(self) -> Optional[str]:
         """Release pointer capture unconditionally regardless of owner.
@@ -35,6 +38,7 @@ class PointerCapture:
         previous = self.owner_id
         self.owner_id = None
         self.lock_rect = None
+        self.use_relative_motion = False
         return previous
 
     def is_owned_by(self, owner_id: str) -> bool:
