@@ -118,6 +118,52 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         self.assertIs(self.app.focus.focused_node, self.button1)
         self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
+    def test_space_activation_resets_hint_timer_so_subsequent_space_shows_hint(self) -> None:
+        """Space activation on a focused button must restart the hint timer.
+
+        The hint should still be active immediately after activation, and a
+        second Space before the timeout fires should again be visible (i.e. the
+        elapsed counter was reset, not left advancing from before the first press).
+        """
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Advance time so hint would expire without a reset.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS * 0.9)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Space activates the button; should reset the timer.
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Advance past what would have been the original expiry — hint is still live.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS * 0.2)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_space_activation_resets_cycle_mode_so_next_tab_shows_hint_first(self) -> None:
+        """After Tab-cycling then Space-activating, the next Tab must re-apply the
+        initiation gate: it shows the hint on the current node rather than cycling."""
+        # Tab once to show hint, Tab again to cycle to button2.
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button2)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Space activates button2 — continuous-cycle mode must be reset.
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_SPACE}))
+        self.assertIs(self.app.focus.focused_node, self.button2)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Allow hint to expire.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
+
+        # Next Tab must show hint on button2 (initiation gate), not advance to button1.
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button2)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
     def test_titlebar_click_does_not_focus_screen_control_under_window(self) -> None:
         """Mouse focus selection must not fall through top window titlebar to screen controls."""
         app = GuiApplication(Surface((400, 300)))

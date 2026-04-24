@@ -122,7 +122,11 @@ class FocusManager:
         if not self._is_focus_window_context_valid(target):
             self.clear_focus()
             return False
+        # Any routed keyboard event re-arms the hint display and resets continuous-cycle
+        # mode so the next Tab applies the initiation gate (show hint before cycling).
         self._hint_visible = True
+        self._hint_elapsed_seconds = 0.0
+        self._continuous_tab_cycle = False
         if self._try_activate_focused_button(event, app, target):
             return True
         return bool(target.handle_event(event, app))
