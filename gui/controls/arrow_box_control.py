@@ -15,7 +15,11 @@ if TYPE_CHECKING:
 
 
 class ArrowBoxControl(UiNode):
-    """Arrow button with optional repeat activation while held."""
+    """Arrow button with optional repeat activation while held.
+
+    Direction is accepted in true mathematical degrees:
+    0=right, 90=up, 180=left, 270=down.
+    """
 
     def __init__(
         self,
@@ -93,9 +97,10 @@ class ArrowBoxControl(UiNode):
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
-        visual_key = (self.rect.width, self.rect.height, int(self.direction) % 360)
+        render_direction = int(self.direction) % 360
+        visual_key = (self.rect.width, self.rect.height, render_direction)
         if self._visuals is None or self._visual_key != visual_key:
-            self._visuals = factory.draw_arrow_visuals(self.rect, self.direction)
+            self._visuals = factory.draw_arrow_visuals(self.rect, render_direction)
             self._visual_key = visual_key
         hovered = self._hovered
         selected = factory.resolve_visual_state(

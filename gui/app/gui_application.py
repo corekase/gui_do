@@ -30,6 +30,11 @@ from ..controls.canvas_control import CanvasControl
 from ..controls.slider_control import SliderControl
 from ..controls.toggle_control import ToggleControl
 from ..controls.button_group_control import ButtonGroupControl
+from ..controls.arrow_box_control import ArrowBoxControl
+from ..controls.frame_control import FrameControl
+from ..controls.image_control import ImageControl
+from ..controls.scrollbar_control import ScrollbarControl
+from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
 from shared.part_lifecycle import PartManager
 
@@ -44,6 +49,11 @@ class PartUiTypes:
     toggle_control_cls: type
     layout_axis_cls: type
     button_group_control_cls: type
+    arrow_box_control_cls: type
+    frame_control_cls: type
+    image_control_cls: type
+    scrollbar_control_cls: type
+    panel_control_cls: type
 
 
 class GuiApplication:
@@ -84,6 +94,11 @@ class GuiApplication:
             toggle_control_cls=ToggleControl,
             layout_axis_cls=LayoutAxis,
             button_group_control_cls=ButtonGroupControl,
+            arrow_box_control_cls=ArrowBoxControl,
+            frame_control_cls=FrameControl,
+            image_control_cls=ImageControl,
+            scrollbar_control_cls=ScrollbarControl,
+            panel_control_cls=PanelControl,
         )
         self.parts = PartManager(self)
         self.running = True

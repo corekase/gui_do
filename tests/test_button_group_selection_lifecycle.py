@@ -46,6 +46,17 @@ class ButtonGroupSelectionLifecycleTests(unittest.TestCase):
         self.assertFalse(second.pushed)
         self.assertEqual(ButtonGroupControl._selection_by_group.get("g"), "a")
 
+    def test_stale_group_mapping_does_not_block_first_added_auto_selection(self) -> None:
+        ButtonGroupControl._selection_by_group["g"] = "stale-id"
+        panel = PanelControl("panel", Rect(0, 0, 200, 100))
+
+        first = panel.add(ButtonGroupControl("a", Rect(0, 0, 40, 20), group="g", text="A", selected=False))
+        second = panel.add(ButtonGroupControl("b", Rect(50, 0, 40, 20), group="g", text="B", selected=False))
+
+        self.assertTrue(first.pushed)
+        self.assertFalse(second.pushed)
+        self.assertEqual(ButtonGroupControl._selection_by_group.get("g"), "a")
+
 
 if __name__ == "__main__":
     unittest.main()

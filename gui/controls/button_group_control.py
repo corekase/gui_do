@@ -64,6 +64,11 @@ class ButtonGroupControl(ToggleControl):
             return
 
         selected_id = ButtonGroupControl._selection_by_group.get(self.group)
+        if selected_id is not None and not self._group_peer_exists_in_nodes([_parent], selected_id):
+            # Ignore stale registry entries from prior scenes/apps.
+            ButtonGroupControl._selection_by_group.pop(self.group, None)
+            selected_id = None
+
         if self.pushed:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
             self._clear_peer_selection_from_nodes([_parent])
@@ -139,6 +144,12 @@ class ButtonGroupControl(ToggleControl):
             if isinstance(node, ButtonGroupControl) and node.group == self.group and node.control_id != self.control_id:
                 return node
         return None
+
+    def _group_peer_exists_in_nodes(self, nodes, control_id: str) -> bool:
+        for node in self._walk_nodes(nodes):
+            if isinstance(node, ButtonGroupControl) and node.group == self.group and node.control_id == control_id:
+                return True
+        return False
 
     def _clear_peer_selection_from_nodes(self, nodes) -> None:
         for node in self._walk_nodes(nodes):

@@ -76,6 +76,17 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
         self.assertFalse(control._hovered)
         self.assertFalse(control._pressed)
 
+    def test_disabled_visual_includes_arrow_glyph(self) -> None:
+        rect = Rect(0, 0, 40, 30)
+        factory = self.app.theme.graphics_factory
+        arrow_visuals = factory.draw_arrow_visuals(rect, 0)
+        frame_visuals = factory.build_frame_visuals(rect)
+
+        # Regression guard: disabled arrow visuals must not be frame-only.
+        arrow_disabled = pygame.image.tobytes(arrow_visuals.disabled, "RGBA")
+        frame_disabled = pygame.image.tobytes(frame_visuals.disabled, "RGBA")
+        self.assertNotEqual(arrow_disabled, frame_disabled)
+
 
 if __name__ == "__main__":
     unittest.main()

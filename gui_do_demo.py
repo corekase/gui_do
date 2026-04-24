@@ -3,6 +3,7 @@ from pygame import Rect
 from demo_parts.mandelbrot_demo_part import MandelbrotLogicPart, MandelbrotRenderFeature
 from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
 from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
+from demo_parts.controls_demo_part import ControlsShowcasePart
 from demo_parts.styles_demo_part import StylesShowcaseFeature
 
 from gui import (
@@ -46,6 +47,7 @@ class GuiDoDemo:
         self._life_logic_feature = LifeSimulationLogicPart()
         self._life_feature = LifeSimulationFeature()
         self._styles_feature = StylesShowcaseFeature()
+        self._controls_feature = ControlsShowcasePart()
         self._mandel_logic_primary = MandelbrotLogicPart("mandelbrot_logic_primary")
         self._mandel_logic_can1 = MandelbrotLogicPart("mandelbrot_logic_can1")
         self._mandel_logic_can2 = MandelbrotLogicPart("mandelbrot_logic_can2")
@@ -57,6 +59,7 @@ class GuiDoDemo:
             self._life_logic_feature,
             self._life_feature,
             self._styles_feature,
+            self._controls_feature,
             self._mandel_logic_primary,
             self._mandel_logic_can1,
             self._mandel_logic_can2,

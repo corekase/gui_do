@@ -358,4 +358,6 @@ class BuiltInGraphicsFactory:
         glyph_y = self._centre(rect.height, size)
         for surf in (visuals.idle, visuals.hover, visuals.armed):
             surf.blit(glyph, (glyph_x, glyph_y))
+        # Disabled state should include the arrow glyph as a dimmed variant of idle.
+        visuals.disabled = self.build_disabled_bitmap(visuals.idle)
         return visuals
