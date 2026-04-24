@@ -21,6 +21,7 @@ class InteractiveVisuals:
     hover: Surface
     armed: Surface
     disabled: Surface
+    disabled_armed: Surface
     hidden: Surface
     hit_rect: Rect
 
@@ -100,7 +101,7 @@ class BuiltInGraphicsFactory:
         if not visible:
             return visuals.hidden
         if not enabled:
-            return visuals.disabled
+            return visuals.disabled_armed if armed else visuals.disabled
         if armed:
             return visuals.armed
         if hovered:
@@ -249,8 +250,9 @@ class BuiltInGraphicsFactory:
             armed = self._draw_built_in_button_surface(text, rect, "armed", font_role=font_role, highlight=True)
 
         disabled = self.build_disabled_bitmap(idle)
+        disabled_armed = self.build_disabled_bitmap(armed)
         hidden = self.build_hidden_bitmap((idle.get_width(), idle.get_height()))
-        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, hidden=hidden, hit_rect=Rect(rect))
+        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
     def build_toggle_visuals(self, style: str, pushed_text: str, raised_text: Optional[str], rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
         raised = pushed_text if raised_text is None else raised_text
@@ -261,6 +263,7 @@ class BuiltInGraphicsFactory:
             hover=idle_set.hover,
             armed=armed_set.armed,
             disabled=idle_set.disabled,
+            disabled_armed=armed_set.disabled_armed,
             hidden=idle_set.hidden,
             hit_rect=Rect(rect),
         )
@@ -274,8 +277,9 @@ class BuiltInGraphicsFactory:
         draw_box_bitmap(hover, "hover", Rect(0, 0, width, height), BUILT_IN_COLOURS)
         draw_box_bitmap(armed, "armed", Rect(0, 0, width, height), BUILT_IN_COLOURS)
         disabled = self.build_disabled_bitmap(idle)
+        disabled_armed = self.build_disabled_bitmap(armed)
         hidden = self.build_hidden_bitmap((width, height))
-        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, hidden=hidden, hit_rect=Rect(rect))
+        return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
     def draw_radio_bitmap(self, size: int, col1, col2) -> Surface:
         supersampled = Surface((400, 400), pygame.SRCALPHA).convert_alpha()

@@ -33,6 +33,9 @@ class ButtonGroupControl(ToggleControl):
         self.on_activate = on_activate
         if selected:
             ButtonGroupControl._selection_by_group[self.group] = self.control_id
+        elif self.group not in ButtonGroupControl._selection_by_group:
+            self.pushed = True
+            ButtonGroupControl._selection_by_group[self.group] = self.control_id
 
     def _invoke_activate(self) -> None:
         if self.on_activate is not None:
@@ -64,7 +67,7 @@ class ButtonGroupControl(ToggleControl):
             return
 
         selected_id = ButtonGroupControl._selection_by_group.get(self.group)
-        if selected_id is not None and not self._group_peer_exists_in_nodes([_parent], selected_id):
+        if selected_id is not None and selected_id != self.control_id and not self._group_peer_exists_in_nodes([_parent], selected_id):
             # Ignore stale registry entries from prior scenes/apps.
             ButtonGroupControl._selection_by_group.pop(self.group, None)
             selected_id = None
