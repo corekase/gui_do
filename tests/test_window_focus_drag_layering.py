@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import CanvasControl, GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
+from gui import ButtonControl, CanvasControl, GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
 
 
 class WindowFocusDragLayeringTest(unittest.TestCase):
@@ -222,6 +222,38 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         )
 
         self.assertTrue(win.active)
+
+
+    def test_background_click_moves_focus_to_screen_lifecycle(self) -> None:
+        win = self.root.add(WindowControl("win", Rect(80, 60, 180, 140), "A"))
+        btn = win.add(ButtonControl("btn", Rect(100, 90, 80, 30), "OK"))
+        btn.set_tab_index(0)
+        win.active = True
+        self.app.focus.set_focus(btn, show_hint=False)
+        self.assertIs(self.app.focus.focused_node, btn)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN,
+                {"pos": (10, 10), "button": 1},
+            )
+        )
+
+        self.assertIsNone(self.app.focus.focused_node)
+
+    def test_background_click_is_idempotent_when_focus_already_screen_lifecycle(self) -> None:
+        win = self.root.add(WindowControl("win", Rect(80, 60, 180, 140), "A"))
+        win.active = True
+        self.assertIsNone(self.app.focus.focused_node)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN,
+                {"pos": (10, 10), "button": 1},
+            )
+        )
+
+        self.assertIsNone(self.app.focus.focused_node)
 
 
 if __name__ == "__main__":
