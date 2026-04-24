@@ -34,6 +34,36 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         self.assertEqual(len(fired), 2)
         self.assertFalse(control.pressed)
 
+    def test_keyboard_activation_sets_cosmetic_focus_armed_until_shared_timeout(self) -> None:
+        fired = []
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))
+        control.set_tab_index(0)
+        self.app.focus.set_focus(control, show_hint=False)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(fired, [True])
+        self.assertTrue(control._focus_activation_armed)
+        self.assertFalse(control.pressed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(control._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(control._focus_activation_armed)
+
+    def test_focus_keyboard_activation_invokes_click_once_per_key_event(self) -> None:
+        fired = []
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append("hit")))
+        control.set_tab_index(0)
+        self.app.focus.set_focus(control)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(fired, ["hit"])
+
     def test_keyboard_activation_refreshes_focus_hint_with_shared_timeout(self) -> None:
         fired = []
         control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))

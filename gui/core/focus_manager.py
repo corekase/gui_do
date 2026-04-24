@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
+import pygame
+
+from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+
 if TYPE_CHECKING:
     from .focus_visualizer import FocusVisualizer
 
@@ -15,6 +19,8 @@ class FocusManager:
     def __init__(self, visualizer: Optional["FocusVisualizer"] = None) -> None:
         self._focused_node = None
         self._visualizer = visualizer
+        self._armed_focus_target = None
+        self._armed_focus_elapsed_seconds = 0.0
 
     @property
     def focused_node(self):
@@ -74,7 +80,54 @@ class FocusManager:
         if not self._is_focus_window_context_valid(target):
             self.clear_focus()
             return False
+        if self._try_activate_focused_button(event, app, target):
+            return True
         return bool(target.handle_event(event, app))
+
+    def update(self, dt_seconds: float) -> None:
+        """Advance focus-driven cosmetic states."""
+        if self._armed_focus_target is None:
+            return
+        if dt_seconds <= 0.0:
+            return
+
+        self._armed_focus_elapsed_seconds += float(dt_seconds)
+        if self._armed_focus_elapsed_seconds < FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS:
+            return
+
+        target = self._armed_focus_target
+        self._armed_focus_target = None
+        self._armed_focus_elapsed_seconds = 0.0
+        if hasattr(target, "end_focus_activation_visual"):
+            target.end_focus_activation_visual()
+
+    def _try_activate_focused_button(self, event, app, target) -> bool:
+        """Handle focused keyboard activation for push buttons in one place.
+
+        Activation still occurs exactly once here. The armed state is visual-only and
+        held for the shared focus-hint timeout.
+        """
+        if not (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
+            return False
+        if not hasattr(target, "begin_focus_activation_visual"):
+            return False
+        if not hasattr(target, "_invoke_click"):
+            return False
+
+        if getattr(app, "focus_visualizer", None) is not None:
+            app.focus_visualizer.refresh_focus_hint(target)
+        self._begin_focus_activation_visual(target)
+        target._invoke_click()
+        return True
+
+    def _begin_focus_activation_visual(self, target) -> None:
+        if self._armed_focus_target is not None and self._armed_focus_target is not target:
+            previous = self._armed_focus_target
+            if hasattr(previous, "end_focus_activation_visual"):
+                previous.end_focus_activation_visual()
+        self._armed_focus_target = target
+        self._armed_focus_elapsed_seconds = 0.0
+        target.begin_focus_activation_visual()
 
     @staticmethod
     def _is_descendant(node, ancestor) -> bool:

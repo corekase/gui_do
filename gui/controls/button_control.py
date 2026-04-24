@@ -32,6 +32,7 @@ class ButtonControl(UiNode):
         self.font_role = font_role
         self.hovered = False
         self.pressed = False
+        self._focus_activation_armed = False
         self._visuals = None
         self._visual_key = None
 
@@ -60,18 +61,35 @@ class ButtonControl(UiNode):
         if old_enabled != new_enabled:
             self.hovered = False
             self.pressed = False
+            self._focus_activation_armed = False
         super()._on_enabled_changed(old_enabled, new_enabled)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         if old_visible != new_visible:
             self.hovered = False
             self.pressed = False
+            self._focus_activation_armed = False
         super()._on_visibility_changed(old_visible, new_visible)
+
+    def begin_focus_activation_visual(self) -> None:
+        """Show a temporary armed visual after focus-driven activation."""
+        if self._focus_activation_armed:
+            return
+        self._focus_activation_armed = True
+        self.invalidate()
+
+    def end_focus_activation_visual(self) -> None:
+        """Clear temporary armed visual after focus activation hint timeout."""
+        if not self._focus_activation_armed:
+            return
+        self._focus_activation_armed = False
+        self.invalidate()
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             self.pressed = False
+            self._focus_activation_armed = False
             return False
 
         if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
@@ -110,7 +128,7 @@ class ButtonControl(UiNode):
             self._visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self.pressed and self.hovered,
+            armed=(self.pressed and self.hovered) or self._focus_activation_armed,
             hovered=self.hovered,
         )
         surface.blit(selected, self.rect)

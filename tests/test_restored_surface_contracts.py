@@ -26,6 +26,7 @@ from gui import (
     WindowControl,
     WindowTilingManager,
 )
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 from gui.core.ui_node import UiNode
 from shared.part_lifecycle import Part
 
@@ -431,6 +432,32 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
         self.assertTrue(control.handle_event(up, None))
         self.assertFalse(control.pressed)
         self.assertEqual(fired, [True])
+
+    def test_focus_key_activation_uses_visual_only_armed_state_for_shared_hint_time(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((220, 140)))
+            root = app.add(PanelControl("root", Rect(0, 0, 220, 140)))
+            fired = []
+            control = root.add(ButtonControl("b", Rect(10, 10, 80, 30), "B", on_click=lambda: fired.append("hit")))
+            control.set_tab_index(0)
+            app.focus.set_focus(control, show_hint=False)
+
+            consumed = app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+            self.assertTrue(consumed)
+            self.assertEqual(fired, ["hit"])
+            self.assertTrue(control._focus_activation_armed)
+            self.assertFalse(control.pressed)
+
+            app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+            self.assertTrue(control._focus_activation_armed)
+
+            app.update(0.02)
+            self.assertFalse(control._focus_activation_armed)
+            self.assertEqual(fired, ["hit"])
+        finally:
+            pygame.quit()
 
     def test_lock_point_dispatches_logical_pos_and_preserves_raw_pos(self) -> None:
         pygame.init()

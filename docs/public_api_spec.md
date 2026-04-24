@@ -87,6 +87,12 @@ Required event consumption patterns:
   - `event.raw_rel`
   - `event.wheel_delta`
 
+Focused button activation requirement:
+
+- When Enter/Space activates a focused `ButtonControl`, activation occurs once from the focus-key event path.
+- The button enters an armed visual state for `FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS`, then returns to idle automatically.
+- This armed transition is cosmetic-only and must not trigger a second activation callback.
+
 Raw `pygame` events are normalized only at ingress through `EventManager` and `GuiApplication.process_event`.
 
 See `docs/event_system_spec.md` for the detailed event object shape and dispatch flow.

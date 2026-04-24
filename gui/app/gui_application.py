@@ -259,6 +259,7 @@ class GuiApplication:
         if self._screen_lifecycle_active and self._screen_preamble is not None:
             self._screen_preamble()
         self.focus_visualizer.update(dt_seconds)
+        self.focus.update(dt_seconds)
         runtime = self._scenes[self._active_scene_name]
         runtime["timers"].update(dt_seconds)
         runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
