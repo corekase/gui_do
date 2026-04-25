@@ -261,7 +261,7 @@ class GuiApplication:
 
     def restore_pristine(self, scene_name: Optional[str] = None, surface: Optional[pygame.Surface] = None) -> bool:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        pristine = runtime.get("screen_pristine")
+        pristine = runtime["screen_pristine"]
         if pristine is None:
             return False
 
@@ -269,8 +269,8 @@ class GuiApplication:
         target_size = target.get_size()
         bitmap = pristine
         if pristine.get_size() != target_size:
-            cached = runtime.get("screen_pristine_scaled")
-            cached_size = runtime.get("screen_pristine_scaled_size", (0, 0))
+            cached = runtime["screen_pristine_scaled"]
+            cached_size = runtime["screen_pristine_scaled_size"]
             if cached is None or cached_size != target_size:
                 scale_start = perf_counter()
                 cached = pygame.transform.smoothscale(pristine, target_size)

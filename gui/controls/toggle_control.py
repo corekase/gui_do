@@ -80,17 +80,20 @@ class ToggleControl(UiNode):
         self._focus_activation_armed = False
         self.invalidate()
 
-    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
-        if old_enabled != new_enabled:
-            self.hovered = False
-            self._focus_activation_armed = False
-        super()._on_enabled_changed(old_enabled, new_enabled)
+    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
+        self.hovered = False
+        self._focus_activation_armed = False
+        super()._on_enabled_changed(_old_enabled, _new_enabled)
 
-    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
-        if old_visible != new_visible:
-            self.hovered = False
-            self._focus_activation_armed = False
-        super()._on_visibility_changed(old_visible, new_visible)
+    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
+        self.hovered = False
+        self._focus_activation_armed = False
+        super()._on_visibility_changed(_old_visible, _new_visible)
+
+    def reconcile_hover(self, wants_hover: bool) -> None:
+        if self.hovered != wants_hover:
+            self.hovered = wants_hover
+            self.invalidate()
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:

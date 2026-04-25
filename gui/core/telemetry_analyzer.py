@@ -40,11 +40,11 @@ def _as_record_dict(record: Any) -> Dict[str, Any]:
     if isinstance(record, dict):
         return dict(record)
     return {
-        "timestamp": getattr(record, "timestamp", ""),
-        "system": getattr(record, "system", ""),
-        "point": getattr(record, "point", ""),
-        "elapsed_ms": float(getattr(record, "elapsed_ms", 0.0)),
-        "metadata": dict(getattr(record, "metadata", {}) or {}),
+        "timestamp": record.timestamp,
+        "system": record.system,
+        "point": record.point,
+        "elapsed_ms": float(record.elapsed_ms),
+        "metadata": dict(record.metadata or {}),
     }
 
 

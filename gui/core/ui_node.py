@@ -268,5 +268,28 @@ class UiNode:
             return bool(self.on_event_bubble(event, app))
         return bool(self.handle_event(event, app))
 
+    def reconcile_hover(self, _wants_hover: bool) -> None:
+        """Update hover state during focus traversal. No-op for nodes without hover visuals."""
+
+    def begin_focus_activation_visual(self) -> None:
+        """No-op base. Controls with activation visuals override this."""
+
+    def end_focus_activation_visual(self) -> None:
+        """No-op base. Controls with activation visuals override this."""
+
+    def _invoke_click(self) -> None:
+        """No-op base. Activatable controls override this."""
+
+    def should_arm_focus_activation_for_event(self, _event: "GuiEvent") -> bool:
+        """No-op base. Returns False. Activatable controls override this."""
+        return False
+
+    def draw_screen_phase(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
+        """Screen-phase draw. Default calls draw(). PanelControl overrides for split-phase rendering."""
+        self.draw(surface, theme)
+
+    def draw_window_phase(self, _surface: "pygame.Surface", _theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
+        """Window-phase draw. No-op for most nodes; PanelControl renders window children here."""
+
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
         """Draw control onto target surface."""

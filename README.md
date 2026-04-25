@@ -504,10 +504,7 @@ scheduler = TaskScheduler(max_workers=workers)
 
 ### Value Change Callbacks
 
-`SliderControl` and `ScrollbarControl` support value callbacks in two modes:
-
-- `compat`: callback can be `(value)` or `(value, reason)`
-- `reason-required`: callback must accept `(value, reason)`
+`SliderControl` and `ScrollbarControl` callbacks must accept `(value, reason)`:
 
 ```python
 from gui import SliderControl, LayoutAxis, ValueChangeReason
@@ -526,24 +523,7 @@ slider = SliderControl(
     30,
     12,
     on_change=on_zoom_changed,
-    on_change_mode="reason-required",
 )
-```
-
-`VALUE_CHANGE_CALLBACK_MODES` is a tuple of all valid mode strings: `("compat", "reason-required")`. Use it for validation or to enumerate accepted values.
-
-`ensure_reason_callback(callback)` adapts a legacy value-only callback to one that also accepts a `reason` argument, letting you unify old and new callbacks without branching:
-
-```python
-from gui import ensure_reason_callback, ValueChangeReason
-
-def legacy_on_change(value):          # old one-arg callback
-    print(f"Value: {value}")
-
-adapted = ensure_reason_callback(legacy_on_change)
-# adapted is now callable as adapted(value, reason) with reason silently ignored.
-# Pass None to get None back (no-op adapter).
-adapted = ensure_reason_callback(None)  # returns None
 ```
 
 ## Feature Example: Part Registration and Runtime Binding
@@ -2110,11 +2090,7 @@ from gui import (
     EventPhase,
     EventType,
     GuiEvent,
-    VALUE_CHANGE_CALLBACK_MODES,
-    ValueChangeCallbackMode,
     ValueChangeCallback,
-    ensure_reason_callback,
-    normalize_value_change_callback_mode,
     ValueChangeReason,
     InvalidationTracker,
     ObservableValue,

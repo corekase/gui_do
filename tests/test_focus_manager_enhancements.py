@@ -22,6 +22,9 @@ class _HoverNode(UiNode):
         self.set_tab_index(tab_index)
         self.hovered = False
 
+    def reconcile_hover(self, wants_hover: bool) -> None:
+        self.hovered = wants_hover
+
 
 class FocusedControlIdTests(unittest.TestCase):
 

@@ -11,12 +11,10 @@ from typing import Any, Callable, Deque, Dict, Iterable, Optional
 
 
 class _NoopTelemetryCollector:
-    def span(self, _system: str, _point: str, metadata: Optional[Dict[str, Any]] = None):
-        del metadata
+    def span(self, _system: str, _point: str, _metadata: Optional[Dict[str, Any]] = None):
         return nullcontext()
 
-    def record_duration(self, _system: str, _point: str, _elapsed_ms: float, *, metadata: Optional[Dict[str, Any]] = None) -> None:
-        del metadata
+    def record_duration(self, _system: str, _point: str, _elapsed_ms: float, *, _metadata: Optional[Dict[str, Any]] = None) -> None:
         return None
 
 
@@ -82,7 +80,7 @@ class Part:
 
     def send_message(self, target_part_name: str, message: Dict[str, Any]) -> bool:
         if self._part_manager is None:
-            return False
+            raise RuntimeError("part must be registered before sending messages")
         return self._part_manager.send_message(self.name, target_part_name, message)
 
     def bind_logic_part(self, logic_part_name: str, *, alias: str = "default") -> None:
@@ -92,17 +90,17 @@ class Part:
 
     def unbind_logic_part(self, *, alias: str = "default") -> bool:
         if self._part_manager is None:
-            return False
+            raise RuntimeError("part must be registered before unbinding logic parts")
         return self._part_manager.unbind_logic_part(self.name, alias=alias)
 
     def logic_part_name(self, *, alias: str = "default") -> Optional[str]:
         if self._part_manager is None:
-            return None
+            raise RuntimeError("part must be registered before querying logic part names")
         return self._part_manager.logic_part_name(self.name, alias=alias)
 
     def send_logic_message(self, message: Dict[str, Any], *, alias: str = "default") -> bool:
         if self._part_manager is None:
-            return False
+            raise RuntimeError("part must be registered before sending logic messages")
         return self._part_manager.send_logic_message(self.name, message, alias=alias)
 
     def enqueue_message(self, message: Dict[str, Any]) -> None:

@@ -5,9 +5,7 @@ from pygame import Rect
 
 from ..core.gui_event import GuiEvent
 from ..core.value_change_callback import ValueChangeCallback
-from ..core.value_change_callback import ValueChangeCallbackMode
 from ..core.value_change_callback import dispatch_value_change
-from ..core.value_change_callback import normalize_value_change_callback_mode
 from ..core.value_change_callback import validate_value_change_callback
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
@@ -47,7 +45,6 @@ class SliderControl(UiNode):
         maximum: float,
         value: float,
         on_change: Optional[ValueChangeCallback[float]] = None,
-        on_change_mode: ValueChangeCallbackMode = "compat",
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -55,8 +52,7 @@ class SliderControl(UiNode):
         self.maximum = float(maximum)
         self.value = float(value)
         self.on_change = on_change
-        self.on_change_mode = normalize_value_change_callback_mode(on_change_mode)
-        validate_value_change_callback(self.on_change, self.on_change_mode)
+        validate_value_change_callback(self.on_change)
         self.dragging = False
         self.handle_size = 16
         self._drag_anchor_offset = 0
@@ -70,16 +66,9 @@ class SliderControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_value()
 
-    def set_on_change_mode(self, mode: str) -> ValueChangeCallbackMode:
-        """Update callback dispatch mode at runtime with validation."""
-        normalized = normalize_value_change_callback_mode(mode)
-        validate_value_change_callback(self.on_change, normalized)
-        self.on_change_mode = normalized
-        return self.on_change_mode
-
     def set_on_change_callback(self, callback: Optional[ValueChangeCallback[float]]) -> Optional[ValueChangeCallback[float]]:
-        """Update callback at runtime and validate compatibility with current mode."""
-        validate_value_change_callback(callback, self.on_change_mode)
+        """Update callback at runtime."""
+        validate_value_change_callback(callback)
         self.on_change = callback
         return self.on_change
 
@@ -150,15 +139,13 @@ class SliderControl(UiNode):
         self._focus_activation_armed = False
         self.invalidate()
 
-    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
-        if old_enabled != new_enabled:
-            self._focus_activation_armed = False
-        super()._on_enabled_changed(old_enabled, new_enabled)
+    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
+        self._focus_activation_armed = False
+        super()._on_enabled_changed(_old_enabled, _new_enabled)
 
-    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
-        if old_visible != new_visible:
-            self._focus_activation_armed = False
-        super()._on_visibility_changed(old_visible, new_visible)
+    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
+        self._focus_activation_armed = False
+        super()._on_visibility_changed(_old_visible, _new_visible)
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""
@@ -192,7 +179,7 @@ class SliderControl(UiNode):
         if changed and reason == ValueChangeReason.PROGRAMMATIC:
             self._programmatic_change_epoch += 1
         if changed:
-            dispatch_value_change(self.on_change, self.value, reason, mode=self.on_change_mode)
+            dispatch_value_change(self.on_change, self.value, reason)
         return changed
 
     def handle_rect(self) -> Rect:

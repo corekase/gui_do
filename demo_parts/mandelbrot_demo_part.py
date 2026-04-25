@@ -91,8 +91,6 @@ class MandelbrotLogicPart(LogicPart):
         self.max_iter = 48
 
     def bind_runtime(self, _host) -> None:
-        if self._part_manager is None:
-            return
         self._part_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
         self._part_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
 
@@ -250,8 +248,6 @@ class MandelbrotRenderFeature(RoutedMessagePart):
                 self.bind_logic_part(provider_name, alias=alias)
 
     def _resolve_logic_part(self, alias: str) -> Optional[MandelbrotLogicPart]:
-        if self._part_manager is None:
-            return None
         provider_name = self.logic_part_name(alias=alias)
         if provider_name is None:
             return None

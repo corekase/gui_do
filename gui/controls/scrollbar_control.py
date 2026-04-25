@@ -5,9 +5,7 @@ from pygame import Rect
 
 from ..core.gui_event import GuiEvent
 from ..core.value_change_callback import ValueChangeCallback
-from ..core.value_change_callback import ValueChangeCallbackMode
 from ..core.value_change_callback import dispatch_value_change
-from ..core.value_change_callback import normalize_value_change_callback_mode
 from ..core.value_change_callback import validate_value_change_callback
 from ..core.value_change_reason import ValueChangeReason
 from ..core.ui_node import UiNode
@@ -48,7 +46,6 @@ class ScrollbarControl(UiNode):
         offset: int = 0,
         step: int = 16,
         on_change: Optional[ValueChangeCallback[int]] = None,
-        on_change_mode: ValueChangeCallbackMode = "compat",
     ) -> None:
         super().__init__(control_id, rect)
         self.axis = axis
@@ -57,8 +54,7 @@ class ScrollbarControl(UiNode):
         self.offset = max(0, int(offset))
         self.step = max(1, int(step))
         self.on_change = on_change
-        self.on_change_mode = normalize_value_change_callback_mode(on_change_mode)
-        validate_value_change_callback(self.on_change, self.on_change_mode)
+        validate_value_change_callback(self.on_change)
         self.dragging = False
         self._drag_anchor_offset = 0
         self._drag_handle_axis_pixel = 0
@@ -71,16 +67,9 @@ class ScrollbarControl(UiNode):
         self._handle_visuals_size = None
         self._clamp_offset()
 
-    def set_on_change_mode(self, mode: str) -> ValueChangeCallbackMode:
-        """Update callback dispatch mode at runtime with validation."""
-        normalized = normalize_value_change_callback_mode(mode)
-        validate_value_change_callback(self.on_change, normalized)
-        self.on_change_mode = normalized
-        return self.on_change_mode
-
     def set_on_change_callback(self, callback: Optional[ValueChangeCallback[int]]) -> Optional[ValueChangeCallback[int]]:
-        """Update callback at runtime and validate compatibility with current mode."""
-        validate_value_change_callback(callback, self.on_change_mode)
+        """Update callback at runtime."""
+        validate_value_change_callback(callback)
         self.on_change = callback
         return self.on_change
 
@@ -128,7 +117,7 @@ class ScrollbarControl(UiNode):
         if changed and reason == ValueChangeReason.PROGRAMMATIC:
             self._programmatic_change_epoch += 1
         if changed:
-            dispatch_value_change(self.on_change, self.offset, reason, mode=self.on_change_mode)
+            dispatch_value_change(self.on_change, self.offset, reason)
         return changed
 
     def should_arm_focus_activation_for_event(self, event: GuiEvent) -> bool:
@@ -164,15 +153,13 @@ class ScrollbarControl(UiNode):
         self._focus_activation_armed = False
         self.invalidate()
 
-    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
-        if old_enabled != new_enabled:
-            self._focus_activation_armed = False
-        super()._on_enabled_changed(old_enabled, new_enabled)
+    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
+        self._focus_activation_armed = False
+        super()._on_enabled_changed(_old_enabled, _new_enabled)
 
-    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
-        if old_visible != new_visible:
-            self._focus_activation_armed = False
-        super()._on_visibility_changed(old_visible, new_visible)
+    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
+        self._focus_activation_armed = False
+        super()._on_visibility_changed(_old_visible, _new_visible)
 
     def _track_rect(self) -> Rect:
         if self.axis == LayoutAxis.HORIZONTAL:

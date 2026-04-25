@@ -84,13 +84,12 @@ class FocusManager:
         self._scope_focus_memory[scope_key] = None
         return None
 
-    def _preferred_scope_entry_target(self, *, scene, window, candidates):
+    def _preferred_scope_entry_target(self, *, _scene, window, candidates):
         """Pick the initial focus target when entering a scope.
 
         For window scope: prefer remembered target, else first candidate.
         For screen scope: prefer remembered target, else first candidate.
         """
-        del scene
         remembered = self._remembered_focus_for_scope(window=window, candidates=candidates)
         return remembered if remembered is not None else candidates[0]
 
@@ -152,8 +151,7 @@ class FocusManager:
         target = self._armed_focus_target
         self._armed_focus_target = None
         self._armed_focus_elapsed_seconds = 0.0
-        if hasattr(target, "end_focus_activation_visual"):
-            target.end_focus_activation_visual()
+        target.end_focus_activation_visual()
 
     def _try_activate_focused_button(self, event, app, target) -> bool:
         """Handle focused keyboard activation for push buttons in one place.
@@ -163,10 +161,6 @@ class FocusManager:
         """
         if not (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
             return False
-        if not hasattr(target, "begin_focus_activation_visual"):
-            return False
-        if not hasattr(target, "_invoke_click"):
-            return False
 
         self._begin_focus_activation_visual(target)
         target._invoke_click()
@@ -175,8 +169,7 @@ class FocusManager:
     def _begin_focus_activation_visual(self, target) -> None:
         if self._armed_focus_target is not None and self._armed_focus_target is not target:
             previous = self._armed_focus_target
-            if hasattr(previous, "end_focus_activation_visual"):
-                previous.end_focus_activation_visual()
+            previous.end_focus_activation_visual()
         self._armed_focus_target = target
         self._armed_focus_elapsed_seconds = 0.0
         target.begin_focus_activation_visual()
@@ -186,12 +179,7 @@ class FocusManager:
 
         This is non-consuming: key handling still flows through to ``target.handle_event``.
         """
-        if not hasattr(target, "begin_focus_activation_visual"):
-            return
-        should_arm = getattr(target, "should_arm_focus_activation_for_event", None)
-        if should_arm is None or not callable(should_arm):
-            return
-        if bool(should_arm(event)):
+        if bool(target.should_arm_focus_activation_for_event(event)):
             self._begin_focus_activation_visual(target)
 
     @staticmethod
@@ -241,7 +229,7 @@ class FocusManager:
         focused = self._focused_node
 
         if focused is None or focused not in candidates:
-            target = self._preferred_scope_entry_target(scene=scene, window=window, candidates=candidates)
+            target = self._preferred_scope_entry_target(_scene=scene, window=window, candidates=candidates)
             self.set_focus(target, via_keyboard=True)
             return True
 
@@ -270,20 +258,8 @@ class FocusManager:
         for node in scene._walk_nodes():
             if window is not None and not self._is_descendant(node, window):
                 continue
-
             wants_hover = bool(node.visible and node.enabled and node.rect.collidepoint(probe))
-
-            if hasattr(node, "hovered"):
-                current = bool(getattr(node, "hovered"))
-                if current != wants_hover:
-                    setattr(node, "hovered", wants_hover)
-                    node.invalidate()
-
-            if hasattr(node, "_hovered"):
-                current_private = bool(getattr(node, "_hovered"))
-                if current_private != wants_hover:
-                    setattr(node, "_hovered", wants_hover)
-                    node.invalidate()
+            node.reconcile_hover(wants_hover)
 
     def revalidate_focus(self, scene) -> None:
         """If the focused node is no longer focusable, move to the nearest valid node or clear.

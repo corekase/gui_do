@@ -195,6 +195,8 @@ class LifeSimulationFeature(RoutedMessagePart):
         return None
 
     def _send_life_logic_command(self, command: str, **extra: Any) -> bool:
+        if self._part_manager is None:
+            return False
         message: Dict[str, Any] = {
             _KEY_TOPIC: _LIFE_LOGIC_TOPIC,
             _KEY_COMMAND: str(command),
@@ -323,7 +325,7 @@ class LifeSimulationFeature(RoutedMessagePart):
         slider_value = max(0, min(11, int(round(self.zoom_slider.value))))
         self.sync_life_zoom_from_slider(slider_value)
 
-    def on_life_zoom_slider_changed(self, value: float) -> None:
+    def on_life_zoom_slider_changed(self, value: float, _reason) -> None:
         """Slider callback that converts float slider values into integer zoom steps."""
         self.sync_life_zoom_from_slider(int(round(value)))
 

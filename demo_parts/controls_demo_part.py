@@ -174,7 +174,7 @@ class ControlsShowcasePart(Part):
         """Set initial focus to first created enabled focus control once per runtime."""
         if not self._pending_initial_focus:
             return
-        if str(host.app.active_scene_name) != str(self.scene_name):
+        if host.app.active_scene_name != self.scene_name:
             return
         target = self._initial_focus_control
         if target is None:

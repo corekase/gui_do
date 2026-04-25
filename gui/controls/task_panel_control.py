@@ -90,3 +90,8 @@ class TaskPanelControl(PanelControl):
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
         return super().handle_event(event, app)
+
+    def reconcile_hover(self, wants_hover: bool) -> None:
+        if self._hovered != wants_hover:
+            self._hovered = wants_hover
+            self.invalidate()

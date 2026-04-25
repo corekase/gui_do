@@ -101,7 +101,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
     def test_slider_callback_applies_zoom_change(self) -> None:
         demo = self._make_demo_stub()
 
-        demo._life_feature.on_life_zoom_slider_changed(6.0)
+        demo._life_feature.on_life_zoom_slider_changed(6.0, None)
 
         self.assertEqual(demo._life_feature.life_zoom_slider_last_value, 6)
         self.assertEqual(demo._life_feature.life_cell_size, 14)
