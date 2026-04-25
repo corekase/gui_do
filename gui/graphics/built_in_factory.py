@@ -225,9 +225,6 @@ class BuiltInGraphicsFactory:
         complete.blit(text_bitmap, (text_height + 2, y_offset))
         return complete
 
-    def _draw_radio_pushbutton(self, text: str, rect: Rect, col1, col2, *, font_role: str = "body", highlight: bool = False) -> Surface:
-        return self._draw_radio_style_surface(text, rect, col1, col2, font_role=font_role, highlight=highlight)
-
     def build_interactive_visuals(self, style: str, text: str, rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
         start = perf_counter()
         style_key = (style or "box").lower()

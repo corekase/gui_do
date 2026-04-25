@@ -293,7 +293,6 @@ class WindowControl(UiNode):
         if not self.enabled:
             overlay_size = (self.rect.width, self.rect.height)
             if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:
-                self._disabled_overlay = factory.build_disabled_bitmap(self._chrome.title_bar_inactive)
                 wash = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
                 wash.fill((50, 50, 50, 120))
                 self._disabled_overlay = wash

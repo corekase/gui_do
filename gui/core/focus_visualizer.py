@@ -29,13 +29,9 @@ class FocusVisualizer:
 
     def _focused_node(self):
         """Return the currently focused UI node when hint drawing is enabled."""
-        focus = getattr(self.app, "focus", None)
-        if focus is None:
+        if not self.app.focus.should_draw_focus_hint():
             return None
-        should_draw = getattr(focus, "should_draw_focus_hint", None)
-        if callable(should_draw) and not should_draw():
-            return None
-        return focus.focused_node
+        return self.app.focus.focused_node
 
     def draw_hints(self, surface: "pygame.Surface", theme) -> None:
         """Draw focus hint for the currently focused node."""

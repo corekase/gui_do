@@ -100,7 +100,6 @@ class StylesShowcaseFeature(Part):
                 "Styles",
                 titlebar_height=28,
                 title_font_role=self.font_role("window_title"),
-                event_handler=self.styles_window_event_handler,
                 use_frame_backdrop=True,
             )
         )
@@ -240,18 +239,6 @@ class StylesShowcaseFeature(Part):
 
     def _update_footer_label(self, footer_label, token: str) -> None:
         footer_label.text = token
-
-    def styles_window_event_handler(self, event) -> bool:
-        if not event.is_mouse_down(1):
-            return False
-        pos = event.pos
-        if not (isinstance(pos, tuple) and len(pos) == 2):
-            return False
-        for control, footer_label, token in self._group_footer_bindings:
-            if control.rect.collidepoint(pos):
-                self._update_footer_label(footer_label, token)
-                break
-        return False
 
     def prewarm(self, host, surface, theme) -> None:
         """Prime styles window and child control visuals before first window open."""

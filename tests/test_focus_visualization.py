@@ -41,10 +41,6 @@ class FocusVisualizerQueryTests(unittest.TestCase):
         mgr.clear_focus()
         self.assertFalse(vis.has_active_hint())
 
-    def test_has_active_hint_false_when_app_has_no_focus_attr(self) -> None:
-        vis = FocusVisualizer(SimpleNamespace())
-        self.assertFalse(vis.has_active_hint())
-
 
 class FocusVisualizerDrawingTests(unittest.TestCase):
     """Drawing behaviour -- hint drawn for focused node, nothing when unfocused."""

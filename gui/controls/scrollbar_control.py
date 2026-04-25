@@ -34,8 +34,8 @@ class ScrollbarControl(UiNode):
         if app.pointer_capture.is_owned_by(self.control_id):
             app.pointer_capture.end(self.control_id)
         if sync_pointer:
-            final_pos = release_pos if release_pos is not None else getattr(app, "logical_pointer_pos", None)
-            if final_pos is not None and hasattr(app, "sync_pointer_to_logical_position"):
+            final_pos = release_pos if release_pos is not None else app.logical_pointer_pos
+            if final_pos is not None:
                 app.sync_pointer_to_logical_position(final_pos)
 
     def __init__(

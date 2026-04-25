@@ -25,7 +25,7 @@ def _telemetry_collector():
         from gui.core.telemetry import telemetry_collector
 
         return telemetry_collector()
-    except Exception:
+    except ImportError:
         return _NoopTelemetryCollector()
 
 

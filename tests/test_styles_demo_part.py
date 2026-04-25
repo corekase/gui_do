@@ -11,14 +11,6 @@ from gui import GuiApplication, PanelControl
 from gui_do_demo import GuiDoDemo
 
 
-class _ClickEvent:
-    def __init__(self, pos) -> None:
-        self.pos = pos
-
-    def is_mouse_down(self, button=None) -> bool:
-        return button in (None, 1)
-
-
 class StylesShowcaseFeatureTests(unittest.TestCase):
     def setUp(self) -> None:
         pygame.init()
@@ -48,16 +40,6 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
         self.assertEqual(len(part.button_controls), 5)
         self.assertEqual(len(part.toggle_controls), 5)
         self.assertEqual(len(part.footer_labels), 6)
-
-    def test_window_event_handler_updates_group_footer_label(self) -> None:
-        _app, _demo, part = self._build_part()
-
-        second_group_control = part.group_controls[1]
-        first_footer_label = part.footer_labels[0]
-
-        part.styles_window_event_handler(_ClickEvent(second_group_control.rect.center))
-
-        self.assertEqual(first_footer_label.text, "Gr: 1 ID: 2")
 
     def test_each_group_defaults_to_first_item_selected(self) -> None:
         _app, _demo, part = self._build_part()
