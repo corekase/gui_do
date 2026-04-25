@@ -61,6 +61,7 @@ class SliderControl(UiNode):
         self.handle_size = 16
         self._drag_anchor_offset = 0
         self._drag_handle_axis_pixel = 0
+        self._focus_activation_armed = False
         self._programmatic_change_epoch = 0
         self._drag_start_programmatic_epoch = 0
         self._track_visuals = None
@@ -117,6 +118,47 @@ class SliderControl(UiNode):
     def _keyboard_step(self) -> float:
         span = self.maximum - self.minimum
         return max(1.0, abs(span) * 0.05)
+
+    def should_arm_focus_activation_for_event(self, event: GuiEvent) -> bool:
+        """Return True when this key event should arm the handle visual.
+
+        Supports accessibility-style less/more and home/end keyboard adjustments.
+        """
+        if event.is_key_down(pygame.K_HOME) or event.is_key_down(pygame.K_END):
+            return True
+        if self.axis == LayoutAxis.HORIZONTAL:
+            return bool(event.is_key_down(pygame.K_LEFT) or event.is_key_down(pygame.K_RIGHT))
+        return bool(event.is_key_down(pygame.K_DOWN) or event.is_key_down(pygame.K_UP))
+
+    def _invoke_click(self) -> None:
+        """Keyboard-activation entry point used by the focus manager's armed-visual path."""
+        # Sliders activate visually on focus key activation; value changes remain
+        # driven by directional/home/end keys and pointer interaction.
+        return
+
+    def begin_focus_activation_visual(self) -> None:
+        """Show temporary armed handle visual after focus-driven activation."""
+        if self._focus_activation_armed:
+            return
+        self._focus_activation_armed = True
+        self.invalidate()
+
+    def end_focus_activation_visual(self) -> None:
+        """Clear temporary armed handle visual after focus activation timeout."""
+        if not self._focus_activation_armed:
+            return
+        self._focus_activation_armed = False
+        self.invalidate()
+
+    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
+        if old_enabled != new_enabled:
+            self._focus_activation_armed = False
+        super()._on_enabled_changed(old_enabled, new_enabled)
+
+    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
+        if old_visible != new_visible:
+            self._focus_activation_armed = False
+        super()._on_visibility_changed(old_visible, new_visible)
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""
@@ -231,9 +273,9 @@ class SliderControl(UiNode):
                 return self._set_value(self.value + step, reason=ValueChangeReason.KEYBOARD)
         else:
             if event.is_key_down(pygame.K_DOWN):
-                return self._set_value(self.value - step, reason=ValueChangeReason.KEYBOARD)
-            if event.is_key_down(pygame.K_UP):
                 return self._set_value(self.value + step, reason=ValueChangeReason.KEYBOARD)
+            if event.is_key_down(pygame.K_UP):
+                return self._set_value(self.value - step, reason=ValueChangeReason.KEYBOARD)
 
         pointer = app.logical_pointer_pos
         if event.is_mouse_down(1):
@@ -333,7 +375,7 @@ class SliderControl(UiNode):
             self._handle_visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self.dragging,
+            armed=self.dragging or self._focus_activation_armed,
             hovered=not self.dragging,
         )
         surface.blit(track_selected, travel)

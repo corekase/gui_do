@@ -62,6 +62,7 @@ class ScrollbarControl(UiNode):
         self.dragging = False
         self._drag_anchor_offset = 0
         self._drag_handle_axis_pixel = 0
+        self._focus_activation_armed = False
         self._programmatic_change_epoch = 0
         self._drag_start_programmatic_epoch = 0
         self._track_visuals = None
@@ -129,6 +130,49 @@ class ScrollbarControl(UiNode):
         if changed:
             dispatch_value_change(self.on_change, self.offset, reason, mode=self.on_change_mode)
         return changed
+
+    def should_arm_focus_activation_for_event(self, event: GuiEvent) -> bool:
+        """Return True when this key event should arm the handle visual.
+
+        Supports accessibility-style less/more and home/end keyboard adjustments.
+        """
+        if event.is_key_down(pygame.K_HOME) or event.is_key_down(pygame.K_END):
+            return True
+        if event.is_key_down(pygame.K_PAGEUP) or event.is_key_down(pygame.K_PAGEDOWN):
+            return True
+        if self.axis == LayoutAxis.HORIZONTAL:
+            return bool(event.is_key_down(pygame.K_LEFT) or event.is_key_down(pygame.K_RIGHT))
+        return bool(event.is_key_down(pygame.K_UP) or event.is_key_down(pygame.K_DOWN))
+
+    def _invoke_click(self) -> None:
+        """Keyboard-activation entry point used by the focus manager's armed-visual path."""
+        # Scrollbars activate visually on focus key activation; offset changes remain
+        # driven by directional/page/home/end keys and pointer interaction.
+        return
+
+    def begin_focus_activation_visual(self) -> None:
+        """Show temporary armed handle visual after focus-driven activation."""
+        if self._focus_activation_armed:
+            return
+        self._focus_activation_armed = True
+        self.invalidate()
+
+    def end_focus_activation_visual(self) -> None:
+        """Clear temporary armed handle visual after focus activation timeout."""
+        if not self._focus_activation_armed:
+            return
+        self._focus_activation_armed = False
+        self.invalidate()
+
+    def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
+        if old_enabled != new_enabled:
+            self._focus_activation_armed = False
+        super()._on_enabled_changed(old_enabled, new_enabled)
+
+    def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
+        if old_visible != new_visible:
+            self._focus_activation_armed = False
+        super()._on_visibility_changed(old_visible, new_visible)
 
     def _track_rect(self) -> Rect:
         if self.axis == LayoutAxis.HORIZONTAL:
@@ -353,7 +397,7 @@ class ScrollbarControl(UiNode):
             self._handle_visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self.dragging,
+            armed=self.dragging or self._focus_activation_armed,
             hovered=not self.dragging,
         )
         surface.blit(track_selected, track)

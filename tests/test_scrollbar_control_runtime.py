@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, WindowControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ScrollbarControlRuntimeTests(unittest.TestCase):
@@ -113,6 +114,62 @@ class ScrollbarControlRuntimeTests(unittest.TestCase):
 
         self.assertFalse(consumed)
         self.assertEqual(bar.offset, 100)
+
+    def test_focus_keyboard_activation_sets_handle_armed_until_shared_timeout(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(bar.offset, 100)
+        self.assertTrue(bar._focus_activation_armed)
+        self.assertFalse(bar.dragging)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(bar._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(bar._focus_activation_armed)
+
+    def test_less_more_and_home_end_keyboard_signals_arm_handle_visual(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        bar.set_tab_index(0)
+        self.app.focus.set_focus(bar)
+
+        consumed_more = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+        self.assertTrue(consumed_more)
+        self.assertTrue(bar._focus_activation_armed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(bar._focus_activation_armed)
+
+        consumed_home = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        consumed_end = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_END}))
+        self.assertTrue(consumed_home)
+        self.assertTrue(consumed_end)
+        self.assertTrue(bar._focus_activation_armed)
 
     def test_screen_scrollbar_drag_ends_when_pointer_enters_window(self) -> None:
         bar = self.root.add(

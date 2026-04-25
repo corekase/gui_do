@@ -426,12 +426,31 @@ class ControlsShowcasePart(Part):
         return control.__class__.__name__ in focus_type_names
 
     def _collect_accessibility_focus_controls(self) -> list:
-        """Collect focus controls in the same order controls are laid out within enabled blocks."""
+        """Collect focus controls in a deliberate accessibility traversal order.
+
+        Order requirement:
+        - Arrow cluster first
+        - Button + toggle immediately after arrows
+        - Remaining focus controls in block order
+        """
         ordered_controls = []
-        for block in self.enabled_blocks:
+        priority_blocks = ("arrow_cluster", "buttons_and_indicators")
+
+        for block_name in priority_blocks:
+            block = next((candidate for candidate in self.enabled_blocks if candidate["name"] == block_name), None)
+            if block is None:
+                continue
             for control in block["controls"]:
                 if self._is_accessibility_focus_control(control):
                     ordered_controls.append(control)
+
+        for block in self.enabled_blocks:
+            if block["name"] in priority_blocks:
+                continue
+            for control in block["controls"]:
+                if self._is_accessibility_focus_control(control):
+                    ordered_controls.append(control)
+
         return ordered_controls
 
     def _build_arrow_cluster(self, ui, content_rect: Rect, enabled: bool) -> list:

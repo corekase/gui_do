@@ -35,6 +35,7 @@ class ArrowBoxControl(UiNode):
         self.repeat_interval_seconds = float(repeat_interval_seconds)
         self._pressed = False
         self._hovered = False
+        self._focus_activation_armed = False
         self._timer_id = ("arrow_repeat", self.control_id)
         self._visuals = None
         self._visual_key = None
@@ -42,6 +43,24 @@ class ArrowBoxControl(UiNode):
     def _invoke(self) -> None:
         if self.on_activate is not None:
             self.on_activate()
+
+    def _invoke_click(self) -> None:
+        """Keyboard-activation entry point used by the focus manager's armed-visual path."""
+        self._invoke()
+
+    def begin_focus_activation_visual(self) -> None:
+        """Show a temporary armed visual after focus-driven activation."""
+        if self._focus_activation_armed:
+            return
+        self._focus_activation_armed = True
+        self.invalidate()
+
+    def end_focus_activation_visual(self) -> None:
+        """Clear temporary armed visual after focus activation hint timeout."""
+        if not self._focus_activation_armed:
+            return
+        self._focus_activation_armed = False
+        self.invalidate()
 
     def set_on_activate(self, callback: Optional[Callable[[], None]]) -> None:
         """Replace the activation callback at runtime. Pass None to remove it."""
@@ -53,12 +72,14 @@ class ArrowBoxControl(UiNode):
         if old_enabled != new_enabled:
             self._hovered = False
             self._pressed = False
+            self._focus_activation_armed = False
         super()._on_enabled_changed(old_enabled, new_enabled)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         if old_visible != new_visible:
             self._hovered = False
             self._pressed = False
+            self._focus_activation_armed = False
         super()._on_visibility_changed(old_visible, new_visible)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
@@ -72,11 +93,6 @@ class ArrowBoxControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self._hovered = self.rect.collidepoint(raw)
-        if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
-            return False
-        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
-            self._invoke()
-            return True
         if event.is_mouse_motion() and self._pressed and not self._hovered:
             self._pressed = False
             app.timers.remove_timer(self._timer_id)
@@ -107,7 +123,7 @@ class ArrowBoxControl(UiNode):
             self._visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self._pressed,
+            armed=self._pressed or self._focus_activation_armed,
             hovered=hovered,
         )
         surface.blit(selected, self.rect)

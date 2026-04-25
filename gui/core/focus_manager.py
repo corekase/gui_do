@@ -129,6 +129,7 @@ class FocusManager:
         self._continuous_tab_cycle = False
         if self._try_activate_focused_button(event, app, target):
             return True
+        self._try_arm_focused_control_for_adjustment_event(event, target)
         return bool(target.handle_event(event, app))
 
     def update(self, dt_seconds: float) -> None:
@@ -179,6 +180,19 @@ class FocusManager:
         self._armed_focus_target = target
         self._armed_focus_elapsed_seconds = 0.0
         target.begin_focus_activation_visual()
+
+    def _try_arm_focused_control_for_adjustment_event(self, event, target) -> None:
+        """Arm a focused control's activation visual for non-click adjustment keys.
+
+        This is non-consuming: key handling still flows through to ``target.handle_event``.
+        """
+        if not hasattr(target, "begin_focus_activation_visual"):
+            return
+        should_arm = getattr(target, "should_arm_focus_activation_for_event", None)
+        if should_arm is None or not callable(should_arm):
+            return
+        if bool(should_arm(event)):
+            self._begin_focus_activation_visual(target)
 
     @staticmethod
     def _is_descendant(node, ancestor) -> bool:

@@ -41,6 +41,16 @@ class ButtonGroupControl(ToggleControl):
         if self.on_activate is not None:
             self.on_activate()
 
+    def _invoke_click(self) -> None:
+        """Keyboard-activation entry point used by the focus manager's armed-visual path."""
+        previous = ButtonGroupControl._selection_by_group.get(self.group)
+        if previous != self.control_id or not self.pushed:
+            self.pushed = True
+            ButtonGroupControl._selection_by_group[self.group] = self.control_id
+            if self.parent is not None:
+                self._clear_peer_selection_from_nodes([self.parent])
+        self._invoke_activate()
+
     def set_on_activate(self, callback: Optional[Callable[[], None]]) -> None:
         """Replace the activation callback at runtime. Pass None to remove it."""
         if callback is not None and not callable(callback):
@@ -118,11 +128,6 @@ class ButtonGroupControl(ToggleControl):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-
-        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
-            if not self.focused:
-                return False
-            return self._activate(app)
 
         if not event.is_mouse_down(1):
             return False

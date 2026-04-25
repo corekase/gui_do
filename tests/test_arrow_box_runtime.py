@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import ArrowBoxControl, GuiApplication, PanelControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ArrowBoxRuntimeTests(unittest.TestCase):
@@ -31,6 +32,25 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_return)
         self.assertTrue(consumed_space)
         self.assertEqual(len(fired), 2)
+
+    def test_keyboard_activation_sets_cosmetic_focus_armed_until_shared_timeout(self) -> None:
+        fired = []
+        control = self.root.add(ArrowBoxControl("arr", Rect(20, 20, 40, 30), 0, on_activate=lambda: fired.append(True)))
+        control.set_tab_index(0)
+        self.app.focus.set_focus(control)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(fired, [True])
+        self.assertTrue(control._focus_activation_armed)
+        self.assertFalse(control._pressed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(control._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(control._focus_activation_armed)
 
     def test_keyboard_activation_ignored_when_not_focused(self) -> None:
         fired = []

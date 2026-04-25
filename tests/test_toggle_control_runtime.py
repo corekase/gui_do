@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import GuiApplication, PanelControl, ToggleControl, WindowControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ToggleControlRuntimeTests(unittest.TestCase):
@@ -32,6 +33,24 @@ class ToggleControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_space)
         self.assertFalse(toggle.pushed)
         self.assertEqual(states, [True, False])
+
+    def test_keyboard_activation_sets_cosmetic_focus_armed_until_shared_timeout(self) -> None:
+        states = []
+        toggle = self.root.add(ToggleControl("tog", Rect(20, 20, 80, 30), "On", "Off", pushed=False, on_toggle=lambda s: states.append(s)))
+        toggle.set_tab_index(0)
+        self.app.focus.set_focus(toggle)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(states, [True])
+        self.assertTrue(toggle._focus_activation_armed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(toggle._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(toggle._focus_activation_armed)
 
     def test_keyboard_activation_fires_toggle_and_hint_remains_active(self) -> None:
         states = []

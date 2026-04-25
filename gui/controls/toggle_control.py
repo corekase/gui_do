@@ -35,6 +35,7 @@ class ToggleControl(UiNode):
         self._font_role = "body"
         self.font_role = font_role
         self.hovered = False
+        self._focus_activation_armed = False
         self._visuals = None
         self._visual_key = None
 
@@ -60,14 +61,33 @@ class ToggleControl(UiNode):
             raise ValueError("on_toggle callback must be callable or None")
         self.on_toggle = callback
 
+    def _invoke_click(self) -> None:
+        self._commit_toggle()
+
+    def begin_focus_activation_visual(self) -> None:
+        """Show a temporary armed visual after focus-driven activation."""
+        if self._focus_activation_armed:
+            return
+        self._focus_activation_armed = True
+        self.invalidate()
+
+    def end_focus_activation_visual(self) -> None:
+        """Clear temporary armed visual after focus activation hint timeout."""
+        if not self._focus_activation_armed:
+            return
+        self._focus_activation_armed = False
+        self.invalidate()
+
     def _on_enabled_changed(self, old_enabled: bool, new_enabled: bool) -> None:
         if old_enabled != new_enabled:
             self.hovered = False
+            self._focus_activation_armed = False
         super()._on_enabled_changed(old_enabled, new_enabled)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
         if old_visible != new_visible:
             self.hovered = False
+            self._focus_activation_armed = False
         super()._on_visibility_changed(old_visible, new_visible)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
@@ -78,11 +98,6 @@ class ToggleControl(UiNode):
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
             self.hovered = self.rect.collidepoint(raw)
-        if not self.focused and (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
-            return False
-        if event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE):
-            self._commit_toggle()
-            return True
         if event.is_mouse_down(1):
             if isinstance(raw, tuple) and len(raw) == 2 and self.rect.collidepoint(raw):
                 self._commit_toggle()
@@ -100,7 +115,7 @@ class ToggleControl(UiNode):
             self._visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self.pushed,
+            armed=self.pushed or self._focus_activation_armed,
             hovered=self.hovered,
         )
         surface.blit(selected, self.rect)

@@ -28,21 +28,37 @@ class BouncingShapesBackdropFeatureTests(unittest.TestCase):
         self.assertEqual(len(part._shapes), 12)
         self.assertTrue(all(shape.sprite is not None for shape in part._shapes))
 
-    def test_init_supports_diamond_count_and_combines_shape_total(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=5, diamond_count=7, seed=11)
+    def test_init_supports_shape_counts_and_combines_shape_total(self) -> None:
+        part = BouncingShapesBackdropFeature(
+            circle_count=5,
+            square_count=3,
+            octagon_count=2,
+            star_count=4,
+            seed=11,
+        )
 
         self.assertEqual(part.circle_count, 5)
-        self.assertEqual(part.diamond_count, 7)
-        self.assertEqual(len(part._shapes), 12)
+        self.assertEqual(part.square_count, 3)
+        self.assertEqual(part.octagon_count, 2)
+        self.assertEqual(part.star_count, 4)
+        self.assertEqual(len(part._shapes), 14)
 
     def test_init_randomizes_mixed_shape_draw_order(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=8, diamond_count=8, seed=19)
+        part = BouncingShapesBackdropFeature(
+            circle_count=8,
+            square_count=8,
+            octagon_count=8,
+            star_count=8,
+            seed=19,
+        )
         kinds = [shape.kind for shape in part._shapes]
 
         self.assertIn("circle", kinds)
-        self.assertIn("diamond", kinds)
+        self.assertIn("square", kinds)
+        self.assertIn("octagon", kinds)
+        self.assertIn("star", kinds)
         self.assertNotEqual(kinds[:8], ["circle"] * 8)
-        self.assertNotEqual(kinds[:8], ["diamond"] * 8)
+        self.assertNotEqual(kinds[:8], ["square"] * 8)
 
     def test_bind_runtime_randomizes_positions_using_screen_bounds(self) -> None:
         part = BouncingShapesBackdropFeature(circle_count=3, seed=3)

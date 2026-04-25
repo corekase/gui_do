@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import GuiApplication, LayoutAxis, PanelControl, SliderControl, WindowControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class SliderControlRuntimeTests(unittest.TestCase):
@@ -44,7 +45,7 @@ class SliderControlRuntimeTests(unittest.TestCase):
         value_after_up = slider.value
         self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_DOWN}))
 
-        self.assertGreater(value_after_up, 5.0)
+        self.assertLess(value_after_up, 5.0)
         self.assertAlmostEqual(slider.value, 5.0)
 
     def test_keyboard_ignored_when_disabled(self) -> None:
@@ -66,6 +67,42 @@ class SliderControlRuntimeTests(unittest.TestCase):
 
         self.assertFalse(consumed)
         self.assertEqual(slider.value, 50.0)
+
+    def test_focus_keyboard_activation_sets_handle_armed_until_shared_timeout(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        slider.set_tab_index(0)
+        self.app.focus.set_focus(slider)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(slider.value, 50.0)
+        self.assertTrue(slider._focus_activation_armed)
+        self.assertFalse(slider.dragging)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(slider._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(slider._focus_activation_armed)
+
+    def test_less_more_and_home_end_keyboard_signals_arm_handle_visual(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        slider.set_tab_index(0)
+        self.app.focus.set_focus(slider)
+
+        consumed_more = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RIGHT}))
+        self.assertTrue(consumed_more)
+        self.assertTrue(slider._focus_activation_armed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(slider._focus_activation_armed)
+
+        consumed_home = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_HOME}))
+        consumed_end = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_END}))
+        self.assertTrue(consumed_home)
+        self.assertTrue(consumed_end)
+        self.assertTrue(slider._focus_activation_armed)
 
     def test_screen_slider_drag_ends_when_pointer_enters_window(self) -> None:
         slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))

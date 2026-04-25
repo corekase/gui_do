@@ -26,7 +26,7 @@ class ShapeSpriteState:
 
 
 class BouncingShapesBackdropFeature(ScreenPart):
-    """Render and animate cached random circles/diamonds directly on screen."""
+    """Render and animate cached random geometric sprites directly on screen."""
 
     HOST_REQUIREMENTS = {
         "bind_runtime": ("app", "screen_rect"),
@@ -36,16 +36,18 @@ class BouncingShapesBackdropFeature(ScreenPart):
         self,
         *,
         circle_count: int = 28,
-        diamond_count: int = 0,
         square_count: int = 0,
+        octagon_count: int = 0,
+        star_count: int = 0,
         seed: Optional[int] = None,
         scene_name: Optional[str] = None,
         part_name: str = "bouncing_shapes_backdrop",
     ) -> None:
         super().__init__(part_name, scene_name=scene_name)
         self.circle_count = max(0, int(circle_count))
-        self.diamond_count = max(0, int(diamond_count))
         self.square_count = max(0, int(square_count))
+        self.octagon_count = max(0, int(octagon_count))
+        self.star_count = max(0, int(star_count))
         self._rng = random.Random(seed)
         self._shapes: list[ShapeSpriteState] = []
         self._create_shapes()
@@ -86,13 +88,15 @@ class BouncingShapesBackdropFeature(ScreenPart):
             surface.blit(shape.sprite, (left, top))
 
     def _create_shapes(self) -> None:
-        """Create cached circle, diamond, and square sprite/motion states at init time."""
+        """Create cached shape sprite/motion states at init time."""
         for _ in range(self.circle_count):
             self._shapes.append(self._create_circle_shape())
-        for _ in range(self.diamond_count):
-            self._shapes.append(self._create_diamond_shape())
         for _ in range(self.square_count):
             self._shapes.append(self._create_square_shape())
+        for _ in range(self.octagon_count):
+            self._shapes.append(self._create_octagon_shape())
+        for _ in range(self.star_count):
+            self._shapes.append(self._create_star_shape())
 
     def _create_circle_shape(self) -> ShapeSpriteState:
         """Create one cached circular sprite with initial velocity."""
@@ -121,38 +125,6 @@ class BouncingShapesBackdropFeature(ScreenPart):
             dy=dy,
         )
 
-    def _create_diamond_shape(self) -> ShapeSpriteState:
-        """Create one cached diamond sprite (45-degree square) with velocity."""
-        radius = self._rng.randint(12, 38)
-        diameter = radius * 2
-        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        fill_color = (
-            self._rng.randint(45, 245),
-            self._rng.randint(45, 245),
-            self._rng.randint(45, 245),
-            190,
-        )
-        border_color = (15, 15, 15, 230)
-        points = [
-            (radius, 0),
-            (diameter - 1, radius),
-            (radius, diameter - 1),
-            (0, radius),
-        ]
-        pygame.draw.polygon(sprite, fill_color, points)
-        pygame.draw.polygon(sprite, border_color, points, width=2)
-        dx, dy = self._random_velocity()
-
-        return ShapeSpriteState(
-            kind="diamond",
-            radius=radius,
-            sprite=sprite,
-            x=0.0,
-            y=0.0,
-            dx=dx,
-            dy=dy,
-        )
-
     def _create_square_shape(self) -> ShapeSpriteState:
         """Create one cached axis-aligned square sprite with velocity."""
         radius = self._rng.randint(12, 38)
@@ -167,6 +139,8 @@ class BouncingShapesBackdropFeature(ScreenPart):
         border_color = (15, 15, 15, 230)
         pygame.draw.rect(sprite, fill_color, pygame.Rect(0, 0, diameter, diameter))
         pygame.draw.rect(sprite, border_color, pygame.Rect(0, 0, diameter, diameter), width=2)
+        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
+        radius = sprite.get_width() // 2
         dx, dy = self._random_velocity()
 
         return ShapeSpriteState(
@@ -179,9 +153,89 @@ class BouncingShapesBackdropFeature(ScreenPart):
             dy=dy,
         )
 
+    def _create_octagon_shape(self) -> ShapeSpriteState:
+        """Create one cached regular octagon sprite with velocity."""
+        radius = self._rng.randint(12, 38)
+        diameter = radius * 2
+        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        fill_color = (
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            190,
+        )
+        border_color = (15, 15, 15, 230)
+
+        center_x = float(radius)
+        center_y = float(radius)
+        outer_r = float(radius - 1)
+        points = []
+        for i in range(8):
+            angle = (math.tau * i / 8.0) - (math.pi / 8.0)
+            px = center_x + (math.cos(angle) * outer_r)
+            py = center_y + (math.sin(angle) * outer_r)
+            points.append((int(round(px)), int(round(py))))
+
+        pygame.draw.polygon(sprite, fill_color, points)
+        pygame.draw.polygon(sprite, border_color, points, width=2)
+        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
+        radius = sprite.get_width() // 2
+        dx, dy = self._random_velocity()
+
+        return ShapeSpriteState(
+            kind="octagon",
+            radius=radius,
+            sprite=sprite,
+            x=0.0,
+            y=0.0,
+            dx=dx,
+            dy=dy,
+        )
+
+    def _create_star_shape(self) -> ShapeSpriteState:
+        """Create one cached five-point star sprite with velocity."""
+        radius = self._rng.randint(12, 38)
+        diameter = radius * 2
+        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        fill_color = (
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            self._rng.randint(45, 245),
+            190,
+        )
+        border_color = (15, 15, 15, 230)
+
+        center_x = float(radius)
+        center_y = float(radius)
+        outer_r = float(radius - 1)
+        inner_r = max(2.0, outer_r * 0.45)
+        points = []
+        for i in range(10):
+            angle = (-math.pi / 2.0) + (math.pi * i / 5.0)
+            point_r = outer_r if i % 2 == 0 else inner_r
+            px = center_x + (math.cos(angle) * point_r)
+            py = center_y + (math.sin(angle) * point_r)
+            points.append((int(round(px)), int(round(py))))
+
+        pygame.draw.polygon(sprite, fill_color, points)
+        pygame.draw.polygon(sprite, border_color, points, width=2)
+        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
+        radius = sprite.get_width() // 2
+        dx, dy = self._random_velocity()
+
+        return ShapeSpriteState(
+            kind="star",
+            radius=radius,
+            sprite=sprite,
+            x=0.0,
+            y=0.0,
+            dx=dx,
+            dy=dy,
+        )
+
     def _random_velocity(self) -> tuple[float, float]:
         """Create a random velocity vector with bounded speed."""
-        speed = self._rng.uniform(1.2, 2.9)
+        speed = 2.8 + self._rng.uniform(0.0, 1.8)
         angle = self._rng.uniform(0.0, math.tau)
         dx = math.cos(angle) * speed
         dy = math.sin(angle) * speed

@@ -7,6 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui import ButtonGroupControl, GuiApplication, PanelControl
+from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ButtonGroupRuntimeTests(unittest.TestCase):
@@ -104,6 +105,24 @@ class ButtonGroupRuntimeTests(unittest.TestCase):
         self.assertTrue(second.pushed)
         # Hint remains active (still focused on second).
         self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_keyboard_activation_sets_cosmetic_focus_armed_until_shared_timeout(self) -> None:
+        first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
+        second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
+        second.set_tab_index(0)
+        self.app.focus.set_focus(second)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertTrue(second.pushed)
+        self.assertTrue(second._focus_activation_armed)
+
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
+        self.assertTrue(second._focus_activation_armed)
+
+        self.app.update(0.02)
+        self.assertFalse(second._focus_activation_armed)
 
 
 if __name__ == "__main__":
