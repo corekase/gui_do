@@ -109,9 +109,34 @@ class ToggleControlRuntimeTests(unittest.TestCase):
 
         self.assertTrue(resolve_spy.called)
         kwargs = resolve_spy.call_args.kwargs
-        # Visual state tracks the new toggle state immediately (unpushed).
+        # Visual state tracks the new toggle state immediately (unpushed) and
+        # still uses armed visuals during the keyboard activation timeout.
         self.assertTrue(kwargs["armed"])
         # Hover-only visuals are not used for keyboard activation timeout hint.
+        self.assertFalse(kwargs["hovered"])
+
+    def test_mouse_toggle_pushed_state_renders_armed_when_not_hovered(self) -> None:
+        toggle = self.root.add(ToggleControl("tog", Rect(20, 20, 80, 30), "On", "Off", pushed=False))
+
+        consumed = self.app.process_event(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": toggle.rect.center, "button": 1})
+        )
+        self.assertTrue(consumed)
+        self.assertTrue(toggle.pushed)
+
+        # Move pointer away to ensure hover does not drive the selected appearance.
+        self.app.process_event(
+            pygame.event.Event(pygame.MOUSEMOTION, {"pos": (200, 120), "rel": (0, 0), "buttons": (0, 0, 0)})
+        )
+        self.assertFalse(toggle.hovered)
+
+        factory = self.app.theme.graphics_factory
+        with patch.object(factory, "resolve_visual_state", wraps=factory.resolve_visual_state) as resolve_spy:
+            toggle.draw(self.surface, self.app.theme)
+
+        self.assertTrue(resolve_spy.called)
+        kwargs = resolve_spy.call_args.kwargs
+        self.assertTrue(kwargs["armed"])
         self.assertFalse(kwargs["hovered"])
 
     def test_keyboard_activation_ignored_when_disabled(self) -> None:

@@ -1,5 +1,6 @@
 ﻿import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -123,6 +124,31 @@ class ButtonGroupRuntimeTests(unittest.TestCase):
 
         self.app.update(0.02)
         self.assertFalse(second._focus_activation_armed)
+
+    def test_mouse_selected_group_button_renders_armed_when_not_hovered(self) -> None:
+        first = self.panel.add(ButtonGroupControl("a", Rect(10, 10, 50, 24), group="g", text="A", selected=True))
+        second = self.panel.add(ButtonGroupControl("b", Rect(70, 10, 50, 24), group="g", text="B", selected=False))
+
+        consumed = self.app.process_event(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": second.rect.center, "button": 1})
+        )
+        self.assertTrue(consumed)
+        self.assertFalse(first.pushed)
+        self.assertTrue(second.pushed)
+
+        self.app.process_event(
+            pygame.event.Event(pygame.MOUSEMOTION, {"pos": (240, 120), "rel": (0, 0), "buttons": (0, 0, 0)})
+        )
+        self.assertFalse(second.hovered)
+
+        factory = self.app.theme.graphics_factory
+        with patch.object(factory, "resolve_visual_state", wraps=factory.resolve_visual_state) as resolve_spy:
+            second.draw(self.surface, self.app.theme)
+
+        self.assertTrue(resolve_spy.called)
+        kwargs = resolve_spy.call_args.kwargs
+        self.assertTrue(kwargs["armed"])
+        self.assertFalse(kwargs["hovered"])
 
 
 if __name__ == "__main__":

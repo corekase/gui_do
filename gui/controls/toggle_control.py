@@ -31,7 +31,7 @@ class ToggleControl(UiNode):
         super().__init__(control_id, rect)
         self.text_on = text_on
         self.text_off = text_off if text_off is not None else text_on
-        self.pushed = bool(pushed)
+        self._pushed = bool(pushed)
         self.on_toggle = on_toggle
         self.style = style
         self._font_role = "body"
@@ -52,6 +52,18 @@ class ToggleControl(UiNode):
         if not next_role:
             raise ValueError("font_role must be a non-empty string")
         self._font_role = next_role
+
+    @property
+    def pushed(self) -> bool:
+        return self._pushed
+
+    @pushed.setter
+    def pushed(self, value: bool) -> None:
+        next_value = bool(value)
+        if self._pushed == next_value:
+            return
+        self._pushed = next_value
+        self.invalidate()
 
     def _commit_toggle(self) -> None:
         self.pushed = not self.pushed
@@ -140,7 +152,9 @@ class ToggleControl(UiNode):
             visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self._focus_activation_armed,
+            # Pushed toggles are rendered in armed state; keyboard activation hint
+            # temporarily arms the current pushed/unpushed state as well.
+            armed=self.pushed or self._focus_activation_armed,
             hovered=self.hovered,
         )
         surface.blit(selected, self.rect)

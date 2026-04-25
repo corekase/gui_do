@@ -260,27 +260,6 @@ class BuiltInGraphicsFactory:
         )
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
-    def build_toggle_visuals(self, style: str, pushed_text: str, raised_text: Optional[str], rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
-        start = perf_counter()
-        raised = pushed_text if raised_text is None else raised_text
-        idle_set = self.build_interactive_visuals(style, raised, rect, font_role=font_role)
-        armed_set = self.build_interactive_visuals(style, pushed_text, rect, font_role=font_role)
-        first_frame_profiler().record_once(
-            "visual.toggle",
-            f"{(style or 'box').lower()}:{font_role}:{rect.width}x{rect.height}:{raised}->{pushed_text}",
-            (perf_counter() - start) * 1000.0,
-            detail="build_toggle_visuals",
-        )
-        return InteractiveVisuals(
-            idle=idle_set.idle,
-            hover=idle_set.hover,
-            armed=armed_set.armed,
-            disabled=idle_set.disabled,
-            disabled_armed=armed_set.disabled_armed,
-            hidden=idle_set.hidden,
-            hit_rect=Rect(rect),
-        )
-
     def build_frame_visuals(self, rect: Rect) -> InteractiveVisuals:
         start = perf_counter()
         width, height = rect.size

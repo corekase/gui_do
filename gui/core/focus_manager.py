@@ -18,7 +18,6 @@ class FocusManager:
         self._focused_node = None
         self._hint_visible = False
         self._hint_elapsed_seconds = 0.0
-        self._continuous_tab_cycle = False
         self._armed_focus_target = None
         self._armed_focus_elapsed_seconds = 0.0
         self._scope_focus_memory = {"__screen__": None}
@@ -43,7 +42,6 @@ class FocusManager:
             if node is None:
                 self._hint_visible = False
                 self._hint_elapsed_seconds = 0.0
-                self._continuous_tab_cycle = False
             elif via_keyboard:
                 self._hint_visible = True
                 self._hint_elapsed_seconds = 0.0
@@ -53,8 +51,6 @@ class FocusManager:
         self._focused_node = node
         self._hint_visible = bool(node is not None and via_keyboard)
         self._hint_elapsed_seconds = 0.0
-        if not via_keyboard:
-            self._continuous_tab_cycle = False
         if node is not None:
             node._set_focused(True)
             scope_key = self._scope_key_for_window(self._find_ancestor_window(node))
@@ -129,7 +125,6 @@ class FocusManager:
         if not self._is_modifier_key_event(event):
             self._hint_visible = True
             self._hint_elapsed_seconds = 0.0
-            self._continuous_tab_cycle = False
         if self._try_activate_focused_button(event, app, target):
             return True
         self._try_arm_focused_control_for_adjustment_event(event, target)
@@ -247,7 +242,6 @@ class FocusManager:
         if focused is None or focused not in candidates:
             target = self._preferred_scope_entry_target(_scene=scene, window=window, candidates=candidates)
             self.set_focus(target, via_keyboard=True)
-            self._continuous_tab_cycle = False
             return True
 
         # Traversal initiation: with an existing focused node but no visible hint,
@@ -261,7 +255,6 @@ class FocusManager:
         next_index = (current_index + offset) % len(candidates)
         next_node = candidates[next_index]
         self.set_focus(next_node, via_keyboard=True)
-        self._continuous_tab_cycle = True
         return True
 
     def _reconcile_hover_state(self, scene, *, pointer_pos, window=None) -> None:
