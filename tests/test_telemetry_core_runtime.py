@@ -117,7 +117,7 @@ class TelemetryCoreRuntimeTests(unittest.TestCase):
         self.assertEqual(analysis.feature_hotspots[0].count, 2)
         self.assertEqual(analysis.feature_hotspots[1].key, "beta")
 
-    def test_analyzer_feature_hotspots_support_legacy_part_name_metadata(self) -> None:
+    def test_analyzer_feature_hotspots_require_feature_name_metadata(self) -> None:
         analysis = analyze_telemetry_records(
             [
                 {
@@ -129,10 +129,7 @@ class TelemetryCoreRuntimeTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(len(analysis.feature_hotspots), 1)
-        self.assertEqual(analysis.feature_hotspots[0].key, "legacy_feature")
-        # Backward-compatible alias remains available to older callers.
-        self.assertEqual(analysis.part_hotspots, analysis.feature_hotspots)
+        self.assertEqual(analysis.feature_hotspots, ())
 
     def test_report_uses_feature_hotspots_section(self) -> None:
         analysis = analyze_telemetry_records(

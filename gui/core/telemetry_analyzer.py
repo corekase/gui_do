@@ -26,11 +26,6 @@ class TelemetryAnalysis:
     hotspots: tuple[TelemetryHotspot, ...]
     feature_hotspots: tuple[TelemetryHotspot, ...]
 
-    @property
-    def part_hotspots(self) -> tuple[TelemetryHotspot, ...]:
-        """Backward-compatible alias for pre-rename callers."""
-        return self.feature_hotspots
-
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
     if not values:
@@ -94,9 +89,6 @@ def analyze_telemetry_records(records: Iterable[Any], *, top_n: int = 12) -> Tel
 
         metadata = dict(record.get("metadata", {}) or {})
         feature_name = metadata.get("feature_name")
-        if not (isinstance(feature_name, str) and feature_name.strip()):
-            # Legacy fallback for pre-rename telemetry payloads.
-            feature_name = metadata.get("part_name")
         if isinstance(feature_name, str) and feature_name.strip():
             by_feature.setdefault(str(feature_name).strip(), []).append(elapsed)
 

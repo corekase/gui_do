@@ -175,6 +175,8 @@ Telemetry API (`from gui import ...`):
 - `load_telemetry_log_file(...)`
 - `render_telemetry_report(...)`
 
+Analyzer note: per-feature hotspot aggregation reads `metadata.feature_name` on each telemetry sample.
+
 `GuiApplication` convenience helpers:
 
 - `app.configure_telemetry(...)`
@@ -304,7 +306,7 @@ class MandelbrotRenderFeature(RoutedFeature):
     }
 
     def __init__(self):
-        super().__init__("mandelbrot_render", scene_name="main")
+        super().__init__("mandelbrot", scene_name="main")
         # Owns render-mode toggles, status label, scheduler tasks, and
         # a canvas window — all standard controls; no raw screen blitting.
         ...
@@ -318,7 +320,7 @@ This keeps the lifecycle strict and generic: the framework provides only routing
 
 API helpers:
 
-- `Feature.bind_logic(bound_logic_name, alias="default")`
+- `Feature.bind_logic(logic_feature_name, alias="default")`
 - `Feature.send_logic_message(message, alias="default")`
 - `GuiApplication.bind_feature_logic(...)`
 - `GuiApplication.send_feature_logic_message(...)`
@@ -331,6 +333,78 @@ Private and shared logic are both supported:
 `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicFeature`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic Feature sends back the updated `life_cells` snapshot.
 
 `MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicFeature` providers (one primary logic Feature plus split-canvas logic Features), while the render Feature owns control flow and payload-to-canvas drawing.
+
+#### Attaching logic inside your Feature (recommended pattern)
+
+The current preferred pattern is: register companion `LogicFeature` providers from `on_register`, then bind aliases in `bind_runtime`. This keeps bootstrap wiring local to the owning Feature so your app/demo only registers the top-level render Feature.
+
+```python
+from shared.feature_lifecycle import FeatureMessage, LogicFeature, RoutedFeature
+
+TOPIC = "counter"
+
+
+class CounterLogicFeature(LogicFeature):
+    def __init__(self) -> None:
+        super().__init__("counter_logic", scene_name="main")
+        self.value = 0
+
+    def on_logic_command(self, _host, message: FeatureMessage) -> None:
+        if message.command == "inc":
+            self.value += 1
+        elif message.command == "reset":
+            self.value = 0
+        else:
+            return
+        self.send_message(
+            message.sender,
+            {"topic": TOPIC, "event": "state", "value": self.value},
+        )
+
+
+class CounterFeature(RoutedFeature):
+    LOGIC_ALIAS = "counter"
+
+    def __init__(self) -> None:
+        super().__init__("counter", scene_name="main")
+        self.value = 0
+
+    def on_register(self, host) -> None:
+        # Companion logic is registered as part of this Feature's registration.
+        self._feature_manager.register(CounterLogicFeature(), host)
+
+    def bind_runtime(self, _host) -> None:
+        # Bind once; future calls are no-ops.
+        if self.bound_logic_name(alias=self.LOGIC_ALIAS) is None:
+            self.bind_logic("counter_logic", alias=self.LOGIC_ALIAS)
+        self.send_logic_message({"topic": TOPIC, "command": "reset"}, alias=self.LOGIC_ALIAS)
+
+    def message_handlers(self):
+        return {TOPIC: self._on_counter_message}
+
+    def _on_counter_message(self, _host, message: FeatureMessage) -> None:
+        if message.event == "state":
+            self.value = int(message.get("value", 0))
+
+    def increment(self) -> None:
+        self.send_logic_message({"topic": TOPIC, "command": "inc"}, alias=self.LOGIC_ALIAS)
+```
+
+Minimal app wiring with this pattern:
+
+```python
+# Only register the owning Feature; it self-registers logic in on_register.
+app.register_feature(CounterFeature(), host=self)
+app.build_features(self)
+app.bind_features_runtime(self)
+```
+
+Practical notes:
+
+- Keep logic provider names stable (`counter_logic`) so alias binding remains deterministic.
+- Use `bound_logic_name(...) is None` guards in `bind_runtime` to avoid duplicate binds.
+- Use a dedicated topic key for replies and route with `RoutedFeature.message_handlers()`.
+- The demo follows this exact pattern for both `LifeSimulationFeature` and `MandelbrotRenderFeature`.
 
 #### `RoutedFeature` — Topic-routed message dispatch
 
