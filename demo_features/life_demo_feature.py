@@ -18,57 +18,57 @@ _KEY_LIFE_CELLS = "life_cells"
 
 _LIFE_EVENT_STATE = "state"
 
-_LIFE_DEFAULT_SEED: Set[Tuple[int, int]] = {
-    (0, 0),
-    (1, 0),
-    (-1, 0),
-    (0, -1),
-    (1, -2),
-}
-_LIFE_NEIGHBOURS = (
-    (-1, -1), (-1, 0), (-1, 1),
-    (0, -1),           (0, 1),
-    (1, -1),  (1, 0),  (1, 1),
-)
-
-
-def _life_population(cells: Set[Tuple[int, int]], cell: Tuple[int, int]) -> int:
-    count = 0
-    for dx, dy in _LIFE_NEIGHBOURS:
-        if (cell[0] + dx, cell[1] + dy) in cells:
-            count += 1
-    return count
-
-
-def _next_life_cycle(cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
-    new_life: Set[Tuple[int, int]] = set()
-    for cell in cells:
-        pop = _life_population(cells, cell)
-        if pop in (2, 3):
-            new_life.add(cell)
-        for dx, dy in _LIFE_NEIGHBOURS:
-            n_cell = (cell[0] + dx, cell[1] + dy)
-            if _life_population(cells, n_cell) == 3:
-                new_life.add(n_cell)
-    return new_life
-
 
 class LifeSimulationLogicFeature(LogicFeature):
     """Domain logic service for Conway life cycles."""
 
+    DEFAULT_SEED: Set[Tuple[int, int]] = {
+        (0, 0),
+        (1, 0),
+        (-1, 0),
+        (0, -1),
+        (1, -2),
+    }
+    NEIGHBOURS = (
+        (-1, -1), (-1, 0), (-1, 1),
+        (0, -1),           (0, 1),
+        (1, -1),  (1, 0),  (1, 1),
+    )
+
     def __init__(self) -> None:
         super().__init__("life_simulation_logic", scene_name="main")
-        self.life_cells: Set[Tuple[int, int]] = set(_LIFE_DEFAULT_SEED)
+        self.life_cells: Set[Tuple[int, int]] = set(self.DEFAULT_SEED)
+
+    @classmethod
+    def next_life_cycle(cls, cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
+        new_life: Set[Tuple[int, int]] = set()
+        for cell in cells:
+            pop = cls._life_population(cells, cell)
+            if pop in (2, 3):
+                new_life.add(cell)
+            for dx, dy in cls.NEIGHBOURS:
+                n_cell = (cell[0] + dx, cell[1] + dy)
+                if cls._life_population(cells, n_cell) == 3:
+                    new_life.add(n_cell)
+        return new_life
+
+    @classmethod
+    def _life_population(cls, cells: Set[Tuple[int, int]], cell: Tuple[int, int]) -> int:
+        count = 0
+        for dx, dy in cls.NEIGHBOURS:
+            if (cell[0] + dx, cell[1] + dy) in cells:
+                count += 1
+        return count
 
     def on_logic_command(self, _host, message: FeatureMessage) -> None:
         command = message.command
         sender_name = message.sender
         if command == "reset":
-            self.life_cells = set(_LIFE_DEFAULT_SEED)
+            self.life_cells = set(self.DEFAULT_SEED)
             self._publish_state(sender_name)
             return
         if command == "next":
-            self.life_cells = _next_life_cycle(self.life_cells)
+            self.life_cells = self.next_life_cycle(self.life_cells)
             self._publish_state(sender_name)
             return
         if command == "toggle_cell":
@@ -306,7 +306,7 @@ class LifeSimulationFeature(RoutedFeature):
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         self.toggle.pushed = False
         if not self._send_life_logic_command("reset"):
-            self.life_cells = set(_LIFE_DEFAULT_SEED)
+            self.life_cells = set(LifeSimulationLogicFeature.DEFAULT_SEED)
 
     def zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
         """Zoom around a local canvas anchor while preserving the anchored world point."""
