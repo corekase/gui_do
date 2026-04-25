@@ -5,6 +5,7 @@ from pathlib import Path
 from gui.core.telemetry import TelemetryCollector
 from gui.core.telemetry_analyzer import analyze_telemetry_records
 from gui.core.telemetry_analyzer import load_telemetry_log_file
+from gui.core.telemetry_analyzer import render_telemetry_report
 
 
 class TelemetryCoreRuntimeTests(unittest.TestCase):
@@ -86,6 +87,69 @@ class TelemetryCoreRuntimeTests(unittest.TestCase):
         self.assertEqual(analysis.sample_count, 3)
         self.assertGreaterEqual(len(analysis.hotspots), 2)
         self.assertEqual(analysis.hotspots[0].key, "gui.draw")
+
+    def test_analyzer_collects_feature_hotspots_from_feature_name_metadata(self) -> None:
+        analysis = analyze_telemetry_records(
+            [
+                {
+                    "system": "feature_lifecycle",
+                    "point": "feature_update",
+                    "elapsed_ms": 5.0,
+                    "metadata": {"feature_name": "alpha"},
+                },
+                {
+                    "system": "feature_lifecycle",
+                    "point": "feature_draw",
+                    "elapsed_ms": 2.0,
+                    "metadata": {"feature_name": "alpha"},
+                },
+                {
+                    "system": "feature_lifecycle",
+                    "point": "feature_update",
+                    "elapsed_ms": 1.0,
+                    "metadata": {"feature_name": "beta"},
+                },
+            ],
+            top_n=5,
+        )
+
+        self.assertEqual(analysis.feature_hotspots[0].key, "alpha")
+        self.assertEqual(analysis.feature_hotspots[0].count, 2)
+        self.assertEqual(analysis.feature_hotspots[1].key, "beta")
+
+    def test_analyzer_feature_hotspots_support_legacy_part_name_metadata(self) -> None:
+        analysis = analyze_telemetry_records(
+            [
+                {
+                    "system": "feature_lifecycle",
+                    "point": "feature_update",
+                    "elapsed_ms": 3.0,
+                    "metadata": {"part_name": "legacy_feature"},
+                }
+            ]
+        )
+
+        self.assertEqual(len(analysis.feature_hotspots), 1)
+        self.assertEqual(analysis.feature_hotspots[0].key, "legacy_feature")
+        # Backward-compatible alias remains available to older callers.
+        self.assertEqual(analysis.part_hotspots, analysis.feature_hotspots)
+
+    def test_report_uses_feature_hotspots_section(self) -> None:
+        analysis = analyze_telemetry_records(
+            [
+                {
+                    "system": "feature_lifecycle",
+                    "point": "feature_update",
+                    "elapsed_ms": 3.0,
+                    "metadata": {"feature_name": "alpha"},
+                }
+            ]
+        )
+
+        report = render_telemetry_report(analysis, source="unit-test")
+        self.assertIn("Feature Hotspots:", report)
+        self.assertNotIn("Part Hotspots:", report)
+        self.assertIn("alpha", report)
 
 
 if __name__ == "__main__":

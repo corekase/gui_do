@@ -23,7 +23,12 @@ class TelemetryAnalysis:
     sample_count: int
     systems: tuple[str, ...]
     hotspots: tuple[TelemetryHotspot, ...]
-    part_hotspots: tuple[TelemetryHotspot, ...]
+    feature_hotspots: tuple[TelemetryHotspot, ...]
+
+    @property
+    def part_hotspots(self) -> tuple[TelemetryHotspot, ...]:
+        """Backward-compatible alias for pre-rename callers."""
+        return self.feature_hotspots
 
 
 def _percentile(values: Sequence[float], fraction: float) -> float:
@@ -70,7 +75,7 @@ def _build_hotspots(groups: Dict[str, List[float]], top_n: int) -> tuple[Telemet
 
 def analyze_telemetry_records(records: Iterable[Any], *, top_n: int = 12) -> TelemetryAnalysis:
     by_point: Dict[str, List[float]] = {}
-    by_part: Dict[str, List[float]] = {}
+    by_feature: Dict[str, List[float]] = {}
     systems: set[str] = set()
     sample_count = 0
 
@@ -87,15 +92,18 @@ def analyze_telemetry_records(records: Iterable[Any], *, top_n: int = 12) -> Tel
         by_point.setdefault(key, []).append(elapsed)
 
         metadata = dict(record.get("metadata", {}) or {})
-        part_name = metadata.get("part_name")
-        if isinstance(part_name, str) and part_name.strip():
-            by_part.setdefault(str(part_name).strip(), []).append(elapsed)
+        feature_name = metadata.get("feature_name")
+        if not (isinstance(feature_name, str) and feature_name.strip()):
+            # Legacy fallback for pre-rename telemetry payloads.
+            feature_name = metadata.get("part_name")
+        if isinstance(feature_name, str) and feature_name.strip():
+            by_feature.setdefault(str(feature_name).strip(), []).append(elapsed)
 
     return TelemetryAnalysis(
         sample_count=sample_count,
         systems=tuple(sorted(systems)),
         hotspots=_build_hotspots(by_point, top_n),
-        part_hotspots=_build_hotspots(by_part, top_n),
+        feature_hotspots=_build_hotspots(by_feature, top_n),
     )
 
 
@@ -142,11 +150,11 @@ def render_telemetry_report(
             )
 
     lines.append("")
-    lines.append("Part Hotspots:")
-    if not analysis.part_hotspots:
-        lines.append("- No per-part telemetry was detected.")
+    lines.append("Feature Hotspots:")
+    if not analysis.feature_hotspots:
+        lines.append("- No per-feature telemetry was detected.")
     else:
-        for index, hotspot in enumerate(analysis.part_hotspots, start=1):
+        for index, hotspot in enumerate(analysis.feature_hotspots, start=1):
             lines.append(
                 f"{index}. {hotspot.key} | total={hotspot.total_ms:.3f} ms | "
                 f"avg={hotspot.average_ms:.3f} ms | p95={hotspot.p95_ms:.3f} ms | "
