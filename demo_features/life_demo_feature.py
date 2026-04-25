@@ -428,7 +428,7 @@ class LifeSimulationFeature(RoutedFeature):
 
         if toggle.pushed:
             if not self._send_life_logic_command("next"):
-                self.life_cells = _next_life_cycle(self.life_cells)
+                self.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.life_cells)
 
         cell_size = max(2, int(round(self.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)
