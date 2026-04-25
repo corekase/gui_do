@@ -2,7 +2,7 @@
 
 # gui_do
 
-Architecture-first pygame GUI framework focused on strict contracts, scene isolation, and composable feature parts.
+Architecture-first pygame GUI framework focused on strict contracts, scene isolation, and composable Features.
 
 ## Quick Start
 
@@ -103,10 +103,10 @@ Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and a
 
 ### Scene Prewarm (One Call Per Scene)
 
-`GuiApplication.prewarm_scene(scene_name)` performs a one-time prewarm pass for all parts active in that scene:
+`GuiApplication.prewarm_scene(scene_name)` performs a one-time prewarm pass for all Features active in that scene:
 
-- parts with `Feature.scene_name == scene_name`
-- parts with `Feature.scene_name is None` (shared/global)
+- Features with `Feature.scene_name == scene_name`
+- Features with `Feature.scene_name is None` (shared/global)
 
 It invokes each Feature's `prewarm(host, surface, theme)` exactly once per `(Feature, scene)` unless `force=True` is passed.
 
@@ -122,7 +122,7 @@ app.prewarm_scene("control_showcase")
 app.prewarm_scene("control_showcase", force=True)
 ```
 
-Host behavior: if `host` is omitted, prewarm uses each Feature's registered host context (same as runtime hooks). This lets one scene-level call prewarm all scene parts safely, including parts that require richer host state than `GuiApplication` alone.
+Host behavior: if `host` is omitted, prewarm uses each Feature's registered host context (same as runtime hooks). This lets one scene-level call prewarm all scene Features safely, including Features that require richer host state than `GuiApplication` alone.
 
 ### First-Open Optimisation Workflow (Instrument -> Confirm -> Prewarm)
 
@@ -137,7 +137,7 @@ Use this sequence to remove first-open stutter caused by one-time lazy work (fon
 # 1) Enable first-open profiling
 app.configure_first_frame_profiling(enabled=True, min_ms=0.25)
 
-# 2) Build/bind parts as normal
+# 2) Build/bind Features as normal
 app.build_features(demo)
 app.bind_features_runtime(demo)
 
@@ -312,7 +312,7 @@ class MandelbrotRenderFeature(RoutedFeature):
 
 #### `LogicFeature` — Domain logic service behind message commands
 
-`LogicFeature` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic Feature responds with result/state messages.
+`LogicFeature` is for domain-specific logic that should be reused by one or many UI-facing Features without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic Feature responds with result/state messages.
 
 This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic Feature defines its own command/data protocol.
 
@@ -321,7 +321,7 @@ API helpers:
 - `Feature.bind_logic(bound_logic_name, alias="default")`
 - `Feature.send_logic_message(message, alias="default")`
 - `GuiApplication.bind_feature_logic(...)`
-- `GuiApplication.send_part_logic_message(...)`
+- `GuiApplication.send_feature_logic_message(...)`
 
 Private and shared logic are both supported:
 
@@ -330,7 +330,7 @@ Private and shared logic are both supported:
 
 `LifeSimulationFeature` uses this pattern with `LifeSimulationLogicFeature`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic Feature sends back the updated `life_cells` snapshot.
 
-`MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicFeature` providers (one primary logic Feature plus split-canvas logic parts), while the render Feature owns control flow and payload-to-canvas drawing.
+`MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicFeature` providers (one primary logic Feature plus split-canvas logic Features), while the render Feature owns control flow and payload-to-canvas drawing.
 
 #### `RoutedFeature` — Topic-routed message dispatch
 
@@ -339,7 +339,7 @@ Private and shared logic are both supported:
 ```python
 from shared.feature_lifecycle import RoutedFeature
 
-class StatusConsumerPart(RoutedFeature):
+class StatusConsumerFeature(RoutedFeature):
     # Override MESSAGE_TOPIC_KEY if the sending party uses a different field name.
     MESSAGE_TOPIC_KEY = "topic"  # default
 
@@ -362,13 +362,13 @@ class StatusConsumerPart(RoutedFeature):
 
 `DirectFeature` is a `Feature` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
 
-- `handle_screen_event(host, event) -> bool` — receives raw events before controls
-- `on_screen_update(host, dt_seconds)` — called once per frame with elapsed time
-- `draw_screen(host, surface, theme)` — blits directly onto the full-screen surface
+- `handle_direct_event(host, event) -> bool` — receives raw events before controls
+- `on_direct_update(host, dt_seconds)` — called once per frame with elapsed time
+- `draw_direct(host, surface, theme)` — blits directly onto the full-screen surface
 
 This matters for performance. A standard `Feature` drawing onto the screen via `draw(...)` enters the full GUI widget rendering pipeline: hit testing, invalidation tracking, and compositor layering all run even when only a background animation needs to repaint. For an animated backdrop with dozens of sprites updated every frame, that overhead is measurable.
 
-`DirectFeature` bypasses the widget pipeline entirely for its drawing path. `draw_screen` receives the already-restored pristine surface and blits cached sprites directly, keeping the path as thin as a raw pygame `surface.blit` call. The pre-cached sprite approach (surfaces created once at init time) keeps `draw_screen` allocation-free and avoids per-frame `pygame.draw` calls.
+`DirectFeature` bypasses the widget pipeline entirely for its drawing path. `draw_direct` receives the already-restored pristine surface and blits cached sprites directly, keeping the path as thin as a raw pygame `surface.blit` call. The pre-cached sprite approach (surfaces created once at init time) keeps `draw_direct` allocation-free and avoids per-frame `pygame.draw` calls.
 
 The demo's `BouncingShapesBackdropFeature` extends `DirectFeature` for exactly this reason: it renders many translucent animated circles and diamonds as a fullscreen backdrop every frame, and any per-frame widget pipeline overhead would compound noticeably at 60 fps.
 
@@ -381,9 +381,9 @@ class BouncingShapesBackdropFeature(DirectFeature):
     }
 
     def __init__(self, *, circle_count=28, diamond_count=0, seed=None,
-                 scene_name=None, part_name="bouncing_shapes_backdrop"):
-        super().__init__(part_name, scene_name=scene_name)
-        # Sprites are fully pre-rendered at init time — draw_screen does
+                 scene_name=None, feature_name="bouncing_shapes_backdrop"):
+        super().__init__(feature_name, scene_name=scene_name)
+        # Sprites are fully pre-rendered at init time — draw_direct does
         # zero allocation; it only calls surface.blit() per shape.
         self._shapes = self._create_shapes(circle_count, diamond_count)
 
@@ -392,7 +392,7 @@ class BouncingShapesBackdropFeature(DirectFeature):
         width, height = demo.screen_rect.size
         self._randomize_positions(width, height)
 
-    def on_screen_update(self, host, dt_seconds: float) -> None:
+    def on_direct_update(self, host, dt_seconds: float) -> None:
         # Advance every shape position and bounce off screen edges.
         # Called by the screen lifecycle layer, not the widget tree.
         for shape in self._shapes:
@@ -400,7 +400,7 @@ class BouncingShapesBackdropFeature(DirectFeature):
             shape.y += shape.dy
             # ... edge bounce logic ...
 
-    def draw_screen(self, _host, surface, _theme) -> None:
+    def draw_direct(self, _host, surface, _theme) -> None:
         # Blit pre-cached sprites directly onto the full-screen surface.
         # No widget pipeline overhead — this is the performance-critical path.
         for shape in self._shapes:
@@ -417,7 +417,7 @@ class BouncingShapesBackdropFeature(DirectFeature):
 | Encapsulates reusable domain logic behind command messages | `LogicFeature` |
 | Wires preamble / event routing / postamble for controls | `Feature` |
 | Uses scheduler, event bus, or Feature messaging | `Feature` |
-| Needs to be shared as a logic service by multiple parts | `LogicFeature` |
+| Needs to be shared as a logic service by multiple Features | `LogicFeature` |
 | Draws a fullscreen or large background animation every frame | `DirectFeature` |
 | Needs raw per-frame `dt_seconds` for physics/animation | `DirectFeature` |
 | Requires bypassing the widget pipeline for performance | `DirectFeature` |
@@ -504,7 +504,10 @@ scheduler = TaskScheduler(max_workers=workers)
 
 ### Value Change Callbacks
 
-`SliderControl` and `ScrollbarControl` callbacks must accept `(value, reason)`:
+`SliderControl` and `ScrollbarControl` support two callback modes:
+
+- `compat` (default): callback may accept `value` only or `(value, reason)`
+- `reason-required`: callback must accept `(value, reason)`
 
 ```python
 from gui import SliderControl, LayoutAxis, ValueChangeReason
@@ -1272,7 +1275,7 @@ window.restore_pristine(surface)
 
 The framework includes automatic layout for multiple windows. Both `configure_window_tiling` and `set_window_tiling_enabled` accept an optional `scene_name` parameter so non-active scenes can be configured without switching scenes first.
 
-`build_features(host)` automatically primes the per-scene tiling registration order for all scenes after building parts, so no manual pre-registration ceremony (calling `tile_windows()` before first visibility toggles) is needed.
+`build_features(host)` automatically primes the per-scene tiling registration order for all scenes after building Features, so no manual pre-registration ceremony (calling `tile_windows()` before first visibility toggles) is needed.
 
 ```python
 # Configure tiling for the active scene or a named non-active scene
@@ -1650,20 +1653,20 @@ for_topic = bus.subscriber_count("status_changed")
 
 ### Cross-Feature Communication via Messaging
 
-Parts communicate by sending dictionary messages to named target parts. The receiver drains its queue each frame.
+Features communicate by sending dictionary messages to named target Features. The receiver drains its queue each frame.
 
 ```python
 from shared.feature_lifecycle import Feature
 
-class ProducerPart(Feature):
+class ProducerFeature(Feature):
     def on_update(self, host):
         # Send a message to a named target Feature
-        self.send_message("consumer_part", {
+        self.send_message("consumer_feature", {
             "topic": "data_update",
             "data": {"value": 42}
         })
 
-class ConsumerPart(Feature):
+    class ConsumerFeature(Feature):
     def on_update(self, host):
         # Drain the incoming message queue
         while self.has_messages():
@@ -1680,7 +1683,7 @@ class ConsumerPart(Feature):
 
 ### Feature Font Role Management
 
-Parts can register their own namespaced font roles without colliding with other parts or application-level roles. Roles are stored under a qualified name `Feature.<part_name>.<role_name>` and resolved via `self.font_role(...)`.
+Features can register their own namespaced font roles without colliding with other Features or application-level roles. Roles are stored under a qualified name `feature.<feature_name>.<role_name>` and resolved via `self.font_role(...)`.
 
 ```python
 from shared.feature_lifecycle import Feature
@@ -1713,7 +1716,7 @@ class MyFeature(Feature):
 
     def bind_runtime(self, host) -> None:
         # Resolve the local role name to the qualified global name
-        heading_role = self.font_role("heading")   # "Feature.my_feature.heading"
+        heading_role = self.font_role("heading")   # "feature.my_feature.heading"
         host.app.style_label(self.title_label, size=20, role=heading_role)
 ```
 
@@ -1727,8 +1730,8 @@ from shared.feature_lifecycle import LogicFeature, RoutedFeature
 class MandelbrotLogicFeature(LogicFeature):
     def bind_runtime(self, host) -> None:
         # Expose worker entrypoints via the public GuiApplication API.
-        host.app.register_part_runnable(self.name, "iterative_task", self.run_iterative_task)
-        host.app.register_part_runnable(self.name, "recursive_task", self.run_recursive_task)
+        host.app.register_feature_runnable(self.name, "iterative_task", self.run_iterative_task)
+        host.app.register_feature_runnable(self.name, "recursive_task", self.run_recursive_task)
 
     def run_iterative_task(self, scheduler, task_id, params):
         ...  # emits scheduler.send_message(task_id, payload)
@@ -1830,12 +1833,12 @@ app.set_window_tiling_enabled(True, relayout=False, scene_name="settings")
 # Activate the startup scene
 app.switch_scene("main")
 
-# Register parts for each scene
-main_parts = [Feature1(), Feature2()]
-for Feature in main_parts:
-    app.register_feature(Feature, host=demo)
+# Register Features for each scene
+main_features = [Feature1(), Feature2()]
+for feature in main_features:
+    app.register_feature(feature, host=demo)
 
-# Build and bind parts — build_features() also auto-primes tiling registration
+# Build and bind Features — build_features() also auto-primes tiling registration
 app.build_features(demo)
 app.bind_features_runtime(demo)
 
@@ -1908,21 +1911,21 @@ removed    = app.remove_scene("about") # True when removed (cannot remove active
 active     = app.active_scene_name    # name of the currently active scene
 
 # Feature management
-app.register_feature(my_part, host=demo)   # register a Feature with optional host
+app.register_feature(my_feature, host=demo)   # register a Feature with optional host
 app.unregister_feature("my_feature")       # unregister and shutdown; returns bool
-Feature = app.get_part("my_feature")       # Feature instance or None
-names = app.part_names()                # tuple of registered Feature names in order
+feature = app.get_feature("my_feature")     # Feature instance or None
+names = app.feature_names()                  # tuple of registered Feature names in order
 ```
 
 ### Logic Feature Bindings
 
 ```python
-app.bind_feature_logic("consumer", "logic_part")          # bind consumer to LogicFeature
+app.bind_feature_logic("consumer", "logic_feature")       # bind consumer to LogicFeature
 app.unbind_feature_logic("consumer", alias="default")     # remove one binding; returns bool
-name = app.get_part_logic("consumer", alias="default") # provider name or None
+name = app.get_feature_logic("consumer", alias="default") # provider name or None
 
 # Send a command message from a consumer to its bound LogicFeature
-app.send_part_logic_message("consumer", {"command": "reset"})
+app.send_feature_logic_message("consumer", {"command": "reset"})
 ```
 
 ### Node Search
@@ -1947,11 +1950,11 @@ focused = app.focus_on("my_button", scene_name="settings")
 ### Feature Accessibility and Messaging Helpers
 
 ```python
-# Call configure_accessibility on all parts in order (returns next available tab index)
+# Call configure_accessibility on all Features in order (returns next available tab index)
 next_idx = app.configure_features_accessibility(demo, tab_index_start=0)
 
-# Send a message between two registered parts by name
-app.send_part_message("producer_part", "consumer_part", {"topic": "data_update", "value": 42})
+# Send a message between two registered Features by name
+app.send_feature_message("producer_feature", "consumer_feature", {"topic": "data_update", "value": 42})
 ```
 
 ### Scene-Specific Services
@@ -1961,7 +1964,7 @@ app.send_part_message("producer_part", "consumer_part", {"topic": "data_update",
 scheduler  = app.get_scene_scheduler("main")
 factory    = app.get_scene_graphics_factory("main")
 
-# Scene-level prewarm (runs Feature.prewarm for active scene parts + shared parts)
+# Scene-level prewarm (runs Feature.prewarm for active scene Features + shared Features)
 warmed = app.prewarm_scene("control_showcase")
 warmed = app.prewarm_scene("control_showcase", force=True)
 
