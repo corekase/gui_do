@@ -20,8 +20,8 @@ python gui_do_demo.py
 
 The demo ships with two scenes:
 
-- `main`: Life + Mandelbrot windows, animated backdrop, task panel (`Exit`, `Showcase`, `Life`, `Mandelbrot`)
-- `control_showcase`: dedicated showcase scene with its own backdrop and an `Apps` task-panel button
+- `main`: Life simulation window, Mandelbrot render window, animated bouncing-shapes backdrop
+- `control_showcase`: controls showcase window, styles window, animated bouncing-shapes backdrop (shared with `main`)
 
 ## Minimal Runnable Example
 
@@ -77,14 +77,14 @@ Switching scenes swaps these runtime services through `GuiApplication.switch_sce
 
 ### Window Tiling Registration
 
-`GuiApplication.build_features(host)` now primes per-scene window tiling registration order internally.
+`GuiApplication.build_features(host)` primes per-scene window tiling registration order internally.
 
 This means app/demo startup does not need manual pre-registration choreography such as:
 
 - calling `tile_windows()` before first visibility toggles
 - switching scenes solely to pre-register tiling order
 
-Registration order is still deterministic by scene graph creation order, and remains stable across hide/show visibility toggles.
+Registration order is deterministic by scene graph creation order and remains stable across hide/show visibility toggles.
 
 ### Feature Lifecycle
 
@@ -157,7 +157,7 @@ python gui_do_demo.py
 
 ### Runtime Telemetry and Performance Analyzer
 
-`gui_do` now includes a built-in telemetry system for GUI loop timing, scheduler throughput, Feature lifecycle execution, and Feature/event messaging hotspots.
+`gui_do` includes a built-in telemetry system for GUI loop timing, scheduler throughput, Feature lifecycle execution, and Feature/event messaging hotspots.
 
 Default behavior:
 
@@ -409,20 +409,21 @@ class BouncingShapesBackdropFeature(DirectFeature):
             surface.blit(shape.sprite, (left, top))
 ```
 
-#### Choosing between `Feature` and `DirectFeature`
+#### Choosing between `Feature`, `RoutedFeature`, `LogicFeature`, and `DirectFeature`
 
 | Scenario | Use |
 |---|---|
 | Owns windows, buttons, or other controls on the scene | `Feature` |
-| Encapsulates reusable domain logic behind command messages | `LogicFeature` |
 | Wires preamble / event routing / postamble for controls | `Feature` |
 | Uses scheduler, event bus, or Feature messaging | `Feature` |
+| Routes incoming messages to handlers by topic key | `RoutedFeature` |
+| Encapsulates reusable domain logic behind command messages | `LogicFeature` |
 | Needs to be shared as a logic service by multiple Features | `LogicFeature` |
 | Draws a fullscreen or large background animation every frame | `DirectFeature` |
 | Needs raw per-frame `dt_seconds` for physics/animation | `DirectFeature` |
 | Requires bypassing the widget pipeline for performance | `DirectFeature` |
 
-A `DirectFeature` can still declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle — it just adds the three screen-layer hooks on top.
+All four subtypes can declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle. `DirectFeature` adds three screen-layer hooks on top; `RoutedFeature` and `LogicFeature` each add their own dispatch hooks.
 
 ### Screen Lifecycle Composition
 
@@ -1004,6 +1005,71 @@ canvas_surface = canvas.get_canvas_surface()
 pygame.draw.circle(canvas_surface, (255, 0, 0), (100, 100), 50)
 ```
 
+## Task Panel Configuration
+
+`TaskPanelControl` provides a panel that slides in/out from an edge of the screen, typically for application-level action buttons. Construct it like any other control and add it to a root container.
+
+```python
+from gui import TaskPanelControl, ButtonControl
+from pygame import Rect
+
+# Create task panel docked at the top of the screen
+task_panel = root.add(
+    TaskPanelControl(
+        "task_panel",
+        Rect(0, 0, screen_width, 48),
+        auto_hide=True,          # slide out of view when not hovered
+        hidden_peek_pixels=4,    # pixels visible when hidden (gives hover target)
+        animation_step_px=4,     # pixels per frame while animating
+        dock_bottom=False,       # True = dock to bottom edge instead
+    )
+)
+
+# Add buttons to the task panel
+exit_btn = task_panel.add(
+    ButtonControl("exit_btn", Rect(8, 8, 100, 32), "Exit", on_click=app.quit)
+)
+exit_btn.set_accessibility(role="button", label="Exit application")
+
+# Mutate settings at runtime
+task_panel.set_auto_hide(False)
+task_panel.set_hidden_peek_pixels(8)
+task_panel.set_animation_step_px(6)
+```
+
+## Canvas and Custom Drawing
+
+The `CanvasControl` provides a drawable surface for custom graphics and interactive content. Mouse events that land on the canvas are queued as `CanvasEventPacket` objects. Drain the queue in your update hook each frame using `read_event()`.
+
+```python
+from gui import CanvasControl, CanvasEventPacket
+
+canvas = parent.add(
+    CanvasControl("canvas_id", rect, max_events=256)
+)
+
+# Drain the event queue each frame (e.g., in Feature.on_update or a screen lifecycle postamble)
+packet = canvas.read_event()
+while packet is not None:
+    if packet.is_left_down():
+        lx, ly = packet.local_pos   # canvas-local coordinates
+        print(f"Left click at ({lx}, {ly})")
+    elif packet.is_mouse_motion():
+        print(f"Motion: pos={packet.pos}, local={packet.local_pos}, rel={packet.rel}")
+    elif packet.is_mouse_wheel():
+        print(f"Wheel delta: {packet.wheel_delta}")
+    packet = canvas.read_event()
+
+# Draw custom content to the canvas backing surface each frame:
+canvas_surface = canvas.get_canvas_surface()
+pygame.draw.circle(canvas_surface, (255, 0, 0), (100, 100), 50)
+pygame.draw.line(canvas_surface, (0, 255, 0), (0, 0), (200, 200), 2)
+```
+
+`CanvasEventPacket` helper methods: `is_mouse_motion()`, `is_mouse_wheel()`, `is_mouse_down(button)`, `is_mouse_up(button)`, `is_left_down()`, `is_left_up()`, `is_right_down()`, `is_right_up()`, `is_middle_down()`, `is_middle_up()`.
+
+Fields: `kind`, `pos` (screen coordinates), `local_pos` (canvas-relative coordinates), `rel`, `button`, `wheel_delta`.
+
 ## Event Handling and Propagation
 
 The framework uses canonical `GuiEvent` objects with three-phase dispatch: capture, target, and bubble.
@@ -1247,7 +1313,7 @@ window = panel.add(
         event_handler=None,     # optional: custom event handler callback
         postamble=None,         # optional: called after each event dispatch cycle
         title_font_role="title",
-        use_frame_backdrop=True,  # True = legacy frame visuals; False = black backing
+        use_frame_backdrop=True,  # True = built-in graphics factory backdrop; False = plain black backing
     )
 )
 
@@ -1416,71 +1482,6 @@ view_model.is_playing.value = True
 
 # Dispose all managed subscriptions at once (e.g., on scene cleanup)
 view_model.dispose()
-```
-
-## Canvas and Custom Drawing
-
-The `CanvasControl` provides a drawable surface for custom graphics and interactive content. Mouse events that land on the canvas are queued as `CanvasEventPacket` objects. Drain the queue in your update hook each frame using `read_event()`.
-
-```python
-from gui import CanvasControl, CanvasEventPacket
-
-canvas = parent.add(
-    CanvasControl("canvas_id", rect, max_events=256)
-)
-
-# Drain the event queue each frame (e.g., in Feature.on_update or a screen lifecycle postamble)
-packet = canvas.read_event()
-while packet is not None:
-    if packet.is_left_down():
-        lx, ly = packet.local_pos   # canvas-local coordinates
-        print(f"Left click at ({lx}, {ly})")
-    elif packet.is_mouse_motion():
-        print(f"Motion: pos={packet.pos}, local={packet.local_pos}, rel={packet.rel}")
-    elif packet.is_mouse_wheel():
-        print(f"Wheel delta: {packet.wheel_delta}")
-    packet = canvas.read_event()
-
-# Draw custom content to the canvas backing surface each frame:
-canvas_surface = canvas.get_canvas_surface()
-pygame.draw.circle(canvas_surface, (255, 0, 0), (100, 100), 50)
-pygame.draw.line(canvas_surface, (0, 255, 0), (0, 0), (200, 200), 2)
-```
-
-`CanvasEventPacket` helper methods: `is_mouse_motion()`, `is_mouse_wheel()`, `is_mouse_down(button)`, `is_mouse_up(button)`, `is_left_down()`, `is_left_up()`, `is_right_down()`, `is_right_up()`, `is_middle_down()`, `is_middle_up()`.
-
-Fields: `kind`, `pos` (screen coordinates), `local_pos` (canvas-relative coordinates), `rel`, `button`, `wheel_delta`.
-
-## Task Panel Configuration
-
-`TaskPanelControl` provides a panel that slides in/out from an edge of the screen, typically for application-level action buttons. Construct it like any other control and add it to a root container.
-
-```python
-from gui import TaskPanelControl, ButtonControl
-from pygame import Rect
-
-# Create task panel docked at the top of the screen
-task_panel = root.add(
-    TaskPanelControl(
-        "task_panel",
-        Rect(0, 0, screen_width, 48),
-        auto_hide=True,          # slide out of view when not hovered
-        hidden_peek_pixels=4,    # pixels visible when hidden (gives hover target)
-        animation_step_px=4,     # pixels per frame while animating
-        dock_bottom=False,       # True = dock to bottom edge instead
-    )
-)
-
-# Add buttons to the task panel
-exit_btn = task_panel.add(
-    ButtonControl("exit_btn", Rect(8, 8, 100, 32), "Exit", on_click=app.quit)
-)
-exit_btn.set_accessibility(role="button", label="Exit application")
-
-# Mutate settings at runtime
-task_panel.set_auto_hide(False)
-task_panel.set_hidden_peek_pixels(8)
-task_panel.set_animation_step_px(6)
 ```
 
 ## Themes and Styling
