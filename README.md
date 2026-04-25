@@ -88,7 +88,7 @@ Registration order is still deterministic by scene graph creation order, and rem
 
 ### Feature Lifecycle
 
-A feature is a `Feature` with optional hooks:
+A feature implements the `Feature` contract and may provide these lifecycle hooks:
 
 - `build(host)`
 - `bind_runtime(host)`
@@ -334,7 +334,7 @@ Private and shared logic are both supported:
 
 #### `RoutedFeature` — Topic-routed message dispatch
 
-`RoutedFeature` is a `Feature` subclass that routes incoming messages by a canonical **topic key** instead of requiring manual `pop_message()` loop inspection. It adds a single override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
+`RoutedFeature` extends `Feature` with topic-based message dispatch, so you can avoid manual `pop_message()` loop inspection. It adds one override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
 
 ```python
 from shared.feature_lifecycle import RoutedFeature
@@ -360,7 +360,7 @@ class StatusConsumerFeature(RoutedFeature):
 
 #### `DirectFeature` — Direct screen drawing with frame synchronisation
 
-`DirectFeature` is a `Feature` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
+`DirectFeature` extends `Feature` with three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
 
 - `handle_direct_event(host, event) -> bool` — receives raw events before controls
 - `on_direct_update(host, dt_seconds)` — called once per frame with elapsed time
@@ -646,7 +646,7 @@ node.invalidate()           # mark as dirty for next draw pass
 
 ### Toggle Control
 
-`ToggleControl` is a two-state button that tracks a `pushed` boolean. It fires `on_toggle(pushed: bool)` each time it changes state.
+Use `ToggleControl` for two-state buttons that track a `pushed` boolean. It fires `on_toggle(pushed: bool)` each time the state changes.
 
 ```python
 from gui import ToggleControl
@@ -788,7 +788,7 @@ scrollbar.set_on_change_mode("reason-required")  # returns normalized mode strin
 
 ### Button Group Control
 
-Mutually exclusive selection (radio button behavior). Each `ButtonGroupControl` is a single button belonging to a named group. Clicking any button in the group deselects the previously selected one.
+Mutually exclusive selection (radio button behavior). Each `ButtonGroupControl` instance represents one option in a named group. Selecting any option in the group clears the previous selection.
 
 ```python
 from gui import ButtonGroupControl
@@ -916,7 +916,7 @@ window.close()
 
 ### Panel Control
 
-`PanelControl` is the base container for child controls. Use it to group related widgets, manage windows, and build layout regions. It optionally draws a theme background fill.
+`PanelControl` serves as the base container for child controls. Use it to group related widgets, manage windows, and build layout regions. It can optionally draw a theme background fill.
 
 ```python
 from gui import PanelControl
@@ -943,7 +943,7 @@ panel.remove(label)
 
 ### Task Panel Control
 
-`TaskPanelControl` is a panel that slides in/out from a screen edge. Create it directly and add it to a root container. See the [Task Panel Configuration](#task-panel-configuration) section for a complete example.
+`TaskPanelControl` provides a slide-in/slide-out panel along a screen edge. Create it directly and add it to a root container. See the [Task Panel Configuration](#task-panel-configuration) section for a complete example.
 
 ```python
 from gui import TaskPanelControl, ButtonControl
@@ -1232,7 +1232,7 @@ for control in [btn1, btn2, inp]:
 
 ### Window Management
 
-`WindowControl` is a floating, draggable window with a title bar. It is added to a `PanelControl` which manages window ordering and activation.
+`WindowControl` provides a floating, draggable window with a title bar. Add it to a `PanelControl`, which manages window ordering and activation.
 
 ```python
 from gui import WindowControl
@@ -1453,7 +1453,7 @@ Fields: `kind`, `pos` (screen coordinates), `local_pos` (canvas-relative coordin
 
 ## Task Panel Configuration
 
-`TaskPanelControl` is a panel that slides in/out from an edge of the screen, typically holding application-level action buttons. Construct it like any other control and add it to a root container.
+`TaskPanelControl` provides a panel that slides in/out from an edge of the screen, typically for application-level action buttons. Construct it like any other control and add it to a root container.
 
 ```python
 from gui import TaskPanelControl, ButtonControl
@@ -1616,7 +1616,7 @@ gui_event = manager.to_gui_event(raw_event, pointer_pos=(x, y))
 
 ### Event Bus (Pub-Sub)
 
-`EventBus` is a scoped publish-subscribe bus for non-input UI events. Access it as `app.events`.
+`EventBus` provides scoped publish-subscribe delivery for non-input UI events. Access it as `app.events`.
 
 ```python
 from gui import EventBus
@@ -1797,7 +1797,9 @@ if app.mouse_point_locked:
 x, y = app.logical_pointer_pos
 ```
 
-### InvalidationTracker The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, but you can force a full redraw from application code:
+### InvalidationTracker
+
+The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, and you can force a full redraw from application code:
 
 ```python
 from gui import InvalidationTracker
