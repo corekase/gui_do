@@ -2,6 +2,7 @@ from pathlib import Path
 import pygame
 from typing import TYPE_CHECKING
 from pygame import Rect
+from shared.error_handling import io_error
 
 from ..core.ui_node import UiNode
 
@@ -38,7 +39,19 @@ class ImageControl(UiNode):
         if isinstance(image_path, pygame.Surface):
             return image_path.convert_alpha()
         resolved = cls._resolve_image_path(image_path)
-        return pygame.image.load(str(resolved)).convert_alpha()
+        try:
+            return pygame.image.load(str(resolved)).convert_alpha()
+        except Exception as exc:
+            raise io_error(
+                "failed to load image control bitmap",
+                subsystem="gui.controls",
+                operation="ImageControl._load_image",
+                cause=exc,
+                path=str(resolved),
+                exc_type=ValueError,
+                details={"image_path": str(image_path)},
+                source_skip_frames=1,
+            ) from exc
 
     def _get_render_image(self) -> pygame.Surface:
         if not self.scale:

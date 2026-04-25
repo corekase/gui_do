@@ -1,5 +1,6 @@
 from pathlib import Path
 import pygame
+from shared.error_handling import io_error, logical_error
 
 from .built_in_definitions import BUILT_IN_COLOURS
 from .built_in_factory import InteractiveVisuals, BuiltInGraphicsFactory, WindowChromeVisuals
@@ -35,8 +36,27 @@ def load_pristine_surface(source):
         if not candidate.is_absolute():
             root = Path(__file__).resolve().parents[2]
             candidate = root / "data" / "images" / str(source)
-        return _convert_if_available(pygame.image.load(str(candidate)))
-    raise TypeError("pristine source must be a Surface or path-like string")
+        try:
+            return _convert_if_available(pygame.image.load(str(candidate)))
+        except Exception as exc:
+            raise io_error(
+                "failed to load pristine surface",
+                subsystem="gui.graphics",
+                operation="load_pristine_surface",
+                cause=exc,
+                path=str(candidate),
+                exc_type=ValueError,
+                details={"source": str(source)},
+                source_skip_frames=1,
+            ) from exc
+    raise logical_error(
+        "pristine source must be a Surface or path-like string",
+        subsystem="gui.graphics",
+        operation="load_pristine_surface",
+        exc_type=TypeError,
+        details={"source_type": type(source).__name__},
+        source_skip_frames=1,
+    )
 
 
 __all__ = [

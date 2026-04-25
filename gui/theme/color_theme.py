@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 from ..core.font_manager import FontManager
+from shared.error_handling import report_nonfatal_error
 
 import pygame
 
@@ -35,7 +36,16 @@ class ColorTheme:
         try:
             path = self._resource_path("data", "images", "backdrop.jpg")
             return pygame.image.load(path).convert()
-        except Exception:
+        except Exception as exc:
+            report_nonfatal_error(
+                "failed to load theme background bitmap; continuing without background image",
+                kind="io",
+                subsystem="gui.theme",
+                operation="ColorTheme._load_background_bitmap",
+                cause=exc,
+                path=path,
+                source_skip_frames=1,
+            )
             return None
 
     @property

@@ -8,6 +8,7 @@ from typing import Optional
 import pygame
 
 from .first_frame_profiler import first_frame_profiler
+from shared.error_handling import logical_error, report_nonfatal_error
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,7 @@ class FontManager:
         self._roles: dict[str, _FontRole] = {}
         self._role_order: list[str] = []
         self._font_cache: dict[tuple[str, int], pygame.font.Font] = {}
+        self._reported_load_failures: set[tuple[str, int, str]] = set()
         self._revision = 0
 
     @property
@@ -96,7 +98,14 @@ class FontManager:
         """
         normalized_name = str(role_name).strip()
         if not normalized_name:
-            raise ValueError("role_name must be a non-empty string")
+            raise logical_error(
+                "role_name must be a non-empty string",
+                subsystem="gui.fonts",
+                operation="FontManager.register_role",
+                exc_type=ValueError,
+                details={"role_name": role_name},
+                source_skip_frames=1,
+            )
 
         normalized_size = max(1, int(size))
         resolved_path: Optional[str] = None
@@ -136,12 +145,14 @@ class FontManager:
         if role.file_path is not None:
             try:
                 loaded = pygame.font.Font(role.file_path, resolved_size)
-            except Exception:
+            except Exception as exc:
+                self._report_load_failure_once(role.name, resolved_size, "file", exc, source=role.file_path)
                 loaded = None
         if loaded is None and role.system_name is not None:
             try:
                 loaded = pygame.font.SysFont(role.system_name, resolved_size, bold=role.bold, italic=role.italic)
-            except Exception:
+            except Exception as exc:
+                self._report_load_failure_once(role.name, resolved_size, "system", exc, source=role.system_name)
                 loaded = None
         if loaded is None:
             loaded = pygame.font.Font(None, resolved_size)
@@ -209,8 +220,31 @@ class FontManager:
     def _resolve_role(self, role_name: str) -> _FontRole:
         role = self._roles.get(str(role_name))
         if role is None:
-            raise ValueError(f"unknown font role: {role_name!r}")
+            raise logical_error(
+                f"unknown font role: {role_name!r}",
+                subsystem="gui.fonts",
+                operation="FontManager._resolve_role",
+                exc_type=ValueError,
+                details={"role_name": role_name},
+                source_skip_frames=1,
+            )
         return role
+
+    def _report_load_failure_once(self, role_name: str, size: int, source_type: str, exc: BaseException, *, source: str) -> None:
+        key = (str(role_name), int(size), str(source_type))
+        if key in self._reported_load_failures:
+            return
+        self._reported_load_failures.add(key)
+        report_nonfatal_error(
+            "failed to load configured font; falling back to a default font",
+            kind="io",
+            subsystem="gui.fonts",
+            operation="FontManager.get_font",
+            cause=exc,
+            path=source,
+            details={"role": role_name, "size": int(size), "source_type": source_type},
+            source_skip_frames=1,
+        )
 
     def _drop_role_cache(self, role_name: str) -> None:
         doomed = [key for key in self._font_cache.keys() if key[0] == role_name]

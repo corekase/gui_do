@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, Iterable, List, Sequence
+from shared.error_handling import io_error
 
 
 @dataclass(frozen=True)
@@ -109,14 +110,40 @@ def analyze_telemetry_records(records: Iterable[Any], *, top_n: int = 12) -> Tel
 
 def load_telemetry_log_file(path: str | Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    with Path(path).open("r", encoding="utf-8") as handle:
-        for line in handle:
-            text = line.strip()
-            if not text:
-                continue
-            payload = json.loads(text)
-            if isinstance(payload, dict) and payload.get("type") == "sample":
-                records.append(payload)
+    resolved_path = Path(path)
+    try:
+        with resolved_path.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                text = line.strip()
+                if not text:
+                    continue
+                try:
+                    payload = json.loads(text)
+                except Exception as exc:
+                    raise io_error(
+                        "failed to parse telemetry log line as JSON",
+                        subsystem="gui.telemetry",
+                        operation="load_telemetry_log_file",
+                        cause=exc,
+                        path=str(resolved_path),
+                        exc_type=ValueError,
+                        details={"line_number": line_number},
+                        source_skip_frames=1,
+                    ) from exc
+                if isinstance(payload, dict) and payload.get("type") == "sample":
+                    records.append(payload)
+    except Exception as exc:
+        if isinstance(exc, ValueError):
+            raise
+        raise io_error(
+            "failed to read telemetry log file",
+            subsystem="gui.telemetry",
+            operation="load_telemetry_log_file",
+            cause=exc,
+            path=str(resolved_path),
+            exc_type=RuntimeError,
+            source_skip_frames=1,
+        ) from exc
     return records
 
 

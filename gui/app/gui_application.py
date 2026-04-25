@@ -42,6 +42,7 @@ from ..controls.scrollbar_control import ScrollbarControl
 from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
 from shared.feature_lifecycle import FeatureManager
+from shared.error_handling import logical_error, report_nonfatal_error
 
 
 @dataclass(frozen=True)
@@ -158,7 +159,14 @@ class GuiApplication:
     def switch_scene(self, name: str) -> None:
         collector = telemetry_collector()
         if name not in self._scenes:
-            raise ValueError(f"unknown scene: {name}")
+            raise logical_error(
+                f"unknown scene: {name}",
+                subsystem="gui.application",
+                operation="GuiApplication.switch_scene",
+                exc_type=ValueError,
+                details={"scene_name": name},
+                source_skip_frames=1,
+            )
         with collector.span("gui_application", "switch_scene", metadata={"scene_name": str(name)}):
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
@@ -196,8 +204,16 @@ class GuiApplication:
         runtime = self._scenes.pop(name)
         try:
             runtime["scheduler"].shutdown()
-        except Exception:
-            pass
+        except Exception as exc:
+            report_nonfatal_error(
+                "scene scheduler shutdown failed during remove_scene",
+                kind="logical",
+                subsystem="gui.application",
+                operation="GuiApplication.remove_scene",
+                cause=exc,
+                details={"scene_name": name},
+                source_skip_frames=1,
+            )
         return True
 
     def get_scene_scheduler(self, name: str) -> TaskScheduler:
@@ -674,8 +690,16 @@ class GuiApplication:
         self._pending_warp_ignore_budget = 8
         try:
             pygame.mouse.set_pos(logical)
-        except Exception:
-            pass
+        except Exception as exc:
+            report_nonfatal_error(
+                "failed to sync hardware pointer to logical pointer position",
+                kind="logical",
+                subsystem="gui.application",
+                operation="GuiApplication.sync_pointer_to_logical_position",
+                cause=exc,
+                details={"logical": logical},
+                source_skip_frames=1,
+            )
 
     def _logicalize_pointer_event(self, event):
         if not event.is_kind(EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):
@@ -705,11 +729,22 @@ class GuiApplication:
 
     def register_cursor(self, name: str, filename: str, hotspot=(0, 0)) -> None:
         cursor_surface = None
+        path = None
         try:
             root = Path(__file__).resolve().parents[2]
             path = root / "data" / "cursors" / filename
             cursor_surface = pygame.image.load(str(path)).convert_alpha()
-        except Exception:
+        except Exception as exc:
+            report_nonfatal_error(
+                "failed to load cursor asset; using fallback cursor",
+                kind="io",
+                subsystem="gui.application",
+                operation="GuiApplication.register_cursor",
+                cause=exc,
+                path=None if path is None else str(path),
+                details={"cursor_name": name, "filename": filename},
+                source_skip_frames=1,
+            )
             cursor_surface = None
         if cursor_surface is None:
             cursor_surface = pygame.Surface((12, 12), pygame.SRCALPHA)

@@ -10,6 +10,7 @@ from time import perf_counter, time
 from typing import Any, Dict, Optional
 
 from .telemetry_analyzer import analyze_telemetry_records, render_telemetry_report
+from shared.error_handling import io_error, logical_error
 
 
 @dataclass(frozen=True)
@@ -71,9 +72,23 @@ class TelemetryCollector:
         normalized_system = str(system).strip().lower()
         normalized_point = str(point).strip().lower()
         if not normalized_system:
-            raise ValueError("system must be a non-empty string")
+            raise logical_error(
+                "system must be a non-empty string",
+                subsystem="gui.telemetry",
+                operation="TelemetryCollector._normalize_key",
+                exc_type=ValueError,
+                details={"system": system},
+                source_skip_frames=1,
+            )
         if not normalized_point:
-            raise ValueError("point must be a non-empty string")
+            raise logical_error(
+                "point must be a non-empty string",
+                subsystem="gui.telemetry",
+                operation="TelemetryCollector._normalize_key",
+                exc_type=ValueError,
+                details={"point": point},
+                source_skip_frames=1,
+            )
         return normalized_system, normalized_point, f"{normalized_system}.{normalized_point}"
 
     def reset(self) -> None:
@@ -119,7 +134,14 @@ class TelemetryCollector:
     def set_min_duration_ms(self, minimum: float) -> None:
         value = float(minimum)
         if value < 0.0:
-            raise ValueError("minimum must be >= 0.0")
+            raise logical_error(
+                "minimum must be >= 0.0",
+                subsystem="gui.telemetry",
+                operation="TelemetryCollector.set_min_duration_ms",
+                exc_type=ValueError,
+                details={"minimum": minimum},
+                source_skip_frames=1,
+            )
         with self._lock:
             self._min_duration_ms = value
 
@@ -132,7 +154,14 @@ class TelemetryCollector:
     def set_system_enabled(self, system: str, enabled: bool) -> None:
         normalized_system = str(system).strip().lower()
         if not normalized_system:
-            raise ValueError("system must be a non-empty string")
+            raise logical_error(
+                "system must be a non-empty string",
+                subsystem="gui.telemetry",
+                operation="TelemetryCollector.set_system_enabled",
+                exc_type=ValueError,
+                details={"system": system, "enabled": bool(enabled)},
+                source_skip_frames=1,
+            )
         with self._lock:
             self._system_overrides[normalized_system] = bool(enabled)
 
@@ -205,8 +234,19 @@ class TelemetryCollector:
                 report_path = self._build_output_path("report", "txt")
             else:
                 report_path = Path(output_path)
-            report_path.parent.mkdir(parents=True, exist_ok=True)
-            report_path.write_text(content, encoding="utf-8")
+            try:
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_text(content, encoding="utf-8")
+            except Exception as exc:
+                raise io_error(
+                    "failed to write telemetry report",
+                    subsystem="gui.telemetry",
+                    operation="TelemetryCollector.write_report",
+                    cause=exc,
+                    path=str(report_path),
+                    exc_type=RuntimeError,
+                    source_skip_frames=1,
+                ) from exc
             return str(report_path)
 
     def shutdown(self) -> Optional[str]:
@@ -225,7 +265,6 @@ class TelemetryCollector:
         path = self._active_log_file_path()
         if path is None:
             return
-        path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "type": "sample",
             "timestamp": sample.timestamp,
@@ -234,8 +273,21 @@ class TelemetryCollector:
             "elapsed_ms": sample.elapsed_ms,
             "metadata": sample.metadata,
         }
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        except Exception as exc:
+            raise io_error(
+                "failed to append telemetry sample to log file",
+                subsystem="gui.telemetry",
+                operation="TelemetryCollector._append_log_sample",
+                cause=exc,
+                path=str(path),
+                exc_type=RuntimeError,
+                details={"system": sample.system, "point": sample.point},
+                source_skip_frames=1,
+            ) from exc
 
     def _build_output_path(self, suffix: str, extension: str) -> Path:
         if self._run_id is None:

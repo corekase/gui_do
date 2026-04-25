@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import inspect
 from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, Mapping, Optional
+from shared.error_handling import logical_error, report_nonfatal_error
 
 
 class _NoopTelemetryCollector:
@@ -69,14 +70,28 @@ class Feature:
     def __init__(self, name: str, *, scene_name: Optional[str] = None) -> None:
         normalized = str(name).strip()
         if not normalized:
-            raise ValueError("feature name must be a non-empty string")
+            raise logical_error(
+                "feature name must be a non-empty string",
+                subsystem="feature_lifecycle",
+                operation="Feature.__init__",
+                exc_type=ValueError,
+                details={"name": name},
+                source_skip_frames=1,
+            )
         self.name = normalized
         if scene_name is None:
             self.scene_name = None
         else:
             normalized_scene_name = str(scene_name).strip()
             if not normalized_scene_name:
-                raise ValueError("scene_name must be a non-empty string when provided")
+                raise logical_error(
+                    "scene_name must be a non-empty string when provided",
+                    subsystem="feature_lifecycle",
+                    operation="Feature.__init__",
+                    exc_type=ValueError,
+                    details={"scene_name": scene_name},
+                    source_skip_frames=1,
+                )
             self.scene_name = normalized_scene_name
         self._feature_manager = None
         self._message_queue: Deque[FeatureMessage] = deque()
@@ -114,32 +129,74 @@ class Feature:
 
     def send_message(self, target_feature_name: str, message: Mapping[str, Any]) -> bool:
         if self._feature_manager is None:
-            raise RuntimeError("feature must be registered before sending messages")
+            raise logical_error(
+                "feature must be registered before sending messages",
+                subsystem="feature_lifecycle",
+                operation="Feature.send_message",
+                exc_type=RuntimeError,
+                details={"feature_name": self.name, "target_feature_name": target_feature_name},
+                source_skip_frames=1,
+            )
         return self._feature_manager.send_message(self.name, target_feature_name, message)
 
     def bind_logic(self, logic_feature_name: str, *, alias: str = "default") -> None:
         if self._feature_manager is None:
-            raise RuntimeError("feature must be registered before binding logic features")
+            raise logical_error(
+                "feature must be registered before binding logic features",
+                subsystem="feature_lifecycle",
+                operation="Feature.bind_logic",
+                exc_type=RuntimeError,
+                details={"feature_name": self.name, "logic_feature_name": logic_feature_name, "alias": alias},
+                source_skip_frames=1,
+            )
         self._feature_manager.bind_logic(self.name, logic_feature_name, alias=alias)
 
     def unbind_logic(self, *, alias: str = "default") -> bool:
         if self._feature_manager is None:
-            raise RuntimeError("feature must be registered before unbinding logic features")
+            raise logical_error(
+                "feature must be registered before unbinding logic features",
+                subsystem="feature_lifecycle",
+                operation="Feature.unbind_logic",
+                exc_type=RuntimeError,
+                details={"feature_name": self.name, "alias": alias},
+                source_skip_frames=1,
+            )
         return self._feature_manager.unbind_logic(self.name, alias=alias)
 
     def bound_logic_name(self, *, alias: str = "default") -> Optional[str]:
         if self._feature_manager is None:
-            raise RuntimeError("feature must be registered before querying logic feature names")
+            raise logical_error(
+                "feature must be registered before querying logic feature names",
+                subsystem="feature_lifecycle",
+                operation="Feature.bound_logic_name",
+                exc_type=RuntimeError,
+                details={"feature_name": self.name, "alias": alias},
+                source_skip_frames=1,
+            )
         return self._feature_manager.bound_logic_name(self.name, alias=alias)
 
     def send_logic_message(self, message: Mapping[str, Any], *, alias: str = "default") -> bool:
         if self._feature_manager is None:
-            raise RuntimeError("feature must be registered before sending logic messages")
+            raise logical_error(
+                "feature must be registered before sending logic messages",
+                subsystem="feature_lifecycle",
+                operation="Feature.send_logic_message",
+                exc_type=RuntimeError,
+                details={"feature_name": self.name, "alias": alias},
+                source_skip_frames=1,
+            )
         return self._feature_manager.send_logic_message(self.name, message, alias=alias)
 
     def enqueue_message(self, message: FeatureMessage) -> None:
         if not isinstance(message, FeatureMessage):
-            raise TypeError("feature messages must be FeatureMessage instances")
+            raise logical_error(
+                "feature messages must be FeatureMessage instances",
+                subsystem="feature_lifecycle",
+                operation="Feature.enqueue_message",
+                exc_type=TypeError,
+                details={"feature_name": self.name, "message_type": type(message).__name__},
+                source_skip_frames=1,
+            )
         self._message_queue.append(message)
 
     def has_messages(self) -> bool:
@@ -197,7 +254,14 @@ class Feature:
         registered: Dict[str, str] = {}
         for role_name, spec in dict(roles).items():
             if not isinstance(spec, dict):
-                raise TypeError("font role definitions must be dictionaries")
+                raise logical_error(
+                    "font role definitions must be dictionaries",
+                    subsystem="feature_lifecycle",
+                    operation="Feature.register_font_roles",
+                    exc_type=TypeError,
+                    details={"feature_name": self.name, "role_name": role_name, "spec_type": type(spec).__name__},
+                    source_skip_frames=1,
+                )
             registered[role_name] = self.register_font_role(
                 host,
                 role_name,
@@ -215,21 +279,42 @@ class Feature:
         local_name = self._normalize_font_role_name(role_name)
         qualified_name = self._font_roles.get(local_name)
         if qualified_name is None:
-            raise KeyError(f"unknown feature font role: {self.name}.{local_name}")
+            raise logical_error(
+                f"unknown feature font role: {self.name}.{local_name}",
+                subsystem="feature_lifecycle",
+                operation="Feature.font_role",
+                exc_type=KeyError,
+                details={"feature_name": self.name, "role_name": local_name},
+                source_skip_frames=1,
+            )
         return qualified_name
 
     @staticmethod
     def _normalize_font_role_name(role_name: str) -> str:
         normalized = str(role_name).strip()
         if not normalized:
-            raise ValueError("font role name must be a non-empty string")
+            raise logical_error(
+                "font role name must be a non-empty string",
+                subsystem="feature_lifecycle",
+                operation="Feature._normalize_font_role_name",
+                exc_type=ValueError,
+                details={"role_name": role_name},
+                source_skip_frames=1,
+            )
         return normalized
 
     @staticmethod
     def _resolve_app(host):
         app = getattr(host, "app", host)
         if not hasattr(app, "register_font_role"):
-            raise AttributeError("host does not expose an application with register_font_role()")
+            raise logical_error(
+                "host does not expose an application with register_font_role()",
+                subsystem="feature_lifecycle",
+                operation="Feature._resolve_app",
+                exc_type=AttributeError,
+                details={"host_type": type(host).__name__},
+                source_skip_frames=1,
+            )
         return app
 
     def host_requirements_for(self, hook_name: str) -> tuple[str, ...]:
@@ -247,7 +332,14 @@ class Feature:
         if not missing:
             return
         missing_csv = ", ".join(missing)
-        raise AttributeError(f"{self.__class__.__name__}.{hook_name} requires host fields: {missing_csv}")
+        raise logical_error(
+            f"{self.__class__.__name__}.{hook_name} requires host fields: {missing_csv}",
+            subsystem="feature_lifecycle",
+            operation="Feature.validate_host_for",
+            exc_type=AttributeError,
+            details={"feature_class": self.__class__.__name__, "hook_name": hook_name, "missing_fields": tuple(missing)},
+            source_skip_frames=1,
+        )
 
 
 class DirectFeature(Feature):
@@ -347,9 +439,23 @@ class FeatureManager:
 
     def register(self, feature: Feature, host=None) -> Feature:
         if not isinstance(feature, Feature):
-            raise TypeError("register expects a Feature instance")
+            raise logical_error(
+                "register expects a Feature instance",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.register",
+                exc_type=TypeError,
+                details={"feature_type": type(feature).__name__},
+                source_skip_frames=1,
+            )
         if feature.name in self._features:
-            raise ValueError(f"feature already registered: {feature.name}")
+            raise logical_error(
+                f"feature already registered: {feature.name}",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.register",
+                exc_type=ValueError,
+                details={"feature_name": feature.name},
+                source_skip_frames=1,
+            )
         self._validate_host_contract(feature)
         feature._feature_manager = self
         self._features[feature.name] = feature
@@ -396,7 +502,14 @@ class FeatureManager:
     def send_message(self, sender_name: str, target_feature_name: str, message: Mapping[str, Any]) -> bool:
         collector = _telemetry_collector()
         if not isinstance(message, Mapping):
-            raise TypeError("feature messages must be mappings")
+            raise logical_error(
+                "feature messages must be mappings",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.send_message",
+                exc_type=TypeError,
+                details={"sender_name": sender_name, "target_feature_name": target_feature_name, "message_type": type(message).__name__},
+                source_skip_frames=1,
+            )
         envelope = FeatureMessage.from_payload(str(sender_name), str(target_feature_name), message)
         topic = envelope.topic or ""
         target = self._features.get(str(target_feature_name))
@@ -426,10 +539,24 @@ class FeatureManager:
     def register_runnable(self, feature_name: str, runnable_name: str, runnable: Callable[..., Any]) -> None:
         self._require_feature(feature_name)
         if not callable(runnable):
-            raise TypeError("runnable must be callable")
+            raise logical_error(
+                "runnable must be callable",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.register_runnable",
+                exc_type=TypeError,
+                details={"feature_name": feature_name, "runnable_name": runnable_name, "runnable_type": type(runnable).__name__},
+                source_skip_frames=1,
+            )
         name = str(runnable_name).strip()
         if not name:
-            raise ValueError("runnable_name must be a non-empty string")
+            raise logical_error(
+                "runnable_name must be a non-empty string",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.register_runnable",
+                exc_type=ValueError,
+                details={"feature_name": feature_name, "runnable_name": runnable_name},
+                source_skip_frames=1,
+            )
         bucket = self._runnables.setdefault(str(feature_name), {})
         bucket[name] = runnable
 
@@ -437,7 +564,14 @@ class FeatureManager:
         consumer = self._require_feature(consumer_feature_name)
         provider = self._require_feature(logic_feature_name)
         if not isinstance(provider, LogicFeature):
-            raise TypeError(f"feature is not a LogicFeature: {provider.name}")
+            raise logical_error(
+                f"feature is not a LogicFeature: {provider.name}",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.bind_logic",
+                exc_type=TypeError,
+                details={"consumer": consumer.name, "provider": provider.name, "alias": alias},
+                source_skip_frames=1,
+            )
         alias_name = self._normalize_alias(alias)
         bucket = self._logic_bindings.setdefault(consumer.name, {})
         bucket[alias_name] = provider.name
@@ -467,7 +601,14 @@ class FeatureManager:
         feature_bucket = self._runnables.get(str(feature_name), {})
         runnable = feature_bucket.get(str(runnable_name))
         if runnable is None:
-            raise KeyError(f"unknown runnable: {feature_name}.{runnable_name}")
+            raise logical_error(
+                f"unknown runnable: {feature_name}.{runnable_name}",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager.run",
+                exc_type=KeyError,
+                details={"feature_name": feature_name, "runnable_name": runnable_name},
+                source_skip_frames=1,
+            )
         return runnable(*args, **kwargs)
 
     def handle_event(self, event, host=None) -> bool:
@@ -564,7 +705,16 @@ class FeatureManager:
                 elapsed_ms,
                 detail="feature prewarm hook",
             )
-        except Exception:
+        except Exception as exc:
+            report_nonfatal_error(
+                "failed to record feature prewarm telemetry sample",
+                kind="logical",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager._record_prewarm_sample",
+                cause=exc,
+                details={"scene_name": scene_name, "feature_name": feature_name, "elapsed_ms": float(elapsed_ms)},
+                source_skip_frames=1,
+            )
             return
 
     def build_features(self, host) -> None:
@@ -605,7 +755,14 @@ class FeatureManager:
     def _require_feature(self, feature_name: str) -> Feature:
         feature = self.get(feature_name)
         if feature is None:
-            raise KeyError(f"unknown feature: {feature_name}")
+            raise logical_error(
+                f"unknown feature: {feature_name}",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager._require_feature",
+                exc_type=KeyError,
+                details={"feature_name": feature_name},
+                source_skip_frames=1,
+            )
         return feature
 
     def _resolve_host(self, feature_name: str, override_host=None):
@@ -640,13 +797,25 @@ class FeatureManager:
             host_parameter_name = positional[0].name
             if host_parameter_name in ("host", "_host"):
                 continue
-            raise ValueError(
-                f"{feature.__class__.__name__}.{hook_name} first positional parameter must be 'host' or '_host', got {host_parameter_name!r}"
+            raise logical_error(
+                f"{feature.__class__.__name__}.{hook_name} first positional parameter must be 'host' or '_host', got {host_parameter_name!r}",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager._validate_host_contract",
+                exc_type=ValueError,
+                details={"feature_class": feature.__class__.__name__, "hook_name": hook_name, "parameter_name": host_parameter_name},
+                source_skip_frames=1,
             )
 
     @staticmethod
     def _normalize_alias(alias: str) -> str:
         alias_name = str(alias).strip()
         if not alias_name:
-            raise ValueError("logic binding alias must be a non-empty string")
+            raise logical_error(
+                "logic binding alias must be a non-empty string",
+                subsystem="feature_lifecycle",
+                operation="FeatureManager._normalize_alias",
+                exc_type=ValueError,
+                details={"alias": alias},
+                source_skip_frames=1,
+            )
         return alias_name
