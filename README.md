@@ -92,6 +92,7 @@ A feature is a `Part` with optional hooks:
 
 - `build(host)`
 - `bind_runtime(host)`
+- `prewarm(host, surface, theme)`
 - `configure_accessibility(host, tab_index_start) -> int`
 - `handle_event(host, event) -> bool`
 - `on_update(host)`
@@ -99,6 +100,60 @@ A feature is a `Part` with optional hooks:
 - `shutdown_runtime(host)`
 
 Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and are validated before invocation.
+
+### Scene Prewarm (One Call Per Scene)
+
+`GuiApplication.prewarm_scene(scene_name)` performs a one-time prewarm pass for all parts active in that scene:
+
+- parts with `part.scene_name == scene_name`
+- parts with `part.scene_name is None` (shared/global)
+
+It invokes each part's `prewarm(host, surface, theme)` exactly once per `(part, scene)` unless `force=True` is passed.
+
+```python
+# Typical bootstrap ordering
+app.build_parts(demo)
+app.bind_parts_runtime(demo)
+
+# One prewarm call per scene before first user-visible frame/open
+app.prewarm_scene("control_showcase")
+
+# Optional: replay prewarm for the scene if assets/styles changed
+app.prewarm_scene("control_showcase", force=True)
+```
+
+Host behavior: if `host` is omitted, prewarm uses each part's registered host context (same as runtime hooks). This lets one scene-level call prewarm all scene parts safely, including parts that require richer host state than `GuiApplication` alone.
+
+### First-Open Optimisation Workflow (Instrument -> Confirm -> Prewarm)
+
+Use this sequence to remove first-open stutter caused by one-time lazy work (font loads, text rasterization, control visual generation, and first-draw setup):
+
+1. Enable profiling.
+2. Open the target scene/window once and inspect `[gui_do][first-open]` logs.
+3. Add one `prewarm_scene(...)` call during startup for that scene.
+4. Re-run and confirm first-open hotspots are reduced/shifted to startup.
+
+```python
+# 1) Enable first-open profiling
+app.configure_first_frame_profiling(enabled=True, min_ms=0.25)
+
+# 2) Build/bind parts as normal
+app.build_parts(demo)
+app.bind_parts_runtime(demo)
+
+# 3) Prewarm one scene once (recommended per scene)
+app.prewarm_scene("control_showcase")
+
+# Optional: re-run prewarm if style/assets changed dynamically
+# app.prewarm_scene("control_showcase", force=True)
+```
+
+Environment-only toggle (no code change):
+
+```bash
+set GUI_DO_PROFILE_FIRST_OPEN=1
+python gui_do_demo.py
+```
 
 ### Part Types: `Part`, `RoutedMessagePart`, `LogicPart`, and `ScreenPart`
 
@@ -451,7 +506,7 @@ from gui import ButtonControl, ToggleControl, LabelControl
 button = parent.add(
     ButtonControl("btn_id", rect, "Button Text", on_click=callback, style="angle", font_role="body")
 )
-# style controls visual shape; built-in values: "box" (default), "angle"
+# style controls visual shape; built-in values: "box" (default), "radio", "round", "angle", "check"
 # font_role must be a registered font role name (default: "body")
 
 # Add a toggle (state-tracking button)
@@ -463,7 +518,7 @@ toggle = parent.add(
         "Off",  # text_off: label shown when pushed=False
         pushed=False,
         on_toggle=lambda pushed: print(f"Toggled: {pushed}"),
-        # style controls visual shape; built-in values: "box" (default)
+        # style controls visual shape; built-in values: "box" (default), "radio", "round", "angle", "check"
     )
 )
 
@@ -539,7 +594,7 @@ toggle = parent.add(
         text_off="OFF",      # label shown when pushed=False (defaults to text_on)
         pushed=False,        # initial state
         on_toggle=lambda pushed: print(f"State: {pushed}"),
-        style="box",         # built-in values: "box" (default)
+        style="box",         # built-in values: "box" (default), "radio", "round", "angle", "check"
         font_role="body",
     )
 )
@@ -1844,6 +1899,15 @@ app.send_part_message("producer_part", "consumer_part", {"topic": "data_update",
 scheduler  = app.get_scene_scheduler("main")
 factory    = app.get_scene_graphics_factory("main")
 
+# Scene-level prewarm (runs Part.prewarm for active scene parts + shared parts)
+warmed = app.prewarm_scene("control_showcase")
+warmed = app.prewarm_scene("control_showcase", force=True)
+
+# First-open profiling controls
+app.configure_first_frame_profiling(enabled=True, min_ms=0.25)
+# Optional custom logger
+app.configure_first_frame_profiling(enabled=True, logger=lambda msg: print(msg))
+
 # Font role queries for the active (or named) scene
 roles = app.font_roles()               # tuple of registered role names
 roles = app.font_roles(scene_name="main")
@@ -1864,6 +1928,8 @@ app.restore_pristine(scene_name="main", surface=my_surf)   # blit to a specific 
 # Coordinate conversion
 local_pos = app.convert_to_window(screen_pos, window)  # convert (x,y) to window-local coords
 ```
+
+Environment shortcut: set `GUI_DO_PROFILE_FIRST_OPEN=1` (or `true`/`yes`/`on`) before app startup to enable first-open hotspot profiling without calling `configure_first_frame_profiling(...)` manually.
 
 ## UiEngine Standalone Usage
 
