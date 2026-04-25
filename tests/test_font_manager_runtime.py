@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from gui import FontManager, GuiApplication
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
 
 class FontManagerRoleTests(unittest.TestCase):
@@ -93,7 +93,7 @@ class FontManagerRoleTests(unittest.TestCase):
             manager.render_text("x", (0, 0, 0), role_name="missing")
 
 
-class _FontPart(Part):
+class _FontFeature(Feature):
     def __init__(self) -> None:
         super().__init__("sample")
 
@@ -120,21 +120,21 @@ class GuiApplicationFontRegistrationTests(unittest.TestCase):
         app = GuiApplication(self.surface)
         app.create_scene("main")
         app.switch_scene("main")
-        part = _FontPart()
+        feature = _FontFeature()
 
-        registered = part.register_font_role(app, "window_title", size=18, scene_name="main")
+        registered = feature.register_font_role(app, "window_title", size=18, scene_name="main")
 
-        self.assertEqual("part.sample.window_title", registered)
-        self.assertTrue(app.theme.fonts.has_role("part.sample.window_title"))
-        self.assertEqual("part.sample.window_title", part.font_role("window_title"))
+        self.assertEqual("feature.sample.window_title", registered)
+        self.assertTrue(app.theme.fonts.has_role("feature.sample.window_title"))
+        self.assertEqual("feature.sample.window_title", feature.font_role("window_title"))
 
     def test_part_register_font_roles_registers_multiple_roles(self) -> None:
         app = GuiApplication(self.surface)
         app.create_scene("main")
         app.switch_scene("main")
-        part = _FontPart()
+        feature = _FontFeature()
 
-        names = part.register_font_roles(
+        names = feature.register_font_roles(
             app,
             {
                 "window_title": {"size": 18},
@@ -143,10 +143,10 @@ class GuiApplicationFontRegistrationTests(unittest.TestCase):
             scene_name="main",
         )
 
-        self.assertEqual("part.sample.window_title", names["window_title"])
-        self.assertEqual("part.sample.control", names["control"])
-        self.assertTrue(app.theme.fonts.has_role("part.sample.window_title"))
-        self.assertTrue(app.theme.fonts.has_role("part.sample.control"))
+        self.assertEqual("feature.sample.window_title", names["window_title"])
+        self.assertEqual("feature.sample.control", names["control"])
+        self.assertTrue(app.theme.fonts.has_role("feature.sample.window_title"))
+        self.assertTrue(app.theme.fonts.has_role("feature.sample.control"))
 
     def test_font_roles_returns_registered_role_names(self) -> None:
         app = GuiApplication(self.surface)

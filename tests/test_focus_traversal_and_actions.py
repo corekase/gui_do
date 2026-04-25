@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 import pygame
 from pygame import Rect, Surface

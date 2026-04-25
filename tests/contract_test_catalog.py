@@ -1,4 +1,4 @@
-"""Canonical contract-test catalog shared by docs/parity regression tests."""
+﻿"""Canonical contract-test catalog shared by docs/parity regression tests."""
 
 CONTRACT_TEST_MODULES = (
     "tests.test_boundary_contracts",
@@ -30,7 +30,7 @@ BOUNDARY_RELATED_DOC_PATHS = (
 )
 
 BOUNDARY_ASSET_PATHS = (
-    "demo_parts/mandelbrot_demo_part.py",
+    "demo_features/mandelbrot_demo_feature.py",
 )
 
 ACTIVE_DEMO_ENTRYPOINT_GLOB = "*_demo.py"
@@ -48,8 +48,8 @@ BOUNDARY_RULE_REQUIRED_PHRASES = (
 )
 
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
-    "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts",
-    "tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui",
+    "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features",
+    "tests/test_boundary_contracts.py::test_demo_features_does_not_depend_on_gui",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement",
     "tests/test_boundary_contracts.py::test_demo_entrypoints_import_only_named_public_gui_exports",
@@ -68,7 +68,7 @@ BOUNDARY_COMMAND_SEQUENCE = (
     CONTRACT_PYTEST_COMMAND,
 )
 
-DEMO_PARTS_EXPORT_ORDER = (
+DEMO_FEATURES_EXPORT_ORDER = (
     "MANDEL_STATUS_TOPIC",
     "MANDEL_STATUS_SCOPE",
     "MANDEL_KIND_IDLE",
@@ -133,11 +133,11 @@ PUBLIC_API_EXPORT_ORDER = (
 
 PUBLIC_API_REQUIRED_REFERENCES = (
     "docs/architecture_boundary_spec.md",
-    "demo_parts/mandelbrot_demo_part.py",
+    "demo_features/mandelbrot_demo_feature.py",
 )
 
 PUBLIC_API_REQUIRED_PHRASES = (
-    "demo_parts.mandelbrot_demo_part.__all__ export surface/order is treated as a locked contract",
+    "demo_features.mandelbrot_demo_feature.__all__ export surface/order is treated as a locked contract",
 )
 
 README_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
@@ -187,7 +187,7 @@ README_PUBLIC_API_GUI_IMPORT_ORDER = (
 )
 
 README_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
-    "from demo_parts.mandelbrot_demo_part import MandelStatusEvent",
+    "from demo_features.mandelbrot_demo_feature import MandelStatusEvent",
 )
 
 README_PUBLIC_API_REQUIRED_PHRASES = (
@@ -196,7 +196,7 @@ README_PUBLIC_API_REQUIRED_PHRASES = (
 
 README_BOUNDARY_REQUIRED_PHRASES = (
     "gui/",
-    "demo_parts/",
+    "demo_features/",
     "*_demo.py",
     "from gui import ...",
     "without aliases",

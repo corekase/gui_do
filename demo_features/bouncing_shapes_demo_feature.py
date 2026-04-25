@@ -9,7 +9,7 @@ from typing import Optional
 
 import pygame
 
-from shared.part_lifecycle import ScreenPart
+from shared.feature_lifecycle import DirectFeature
 
 
 DEMO_SHAPE_COLOURS = (
@@ -38,7 +38,7 @@ class ShapeSpriteState:
     dy: float
 
 
-class BouncingShapesBackdropFeature(ScreenPart):
+class BouncingShapesBackdropFeature(DirectFeature):
     """Render and animate cached random geometric sprites directly on screen."""
 
     HOST_REQUIREMENTS = {
@@ -54,9 +54,9 @@ class BouncingShapesBackdropFeature(ScreenPart):
         star_count: int = 0,
         seed: Optional[int] = None,
         scene_name: Optional[str] = None,
-        part_name: str = "bouncing_shapes_backdrop",
+        feature_name: str = "bouncing_shapes_backdrop",
     ) -> None:
-        super().__init__(part_name, scene_name=scene_name)
+        super().__init__(feature_name, scene_name=scene_name)
         self.circle_count = max(0, int(circle_count))
         self.square_count = max(0, int(square_count))
         self.octagon_count = max(0, int(octagon_count))
@@ -71,7 +71,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
         width, height = host.screen_rect.size
         self._randomize_positions(width, height)
 
-    def on_screen_update(self, host, _dt_seconds: float) -> None:
+    def on_direct_update(self, host, _dt_seconds: float) -> None:
         """Advance shape positions and bounce off active screen boundaries."""
         width = int(host.screen_rect.width)
         height = int(host.screen_rect.height)
@@ -93,7 +93,7 @@ class BouncingShapesBackdropFeature(ScreenPart):
                 shape.y = float(height - shape.radius)
                 shape.dy = -abs(shape.dy)
 
-    def draw_screen(self, _host, surface, _theme) -> None:
+    def draw_direct(self, _host, surface, _theme) -> None:
         """Draw current shape sprites on the already-restored frame surface."""
         for shape in self._shapes:
             left = int(round(shape.x - shape.radius))

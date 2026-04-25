@@ -1,4 +1,4 @@
-"""Tests for FocusManager.revalidate_focus — focus moves away from disabled/hidden nodes."""
+﻿"""Tests for FocusManager.revalidate_focus — focus moves away from disabled/hidden nodes."""
 import unittest
 
 import pygame

@@ -1,4 +1,4 @@
-"""Shared Part abstractions for managed lifecycle composition."""
+"""Shared Feature abstractions for managed lifecycle composition."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _telemetry_collector():
         return _NoopTelemetryCollector()
 
 
-class Part:
+class Feature:
     """Base unit for managed GUI lifecycle composition."""
 
     HOST_REQUIREMENTS: Dict[str, tuple[str, ...]] = {}
@@ -35,7 +35,7 @@ class Part:
     def __init__(self, name: str, *, scene_name: Optional[str] = None) -> None:
         normalized = str(name).strip()
         if not normalized:
-            raise ValueError("part name must be a non-empty string")
+            raise ValueError("feature name must be a non-empty string")
         self.name = normalized
         if scene_name is None:
             self.scene_name = None
@@ -44,7 +44,7 @@ class Part:
             if not normalized_scene_name:
                 raise ValueError("scene_name must be a non-empty string when provided")
             self.scene_name = normalized_scene_name
-        self._part_manager = None
+        self._feature_manager = None
         self._message_queue: Deque[Dict[str, Any]] = deque()
         self._font_roles: Dict[str, str] = {}
 
@@ -78,34 +78,34 @@ class Part:
     def prewarm(self, host, surface, theme) -> None:
         return None
 
-    def send_message(self, target_part_name: str, message: Dict[str, Any]) -> bool:
-        if self._part_manager is None:
-            raise RuntimeError("part must be registered before sending messages")
-        return self._part_manager.send_message(self.name, target_part_name, message)
+    def send_message(self, target_feature_name: str, message: Dict[str, Any]) -> bool:
+        if self._feature_manager is None:
+            raise RuntimeError("feature must be registered before sending messages")
+        return self._feature_manager.send_message(self.name, target_feature_name, message)
 
-    def bind_logic_part(self, logic_part_name: str, *, alias: str = "default") -> None:
-        if self._part_manager is None:
-            raise RuntimeError("part must be registered before binding logic parts")
-        self._part_manager.bind_logic_part(self.name, logic_part_name, alias=alias)
+    def bind_logic(self, logic_feature_name: str, *, alias: str = "default") -> None:
+        if self._feature_manager is None:
+            raise RuntimeError("feature must be registered before binding logic features")
+        self._feature_manager.bind_logic(self.name, logic_feature_name, alias=alias)
 
-    def unbind_logic_part(self, *, alias: str = "default") -> bool:
-        if self._part_manager is None:
-            raise RuntimeError("part must be registered before unbinding logic parts")
-        return self._part_manager.unbind_logic_part(self.name, alias=alias)
+    def unbind_logic(self, *, alias: str = "default") -> bool:
+        if self._feature_manager is None:
+            raise RuntimeError("feature must be registered before unbinding logic features")
+        return self._feature_manager.unbind_logic(self.name, alias=alias)
 
-    def logic_part_name(self, *, alias: str = "default") -> Optional[str]:
-        if self._part_manager is None:
-            raise RuntimeError("part must be registered before querying logic part names")
-        return self._part_manager.logic_part_name(self.name, alias=alias)
+    def bound_logic_name(self, *, alias: str = "default") -> Optional[str]:
+        if self._feature_manager is None:
+            raise RuntimeError("feature must be registered before querying logic feature names")
+        return self._feature_manager.bound_logic_name(self.name, alias=alias)
 
     def send_logic_message(self, message: Dict[str, Any], *, alias: str = "default") -> bool:
-        if self._part_manager is None:
-            raise RuntimeError("part must be registered before sending logic messages")
-        return self._part_manager.send_logic_message(self.name, message, alias=alias)
+        if self._feature_manager is None:
+            raise RuntimeError("feature must be registered before sending logic messages")
+        return self._feature_manager.send_logic_message(self.name, message, alias=alias)
 
     def enqueue_message(self, message: Dict[str, Any]) -> None:
         if not isinstance(message, dict):
-            raise TypeError("part messages must be dictionaries")
+            raise TypeError("feature messages must be dictionaries")
         self._message_queue.append(deepcopy(message))
 
     def has_messages(self) -> bool:
@@ -142,10 +142,10 @@ class Part:
         italic: bool = False,
         scene_name: Optional[str] = None,
     ) -> str:
-        """Register one namespaced font role owned by this part."""
+        """Register one namespaced font role owned by this feature."""
         local_name = self._normalize_font_role_name(role_name)
         app = self._resolve_app(host)
-        qualified_name = f"part.{self.name}.{local_name}"
+        qualified_name = f"feature.{self.name}.{local_name}"
         app.register_font_role(
             qualified_name,
             size=size,
@@ -159,7 +159,7 @@ class Part:
         return qualified_name
 
     def register_font_roles(self, host, roles: Dict[str, Dict[str, Any]], *, scene_name: Optional[str] = None) -> Dict[str, str]:
-        """Register multiple namespaced font roles owned by this part."""
+        """Register multiple namespaced font roles owned by this feature."""
         registered: Dict[str, str] = {}
         for role_name, spec in dict(roles).items():
             if not isinstance(spec, dict):
@@ -177,11 +177,11 @@ class Part:
         return registered
 
     def font_role(self, role_name: str) -> str:
-        """Resolve a local part font role name to its registered global role."""
+        """Resolve a local feature font role name to its registered global role."""
         local_name = self._normalize_font_role_name(role_name)
         qualified_name = self._font_roles.get(local_name)
         if qualified_name is None:
-            raise KeyError(f"unknown part font role: {self.name}.{local_name}")
+            raise KeyError(f"unknown feature font role: {self.name}.{local_name}")
         return qualified_name
 
     @staticmethod
@@ -216,21 +216,26 @@ class Part:
         raise AttributeError(f"{self.__class__.__name__}.{hook_name} requires host fields: {missing_csv}")
 
 
-class ScreenPart(Part):
-    """Part subtype for direct screen event/update/draw integration."""
+class DirectFeature(Feature):
+    """Feature subtype for direct screen event/update/draw integration.
 
-    def handle_screen_event(self, host, event) -> bool:
+    Bypasses the widget pipeline entirely, receiving raw per-frame dt_seconds
+    and drawing directly to the restored pristine surface — analogous to how
+    DirectX bypasses the Windows GDI for direct hardware access.
+    """
+
+    def handle_direct_event(self, host, event) -> bool:
         return False
 
-    def on_screen_update(self, host, dt_seconds: float) -> None:
+    def on_direct_update(self, host, dt_seconds: float) -> None:
         return None
 
-    def draw_screen(self, host, surface, theme) -> None:
+    def draw_direct(self, host, surface, theme) -> None:
         return None
 
 
-class LogicPart(Part):
-    """Part subtype for domain logic routed through message commands."""
+class LogicFeature(Feature):
+    """Feature subtype for domain logic routed through message commands."""
 
     def on_logic_command(self, host, sender_name: str, command: str, payload: Dict[str, Any]) -> None:
         return None
@@ -246,8 +251,8 @@ class LogicPart(Part):
             self.on_logic_command(host, str(message.get("_from", "")), command, message)
 
 
-class RoutedMessagePart(Part):
-    """Part subtype that routes queued messages by a canonical topic key."""
+class RoutedFeature(Feature):
+    """Feature subtype that routes queued messages by a canonical topic key."""
 
     MESSAGE_TOPIC_KEY = "topic"
 
@@ -275,10 +280,10 @@ class RoutedMessagePart(Part):
             self.on_message(host, str(message.get("_from", "")), topic, message)
 
 
-class PartManager:
-    """Coordinates lifecycle, messaging, and utility registrations for parts."""
+class FeatureManager:
+    """Coordinates lifecycle, messaging, and utility registrations for features."""
 
-    _HOST_PARAMETER_HOOKS = (
+    _LIFECYCLE_HOOKS = (
         "on_register",
         "on_unregister",
         "build",
@@ -288,9 +293,9 @@ class PartManager:
         "handle_event",
         "on_update",
         "draw",
-        "handle_screen_event",
-        "on_screen_update",
-        "draw_screen",
+        "handle_direct_event",
+        "on_direct_update",
+        "draw_direct",
         "on_logic_command",
         "on_message",
         "prewarm",
@@ -298,79 +303,79 @@ class PartManager:
 
     def __init__(self, app) -> None:
         self.app = app
-        self._parts: "OrderedDict[str, Part]" = OrderedDict()
-        self._part_hosts: Dict[str, object] = {}
+        self._features: "OrderedDict[str, Feature]" = OrderedDict()
+        self._feature_hosts: Dict[str, object] = {}
         self._runnables: Dict[str, Dict[str, Callable[..., Any]]] = {}
-        self._runtime_bound_parts: set[str] = set()
+        self._runtime_bound: set[str] = set()
         self._logic_bindings: Dict[str, Dict[str, str]] = {}
-        self._prewarmed_parts: set[tuple[str, str]] = set()
+        self._prewarmed: set[tuple[str, str]] = set()
 
-    def register(self, part: Part, host=None) -> Part:
-        if not isinstance(part, Part):
-            raise TypeError("register expects a Part instance")
-        if part.name in self._parts:
-            raise ValueError(f"part already registered: {part.name}")
-        self._validate_host_parameter_contract(part)
-        part._part_manager = self
-        self._parts[part.name] = part
+    def register(self, feature: Feature, host=None) -> Feature:
+        if not isinstance(feature, Feature):
+            raise TypeError("register expects a Feature instance")
+        if feature.name in self._features:
+            raise ValueError(f"feature already registered: {feature.name}")
+        self._validate_host_contract(feature)
+        feature._feature_manager = self
+        self._features[feature.name] = feature
         host_obj = self.app if host is None else host
-        self._part_hosts[part.name] = host_obj
-        self._runtime_bound_parts.discard(part.name)
-        part.on_register(host_obj)
-        return part
+        self._feature_hosts[feature.name] = host_obj
+        self._runtime_bound.discard(feature.name)
+        feature.on_register(host_obj)
+        return feature
 
     def unregister(self, name: str, host=None) -> bool:
         key = str(name)
-        part = self._parts.get(key)
-        if part is None:
+        feature = self._features.get(key)
+        if feature is None:
             return False
-        host_obj = self._part_hosts.get(part.name)
+        host_obj = self._feature_hosts.get(feature.name)
         if host_obj is None:
             host_obj = self.app if host is None else host
-        if part.name in self._runtime_bound_parts:
-            part.shutdown_runtime(host_obj)
-        part.on_unregister(host_obj)
-        self._parts.pop(key, None)
-        self._part_hosts.pop(part.name, None)
-        self._runtime_bound_parts.discard(part.name)
-        self._logic_bindings.pop(part.name, None)
+        if feature.name in self._runtime_bound:
+            feature.shutdown_runtime(host_obj)
+        feature.on_unregister(host_obj)
+        self._features.pop(key, None)
+        self._feature_hosts.pop(feature.name, None)
+        self._runtime_bound.discard(feature.name)
+        self._logic_bindings.pop(feature.name, None)
         for consumer_name, alias_map in tuple(self._logic_bindings.items()):
-            aliases_to_remove = [alias for alias, provider_name in alias_map.items() if provider_name == part.name]
+            aliases_to_remove = [alias for alias, provider_name in alias_map.items() if provider_name == feature.name]
             for alias in aliases_to_remove:
                 alias_map.pop(alias, None)
             if not alias_map:
                 self._logic_bindings.pop(consumer_name, None)
-        part._part_manager = None
-        self._runnables.pop(part.name, None)
+        feature._feature_manager = None
+        self._runnables.pop(feature.name, None)
         return True
 
-    def get(self, name: str) -> Optional[Part]:
-        return self._parts.get(str(name))
+    def get(self, name: str) -> Optional[Feature]:
+        return self._features.get(str(name))
 
     def names(self) -> tuple[str, ...]:
-        return tuple(self._parts.keys())
+        return tuple(self._features.keys())
 
-    def parts(self) -> Iterable[Part]:
-        return tuple(self._parts.values())
+    def features(self) -> Iterable[Feature]:
+        return tuple(self._features.values())
 
-    def send_message(self, sender_name: str, target_part_name: str, message: Dict[str, Any]) -> bool:
+    def send_message(self, sender_name: str, target_feature_name: str, message: Dict[str, Any]) -> bool:
         collector = _telemetry_collector()
         topic = ""
         if isinstance(message, dict):
             raw_topic = message.get("topic")
             if isinstance(raw_topic, str):
                 topic = raw_topic
-        target = self._parts.get(str(target_part_name))
+        target = self._features.get(str(target_feature_name))
         if target is None:
             collector.record_duration(
-                "part_lifecycle",
+                "feature_lifecycle",
                 "send_message_missing_target",
                 0.0,
-                metadata={"sender": str(sender_name), "target": str(target_part_name), "topic": topic},
+                metadata={"sender": str(sender_name), "target": str(target_feature_name), "topic": topic},
             )
             return False
         with collector.span(
-            "part_lifecycle",
+            "feature_lifecycle",
             "send_message",
             metadata={"sender": str(sender_name), "target": target.name, "topic": topic},
         ):
@@ -379,214 +384,214 @@ class PartManager:
             payload.setdefault("_to", target.name)
             target.enqueue_message(payload)
             collector.record_duration(
-                "part_lifecycle",
+                "feature_lifecycle",
                 "target_queue_depth",
                 0.0,
                 metadata={"target": target.name, "queue_depth": target.message_count()},
             )
             return True
 
-    def register_runnable(self, part_name: str, runnable_name: str, runnable: Callable[..., Any]) -> None:
-        self._require_part(part_name)
+    def register_runnable(self, feature_name: str, runnable_name: str, runnable: Callable[..., Any]) -> None:
+        self._require_feature(feature_name)
         if not callable(runnable):
             raise TypeError("runnable must be callable")
         name = str(runnable_name).strip()
         if not name:
             raise ValueError("runnable_name must be a non-empty string")
-        bucket = self._runnables.setdefault(str(part_name), {})
+        bucket = self._runnables.setdefault(str(feature_name), {})
         bucket[name] = runnable
 
-    def bind_logic_part(self, consumer_part_name: str, logic_part_name: str, *, alias: str = "default") -> None:
-        consumer = self._require_part(consumer_part_name)
-        provider = self._require_part(logic_part_name)
-        if not isinstance(provider, LogicPart):
-            raise TypeError(f"part is not a LogicPart: {provider.name}")
+    def bind_logic(self, consumer_feature_name: str, logic_feature_name: str, *, alias: str = "default") -> None:
+        consumer = self._require_feature(consumer_feature_name)
+        provider = self._require_feature(logic_feature_name)
+        if not isinstance(provider, LogicFeature):
+            raise TypeError(f"feature is not a LogicFeature: {provider.name}")
         alias_name = self._normalize_alias(alias)
         bucket = self._logic_bindings.setdefault(consumer.name, {})
         bucket[alias_name] = provider.name
 
-    def unbind_logic_part(self, consumer_part_name: str, *, alias: str = "default") -> bool:
+    def unbind_logic(self, consumer_feature_name: str, *, alias: str = "default") -> bool:
         alias_name = self._normalize_alias(alias)
-        bucket = self._logic_bindings.get(str(consumer_part_name))
+        bucket = self._logic_bindings.get(str(consumer_feature_name))
         if not bucket or alias_name not in bucket:
             return False
         bucket.pop(alias_name, None)
         if not bucket:
-            self._logic_bindings.pop(str(consumer_part_name), None)
+            self._logic_bindings.pop(str(consumer_feature_name), None)
         return True
 
-    def logic_part_name(self, consumer_part_name: str, *, alias: str = "default") -> Optional[str]:
+    def bound_logic_name(self, consumer_feature_name: str, *, alias: str = "default") -> Optional[str]:
         alias_name = self._normalize_alias(alias)
-        bucket = self._logic_bindings.get(str(consumer_part_name), {})
+        bucket = self._logic_bindings.get(str(consumer_feature_name), {})
         return bucket.get(alias_name)
 
-    def send_logic_message(self, consumer_part_name: str, message: Dict[str, Any], *, alias: str = "default") -> bool:
-        provider_name = self.logic_part_name(consumer_part_name, alias=alias)
+    def send_logic_message(self, consumer_feature_name: str, message: Dict[str, Any], *, alias: str = "default") -> bool:
+        provider_name = self.bound_logic_name(consumer_feature_name, alias=alias)
         if provider_name is None:
             return False
-        return self.send_message(str(consumer_part_name), provider_name, message)
+        return self.send_message(str(consumer_feature_name), provider_name, message)
 
-    def run(self, part_name: str, runnable_name: str, *args, **kwargs) -> Any:
-        part_bucket = self._runnables.get(str(part_name), {})
-        runnable = part_bucket.get(str(runnable_name))
+    def run(self, feature_name: str, runnable_name: str, *args, **kwargs) -> Any:
+        feature_bucket = self._runnables.get(str(feature_name), {})
+        runnable = feature_bucket.get(str(runnable_name))
         if runnable is None:
-            raise KeyError(f"unknown runnable: {part_name}.{runnable_name}")
+            raise KeyError(f"unknown runnable: {feature_name}.{runnable_name}")
         return runnable(*args, **kwargs)
 
     def handle_event(self, event, host=None) -> bool:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not self._is_part_active_for_scene(part):
+        for feature in self._features.values():
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "part_handle_event", metadata={"part_name": part.name}):
-                if part.handle_event(host_obj, event):
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "feature_handle_event", metadata={"feature_name": feature.name}):
+                if feature.handle_event(host_obj, event):
                     return True
         return False
 
-    def update_parts(self, host=None) -> None:
+    def update_features(self, host=None) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not self._is_part_active_for_scene(part):
+        for feature in self._features.values():
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "part_update", metadata={"part_name": part.name}):
-                part.on_update(host_obj)
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "feature_update", metadata={"feature_name": feature.name}):
+                feature.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not self._is_part_active_for_scene(part):
+        for feature in self._features.values():
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "part_draw", metadata={"part_name": part.name}):
-                part.draw(host_obj, surface, theme)
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "feature_draw", metadata={"feature_name": feature.name}):
+                feature.draw(host_obj, surface, theme)
 
-    def handle_screen_event(self, event, host=None) -> bool:
+    def handle_direct_event(self, event, host=None) -> bool:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not isinstance(part, ScreenPart):
+        for feature in self._features.values():
+            if not isinstance(feature, DirectFeature):
                 continue
-            if not self._is_part_active_for_scene(part):
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "screen_part_handle_event", metadata={"part_name": part.name}):
-                if part.handle_screen_event(host_obj, event):
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "direct_feature_handle_event", metadata={"feature_name": feature.name}):
+                if feature.handle_direct_event(host_obj, event):
                     return True
         return False
 
-    def update_screen_parts(self, dt_seconds: float, host=None) -> None:
+    def update_direct_features(self, dt_seconds: float, host=None) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not isinstance(part, ScreenPart):
+        for feature in self._features.values():
+            if not isinstance(feature, DirectFeature):
                 continue
-            if not self._is_part_active_for_scene(part):
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "screen_part_update", metadata={"part_name": part.name}):
-                part.on_screen_update(host_obj, dt_seconds)
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "direct_feature_update", metadata={"feature_name": feature.name}):
+                feature.on_direct_update(host_obj, dt_seconds)
 
-    def draw_screen_parts(self, surface, theme, host=None) -> None:
+    def draw_direct_features(self, surface, theme, host=None) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            if not isinstance(part, ScreenPart):
+        for feature in self._features.values():
+            if not isinstance(feature, DirectFeature):
                 continue
-            if not self._is_part_active_for_scene(part):
+            if not self._is_feature_active_for_scene(feature):
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "screen_part_draw", metadata={"part_name": part.name}):
-                part.draw_screen(host_obj, surface, theme)
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "direct_feature_draw", metadata={"feature_name": feature.name}):
+                feature.draw_direct(host_obj, surface, theme)
 
-    def prewarm_parts(self, host, surface, theme, *, scene_name: Optional[str] = None, force: bool = False) -> int:
+    def prewarm_features(self, host, surface, theme, *, scene_name: Optional[str] = None, force: bool = False) -> int:
         target_scene_name = str(self.app.active_scene_name if scene_name is None else scene_name)
         warmed = 0
-        for part in self._parts.values():
-            if not self._is_part_active_for_scene(part, scene_name=target_scene_name):
+        for feature in self._features.values():
+            if not self._is_feature_active_for_scene(feature, scene_name=target_scene_name):
                 continue
-            cache_key = (part.name, target_scene_name)
-            if cache_key in self._prewarmed_parts and not force:
+            cache_key = (feature.name, target_scene_name)
+            if cache_key in self._prewarmed and not force:
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            part.validate_host_for(host_obj, "prewarm")
+            host_obj = self._resolve_host(feature.name, host)
+            feature.validate_host_for(host_obj, "prewarm")
             start = perf_counter()
-            part.prewarm(host_obj, surface, theme)
+            feature.prewarm(host_obj, surface, theme)
             elapsed_ms = (perf_counter() - start) * 1000.0
-            self._record_prewarm_sample(target_scene_name, part.name, elapsed_ms)
-            self._prewarmed_parts.add(cache_key)
+            self._record_prewarm_sample(target_scene_name, feature.name, elapsed_ms)
+            self._prewarmed.add(cache_key)
             warmed += 1
         return warmed
 
     @staticmethod
-    def _record_prewarm_sample(scene_name: str, part_name: str, elapsed_ms: float) -> None:
+    def _record_prewarm_sample(scene_name: str, feature_name: str, elapsed_ms: float) -> None:
         try:
             from gui.core.first_frame_profiler import first_frame_profiler
 
             first_frame_profiler().record_once(
-                "part.prewarm",
-                f"{scene_name}:{part_name}",
+                "feature.prewarm",
+                f"{scene_name}:{feature_name}",
                 elapsed_ms,
-                detail="part prewarm hook",
+                detail="feature prewarm hook",
             )
         except Exception:
             return
 
-    def build_parts(self, host) -> None:
+    def build_features(self, host) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            part.validate_host_for(host, "build")
-            with collector.span("part_lifecycle", "part_build", metadata={"part_name": part.name}):
-                part.build(host)
+        for feature in self._features.values():
+            feature.validate_host_for(host, "build")
+            with collector.span("feature_lifecycle", "feature_build", metadata={"feature_name": feature.name}):
+                feature.build(host)
 
     def bind_runtime(self, host) -> None:
         collector = _telemetry_collector()
-        for part in self._parts.values():
-            part.validate_host_for(host, "bind_runtime")
-            with collector.span("part_lifecycle", "part_bind_runtime", metadata={"part_name": part.name}):
-                part.bind_runtime(host)
-            self._runtime_bound_parts.add(part.name)
+        for feature in self._features.values():
+            feature.validate_host_for(host, "bind_runtime")
+            with collector.span("feature_lifecycle", "feature_bind_runtime", metadata={"feature_name": feature.name}):
+                feature.bind_runtime(host)
+            self._runtime_bound.add(feature.name)
 
     def shutdown_runtime(self, host=None) -> None:
-        """Call shutdown_runtime(host) for parts with active runtime bindings."""
+        """Call shutdown_runtime(host) for features with active runtime bindings."""
         collector = _telemetry_collector()
-        for part in reversed(tuple(self._parts.values())):
-            if part.name not in self._runtime_bound_parts:
+        for feature in reversed(tuple(self._features.values())):
+            if feature.name not in self._runtime_bound:
                 continue
-            host_obj = self._resolve_host(part.name, host)
-            with collector.span("part_lifecycle", "part_shutdown_runtime", metadata={"part_name": part.name}):
-                part.shutdown_runtime(host_obj)
-            self._runtime_bound_parts.discard(part.name)
+            host_obj = self._resolve_host(feature.name, host)
+            with collector.span("feature_lifecycle", "feature_shutdown_runtime", metadata={"feature_name": feature.name}):
+                feature.shutdown_runtime(host_obj)
+            self._runtime_bound.discard(feature.name)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         collector = _telemetry_collector()
         next_index = int(tab_index_start)
-        for part in self._parts.values():
-            part.validate_host_for(host, "configure_accessibility")
-            with collector.span("part_lifecycle", "part_configure_accessibility", metadata={"part_name": part.name}):
-                next_index = int(part.configure_accessibility(host, next_index))
+        for feature in self._features.values():
+            feature.validate_host_for(host, "configure_accessibility")
+            with collector.span("feature_lifecycle", "feature_configure_accessibility", metadata={"feature_name": feature.name}):
+                next_index = int(feature.configure_accessibility(host, next_index))
         return next_index
 
-    def _require_part(self, part_name: str) -> Part:
-        part = self.get(part_name)
-        if part is None:
-            raise KeyError(f"unknown part: {part_name}")
-        return part
+    def _require_feature(self, feature_name: str) -> Feature:
+        feature = self.get(feature_name)
+        if feature is None:
+            raise KeyError(f"unknown feature: {feature_name}")
+        return feature
 
-    def _resolve_host(self, part_name: str, override_host=None):
+    def _resolve_host(self, feature_name: str, override_host=None):
         if override_host is not None:
             return override_host
-        return self._part_hosts.get(part_name, self.app)
+        return self._feature_hosts.get(feature_name, self.app)
 
-    def _is_part_active_for_scene(self, part: Part, *, scene_name: Optional[str] = None) -> bool:
+    def _is_feature_active_for_scene(self, feature: Feature, *, scene_name: Optional[str] = None) -> bool:
         target_scene_name = self.app.active_scene_name if scene_name is None else scene_name
-        scene_name = part.scene_name
-        if scene_name is None:
+        feature_scene = feature.scene_name
+        if feature_scene is None:
             return True
-        return str(scene_name) == str(target_scene_name)
+        return str(feature_scene) == str(target_scene_name)
 
     @classmethod
-    def _validate_host_parameter_contract(cls, part: Part) -> None:
-        for hook_name in cls._HOST_PARAMETER_HOOKS:
-            method = getattr(part, hook_name, None)
+    def _validate_host_contract(cls, feature: Feature) -> None:
+        for hook_name in cls._LIFECYCLE_HOOKS:
+            method = getattr(feature, hook_name, None)
             if method is None or not callable(method):
                 continue
             try:
@@ -604,7 +609,7 @@ class PartManager:
             if host_parameter_name in ("host", "_host"):
                 continue
             raise ValueError(
-                f"{part.__class__.__name__}.{hook_name} first positional parameter must be 'host' or '_host', got {host_parameter_name!r}"
+                f"{feature.__class__.__name__}.{hook_name} first positional parameter must be 'host' or '_host', got {host_parameter_name!r}"
             )
 
     @staticmethod

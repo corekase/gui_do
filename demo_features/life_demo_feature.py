@@ -6,7 +6,7 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from shared.part_lifecycle import LogicPart, RoutedMessagePart
+from shared.feature_lifecycle import LogicFeature, RoutedFeature
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -53,7 +53,7 @@ def _next_life_cycle(cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
     return new_life
 
 
-class LifeSimulationLogicPart(LogicPart):
+class LifeSimulationLogicFeature(LogicFeature):
     """Domain logic service for Conway life cycles."""
 
     def __init__(self) -> None:
@@ -93,7 +93,7 @@ class LifeSimulationLogicPart(LogicPart):
         )
 
 
-class LifeSimulationFeature(RoutedMessagePart):
+class LifeSimulationFeature(RoutedFeature):
     """Build and run the Conway's Game of Life feature window and interactions."""
 
     HOST_REQUIREMENTS = {
@@ -120,7 +120,7 @@ class LifeSimulationFeature(RoutedMessagePart):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""
-        ui = host.app.read_part_ui_types()
+        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {
@@ -144,8 +144,8 @@ class LifeSimulationFeature(RoutedMessagePart):
         if self.scheduler is None:
             self.scheduler = host.app.get_scene_scheduler("main")
         self.scheduler.set_message_dispatch_limit(256)
-        if self.logic_part_name(alias=self.LOGIC_ALIAS) is None:
-            self.bind_logic_part("life_simulation_logic", alias=self.LOGIC_ALIAS)
+        if self.bound_logic_name(alias=self.LOGIC_ALIAS) is None:
+            self.bind_logic("life_simulation_logic", alias=self.LOGIC_ALIAS)
         self._send_life_logic_command("snapshot")
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
@@ -170,7 +170,7 @@ class LifeSimulationFeature(RoutedMessagePart):
         return next_index
 
     def message_handlers(self):
-        """Route lifecycle part messages by canonical topic."""
+        """Route lifecycle feature messages by canonical topic."""
         return {
             _LIFE_LOGIC_TOPIC: self._handle_life_logic_message,
         }
@@ -195,7 +195,7 @@ class LifeSimulationFeature(RoutedMessagePart):
         return None
 
     def _send_life_logic_command(self, command: str, **extra: Any) -> bool:
-        if self._part_manager is None:
+        if self._feature_manager is None:
             return False
         message: Dict[str, Any] = {
             _KEY_TOPIC: _LIFE_LOGIC_TOPIC,

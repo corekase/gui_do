@@ -1,4 +1,4 @@
-"""Tests for Timers management APIs: timer_ids, cancel_all, reschedule."""
+﻿"""Tests for Timers management APIs: timer_ids, cancel_all, reschedule."""
 import unittest
 
 from gui.core.timers import Timers

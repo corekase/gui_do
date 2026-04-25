@@ -1,4 +1,4 @@
-# Event System Specification
+﻿# Event System Specification
 
 ## Purpose
 

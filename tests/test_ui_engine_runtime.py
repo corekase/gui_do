@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from unittest import mock
 
 from gui.loop.ui_engine import UiEngine

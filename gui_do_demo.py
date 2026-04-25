@@ -1,10 +1,10 @@
 import pygame
 from pygame import Rect
-from demo_parts.mandelbrot_demo_part import MandelbrotLogicPart, MandelbrotRenderFeature
-from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
-from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
-from demo_parts.controls_demo_part import ControlsShowcasePart
-from demo_parts.styles_demo_part import StylesShowcaseFeature
+from demo_features.mandelbrot_demo_feature import MandelbrotLogicFeature, MandelbrotRenderFeature
+from demo_features.life_demo_feature import LifeSimulationFeature, LifeSimulationLogicFeature
+from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
+from demo_features.controls_demo_feature import ControlsShowcaseFeature
+from demo_features.styles_demo_feature import StylesShowcaseFeature
 
 from gui import (
     GuiApplication,
@@ -54,19 +54,19 @@ class GuiDoDemo:
             octagon_count=12,
             star_count=12,
         )
-        self._life_logic_feature = LifeSimulationLogicPart()
+        self._life_logic = LifeSimulationLogicFeature()
         self._life_feature = LifeSimulationFeature()
         self._styles_feature = StylesShowcaseFeature()
-        self._controls_feature = ControlsShowcasePart()
-        self._mandel_logic_primary = MandelbrotLogicPart("mandelbrot_logic_primary")
-        self._mandel_logic_can1 = MandelbrotLogicPart("mandelbrot_logic_can1")
-        self._mandel_logic_can2 = MandelbrotLogicPart("mandelbrot_logic_can2")
-        self._mandel_logic_can3 = MandelbrotLogicPart("mandelbrot_logic_can3")
-        self._mandel_logic_can4 = MandelbrotLogicPart("mandelbrot_logic_can4")
+        self._controls_feature = ControlsShowcaseFeature()
+        self._mandel_logic_primary = MandelbrotLogicFeature("mandelbrot_logic_primary")
+        self._mandel_logic_can1 = MandelbrotLogicFeature("mandelbrot_logic_can1")
+        self._mandel_logic_can2 = MandelbrotLogicFeature("mandelbrot_logic_can2")
+        self._mandel_logic_can3 = MandelbrotLogicFeature("mandelbrot_logic_can3")
+        self._mandel_logic_can4 = MandelbrotLogicFeature("mandelbrot_logic_can4")
         self._mandel_feature = MandelbrotRenderFeature()
         for feature in [
             self._shapes_feature,
-            self._life_logic_feature,
+            self._life_logic,
             self._life_feature,
             self._styles_feature,
             self._controls_feature,
@@ -77,11 +77,11 @@ class GuiDoDemo:
             self._mandel_logic_can4,
             self._mandel_feature,
         ]:
-            self.app.register_part(feature, host=self)
+            self.app.register_feature(feature, host=self)
 
         self._build_main_scene()
         self._build_control_showcase_scene()
-        self.app.build_parts(self)
+        self.app.build_features(self)
         self.life_window = self._life_feature.window
         self.mandel_window = self._mandel_feature.window
         self.styles_window = self._styles_feature.window
@@ -93,7 +93,7 @@ class GuiDoDemo:
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
-        self.app.bind_parts_runtime(self)
+        self.app.bind_features_runtime(self)
         self.app.prewarm_scene("control_showcase")
 
         base_controls = [
@@ -112,7 +112,7 @@ class GuiDoDemo:
         self.showcase_exit_button.set_accessibility(role="button", label="Exit")
         self.showcase_apps_button.set_accessibility(role="button", label="Apps")
         self.showcase_styles_toggle.set_accessibility(role="toggle", label="Show Styles window")
-        self.app.configure_parts_accessibility(self, len(base_controls))
+        self.app.configure_features_accessibility(self, len(base_controls))
 
     def _register_screen_font_roles(self) -> None:
         """Register screen-owned font roles for non-part scene composition."""

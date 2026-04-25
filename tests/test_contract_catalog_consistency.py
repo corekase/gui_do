@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from pathlib import Path
 
 from tests.contract_test_catalog import ARCHITECTURE_DOC_PATHS
@@ -15,7 +15,7 @@ from tests.contract_test_catalog import CONTRACT_PYTEST_COMMAND
 from tests.contract_test_catalog import CONTRACT_TEST_FILE_PATHS
 from tests.contract_test_catalog import CONTRACT_TEST_MODULES
 from tests.contract_test_catalog import CONTRACT_UNITTEST_COMMAND
-from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
+from tests.contract_test_catalog import DEMO_FEATURES_EXPORT_ORDER
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
@@ -105,12 +105,12 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         )
         self.assertEqual(BOUNDARY_RELATED_DOC_PATHS, expected_ordered_subset)
 
-    def test_demo_parts_export_order_constant_is_well_formed(self) -> None:
-        self.assertTrue(DEMO_PARTS_EXPORT_ORDER)
-        self.assertEqual(len(DEMO_PARTS_EXPORT_ORDER), len(set(DEMO_PARTS_EXPORT_ORDER)))
-        self.assertEqual(DEMO_PARTS_EXPORT_ORDER[-1], "MandelStatusEvent")
+    def test_DEMO_FEATURES_EXPORT_ORDER_constant_is_well_formed(self) -> None:
+        self.assertTrue(DEMO_FEATURES_EXPORT_ORDER)
+        self.assertEqual(len(DEMO_FEATURES_EXPORT_ORDER), len(set(DEMO_FEATURES_EXPORT_ORDER)))
+        self.assertEqual(DEMO_FEATURES_EXPORT_ORDER[-1], "MandelStatusEvent")
 
-        for entry in DEMO_PARTS_EXPORT_ORDER[:-1]:
+        for entry in DEMO_FEATURES_EXPORT_ORDER[:-1]:
             self.assertTrue(entry.startswith("MANDEL_"))
 
     def test_public_api_required_references_and_phrases_are_well_formed(self) -> None:
@@ -161,7 +161,7 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         )
 
         for required_import_line in README_PUBLIC_API_REQUIRED_DEMO_IMPORTS:
-            self.assertTrue(required_import_line.startswith("from demo_parts."))
+            self.assertTrue(required_import_line.startswith("from demo_features."))
 
     def test_readme_public_api_required_phrases_constant_is_well_formed(self) -> None:
         self.assertTrue(README_PUBLIC_API_REQUIRED_PHRASES)

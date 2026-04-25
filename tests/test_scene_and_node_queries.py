@@ -1,4 +1,4 @@
-"""Tests for Scene.find / find_all / node_count and UiNode tree traversal helpers."""
+﻿"""Tests for Scene.find / find_all / node_count and UiNode tree traversal helpers."""
 import unittest
 
 from pygame import Rect

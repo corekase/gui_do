@@ -1,4 +1,4 @@
-[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
+﻿[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
 
 # gui_do
 
@@ -77,7 +77,7 @@ Switching scenes swaps these runtime services through `GuiApplication.switch_sce
 
 ### Window Tiling Registration
 
-`GuiApplication.build_parts(host)` now primes per-scene window tiling registration order internally.
+`GuiApplication.build_features(host)` now primes per-scene window tiling registration order internally.
 
 This means app/demo startup does not need manual pre-registration choreography such as:
 
@@ -86,9 +86,9 @@ This means app/demo startup does not need manual pre-registration choreography s
 
 Registration order is still deterministic by scene graph creation order, and remains stable across hide/show visibility toggles.
 
-### Part Lifecycle
+### Feature Lifecycle
 
-A feature is a `Part` with optional hooks:
+A feature is a `Feature` with optional hooks:
 
 - `build(host)`
 - `bind_runtime(host)`
@@ -105,15 +105,15 @@ Host field requirements can be declared per hook using `HOST_REQUIREMENTS` and a
 
 `GuiApplication.prewarm_scene(scene_name)` performs a one-time prewarm pass for all parts active in that scene:
 
-- parts with `part.scene_name == scene_name`
-- parts with `part.scene_name is None` (shared/global)
+- parts with `Feature.scene_name == scene_name`
+- parts with `Feature.scene_name is None` (shared/global)
 
-It invokes each part's `prewarm(host, surface, theme)` exactly once per `(part, scene)` unless `force=True` is passed.
+It invokes each Feature's `prewarm(host, surface, theme)` exactly once per `(Feature, scene)` unless `force=True` is passed.
 
 ```python
 # Typical bootstrap ordering
-app.build_parts(demo)
-app.bind_parts_runtime(demo)
+app.build_features(demo)
+app.bind_features_runtime(demo)
 
 # One prewarm call per scene before first user-visible frame/open
 app.prewarm_scene("control_showcase")
@@ -122,7 +122,7 @@ app.prewarm_scene("control_showcase")
 app.prewarm_scene("control_showcase", force=True)
 ```
 
-Host behavior: if `host` is omitted, prewarm uses each part's registered host context (same as runtime hooks). This lets one scene-level call prewarm all scene parts safely, including parts that require richer host state than `GuiApplication` alone.
+Host behavior: if `host` is omitted, prewarm uses each Feature's registered host context (same as runtime hooks). This lets one scene-level call prewarm all scene parts safely, including parts that require richer host state than `GuiApplication` alone.
 
 ### First-Open Optimisation Workflow (Instrument -> Confirm -> Prewarm)
 
@@ -138,8 +138,8 @@ Use this sequence to remove first-open stutter caused by one-time lazy work (fon
 app.configure_first_frame_profiling(enabled=True, min_ms=0.25)
 
 # 2) Build/bind parts as normal
-app.build_parts(demo)
-app.bind_parts_runtime(demo)
+app.build_features(demo)
+app.bind_features_runtime(demo)
 
 # 3) Prewarm one scene once (recommended per scene)
 app.prewarm_scene("control_showcase")
@@ -157,7 +157,7 @@ python gui_do_demo.py
 
 ### Runtime Telemetry and Performance Analyzer
 
-`gui_do` now includes a built-in telemetry system for GUI loop timing, scheduler throughput, part lifecycle execution, and part/event messaging hotspots.
+`gui_do` now includes a built-in telemetry system for GUI loop timing, scheduler throughput, Feature lifecycle execution, and Feature/event messaging hotspots.
 
 Default behavior:
 
@@ -202,7 +202,7 @@ app.configure_telemetry(
 app.set_telemetry_system_enabled("event_bus", False)
 app.set_telemetry_point_enabled("task_scheduler", "message_callback", True)
 
-# 3) Run your normal scenes and part interactions
+# 3) Run your normal scenes and Feature interactions
 app.run(target_fps=60)
 
 # 4) Analyze live-captured samples
@@ -237,21 +237,21 @@ analysis = analyze_telemetry_log_file("gui_do_telemetry_20260425_171200_samples.
 print(render_telemetry_report(analysis, source="offline-log"))
 ```
 
-### Part Types: `Part`, `RoutedMessagePart`, `LogicPart`, and `ScreenPart`
+### Feature Types: `Feature`, `RoutedFeature`, `LogicFeature`, and `DirectFeature`
 
-There are four part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
+There are four Feature base classes in `shared.feature_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
 
-#### Part Lifecycle Hooks: `on_register` and `on_unregister`
+#### Feature Lifecycle Hooks: `on_register` and `on_unregister`
 
-Two additional hooks are called by `PartManager` outside the main lifecycle sequence:
+Two additional hooks are called by `FeatureManager` outside the main lifecycle sequence:
 
-- `on_register(host)` — called immediately when the part is registered via `app.register_part(...)`. Use it for one-time setup that does not depend on the scene being active.
-- `on_unregister(host)` — called when the part is removed via `app.unregister_part(...)`, after `shutdown_runtime`. Use it for final cleanup.
+- `on_register(host)` — called immediately when the Feature is registered via `app.register_feature(...)`. Use it for one-time setup that does not depend on the scene being active.
+- `on_unregister(host)` — called when the Feature is removed via `app.unregister_feature(...)`, after `shutdown_runtime`. Use it for final cleanup.
 
 ```python
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
-class MyFeature(Part):
+class MyFeature(Feature):
     def on_register(self, host) -> None:
         # Called once when registered; scene may not be active yet.
         pass
@@ -261,21 +261,21 @@ class MyFeature(Part):
         pass
 ```
 
-#### `Part` — General-purpose feature unit
+#### `Feature` — General-purpose feature unit
 
-`Part` is the standard base for features that build and manage controls (windows, buttons, canvases, sliders, etc.) on a scene. Its lifecycle hooks integrate directly with `GuiApplication` scene management: `build` creates controls, `bind_runtime` wires services, `on_update` runs frame logic, and `draw` renders into its own controls rather than directly onto the screen surface.
+`Feature` is the standard base for features that build and manage controls (windows, buttons, canvases, sliders, etc.) on a scene. Its lifecycle hooks integrate directly with `GuiApplication` scene management: `build` creates controls, `bind_runtime` wires services, `on_update` runs frame logic, and `draw` renders into its own controls rather than directly onto the screen surface.
 
-Use `Part` for features that:
+Use `Feature` for features that:
 - own a window or other UI structure on the scene
 - coordinate preamble, event routing, and postamble for those controls
-- communicate through the scheduler, event bus, or part messaging
+- communicate through the scheduler, event bus, or Feature messaging
 
-The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `RoutedMessagePart`. Each owns a `WindowControl` containing `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the part itself is responsible for wiring and orchestration, not raw pixel output.
+The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `RoutedFeature`. Each owns a `WindowControl` containing `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the Feature itself is responsible for wiring and orchestration, not raw pixel output.
 
 ```python
-from shared.part_lifecycle import RoutedMessagePart
+from shared.feature_lifecycle import RoutedFeature
 
-class LifeSimulationFeature(RoutedMessagePart):
+class LifeSimulationFeature(RoutedFeature):
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
         "bind_runtime": ("app",),
@@ -289,7 +289,7 @@ class LifeSimulationFeature(RoutedMessagePart):
 
     def build(self, demo) -> None:
         # Creates a WindowControl with canvas + buttons under demo.root.
-        # The Part orchestrates layout and events; the controls handle drawing.
+        # The Feature orchestrates layout and events; the controls handle drawing.
         ...
 
     def bind_runtime(self, demo) -> None:
@@ -297,7 +297,7 @@ class LifeSimulationFeature(RoutedMessagePart):
 ```
 
 ```python
-class MandelbrotRenderFeature(RoutedMessagePart):
+class MandelbrotRenderFeature(RoutedFeature):
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
         "bind_runtime": ("app",),
@@ -310,36 +310,36 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         ...
 ```
 
-#### `LogicPart` — Domain logic service behind message commands
+#### `LogicFeature` — Domain logic service behind message commands
 
-`LogicPart` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic part responds with result/state messages.
+`LogicFeature` is for domain-specific logic that should be reused by one or many UI-facing parts without exposing internal state directly. Consumers send command messages (for example `{"command": "next"}`) and the logic Feature responds with result/state messages.
 
-This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic part defines its own command/data protocol.
+This keeps the lifecycle strict and generic: the framework provides only routing and bindings, while each logic Feature defines its own command/data protocol.
 
 API helpers:
 
-- `Part.bind_logic_part(logic_part_name, alias="default")`
-- `Part.send_logic_message(message, alias="default")`
-- `GuiApplication.bind_part_logic(...)`
+- `Feature.bind_logic(bound_logic_name, alias="default")`
+- `Feature.send_logic_message(message, alias="default")`
+- `GuiApplication.bind_feature_logic(...)`
 - `GuiApplication.send_part_logic_message(...)`
 
 Private and shared logic are both supported:
 
-- private: bind one consumer to a dedicated logic part
-- shared: bind multiple consumers to the same logic part under their own aliases
+- private: bind one consumer to a dedicated logic Feature
+- shared: bind multiple consumers to the same logic Feature under their own aliases
 
-`LifeSimulationFeature` uses this pattern with `LifeSimulationLogicPart`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic part sends back the updated `life_cells` snapshot.
+`LifeSimulationFeature` uses this pattern with `LifeSimulationLogicFeature`: UI interactions send commands (`reset`, `toggle_cell`, `next`) and the logic Feature sends back the updated `life_cells` snapshot.
 
-`MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicPart` providers (one primary logic part plus split-canvas logic parts), while the render part owns control flow and payload-to-canvas drawing.
+`MandelbrotRenderFeature` also uses this pattern: scheduler worker algorithms are delegated to `MandelbrotLogicFeature` providers (one primary logic Feature plus split-canvas logic parts), while the render Feature owns control flow and payload-to-canvas drawing.
 
-#### `RoutedMessagePart` — Topic-routed message dispatch
+#### `RoutedFeature` — Topic-routed message dispatch
 
-`RoutedMessagePart` is a `Part` subclass that routes incoming messages by a canonical **topic key** instead of requiring manual `pop_message()` loop inspection. It adds a single override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
+`RoutedFeature` is a `Feature` subclass that routes incoming messages by a canonical **topic key** instead of requiring manual `pop_message()` loop inspection. It adds a single override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
 
 ```python
-from shared.part_lifecycle import RoutedMessagePart
+from shared.feature_lifecycle import RoutedFeature
 
-class StatusConsumerPart(RoutedMessagePart):
+class StatusConsumerPart(RoutedFeature):
     # Override MESSAGE_TOPIC_KEY if the sending party uses a different field name.
     MESSAGE_TOPIC_KEY = "topic"  # default
 
@@ -358,24 +358,24 @@ class StatusConsumerPart(RoutedMessagePart):
 
 `on_update` calls `on_message()` for each queued message. Unknown topics are silently ignored by default; override `on_message()` to handle them differently.
 
-#### `ScreenPart` — Direct screen drawing with frame synchronisation
+#### `DirectFeature` — Direct screen drawing with frame synchronisation
 
-`ScreenPart` is a `Part` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
+`DirectFeature` is a `Feature` subclass that adds three additional lifecycle hooks called by the scene's *screen lifecycle layer* rather than by the normal control tree:
 
 - `handle_screen_event(host, event) -> bool` — receives raw events before controls
 - `on_screen_update(host, dt_seconds)` — called once per frame with elapsed time
 - `draw_screen(host, surface, theme)` — blits directly onto the full-screen surface
 
-This matters for performance. A standard `Part` drawing onto the screen via `draw(...)` enters the full GUI widget rendering pipeline: hit testing, invalidation tracking, and compositor layering all run even when only a background animation needs to repaint. For an animated backdrop with dozens of sprites updated every frame, that overhead is measurable.
+This matters for performance. A standard `Feature` drawing onto the screen via `draw(...)` enters the full GUI widget rendering pipeline: hit testing, invalidation tracking, and compositor layering all run even when only a background animation needs to repaint. For an animated backdrop with dozens of sprites updated every frame, that overhead is measurable.
 
-`ScreenPart` bypasses the widget pipeline entirely for its drawing path. `draw_screen` receives the already-restored pristine surface and blits cached sprites directly, keeping the path as thin as a raw pygame `surface.blit` call. The pre-cached sprite approach (surfaces created once at init time) keeps `draw_screen` allocation-free and avoids per-frame `pygame.draw` calls.
+`DirectFeature` bypasses the widget pipeline entirely for its drawing path. `draw_screen` receives the already-restored pristine surface and blits cached sprites directly, keeping the path as thin as a raw pygame `surface.blit` call. The pre-cached sprite approach (surfaces created once at init time) keeps `draw_screen` allocation-free and avoids per-frame `pygame.draw` calls.
 
-The demo's `BouncingShapesBackdropFeature` extends `ScreenPart` for exactly this reason: it renders many translucent animated circles and diamonds as a fullscreen backdrop every frame, and any per-frame widget pipeline overhead would compound noticeably at 60 fps.
+The demo's `BouncingShapesBackdropFeature` extends `DirectFeature` for exactly this reason: it renders many translucent animated circles and diamonds as a fullscreen backdrop every frame, and any per-frame widget pipeline overhead would compound noticeably at 60 fps.
 
 ```python
-from shared.part_lifecycle import ScreenPart
+from shared.feature_lifecycle import DirectFeature
 
-class BouncingShapesBackdropFeature(ScreenPart):
+class BouncingShapesBackdropFeature(DirectFeature):
     HOST_REQUIREMENTS = {
         "bind_runtime": ("app", "screen_rect"),
     }
@@ -409,20 +409,20 @@ class BouncingShapesBackdropFeature(ScreenPart):
             surface.blit(shape.sprite, (left, top))
 ```
 
-#### Choosing between `Part` and `ScreenPart`
+#### Choosing between `Feature` and `DirectFeature`
 
 | Scenario | Use |
 |---|---|
-| Owns windows, buttons, or other controls on the scene | `Part` |
-| Encapsulates reusable domain logic behind command messages | `LogicPart` |
-| Wires preamble / event routing / postamble for controls | `Part` |
-| Uses scheduler, event bus, or part messaging | `Part` |
-| Needs to be shared as a logic service by multiple parts | `LogicPart` |
-| Draws a fullscreen or large background animation every frame | `ScreenPart` |
-| Needs raw per-frame `dt_seconds` for physics/animation | `ScreenPart` |
-| Requires bypassing the widget pipeline for performance | `ScreenPart` |
+| Owns windows, buttons, or other controls on the scene | `Feature` |
+| Encapsulates reusable domain logic behind command messages | `LogicFeature` |
+| Wires preamble / event routing / postamble for controls | `Feature` |
+| Uses scheduler, event bus, or Feature messaging | `Feature` |
+| Needs to be shared as a logic service by multiple parts | `LogicFeature` |
+| Draws a fullscreen or large background animation every frame | `DirectFeature` |
+| Needs raw per-frame `dt_seconds` for physics/animation | `DirectFeature` |
+| Requires bypassing the widget pipeline for performance | `DirectFeature` |
 
-A `ScreenPart` can still declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle — it just adds the three screen-layer hooks on top.
+A `DirectFeature` can still declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle — it just adds the three screen-layer hooks on top.
 
 ### Screen Lifecycle Composition
 
@@ -526,12 +526,12 @@ slider = SliderControl(
 )
 ```
 
-## Feature Example: Part Registration and Runtime Binding
+## Feature Example: Feature Registration and Runtime Binding
 
 ```python
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
-class StatusFeature(Part):
+class StatusFeature(Feature):
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
         "bind_runtime": ("app",),
@@ -550,9 +550,9 @@ class StatusFeature(Part):
 
 
 # In app bootstrap:
-# app.register_part(StatusFeature(), host=demo)
-# app.build_parts(demo)
-# app.bind_parts_runtime(demo)
+# app.register_feature(StatusFeature(), host=demo)
+# app.build_features(demo)
+# app.bind_features_runtime(demo)
 ```
 
 ## Control Widgets Guide
@@ -1272,7 +1272,7 @@ window.restore_pristine(surface)
 
 The framework includes automatic layout for multiple windows. Both `configure_window_tiling` and `set_window_tiling_enabled` accept an optional `scene_name` parameter so non-active scenes can be configured without switching scenes first.
 
-`build_parts(host)` automatically primes the per-scene tiling registration order for all scenes after building parts, so no manual pre-registration ceremony (calling `tile_windows()` before first visibility toggles) is needed.
+`build_features(host)` automatically primes the per-scene tiling registration order for all scenes after building parts, so no manual pre-registration ceremony (calling `tile_windows()` before first visibility toggles) is needed.
 
 ```python
 # Configure tiling for the active scene or a named non-active scene
@@ -1426,7 +1426,7 @@ canvas = parent.add(
     CanvasControl("canvas_id", rect, max_events=256)
 )
 
-# Drain the event queue each frame (e.g., in Part.on_update or a screen lifecycle postamble)
+# Drain the event queue each frame (e.g., in Feature.on_update or a screen lifecycle postamble)
 packet = canvas.read_event()
 while packet is not None:
     if packet.is_left_down():
@@ -1648,22 +1648,22 @@ total = bus.subscriber_count()
 for_topic = bus.subscriber_count("status_changed")
 ```
 
-### Cross-Part Communication via Messaging
+### Cross-Feature Communication via Messaging
 
 Parts communicate by sending dictionary messages to named target parts. The receiver drains its queue each frame.
 
 ```python
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
-class ProducerPart(Part):
+class ProducerPart(Feature):
     def on_update(self, host):
-        # Send a message to a named target part
+        # Send a message to a named target Feature
         self.send_message("consumer_part", {
             "topic": "data_update",
             "data": {"value": 42}
         })
 
-class ConsumerPart(Part):
+class ConsumerPart(Feature):
     def on_update(self, host):
         # Drain the incoming message queue
         while self.has_messages():
@@ -1678,19 +1678,19 @@ class ConsumerPart(Part):
         # self.clear_messages()      -> discard all queued messages
 ```
 
-### Part Font Role Management
+### Feature Font Role Management
 
-Parts can register their own namespaced font roles without colliding with other parts or application-level roles. Roles are stored under a qualified name `part.<part_name>.<role_name>` and resolved via `self.font_role(...)`.
+Parts can register their own namespaced font roles without colliding with other parts or application-level roles. Roles are stored under a qualified name `Feature.<part_name>.<role_name>` and resolved via `self.font_role(...)`.
 
 ```python
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
-class MyFeature(Part):
+class MyFeature(Feature):
     def __init__(self):
         super().__init__("my_feature", scene_name="main")
 
     def build(self, host) -> None:
-        # Register a single namespaced font role owned by this part
+        # Register a single namespaced font role owned by this Feature
         self.register_font_role(
             host,
             "heading",
@@ -1713,18 +1713,18 @@ class MyFeature(Part):
 
     def bind_runtime(self, host) -> None:
         # Resolve the local role name to the qualified global name
-        heading_role = self.font_role("heading")   # "part.my_feature.heading"
+        heading_role = self.font_role("heading")   # "Feature.my_feature.heading"
         host.app.style_label(self.title_label, size=20, role=heading_role)
 ```
 
-### LogicPart Runnables for Scheduler Workers
+### LogicFeature Runnables for Scheduler Workers
 
-For compute-heavy features, keep scheduler control flow in a render part and move pixel/algorithm work into one or more `LogicPart` providers. Register worker entrypoints as named runnables in the logic part, then invoke them from scheduler tasks via `app.run_part_runnable(...)`.
+For compute-heavy features, keep scheduler control flow in a render Feature and move pixel/algorithm work into one or more `LogicFeature` providers. Register worker entrypoints as named runnables in the logic Feature, then invoke them from scheduler tasks via `app.run_feature_runnable(...)`.
 
 ```python
-from shared.part_lifecycle import LogicPart, RoutedMessagePart
+from shared.feature_lifecycle import LogicFeature, RoutedFeature
 
-class MandelbrotLogicPart(LogicPart):
+class MandelbrotLogicFeature(LogicFeature):
     def bind_runtime(self, host) -> None:
         # Expose worker entrypoints via the public GuiApplication API.
         host.app.register_part_runnable(self.name, "iterative_task", self.run_iterative_task)
@@ -1733,16 +1733,16 @@ class MandelbrotLogicPart(LogicPart):
     def run_iterative_task(self, scheduler, task_id, params):
         ...  # emits scheduler.send_message(task_id, payload)
 
-class MandelbrotRenderFeature(RoutedMessagePart):
+class MandelbrotRenderFeature(RoutedFeature):
     def bind_runtime(self, demo) -> None:
-        # Bind aliases so one render part can target multiple logic providers.
-        self.bind_logic_part("mandelbrot_logic_primary", alias="primary")
-        self.bind_logic_part("mandelbrot_logic_can1", alias="can1")
+        # Bind aliases so one render Feature can target multiple logic providers.
+        self.bind_logic("mandelbrot_logic_primary", alias="primary")
+        self.bind_logic("mandelbrot_logic_can1", alias="can1")
 
     def _run_logic(self, demo, alias: str, runnable: str, task_id: str, params):
-        provider_name = self.logic_part_name(alias=alias)
+        provider_name = self.bound_logic_name(alias=alias)
         scheduler = demo.app.get_scene_scheduler("main")
-        demo.app.run_part_runnable(provider_name, runnable, scheduler, task_id, params)
+        demo.app.run_feature_runnable(provider_name, runnable, scheduler, task_id, params)
 
     def launch_recursive(self, demo):
         scheduler = demo.app.get_scene_scheduler("main")
@@ -1756,8 +1756,8 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
 This pattern keeps concerns clean:
 
-- render part: window/canvas state, launch modes, status flow, payload painting
-- logic part(s): viewport math, pixel function, recursive/iterative algorithms
+- render Feature: window/canvas state, launch modes, status flow, payload painting
+- logic Feature(s): viewport math, pixel function, recursive/iterative algorithms
 - scheduler: task lifecycle, progress/failure events, main-thread message delivery
 
 ### Pointer and Input Lock
@@ -1832,12 +1832,12 @@ app.switch_scene("main")
 
 # Register parts for each scene
 main_parts = [Feature1(), Feature2()]
-for part in main_parts:
-    app.register_part(part, host=demo)
+for Feature in main_parts:
+    app.register_feature(Feature, host=demo)
 
-# Build and bind parts — build_parts() also auto-primes tiling registration
-app.build_parts(demo)
-app.bind_parts_runtime(demo)
+# Build and bind parts — build_features() also auto-primes tiling registration
+app.build_features(demo)
+app.bind_features_runtime(demo)
 
 # Later, switch to a different scene
 app.switch_scene("settings")
@@ -1898,7 +1898,7 @@ cancelled = timers.cancel_all()
 
 `GuiApplication` exposes a number of shorthand helpers beyond the basic scene-cycle API.
 
-### Scene and Part Management
+### Scene and Feature Management
 
 ```python
 # Scene queries
@@ -1907,21 +1907,21 @@ is_known   = app.has_scene("about")   # True if the scene exists
 removed    = app.remove_scene("about") # True when removed (cannot remove active scene)
 active     = app.active_scene_name    # name of the currently active scene
 
-# Part management
-app.register_part(my_part, host=demo)   # register a Part with optional host
-app.unregister_part("my_feature")       # unregister and shutdown; returns bool
-part = app.get_part("my_feature")       # Part instance or None
-names = app.part_names()                # tuple of registered part names in order
+# Feature management
+app.register_feature(my_part, host=demo)   # register a Feature with optional host
+app.unregister_feature("my_feature")       # unregister and shutdown; returns bool
+Feature = app.get_part("my_feature")       # Feature instance or None
+names = app.part_names()                # tuple of registered Feature names in order
 ```
 
-### Logic Part Bindings
+### Logic Feature Bindings
 
 ```python
-app.bind_part_logic("consumer", "logic_part")          # bind consumer to LogicPart
-app.unbind_part_logic("consumer", alias="default")     # remove one binding; returns bool
+app.bind_feature_logic("consumer", "logic_part")          # bind consumer to LogicFeature
+app.unbind_feature_logic("consumer", alias="default")     # remove one binding; returns bool
 name = app.get_part_logic("consumer", alias="default") # provider name or None
 
-# Send a command message from a consumer to its bound LogicPart
+# Send a command message from a consumer to its bound LogicFeature
 app.send_part_logic_message("consumer", {"command": "reset"})
 ```
 
@@ -1944,11 +1944,11 @@ focused = app.focus_on("my_button")
 focused = app.focus_on("my_button", scene_name="settings")
 ```
 
-### Part Accessibility and Messaging Helpers
+### Feature Accessibility and Messaging Helpers
 
 ```python
 # Call configure_accessibility on all parts in order (returns next available tab index)
-next_idx = app.configure_parts_accessibility(demo, tab_index_start=0)
+next_idx = app.configure_features_accessibility(demo, tab_index_start=0)
 
 # Send a message between two registered parts by name
 app.send_part_message("producer_part", "consumer_part", {"topic": "data_update", "value": 42})
@@ -1961,7 +1961,7 @@ app.send_part_message("producer_part", "consumer_part", {"topic": "data_update",
 scheduler  = app.get_scene_scheduler("main")
 factory    = app.get_scene_graphics_factory("main")
 
-# Scene-level prewarm (runs Part.prewarm for active scene parts + shared parts)
+# Scene-level prewarm (runs Feature.prewarm for active scene parts + shared parts)
 warmed = app.prewarm_scene("control_showcase")
 warmed = app.prewarm_scene("control_showcase", force=True)
 
@@ -2103,13 +2103,13 @@ from gui import (
 )
 
 # Demo-only contracts are intentionally outside gui package:
-from demo_parts.mandelbrot_demo_part import MandelStatusEvent
+from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
 
 - `gui/` contains reusable framework/runtime functionality.
-- `demo_parts/` contains demo-specific contracts and helpers.
+- `demo_features/` contains demo-specific contracts and helpers.
 - Boundary scope for demo entrypoints is `*_demo.py`.
 - Active demo entrypoints should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
 

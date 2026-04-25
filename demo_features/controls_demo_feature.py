@@ -6,10 +6,10 @@ import pygame
 from pathlib import Path
 from pygame import Rect
 
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
 
-class ControlsShowcasePart(Part):
+class ControlsShowcaseFeature(Feature):
     """Render all core controls in columnar blocks with mirrored enabled/disabled halves."""
 
     HOST_REQUIREMENTS = {
@@ -90,7 +90,7 @@ class ControlsShowcasePart(Part):
         self._pending_initial_focus = False
 
     def build(self, host) -> None:
-        ui = host.app.read_part_ui_types()
+        ui = host.app.read_feature_ui_types()
         if self.rect.width <= 0 or self.rect.height <= 0:
             self.rect = self._default_part_rect(host)
         self._load_image_natural_size()

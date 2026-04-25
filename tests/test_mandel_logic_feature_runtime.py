@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 from types import SimpleNamespace
 
@@ -6,8 +6,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from demo_parts.mandelbrot_demo_part import MandelbrotLogicPart, MandelbrotRenderFeature
-from shared.part_lifecycle import PartManager
+from demo_features.mandelbrot_demo_feature import MandelbrotLogicFeature, MandelbrotRenderFeature
+from shared.feature_lifecycle import FeatureManager
 
 
 class _ActionsStub:
@@ -62,7 +62,7 @@ class _SchedulerStub:
         return None
 
 
-class MandelLogicPartRuntimeTests(unittest.TestCase):
+class MandelLogicFeatureRuntimeTests(unittest.TestCase):
     def setUp(self) -> None:
         pygame.init()
         pygame.display.set_mode((16, 16))
@@ -71,8 +71,8 @@ class MandelLogicPartRuntimeTests(unittest.TestCase):
         pygame.quit()
 
     def test_logic_part_iterative_runnable_emits_scanlines(self) -> None:
-        logic = MandelbrotLogicPart("mandelbrot_logic_primary")
-        manager = PartManager(SimpleNamespace(active_scene_name="main"))
+        logic = MandelbrotLogicFeature("mandelbrot_logic_primary")
+        manager = FeatureManager(SimpleNamespace(active_scene_name="main"))
         manager.register(logic, host=SimpleNamespace())
         manager.bind_runtime(SimpleNamespace())
 
@@ -102,23 +102,23 @@ class MandelLogicPartRuntimeTests(unittest.TestCase):
             get_scene_scheduler=lambda _scene: scheduler,
         )
         host = SimpleNamespace(app=app)
-        manager = PartManager(app)
+        manager = FeatureManager(app)
 
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_primary"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can1"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can2"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can3"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can4"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_primary"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can1"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can2"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can3"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can4"), host=host)
         render = MandelbrotRenderFeature()
         manager.register(render, host=host)
 
         manager.bind_runtime(host)
 
-        self.assertEqual(render.logic_part_name(alias=render.LOGIC_ALIAS_PRIMARY), "mandelbrot_logic_primary")
-        self.assertEqual(render.logic_part_name(alias=render.LOGIC_ALIAS_CAN1), "mandelbrot_logic_can1")
-        self.assertEqual(render.logic_part_name(alias=render.LOGIC_ALIAS_CAN2), "mandelbrot_logic_can2")
-        self.assertEqual(render.logic_part_name(alias=render.LOGIC_ALIAS_CAN3), "mandelbrot_logic_can3")
-        self.assertEqual(render.logic_part_name(alias=render.LOGIC_ALIAS_CAN4), "mandelbrot_logic_can4")
+        self.assertEqual(render.bound_logic_name(alias=render.LOGIC_ALIAS_PRIMARY), "mandelbrot_logic_primary")
+        self.assertEqual(render.bound_logic_name(alias=render.LOGIC_ALIAS_CAN1), "mandelbrot_logic_can1")
+        self.assertEqual(render.bound_logic_name(alias=render.LOGIC_ALIAS_CAN2), "mandelbrot_logic_can2")
+        self.assertEqual(render.bound_logic_name(alias=render.LOGIC_ALIAS_CAN3), "mandelbrot_logic_can3")
+        self.assertEqual(render.bound_logic_name(alias=render.LOGIC_ALIAS_CAN4), "mandelbrot_logic_can4")
 
     def test_launch_four_split_routes_each_canvas_task_to_its_logic_part(self) -> None:
         scheduler = _SchedulerStub()
@@ -134,17 +134,17 @@ class MandelLogicPartRuntimeTests(unittest.TestCase):
             get_scene_scheduler=lambda _scene: scheduler,
         )
         host = SimpleNamespace(app=app)
-        manager = PartManager(app)
+        manager = FeatureManager(app)
 
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_primary"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can1"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can2"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can3"), host=host)
-        manager.register(MandelbrotLogicPart("mandelbrot_logic_can4"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_primary"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can1"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can2"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can3"), host=host)
+        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can4"), host=host)
         render = MandelbrotRenderFeature()
         manager.register(render, host=host)
 
-        app.run_part_runnable = lambda part_name, runnable_name, sched, task_id, params: (
+        app.run_feature_runnable = lambda part_name, runnable_name, sched, task_id, params: (
             called_logic_parts.append(part_name),
             manager.run(part_name, runnable_name, sched, task_id, params),
         )[-1]

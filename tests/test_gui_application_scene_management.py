@@ -1,4 +1,4 @@
-"""Tests for GuiApplication scene management APIs: scene_names, has_scene, remove_scene."""
+﻿"""Tests for GuiApplication scene management APIs: scene_names, has_scene, remove_scene."""
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -13,7 +13,7 @@ from gui.controls.canvas_control import CanvasControl
 from gui.controls.slider_control import SliderControl
 from gui.controls.toggle_control import ToggleControl
 from gui.layout.layout_axis import LayoutAxis
-from shared.part_lifecycle import LogicPart, Part, RoutedMessagePart
+from shared.feature_lifecycle import LogicFeature, Feature, RoutedFeature
 
 
 def _make_app() -> GuiApplication:
@@ -120,7 +120,7 @@ class RemoveSceneTests(GuiApplicationSceneManagementSetup):
             self.app.switch_scene("away")
 
 
-class _StubPart(Part):
+class _StubFeature(Feature):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.host_seen = None
@@ -149,12 +149,12 @@ class _StubPart(Part):
         self.update_calls += 1
 
 
-class _StubLogicPart(LogicPart):
+class _StubLogicFeature(LogicFeature):
     def __init__(self, name: str = "logic") -> None:
         super().__init__(name)
 
 
-class _EchoLogicPart(LogicPart):
+class _EchoLogicFeature(LogicFeature):
     def __init__(self, name: str = "logic") -> None:
         super().__init__(name)
         self._counter = 0
@@ -173,7 +173,7 @@ class _EchoLogicPart(LogicPart):
         )
 
 
-class _LogicConsumerPart(Part):
+class _LogicConsumerFeature(Feature):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.received_payloads = []
@@ -185,7 +185,7 @@ class _LogicConsumerPart(Part):
                 self.received_payloads.append(payload)
 
 
-class _RoutedCapturePart(RoutedMessagePart):
+class _RoutedCaptureFeature(RoutedFeature):
     def __init__(self, name: str = "routed") -> None:
         super().__init__(name)
         self.seen = []
@@ -201,34 +201,34 @@ class _RoutedCapturePart(RoutedMessagePart):
 
 class PartApiTests(GuiApplicationSceneManagementSetup):
 
-    def test_register_and_get_part(self) -> None:
-        part = _StubPart("alpha")
-        self.app.register_part(part, host=self.app)
-        self.assertIs(self.app.get_part("alpha"), part)
-        self.assertIn("alpha", self.app.part_names())
+    def test_register_and_get_feature(self) -> None:
+        feature = _StubFeature("alpha")
+        self.app.register_feature(feature, host=self.app)
+        self.assertIs(self.app.get_feature("alpha"), feature)
+        self.assertIn("alpha", self.app.feature_names())
 
-    def test_unregister_part(self) -> None:
-        self.app.register_part(_StubPart("alpha"), host=self.app)
-        self.assertTrue(self.app.unregister_part("alpha"))
-        self.assertIsNone(self.app.get_part("alpha"))
+    def test_unregister_feature(self) -> None:
+        self.app.register_feature(_StubFeature("alpha"), host=self.app)
+        self.assertTrue(self.app.unregister_feature("alpha"))
+        self.assertIsNone(self.app.get_feature("alpha"))
 
     def test_unregister_part_shuts_down_bound_runtime(self) -> None:
-        part = _StubPart("alpha")
-        self.app.register_part(part, host=self.app)
-        self.app.bind_parts_runtime(self.app)
+        feature = _StubFeature("alpha")
+        self.app.register_feature(feature, host=self.app)
+        self.app.bind_features_runtime(self.app)
 
-        self.assertTrue(self.app.unregister_part("alpha"))
+        self.assertTrue(self.app.unregister_feature("alpha"))
 
-        self.assertEqual(1, part.bind_calls)
-        self.assertEqual(1, part.shutdown_calls)
-        self.assertEqual(1, part.unregister_calls)
+        self.assertEqual(1, feature.bind_calls)
+        self.assertEqual(1, feature.shutdown_calls)
+        self.assertEqual(1, feature.unregister_calls)
 
-    def test_send_part_message(self) -> None:
-        sender = _StubPart("sender")
-        target = _StubPart("target")
-        self.app.register_part(sender, host=self.app)
-        self.app.register_part(target, host=self.app)
-        sent = self.app.send_part_message("sender", "target", {"kind": "ping"})
+    def test_send_feature_message(self) -> None:
+        sender = _StubFeature("sender")
+        target = _StubFeature("target")
+        self.app.register_feature(sender, host=self.app)
+        self.app.register_feature(target, host=self.app)
+        sent = self.app.send_feature_message("sender", "target", {"kind": "ping"})
         self.assertTrue(sent)
         self.assertTrue(target.has_messages())
         msg = target.pop_message()
@@ -236,49 +236,49 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual("sender", msg["_from"])
         self.assertEqual("target", msg["_to"])
 
-    def test_register_and_run_part_runnable(self) -> None:
-        self.app.register_part(_StubPart("worker"), host=self.app)
-        self.app.register_part_runnable("worker", "sum", lambda x, y: x + y)
-        self.assertEqual(7, self.app.run_part_runnable("worker", "sum", 3, 4))
+    def test_register_and_run_feature_runnable(self) -> None:
+        self.app.register_feature(_StubFeature("worker"), host=self.app)
+        self.app.register_feature_runnable("worker", "sum", lambda x, y: x + y)
+        self.assertEqual(7, self.app.run_feature_runnable("worker", "sum", 3, 4))
 
     def test_bind_logic_and_send_logic_message(self) -> None:
-        consumer = _StubPart("consumer")
-        logic = _StubLogicPart("logic")
-        self.app.register_part(consumer, host=self.app)
-        self.app.register_part(logic, host=self.app)
+        consumer = _StubFeature("consumer")
+        logic = _StubLogicFeature("logic")
+        self.app.register_feature(consumer, host=self.app)
+        self.app.register_feature(logic, host=self.app)
 
-        self.app.bind_part_logic("consumer", "logic")
-        sent = self.app.send_part_logic_message("consumer", {"command": "snapshot"})
+        self.app.bind_feature_logic("consumer", "logic")
+        sent = self.app.send_feature_logic_message("consumer", {"command": "snapshot"})
 
         self.assertTrue(sent)
-        self.assertEqual("logic", self.app.get_part_logic("consumer"))
+        self.assertEqual("logic", self.app.get_feature_logic("consumer"))
         self.assertTrue(logic.has_messages())
         payload = logic.pop_message()
         self.assertEqual("consumer", payload["_from"])
         self.assertEqual("logic", payload["_to"])
 
     def test_unbind_logic_returns_true_when_alias_present(self) -> None:
-        consumer = _StubPart("consumer")
-        logic = _StubLogicPart("logic")
-        self.app.register_part(consumer, host=self.app)
-        self.app.register_part(logic, host=self.app)
-        self.app.bind_part_logic("consumer", "logic", alias="life")
+        consumer = _StubFeature("consumer")
+        logic = _StubLogicFeature("logic")
+        self.app.register_feature(consumer, host=self.app)
+        self.app.register_feature(logic, host=self.app)
+        self.app.bind_feature_logic("consumer", "logic", alias="life")
 
-        removed = self.app.unbind_part_logic("consumer", alias="life")
+        removed = self.app.unbind_feature_logic("consumer", alias="life")
 
         self.assertTrue(removed)
-        self.assertIsNone(self.app.get_part_logic("consumer", alias="life"))
+        self.assertIsNone(self.app.get_feature_logic("consumer", alias="life"))
 
     def test_non_owner_consumer_can_use_logic_part_and_receive_reply(self) -> None:
-        consumer = _LogicConsumerPart("consumer")
-        logic = _EchoLogicPart("logic")
-        self.app.register_part(consumer, host=self.app)
-        self.app.register_part(logic, host=self.app)
-        self.app.bind_part_logic("consumer", "logic", alias="shared")
+        consumer = _LogicConsumerFeature("consumer")
+        logic = _EchoLogicFeature("logic")
+        self.app.register_feature(consumer, host=self.app)
+        self.app.register_feature(logic, host=self.app)
+        self.app.bind_feature_logic("consumer", "logic", alias="shared")
 
-        sent = self.app.send_part_logic_message("consumer", {"command": "echo", "value": "one"}, alias="shared")
-        self.app.parts.update_parts()
-        self.app.parts.update_parts()
+        sent = self.app.send_feature_logic_message("consumer", {"command": "echo", "value": "one"}, alias="shared")
+        self.app.features.update_features()
+        self.app.features.update_features()
 
         self.assertTrue(sent)
         self.assertEqual(1, len(consumer.received_payloads))
@@ -290,19 +290,19 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual("consumer", payload["_to"])
 
     def test_multiple_non_owner_consumers_can_share_one_logic_part(self) -> None:
-        logic = _EchoLogicPart("logic")
-        consumer_a = _LogicConsumerPart("consumer_a")
-        consumer_b = _LogicConsumerPart("consumer_b")
-        self.app.register_part(logic, host=self.app)
-        self.app.register_part(consumer_a, host=self.app)
-        self.app.register_part(consumer_b, host=self.app)
-        self.app.bind_part_logic("consumer_a", "logic", alias="shared")
-        self.app.bind_part_logic("consumer_b", "logic", alias="shared")
+        logic = _EchoLogicFeature("logic")
+        consumer_a = _LogicConsumerFeature("consumer_a")
+        consumer_b = _LogicConsumerFeature("consumer_b")
+        self.app.register_feature(logic, host=self.app)
+        self.app.register_feature(consumer_a, host=self.app)
+        self.app.register_feature(consumer_b, host=self.app)
+        self.app.bind_feature_logic("consumer_a", "logic", alias="shared")
+        self.app.bind_feature_logic("consumer_b", "logic", alias="shared")
 
-        self.assertTrue(self.app.send_part_logic_message("consumer_a", {"command": "echo", "value": "a"}, alias="shared"))
-        self.assertTrue(self.app.send_part_logic_message("consumer_b", {"command": "echo", "value": "b"}, alias="shared"))
-        self.app.parts.update_parts()
-        self.app.parts.update_parts()
+        self.assertTrue(self.app.send_feature_logic_message("consumer_a", {"command": "echo", "value": "a"}, alias="shared"))
+        self.assertTrue(self.app.send_feature_logic_message("consumer_b", {"command": "echo", "value": "b"}, alias="shared"))
+        self.app.features.update_features()
+        self.app.features.update_features()
 
         self.assertEqual(1, len(consumer_a.received_payloads))
         self.assertEqual(1, len(consumer_b.received_payloads))
@@ -312,24 +312,24 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual("logic", consumer_b.received_payloads[0]["_from"])
 
     def test_app_shutdown_shuts_down_bound_parts_once(self) -> None:
-        part = _StubPart("alpha")
-        self.app.register_part(part, host=self.app)
-        self.app.bind_parts_runtime(self.app)
+        feature = _StubFeature("alpha")
+        self.app.register_feature(feature, host=self.app)
+        self.app.bind_features_runtime(self.app)
 
         self.app.shutdown()
         self.app.shutdown()
 
-        self.assertEqual(1, part.bind_calls)
-        self.assertEqual(1, part.shutdown_calls)
+        self.assertEqual(1, feature.bind_calls)
+        self.assertEqual(1, feature.shutdown_calls)
 
     def test_part_font_role_helper_registers_namespaced_role(self) -> None:
-        part = _StubPart("alpha")
+        feature = _StubFeature("alpha")
 
-        role_name = part.register_font_role(self.app, "window_title", size=18)
+        role_name = feature.register_font_role(self.app, "window_title", size=18)
 
-        self.assertEqual("part.alpha.window_title", role_name)
-        self.assertEqual("part.alpha.window_title", part.font_role("window_title"))
-        self.assertTrue(self.app.theme.fonts.has_role("part.alpha.window_title"))
+        self.assertEqual("feature.alpha.window_title", role_name)
+        self.assertEqual("feature.alpha.window_title", feature.font_role("window_title"))
+        self.assertTrue(self.app.theme.fonts.has_role("feature.alpha.window_title"))
 
     def test_app_run_delegates_to_ui_engine(self) -> None:
         with patch("gui.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
@@ -339,37 +339,37 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         run_mock.assert_called_once_with(max_frames=3)
 
     def test_routed_message_part_dispatches_registered_topics(self) -> None:
-        routed = _RoutedCapturePart("routed")
-        sender = _StubPart("sender")
-        self.app.register_part(routed, host=self.app)
-        self.app.register_part(sender, host=self.app)
+        routed = _RoutedCaptureFeature("routed")
+        sender = _StubFeature("sender")
+        self.app.register_feature(routed, host=self.app)
+        self.app.register_feature(sender, host=self.app)
 
-        self.assertTrue(self.app.send_part_message("sender", "routed", {"topic": "alpha", "value": 7}))
-        self.app.parts.update_parts()
+        self.assertTrue(self.app.send_feature_message("sender", "routed", {"topic": "alpha", "value": 7}))
+        self.app.features.update_features()
 
         self.assertEqual(routed.seen, [("sender", 7)])
 
     def test_routed_message_part_ignores_unknown_topics(self) -> None:
-        routed = _RoutedCapturePart("routed")
-        sender = _StubPart("sender")
-        self.app.register_part(routed, host=self.app)
-        self.app.register_part(sender, host=self.app)
+        routed = _RoutedCaptureFeature("routed")
+        sender = _StubFeature("sender")
+        self.app.register_feature(routed, host=self.app)
+        self.app.register_feature(sender, host=self.app)
 
-        self.assertTrue(self.app.send_part_message("sender", "routed", {"topic": "beta", "value": 3}))
-        self.app.parts.update_parts()
+        self.assertTrue(self.app.send_feature_message("sender", "routed", {"topic": "beta", "value": 3}))
+        self.app.features.update_features()
 
         self.assertEqual(routed.seen, [])
 
 
-class PartUiTypesTests(GuiApplicationSceneManagementSetup):
+class FeatureUiTypesTests(GuiApplicationSceneManagementSetup):
 
-    def test_read_part_ui_types_returns_same_instance(self) -> None:
-        ui_types_a = self.app.read_part_ui_types()
-        ui_types_b = self.app.read_part_ui_types()
+    def test_read_feature_ui_types_returns_same_instance(self) -> None:
+        ui_types_a = self.app.read_feature_ui_types()
+        ui_types_b = self.app.read_feature_ui_types()
         self.assertIs(ui_types_a, ui_types_b)
 
-    def test_read_part_ui_types_contains_expected_bindings(self) -> None:
-        ui_types = self.app.read_part_ui_types()
+    def test_read_feature_ui_types_contains_expected_bindings(self) -> None:
+        ui_types = self.app.read_feature_ui_types()
         self.assertIs(ui_types.window_control_cls, WindowControl)
         self.assertIs(ui_types.label_control_cls, LabelControl)
         self.assertIs(ui_types.button_control_cls, ButtonControl)
@@ -476,16 +476,16 @@ class SceneSuspensionTests(GuiApplicationSceneManagementSetup):
 
     def test_scene_scoped_part_updates_suspend_when_scene_inactive(self) -> None:
         self.app.create_scene("alt")
-        default_part = _StubPart("default_part")
+        default_part = _StubFeature("default_part")
         default_part.scene_name = "default"
-        alt_part = _StubPart("alt_part")
+        alt_part = _StubFeature("alt_part")
         alt_part.scene_name = "alt"
-        self.app.register_part(default_part, host=self.app)
-        self.app.register_part(alt_part, host=self.app)
+        self.app.register_feature(default_part, host=self.app)
+        self.app.register_feature(alt_part, host=self.app)
 
-        self.app.parts.update_parts()
+        self.app.features.update_features()
         self.app.switch_scene("alt")
-        self.app.parts.update_parts()
+        self.app.features.update_features()
 
         self.assertEqual(default_part.update_calls, 1)
         self.assertEqual(alt_part.update_calls, 1)
@@ -512,9 +512,9 @@ class SceneSuspensionTests(GuiApplicationSceneManagementSetup):
 
 class ScenePrewarmTests(GuiApplicationSceneManagementSetup):
 
-    def test_prewarm_scene_delegates_to_part_manager(self) -> None:
+    def test_prewarm_scene_delegates_to_feature_manager(self) -> None:
         self.app.create_scene("control_showcase")
-        with patch.object(self.app.parts, "prewarm_parts", return_value=3) as prewarm_mock:
+        with patch.object(self.app.features, "prewarm_features", return_value=3) as prewarm_mock:
             warmed = self.app.prewarm_scene("control_showcase")
 
         self.assertEqual(3, warmed)

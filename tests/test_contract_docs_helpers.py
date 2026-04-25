@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from pathlib import Path
 
 from tests.contract_docs_helpers import commands_from_fenced_section

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pygame import Rect
 
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
 
-class StylesShowcaseFeature(Part):
+class StylesShowcaseFeature(Feature):
     """Build a window showcasing the built-in interactive control styles."""
 
     HOST_REQUIREMENTS = {
@@ -61,7 +61,7 @@ class StylesShowcaseFeature(Part):
         self._group_footer_bindings = []
 
     def build(self, host) -> None:
-        ui = host.app.read_part_ui_types()
+        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {

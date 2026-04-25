@@ -1,4 +1,4 @@
-"""Tests for FocusManager query APIs: has_focus, focusable_count."""
+﻿"""Tests for FocusManager query APIs: has_focus, focusable_count."""
 import unittest
 
 from pygame import Rect

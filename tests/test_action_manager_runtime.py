@@ -1,4 +1,4 @@
-"""Tests for ActionManager runtime binding management APIs."""
+﻿"""Tests for ActionManager runtime binding management APIs."""
 import unittest
 from types import SimpleNamespace
 

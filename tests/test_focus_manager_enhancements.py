@@ -1,4 +1,4 @@
-"""Tests for FocusManager.focused_control_id and set_focus_by_id."""
+﻿"""Tests for FocusManager.focused_control_id and set_focus_by_id."""
 import unittest
 
 from pygame import Rect

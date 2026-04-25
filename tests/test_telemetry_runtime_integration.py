@@ -1,14 +1,14 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 
 from gui import EventBus
 from gui.core.task_scheduler import TaskScheduler
 from gui.core.telemetry import telemetry_collector
-from shared.part_lifecycle import Part
-from shared.part_lifecycle import PartManager
+from shared.feature_lifecycle import Feature
+from shared.feature_lifecycle import FeatureManager
 
 
-class _StubPart(Part):
+class _StubFeature(Feature):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.calls = 0
@@ -57,21 +57,21 @@ class TelemetryRuntimeIntegrationTests(unittest.TestCase):
         finally:
             scheduler.shutdown()
 
-    def test_part_manager_update_and_message_are_instrumented(self) -> None:
+    def test_feature_manager_update_and_message_are_instrumented(self) -> None:
         app = SimpleNamespace(active_scene_name="main")
-        manager = PartManager(app)
-        part_a = _StubPart("a")
-        part_b = _StubPart("b")
+        manager = FeatureManager(app)
+        part_a = _StubFeature("a")
+        part_b = _StubFeature("b")
         manager.register(part_a, host=app)
         manager.register(part_b, host=app)
 
         sent = manager.send_message("a", "b", {"topic": "ping"})
-        manager.update_parts(host=app)
+        manager.update_features(host=app)
 
         self.assertTrue(sent)
         points = {(sample.system, sample.point) for sample in self.collector.snapshot()}
-        self.assertIn(("part_lifecycle", "send_message"), points)
-        self.assertIn(("part_lifecycle", "part_update"), points)
+        self.assertIn(("feature_lifecycle", "send_message"), points)
+        self.assertIn(("feature_lifecycle", "feature_update"), points)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Architecture Boundary Specification
+﻿# Architecture Boundary Specification
 
 ## Purpose
 
@@ -8,14 +8,14 @@ It complements the public API and event-system specs by keeping framework contra
 
 ## Boundary Rule
 
-- `gui/` is framework/runtime package code and must not depend on `demo_parts/`.
-- `demo_parts/` contains demo-specific contracts and must remain independent from `gui/` imports.
+- `gui/` is framework/runtime package code and must not depend on `demo_features/`.
+- `demo_features/` contains demo-specific contracts and must remain independent from `gui/` imports.
 - Active demo entrypoints (`*_demo.py`) should consume `gui` via public root exports (`from gui import ...`) rather than internal submodule imports, keep named imports without aliases, and use a single `from gui import (...)` block.
 
 Boundary intent:
 
 - Keep `gui/` independently reusable in non-demo applications.
-- Allow demo schema evolution inside `demo_parts/` without leaking symbols into `gui.__all__`.
+- Allow demo schema evolution inside `demo_features/` without leaking symbols into `gui.__all__`.
 - Keep demo entrypoints readable and enforceable via one canonical gui-root import block.
 
 Rebase status:
@@ -24,7 +24,7 @@ Rebase status:
 
 ## Current Demo Boundary Assets
 
-- `demo_parts/mandelbrot_demo_part.py`: Mandelbrot status topic, kind constants, and payload dataclass.
+- `demo_features/mandelbrot_demo_feature.py`: Mandelbrot status topic, kind constants, and payload dataclass.
 
 ## Current Active Demo Entrypoints
 
@@ -34,8 +34,8 @@ Rebase status:
 
 Automated tests enforce both directions:
 
-- `tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_parts`
-- `tests/test_boundary_contracts.py::test_demo_parts_does_not_depend_on_gui`
+- `tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features`
+- `tests/test_boundary_contracts.py::test_demo_features_does_not_depend_on_gui`
 - `tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only`
 - `tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement`
 - `tests/test_boundary_contracts.py::test_demo_entrypoints_import_only_named_public_gui_exports`

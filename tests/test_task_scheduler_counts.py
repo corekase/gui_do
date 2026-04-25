@@ -1,4 +1,4 @@
-"""Tests for TaskScheduler count query helpers: pending_count, running_count,
+﻿"""Tests for TaskScheduler count query helpers: pending_count, running_count,
 suspended_count, task_count."""
 import time
 import threading

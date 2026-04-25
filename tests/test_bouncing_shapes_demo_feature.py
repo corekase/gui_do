@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 from types import SimpleNamespace
 
@@ -6,8 +6,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from demo_parts.bouncing_shapes_demo_part import BouncingShapesBackdropFeature
-from shared.part_lifecycle import ScreenPart
+from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
+from shared.feature_lifecycle import DirectFeature
 
 
 class BouncingShapesBackdropFeatureTests(unittest.TestCase):
@@ -19,17 +19,17 @@ class BouncingShapesBackdropFeatureTests(unittest.TestCase):
         pygame.quit()
 
     def test_feature_is_screen_part(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=1, seed=7)
-        self.assertIsInstance(part, ScreenPart)
+        feature = BouncingShapesBackdropFeature(circle_count=1, seed=7)
+        self.assertIsInstance(feature, DirectFeature)
 
     def test_init_creates_requested_circle_count_with_cached_sprites(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=12, seed=7)
+        feature = BouncingShapesBackdropFeature(circle_count=12, seed=7)
 
-        self.assertEqual(len(part._shapes), 12)
-        self.assertTrue(all(shape.sprite is not None for shape in part._shapes))
+        self.assertEqual(len(feature._shapes), 12)
+        self.assertTrue(all(shape.sprite is not None for shape in feature._shapes))
 
     def test_init_supports_shape_counts_and_combines_shape_total(self) -> None:
-        part = BouncingShapesBackdropFeature(
+        feature = BouncingShapesBackdropFeature(
             circle_count=5,
             square_count=3,
             octagon_count=2,
@@ -37,21 +37,21 @@ class BouncingShapesBackdropFeatureTests(unittest.TestCase):
             seed=11,
         )
 
-        self.assertEqual(part.circle_count, 5)
-        self.assertEqual(part.square_count, 3)
-        self.assertEqual(part.octagon_count, 2)
-        self.assertEqual(part.star_count, 4)
-        self.assertEqual(len(part._shapes), 14)
+        self.assertEqual(feature.circle_count, 5)
+        self.assertEqual(feature.square_count, 3)
+        self.assertEqual(feature.octagon_count, 2)
+        self.assertEqual(feature.star_count, 4)
+        self.assertEqual(len(feature._shapes), 14)
 
     def test_init_randomizes_mixed_shape_draw_order(self) -> None:
-        part = BouncingShapesBackdropFeature(
+        feature = BouncingShapesBackdropFeature(
             circle_count=8,
             square_count=8,
             octagon_count=8,
             star_count=8,
             seed=19,
         )
-        kinds = [shape.kind for shape in part._shapes]
+        kinds = [shape.kind for shape in feature._shapes]
 
         self.assertIn("circle", kinds)
         self.assertIn("square", kinds)
@@ -61,46 +61,46 @@ class BouncingShapesBackdropFeatureTests(unittest.TestCase):
         self.assertNotEqual(kinds[:8], ["square"] * 8)
 
     def test_bind_runtime_randomizes_positions_using_screen_bounds(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=3, seed=3)
+        feature = BouncingShapesBackdropFeature(circle_count=3, seed=3)
         host = SimpleNamespace(app=SimpleNamespace(), screen_rect=pygame.Rect(0, 0, 120, 80))
 
-        part.bind_runtime(host)
+        feature.bind_runtime(host)
 
-        for shape in part._shapes:
+        for shape in feature._shapes:
             self.assertGreaterEqual(shape.x, float(shape.radius))
             self.assertLessEqual(shape.x, float(120 - shape.radius))
             self.assertGreaterEqual(shape.y, float(shape.radius))
             self.assertLessEqual(shape.y, float(80 - shape.radius))
 
-    def test_on_screen_update_bounces_circle_at_edge(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=1, seed=3)
+    def test_on_direct_update_bounces_circle_at_edge(self) -> None:
+        feature = BouncingShapesBackdropFeature(circle_count=1, seed=3)
         host = SimpleNamespace(app=SimpleNamespace(), screen_rect=pygame.Rect(0, 0, 120, 80))
-        part.bind_runtime(host)
+        feature.bind_runtime(host)
 
-        circle = part._shapes[0]
+        circle = feature._shapes[0]
         circle.radius = 10
         circle.x = 10.0
         circle.y = 20.0
         circle.dx = -2.0
         circle.dy = 0.0
 
-        part.on_screen_update(host, 1.0 / 60.0)
+        feature.on_direct_update(host, 1.0 / 60.0)
 
         self.assertGreater(circle.dx, 0.0)
         self.assertEqual(circle.x, 10.0)
 
     def test_draw_screen_blits_shapes_to_surface(self) -> None:
-        part = BouncingShapesBackdropFeature(circle_count=1, seed=1)
+        feature = BouncingShapesBackdropFeature(circle_count=1, seed=1)
         host = SimpleNamespace(app=SimpleNamespace(), screen_rect=pygame.Rect(0, 0, 120, 80))
-        part.bind_runtime(host)
+        feature.bind_runtime(host)
 
         surface = pygame.Surface((120, 80), pygame.SRCALPHA)
         surface.fill((0, 0, 0, 0))
-        before = surface.get_at((int(part._shapes[0].x), int(part._shapes[0].y)))
+        before = surface.get_at((int(feature._shapes[0].x), int(feature._shapes[0].y)))
 
-        part.draw_screen(host, surface, None)
+        feature.draw_direct(host, surface, None)
 
-        after = surface.get_at((int(part._shapes[0].x), int(part._shapes[0].y)))
+        after = surface.get_at((int(feature._shapes[0].x), int(feature._shapes[0].y)))
         self.assertNotEqual(before, after)
 
     def test_host_requirements_restore_screen_runtime_contract(self) -> None:

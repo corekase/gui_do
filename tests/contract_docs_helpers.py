@@ -1,4 +1,4 @@
-"""Shared parsing helpers for contract documentation tests."""
+﻿"""Shared parsing helpers for contract documentation tests."""
 
 import re
 from pathlib import Path

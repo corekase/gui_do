@@ -1,4 +1,4 @@
-"""Tests for GuiEvent convenience helper methods: is_left_down/up, is_right_down/up,
+﻿"""Tests for GuiEvent convenience helper methods: is_left_down/up, is_right_down/up,
 is_middle_down/up, is_text_event, and clone."""
 import unittest
 

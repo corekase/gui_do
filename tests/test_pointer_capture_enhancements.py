@@ -1,4 +1,4 @@
-"""Tests for PointerCapture.is_active and force_release."""
+﻿"""Tests for PointerCapture.is_active and force_release."""
 import unittest
 
 from pygame import Rect

@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from pathlib import Path
 
 from tests.contract_docs_helpers import readme_boundary_commands

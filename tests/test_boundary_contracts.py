@@ -1,4 +1,4 @@
-import ast
+﻿import ast
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -49,19 +49,19 @@ class BoundaryContractsTests(unittest.TestCase):
             key=lambda path: path.name,
         )
 
-    def test_gui_package_does_not_depend_on_demo_parts(self) -> None:
+    def test_gui_package_does_not_depend_on_demo_features(self) -> None:
         root = Path(__file__).resolve().parents[1]
         gui_root = root / "gui"
-        offenders = self._collect_import_offenders(root, gui_root, ["demo_parts"])
+        offenders = self._collect_import_offenders(root, gui_root, ["demo_features"])
 
-        self.assertEqual(offenders, [], f"gui package must not import demo_parts; found: {offenders}")
+        self.assertEqual(offenders, [], f"gui package must not import demo_features; found: {offenders}")
 
-    def test_demo_parts_does_not_depend_on_gui(self) -> None:
+    def test_demo_features_does_not_depend_on_gui(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        demo_parts_root = root / "demo_parts"
-        offenders = self._collect_import_offenders(root, demo_parts_root, ["gui"])
+        demo_features_root = root / "demo_features"
+        offenders = self._collect_import_offenders(root, demo_features_root, ["gui"])
 
-        self.assertEqual(offenders, [], f"demo_parts must remain gui-independent; found: {offenders}")
+        self.assertEqual(offenders, [], f"demo_features must remain gui-independent; found: {offenders}")
 
     def test_parse_failure_reports_explicit_boundary_message(self) -> None:
         with mock.patch("ast.parse", side_effect=SyntaxError("invalid syntax", ("x.py", 7, 3, "x"))):

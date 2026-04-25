@@ -1,4 +1,4 @@
-"""Tests for UiNode positional helpers: is_root, depth, sibling_index."""
+﻿"""Tests for UiNode positional helpers: is_root, depth, sibling_index."""
 import unittest
 
 from pygame import Rect

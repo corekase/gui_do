@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 from types import SimpleNamespace
 
@@ -6,9 +6,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from demo_parts.life_demo_part import LifeSimulationFeature
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_STATUS
-from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
+from demo_features.life_demo_feature import LifeSimulationFeature
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_STATUS
+from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
 
 
 class _Packet:
@@ -135,84 +135,84 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         pygame.quit()
 
     def test_life_update_life_works_without_demo_part_wrappers(self) -> None:
-        part = LifeSimulationFeature()
+        feature = LifeSimulationFeature()
         host = SimpleNamespace(app=SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0))))
-        part.demo = host
-        part.canvas = _CanvasStub([_Packet(local_pos=(10, 10), button=1)])
-        part.toggle = SimpleNamespace(pushed=False)
-        part.zoom_slider = SimpleNamespace(value=5.0)
-        part.life_origin = [0.0, 0.0]
-        part.life_cell_size = 10
+        feature.demo = host
+        feature.canvas = _CanvasStub([_Packet(local_pos=(10, 10), button=1)])
+        feature.toggle = SimpleNamespace(pushed=False)
+        feature.zoom_slider = SimpleNamespace(value=5.0)
+        feature.life_origin = [0.0, 0.0]
+        feature.life_cell_size = 10
 
-        part.update_life()
+        feature.update_life()
 
-        self.assertIn((1, 1), part.life_cells)
+        self.assertIn((1, 1), feature.life_cells)
 
     def test_life_part_messages_are_consumed_in_on_update(self) -> None:
-        part = LifeSimulationFeature()
+        feature = LifeSimulationFeature()
         host = SimpleNamespace(app=SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0))))
-        part.demo = host
-        part.canvas = _CanvasStub([])
-        part.toggle = SimpleNamespace(pushed=False)
-        part.zoom_slider = SimpleNamespace(value=5.0)
+        feature.demo = host
+        feature.canvas = _CanvasStub([])
+        feature.toggle = SimpleNamespace(pushed=False)
+        feature.zoom_slider = SimpleNamespace(value=5.0)
 
-        part.enqueue_message({"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}})
+        feature.enqueue_message({"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}})
 
-        part.update_life()
-        self.assertEqual(part.life_cells, set())
+        feature.update_life()
+        self.assertEqual(feature.life_cells, set())
 
-        part.on_update(host)
-        self.assertEqual(part.life_cells, {(4, 5)})
+        feature.on_update(host)
+        self.assertEqual(feature.life_cells, {(4, 5)})
 
     def test_life_part_ignores_unregistered_message_topics(self) -> None:
-        part = LifeSimulationFeature()
+        feature = LifeSimulationFeature()
         host = SimpleNamespace(app=SimpleNamespace(theme=SimpleNamespace(medium=(0, 0, 0))))
-        part.demo = host
-        part.canvas = _CanvasStub([])
-        part.toggle = SimpleNamespace(pushed=False)
-        part.zoom_slider = SimpleNamespace(value=5.0)
-        part.life_cells = {(9, 9)}
+        feature.demo = host
+        feature.canvas = _CanvasStub([])
+        feature.toggle = SimpleNamespace(pushed=False)
+        feature.zoom_slider = SimpleNamespace(value=5.0)
+        feature.life_cells = {(9, 9)}
 
-        part.enqueue_message({"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"})
+        feature.enqueue_message({"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"})
 
-        part.on_update(host)
+        feature.on_update(host)
 
-        self.assertEqual(part.life_cells, {(9, 9)})
+        self.assertEqual(feature.life_cells, {(9, 9)})
 
     def test_life_accessibility_uses_part_owned_controls(self) -> None:
-        part = LifeSimulationFeature()
-        part.reset_button = _A11yControl()
-        part.toggle = _A11yControl()
-        part.zoom_slider = _A11yControl()
+        feature = LifeSimulationFeature()
+        feature.reset_button = _A11yControl()
+        feature.toggle = _A11yControl()
+        feature.zoom_slider = _A11yControl()
 
-        next_index = part.configure_accessibility(SimpleNamespace(), 3)
+        next_index = feature.configure_accessibility(SimpleNamespace(), 3)
 
         self.assertEqual(next_index, 6)
-        self.assertEqual(part.reset_button.tab_index, 3)
-        self.assertEqual(part.toggle.tab_index, 4)
-        self.assertEqual(part.zoom_slider.tab_index, 5)
+        self.assertEqual(feature.reset_button.tab_index, 3)
+        self.assertEqual(feature.toggle.tab_index, 4)
+        self.assertEqual(feature.zoom_slider.tab_index, 5)
 
     def test_mandel_publish_event_updates_internal_status_without_model(self) -> None:
-        part = MandelbrotRenderFeature()
+        feature = MandelbrotRenderFeature()
         host = SimpleNamespace(app=SimpleNamespace())
-        part.demo = host
-        part.status_label = SimpleNamespace(text="")
+        feature.demo = host
+        feature.status_label = SimpleNamespace(text="")
 
-        part.publish_event(MANDEL_KIND_STATUS, "portable status")
+        feature.publish_event(MANDEL_KIND_STATUS, "portable status")
 
-        self.assertEqual(part.status_text, "portable status")
-        self.assertEqual(part.status_label.text, "portable status")
+        self.assertEqual(feature.status_text, "portable status")
+        self.assertEqual(feature.status_label.text, "portable status")
 
     def test_mandel_status_event_from_bus_updates_internal_status_without_model(self) -> None:
-        part = MandelbrotRenderFeature()
+        feature = MandelbrotRenderFeature()
         host = SimpleNamespace(app=SimpleNamespace())
-        part.demo = host
-        part.status_label = SimpleNamespace(text="")
+        feature.demo = host
+        feature.status_label = SimpleNamespace(text="")
 
-        part.on_status_event(host, {"kind": MANDEL_KIND_STATUS, "detail": "bus status"})
+        feature.on_status_event(host, {"kind": MANDEL_KIND_STATUS, "detail": "bus status"})
 
-        self.assertEqual(part.status_text, "bus status")
-        self.assertEqual(part.status_label.text, "bus status")
+        self.assertEqual(feature.status_text, "bus status")
+        self.assertEqual(feature.status_label.text, "bus status")
 
     def test_life_build_window_requests_frame_backdrop_mode(self) -> None:
         captured = {}
@@ -226,12 +226,12 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
             root=_RootStub(),
             app=SimpleNamespace(layout=_LayoutStub(), style_label=lambda label, **_kwargs: label),
         )
-        part = LifeSimulationFeature()
-        part.demo = demo
-        part.register_font_roles = lambda *_args, **_kwargs: None
-        part.font_role = lambda _name: "body"
+        feature = LifeSimulationFeature()
+        feature.demo = demo
+        feature.register_font_roles = lambda *_args, **_kwargs: None
+        feature.font_role = lambda _name: "body"
 
-        part.build_window(
+        feature.build_window(
             demo,
             window_control_cls=_CaptureLifeWindow,
             canvas_control_cls=_WidgetStub,
@@ -264,11 +264,11 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
                 get_scene_scheduler=lambda _name: scheduler_stub,
             ),
         )
-        part = MandelbrotRenderFeature()
-        part.demo = demo
-        part.font_role = lambda _name: "body"
+        feature = MandelbrotRenderFeature()
+        feature.demo = demo
+        feature.font_role = lambda _name: "body"
 
-        part.build_window(
+        feature.build_window(
             demo,
             window_control_cls=_CaptureMandelWindow,
             label_control_cls=_LabelStub,

@@ -41,11 +41,11 @@ from ..controls.image_control import ImageControl
 from ..controls.scrollbar_control import ScrollbarControl
 from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
-from shared.part_lifecycle import PartManager
+from shared.feature_lifecycle import FeatureManager
 
 
 @dataclass(frozen=True)
-class PartUiTypes:
+class FeatureUiTypes:
     window_control_cls: type
     label_control_cls: type
     button_control_cls: type
@@ -90,7 +90,7 @@ class GuiApplication:
         self.window_tiling = active_runtime["window_tiling"]
         self.theme = active_runtime["theme"]
         self.graphics_factory = active_runtime["graphics_factory"]
-        self._part_ui_types = PartUiTypes(
+        self._feature_ui_types = FeatureUiTypes(
             window_control_cls=WindowControl,
             label_control_cls=LabelControl,
             button_control_cls=ButtonControl,
@@ -105,7 +105,7 @@ class GuiApplication:
             scrollbar_control_cls=ScrollbarControl,
             panel_control_cls=PanelControl,
         )
-        self.parts = PartManager(self)
+        self.features = FeatureManager(self)
         self.running = True
         self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
@@ -141,9 +141,9 @@ class GuiApplication:
         target = self._scene_runtime(scene_name)
         return target["scene"].add(node)
 
-    def read_part_ui_types(self) -> PartUiTypes:
-        """Return GUI constructor classes used by part build routines."""
-        return self._part_ui_types
+    def read_feature_ui_types(self) -> FeatureUiTypes:
+        """Return GUI constructor classes used by feature build routines."""
+        return self._feature_ui_types
 
     def style_label(self, label, size: int = 16, role: str = "body"):
         """Apply consistent demo-friendly defaults to a label-like control."""
@@ -314,13 +314,13 @@ class GuiApplication:
             runtime["timers"].update(dt_seconds)
             runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
             runtime["scheduler"].update()
-            self.parts.update_screen_parts(dt_seconds)
+            self.features.update_direct_features(dt_seconds)
             runtime["scene"].update(dt_seconds)
             self.invalidation.invalidate_all()
             self.focus.revalidate_focus(runtime["scene"])
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()
-            self.parts.update_parts()
+            self.features.update_features()
 
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
         dt_ms = max(0.0, float(dt_seconds)) * 1000.0
@@ -337,7 +337,7 @@ class GuiApplication:
         """Release runtime services."""
         collector = telemetry_collector()
         with collector.span("gui_application", "shutdown"):
-            self.parts.shutdown_runtime()
+            self.features.shutdown_runtime()
             seen = set()
             for runtime in self._scenes.values():
                 scheduler = runtime["scheduler"]
@@ -443,10 +443,10 @@ class GuiApplication:
                 return True
 
         screen_consumed = False
-        if not pointer_event_in_window and self.parts.handle_screen_event(logical_event):
+        if not pointer_event_in_window and self.features.handle_direct_event(logical_event):
             self.invalidation.invalidate_all()
             return True
-        if self.parts.handle_event(logical_event):
+        if self.features.handle_event(logical_event):
             self.invalidation.invalidate_all()
             return True
         if not pointer_event_in_window and self._screen_lifecycle_active and self._screen_event_handler is not None:
@@ -733,7 +733,7 @@ class GuiApplication:
             first_frame_profiler().begin_frame(self._active_scene_name)
             runtime = self._scenes[self._active_scene_name]
             self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
-            self.parts.draw(self.surface, runtime["theme"])
+            self.features.draw(self.surface, runtime["theme"])
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
         """Run one-time part prewarm hooks for a scene using an offscreen surface.
@@ -743,7 +743,7 @@ class GuiApplication:
         target_scene = self._active_scene_name if scene_name is None else str(scene_name)
         runtime = self._scene_runtime(target_scene)
         warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
-        return self.parts.prewarm_parts(
+        return self.features.prewarm_features(
             host,
             warm_surface,
             runtime["theme"],
@@ -753,7 +753,7 @@ class GuiApplication:
 
     def draw_screen_parts(self, surface, theme) -> None:
         """Render dedicated screen parts behind scene controls each frame."""
-        self.parts.draw_screen_parts(surface, theme)
+        self.features.draw_direct_features(surface, theme)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
         tiling = self._scenes[self._active_scene_name]["window_tiling"] if scene_name is None else self._scene_runtime(scene_name)["window_tiling"]
@@ -852,60 +852,60 @@ class GuiApplication:
         scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
         return self.focus.set_focus_by_id(scene, control_id)
 
-    # --- Part helpers ---
+    # --- Feature helpers ---
 
-    def register_part(self, part, host=None):
-        """Register a Part with optional host context.
+    def register_feature(self, feature, host=None):
+        """Register a Feature with optional host context.
 
-        Returns the registered part instance.
+        Returns the registered feature instance.
         """
-        return self.parts.register(part, host=host)
+        return self.features.register(feature, host=host)
 
-    def unregister_part(self, name: str, host=None) -> bool:
-        """Unregister a Part by name, returning True when it existed."""
-        return self.parts.unregister(name, host=host)
+    def unregister_feature(self, name: str, host=None) -> bool:
+        """Unregister a Feature by name, returning True when it existed."""
+        return self.features.unregister(name, host=host)
 
-    def get_part(self, name: str):
-        """Return a registered Part by name, or None when absent."""
-        return self.parts.get(name)
+    def get_feature(self, name: str):
+        """Return a registered Feature by name, or None when absent."""
+        return self.features.get(name)
 
-    def part_names(self) -> tuple[str, ...]:
-        """Return registered Part names in registration order."""
-        return self.parts.names()
+    def feature_names(self) -> tuple[str, ...]:
+        """Return registered Feature names in registration order."""
+        return self.features.names()
 
-    def send_part_message(self, sender_name: str, target_part_name: str, message: dict) -> bool:
-        """Send dictionary message between registered parts by name."""
-        return self.parts.send_message(sender_name, target_part_name, message)
+    def send_feature_message(self, sender_name: str, target_feature_name: str, message: dict) -> bool:
+        """Send dictionary message between registered features by name."""
+        return self.features.send_message(sender_name, target_feature_name, message)
 
-    def bind_part_logic(self, consumer_part_name: str, logic_part_name: str, *, alias: str = "default") -> None:
-        """Bind a consumer Part to a LogicPart provider under an alias."""
-        self.parts.bind_logic_part(consumer_part_name, logic_part_name, alias=alias)
+    def bind_feature_logic(self, consumer_feature_name: str, logic_feature_name: str, *, alias: str = "default") -> None:
+        """Bind a consumer Feature to a LogicFeature provider under an alias."""
+        self.features.bind_logic(consumer_feature_name, logic_feature_name, alias=alias)
 
-    def unbind_part_logic(self, consumer_part_name: str, *, alias: str = "default") -> bool:
-        """Remove one logic binding alias from a consumer Part."""
-        return self.parts.unbind_logic_part(consumer_part_name, alias=alias)
+    def unbind_feature_logic(self, consumer_feature_name: str, *, alias: str = "default") -> bool:
+        """Remove one logic binding alias from a consumer Feature."""
+        return self.features.unbind_logic(consumer_feature_name, alias=alias)
 
-    def get_part_logic(self, consumer_part_name: str, *, alias: str = "default"):
-        """Return a bound LogicPart provider name for a consumer alias, or None."""
-        return self.parts.logic_part_name(consumer_part_name, alias=alias)
+    def get_feature_logic(self, consumer_feature_name: str, *, alias: str = "default"):
+        """Return a bound LogicFeature provider name for a consumer alias, or None."""
+        return self.features.bound_logic_name(consumer_feature_name, alias=alias)
 
-    def send_part_logic_message(self, consumer_part_name: str, message: dict, *, alias: str = "default") -> bool:
-        """Send a message from a consumer Part to its bound LogicPart alias."""
-        return self.parts.send_logic_message(consumer_part_name, message, alias=alias)
+    def send_feature_logic_message(self, consumer_feature_name: str, message: dict, *, alias: str = "default") -> bool:
+        """Send a message from a consumer Feature to its bound LogicFeature alias."""
+        return self.features.send_logic_message(consumer_feature_name, message, alias=alias)
 
-    def register_part_runnable(self, part_name: str, runnable_name: str, runnable) -> None:
-        """Register a callable runnable under a registered part name."""
-        self.parts.register_runnable(part_name, runnable_name, runnable)
+    def register_feature_runnable(self, feature_name: str, runnable_name: str, runnable) -> None:
+        """Register a callable runnable under a registered feature name."""
+        self.features.register_runnable(feature_name, runnable_name, runnable)
 
-    def run_part_runnable(self, part_name: str, runnable_name: str, *args, **kwargs):
-        """Execute a previously registered runnable for a part."""
-        return self.parts.run(part_name, runnable_name, *args, **kwargs)
+    def run_feature_runnable(self, feature_name: str, runnable_name: str, *args, **kwargs):
+        """Execute a previously registered runnable for a feature."""
+        return self.features.run(feature_name, runnable_name, *args, **kwargs)
 
-    def build_parts(self, host) -> None:
-        """Call optional build(host) on all registered parts."""
+    def build_features(self, host) -> None:
+        """Call optional build(host) on all registered features."""
         collector = telemetry_collector()
-        with collector.span("gui_application", "build_parts"):
-            self.parts.build_parts(host)
+        with collector.span("gui_application", "build_features"):
+            self.features.build_features(host)
             self._prime_scene_window_tiling_registrations()
 
     def _prime_scene_window_tiling_registrations(self) -> None:
@@ -913,10 +913,10 @@ class GuiApplication:
         for runtime in self._scenes.values():
             runtime["window_tiling"].prime_registration()
 
-    def bind_parts_runtime(self, host) -> None:
-        """Call optional bind_runtime(host) on all registered parts."""
-        with telemetry_collector().span("gui_application", "bind_parts_runtime"):
-            self.parts.bind_runtime(host)
+    def bind_features_runtime(self, host) -> None:
+        """Call optional bind_runtime(host) on all registered features."""
+        with telemetry_collector().span("gui_application", "bind_features_runtime"):
+            self.features.bind_runtime(host)
 
     def configure_telemetry(
         self,
@@ -952,6 +952,6 @@ class GuiApplication:
         """Write a ranked telemetry report and return the generated file path."""
         return telemetry_collector().write_report(top_n=top_n, output_path=output_path)
 
-    def configure_parts_accessibility(self, host, tab_index_start: int) -> int:
-        """Call optional configure_accessibility(host, index) on parts in order."""
-        return self.parts.configure_accessibility(host, tab_index_start)
+    def configure_features_accessibility(self, host, tab_index_start: int) -> int:
+        """Call optional configure_accessibility(host, index) on features in order."""
+        return self.features.configure_accessibility(host, tab_index_start)

@@ -1,4 +1,4 @@
-"""Tests for ObservableValue enhancements: set_silently, force_notify, observer_count."""
+﻿"""Tests for ObservableValue enhancements: set_silently, force_notify, observer_count."""
 import unittest
 
 from gui.core.presentation_model import ObservableValue, PresentationModel

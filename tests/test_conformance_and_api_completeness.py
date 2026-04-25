@@ -1,4 +1,4 @@
-"""Tests for the conformance + API completeness pass:
+﻿"""Tests for the conformance + API completeness pass:
 GuiEvent.is_quit, CanvasEventPacket button helpers, set_on_* callback setters,
 LabelControl align, WindowControl.close, PanelControl container queries,
 UiEngine.current_fps, ButtonGroupControl.clear_group_registry."""

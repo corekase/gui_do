@@ -1,4 +1,4 @@
-"""Tests for ActionManager management APIs: binding_count, clear_bindings_for_action."""
+﻿"""Tests for ActionManager management APIs: binding_count, clear_bindings_for_action."""
 import unittest
 
 import pygame

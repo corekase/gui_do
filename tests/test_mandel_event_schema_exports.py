@@ -1,23 +1,23 @@
-import unittest
+﻿import unittest
 import importlib
 import sys
 
-import demo_parts.mandelbrot_demo_part as mandel_module
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_CLEARED
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_FAILED
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_IDLE
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_FOUR_SPLIT
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_ITERATIVE
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_ONE_SPLIT
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_RUNNING_RECURSIVE
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_STATUS
-from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_SCOPE
-from demo_parts.mandelbrot_demo_part import MANDEL_STATUS_TOPIC
-from demo_parts.mandelbrot_demo_part import MandelStatusEvent
-from demo_parts.mandelbrot_demo_part import __all__ as mandel_module_all
-from demo_parts.mandelbrot_demo_part import MandelStatusEvent as ModuleMandelStatusEvent
-from tests.contract_test_catalog import DEMO_PARTS_EXPORT_ORDER
+import demo_features.mandelbrot_demo_feature as mandel_module
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_COMPLETE
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_CLEARED
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_FAILED
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_IDLE
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_RUNNING_FOUR_SPLIT
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_RUNNING_ITERATIVE
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_RUNNING_ONE_SPLIT
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_RUNNING_RECURSIVE
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_STATUS
+from demo_features.mandelbrot_demo_feature import MANDEL_STATUS_SCOPE
+from demo_features.mandelbrot_demo_feature import MANDEL_STATUS_TOPIC
+from demo_features.mandelbrot_demo_feature import MandelStatusEvent
+from demo_features.mandelbrot_demo_feature import __all__ as mandel_module_all
+from demo_features.mandelbrot_demo_feature import MandelStatusEvent as ModuleMandelStatusEvent
+from tests.contract_test_catalog import DEMO_FEATURES_EXPORT_ORDER
 
 
 class MandelEventSchemaExportTests(unittest.TestCase):
@@ -42,8 +42,8 @@ class MandelEventSchemaExportTests(unittest.TestCase):
 
         self.assertEqual(restored, event)
 
-    def test_demo_parts_schema_module_importable(self) -> None:
-        module = importlib.import_module("demo_parts.mandelbrot_demo_part")
+    def test_demo_features_schema_module_importable(self) -> None:
+        module = importlib.import_module("demo_features.mandelbrot_demo_feature")
 
         self.assertTrue(hasattr(module, "MandelStatusEvent"))
 
@@ -69,8 +69,8 @@ class MandelEventSchemaExportTests(unittest.TestCase):
         self.assertIs(ModuleMandelStatusEvent, MandelStatusEvent)
 
     def test_mandel_module_all_matches_expected_schema_surface_and_order(self) -> None:
-        self.assertEqual(tuple(mandel_module_all), DEMO_PARTS_EXPORT_ORDER)
-        self.assertEqual(set(mandel_module_all), set(DEMO_PARTS_EXPORT_ORDER))
+        self.assertEqual(tuple(mandel_module_all), DEMO_FEATURES_EXPORT_ORDER)
+        self.assertEqual(set(mandel_module_all), set(DEMO_FEATURES_EXPORT_ORDER))
 
     def test_mandel_module_all_has_no_duplicates(self) -> None:
         self.assertEqual(len(mandel_module_all), len(set(mandel_module_all)))

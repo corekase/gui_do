@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 
 from gui.core.value_change_callback import dispatch_value_change
 from gui.core.value_change_callback import validate_value_change_callback

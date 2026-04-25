@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 from types import SimpleNamespace
 
@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from demo_parts.styles_demo_part import StylesShowcaseFeature
+from demo_features.styles_demo_feature import StylesShowcaseFeature
 from gui import GuiApplication, PanelControl
 from gui_do_demo import GuiDoDemo
 
@@ -27,54 +27,54 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
             scene_name="control_showcase",
         )
         demo = SimpleNamespace(app=app, control_showcase_root=root)
-        part = StylesShowcaseFeature()
-        part.build(demo)
-        return app, demo, part
+        feature = StylesShowcaseFeature()
+        feature.build(demo)
+        return app, demo, feature
 
     def test_build_creates_hidden_styles_window_with_expected_grid_counts(self) -> None:
-        _app, _demo, part = self._build_part()
+        _app, _demo, feature = self._build_part()
 
-        self.assertEqual(part.window.rect.size, (part.WINDOW_WIDTH, part.WINDOW_HEIGHT))
-        self.assertFalse(part.window.visible)
-        self.assertEqual(len(part.group_controls), 30)
-        self.assertEqual(len(part.button_controls), 5)
-        self.assertEqual(len(part.toggle_controls), 5)
-        self.assertEqual(len(part.footer_labels), 6)
+        self.assertEqual(feature.window.rect.size, (feature.WINDOW_WIDTH, feature.WINDOW_HEIGHT))
+        self.assertFalse(feature.window.visible)
+        self.assertEqual(len(feature.group_controls), 30)
+        self.assertEqual(len(feature.button_controls), 5)
+        self.assertEqual(len(feature.toggle_controls), 5)
+        self.assertEqual(len(feature.footer_labels), 6)
 
     def test_each_group_defaults_to_first_item_selected(self) -> None:
-        _app, _demo, part = self._build_part()
+        _app, _demo, feature = self._build_part()
 
-        self.assertEqual(len(part.group_controls), 30)
+        self.assertEqual(len(feature.group_controls), 30)
         for group_index in range(6):
             start = group_index * 5
-            group_slice = part.group_controls[start:start + 5]
+            group_slice = feature.group_controls[start:start + 5]
             self.assertEqual(len(group_slice), 5)
             self.assertTrue(group_slice[0].pushed)
             for control in group_slice[1:]:
                 self.assertFalse(control.pushed)
-            self.assertEqual(part.footer_labels[group_index].text, f"Gr: {group_index + 1} ID: 1")
+            self.assertEqual(feature.footer_labels[group_index].text, f"Gr: {group_index + 1} ID: 1")
 
     def test_radio_and_check_controls_are_centered_in_grid_cells(self) -> None:
-        app, _demo, part = self._build_part()
+        app, _demo, feature = self._build_part()
         app.switch_scene("control_showcase")
-        part.window.visible = True
+        feature.window.visible = True
 
-        content_rect = part.window.content_rect()
-        heading_y = content_rect.top + part.PADDING_Y
-        controls_anchor_y = heading_y + part.HEADING_HEIGHT + part.HEADING_GAP
+        content_rect = feature.window.content_rect()
+        heading_y = content_rect.top + feature.PADDING_Y
+        controls_anchor_y = heading_y + feature.HEADING_HEIGHT + feature.HEADING_GAP
         app.layout.set_grid_properties(
-            anchor=(content_rect.left + part.PADDING_X, controls_anchor_y),
-            item_width=part.COLUMN_WIDTH,
-            item_height=part.CONTROL_HEIGHT,
-            column_spacing=part.COLUMN_GAP,
-            row_spacing=part.CONTROL_GAP,
+            anchor=(content_rect.left + feature.PADDING_X, controls_anchor_y),
+            item_width=feature.COLUMN_WIDTH,
+            item_height=feature.CONTROL_HEIGHT,
+            column_spacing=feature.COLUMN_GAP,
+            row_spacing=feature.CONTROL_GAP,
             use_rect=True,
         )
 
-        group_radio = next(control for control in part.group_controls if control.control_id == "styles_radio_1")
-        group_check = next(control for control in part.group_controls if control.control_id == "styles_check_1")
-        button_radio = next(control for control in part.button_controls if control.control_id == "styles_button_radio")
-        toggle_check = next(control for control in part.toggle_controls if control.control_id == "styles_toggle_check")
+        group_radio = next(control for control in feature.group_controls if control.control_id == "styles_radio_1")
+        group_check = next(control for control in feature.group_controls if control.control_id == "styles_check_1")
+        button_radio = next(control for control in feature.button_controls if control.control_id == "styles_button_radio")
+        toggle_check = next(control for control in feature.toggle_controls if control.control_id == "styles_toggle_check")
 
         group_radio_cell = app.layout.gridded(1, 0)
         group_check_cell = app.layout.gridded(4, 0)
@@ -87,16 +87,16 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
             (button_radio, button_radio_cell),
             (toggle_check, toggle_check_cell),
         ):
-            self.assertEqual(control.rect.width, part.CENTERED_STYLE_WIDTH)
+            self.assertEqual(control.rect.width, feature.CENTERED_STYLE_WIDTH)
             self.assertEqual(control.rect.centerx, cell.centerx)
             self.assertEqual(control.rect.height, cell.height)
 
     def test_tab_order_is_column_top_to_bottom_and_wraps(self) -> None:
-        app, _demo, part = self._build_part()
+        app, _demo, feature = self._build_part()
         app.switch_scene("control_showcase")
-        part.window.visible = True
+        feature.window.visible = True
 
-        ordered_ids = [control.control_id for control in (part.group_controls + part.button_controls + part.toggle_controls)]
+        ordered_ids = [control.control_id for control in (feature.group_controls + feature.button_controls + feature.toggle_controls)]
         focused_ids = []
 
         for _ in range(len(ordered_ids)):

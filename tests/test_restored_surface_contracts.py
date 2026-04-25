@@ -1,4 +1,4 @@
-import time
+﻿import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -28,7 +28,7 @@ from gui import (
 )
 from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 from gui.core.ui_node import UiNode
-from shared.part_lifecycle import Part
+from shared.feature_lifecycle import Feature
 
 
 class RestoredSurfaceContractsTests(unittest.TestCase):
@@ -141,7 +141,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             pygame.quit()
 
     def test_build_parts_primes_window_registration_for_all_scenes(self) -> None:
-        class _SceneWindowsPart(Part):
+        class _SceneWindowsPart(Feature):
             def __init__(self) -> None:
                 super().__init__("scene_windows_part")
                 self.main_window = None
@@ -167,20 +167,20 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
                 ),
             )
 
-            part = _SceneWindowsPart()
-            app.register_part(part, host=host)
-            app.build_parts(host)
+            feature = _SceneWindowsPart()
+            app.register_feature(feature, host=host)
+            app.build_features(host)
 
             app.switch_scene("main")
-            self.assertEqual(app.window_tiling._registration_order.get(part.main_window), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.main_window), 0)
 
             app.switch_scene("control_showcase")
-            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_window), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.showcase_window), 0)
         finally:
             pygame.quit()
 
     def test_registration_order_stays_deterministic_across_visibility_toggle_order(self) -> None:
-        class _ThreeWindowsPart(Part):
+        class _ThreeWindowsPart(Feature):
             def __init__(self) -> None:
                 super().__init__("three_windows_part")
                 self.w1 = None
@@ -199,37 +199,37 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
                 app=app,
                 main_root=app.add(PanelControl("main_root", Rect(0, 0, 900, 700)), scene_name="default"),
             )
-            part = _ThreeWindowsPart()
-            app.register_part(part, host=host)
-            app.build_parts(host)
+            feature = _ThreeWindowsPart()
+            app.register_feature(feature, host=host)
+            app.build_features(host)
 
             registration_order = app.window_tiling._registration_order
-            self.assertEqual(registration_order.get(part.w1), 0)
-            self.assertEqual(registration_order.get(part.w2), 1)
-            self.assertEqual(registration_order.get(part.w3), 2)
+            self.assertEqual(registration_order.get(feature.w1), 0)
+            self.assertEqual(registration_order.get(feature.w2), 1)
+            self.assertEqual(registration_order.get(feature.w3), 2)
 
-            part.w1.visible = False
-            part.w2.visible = False
-            part.w3.visible = False
+            feature.w1.visible = False
+            feature.w2.visible = False
+            feature.w3.visible = False
 
-            part.w3.visible = True
-            part.w1.visible = True
-            part.w2.visible = True
+            feature.w3.visible = True
+            feature.w1.visible = True
+            feature.w2.visible = True
 
             app.set_window_tiling_enabled(True, relayout=False)
-            app.tile_windows(newly_visible=[part.w3])
+            app.tile_windows(newly_visible=[feature.w3])
 
-            self.assertEqual(registration_order.get(part.w1), 0)
-            self.assertEqual(registration_order.get(part.w2), 1)
-            self.assertEqual(registration_order.get(part.w3), 2)
+            self.assertEqual(registration_order.get(feature.w1), 0)
+            self.assertEqual(registration_order.get(feature.w2), 1)
+            self.assertEqual(registration_order.get(feature.w3), 2)
 
             visible = app.window_tiling._visible_windows()
-            self.assertEqual(visible, [part.w1, part.w2, part.w3])
+            self.assertEqual(visible, [feature.w1, feature.w2, feature.w3])
         finally:
             pygame.quit()
 
     def test_cross_scene_visibility_toggles_preserve_each_scene_registration_order(self) -> None:
-        class _TwoSceneWindowsPart(Part):
+        class _TwoSceneWindowsPart(Feature):
             def __init__(self) -> None:
                 super().__init__("two_scene_windows_part")
                 self.main_a = None
@@ -261,40 +261,40 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
                 ),
             )
 
-            part = _TwoSceneWindowsPart()
-            app.register_part(part, host=host)
-            app.build_parts(host)
+            feature = _TwoSceneWindowsPart()
+            app.register_feature(feature, host=host)
+            app.build_features(host)
 
             app.switch_scene("main")
             main_order = dict(app.window_tiling._registration_order)
-            self.assertEqual(main_order.get(part.main_a), 0)
-            self.assertEqual(main_order.get(part.main_b), 1)
+            self.assertEqual(main_order.get(feature.main_a), 0)
+            self.assertEqual(main_order.get(feature.main_b), 1)
 
             app.switch_scene("control_showcase")
             show_order = dict(app.window_tiling._registration_order)
-            self.assertEqual(show_order.get(part.showcase_a), 0)
-            self.assertEqual(show_order.get(part.showcase_b), 1)
+            self.assertEqual(show_order.get(feature.showcase_a), 0)
+            self.assertEqual(show_order.get(feature.showcase_b), 1)
 
-            part.showcase_a.visible = False
-            part.showcase_b.visible = False
-            part.showcase_b.visible = True
-            part.showcase_a.visible = True
+            feature.showcase_a.visible = False
+            feature.showcase_b.visible = False
+            feature.showcase_b.visible = True
+            feature.showcase_a.visible = True
             app.set_window_tiling_enabled(True, relayout=False)
-            app.tile_windows(newly_visible=[part.showcase_b])
+            app.tile_windows(newly_visible=[feature.showcase_b])
 
-            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_a), 0)
-            self.assertEqual(app.window_tiling._registration_order.get(part.showcase_b), 1)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.showcase_a), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.showcase_b), 1)
 
             app.switch_scene("main")
-            part.main_a.visible = False
-            part.main_b.visible = False
-            part.main_b.visible = True
-            part.main_a.visible = True
+            feature.main_a.visible = False
+            feature.main_b.visible = False
+            feature.main_b.visible = True
+            feature.main_a.visible = True
             app.set_window_tiling_enabled(True, relayout=False)
-            app.tile_windows(newly_visible=[part.main_b])
+            app.tile_windows(newly_visible=[feature.main_b])
 
-            self.assertEqual(app.window_tiling._registration_order.get(part.main_a), 0)
-            self.assertEqual(app.window_tiling._registration_order.get(part.main_b), 1)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.main_a), 0)
+            self.assertEqual(app.window_tiling._registration_order.get(feature.main_b), 1)
         finally:
             pygame.quit()
 

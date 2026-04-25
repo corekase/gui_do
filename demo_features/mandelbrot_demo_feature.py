@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from shared.part_lifecycle import LogicPart, RoutedMessagePart
+from shared.feature_lifecycle import LogicFeature, RoutedFeature
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -75,7 +75,7 @@ _MANDEL_LOGIC_CAN3 = "mandelbrot_logic_can3"
 _MANDEL_LOGIC_CAN4 = "mandelbrot_logic_can4"
 
 
-class MandelbrotLogicPart(LogicPart):
+class MandelbrotLogicFeature(LogicFeature):
     """Domain logic provider for Mandelbrot pixel and algorithm calculations."""
 
     RECURSIVE_LEAF_SPAN = 8
@@ -91,8 +91,8 @@ class MandelbrotLogicPart(LogicPart):
         self.max_iter = 48
 
     def bind_runtime(self, _host) -> None:
-        self._part_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
-        self._part_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
+        self._feature_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
+        self._feature_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
         if k >= self.max_iter - 1:
@@ -150,7 +150,7 @@ class MandelbrotLogicPart(LogicPart):
         return None
 
 
-class MandelbrotRenderFeature(RoutedMessagePart):
+class MandelbrotRenderFeature(RoutedFeature):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
     HOST_REQUIREMENTS = {
@@ -198,7 +198,7 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
-        ui = host.app.read_part_ui_types()
+        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {
@@ -244,15 +244,15 @@ class MandelbrotRenderFeature(RoutedMessagePart):
             self.LOGIC_ALIAS_CAN4: _MANDEL_LOGIC_CAN4,
         }
         for alias, provider_name in bindings.items():
-            if self.logic_part_name(alias=alias) is None:
-                self.bind_logic_part(provider_name, alias=alias)
+            if self.bound_logic_name(alias=alias) is None:
+                self.bind_logic(provider_name, alias=alias)
 
-    def _resolve_logic_part(self, alias: str) -> Optional[MandelbrotLogicPart]:
-        provider_name = self.logic_part_name(alias=alias)
+    def _resolve_logic(self, alias: str) -> Optional[MandelbrotLogicFeature]:
+        provider_name = self.bound_logic_name(alias=alias)
         if provider_name is None:
             return None
-        provider = self._part_manager.get(provider_name)
-        if isinstance(provider, MandelbrotLogicPart):
+        provider = self._feature_manager.get(provider_name)
+        if isinstance(provider, MandelbrotLogicFeature):
             return provider
         return None
 
@@ -260,12 +260,12 @@ class MandelbrotRenderFeature(RoutedMessagePart):
         demo = self.demo
         if demo is None:
             return False
-        provider_name = self.logic_part_name(alias=alias)
+        provider_name = self.bound_logic_name(alias=alias)
         if provider_name is None:
             return False
         try:
             scheduler = self._get_scheduler(demo)
-            demo.app.run_part_runnable(provider_name, runnable_name, scheduler, task_id, params)
+            demo.app.run_feature_runnable(provider_name, runnable_name, scheduler, task_id, params)
             return True
         except KeyError:
             return False
@@ -595,15 +595,15 @@ class MandelbrotRenderFeature(RoutedMessagePart):
 
     def mandel_col(self, k: int) -> Tuple[int, int, int]:
         """Map an iteration count to the Mandelbrot palette color."""
-        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_col(k)
+        return self._resolve_logic(self.LOGIC_ALIAS_PRIMARY).mandel_col(k)
 
     def mandel_viewport(self, _host, width: int, height: int) -> Tuple[complex, float]:
         """Return viewport center and scale for the requested render dimensions."""
-        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_viewport(width, height)
+        return self._resolve_logic(self.LOGIC_ALIAS_PRIMARY).mandel_viewport(width, height)
 
     def mandel_pixel(self, _host, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
         """Compute Mandelbrot iteration count for one pixel coordinate."""
-        return self._resolve_logic_part(self.LOGIC_ALIAS_PRIMARY).mandel_pixel(px, py, width, height, center, scale)
+        return self._resolve_logic(self.LOGIC_ALIAS_PRIMARY).mandel_pixel(px, py, width, height, center, scale)
 
     def clear_surfaces(self, host) -> None:
         """Clear all Mandelbrot canvases to the theme medium background color."""

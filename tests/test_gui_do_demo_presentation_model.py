@@ -1,40 +1,40 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 
-from demo_parts.life_demo_part import LifeSimulationFeature
-from demo_parts.mandelbrot_demo_part import MandelbrotRenderFeature
-from demo_parts.mandelbrot_demo_part import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
+from demo_features.life_demo_feature import LifeSimulationFeature
+from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
+from demo_features.mandelbrot_demo_feature import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
 from gui import EventBus
 from gui_do_demo import GuiDoDemo
-from shared.part_lifecycle import PartManager
+from shared.feature_lifecycle import FeatureManager
 
 class GuiDoDemoPresentationModelTests(unittest.TestCase):
     def _make_part(self):
         demo = GuiDoDemo.__new__(GuiDoDemo)
         demo.app = SimpleNamespace(events=EventBus())
-        part = MandelbrotRenderFeature()
-        part.demo = demo
-        part.status_label = SimpleNamespace(text="Mandelbrot: idle")
-        part.help_label = SimpleNamespace(text="")
-        demo._mandel_feature = part
-        return demo, part
+        feature = MandelbrotRenderFeature()
+        feature.demo = demo
+        feature.status_label = SimpleNamespace(text="Mandelbrot: idle")
+        feature.help_label = SimpleNamespace(text="")
+        demo._mandel_feature = feature
+        return demo, feature
 
     def test_publish_mandel_event_uses_bus_when_ready(self) -> None:
-        demo, part = self._make_part()
-        part.status_bus_ready = True
-        demo.app.events.subscribe(part.status_topic, lambda payload: part.on_status_event(demo, payload), scope=part.status_scope)
+        demo, feature = self._make_part()
+        feature.status_bus_ready = True
+        demo.app.events.subscribe(feature.status_topic, lambda payload: feature.on_status_event(demo, payload), scope=feature.status_scope)
 
         demo._mandel_feature.publish_event("status", "Mandelbrot: event-bus")
 
-        self.assertEqual(part.status_text, "Mandelbrot: event-bus")
+        self.assertEqual(feature.status_text, "Mandelbrot: event-bus")
 
     def test_publish_mandel_event_falls_back_without_bus(self) -> None:
-        demo, part = self._make_part()
-        part.status_bus_ready = False
+        demo, feature = self._make_part()
+        feature.status_bus_ready = False
 
         demo._mandel_feature.publish_event("status", "Mandelbrot: direct")
 
-        self.assertEqual(part.status_text, "Mandelbrot: direct")
+        self.assertEqual(feature.status_text, "Mandelbrot: direct")
 
     def test_format_mandel_status_maps_typed_payloads(self) -> None:
         demo = GuiDoDemo.__new__(GuiDoDemo)
@@ -356,7 +356,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         mandel.help_label = SimpleNamespace(text="")
         mandel.update_events = lambda: None
 
-        manager = PartManager(SimpleNamespace())
+        manager = FeatureManager(SimpleNamespace())
         manager.register(life, host=demo)
         manager.register(mandel, host=demo)
 

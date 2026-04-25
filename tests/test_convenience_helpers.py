@@ -1,4 +1,4 @@
-"""Tests for GUI package convenience helper functions (2026-04-22).
+﻿"""Tests for GUI package convenience helper functions (2026-04-22).
 
 Covers:
     - UiNode: show/hide, enable/disable, set_pos, resize, set_rect,

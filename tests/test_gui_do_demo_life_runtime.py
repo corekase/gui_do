@@ -1,4 +1,4 @@
-import os
+﻿import os
 import unittest
 from types import SimpleNamespace
 
@@ -8,8 +8,8 @@ import pygame
 
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
-from demo_parts.life_demo_part import LifeSimulationFeature, LifeSimulationLogicPart
-from shared.part_lifecycle import Part, PartManager
+from demo_features.life_demo_feature import LifeSimulationFeature, LifeSimulationLogicFeature
+from shared.feature_lifecycle import Feature, FeatureManager
 
 
 class _Packet:
@@ -35,7 +35,7 @@ class _LifeCanvasStub:
         return self._events.pop(0)
 
 
-class _LifeLogicObserverPart(Part):
+class _LifeLogicObserverPart(Feature):
     def __init__(self, name: str = "life_observer") -> None:
         super().__init__(name, scene_name="main")
         self.last_cells = None
@@ -66,17 +66,17 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
             theme=SimpleNamespace(medium=(0, 0, 0)),
             active_scene_name="main",
         )
-        demo._part_manager = PartManager(demo.app)
-        life_logic_part = LifeSimulationLogicPart()
-        demo._part_manager.register(life_logic_part, host=demo)
-        # Create the life part and configure it
+        demo._feature_manager = FeatureManager(demo.app)
+        life_logic_part = LifeSimulationLogicFeature()
+        demo._feature_manager.register(life_logic_part, host=demo)
+        # Create the life Feature and configure it
         life_part = LifeSimulationFeature()
         life_part.life_cells = set()
         life_part.life_origin = [0.0, 0.0]
         life_part.life_cell_size = 12
         life_part.life_zoom_slider_last_value = 5
-        demo._part_manager.register(life_part, host=demo)
-        life_part.bind_logic_part("life_simulation_logic", alias=life_part.LOGIC_ALIAS)
+        demo._feature_manager.register(life_part, host=demo)
+        life_part.bind_logic("life_simulation_logic", alias=life_part.LOGIC_ALIAS)
         demo._life_feature = life_part
         # Set up UI elements on demo
         demo.life_zoom_slider = SimpleNamespace(value=5.0)
@@ -85,7 +85,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         life_part.zoom_slider = demo.life_zoom_slider
         life_part.canvas = demo.life_canvas
         life_part.toggle = demo.life_toggle
-        # Set the demo reference on the part so it can access UI elements
+        # Set the demo reference on the Feature so it can access UI elements
         life_part.demo = demo
         return demo
 
@@ -126,7 +126,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo._life_feature.canvas = demo.life_canvas
 
         demo._life_feature.update_life()
-        demo._part_manager.update_parts(demo)
+        demo._feature_manager.update_features(demo)
 
         self.assertIn((1, 1), demo._life_feature.life_cells)
 
@@ -134,35 +134,35 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo = self._make_demo_stub()
 
         demo._life_feature.life_reset()
-        demo._part_manager.update_parts(demo)
+        demo._feature_manager.update_features(demo)
 
         expected_seed = {(0, 0), (1, 0), (-1, 0), (0, -1), (1, -2)}
         self.assertEqual(demo._life_feature.life_cells, expected_seed)
 
         demo.life_toggle.pushed = True
         demo._life_feature.update_life()
-        demo._part_manager.update_parts(demo)
+        demo._feature_manager.update_features(demo)
 
         self.assertNotEqual(demo._life_feature.life_cells, expected_seed)
 
     def test_non_life_part_can_bind_and_use_life_logic_part(self) -> None:
         app = SimpleNamespace(active_scene_name="main")
-        manager = PartManager(app)
-        logic_part = LifeSimulationLogicPart()
+        manager = FeatureManager(app)
+        logic_part = LifeSimulationLogicFeature()
         observer = _LifeLogicObserverPart()
         manager.register(logic_part, host=SimpleNamespace())
         manager.register(observer, host=SimpleNamespace())
 
-        observer.bind_logic_part("life_simulation_logic", alias="life")
+        observer.bind_logic("life_simulation_logic", alias="life")
         sent_snapshot = observer.send_logic_message({"command": "snapshot"}, alias="life")
-        manager.update_parts(SimpleNamespace())
+        manager.update_features(SimpleNamespace())
 
         self.assertTrue(sent_snapshot)
         self.assertIsInstance(observer.last_cells, set)
         self.assertIn((0, 0), observer.last_cells)
 
         sent_toggle = observer.send_logic_message({"command": "toggle_cell", "cell": (0, 0)}, alias="life")
-        manager.update_parts(SimpleNamespace())
+        manager.update_features(SimpleNamespace())
 
         self.assertTrue(sent_toggle)
         self.assertNotIn((0, 0), observer.last_cells)
@@ -180,7 +180,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
 
         self.assertEqual(demo._life_feature.life_cells, set())
 
-        demo._part_manager.update_parts(demo)
+        demo._feature_manager.update_features(demo)
 
         self.assertEqual(demo._life_feature.life_cells, {(2, 3)})
 
@@ -189,7 +189,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
         demo._life_feature.life_cells = {(7, 7)}
         demo._life_feature.enqueue_message({"topic": "other", "status": "ignore"})
 
-        demo._part_manager.update_parts(demo)
+        demo._feature_manager.update_features(demo)
 
         self.assertEqual(demo._life_feature.life_cells, {(7, 7)})
 
