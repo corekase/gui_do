@@ -1,5 +1,6 @@
 ﻿import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -66,6 +67,52 @@ class ToggleControlRuntimeTests(unittest.TestCase):
         self.assertEqual(states, [True])
         # Hint remains active (toggle still focused).
         self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_keyboard_activation_invokes_toggle_before_visual_arm_starts(self) -> None:
+        states = []
+        arm_states_during_callback = []
+
+        toggle = self.root.add(
+            ToggleControl(
+                "tog",
+                Rect(20, 20, 80, 30),
+                "On",
+                "Off",
+                pushed=False,
+                on_toggle=lambda state: (states.append(state), arm_states_during_callback.append(toggle._focus_activation_armed)),
+            )
+        )
+        toggle.set_tab_index(0)
+        self.app.focus.set_focus(toggle)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(states, [True])
+        # Toggle callback runs before cosmetic armed visual starts.
+        self.assertEqual(arm_states_during_callback, [False])
+        self.assertTrue(toggle._focus_activation_armed)
+
+    def test_keyboard_toggle_off_keeps_unpushed_visual_while_activation_hint_is_armed(self) -> None:
+        toggle = self.root.add(ToggleControl("tog", Rect(20, 20, 80, 30), "On", "Off", pushed=True))
+        toggle.set_tab_index(0)
+        self.app.focus.set_focus(toggle)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        self.assertTrue(consumed)
+        self.assertFalse(toggle.pushed)
+        self.assertTrue(toggle._focus_activation_armed)
+
+        factory = self.app.theme.graphics_factory
+        with patch.object(factory, "resolve_visual_state", wraps=factory.resolve_visual_state) as resolve_spy:
+            toggle.draw(self.surface, self.app.theme)
+
+        self.assertTrue(resolve_spy.called)
+        kwargs = resolve_spy.call_args.kwargs
+        # Visual state tracks the new toggle state immediately (unpushed).
+        self.assertTrue(kwargs["armed"])
+        # Hover-only visuals are not used for keyboard activation timeout hint.
+        self.assertFalse(kwargs["hovered"])
 
     def test_keyboard_activation_ignored_when_disabled(self) -> None:
         states = []

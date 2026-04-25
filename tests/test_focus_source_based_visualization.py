@@ -111,11 +111,94 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
         self.assertIs(self.app.focus.focused_node, self.button1)
         self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
+    def test_shift_tab_after_mouse_focus_applies_same_two_step_gate(self) -> None:
+        """After mouse focus, first Shift+Tab only shows hint; second Shift+Tab cycles."""
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (100, 70), "button": 1}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT},
+            )
+        )
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT},
+            )
+        )
+        self.assertIs(self.app.focus.focused_node, self.button2)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_direction_change_from_tab_to_shift_tab_cycles_when_hint_active(self) -> None:
+        """Switching from Tab to Shift+Tab cycles when the hint is still active."""
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
+        self.assertIs(self.app.focus.focused_node, self.button2)
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.KEYDOWN,
+                {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT},
+            )
+        )
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
         self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
         self.assertFalse(self.app.focus_visualizer.has_active_hint())
 
         self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB}))
         self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+    def test_shift_keydown_before_tab_does_not_bypass_traversal_gate(self) -> None:
+        """SHIFT KEYDOWN preceding Shift+Tab must not bypass the traversal-initiation gate.
+
+        In real pygame usage Shift+Tab generates two events: a bare SHIFT KEYDOWN then
+        TAB+KMOD_SHIFT KEYDOWN.  The SHIFT KEYDOWN must not pre-arm ``_hint_visible``
+        so that the TAB+KMOD_SHIFT still applies the gate (show hint first, cycle on the
+        second Shift+Tab within the timeout).
+        """
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": (100, 70), "button": 1}))
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
+
+        # Real Shift+Tab: SHIFT key arrives first, then TAB+KMOD_SHIFT.
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_LSHIFT, "mod": pygame.KMOD_LSHIFT})
+        )
+        # SHIFT alone must not pre-arm the hint.
+        self.assertFalse(self.app.focus_visualizer.has_active_hint())
+
+        # First actual Shift+Tab: gate applies — show hint, do not cycle.
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT})
+        )
+        self.assertIs(self.app.focus.focused_node, self.button1)
+        self.assertTrue(self.app.focus_visualizer.has_active_hint())
+
+        # Simulate key-up events between the two Shift+Tab presses.
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYUP, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT})
+        )
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYUP, {"key": pygame.K_LSHIFT, "mod": 0})
+        )
+
+        # Second Shift+Tab (SHIFT↓ then TAB+SHIFT↓): hint is active so cycling must occur.
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_LSHIFT, "mod": pygame.KMOD_LSHIFT})
+        )
+        self.app.process_event(
+            pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT})
+        )
+        self.assertIs(self.app.focus.focused_node, self.button2)
         self.assertTrue(self.app.focus_visualizer.has_active_hint())
 
     def test_space_activation_resets_hint_timer_so_subsequent_space_shows_hint(self) -> None:

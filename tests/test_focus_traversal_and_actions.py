@@ -315,7 +315,7 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
             self.assertIs(app.focus.focused_node, screen_after)
 
-            # Backward traversal returns to the previous control.
+            # Backward traversal moves immediately while hint is active.
             app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_SHIFT}))
             self.assertIs(app.focus.focused_node, screen_behind)
         finally:

@@ -123,9 +123,13 @@ class FocusManager:
             return False
         # Any routed keyboard event re-arms the hint display and resets continuous-cycle
         # mode so the next Tab applies the initiation gate (show hint before cycling).
-        self._hint_visible = True
-        self._hint_elapsed_seconds = 0.0
-        self._continuous_tab_cycle = False
+        # Modifier-only keys (Shift, Ctrl, Alt, Meta) are excluded: they are pressed
+        # before combinations such as Shift+Tab and must not pre-arm _hint_visible,
+        # which would cause the subsequent Tab to skip the traversal-initiation gate.
+        if not self._is_modifier_key_event(event):
+            self._hint_visible = True
+            self._hint_elapsed_seconds = 0.0
+            self._continuous_tab_cycle = False
         if self._try_activate_focused_button(event, app, target):
             return True
         self._try_arm_focused_control_for_adjustment_event(event, target)
@@ -156,14 +160,15 @@ class FocusManager:
     def _try_activate_focused_button(self, event, app, target) -> bool:
         """Handle focused keyboard activation for push buttons in one place.
 
-        Activation still occurs exactly once here. The armed state is visual-only and
-        held for the shared focus-hint timeout.
+        Activation still occurs exactly once here. The control activation fires first,
+        then the armed state (visual-only) is started and held for the shared
+        focus-hint timeout.
         """
         if not (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
             return False
 
-        self._begin_focus_activation_visual(target)
         target._invoke_click()
+        self._begin_focus_activation_visual(target)
         return True
 
     def _begin_focus_activation_visual(self, target) -> None:
@@ -181,6 +186,17 @@ class FocusManager:
         """
         if bool(target.should_arm_focus_activation_for_event(event)):
             self._begin_focus_activation_visual(target)
+
+    @staticmethod
+    def _is_modifier_key_event(event) -> bool:
+        """Return True when the event's key is a bare modifier (Shift, Ctrl, Alt, Meta)."""
+        key = getattr(event, "key", None)
+        return key in (
+            pygame.K_LSHIFT, pygame.K_RSHIFT,
+            pygame.K_LCTRL, pygame.K_RCTRL,
+            pygame.K_LALT, pygame.K_RALT,
+            pygame.K_LGUI, pygame.K_RGUI,
+        )
 
     @staticmethod
     def _is_descendant(node, ancestor) -> bool:
@@ -231,11 +247,12 @@ class FocusManager:
         if focused is None or focused not in candidates:
             target = self._preferred_scope_entry_target(_scene=scene, window=window, candidates=candidates)
             self.set_focus(target, via_keyboard=True)
+            self._continuous_tab_cycle = False
             return True
 
         # Traversal initiation: with an existing focused node but no visible hint,
         # first Tab only reveals the hint. A follow-up Tab before timeout cycles.
-        if not self._continuous_tab_cycle and not self._hint_visible:
+        if not self._hint_visible:
             self.show_keyboard_hint_for_current_focus()
             return True
 

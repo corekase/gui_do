@@ -53,6 +53,34 @@ class ButtonControlRuntimeTests(unittest.TestCase):
         self.app.update(0.02)
         self.assertFalse(control._focus_activation_armed)
 
+    def test_repeated_activation_during_timeout_reinvokes_control_and_resets_timeout(self) -> None:
+        fired = []
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append(True)))
+        control.set_tab_index(0)
+        self.app.focus.set_focus(control)
+
+        consumed_first = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        self.assertTrue(consumed_first)
+        self.assertEqual(len(fired), 1)
+        self.assertTrue(control._focus_activation_armed)
+
+        # Move close to expiry, then activate again while timeout is still active.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS * 0.9)
+        self.assertTrue(control._focus_activation_armed)
+
+        consumed_second = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+        self.assertTrue(consumed_second)
+        self.assertEqual(len(fired), 2)
+        self.assertTrue(control._focus_activation_armed)
+
+        # If timer reset on second activation, arming is still active at this point.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS * 0.2)
+        self.assertTrue(control._focus_activation_armed)
+
+        # And eventually expires relative to the second activation.
+        self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS)
+        self.assertFalse(control._focus_activation_armed)
+
     def test_focus_keyboard_activation_invokes_click_once_per_key_event(self) -> None:
         fired = []
         control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=lambda: fired.append("hit")))
@@ -63,6 +91,23 @@ class ButtonControlRuntimeTests(unittest.TestCase):
 
         self.assertTrue(consumed)
         self.assertEqual(fired, ["hit"])
+
+    def test_keyboard_activation_invokes_control_before_visual_arm_starts(self) -> None:
+        observed_arm_states = []
+
+        def _on_click() -> None:
+            observed_arm_states.append(control._focus_activation_armed)
+
+        control = self.root.add(ButtonControl("btn", Rect(20, 20, 80, 30), "B", on_click=_on_click))
+        control.set_tab_index(0)
+        self.app.focus.set_focus(control)
+
+        consumed = self.app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_RETURN}))
+
+        self.assertTrue(consumed)
+        # Activation callback runs before the cosmetic armed visual begins.
+        self.assertEqual(observed_arm_states, [False])
+        self.assertTrue(control._focus_activation_armed)
 
     def test_keyboard_activation_fires_click_and_hint_remains_active(self) -> None:
         fired = []

@@ -38,7 +38,8 @@ class ToggleControl(UiNode):
         self.font_role = font_role
         self.hovered = False
         self._focus_activation_armed = False
-        self._visuals = None
+        self._visuals_off = None
+        self._visuals_on = None
         self._visual_key = None
 
     @property
@@ -113,9 +114,20 @@ class ToggleControl(UiNode):
         factory = theme.graphics_factory
         font_revision = factory.font_revision()
         visual_key = (self.style, self.text_on, self.text_off, self.font_role, self.rect.width, self.rect.height, font_revision)
-        if self._visuals is None or self._visual_key != visual_key:
+        if self._visuals_off is None or self._visuals_on is None or self._visual_key != visual_key:
             start = perf_counter()
-            self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect, font_role=self.font_role)
+            self._visuals_off = factory.build_interactive_visuals(
+                self.style,
+                self.text_off,
+                self.rect,
+                font_role=self.font_role,
+            )
+            self._visuals_on = factory.build_interactive_visuals(
+                self.style,
+                self.text_on,
+                self.rect,
+                font_role=self.font_role,
+            )
             self._visual_key = visual_key
             first_frame_profiler().record_once(
                 "control.first_draw",
@@ -123,11 +135,12 @@ class ToggleControl(UiNode):
                 (perf_counter() - start) * 1000.0,
                 detail=f"style={self.style} size={self.rect.width}x{self.rect.height}",
             )
+        visuals = self._visuals_on if self.pushed else self._visuals_off
         selected = factory.resolve_visual_state(
-            self._visuals,
+            visuals,
             visible=self.visible,
             enabled=self.enabled,
-            armed=self.pushed or self._focus_activation_armed,
+            armed=self._focus_activation_armed,
             hovered=self.hovered,
         )
         surface.blit(selected, self.rect)
