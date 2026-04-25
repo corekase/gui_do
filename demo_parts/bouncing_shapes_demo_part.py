@@ -9,8 +9,20 @@ from typing import Optional
 
 import pygame
 
-from gui.graphics import BUILT_IN_COLOURS
 from shared.part_lifecycle import ScreenPart
+
+
+DEMO_SHAPE_COLOURS = (
+    (220, 60, 60),
+    (220, 140, 60),
+    (220, 220, 60),
+    (60, 190, 100),
+    (60, 170, 220),
+    (120, 120, 230),
+    (190, 120, 220),
+    (235, 115, 170),
+)
+DEMO_BORDER_BASE_COLOUR = (0, 0, 0)
 
 
 @dataclass
@@ -104,13 +116,11 @@ class BouncingShapesBackdropFeature(ScreenPart):
         radius = self._rng.randint(12, 38)
         diameter = radius * 2
         sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        # Select a random color from the factory colors (excluding "none", "text", "full", and "highlight")
-        factory_colors = [c for name, c in BUILT_IN_COLOURS.items() if name not in ("none", "text", "full", "highlight")]
-        base_color = self._rng.choice(factory_colors)
+        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
         fill_alpha = self._rng.randint(150, 230)
         border_alpha = self._rng.randint(150, 230)
         fill_color = base_color + (fill_alpha,)
-        border_color = BUILT_IN_COLOURS["none"] + (border_alpha,)
+        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
         center = (radius, radius)
         pygame.draw.circle(sprite, border_color, center, radius)
         pygame.draw.circle(sprite, fill_color, center, max(1, radius - 2))
@@ -131,13 +141,11 @@ class BouncingShapesBackdropFeature(ScreenPart):
         radius = self._rng.randint(12, 38)
         diameter = radius * 2
         sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        # Select a random color from the factory colors (excluding "none", "text", "full", and "highlight")
-        factory_colors = [c for name, c in BUILT_IN_COLOURS.items() if name not in ("none", "text", "full", "highlight")]
-        base_color = self._rng.choice(factory_colors)
+        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
         fill_alpha = self._rng.randint(150, 230)
         border_alpha = self._rng.randint(150, 230)
         fill_color = base_color + (fill_alpha,)
-        border_color = BUILT_IN_COLOURS["none"] + (border_alpha,)
+        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
         pygame.draw.rect(sprite, fill_color, pygame.Rect(0, 0, diameter, diameter))
         pygame.draw.rect(sprite, border_color, pygame.Rect(0, 0, diameter, diameter), width=2)
         sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
@@ -159,13 +167,11 @@ class BouncingShapesBackdropFeature(ScreenPart):
         radius = self._rng.randint(12, 38)
         diameter = radius * 2
         sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        # Select a random color from the factory colors (excluding "none", "text", "full", and "highlight")
-        factory_colors = [c for name, c in BUILT_IN_COLOURS.items() if name not in ("none", "text", "full", "highlight")]
-        base_color = self._rng.choice(factory_colors)
+        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
         fill_alpha = self._rng.randint(150, 230)
         border_alpha = self._rng.randint(150, 230)
         fill_color = base_color + (fill_alpha,)
-        border_color = BUILT_IN_COLOURS["none"] + (border_alpha,)
+        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
 
         center_x = float(radius)
         center_y = float(radius)
@@ -198,13 +204,11 @@ class BouncingShapesBackdropFeature(ScreenPart):
         radius = self._rng.randint(12, 38)
         diameter = radius * 2
         sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        # Select a random color from the factory colors (excluding "none", "text", "full", and "highlight")
-        factory_colors = [c for name, c in BUILT_IN_COLOURS.items() if name not in ("none", "text", "full", "highlight")]
-        base_color = self._rng.choice(factory_colors)
+        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
         fill_alpha = self._rng.randint(150, 230)
         border_alpha = self._rng.randint(150, 230)
         fill_color = base_color + (fill_alpha,)
-        border_color = BUILT_IN_COLOURS["none"] + (border_alpha,)
+        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
 
         center_x = float(radius)
         center_y = float(radius)

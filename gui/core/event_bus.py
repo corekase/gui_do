@@ -4,6 +4,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from .telemetry import telemetry_collector
+
 
 EventHandler = Callable[[object], None]
 
@@ -49,9 +51,29 @@ class EventBus:
         return sum(len(subs) for subs in self._subscribers.values())
 
     def publish(self, topic: str, payload: object = None, *, scope: str | None = None) -> None:
-        for sub in list(self._subscribers.get(str(topic), ())):
-            if sub.scope is None or sub.scope == scope:
-                sub.handler(payload)
+        topic_name = str(topic)
+        collector = telemetry_collector()
+        with collector.span(
+            "event_bus",
+            "publish",
+            metadata={
+                "topic": topic_name,
+                "scope": "" if scope is None else str(scope),
+                "subscriber_count": len(self._subscribers.get(topic_name, ())),
+            },
+        ):
+            for sub in list(self._subscribers.get(topic_name, ())):
+                if sub.scope is None or sub.scope == scope:
+                    with collector.span(
+                        "event_bus",
+                        "publish_handler",
+                        metadata={
+                            "topic": topic_name,
+                            "scope": "" if scope is None else str(scope),
+                            "subscriber_scope": "" if sub.scope is None else str(sub.scope),
+                        },
+                    ):
+                        sub.handler(payload)
 
     def once(self, topic: str, handler: EventHandler, *, scope: str | None = None) -> Subscription:
         """Subscribe to *topic* and automatically unsubscribe after the first delivery.

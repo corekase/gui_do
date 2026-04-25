@@ -11,6 +11,8 @@ from queue import Empty, Queue
 from threading import Condition, RLock
 from typing import Any, Callable, Deque, Dict, Hashable, List, Optional, Set
 
+from .telemetry import telemetry_collector
+
 
 @dataclass
 class TaskEvent:
@@ -370,14 +372,28 @@ class TaskScheduler:
         self._failed_events.clear()
 
     def update(self) -> List[Hashable]:
-        with self._lock:
-            self._submit_ready_tasks()
-            finished = self._collect_finished_tasks()
-        self._drain_messages()
-        self._drain_failures()
-        self._dispatch_messages()
-        self._drain_failures()
-        return finished
+        collector = telemetry_collector()
+        with collector.span("task_scheduler", "update"):
+            with self._lock:
+                with collector.span("task_scheduler", "submit_ready_tasks"):
+                    self._submit_ready_tasks()
+                with collector.span("task_scheduler", "collect_finished_tasks"):
+                    finished = self._collect_finished_tasks()
+            with collector.span("task_scheduler", "drain_messages"):
+                self._drain_messages()
+            with collector.span("task_scheduler", "drain_failures"):
+                self._drain_failures()
+            with collector.span("task_scheduler", "dispatch_messages"):
+                self._dispatch_messages()
+            with collector.span("task_scheduler", "drain_failures"):
+                self._drain_failures()
+            collector.record_duration(
+                "task_scheduler",
+                "finished_count",
+                0.0,
+                metadata={"count": len(finished)},
+            )
+            return finished
 
     def _build_task_callable(self, task_id: Hashable, logic: Callable[..., Any], parameters: Any) -> Callable[[], Any]:
         def run() -> Any:
@@ -404,6 +420,8 @@ class TaskScheduler:
         self._incoming_failures.put(_TaskFailure(task_id=task_id, generation=generation, error=error))
 
     def _submit_ready_tasks(self) -> None:
+        collector = telemetry_collector()
+        submitted = 0
         while self._pending and len(self._running) < self._max_workers:
             task_id = self._pending.popleft()
             self._pending_set.discard(task_id)
@@ -415,8 +433,12 @@ class TaskScheduler:
                 lambda done_future, _task_id=task_id, _generation=task.generation: self._enqueue_completion(_task_id, _generation, done_future)
             )
             self._running.add(task_id)
+            submitted += 1
+        if submitted:
+            collector.record_duration("task_scheduler", "submitted_count", 0.0, metadata={"count": submitted})
 
     def _collect_finished_tasks(self) -> List[Hashable]:
+        collector = telemetry_collector()
         finished_task_ids: List[Hashable] = []
         completions: List[_TaskCompletion] = []
         while True:
@@ -441,6 +463,13 @@ class TaskScheduler:
                 self._enqueue_failure(task_id, completion.generation, f"{type(exc).__name__}: {exc}")
             finally:
                 self._tasks.pop(task_id, None)
+        if completions:
+            collector.record_duration(
+                "task_scheduler",
+                "completion_count",
+                0.0,
+                metadata={"count": len(completions), "finished": len(finished_task_ids)},
+            )
         return finished_task_ids
 
     def _drain_messages(self) -> None:
@@ -489,8 +518,14 @@ class TaskScheduler:
                 if self._task_generation.get(message.task_id) != message.generation:
                     self._decrement_message_count_locked(message.task_id)
                     continue
+            collector = telemetry_collector()
             try:
-                message.callback(message.payload)
+                with collector.span(
+                    "task_scheduler",
+                    "message_callback",
+                    metadata={"task_id": str(message.task_id)},
+                ):
+                    message.callback(message.payload)
             except Exception as exc:  # noqa: BLE001
                 self._enqueue_failure(
                     message.task_id,

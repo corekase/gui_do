@@ -53,6 +53,14 @@ The package exports the following symbols via `gui/__init__.py`:
 - `TaskEvent`
 - `TaskScheduler`
 - `Timers`
+- `TelemetryCollector`
+- `TelemetrySample`
+- `configure_telemetry`
+- `telemetry_collector`
+- `analyze_telemetry_records`
+- `analyze_telemetry_log_file`
+- `load_telemetry_log_file`
+- `render_telemetry_report`
 - `BuiltInGraphicsFactory`
 - `ColorTheme`
 

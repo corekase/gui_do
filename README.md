@@ -155,6 +155,88 @@ set GUI_DO_PROFILE_FIRST_OPEN=1
 python gui_do_demo.py
 ```
 
+### Runtime Telemetry and Performance Analyzer
+
+`gui_do` now includes a built-in telemetry system for GUI loop timing, scheduler throughput, part lifecycle execution, and part/event messaging hotspots.
+
+Default behavior:
+
+- telemetry capture is disabled
+- live analyzer is disabled
+- file logging is disabled
+
+Telemetry API (`from gui import ...`):
+
+- `configure_telemetry(...)`
+- `telemetry_collector()`
+- `TelemetryCollector`, `TelemetrySample`
+- `analyze_telemetry_records(...)`
+- `analyze_telemetry_log_file(...)`
+- `load_telemetry_log_file(...)`
+- `render_telemetry_report(...)`
+
+`GuiApplication` convenience helpers:
+
+- `app.configure_telemetry(...)`
+- `app.set_telemetry_system_enabled(system, enabled)`
+- `app.set_telemetry_point_enabled(system, point, enabled)`
+- `app.telemetry_summary(top_n=...)`
+- `app.write_telemetry_report(top_n=..., output_path=...)`
+
+#### Quick Telemetry Tutorial
+
+```python
+from gui import GuiApplication
+
+app = GuiApplication(screen)
+
+# 1) Turn telemetry on (still in-memory only)
+app.configure_telemetry(
+    enabled=True,
+    live_analysis_enabled=True,
+    file_logging_enabled=False,
+    min_duration_ms=0.0,
+)
+
+# 2) Narrow focus to one subsystem if needed
+app.set_telemetry_system_enabled("event_bus", False)
+app.set_telemetry_point_enabled("task_scheduler", "message_callback", True)
+
+# 3) Run your normal scenes and part interactions
+app.run(target_fps=60)
+
+# 4) Analyze live-captured samples
+summary = app.telemetry_summary(top_n=10)
+for hotspot in summary.hotspots[:3]:
+    print(hotspot.key, hotspot.total_ms, hotspot.p95_ms)
+
+# 5) Optional explicit report write (text)
+report_path = app.write_telemetry_report(top_n=12)
+print("report:", report_path)
+```
+
+Automatic file naming convention:
+
+- sample logs (JSONL): `gui_do_telemetry_YYYYMMDD_HHMMSS_samples.jsonl`
+- analyzer report (text): `gui_do_telemetry_YYYYMMDD_HHMMSS_report.txt`
+
+Files are generated in the project root by default. You can set a custom folder through `configure_telemetry(log_directory=...)`.
+
+Live analyzer shutdown behavior:
+
+- if telemetry + live analysis are enabled and samples exist, `GuiApplication.shutdown()` writes a high-level hotspot report automatically
+- if live analysis is disabled, no shutdown report is emitted unless requested via `write_telemetry_report(...)`
+
+Analyzer workflow for offline logs:
+
+```python
+from gui import analyze_telemetry_log_file
+from gui import render_telemetry_report
+
+analysis = analyze_telemetry_log_file("gui_do_telemetry_20260425_171200_samples.jsonl", top_n=20)
+print(render_telemetry_report(analysis, source="offline-log"))
+```
+
 ### Part Types: `Part`, `RoutedMessagePart`, `LogicPart`, and `ScreenPart`
 
 There are four part base classes in `shared.part_lifecycle`. Choosing between them depends on what the feature owns and how it runs.

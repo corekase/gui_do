@@ -48,6 +48,14 @@ from .core.invalidation import InvalidationTracker
 from .core.presentation_model import ObservableValue, PresentationModel
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
+from .core.telemetry import TelemetryCollector
+from .core.telemetry import TelemetrySample
+from .core.telemetry import configure_telemetry
+from .core.telemetry import telemetry_collector
+from .core.telemetry_analyzer import analyze_telemetry_log_file
+from .core.telemetry_analyzer import analyze_telemetry_records
+from .core.telemetry_analyzer import load_telemetry_log_file
+from .core.telemetry_analyzer import render_telemetry_report
 from .graphics.built_in_factory import BuiltInGraphicsFactory
 from .theme.color_theme import ColorTheme
 
@@ -91,6 +99,14 @@ __all__ = [
     "TaskEvent",
     "TaskScheduler",
     "Timers",
+    "TelemetryCollector",
+    "TelemetrySample",
+    "configure_telemetry",
+    "telemetry_collector",
+    "analyze_telemetry_records",
+    "analyze_telemetry_log_file",
+    "load_telemetry_log_file",
+    "render_telemetry_report",
     "BuiltInGraphicsFactory",
     "ColorTheme",
 ]

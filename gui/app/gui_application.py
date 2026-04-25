@@ -18,6 +18,8 @@ from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
 from ..core.renderer import Renderer
 from ..core.first_frame_profiler import first_frame_profiler
+from ..core.telemetry import configure_telemetry
+from ..core.telemetry import telemetry_collector
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
 from ..core.focus_visualizer import FocusVisualizer
@@ -154,18 +156,20 @@ class GuiApplication:
         return runtime["scene"]
 
     def switch_scene(self, name: str) -> None:
+        collector = telemetry_collector()
         if name not in self._scenes:
             raise ValueError(f"unknown scene: {name}")
-        self._active_scene_name = name
-        self._sync_scene_scheduler_activity(name)
-        runtime = self._scenes[name]
-        self.scene = runtime["scene"]
-        self.scheduler = runtime["scheduler"]
-        self.timers = runtime["timers"]
-        self.window_tiling = runtime["window_tiling"]
-        self.theme = runtime["theme"]
-        self.graphics_factory = runtime["graphics_factory"]
-        self._apply_screen_lifecycle_chain()
+        with collector.span("gui_application", "switch_scene", metadata={"scene_name": str(name)}):
+            self._active_scene_name = name
+            self._sync_scene_scheduler_activity(name)
+            runtime = self._scenes[name]
+            self.scene = runtime["scene"]
+            self.scheduler = runtime["scheduler"]
+            self.timers = runtime["timers"]
+            self.window_tiling = runtime["window_tiling"]
+            self.theme = runtime["theme"]
+            self.graphics_factory = runtime["graphics_factory"]
+            self._apply_screen_lifecycle_chain()
 
     @property
     def active_scene_name(self) -> str:
@@ -301,20 +305,22 @@ class GuiApplication:
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
-        if self._screen_lifecycle_active and self._screen_preamble is not None:
-            self._screen_preamble()
-        self.focus.update(dt_seconds)
-        runtime = self._scenes[self._active_scene_name]
-        runtime["timers"].update(dt_seconds)
-        runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
-        runtime["scheduler"].update()
-        self.parts.update_screen_parts(dt_seconds)
-        runtime["scene"].update(dt_seconds)
-        self.invalidation.invalidate_all()
-        self.focus.revalidate_focus(runtime["scene"])
-        if self._screen_lifecycle_active and self._screen_postamble is not None:
-            self._screen_postamble()
-        self.parts.update_parts()
+        collector = telemetry_collector()
+        with collector.span("gui_application", "update", metadata={"scene_name": self._active_scene_name}):
+            if self._screen_lifecycle_active and self._screen_preamble is not None:
+                self._screen_preamble()
+            self.focus.update(dt_seconds)
+            runtime = self._scenes[self._active_scene_name]
+            runtime["timers"].update(dt_seconds)
+            runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
+            runtime["scheduler"].update()
+            self.parts.update_screen_parts(dt_seconds)
+            runtime["scene"].update(dt_seconds)
+            self.invalidation.invalidate_all()
+            self.focus.revalidate_focus(runtime["scene"])
+            if self._screen_lifecycle_active and self._screen_postamble is not None:
+                self._screen_postamble()
+            self.parts.update_parts()
 
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
         dt_ms = max(0.0, float(dt_seconds)) * 1000.0
@@ -329,32 +335,37 @@ class GuiApplication:
 
     def shutdown(self) -> None:
         """Release runtime services."""
-        self.parts.shutdown_runtime()
-        seen = set()
-        for runtime in self._scenes.values():
-            scheduler = runtime["scheduler"]
-            marker = id(scheduler)
-            if marker in seen:
-                continue
-            seen.add(marker)
-            scheduler.shutdown()
+        collector = telemetry_collector()
+        with collector.span("gui_application", "shutdown"):
+            self.parts.shutdown_runtime()
+            seen = set()
+            for runtime in self._scenes.values():
+                scheduler = runtime["scheduler"]
+                marker = id(scheduler)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                scheduler.shutdown()
+        collector.shutdown()
 
     def process_event(self, event) -> bool:
         """Process one event through normalization and scene dispatch."""
-        gui_event = self.event_manager.to_gui_event(event, pointer_pos=self._logical_pointer_pos)
-        if gui_event.kind == EventType.QUIT:
-            self.running = False
-            return True
-        self.input_state.update_from_event(gui_event)
-        if gui_event.kind == EventType.MOUSE_WHEEL:
-            wheel_pos = pygame.mouse.get_pos()
-            self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
-            self.input_state.pointer_pos = self._logical_pointer_pos
-            gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
-        raw_pos = gui_event.pos
-        if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
-            self._pending_warp_target = None
-            self._pending_warp_ignore_budget = 0
+        collector = telemetry_collector()
+        with collector.span("gui_application", "process_event"):
+            gui_event = self.event_manager.to_gui_event(event, pointer_pos=self._logical_pointer_pos)
+            if gui_event.kind == EventType.QUIT:
+                self.running = False
+                return True
+            self.input_state.update_from_event(gui_event)
+            if gui_event.kind == EventType.MOUSE_WHEEL:
+                wheel_pos = pygame.mouse.get_pos()
+                self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
+                self.input_state.pointer_pos = self._logical_pointer_pos
+                gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
+            raw_pos = gui_event.pos
+            if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
+                self._pending_warp_target = None
+                self._pending_warp_ignore_budget = 0
 
         if (
             gui_event.kind == EventType.MOUSE_MOTION
@@ -425,7 +436,8 @@ class GuiApplication:
                 self.focus.set_focus(target)
 
         if self.keyboard.is_key_event(logical_event):
-            consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
+            with collector.span("gui_application", "route_key_event"):
+                consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
             if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
                 self.invalidation.invalidate_all()
                 return True
@@ -716,10 +728,12 @@ class GuiApplication:
 
     def draw(self) -> None:
         """Render one frame."""
-        first_frame_profiler().begin_frame(self._active_scene_name)
-        runtime = self._scenes[self._active_scene_name]
-        self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
-        self.parts.draw(self.surface, runtime["theme"])
+        collector = telemetry_collector()
+        with collector.span("gui_application", "draw", metadata={"scene_name": self._active_scene_name}):
+            first_frame_profiler().begin_frame(self._active_scene_name)
+            runtime = self._scenes[self._active_scene_name]
+            self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
+            self.parts.draw(self.surface, runtime["theme"])
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
         """Run one-time part prewarm hooks for a scene using an offscreen surface.
@@ -889,8 +903,10 @@ class GuiApplication:
 
     def build_parts(self, host) -> None:
         """Call optional build(host) on all registered parts."""
-        self.parts.build_parts(host)
-        self._prime_scene_window_tiling_registrations()
+        collector = telemetry_collector()
+        with collector.span("gui_application", "build_parts"):
+            self.parts.build_parts(host)
+            self._prime_scene_window_tiling_registrations()
 
     def _prime_scene_window_tiling_registrations(self) -> None:
         """Prime per-scene window registration order without forcing relayout."""
@@ -899,7 +915,42 @@ class GuiApplication:
 
     def bind_parts_runtime(self, host) -> None:
         """Call optional bind_runtime(host) on all registered parts."""
-        self.parts.bind_runtime(host)
+        with telemetry_collector().span("gui_application", "bind_parts_runtime"):
+            self.parts.bind_runtime(host)
+
+    def configure_telemetry(
+        self,
+        *,
+        enabled: Optional[bool] = None,
+        live_analysis_enabled: Optional[bool] = None,
+        file_logging_enabled: Optional[bool] = None,
+        min_duration_ms: Optional[float] = None,
+        log_directory: Optional[str] = None,
+    ):
+        """Configure process-wide telemetry collection and optional file logging."""
+        return configure_telemetry(
+            enabled=enabled,
+            live_analysis_enabled=live_analysis_enabled,
+            file_logging_enabled=file_logging_enabled,
+            min_duration_ms=min_duration_ms,
+            log_directory=log_directory,
+        )
+
+    def set_telemetry_system_enabled(self, system: str, enabled: bool) -> None:
+        """Enable or disable telemetry for one system namespace."""
+        telemetry_collector().set_system_enabled(system, enabled)
+
+    def set_telemetry_point_enabled(self, system: str, point: str, enabled: bool) -> None:
+        """Enable or disable telemetry for one specific telemetry point."""
+        telemetry_collector().set_point_enabled(system, point, enabled)
+
+    def telemetry_summary(self, *, top_n: int = 12):
+        """Return collated telemetry hotspot analysis for currently captured samples."""
+        return telemetry_collector().summary(top_n=top_n)
+
+    def write_telemetry_report(self, *, top_n: int = 12, output_path: Optional[str] = None) -> Optional[str]:
+        """Write a ranked telemetry report and return the generated file path."""
+        return telemetry_collector().write_report(top_n=top_n, output_path=output_path)
 
     def configure_parts_accessibility(self, host, tab_index_start: int) -> int:
         """Call optional configure_accessibility(host, index) on parts in order."""

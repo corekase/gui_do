@@ -3,10 +3,30 @@
 from __future__ import annotations
 
 from collections import OrderedDict, deque
+from contextlib import nullcontext
 from copy import deepcopy
 import inspect
 from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, Optional
+
+
+class _NoopTelemetryCollector:
+    def span(self, _system: str, _point: str, metadata: Optional[Dict[str, Any]] = None):
+        del metadata
+        return nullcontext()
+
+    def record_duration(self, _system: str, _point: str, _elapsed_ms: float, *, metadata: Optional[Dict[str, Any]] = None) -> None:
+        del metadata
+        return None
+
+
+def _telemetry_collector():
+    try:
+        from gui.core.telemetry import telemetry_collector
+
+        return telemetry_collector()
+    except Exception:
+        return _NoopTelemetryCollector()
 
 
 class Part:
@@ -336,14 +356,37 @@ class PartManager:
         return tuple(self._parts.values())
 
     def send_message(self, sender_name: str, target_part_name: str, message: Dict[str, Any]) -> bool:
+        collector = _telemetry_collector()
+        topic = ""
+        if isinstance(message, dict):
+            raw_topic = message.get("topic")
+            if isinstance(raw_topic, str):
+                topic = raw_topic
         target = self._parts.get(str(target_part_name))
         if target is None:
+            collector.record_duration(
+                "part_lifecycle",
+                "send_message_missing_target",
+                0.0,
+                metadata={"sender": str(sender_name), "target": str(target_part_name), "topic": topic},
+            )
             return False
-        payload = dict(message)
-        payload.setdefault("_from", str(sender_name))
-        payload.setdefault("_to", target.name)
-        target.enqueue_message(payload)
-        return True
+        with collector.span(
+            "part_lifecycle",
+            "send_message",
+            metadata={"sender": str(sender_name), "target": target.name, "topic": topic},
+        ):
+            payload = dict(message)
+            payload.setdefault("_from", str(sender_name))
+            payload.setdefault("_to", target.name)
+            target.enqueue_message(payload)
+            collector.record_duration(
+                "part_lifecycle",
+                "target_queue_depth",
+                0.0,
+                metadata={"target": target.name, "queue_depth": target.message_count()},
+            )
+            return True
 
     def register_runnable(self, part_name: str, runnable_name: str, runnable: Callable[..., Any]) -> None:
         self._require_part(part_name)
@@ -393,56 +436,68 @@ class PartManager:
         return runnable(*args, **kwargs)
 
     def handle_event(self, event, host=None) -> bool:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            if part.handle_event(host_obj, event):
-                return True
+            with collector.span("part_lifecycle", "part_handle_event", metadata={"part_name": part.name}):
+                if part.handle_event(host_obj, event):
+                    return True
         return False
 
     def update_parts(self, host=None) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            part.on_update(host_obj)
+            with collector.span("part_lifecycle", "part_update", metadata={"part_name": part.name}):
+                part.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            part.draw(host_obj, surface, theme)
+            with collector.span("part_lifecycle", "part_draw", metadata={"part_name": part.name}):
+                part.draw(host_obj, surface, theme)
 
     def handle_screen_event(self, event, host=None) -> bool:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not isinstance(part, ScreenPart):
                 continue
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            if part.handle_screen_event(host_obj, event):
-                return True
+            with collector.span("part_lifecycle", "screen_part_handle_event", metadata={"part_name": part.name}):
+                if part.handle_screen_event(host_obj, event):
+                    return True
         return False
 
     def update_screen_parts(self, dt_seconds: float, host=None) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not isinstance(part, ScreenPart):
                 continue
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            part.on_screen_update(host_obj, dt_seconds)
+            with collector.span("part_lifecycle", "screen_part_update", metadata={"part_name": part.name}):
+                part.on_screen_update(host_obj, dt_seconds)
 
     def draw_screen_parts(self, surface, theme, host=None) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             if not isinstance(part, ScreenPart):
                 continue
             if not self._is_part_active_for_scene(part):
                 continue
             host_obj = self._resolve_host(part.name, host)
-            part.draw_screen(host_obj, surface, theme)
+            with collector.span("part_lifecycle", "screen_part_draw", metadata={"part_name": part.name}):
+                part.draw_screen(host_obj, surface, theme)
 
     def prewarm_parts(self, host, surface, theme, *, scene_name: Optional[str] = None, force: bool = False) -> int:
         target_scene_name = str(self.app.active_scene_name if scene_name is None else scene_name)
@@ -478,30 +533,38 @@ class PartManager:
             return
 
     def build_parts(self, host) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             part.validate_host_for(host, "build")
-            part.build(host)
+            with collector.span("part_lifecycle", "part_build", metadata={"part_name": part.name}):
+                part.build(host)
 
     def bind_runtime(self, host) -> None:
+        collector = _telemetry_collector()
         for part in self._parts.values():
             part.validate_host_for(host, "bind_runtime")
-            part.bind_runtime(host)
+            with collector.span("part_lifecycle", "part_bind_runtime", metadata={"part_name": part.name}):
+                part.bind_runtime(host)
             self._runtime_bound_parts.add(part.name)
 
     def shutdown_runtime(self, host=None) -> None:
         """Call shutdown_runtime(host) for parts with active runtime bindings."""
+        collector = _telemetry_collector()
         for part in reversed(tuple(self._parts.values())):
             if part.name not in self._runtime_bound_parts:
                 continue
             host_obj = self._resolve_host(part.name, host)
-            part.shutdown_runtime(host_obj)
+            with collector.span("part_lifecycle", "part_shutdown_runtime", metadata={"part_name": part.name}):
+                part.shutdown_runtime(host_obj)
             self._runtime_bound_parts.discard(part.name)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
+        collector = _telemetry_collector()
         next_index = int(tab_index_start)
         for part in self._parts.values():
             part.validate_host_for(host, "configure_accessibility")
-            next_index = int(part.configure_accessibility(host, next_index))
+            with collector.span("part_lifecycle", "part_configure_accessibility", metadata={"part_name": part.name}):
+                next_index = int(part.configure_accessibility(host, next_index))
         return next_index
 
     def _require_part(self, part_name: str) -> Part:
