@@ -1788,9 +1788,8 @@ class ConsumerFeature(Feature):
                 print(f"Received data: {message['data']}")
 
         # Other queue introspection helpers:
-        # self.peek_message()        -> copy of next without removing
+        # self.peek_message()        -> next message without removing it
         # self.message_count()       -> int queue length
-        # self.message_queue_empty() -> bool
         # self.clear_messages()      -> discard all queued messages
 ```
 
@@ -2043,6 +2042,20 @@ name = app.get_feature_logic("consumer", alias="default") # provider name or Non
 app.send_feature_logic_message("consumer", {"command": "reset"})
 ```
 
+### Feature UI Type Registry
+
+Feature build routines can read the app's canonical GUI constructor classes from
+`FeatureUiTypes`. This avoids hard-coding imports in feature modules and keeps
+feature wiring portable.
+
+```python
+ui = app.read_feature_ui_types()
+
+win = host.root.add(ui.window_control_cls("main_win", Rect(10, 10, 320, 220), "Main"))
+label = win.add(ui.label_control_cls("status", Rect(12, 32, 200, 20), "Ready"))
+toggle = win.add(ui.toggle_control_cls("enabled", Rect(12, 60, 120, 24), "On", "Off"))
+```
+
 ### Node Search
 
 ```python
@@ -2082,6 +2095,10 @@ factory    = app.get_scene_graphics_factory("main")
 # Scene-level prewarm (runs Feature.prewarm for active scene Features + shared Features)
 warmed = app.prewarm_scene("control_showcase")
 warmed = app.prewarm_scene("control_showcase", force=True)
+
+# Advanced: render DirectFeature screen layer behind scene controls.
+# This is called by the built-in renderer each frame.
+app.draw_screen_features(app.surface, app.theme)
 
 # First-open profiling controls
 app.configure_first_frame_profiling(enabled=True, min_ms=0.25)

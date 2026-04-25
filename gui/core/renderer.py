@@ -16,7 +16,7 @@ class Renderer:
                 scaled = pygame.transform.smoothscale(theme.background_bitmap, surface.get_size())
                 surface.blit(scaled, (0, 0))
         if app is not None:
-            app.draw_screen_parts(surface, theme)
+            app.draw_screen_features(surface, theme)
         scene.draw(surface, theme, app=app)
         if app is None:
             return

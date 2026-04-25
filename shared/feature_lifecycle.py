@@ -202,9 +202,6 @@ class Feature:
     def has_messages(self) -> bool:
         return bool(self._message_queue)
 
-    def message_queue_empty(self) -> bool:
-        return not self._message_queue
-
     def message_count(self) -> int:
         return len(self._message_queue)
 

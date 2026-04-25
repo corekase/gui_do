@@ -117,15 +117,15 @@ class FocusManager:
         if not self._is_focus_window_context_valid(target):
             self.clear_focus()
             return False
-        # Any routed keyboard event re-arms the hint display and resets continuous-cycle
-        # mode so the next Tab applies the initiation gate (show hint before cycling).
+        # Any routed non-modifier keyboard event re-arms the hint display so the
+        # next traversal interaction starts from a visible focus context.
         # Modifier-only keys (Shift, Ctrl, Alt, Meta) are excluded: they are pressed
         # before combinations such as Shift+Tab and must not pre-arm _hint_visible,
         # which would cause the subsequent Tab to skip the traversal-initiation gate.
         if not self._is_modifier_key_event(event):
             self._hint_visible = True
             self._hint_elapsed_seconds = 0.0
-        if self._try_activate_focused_button(event, app, target):
+        if self._try_activate_focused_button(event, target):
             return True
         self._try_arm_focused_control_for_adjustment_event(event, target)
         return bool(target.handle_event(event, app))
@@ -152,7 +152,7 @@ class FocusManager:
         self._armed_focus_elapsed_seconds = 0.0
         target.end_focus_activation_visual()
 
-    def _try_activate_focused_button(self, event, app, target) -> bool:
+    def _try_activate_focused_button(self, event, target) -> bool:
         """Handle focused keyboard activation for push buttons in one place.
 
         Activation still occurs exactly once here. The control activation fires first,

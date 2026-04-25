@@ -63,7 +63,7 @@ class FeatureUiTypes:
 
 
 class GuiApplication:
-    """Application facade for scene, input, capture, and rendering."""
+    """Application runtime coordinator for scene, input, capture, and rendering."""
 
     _SCHEDULER_DISPATCH_BUDGET_FRACTION = 0.12
     _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.5
@@ -771,9 +771,9 @@ class GuiApplication:
             self.features.draw(self.surface, runtime["theme"])
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
-        """Run one-time part prewarm hooks for a scene using an offscreen surface.
+        """Run one-time feature prewarm hooks for a scene using an offscreen surface.
 
-        When ``host`` is omitted, each part's registered host context is used.
+        When ``host`` is omitted, each feature's registered host context is used.
         """
         target_scene = self._active_scene_name if scene_name is None else str(scene_name)
         runtime = self._scene_runtime(target_scene)
@@ -786,8 +786,8 @@ class GuiApplication:
             force=force,
         )
 
-    def draw_screen_parts(self, surface, theme) -> None:
-        """Render dedicated screen parts behind scene controls each frame."""
+    def draw_screen_features(self, surface, theme) -> None:
+        """Render dedicated screen features behind scene controls each frame."""
         self.features.draw_direct_features(surface, theme)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:

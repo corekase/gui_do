@@ -347,7 +347,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
         self.assertEqual(demo._mandel_feature.failure_preview_limit, 1)
         self.assertEqual(mandel_part.status_text, "Mandelbrot failure preview limit: 1 (at bound)")
 
-    def test_mandel_part_does_not_send_direct_cross_part_status_messages(self) -> None:
+    def test_mandel_feature_does_not_send_direct_cross_feature_status_messages(self) -> None:
         demo = SimpleNamespace()
 
         life = LifeSimulationFeature()
@@ -362,7 +362,7 @@ class GuiDoDemoPresentationModelTests(unittest.TestCase):
 
         mandel.on_update(demo)
 
-        self.assertTrue(life.message_queue_empty())
+        self.assertFalse(life.has_messages())
 
 
 if __name__ == "__main__":
