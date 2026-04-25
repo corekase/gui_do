@@ -337,7 +337,7 @@ Private and shared logic are both supported:
 `RoutedFeature` extends `Feature` with topic-based message dispatch, so you can avoid manual `pop_message()` loop inspection. It adds one override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
 
 ```python
-from shared.feature_lifecycle import RoutedFeature
+from shared.feature_lifecycle import RoutedFeature, FeatureMessage
 
 class StatusConsumerFeature(RoutedFeature):
     # Override MESSAGE_TOPIC_KEY if the sending party uses a different field name.
@@ -349,10 +349,10 @@ class StatusConsumerFeature(RoutedFeature):
             "reset":       self._on_reset,
         }
 
-    def _on_data_update(self, host, sender_name: str, payload: dict) -> None:
-        print(f"Data from {sender_name}: {payload['value']}")
+    def _on_data_update(self, host, message: FeatureMessage) -> None:
+        print(f"Data from {message.sender}: {message['value']}")
 
-    def _on_reset(self, host, sender_name: str, payload: dict) -> None:
+    def _on_reset(self, host, message: FeatureMessage) -> None:
         print("Reset requested")
 ```
 
@@ -645,6 +645,40 @@ node.set_accessibility(role="button", label="Save File")
 node.invalidate()           # mark as dirty for next draw pass
 ```
 
+### Button Control
+
+Clickable push button that fires a callback on activation.
+
+```python
+from gui import ButtonControl
+
+button = parent.add(
+    ButtonControl(
+        "button_id",
+        rect,
+        "Button Text",
+        on_click=lambda: print("clicked"),
+        style="box",      # built-in values: "box" (default), "radio", "round", "angle", "check"
+        font_role="body",  # must be a registered font role name
+    )
+)
+
+# Read interaction state
+button.hovered    # True when pointer is over the button
+button.pressed    # True while the mouse button is held down
+
+# Replace or remove the callback at runtime
+button.set_on_click(lambda: print("new callback"))
+button.set_on_click(None)   # remove callback
+
+# Update rendering properties
+button.text = "New Label"
+button.style = "round"
+button.font_role = "body"   # must be a registered role name; empty string raises ValueError
+```
+
+Keyboard: when the button has focus, `Space` or `Return` activates it (fires `on_click` and momentarily shows an armed visual).
+
 ### Toggle Control
 
 Use `ToggleControl` for two-state buttons that track a `pushed` boolean. It fires `on_toggle(pushed: bool)` each time the state changes.
@@ -894,10 +928,12 @@ window = parent.add(
         "window_id",
         rect,
         "Window Title",
-        preamble=None,  # Optional: lifecycle callback before event handling
-        event_handler=None,  # Optional: custom event handler
-        postamble=None,  # Optional: lifecycle callback after event handling
-        use_frame_backdrop=True,
+        titlebar_height=24,       # pixel height of the title bar
+        title_font_role="title",  # font role used for the title text
+        preamble=None,            # Optional: lifecycle callback before event handling
+        event_handler=None,       # Optional: custom event handler
+        postamble=None,           # Optional: lifecycle callback after event handling
+        use_frame_backdrop=True,  # True = built-in graphics factory backdrop; False = plain black backing
     )
 )
 
@@ -914,6 +950,8 @@ content_rect = window.content_rect()     # excludes title bar
 # Close (hide) the window
 window.close()
 ```
+
+See [Window and Layout Management](#window-and-layout-management) for the complete runtime API including `move_by`, `set_pristine`, and `restore_pristine`.
 
 ### Panel Control
 
@@ -1657,7 +1695,7 @@ for_topic = bus.subscriber_count("status_changed")
 Features communicate by sending dictionary messages to named target Features. The receiver drains its queue each frame.
 
 ```python
-from shared.feature_lifecycle import Feature
+from shared.feature_lifecycle import Feature, FeatureMessage
 
 class ProducerFeature(Feature):
     def on_update(self, host):
@@ -1667,13 +1705,13 @@ class ProducerFeature(Feature):
             "data": {"value": 42}
         })
 
-    class ConsumerFeature(Feature):
+class ConsumerFeature(Feature):
     def on_update(self, host):
         # Drain the incoming message queue
         while self.has_messages():
-            payload = self.pop_message()
-            if payload.get("topic") == "data_update":
-                print(f"Received data: {payload['data']}")
+            message = self.pop_message()
+            if message.topic == "data_update":
+                print(f"Received data: {message['data']}")
 
         # Other queue introspection helpers:
         # self.peek_message()        -> copy of next without removing
@@ -2104,6 +2142,14 @@ from gui import (
     TaskEvent,
     TaskScheduler,
     Timers,
+    TelemetryCollector,
+    TelemetrySample,
+    configure_telemetry,
+    telemetry_collector,
+    analyze_telemetry_records,
+    analyze_telemetry_log_file,
+    load_telemetry_log_file,
+    render_telemetry_report,
     BuiltInGraphicsFactory,
     ColorTheme,
 )
