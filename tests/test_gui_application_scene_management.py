@@ -13,7 +13,7 @@ from gui.controls.canvas_control import CanvasControl
 from gui.controls.slider_control import SliderControl
 from gui.controls.toggle_control import ToggleControl
 from gui.layout.layout_axis import LayoutAxis
-from shared.feature_lifecycle import LogicFeature, Feature, RoutedFeature
+from shared.feature_lifecycle import FeatureMessage, LogicFeature, Feature, RoutedFeature
 
 
 def _make_app() -> GuiApplication:
@@ -159,16 +159,16 @@ class _EchoLogicFeature(LogicFeature):
         super().__init__(name)
         self._counter = 0
 
-    def on_logic_command(self, _host, sender_name: str, command: str, payload: dict) -> None:
-        if command != "echo":
+    def on_logic_command(self, _host, message: FeatureMessage) -> None:
+        if message.command != "echo":
             return
         self._counter += 1
         self.send_message(
-            sender_name,
+            message.sender,
             {
                 "topic": "logic.echo",
                 "count": self._counter,
-                "value": payload.get("value"),
+                "value": message.get("value"),
             },
         )
 
@@ -181,7 +181,7 @@ class _LogicConsumerFeature(Feature):
     def on_update(self, _host) -> None:
         while self.has_messages():
             payload = self.pop_message()
-            if isinstance(payload, dict):
+            if payload is not None:
                 self.received_payloads.append(payload)
 
 
@@ -195,8 +195,8 @@ class _RoutedCaptureFeature(RoutedFeature):
             "alpha": self._on_alpha,
         }
 
-    def _on_alpha(self, _host, sender_name: str, payload: dict) -> None:
-        self.seen.append((sender_name, payload.get("value")))
+    def _on_alpha(self, _host, message: FeatureMessage) -> None:
+        self.seen.append((message.sender, message.get("value")))
 
 
 class PartApiTests(GuiApplicationSceneManagementSetup):
@@ -232,9 +232,10 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertTrue(sent)
         self.assertTrue(target.has_messages())
         msg = target.pop_message()
+        self.assertIsNotNone(msg)
         self.assertEqual("ping", msg["kind"])
-        self.assertEqual("sender", msg["_from"])
-        self.assertEqual("target", msg["_to"])
+        self.assertEqual("sender", msg.sender)
+        self.assertEqual("target", msg.target)
 
     def test_register_and_run_feature_runnable(self) -> None:
         self.app.register_feature(_StubFeature("worker"), host=self.app)
@@ -254,8 +255,9 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual("logic", self.app.get_feature_logic("consumer"))
         self.assertTrue(logic.has_messages())
         payload = logic.pop_message()
-        self.assertEqual("consumer", payload["_from"])
-        self.assertEqual("logic", payload["_to"])
+        self.assertIsNotNone(payload)
+        self.assertEqual("consumer", payload.sender)
+        self.assertEqual("logic", payload.target)
 
     def test_unbind_logic_returns_true_when_alias_present(self) -> None:
         consumer = _StubFeature("consumer")
@@ -286,8 +288,8 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual("logic.echo", payload["topic"])
         self.assertEqual("one", payload["value"])
         self.assertEqual(1, payload["count"])
-        self.assertEqual("logic", payload["_from"])
-        self.assertEqual("consumer", payload["_to"])
+        self.assertEqual("logic", payload.sender)
+        self.assertEqual("consumer", payload.target)
 
     def test_multiple_non_owner_consumers_can_share_one_logic_part(self) -> None:
         logic = _EchoLogicFeature("logic")
@@ -308,8 +310,8 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertEqual(1, len(consumer_b.received_payloads))
         self.assertEqual("a", consumer_a.received_payloads[0]["value"])
         self.assertEqual("b", consumer_b.received_payloads[0]["value"])
-        self.assertEqual("logic", consumer_a.received_payloads[0]["_from"])
-        self.assertEqual("logic", consumer_b.received_payloads[0]["_from"])
+        self.assertEqual("logic", consumer_a.received_payloads[0].sender)
+        self.assertEqual("logic", consumer_b.received_payloads[0].sender)
 
     def test_app_shutdown_shuts_down_bound_parts_once(self) -> None:
         feature = _StubFeature("alpha")

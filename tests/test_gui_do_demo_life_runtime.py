@@ -9,7 +9,7 @@ import pygame
 from gui.core.gui_event import EventType
 from gui_do_demo import GuiDoDemo
 from demo_features.life_demo_feature import LifeSimulationFeature, LifeSimulationLogicFeature
-from shared.feature_lifecycle import Feature, FeatureManager
+from shared.feature_lifecycle import Feature, FeatureManager, FeatureMessage
 
 
 class _Packet:
@@ -43,9 +43,9 @@ class _LifeLogicObserverPart(Feature):
     def on_update(self, _host) -> None:
         while self.has_messages():
             payload = self.pop_message()
-            if not isinstance(payload, dict):
+            if payload is None:
                 continue
-            if payload.get("topic") != "life_logic" or payload.get("event") != "state":
+            if payload.topic != "life_logic" or payload.event != "state":
                 continue
             life_cells = payload.get("life_cells")
             if isinstance(life_cells, set):
@@ -170,11 +170,17 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
     def test_update_life_message_drain_is_lifecycle_owned_when_registered(self) -> None:
         demo = self._make_demo_stub()
         demo._life_feature.life_cells = set()
-        demo._life_feature.enqueue_message({
-            "topic": "life_logic",
-            "event": "state",
-            "life_cells": {(2, 3)},
-        })
+        demo._life_feature.enqueue_message(
+            FeatureMessage.from_payload(
+                "test_sender",
+                demo._life_feature.name,
+                {
+                    "topic": "life_logic",
+                    "event": "state",
+                    "life_cells": {(2, 3)},
+                },
+            )
+        )
 
         demo._life_feature.update_life()
 
@@ -187,7 +193,9 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
     def test_life_part_ignores_unrelated_topics(self) -> None:
         demo = self._make_demo_stub()
         demo._life_feature.life_cells = {(7, 7)}
-        demo._life_feature.enqueue_message({"topic": "other", "status": "ignore"})
+        demo._life_feature.enqueue_message(
+            FeatureMessage.from_payload("test_sender", demo._life_feature.name, {"topic": "other", "status": "ignore"})
+        )
 
         demo._feature_manager.update_features(demo)
 

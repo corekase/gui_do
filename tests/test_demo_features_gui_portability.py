@@ -9,6 +9,7 @@ import pygame
 from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.mandelbrot_demo_feature import MANDEL_KIND_STATUS
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
+from shared.feature_lifecycle import FeatureMessage
 
 
 class _Packet:
@@ -156,7 +157,13 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         feature.toggle = SimpleNamespace(pushed=False)
         feature.zoom_slider = SimpleNamespace(value=5.0)
 
-        feature.enqueue_message({"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}})
+        feature.enqueue_message(
+            FeatureMessage.from_payload(
+                "test_sender",
+                feature.name,
+                {"topic": "life_logic", "event": "state", "life_cells": {(4, 5)}},
+            )
+        )
 
         feature.update_life()
         self.assertEqual(feature.life_cells, set())
@@ -173,7 +180,13 @@ class DemoPartsGuiPortabilityTests(unittest.TestCase):
         feature.zoom_slider = SimpleNamespace(value=5.0)
         feature.life_cells = {(9, 9)}
 
-        feature.enqueue_message({"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"})
+        feature.enqueue_message(
+            FeatureMessage.from_payload(
+                "test_sender",
+                feature.name,
+                {"topic": "demo.mandel.status", "kind": "status", "detail": "ignored"},
+            )
+        )
 
         feature.on_update(host)
 

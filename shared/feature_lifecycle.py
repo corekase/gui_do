@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections import OrderedDict, deque
 from contextlib import nullcontext
-from copy import deepcopy
+from dataclasses import dataclass
 import inspect
 from time import perf_counter
-from typing import Any, Callable, Deque, Dict, Iterable, Optional
+from typing import Any, Callable, Deque, Dict, Iterable, Mapping, Optional
 
 
 class _NoopTelemetryCollector:
@@ -25,6 +25,40 @@ def _telemetry_collector():
         return telemetry_collector()
     except ImportError:
         return _NoopTelemetryCollector()
+
+
+@dataclass(slots=True)
+class FeatureMessage:
+    """Structured message envelope used for inter-feature transport."""
+
+    sender: str
+    target: str
+    payload: Dict[str, Any]
+
+    @classmethod
+    def from_payload(cls, sender: str, target: str, payload: Mapping[str, Any]) -> "FeatureMessage":
+        return cls(sender=str(sender), target=str(target), payload=dict(payload))
+
+    def __getitem__(self, key: str) -> Any:
+        return self.payload[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.payload.get(key, default)
+
+    @property
+    def topic(self) -> Optional[str]:
+        value = self.payload.get("topic")
+        return value if isinstance(value, str) else None
+
+    @property
+    def command(self) -> Optional[str]:
+        value = self.payload.get("command")
+        return value if isinstance(value, str) else None
+
+    @property
+    def event(self) -> Optional[str]:
+        value = self.payload.get("event")
+        return value if isinstance(value, str) else None
 
 
 class Feature:
@@ -45,7 +79,7 @@ class Feature:
                 raise ValueError("scene_name must be a non-empty string when provided")
             self.scene_name = normalized_scene_name
         self._feature_manager = None
-        self._message_queue: Deque[Dict[str, Any]] = deque()
+        self._message_queue: Deque[FeatureMessage] = deque()
         self._font_roles: Dict[str, str] = {}
 
     def on_register(self, host) -> None:
@@ -78,7 +112,7 @@ class Feature:
     def prewarm(self, host, surface, theme) -> None:
         return None
 
-    def send_message(self, target_feature_name: str, message: Dict[str, Any]) -> bool:
+    def send_message(self, target_feature_name: str, message: Mapping[str, Any]) -> bool:
         if self._feature_manager is None:
             raise RuntimeError("feature must be registered before sending messages")
         return self._feature_manager.send_message(self.name, target_feature_name, message)
@@ -98,15 +132,15 @@ class Feature:
             raise RuntimeError("feature must be registered before querying logic feature names")
         return self._feature_manager.bound_logic_name(self.name, alias=alias)
 
-    def send_logic_message(self, message: Dict[str, Any], *, alias: str = "default") -> bool:
+    def send_logic_message(self, message: Mapping[str, Any], *, alias: str = "default") -> bool:
         if self._feature_manager is None:
             raise RuntimeError("feature must be registered before sending logic messages")
         return self._feature_manager.send_logic_message(self.name, message, alias=alias)
 
-    def enqueue_message(self, message: Dict[str, Any]) -> None:
-        if not isinstance(message, dict):
-            raise TypeError("feature messages must be dictionaries")
-        self._message_queue.append(deepcopy(message))
+    def enqueue_message(self, message: FeatureMessage) -> None:
+        if not isinstance(message, FeatureMessage):
+            raise TypeError("feature messages must be FeatureMessage instances")
+        self._message_queue.append(message)
 
     def has_messages(self) -> bool:
         return bool(self._message_queue)
@@ -117,12 +151,12 @@ class Feature:
     def message_count(self) -> int:
         return len(self._message_queue)
 
-    def peek_message(self) -> Optional[Dict[str, Any]]:
+    def peek_message(self) -> Optional[FeatureMessage]:
         if not self._message_queue:
             return None
-        return deepcopy(self._message_queue[0])
+        return self._message_queue[0]
 
-    def pop_message(self) -> Optional[Dict[str, Any]]:
+    def pop_message(self) -> Optional[FeatureMessage]:
         if not self._message_queue:
             return None
         return self._message_queue.popleft()
@@ -237,18 +271,17 @@ class DirectFeature(Feature):
 class LogicFeature(Feature):
     """Feature subtype for domain logic routed through message commands."""
 
-    def on_logic_command(self, host, sender_name: str, command: str, payload: Dict[str, Any]) -> None:
+    def on_logic_command(self, host, message: FeatureMessage) -> None:
         return None
 
     def on_update(self, host) -> None:
         while self.has_messages():
             message = self.pop_message()
-            if not isinstance(message, dict):
+            if message is None:
                 continue
-            command = message.get("command")
-            if not isinstance(command, str):
+            if message.command is None:
                 continue
-            self.on_logic_command(host, str(message.get("_from", "")), command, message)
+            self.on_logic_command(host, message)
 
 
 class RoutedFeature(Feature):
@@ -256,28 +289,30 @@ class RoutedFeature(Feature):
 
     MESSAGE_TOPIC_KEY = "topic"
 
-    def message_handlers(self) -> Dict[str, Callable[[Any, str, Dict[str, Any]], None]]:
+    def message_handlers(self) -> Dict[str, Callable[[Any, FeatureMessage], None]]:
         """Return mapping of topic names to message handlers."""
         return {}
 
-    def on_message(self, host, sender_name: str, topic: str, payload: Dict[str, Any]) -> None:
+    def on_message(self, host, message: FeatureMessage) -> None:
         """Handle one routed message; unresolved topics are ignored by default."""
         handlers = self.message_handlers()
-        handler = handlers.get(str(topic))
+        topic = message.topic
+        if topic is None:
+            return
+        handler = handlers.get(topic)
         if handler is None:
             return
-        handler(host, str(sender_name), payload)
+        handler(host, message)
 
     def on_update(self, host) -> None:
-        topic_key = str(self.MESSAGE_TOPIC_KEY)
         while self.has_messages():
             message = self.pop_message()
-            if not isinstance(message, dict):
+            if message is None:
                 continue
-            topic = message.get(topic_key)
-            if not isinstance(topic, str):
+            topic = message.topic
+            if topic is None:
                 continue
-            self.on_message(host, str(message.get("_from", "")), topic, message)
+            self.on_message(host, message)
 
 
 class FeatureManager:
@@ -358,13 +393,12 @@ class FeatureManager:
     def features(self) -> Iterable[Feature]:
         return tuple(self._features.values())
 
-    def send_message(self, sender_name: str, target_feature_name: str, message: Dict[str, Any]) -> bool:
+    def send_message(self, sender_name: str, target_feature_name: str, message: Mapping[str, Any]) -> bool:
         collector = _telemetry_collector()
-        topic = ""
-        if isinstance(message, dict):
-            raw_topic = message.get("topic")
-            if isinstance(raw_topic, str):
-                topic = raw_topic
+        if not isinstance(message, Mapping):
+            raise TypeError("feature messages must be mappings")
+        envelope = FeatureMessage.from_payload(str(sender_name), str(target_feature_name), message)
+        topic = envelope.topic or ""
         target = self._features.get(str(target_feature_name))
         if target is None:
             collector.record_duration(
@@ -379,10 +413,8 @@ class FeatureManager:
             "send_message",
             metadata={"sender": str(sender_name), "target": target.name, "topic": topic},
         ):
-            payload = dict(message)
-            payload.setdefault("_from", str(sender_name))
-            payload.setdefault("_to", target.name)
-            target.enqueue_message(payload)
+            envelope.target = target.name
+            target.enqueue_message(envelope)
             collector.record_duration(
                 "feature_lifecycle",
                 "target_queue_depth",
@@ -425,7 +457,7 @@ class FeatureManager:
         bucket = self._logic_bindings.get(str(consumer_feature_name), {})
         return bucket.get(alias_name)
 
-    def send_logic_message(self, consumer_feature_name: str, message: Dict[str, Any], *, alias: str = "default") -> bool:
+    def send_logic_message(self, consumer_feature_name: str, message: Mapping[str, Any], *, alias: str = "default") -> bool:
         provider_name = self.bound_logic_name(consumer_feature_name, alias=alias)
         if provider_name is None:
             return False

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import os
-import time
 from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 import inspect
 from queue import Empty, Queue
 from threading import Condition, RLock
+from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Hashable, List, Optional, Set
 
 from .telemetry import telemetry_collector
@@ -325,6 +325,9 @@ class TaskScheduler:
 
     def send_message(self, task_id: Hashable, payload: Any) -> None:
         self._validate_task_id(task_id)
+        send_start = perf_counter()
+        collector = telemetry_collector()
+        queued_count = 0
         with self._lock:
             while True:
                 task = self._tasks.get(task_id)
@@ -345,6 +348,12 @@ class TaskScheduler:
             self._task_message_counts[task_id] = self._task_message_counts.get(task_id, 0) + 1
             message = _TaskMessage(task_id=task_id, callback=task.message_method, payload=payload, generation=task.generation)
         self._incoming_messages.put(message)
+        collector.record_duration(
+            "task_scheduler",
+            "message_send_wait",
+            (perf_counter() - send_start) * 1000.0,
+            metadata={"task_id": str(task_id), "queued_before_send": queued_count},
+        )
 
     def pop_result(self, task_id: Hashable, default: Any = None) -> Any:
         return self._results.pop(task_id, default)
@@ -473,6 +482,7 @@ class TaskScheduler:
         return finished_task_ids
 
     def _drain_messages(self) -> None:
+        collector = telemetry_collector()
         drained: List[_TaskMessage] = []
         with self._lock:
             ingest_limit = self._message_ingest_limit
@@ -496,29 +506,35 @@ class TaskScheduler:
                     self._decrement_message_count_locked(message.task_id)
                     continue
                 self._task_messages.append(message)
+        collector.record_duration(
+            "task_scheduler",
+            "drained_message_count",
+            0.0,
+            metadata={"count": len(drained)},
+        )
 
     def _dispatch_messages(self) -> None:
-        dispatch_start = time.perf_counter()
+        collector = telemetry_collector()
+        dispatch_start = perf_counter()
         dispatched_count = 0
         while True:
+            message = None
             with self._lock:
                 if not self._task_messages:
-                    return
+                    break
                 if self._message_dispatch_limit is not None and dispatched_count >= self._message_dispatch_limit:
-                    return
+                    break
                 if (
                     self._message_dispatch_time_budget_ms is not None
                     and dispatched_count > 0
-                    and ((time.perf_counter() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
+                    and ((perf_counter() - dispatch_start) * 1000.0) >= self._message_dispatch_time_budget_ms
                 ):
-                    return
+                    break
                 message = self._task_messages.popleft()
-
-            with self._lock:
                 if self._task_generation.get(message.task_id) != message.generation:
                     self._decrement_message_count_locked(message.task_id)
                     continue
-            collector = telemetry_collector()
+
             try:
                 with collector.span(
                     "task_scheduler",
@@ -536,6 +552,13 @@ class TaskScheduler:
                 with self._lock:
                     self._decrement_message_count_locked(message.task_id)
             dispatched_count += 1
+        if dispatched_count:
+            collector.record_duration(
+                "task_scheduler",
+                "dispatched_message_count",
+                0.0,
+                metadata={"count": dispatched_count},
+            )
 
     def _drain_failures(self) -> None:
         while True:

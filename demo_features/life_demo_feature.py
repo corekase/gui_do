@@ -6,7 +6,7 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from shared.feature_lifecycle import LogicFeature, RoutedFeature
+from shared.feature_lifecycle import FeatureMessage, LogicFeature, RoutedFeature
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -60,7 +60,9 @@ class LifeSimulationLogicFeature(LogicFeature):
         super().__init__("life_simulation_logic", scene_name="main")
         self.life_cells: Set[Tuple[int, int]] = set(_LIFE_DEFAULT_SEED)
 
-    def on_logic_command(self, _host, sender_name: str, command: str, payload: Dict[str, Any]) -> None:
+    def on_logic_command(self, _host, message: FeatureMessage) -> None:
+        command = message.command
+        sender_name = message.sender
         if command == "reset":
             self.life_cells = set(_LIFE_DEFAULT_SEED)
             self._publish_state(sender_name)
@@ -70,7 +72,7 @@ class LifeSimulationLogicFeature(LogicFeature):
             self._publish_state(sender_name)
             return
         if command == "toggle_cell":
-            cell = payload.get("cell")
+            cell = message.get("cell")
             if isinstance(cell, tuple) and len(cell) == 2:
                 normalized_cell = (int(cell[0]), int(cell[1]))
                 if normalized_cell in self.life_cells:
@@ -175,10 +177,10 @@ class LifeSimulationFeature(RoutedFeature):
             _LIFE_LOGIC_TOPIC: self._handle_life_logic_message,
         }
 
-    def _handle_life_logic_message(self, _host, _sender_name: str, payload: Dict[str, Any]) -> None:
-        if payload.get(_KEY_EVENT) != _LIFE_EVENT_STATE:
+    def _handle_life_logic_message(self, _host, message: FeatureMessage) -> None:
+        if message.event != _LIFE_EVENT_STATE:
             return
-        cells = payload.get(_KEY_LIFE_CELLS)
+        cells = message.get(_KEY_LIFE_CELLS)
         normalized = self._normalize_life_cells_payload(cells)
         if normalized is not None:
             self.life_cells = normalized
