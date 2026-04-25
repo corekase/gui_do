@@ -165,8 +165,8 @@ class MandelbrotRenderFeature(RoutedFeature):
     LOGIC_ALIAS_CAN2 = "can2"
     LOGIC_ALIAS_CAN3 = "can3"
     LOGIC_ALIAS_CAN4 = "can4"
-    DEFAULT_MESSAGE_DISPATCH_LIMIT = 256
-    BUSY_MESSAGE_DISPATCH_LIMIT = 64
+    DEFAULT_MESSAGE_DISPATCH_LIMIT = 512
+    BUSY_MESSAGE_DISPATCH_LIMIT = 128
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")

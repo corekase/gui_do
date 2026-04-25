@@ -77,8 +77,8 @@ class TaskScheduler:
         self._task_messages: Deque[_TaskMessage] = deque()
         self._message_dispatch_limit: Optional[int] = None
         self._message_dispatch_time_budget_ms: Optional[float] = None
-        self._message_ingest_limit: Optional[int] = 256
-        self._max_queued_messages_per_task: Optional[int] = 512
+        self._message_ingest_limit: Optional[int] = 512
+        self._max_queued_messages_per_task: Optional[int] = 1024
 
         self._incoming_messages: Queue[_TaskMessage] = Queue()
         self._incoming_failures: Queue[_TaskFailure] = Queue()

@@ -145,7 +145,7 @@ class LifeSimulationFeature(RoutedFeature):
         """Bind scheduler/runtime services required after scene construction."""
         if self.scheduler is None:
             self.scheduler = host.app.get_scene_scheduler("main")
-        self.scheduler.set_message_dispatch_limit(256)
+        self.scheduler.set_message_dispatch_limit(512)
         if self.bound_logic_name(alias=self.LOGIC_ALIAS) is None:
             self.bind_logic("life_simulation_logic", alias=self.LOGIC_ALIAS)
         self._send_life_logic_command("snapshot")
