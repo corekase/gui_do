@@ -31,11 +31,11 @@ class GuiDoDemo:
 
         self.screen_rect = self.screen.get_rect()
         self.app = GuiApplication(self.screen)
-        self.app.configure_telemetry(
-            enabled=True,
-            live_analysis_enabled=True,
-            file_logging_enabled=False,
-        )
+        # self.app.configure_telemetry(
+        #     enabled=True,
+        #     live_analysis_enabled=True,
+        #     file_logging_enabled=False,
+        # )
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.create_scene("main")
         self.app.create_scene("control_showcase")
