@@ -170,7 +170,7 @@ class Scene:
                 return node
         return None
 
-    def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication" | None = None) -> None:
+    def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         for node in self.nodes:
             if not node.visible:
                 continue

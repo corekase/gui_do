@@ -354,7 +354,7 @@ class PanelControl(UiNode):
             if child.visible:
                 child.draw(surface, theme)
 
-    def draw_window_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication" | None = None) -> None:
+    def draw_window_phase(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         """Draw window children (window lifecycle layer), optionally with per-window hints."""
         for child in self.children:
             if not self._is_window_like(child):
