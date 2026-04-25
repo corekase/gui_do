@@ -1,10 +1,12 @@
 from typing import Callable, Optional
 from typing import TYPE_CHECKING
+from time import perf_counter
 
 import pygame
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent
+from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -109,8 +111,15 @@ class ToggleControl(UiNode):
         font_revision = factory.font_revision()
         visual_key = (self.style, self.text_on, self.text_off, self.font_role, self.rect.width, self.rect.height, font_revision)
         if self._visuals is None or self._visual_key != visual_key:
+            start = perf_counter()
             self._visuals = factory.build_toggle_visuals(self.style, self.text_on, self.text_off, self.rect, font_role=self.font_role)
             self._visual_key = visual_key
+            first_frame_profiler().record_once(
+                "control.first_draw",
+                f"toggle:{self.control_id}",
+                (perf_counter() - start) * 1000.0,
+                detail=f"style={self.style} size={self.rect.width}x{self.rect.height}",
+            )
         selected = factory.resolve_visual_state(
             self._visuals,
             visible=self.visible,

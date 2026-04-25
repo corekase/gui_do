@@ -510,5 +510,21 @@ class SceneSuspensionTests(GuiApplicationSceneManagementSetup):
         self.assertEqual(len(alt_ticks), 1)
 
 
+class ScenePrewarmTests(GuiApplicationSceneManagementSetup):
+
+    def test_prewarm_scene_delegates_to_part_manager(self) -> None:
+        self.app.create_scene("control_showcase")
+        with patch.object(self.app.parts, "prewarm_parts", return_value=3) as prewarm_mock:
+            warmed = self.app.prewarm_scene("control_showcase")
+
+        self.assertEqual(3, warmed)
+        prewarm_mock.assert_called_once()
+        args, kwargs = prewarm_mock.call_args
+        self.assertIsNone(args[0])
+        self.assertIs(args[2], self.app._scene_runtime("control_showcase")["theme"])
+        self.assertEqual(kwargs["scene_name"], "control_showcase")
+        self.assertFalse(kwargs["force"])
+
+
 if __name__ == "__main__":
     unittest.main()

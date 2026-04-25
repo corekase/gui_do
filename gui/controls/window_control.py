@@ -1,10 +1,12 @@
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
+from time import perf_counter
 import pygame
 from pygame import Rect
 from pygame.draw import rect as draw_rect
 
 from ..core.gui_event import GuiEvent
+from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
 from ..graphics import load_pristine_surface
 
@@ -266,6 +268,7 @@ class WindowControl(UiNode):
             self._draw_default_window_background(surface, theme, factory)
         chrome_key = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
         if self._chrome is None or self._chrome_size != chrome_key:
+            start = perf_counter()
             self._chrome = factory.build_window_chrome_visuals(
                 self.rect.width,
                 self.titlebar_height,
@@ -275,6 +278,12 @@ class WindowControl(UiNode):
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(18, chrome_height)
             self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
+            first_frame_profiler().record_once(
+                "control.first_draw",
+                f"window:{self.control_id}",
+                (perf_counter() - start) * 1000.0,
+                detail=f"title={self.title}",
+            )
         title_bitmap = self._chrome.title_bar_active if self.active else self._chrome.title_bar_inactive
         title_rect = self.title_bar_rect()
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)

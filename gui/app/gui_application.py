@@ -1,6 +1,8 @@
 import pygame
 from pathlib import Path
 from dataclasses import dataclass, replace
+import os
+from time import perf_counter
 from typing import Callable, Optional
 from pygame import Rect
 
@@ -15,6 +17,7 @@ from ..core.event_bus import EventBus
 from ..core.invalidation import InvalidationTracker
 from ..core.scene import Scene
 from ..core.renderer import Renderer
+from ..core.first_frame_profiler import first_frame_profiler
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
 from ..core.focus_visualizer import FocusVisualizer
@@ -126,6 +129,7 @@ class GuiApplication:
         self._screen_lifecycle_next_layer_id = 1
         self._screen_lifecycle_active = False
         self._init_cursor_system()
+        self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
 
     def add(self, node, scene_name: Optional[str] = None):
@@ -264,12 +268,36 @@ class GuiApplication:
             cached = runtime.get("screen_pristine_scaled")
             cached_size = runtime.get("screen_pristine_scaled_size", (0, 0))
             if cached is None or cached_size != target_size:
+                scale_start = perf_counter()
                 cached = pygame.transform.smoothscale(pristine, target_size)
+                scale_elapsed_ms = (perf_counter() - scale_start) * 1000.0
+                profiler = first_frame_profiler()
+                profiler.record_once(
+                    "pristine.scale",
+                    f"{self._active_scene_name}:{target_size[0]}x{target_size[1]}",
+                    scale_elapsed_ms,
+                    detail="restore_pristine smoothscale",
+                )
                 runtime["screen_pristine_scaled"] = cached
                 runtime["screen_pristine_scaled_size"] = target_size
             bitmap = cached
         target.blit(bitmap, (0, 0))
         return True
+
+    def configure_first_frame_profiling(
+        self,
+        *,
+        enabled: bool,
+        min_ms: float = 0.25,
+        logger: Optional[Callable[[str], None]] = None,
+    ) -> None:
+        """Enable or disable first-open hotspot profiling.
+
+        Profiling is low-overhead and records one-time expensive operations
+        such as font loads and first visual-surface generation.
+        """
+        profiler = first_frame_profiler()
+        profiler.configure(enabled=enabled, min_ms=min_ms, logger=logger)
 
     def update(self, dt_seconds: float) -> None:
         """Update current scene."""
@@ -688,9 +716,26 @@ class GuiApplication:
 
     def draw(self) -> None:
         """Render one frame."""
+        first_frame_profiler().begin_frame(self._active_scene_name)
         runtime = self._scenes[self._active_scene_name]
         self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
         self.parts.draw(self.surface, runtime["theme"])
+
+    def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
+        """Run one-time part prewarm hooks for a scene using an offscreen surface.
+
+        When ``host`` is omitted, each part's registered host context is used.
+        """
+        target_scene = self._active_scene_name if scene_name is None else str(scene_name)
+        runtime = self._scene_runtime(target_scene)
+        warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
+        return self.parts.prewarm_parts(
+            host,
+            warm_surface,
+            runtime["theme"],
+            scene_name=target_scene,
+            force=force,
+        )
 
     def draw_screen_parts(self, surface, theme) -> None:
         """Render dedicated screen parts behind scene controls each frame."""

@@ -12,6 +12,7 @@ class StylesShowcaseFeature(Part):
 
     HOST_REQUIREMENTS = {
         "build": ("app", "control_showcase_root"),
+        "prewarm": ("app",),
     }
 
     STYLE_NAMES = ("box", "radio", "round", "angle", "check")
@@ -251,3 +252,10 @@ class StylesShowcaseFeature(Part):
                 self._update_footer_label(footer_label, token)
                 break
         return False
+
+    def prewarm(self, host, surface, theme) -> None:
+        """Prime styles window and child control visuals before first window open."""
+        del host
+        if self.window is None:
+            return
+        self.window.draw(surface, theme)

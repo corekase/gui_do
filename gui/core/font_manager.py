@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Optional
 
 import pygame
+
+from .first_frame_profiler import first_frame_profiler
 
 
 @dataclass(frozen=True)
@@ -128,6 +131,7 @@ class FontManager:
         if not pygame.font.get_init():
             pygame.font.init()
 
+        load_start = perf_counter()
         loaded: Optional[pygame.font.Font] = None
         if role.file_path is not None:
             try:
@@ -143,6 +147,14 @@ class FontManager:
             loaded = pygame.font.Font(None, resolved_size)
 
         self._font_cache[cache_key] = loaded
+        elapsed_ms = (perf_counter() - load_start) * 1000.0
+        source = role.file_path or role.system_name or "pygame-default"
+        first_frame_profiler().record_once(
+            "font.load",
+            f"{role.name}:{resolved_size}",
+            elapsed_ms,
+            detail=f"source={source}",
+        )
         return loaded
 
     def font_instance(self, role_name: str, *, size: Optional[int] = None) -> _FontInstance:
@@ -152,8 +164,15 @@ class FontManager:
         return _FontInstance(role=role, font=font, size=resolved_size)
 
     def render_text(self, text: str, color, *, role_name: str, size: Optional[int] = None) -> pygame.Surface:
+        timer = first_frame_profiler().time_once(
+            "text.render",
+            f"{role_name}:{size if size is not None else 'default'}",
+            detail=f"shadow=False chars={len(str(text))}",
+        )
         font = self.get_font(role_name, size=size)
-        return font.render(str(text), True, color)
+        rendered = font.render(str(text), True, color)
+        timer()
+        return rendered
 
     def render_text_with_shadow(
         self,
@@ -165,6 +184,11 @@ class FontManager:
         size: Optional[int] = None,
         shadow_offset: tuple[int, int] = (1, 1),
     ) -> pygame.Surface:
+        timer = first_frame_profiler().time_once(
+            "text.render",
+            f"{role_name}:{size if size is not None else 'default'}:shadow",
+            detail=f"shadow=True chars={len(str(text))}",
+        )
         font = self.get_font(role_name, size=size)
         text_bitmap = font.render(str(text), True, color)
         shadow_bitmap = font.render(str(text), True, shadow_color)
@@ -179,6 +203,7 @@ class FontManager:
         )
         out.blit(shadow_bitmap, (max(0, offset_x), max(0, offset_y)))
         out.blit(text_bitmap, (0, 0))
+        timer()
         return out
 
     def _resolve_role(self, role_name: str) -> _FontRole:

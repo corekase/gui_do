@@ -89,6 +89,7 @@ class GuiDoDemo:
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
         self.app.bind_parts_runtime(self)
+        self.app.prewarm_scene("control_showcase")
 
         base_controls = [
             self.exit_button,

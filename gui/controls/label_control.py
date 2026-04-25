@@ -1,6 +1,8 @@
 from pygame import Rect
 from typing import TYPE_CHECKING, Optional
+from time import perf_counter
 
+from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
@@ -84,10 +86,17 @@ class LabelControl(UiNode):
         font_revision = theme.fonts.revision
         render_key = (self._text, self._font_role, self._font_size, colour, font_revision)
         if self._render_key != render_key:
+            start = perf_counter()
             self._rendered_surface = theme.render_text(
                 self._text, role=self._font_role, size=self._font_size, color=colour, shadow=True
             )
             self._render_key = render_key
+            first_frame_profiler().record_once(
+                "control.first_draw",
+                f"label:{self.control_id}",
+                (perf_counter() - start) * 1000.0,
+                detail=f"role={self._font_role} size={self._font_size}",
+            )
         rendered = self._rendered_surface
         rw, rh = rendered.get_size()
         y = self.rect.top + max(0, (self.rect.height - rh) // 2)

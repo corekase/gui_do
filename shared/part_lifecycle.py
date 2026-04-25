@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict, deque
 from copy import deepcopy
 import inspect
+from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, Optional
 
 
@@ -54,6 +55,9 @@ class Part:
         return None
 
     def draw(self, host, surface, theme) -> None:
+        return None
+
+    def prewarm(self, host, surface, theme) -> None:
         return None
 
     def send_message(self, target_part_name: str, message: Dict[str, Any]) -> bool:
@@ -271,6 +275,7 @@ class PartManager:
         "draw_screen",
         "on_logic_command",
         "on_message",
+        "prewarm",
     )
 
     def __init__(self, app) -> None:
@@ -280,6 +285,7 @@ class PartManager:
         self._runnables: Dict[str, Dict[str, Callable[..., Any]]] = {}
         self._runtime_bound_parts: set[str] = set()
         self._logic_bindings: Dict[str, Dict[str, str]] = {}
+        self._prewarmed_parts: set[tuple[str, str]] = set()
 
     def register(self, part: Part, host=None) -> Part:
         if not isinstance(part, Part):
@@ -438,6 +444,39 @@ class PartManager:
             host_obj = self._resolve_host(part.name, host)
             part.draw_screen(host_obj, surface, theme)
 
+    def prewarm_parts(self, host, surface, theme, *, scene_name: Optional[str] = None, force: bool = False) -> int:
+        target_scene_name = str(self.app.active_scene_name if scene_name is None else scene_name)
+        warmed = 0
+        for part in self._parts.values():
+            if not self._is_part_active_for_scene(part, scene_name=target_scene_name):
+                continue
+            cache_key = (part.name, target_scene_name)
+            if cache_key in self._prewarmed_parts and not force:
+                continue
+            host_obj = self._resolve_host(part.name, host)
+            part.validate_host_for(host_obj, "prewarm")
+            start = perf_counter()
+            part.prewarm(host_obj, surface, theme)
+            elapsed_ms = (perf_counter() - start) * 1000.0
+            self._record_prewarm_sample(target_scene_name, part.name, elapsed_ms)
+            self._prewarmed_parts.add(cache_key)
+            warmed += 1
+        return warmed
+
+    @staticmethod
+    def _record_prewarm_sample(scene_name: str, part_name: str, elapsed_ms: float) -> None:
+        try:
+            from gui.core.first_frame_profiler import first_frame_profiler
+
+            first_frame_profiler().record_once(
+                "part.prewarm",
+                f"{scene_name}:{part_name}",
+                elapsed_ms,
+                detail="part prewarm hook",
+            )
+        except Exception:
+            return
+
     def build_parts(self, host) -> None:
         for part in self._parts.values():
             part.validate_host_for(host, "build")
@@ -476,11 +515,12 @@ class PartManager:
             return override_host
         return self._part_hosts.get(part_name, self.app)
 
-    def _is_part_active_for_scene(self, part: Part) -> bool:
+    def _is_part_active_for_scene(self, part: Part, *, scene_name: Optional[str] = None) -> bool:
+        target_scene_name = self.app.active_scene_name if scene_name is None else scene_name
         scene_name = part.scene_name
         if scene_name is None:
             return True
-        return str(scene_name) == str(self.app.active_scene_name)
+        return str(scene_name) == str(target_scene_name)
 
     @classmethod
     def _validate_host_parameter_contract(cls, part: Part) -> None:

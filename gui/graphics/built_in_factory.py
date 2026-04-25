@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from math import cos, radians, sin
+from time import perf_counter
 from typing import Optional, Tuple
 
 import pygame
@@ -12,6 +13,7 @@ from pygame.draw import circle, line, polygon, rect as draw_rect
 from pygame.surfarray import blit_array
 from pygame.transform import rotate, smoothscale
 
+from ..core.first_frame_profiler import first_frame_profiler
 from .built_in_definitions import BUILT_IN_COLOURS, draw_box_bitmap, draw_frame_bitmap
 
 
@@ -227,6 +229,7 @@ class BuiltInGraphicsFactory:
         return self._draw_radio_style_surface(text, rect, col1, col2, font_role=font_role, highlight=highlight)
 
     def build_interactive_visuals(self, style: str, text: str, rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
+        start = perf_counter()
         style_key = (style or "box").lower()
         if style_key == "radio":
             idle = self._draw_radio_style_surface(text, rect, BUILT_IN_COLOURS["light"], BUILT_IN_COLOURS["dark"], font_role=font_role, highlight=False)
@@ -252,12 +255,25 @@ class BuiltInGraphicsFactory:
         disabled = self.build_disabled_bitmap(idle)
         disabled_armed = self.build_disabled_bitmap(armed)
         hidden = self.build_hidden_bitmap((idle.get_width(), idle.get_height()))
+        first_frame_profiler().record_once(
+            "visual.interactive",
+            f"{style_key}:{font_role}:{rect.width}x{rect.height}:{text}",
+            (perf_counter() - start) * 1000.0,
+            detail="build_interactive_visuals",
+        )
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
     def build_toggle_visuals(self, style: str, pushed_text: str, raised_text: Optional[str], rect: Rect, *, font_role: str = "body") -> InteractiveVisuals:
+        start = perf_counter()
         raised = pushed_text if raised_text is None else raised_text
         idle_set = self.build_interactive_visuals(style, raised, rect, font_role=font_role)
         armed_set = self.build_interactive_visuals(style, pushed_text, rect, font_role=font_role)
+        first_frame_profiler().record_once(
+            "visual.toggle",
+            f"{(style or 'box').lower()}:{font_role}:{rect.width}x{rect.height}:{raised}->{pushed_text}",
+            (perf_counter() - start) * 1000.0,
+            detail="build_toggle_visuals",
+        )
         return InteractiveVisuals(
             idle=idle_set.idle,
             hover=idle_set.hover,
@@ -269,6 +285,7 @@ class BuiltInGraphicsFactory:
         )
 
     def build_frame_visuals(self, rect: Rect) -> InteractiveVisuals:
+        start = perf_counter()
         width, height = rect.size
         idle = Surface((width, height)).convert()
         hover = Surface((width, height)).convert()
@@ -279,6 +296,12 @@ class BuiltInGraphicsFactory:
         disabled = self.build_disabled_bitmap(idle)
         disabled_armed = self.build_disabled_bitmap(armed)
         hidden = self.build_hidden_bitmap((width, height))
+        first_frame_profiler().record_once(
+            "visual.frame",
+            f"{width}x{height}",
+            (perf_counter() - start) * 1000.0,
+            detail="build_frame_visuals",
+        )
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
     def draw_radio_bitmap(self, size: int, col1, col2) -> Surface:
@@ -311,6 +334,7 @@ class BuiltInGraphicsFactory:
         return surface
 
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str, *, title_font_role: str = "title") -> WindowChromeVisuals:
+        start = perf_counter()
         title_font = self.fonts.get_font(title_font_role)
         font_based_height = max(18, title_font.get_linesize() + 8)
         chrome_height = max(2, font_based_height)
@@ -346,6 +370,13 @@ class BuiltInGraphicsFactory:
         active.blit(active_text, (5, active_y))
 
         lower = self.draw_window_lower_widget_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"])
+
+        first_frame_profiler().record_once(
+            "visual.window_chrome",
+            f"{title_font_role}:{width}x{chrome_height}:{title}",
+            (perf_counter() - start) * 1000.0,
+            detail="build_window_chrome_visuals",
+        )
 
         return WindowChromeVisuals(title_bar_inactive=inactive, title_bar_active=active, lower_widget=lower)
 

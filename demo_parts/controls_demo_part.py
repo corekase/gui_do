@@ -16,6 +16,7 @@ class ControlsShowcasePart(Part):
         "build": ("app", "control_showcase_root"),
         "configure_accessibility": ("app",),
         "on_update": ("app",),
+        "prewarm": ("app",),
     }
 
     # Section layout constants
@@ -184,6 +185,23 @@ class ControlsShowcasePart(Part):
             return
         host.app.focus.set_focus(target)
         self._pending_initial_focus = False
+
+    def prewarm(self, host, surface, theme) -> None:
+        """Pre-generate first-draw visuals and text surfaces offscreen."""
+        controls = [
+            *self.enabled_controls,
+            *self.disabled_controls,
+            *self.enabled_control_labels,
+            *self.disabled_control_labels,
+        ]
+        if self.enabled_title is not None:
+            controls.append(self.enabled_title)
+        if self.disabled_title is not None:
+            controls.append(self.disabled_title)
+        for control in controls:
+            if control is None:
+                continue
+            control.draw(surface, theme)
 
     def _default_part_rect(self, host) -> Rect:
         """Compute the showcase rect from host screen bounds for encapsulated layout."""
