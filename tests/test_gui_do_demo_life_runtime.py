@@ -67,9 +67,7 @@ class GuiDoDemoLifeRuntimeTests(unittest.TestCase):
             active_scene_name="main",
         )
         demo._feature_manager = FeatureManager(demo.app)
-        life_logic_part = LifeSimulationLogicFeature()
-        demo._feature_manager.register(life_logic_part, host=demo)
-        # Create the life Feature and configure it
+        # Registering LifeSimulationFeature auto-registers LifeSimulationLogicFeature
         life_part = LifeSimulationFeature()
         life_part.life_cells = set()
         life_part.life_origin = [0.0, 0.0]

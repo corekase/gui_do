@@ -458,11 +458,14 @@ class FeatureManager:
             )
         self._validate_host_contract(feature)
         feature._feature_manager = self
-        self._features[feature.name] = feature
         host_obj = self.app if host is None else host
+        # Call on_register before inserting into _features so that any companion
+        # features registered inside on_register appear before this feature in
+        # iteration order (e.g. for correct message-passing in update_features).
+        feature.on_register(host_obj)
+        self._features[feature.name] = feature
         self._feature_hosts[feature.name] = host_obj
         self._runtime_bound.discard(feature.name)
-        feature.on_register(host_obj)
         return feature
 
     def unregister(self, name: str, host=None) -> bool:

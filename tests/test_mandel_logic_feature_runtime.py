@@ -104,11 +104,7 @@ class MandelLogicFeatureRuntimeTests(unittest.TestCase):
         host = SimpleNamespace(app=app)
         manager = FeatureManager(app)
 
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_primary"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can1"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can2"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can3"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can4"), host=host)
+        # Registering MandelbrotRenderFeature auto-registers all 5 logic features
         render = MandelbrotRenderFeature()
         manager.register(render, host=host)
 
@@ -136,11 +132,7 @@ class MandelLogicFeatureRuntimeTests(unittest.TestCase):
         host = SimpleNamespace(app=app)
         manager = FeatureManager(app)
 
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_primary"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can1"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can2"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can3"), host=host)
-        manager.register(MandelbrotLogicFeature("mandelbrot_logic_can4"), host=host)
+        # Registering MandelbrotRenderFeature auto-registers all 5 logic features
         render = MandelbrotRenderFeature()
         manager.register(render, host=host)
 

@@ -3,9 +3,7 @@ from types import SimpleNamespace
 
 from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
 from demo_features.life_demo_feature import LifeSimulationFeature
-from demo_features.life_demo_feature import LifeSimulationLogicFeature
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
-from demo_features.mandelbrot_demo_feature import MandelbrotLogicFeature
 from demo_features.styles_demo_feature import StylesShowcaseFeature
 from shared.feature_lifecycle import Feature, FeatureManager
 
@@ -66,9 +64,7 @@ class DemoPartsHostContractTests(unittest.TestCase):
             BouncingShapesBackdropFeature(),
             StylesShowcaseFeature(),
             LifeSimulationFeature(),
-            LifeSimulationLogicFeature(),
             MandelbrotRenderFeature(),
-            MandelbrotLogicFeature(),
         )
 
         for feature in parts:

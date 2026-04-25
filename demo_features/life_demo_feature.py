@@ -107,6 +107,7 @@ class LifeSimulationFeature(RoutedFeature):
 
     def __init__(self) -> None:
         super().__init__("life_simulation", scene_name="main")
+        self._logic: LifeSimulationLogicFeature | None = None
         self.life_cells: Set[Tuple[int, int]] = set()
         self.life_origin = [0.0, 0.0]
         self.life_cell_size = 12
@@ -119,6 +120,12 @@ class LifeSimulationFeature(RoutedFeature):
         self.reset_button = None
         self.toggle = None
         self.zoom_slider = None
+
+    def on_register(self, host) -> None:
+        """Auto-register the companion logic feature when this feature is registered."""
+        logic = LifeSimulationLogicFeature()
+        self._logic = logic
+        self._feature_manager.register(logic, host)
 
     def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""

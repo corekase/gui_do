@@ -196,6 +196,17 @@ class MandelbrotRenderFeature(RoutedFeature):
             "can4": self.LOGIC_ALIAS_CAN4,
         }
 
+    def on_register(self, host) -> None:
+        """Auto-register all companion logic features when this feature is registered."""
+        for name in (
+            _MANDEL_LOGIC_PRIMARY,
+            _MANDEL_LOGIC_CAN1,
+            _MANDEL_LOGIC_CAN2,
+            _MANDEL_LOGIC_CAN3,
+            _MANDEL_LOGIC_CAN4,
+        ):
+            self._feature_manager.register(MandelbrotLogicFeature(name), host)
+
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
         ui = host.app.read_feature_ui_types()
