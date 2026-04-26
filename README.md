@@ -79,9 +79,8 @@ Working directory note:
 
 - The wrapper scripts under `scripts/` can be run from any current working directory because they
     resolve paths from their own file location.
-- The direct `python scripts/bootstrap_new_project.py ...` examples below assume you are in the
-    project root directory.
-- If you are not in project root, run the script by absolute/relative path to that file.
+- The direct `python scripts/bootstrap_new_project.py ...` examples below use `scripts/` as a
+    relative path, which requires your current working directory to be the project root.
 
 1. Run the bootstrap wrapper (sync + scaffold + verification):
 
