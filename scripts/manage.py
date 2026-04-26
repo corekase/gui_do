@@ -19,17 +19,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-DEMO_TEST_FILES = (
-    "tests/test_bouncing_shapes_demo_feature.py",
-    "tests/test_controls_demo_feature.py",
-    "tests/test_demo_features_gui_portability.py",
-    "tests/test_feature_lifecycle_host_parameter_contracts.py",
-    "tests/test_gui_do_demo_life_runtime.py",
-    "tests/test_gui_do_demo_presentation_model.py",
-    "tests/test_mandel_event_schema_exports.py",
-    "tests/test_mandel_logic_feature_runtime.py",
-    "tests/test_styles_demo_feature.py",
-)
+DEMO_TEST_DISCOVERY_RULE = "any test file in tests/ that imports from demo_features"
 
 DEFAULT_SCAFFOLD_FILE = "myapp.py"
 DEFAULT_SCAFFOLD_PACKAGE = "features"
@@ -51,7 +41,21 @@ SYNC_FILES = (
 
 CORE_PACKAGES = ("gui_do",)
 
-DEMO_TEST_NAMES = tuple(Path(path).name for path in DEMO_TEST_FILES)
+
+def _find_demo_test_files(root: Path) -> list[Path]:
+    """Return all test files in root/tests/ that import from demo_features."""
+    tests_dir = root / "tests"
+    if not tests_dir.is_dir():
+        return []
+    results = []
+    for test_file in sorted(tests_dir.glob("test_*.py")):
+        try:
+            text = test_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if re.search(r"^(?:from|import) demo_features\b", text, re.MULTILINE):
+            results.append(test_file)
+    return results
 
 
 def _replace_optional(text: str, old: str, new: str) -> tuple[str, bool]:
@@ -118,14 +122,13 @@ def _check_package_collisions(target: Path) -> tuple[list[str], list[str]]:
 
 
 def _check_demo_test_conflicts(target: Path) -> tuple[list[str], list[str]]:
-    tests_dir = target / "tests"
+    """Identify demo test files in the target that would be deleted by update+apply."""
     conflicts = []
     messages = []
-    for name in DEMO_TEST_NAMES:
-        existing = tests_dir / name
-        if existing.exists():
-            conflicts.append(str(existing.relative_to(target)))
-            messages.append(f"  CONFLICT: {existing.relative_to(target)}")
+    for test_file in _find_demo_test_files(target):
+        rel = str(test_file.relative_to(target))
+        conflicts.append(rel)
+        messages.append(f"  CONFLICT: {rel}")
     return conflicts, messages
 
 
@@ -349,8 +352,8 @@ def _sync_core_only(
 
     _delete_path(root / "gui_do_demo.py", apply)
     _delete_path(root / "demo_features", apply)
-    for rel_path in DEMO_TEST_FILES:
-        _delete_path(root / rel_path, apply)
+    for test_file in _find_demo_test_files(root):
+        _delete_path(test_file, apply)
     print("[bootstrap] removed demo entrypoint, demo_features package, and demo-specific tests")
 
     if apply:

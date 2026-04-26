@@ -2,6 +2,8 @@
 
 DEMO_CONTRACTS_ENABLED = True
 
+DEMO_TEST_DISCOVERY_RULE = "any test file in tests/ that imports from demo_features"
+
 CORE_CONTRACT_TEST_MODULES = (
     "tests.test_boundary_contracts",
     "tests.test_public_api_exports",
