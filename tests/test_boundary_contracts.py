@@ -3,12 +3,17 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.contract_test_catalog import DEMO_CONTRACTS_ENABLED
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
 
 class BoundaryContractsTests(unittest.TestCase):
+    def _require_demo_contracts(self) -> None:
+        if not DEMO_CONTRACTS_ENABLED:
+            self.skipTest("demo contracts disabled")
+
     def _parse_python_file(self, py_file: Path) -> ast.AST:
         text = py_file.read_text(encoding="utf-8")
         try:
@@ -59,6 +64,9 @@ class BoundaryContractsTests(unittest.TestCase):
     def test_demo_features_does_not_depend_on_gui(self) -> None:
         root = Path(__file__).resolve().parents[1]
         demo_features_root = root / "demo_features"
+        if not demo_features_root.exists():
+            self.assertFalse(DEMO_CONTRACTS_ENABLED)
+            return
         offenders = self._collect_import_offenders(root, demo_features_root, ["gui"])
 
         self.assertEqual(offenders, [], f"demo_features must remain gui-independent; found: {offenders}")
@@ -73,6 +81,7 @@ class BoundaryContractsTests(unittest.TestCase):
         self.assertIn("boundary import inspection", message)
 
     def test_demo_entrypoints_use_public_gui_api_only(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         offenders = []
 
@@ -91,6 +100,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         offenders = []
 
@@ -111,6 +121,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_demo_entrypoints_import_only_named_public_gui_exports(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         wildcard_offenders = []
         non_public_offenders = []
@@ -141,6 +152,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_demo_entrypoints_gui_root_import_names_follow_canonical_order(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         ordering_offenders = []
         canonical_index = {name: idx for idx, name in enumerate(PUBLIC_API_EXPORT_ORDER)}
@@ -163,6 +175,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_demo_entrypoints_do_not_alias_gui_root_imports(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         alias_offenders = []
 
@@ -183,6 +196,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_demo_entrypoints_use_single_gui_root_import_block(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         offenders = []
 
@@ -204,6 +218,7 @@ class BoundaryContractsTests(unittest.TestCase):
         )
 
     def test_active_demo_entrypoints_include_current_demo_set(self) -> None:
+        self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         entrypoint_names = [path.name for path in self._active_demo_entrypoints(root)]
 

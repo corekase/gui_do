@@ -153,4 +153,5 @@ Enforced contract tests:
 - `tests/test_readme_public_api_contracts.py`
 - `tests/test_readme_docs_contracts.py`
 - `tests/test_contract_docs_helpers.py`
+- `tests/test_core_only_bootstrap_contracts.py`
 - `tests/test_contract_catalog_consistency.py`

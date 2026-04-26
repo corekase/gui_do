@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from tests.contract_test_catalog import ARCHITECTURE_DOC_PATHS
+from tests.contract_test_catalog import DEMO_CONTRACTS_ENABLED
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINT_GLOB
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from tests.contract_test_catalog import BOUNDARY_ASSET_PATHS
@@ -54,10 +55,8 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
     def test_boundary_constants_are_non_empty_and_well_formed(self) -> None:
         self.assertTrue(BOUNDARY_ENFORCEMENT_TEST_IDS)
         self.assertTrue(BOUNDARY_RELATED_DOC_PATHS)
-        self.assertTrue(BOUNDARY_ASSET_PATHS)
         self.assertTrue(BOUNDARY_WORKFLOW_STEP_NAME.strip())
         self.assertTrue(ACTIVE_DEMO_ENTRYPOINT_GLOB.strip())
-        self.assertTrue(ACTIVE_DEMO_ENTRYPOINTS)
         self.assertTrue(BOUNDARY_RULE_REQUIRED_PHRASES)
         self.assertEqual(BOUNDARY_WORKFLOW_STEP_NAME, "Run boundary contract tests")
         self.assertEqual(BOUNDARY_PYTEST_COMMAND, "python -m pytest -q tests/test_boundary_contracts.py")
@@ -65,7 +64,15 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertEqual(len(BOUNDARY_ASSET_PATHS), len(set(BOUNDARY_ASSET_PATHS)))
         self.assertEqual(len(BOUNDARY_RULE_REQUIRED_PHRASES), len(set(BOUNDARY_RULE_REQUIRED_PHRASES)))
         self.assertEqual(len(ACTIVE_DEMO_ENTRYPOINTS), len(set(ACTIVE_DEMO_ENTRYPOINTS)))
-        self.assertIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
+
+        if DEMO_CONTRACTS_ENABLED:
+            self.assertTrue(BOUNDARY_ASSET_PATHS)
+            self.assertTrue(ACTIVE_DEMO_ENTRYPOINTS)
+            self.assertIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
+        else:
+            self.assertEqual(BOUNDARY_ASSET_PATHS, ())
+            self.assertEqual(ACTIVE_DEMO_ENTRYPOINTS, ())
+            self.assertNotIn(ACTIVE_DEMO_ENTRYPOINT_GLOB, BOUNDARY_RULE_REQUIRED_PHRASES)
 
         for test_id in BOUNDARY_ENFORCEMENT_TEST_IDS:
             self.assertIn("::", test_id)
@@ -86,7 +93,11 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
             for path in sorted(root.glob(ACTIVE_DEMO_ENTRYPOINT_GLOB), key=lambda path: path.name)
         )
 
-        self.assertEqual(discovered, ACTIVE_DEMO_ENTRYPOINTS)
+        if DEMO_CONTRACTS_ENABLED:
+            self.assertEqual(discovered, ACTIVE_DEMO_ENTRYPOINTS)
+        else:
+            self.assertEqual(discovered, ())
+            self.assertEqual(ACTIVE_DEMO_ENTRYPOINTS, ())
 
     def test_boundary_command_sequence_matches_canonical_commands(self) -> None:
         self.assertEqual(
@@ -106,6 +117,10 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         self.assertEqual(BOUNDARY_RELATED_DOC_PATHS, expected_ordered_subset)
 
     def test_DEMO_FEATURES_EXPORT_ORDER_constant_is_well_formed(self) -> None:
+        if not DEMO_CONTRACTS_ENABLED:
+            self.assertEqual(DEMO_FEATURES_EXPORT_ORDER, ())
+            return
+
         self.assertTrue(DEMO_FEATURES_EXPORT_ORDER)
         self.assertEqual(len(DEMO_FEATURES_EXPORT_ORDER), len(set(DEMO_FEATURES_EXPORT_ORDER)))
         self.assertEqual(DEMO_FEATURES_EXPORT_ORDER[-1], "MandelStatusEvent")
@@ -114,6 +129,11 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
             self.assertTrue(entry.startswith("MANDEL_"))
 
     def test_public_api_required_references_and_phrases_are_well_formed(self) -> None:
+        if not DEMO_CONTRACTS_ENABLED:
+            self.assertEqual(PUBLIC_API_REQUIRED_REFERENCES, ())
+            self.assertEqual(PUBLIC_API_REQUIRED_PHRASES, ())
+            return
+
         self.assertTrue(PUBLIC_API_REQUIRED_REFERENCES)
         self.assertTrue(PUBLIC_API_REQUIRED_PHRASES)
         self.assertEqual(len(PUBLIC_API_REQUIRED_REFERENCES), len(set(PUBLIC_API_REQUIRED_REFERENCES)))
@@ -134,16 +154,21 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
 
     def test_readme_public_api_required_import_constants_are_well_formed(self) -> None:
         self.assertTrue(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)
-        self.assertTrue(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
         self.assertTrue(README_PUBLIC_API_GUI_IMPORT_ORDER)
         self.assertEqual(
             len(README_PUBLIC_API_REQUIRED_GUI_IMPORTS),
             len(set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)),
         )
-        self.assertEqual(
-            len(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
-            len(set(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
-        )
+
+        if DEMO_CONTRACTS_ENABLED:
+            self.assertTrue(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
+            self.assertEqual(
+                len(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
+                len(set(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
+            )
+        else:
+            self.assertEqual(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS, ())
+
         self.assertEqual(
             len(README_PUBLIC_API_GUI_IMPORT_ORDER),
             len(set(README_PUBLIC_API_GUI_IMPORT_ORDER)),

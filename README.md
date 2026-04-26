@@ -61,6 +61,103 @@ app.run(target_fps=60)
 pygame.quit()
 ```
 
+## Start a New Project
+
+This repository includes a CLI bootstrap tool that converts the demo repository into a core-only
+starter project.
+
+What it does:
+
+- sets `DEMO_CONTRACTS_ENABLED = False` in `tests/contract_test_catalog.py`
+- removes `gui_do_demo.py`
+- removes the `demo_features/` package
+- removes demo-specific test files
+- rewrites boundary command/docs parity surfaces (`README.md`, `docs/architecture_boundary_spec.md`,
+  `docs/public_api_spec.md`, and `.github/workflows/unittest.yml`) to match core-only contracts
+
+1. Run the bootstrap wrapper (sync + scaffold + verification):
+
+```bash
+# Linux/macOS
+sh scripts/bootstrap_new_project.sh
+
+# Windows (cmd or PowerShell)
+scripts\bootstrap_new_project.bat
+```
+
+2. Preview actions without writing files (optional):
+
+```bash
+python scripts/bootstrap_new_project.py check
+```
+
+3. Use direct CLI commands if you need finer control (optional):
+
+```bash
+# apply core-only sync only (no scaffold)
+python scripts/bootstrap_new_project.py new
+
+# apply core-only sync + create starter files
+python scripts/bootstrap_new_project.py new --scaffold
+
+# apply core-only sync + scaffold + verification tests
+python scripts/bootstrap_new_project.py new --scaffold --verify
+```
+
+4. Create a new code file (for example, `your_project.py`) and begin by adapting the `Minimal Runnable Example` in this README to your project.
+
+## Upgrade an Existing Core-Only Project
+
+If your project was already created from this repository and you update from a newer upstream
+version (for example by pulling changes with git, or by downloading a newer `.zip`), first update
+the package files in your project and then re-run the core-only sync script.
+
+- For git-based upgrades: pull/merge the upstream changes as usual.
+- For `.zip`-based upgrades: copy/extract the updated package folders/files into your project,
+  including at minimum `gui/`, `shared/`, `scripts/`, `tests/`, `docs/`, and `README.md`.
+
+Important: use the updated script from `scripts/bootstrap_new_project.py` (or the updated upgrade
+wrappers in `scripts/`) after the files above are updated. This reapplies the core-only constraints
+and is safe to run multiple times.
+
+1. Run upgrade sync (re-apply core-only policy + verification):
+
+```bash
+# Linux/macOS
+sh scripts/upgrade_existing_project.sh
+
+# Windows (cmd or PowerShell)
+scripts\upgrade_existing_project.bat
+```
+
+2. Preview upgrade sync without writing files (optional):
+
+```bash
+python scripts/bootstrap_new_project.py check
+```
+
+3. Use direct CLI commands if you need finer control (optional):
+
+```bash
+# apply sync only
+python scripts/bootstrap_new_project.py upgrade
+
+# apply sync and skip README/docs rewrites
+python scripts/bootstrap_new_project.py upgrade --skip-doc-sync
+
+# apply sync and skip CI workflow rewrite
+python scripts/bootstrap_new_project.py upgrade --skip-workflow-sync
+
+# run verification only (no sync)
+python scripts/bootstrap_new_project.py verify
+```
+
+4. After running either upgrade wrapper or `python scripts/bootstrap_new_project.py upgrade`, validate all tests:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
 ## Core Runtime Concepts
 
 ### Scene Model
@@ -2265,7 +2362,7 @@ from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ## Run Boundary Contract Tests
 
 ```bash
-python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_public_api_contracts tests.test_readme_docs_contracts tests.test_contract_docs_helpers tests.test_contract_catalog_consistency -v
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_public_api_contracts tests.test_readme_docs_contracts tests.test_contract_docs_helpers tests.test_core_only_bootstrap_contracts tests.test_contract_catalog_consistency -v
 python -m pytest -q tests/test_boundary_contracts.py
-python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_public_api_contracts.py tests/test_readme_docs_contracts.py tests/test_contract_docs_helpers.py tests/test_contract_catalog_consistency.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_public_api_contracts.py tests/test_readme_docs_contracts.py tests/test_contract_docs_helpers.py tests/test_core_only_bootstrap_contracts.py tests/test_contract_catalog_consistency.py
 ```

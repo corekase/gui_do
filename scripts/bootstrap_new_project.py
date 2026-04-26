@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""Manage core-only project setup for gui_do consumers.
+
+This script is idempotent and supports both first-time setup and ongoing
+upgrade sync.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+DEMO_TEST_FILES = (
+    "tests/test_bouncing_shapes_demo_feature.py",
+    "tests/test_controls_demo_feature.py",
+    "tests/test_demo_features_gui_portability.py",
+    "tests/test_feature_lifecycle_host_parameter_contracts.py",
+    "tests/test_gui_do_demo_life_runtime.py",
+    "tests/test_gui_do_demo_presentation_model.py",
+    "tests/test_mandel_event_schema_exports.py",
+    "tests/test_mandel_logic_feature_runtime.py",
+    "tests/test_styles_demo_feature.py",
+)
+
+DEFAULT_SCAFFOLD_FILE = "myapp.py"
+DEFAULT_SCAFFOLD_PACKAGE = "features"
+
+
+def _replace_optional(text: str, old: str, new: str) -> tuple[str, bool]:
+    if old not in text:
+        return text, False
+    return text.replace(old, new, 1), True
+
+
+def _set_demo_contracts_disabled(catalog_text: str, file_label: str) -> tuple[str, bool]:
+    pattern = re.compile(r"^DEMO_CONTRACTS_ENABLED\s*=\s*(True|False)\s*$", flags=re.MULTILINE)
+    match = pattern.search(catalog_text)
+    if not match:
+        raise RuntimeError(f"Missing DEMO_CONTRACTS_ENABLED assignment in {file_label}")
+    current = match.group(1)
+    if current == "False":
+        return catalog_text, False
+    updated = pattern.sub("DEMO_CONTRACTS_ENABLED = False", catalog_text, count=1)
+    return updated, True
+
+
+def _update_section(text: str, heading: str, replacement_body: str, file_label: str) -> str:
+    pattern = re.compile(rf"({re.escape(heading)}\n)([\s\S]*?)(?=\n## |\Z)")
+    match = pattern.search(text)
+    if not match:
+        raise RuntimeError(f"Missing section {heading} in {file_label}")
+    return text[: match.start()] + match.group(1) + replacement_body.rstrip() + "\n\n" + text[match.end() :]
+
+
+def _write(path: Path, content: str, apply: bool) -> None:
+    if apply:
+        path.write_text(content, encoding="utf-8", newline="\n")
+
+
+def _delete_path(path: Path, apply: bool) -> None:
+    if not path.exists():
+        return
+    if apply:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+
+
+def _read_if_exists(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    return path.read_text(encoding="utf-8")
+
+
+def _core_only_catalog_values(catalog_path: Path) -> dict[str, object]:
+    source = catalog_path.read_text(encoding="utf-8-sig")
+    source, _ = _set_demo_contracts_disabled(source, str(catalog_path))
+    namespace: dict[str, object] = {}
+    exec(compile(source, str(catalog_path), "exec"), namespace)
+    return namespace
+
+
+def _sync_core_only(
+    root: Path,
+    *,
+    apply: bool,
+    skip_doc_sync: bool,
+    skip_workflow_sync: bool,
+) -> dict[str, object]:
+    print(f"[bootstrap] mode: {'apply' if apply else 'dry-run'}")
+
+    catalog_path = root / "tests" / "contract_test_catalog.py"
+    catalog_text = catalog_path.read_text(encoding="utf-8")
+    catalog_text, changed_mode = _set_demo_contracts_disabled(catalog_text, str(catalog_path))
+    _write(catalog_path, catalog_text, apply)
+    if changed_mode:
+        print("[bootstrap] set DEMO_CONTRACTS_ENABLED = False")
+    else:
+        print("[bootstrap] DEMO_CONTRACTS_ENABLED already False")
+
+    catalog_values = _core_only_catalog_values(catalog_path)
+    unittest_cmd = catalog_values["CONTRACT_UNITTEST_COMMAND"]
+    pytest_cmd = catalog_values["CONTRACT_PYTEST_COMMAND"]
+    boundary_pytest_cmd = catalog_values["BOUNDARY_PYTEST_COMMAND"]
+    boundary_tests = catalog_values["BOUNDARY_ENFORCEMENT_TEST_IDS"]
+
+    if not skip_doc_sync:
+        readme_path = root / "README.md"
+        readme_text = _read_if_exists(readme_path)
+        if readme_text is None:
+            print("[bootstrap] skipped README sync (README.md not found)")
+        else:
+            readme_text = _update_section(
+                readme_text,
+                "## Run Boundary Contract Tests",
+                "```bash\n"
+                f"{unittest_cmd}\n"
+                f"{boundary_pytest_cmd}\n"
+                f"{pytest_cmd}\n"
+                "```",
+                str(readme_path),
+            )
+            _write(readme_path, readme_text, apply)
+            print("[bootstrap] updated README boundary commands")
+
+        boundary_spec_path = root / "docs" / "architecture_boundary_spec.md"
+        boundary_spec_text = _read_if_exists(boundary_spec_path)
+        if boundary_spec_text is None:
+            print("[bootstrap] skipped architecture boundary doc sync (file not found)")
+        else:
+            enforcement_body = "Automated tests enforce both directions:\n\n" + "\n".join(
+                f"- `{test_id}`" for test_id in boundary_tests
+            ) + "\n\nThe boundary test uses AST-based import inspection, so only real imports are flagged (not comments or strings).\n\nRun command:\n\n```bash\npython -m pytest -q tests/test_boundary_contracts.py\n```"
+
+            boundary_spec_text = _update_section(
+                boundary_spec_text,
+                "## Current Demo Boundary Assets",
+                "No demo boundary assets in core-only starter mode.",
+                str(boundary_spec_path),
+            )
+            boundary_spec_text = _update_section(
+                boundary_spec_text,
+                "## Current Active Demo Entrypoints",
+                "No demo entrypoints in core-only starter mode.",
+                str(boundary_spec_path),
+            )
+            boundary_spec_text = _update_section(
+                boundary_spec_text,
+                "## Enforcement",
+                enforcement_body,
+                str(boundary_spec_path),
+            )
+            _write(boundary_spec_path, boundary_spec_text, apply)
+            print("[bootstrap] updated architecture boundary spec")
+
+        public_api_spec_path = root / "docs" / "public_api_spec.md"
+        public_api_spec_text = _read_if_exists(public_api_spec_path)
+        if public_api_spec_text is None:
+            print("[bootstrap] skipped public API doc sync (file not found)")
+        else:
+            public_api_spec_text, removed_demo_test_ref = _replace_optional(
+                public_api_spec_text,
+                "- `tests/test_mandel_event_schema_exports.py`\n",
+                "",
+            )
+            _write(public_api_spec_path, public_api_spec_text, apply)
+            if removed_demo_test_ref:
+                print("[bootstrap] updated public API enforced test list")
+            else:
+                print("[bootstrap] public API enforced test list already core-only")
+    else:
+        print("[bootstrap] skipped README/docs sync (--skip-doc-sync)")
+
+    if not skip_workflow_sync:
+        workflow_path = root / ".github" / "workflows" / "unittest.yml"
+        workflow_text = _read_if_exists(workflow_path)
+        if workflow_text is None:
+            print("[bootstrap] skipped workflow sync (.github/workflows/unittest.yml not found)")
+        else:
+            workflow_text, count = re.subn(
+                r"(\n\s*- name: Run boundary contract tests\n\s*run: ).*",
+                rf"\1{unittest_cmd}",
+                workflow_text,
+                count=1,
+            )
+            if count != 1:
+                raise RuntimeError("Could not update boundary test step in .github/workflows/unittest.yml")
+            _write(workflow_path, workflow_text, apply)
+            print("[bootstrap] updated workflow boundary command")
+    else:
+        print("[bootstrap] skipped workflow sync (--skip-workflow-sync)")
+
+    _delete_path(root / "gui_do_demo.py", apply)
+    _delete_path(root / "demo_features", apply)
+    for rel_path in DEMO_TEST_FILES:
+        _delete_path(root / rel_path, apply)
+    print("[bootstrap] removed demo entrypoint, demo_features package, and demo-specific tests")
+
+    if apply:
+        print("[bootstrap] sync complete")
+    else:
+        print("[bootstrap] check complete (no files changed)")
+
+    return catalog_values
+
+
+def _scaffold_starter(root: Path, *, apply: bool, app_file: str, package_name: str) -> None:
+    app_path = root / app_file
+    package_path = root / package_name
+    init_path = package_path / "__init__.py"
+    feature_path = package_path / "starter_feature.py"
+
+    app_content = """import pygame
+from pygame import Rect
+
+from gui import GuiApplication, PanelControl, LabelControl, ButtonControl
+
+
+def main() -> None:
+    pygame.init()
+    screen = pygame.display.set_mode((1280, 720))
+    pygame.display.set_caption(\"gui_do app\")
+
+    app = GuiApplication(screen)
+    app.create_scene(\"main\")
+    app.switch_scene(\"main\")
+
+    root = app.add(
+        PanelControl(\"root\", Rect(0, 0, screen.get_width(), screen.get_height())),
+        scene_name=\"main\",
+    )
+    root.add(LabelControl(\"hello\", Rect(20, 20, 520, 32), \"Hello from your gui_do project\"))
+    root.add(ButtonControl(\"quit\", Rect(20, 64, 140, 32), \"Quit\", on_click=app.quit))
+
+    app.run(target_fps=60)
+    pygame.quit()
+
+
+if __name__ == \"__main__\":
+    main()
+"""
+
+    feature_content = """from shared.feature_lifecycle import Feature
+
+
+class StarterFeature(Feature):
+    def __init__(self) -> None:
+        super().__init__(\"starter_feature\", scene_name=\"main\")
+"""
+
+    if app_path.exists():
+        print(f"[bootstrap] skipped scaffold file (already exists): {app_file}")
+    else:
+        if apply:
+            app_path.write_text(app_content, encoding="utf-8", newline="\n")
+        print(f"[bootstrap] {'created' if apply else 'would create'} scaffold app file: {app_file}")
+
+    if package_path.exists():
+        print(f"[bootstrap] skipped scaffold package (already exists): {package_name}")
+    else:
+        if apply:
+            package_path.mkdir(parents=True, exist_ok=True)
+            init_path.write_text("", encoding="utf-8", newline="\n")
+            feature_path.write_text(feature_content, encoding="utf-8", newline="\n")
+        print(f"[bootstrap] {'created' if apply else 'would create'} scaffold package: {package_name}")
+
+
+def _run_verification(root: Path, catalog_values: dict[str, object]) -> int:
+    command = str(catalog_values["CONTRACT_UNITTEST_COMMAND"])
+    print(f"[bootstrap] running verification: {command}")
+    completed = subprocess.run(command, cwd=str(root), shell=True, check=False)
+    return int(completed.returncode)
+
+
+def _resolve_mode(args: argparse.Namespace) -> tuple[str, bool]:
+    command = args.command
+    if command is None:
+        if args.apply:
+            return "upgrade", True
+        return "check", False
+
+    if command == "check":
+        return command, False
+    if command in ("new", "upgrade"):
+        return command, not args.dry_run
+    return command, False
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", nargs="?", choices=("new", "upgrade", "check", "verify"))
+
+    # Backward-compatibility flag: legacy callers used --apply with no subcommand.
+    parser.add_argument("--apply", action="store_true", help="Legacy mode: equivalent to 'upgrade'")
+
+    parser.add_argument("--dry-run", action="store_true", help="Preview actions for new/upgrade without writing")
+    parser.add_argument("--skip-doc-sync", action="store_true", help="Do not rewrite README/docs parity sections")
+    parser.add_argument("--skip-workflow-sync", action="store_true", help="Do not rewrite CI workflow command")
+    parser.add_argument("--verify", action="store_true", help="Run core-only contract verification after sync")
+    parser.add_argument("--scaffold", action="store_true", help="Create starter app scaffolding (new command)")
+    parser.add_argument("--scaffold-file", default=DEFAULT_SCAFFOLD_FILE, help="Scaffold app entrypoint file path")
+    parser.add_argument("--scaffold-package", default=DEFAULT_SCAFFOLD_PACKAGE, help="Scaffold package directory")
+
+    return parser
+
+
+def main() -> int:
+    parser = _build_parser()
+    args = parser.parse_args()
+
+    root = Path(__file__).resolve().parents[1]
+    mode, apply = _resolve_mode(args)
+
+    if mode == "verify":
+        return _run_verification(root, _core_only_catalog_values(root / "tests" / "contract_test_catalog.py"))
+
+    catalog_values = _sync_core_only(
+        root,
+        apply=apply,
+        skip_doc_sync=args.skip_doc_sync,
+        skip_workflow_sync=args.skip_workflow_sync,
+    )
+
+    if mode == "new" and args.scaffold:
+        _scaffold_starter(
+            root,
+            apply=apply,
+            app_file=args.scaffold_file,
+            package_name=args.scaffold_package,
+        )
+
+    if args.verify and apply:
+        return _run_verification(root, catalog_values)
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
