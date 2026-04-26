@@ -566,6 +566,26 @@ class BouncingShapesBackdropFeature(DirectFeature):
 
 All four subtypes can declare `HOST_REQUIREMENTS` and participate in the normal `build`/`bind_runtime`/`configure_accessibility`/`shutdown_runtime` lifecycle. `DirectFeature` adds three screen-layer hooks on top; `RoutedFeature` and `LogicFeature` each add their own dispatch hooks.
 
+### FeatureManager
+
+`FeatureManager` coordinates the lifecycle, messaging, and utility registrations for all Features. It is exported from `gui_do` primarily for type annotation. In normal application code you interact with it only through `GuiApplication` helpers (`register_feature`, `build_features`, `bind_features_runtime`, etc.).
+
+The key methods on `FeatureManager` that `Feature` subclasses may need to call internally (via `self._feature_manager`) are:
+
+| Method | Description |
+|---|---|
+| `register(feature, host)` | Register a Feature and call `on_register` |
+| `unregister(name, host)` | Unregister and call `on_unregister` + `shutdown_runtime` |
+| `get(name)` | Return a registered Feature by name, or `None` |
+| `names()` | Tuple of registered Feature names in registration order |
+| `send_message(sender, target, payload)` | Enqueue a message from one Feature to another |
+| `bind_logic(consumer, provider, alias)` | Bind a logic Feature alias for a consumer |
+| `unbind_logic(consumer, alias)` | Remove a logic alias; returns `bool` |
+| `bound_logic_name(consumer, alias)` | Return the bound provider name, or `None` |
+| `send_logic_message(consumer, payload, alias)` | Route a command to the bound logic Feature |
+
+Features access their own manager via `self._feature_manager` (set automatically on registration) and should call `self.send_message(...)`, `self.bind_logic(...)` etc. through the `Feature` convenience methods rather than the manager directly.
+
 ### Screen Lifecycle Composition
 
 Use screen lifecycle callbacks for scene-level behavior composition.
@@ -646,10 +666,28 @@ scheduler = TaskScheduler(max_workers=workers)
 
 ### Value Change Callbacks
 
-`SliderControl` and `ScrollbarControl` use a strict callback signature:
+`SliderControl` and `ScrollbarControl` use a strict two-argument callback signature: `(value, reason)` where `reason` is a `ValueChangeReason` enum member.
 
-- callback receives `(value, reason)` where `reason` is a `ValueChangeReason`
-- compatibility callback modes are not supported
+`ValueChangeCallback` is a type alias exported from `gui_do` that names this signature — use it to annotate callback arguments:
+
+```python
+from gui_do import ValueChangeCallback, ValueChangeReason
+
+def on_zoom_changed(value: float, reason: ValueChangeReason) -> None:
+    ...
+
+# Type annotation example:
+zoom_callback: ValueChangeCallback[float] = on_zoom_changed
+```
+
+`ValueChangeReason` members:
+
+| Member | Trigger |
+|---|---|
+| `ValueChangeReason.KEYBOARD` | Arrow keys, `Home`, `End`, `PageUp`, `PageDown` |
+| `ValueChangeReason.MOUSE_DRAG` | Thumb/handle drag |
+| `ValueChangeReason.WHEEL` | Mouse scroll wheel |
+| `ValueChangeReason.PROGRAMMATIC` | `set_value()`, `adjust_value()`, `set_offset()`, `adjust_offset()` |
 
 ```python
 from gui_do import SliderControl, LayoutAxis, ValueChangeReason
@@ -882,6 +920,8 @@ Clicking a `LabelControl` never steals or clears keyboard focus — labels are i
 ### Slider Control
 
 Capture numeric input with mouse drag or keyboard. `SliderControl` and `ScrollbarControl` use the strict `(value, reason)` callback contract.
+
+`LayoutAxis` enum: `LayoutAxis.HORIZONTAL`, `LayoutAxis.VERTICAL` — used by both `SliderControl` and `ScrollbarControl` to set orientation.
 
 ```python
 from gui_do import SliderControl, LayoutAxis, ValueChangeReason
@@ -1333,11 +1373,32 @@ def handle_event(event: GuiEvent) -> bool:
 
 Events traverse the scene graph in three phases:
 
-1. **CAPTURE**: Root → Target (top-down)
-2. **TARGET**: Direct target handling
-3. **BUBBLE**: Target → Root (bottom-up)
+1. **CAPTURE** (`EventPhase.CAPTURE`): Root → Target (top-down)
+2. **TARGET** (`EventPhase.TARGET`): Direct target handling
+3. **BUBBLE** (`EventPhase.BUBBLE`): Target → Root (bottom-up)
 
 Containers automatically propagate events to children. Call `stop_propagation()` to halt traversal.
+
+### EventType and EventPhase Enums
+
+`EventType` members (check with `event.is_kind(EventType.KEY_DOWN, ...)` or `event.kind == EventType.QUIT`):
+
+| Member | Description |
+|---|---|
+| `EventType.QUIT` | Window close / system quit |
+| `EventType.KEY_DOWN` | Key pressed |
+| `EventType.KEY_UP` | Key released |
+| `EventType.MOUSE_BUTTON_DOWN` | Mouse button pressed |
+| `EventType.MOUSE_BUTTON_UP` | Mouse button released |
+| `EventType.MOUSE_MOTION` | Pointer moved |
+| `EventType.MOUSE_WHEEL` | Mouse wheel scrolled |
+| `EventType.TEXT_INPUT` | Character text input |
+| `EventType.TEXT_EDITING` | IME text editing |
+| `EventType.WIDGET` | Internal widget event |
+| `EventType.TASK` | Scheduler task notification |
+| `EventType.PASS` | No-op / unrecognised raw event |
+
+`EventPhase` members: `EventPhase.CAPTURE`, `EventPhase.TARGET`, `EventPhase.BUBBLE`.
 
 ### Keyboard and Action Handling
 
@@ -1666,6 +1727,27 @@ view_model.dispose()
 ## Themes and Styling
 
 `ColorTheme` is constructed without arguments; its palette uses built-in colors. Each scene runtime gets its own theme. Register font roles per-scene via `app.register_font_role(...)`.
+
+### BuiltInGraphicsFactory
+
+`BuiltInGraphicsFactory` is the default widget visual factory. It renders the `InteractiveVisuals` bundles (idle/hover/armed/disabled surfaces) used internally by every control. Each scene has one attached to its theme.
+
+In most applications you do not construct it directly — the scene runtime creates it automatically from `ColorTheme`. It is exported so you can:
+
+- type-annotate custom factory parameters
+- call `graphics_factory.render_text(...)` for consistent themed text surfaces
+- call `graphics_factory.font_revision()` to detect font changes and invalidate caches
+- replace it with a subclass if you are building custom control visuals
+
+Access the active scene's factory via `app.theme.graphics_factory`.
+
+```python
+from gui_do import BuiltInGraphicsFactory
+
+factory = app.theme.graphics_factory            # active scene's factory
+surface = factory.render_text("Hello", role_name="body")  # themed text surface
+rev = factory.font_revision()                   # int; increments when fonts change
+```
 
 ```python
 from gui_do import ColorTheme, BuiltInGraphicsFactory
@@ -2245,7 +2327,12 @@ The renderer blits the active cursor surface each frame at the logical pointer p
 
 ```bash
 python -m venv venv
-source venv/Scripts/activate  # Windows PowerShell / Git Bash path may differ
+
+# Windows PowerShell:
+.\venv\Scripts\Activate.ps1
+# macOS / Linux / Git Bash:
+source venv/bin/activate
+
 pip install pygame numpy
 ```
 
