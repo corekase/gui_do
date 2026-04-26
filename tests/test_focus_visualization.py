@@ -194,7 +194,7 @@ class SceneFocusHintOrderingTests(unittest.TestCase):
                 call_order.append("windows")
 
             def draw(self, _surface, _theme) -> None:
-                call_order.append("legacy")
+                call_order.append("single_phase")
 
         root = _RecordingPanel("root", Rect(0, 0, 40, 40))
         visualizer = MagicMock()

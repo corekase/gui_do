@@ -53,6 +53,16 @@ class ControlsShowcaseFeature(Feature):
     BUTTON_GROUP_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
     BUTTON_GROUP_SYSTEM_FONT = "arial"
 
+    LABEL_FONT_ROLE_LOCAL = "label"
+    LABEL_FONT_SIZE = 14
+    LABEL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
+    LABEL_SYSTEM_FONT = "arial"
+
+    CONTROL_FONT_ROLE_LOCAL = "control"
+    CONTROL_FONT_SIZE = 15
+    CONTROL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
+    CONTROL_SYSTEM_FONT = "arial"
+
     SLIDER_MINIMUM = 0.0
     SLIDER_MAXIMUM = 100.0
     SLIDER_DEFAULT_VALUE = 0.0
@@ -93,6 +103,8 @@ class ControlsShowcaseFeature(Feature):
         self._initial_focus_control = None
         self._pending_initial_focus = False
         self._button_group_font_role = "body"
+        self._label_font_role = "body"
+        self._control_font_role = "body"
 
     def build(self, host) -> None:
         ui = host.app.read_feature_ui_types()
@@ -102,6 +114,22 @@ class ControlsShowcaseFeature(Feature):
             size=self.BUTTON_GROUP_FONT_SIZE,
             file_path=self.BUTTON_GROUP_FONT_PATH,
             system_name=self.BUTTON_GROUP_SYSTEM_FONT,
+            scene_name=self.scene_name,
+        )
+        self._label_font_role = self.register_font_role(
+            host,
+            self.LABEL_FONT_ROLE_LOCAL,
+            size=self.LABEL_FONT_SIZE,
+            file_path=self.LABEL_FONT_PATH,
+            system_name=self.LABEL_SYSTEM_FONT,
+            scene_name=self.scene_name,
+        )
+        self._control_font_role = self.register_font_role(
+            host,
+            self.CONTROL_FONT_ROLE_LOCAL,
+            size=self.CONTROL_FONT_SIZE,
+            file_path=self.CONTROL_FONT_PATH,
+            system_name=self.CONTROL_SYSTEM_FONT,
             scene_name=self.scene_name,
         )
         if self.rect.width <= 0 or self.rect.height <= 0:
@@ -119,6 +147,7 @@ class ControlsShowcaseFeature(Feature):
             )
         )
         self.enabled_title.font_size = 22
+        self.enabled_title.font_role = self._label_font_role
 
         self.disabled_title = host.control_showcase_root.add(
             ui.label_control_cls(
@@ -129,6 +158,7 @@ class ControlsShowcaseFeature(Feature):
             )
         )
         self.disabled_title.font_size = 22
+        self.disabled_title.font_role = self._label_font_role
 
         # Build enabled blocks
         self.enabled_controls = []
@@ -405,6 +435,7 @@ class ControlsShowcaseFeature(Feature):
                 self._format_block_name(block_name),
                 align=label_align,
             )
+            block_label.font_role = self._label_font_role
             labels.append(block_label)
 
         # Content rect for controls (below label, or full block if no label)
@@ -563,6 +594,7 @@ class ControlsShowcaseFeature(Feature):
             button_rect,
             "Button",
         )
+        button.font_role = self._control_font_role
         if enabled:
             button.set_accessibility(role="button", label="Showcase button")
         controls.append(button)
@@ -582,6 +614,7 @@ class ControlsShowcaseFeature(Feature):
             pushed=False,
             style="round",
         )
+        toggle.font_role = self._control_font_role
         if enabled:
             toggle.set_accessibility(role="toggle", label="Showcase toggle")
         controls.append(toggle)
@@ -711,6 +744,7 @@ class ControlsShowcaseFeature(Feature):
             "Canvas",
             align="left",
         )
+        canvas_label.font_role = self._label_font_role
         canvas = ui.canvas_control_cls(
             f"canvas_{'enabled' if enabled else 'disabled'}",
             canvas_rect,
@@ -735,6 +769,7 @@ class ControlsShowcaseFeature(Feature):
             "Panel",
             align="left",
         )
+        panel_label.font_role = self._label_font_role
         panel = ui.panel_control_cls(
             f"panel_{'enabled' if enabled else 'disabled'}",
             panel_rect,

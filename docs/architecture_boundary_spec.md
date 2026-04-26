@@ -15,12 +15,8 @@ It complements the public API and event-system specs by keeping framework contra
 Boundary intent:
 
 - Keep `gui_do/` independently reusable in non-demo applications.
-- Allow demo schema evolution inside `demo_features/` without leaking symbols into `gui.__all__`.
+- Allow demo schema evolution inside `demo_features/` without leaking symbols into `gui_do.__all__`.
 - Keep demo entrypoints readable and enforceable via one canonical gui-root import block.
-
-Rebase status:
-
-- Rebase migration is complete. The repository now documents and enforces only the current gui package contracts with no previous-track baggage.
 
 ## Current Demo Boundary Assets
 
@@ -54,7 +50,7 @@ python -m pytest -q tests/test_boundary_contracts.py
 
 ## Notes
 
-This separation prevents demo implementation details from leaking into the reusable framework API and allows future demos to define their own contracts without modifying `gui` internals.
+This separation prevents demo implementation details from leaking into the reusable framework API and allows future demos to define their own contracts without modifying `gui_do` internals.
 
 Operationally, boundary tests are treated as release gates for import hygiene and docs parity.
 

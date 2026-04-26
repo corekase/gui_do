@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This specification defines the canonical event object model and routing flow for the `gui` package.
+This specification defines the canonical event object model and routing flow for the `gui_do` package.
 It replaces ad hoc direct usage of raw `pygame` events in app-level dispatch with normalized `GuiEvent` objects.
 
 Terminology mirrors README/public API docs: canonical events at ingress, strict contracts in dispatch, and scene-aware routing behavior.

@@ -2,13 +2,13 @@
 
 ## Scope
 
-This document defines the supported public surface of the `gui` package and the strict contracts expected by runtime components.
+This document defines the supported public surface of the `gui_do` package and the strict contracts expected by runtime components.
 
 Terminology in this document aligns with README and architecture docs:
 
 - `strict contracts`: no compatibility/fallback behavior in core dispatch and rendering paths.
 - `scene isolation`: only the active scene executes scene-contained runtime updates.
-- `demo boundary`: demo-only schemas stay outside `gui.__all__`.
+- `demo boundary`: demo-only schemas stay outside `gui_do.__all__`.
 
 ## Public Exports
 
@@ -140,11 +140,11 @@ New APIs must preserve these strict-contract principles.
 
 ## Demo-Specific Modules
 
-Demo-only contracts are intentionally outside the `gui` package boundary.
+Demo-only contracts are intentionally outside the `gui_do` package boundary.
 
 - Mandelbrot demo event schema is defined in `demo_features/mandelbrot_demo_feature.py`.
 - `demo_features.mandelbrot_demo_feature.__all__` export surface/order is treated as a locked contract for demo schema consumers.
-- No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from `gui.__all__`.
+- No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from `gui_do.__all__`.
 
 Boundary rules and enforcement details are specified in `docs/architecture_boundary_spec.md`.
 

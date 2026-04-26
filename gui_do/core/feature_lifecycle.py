@@ -3,30 +3,12 @@
 from __future__ import annotations
 
 from collections import OrderedDict, deque
-from contextlib import nullcontext
 from dataclasses import dataclass
 import inspect
 from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, Mapping, Optional
 from .error_handling import logical_error, report_nonfatal_error
-
-
-class _NoopTelemetryCollector:
-    def span(self, system: str, point: str, metadata: Optional[Dict[str, Any]] = None):
-        return nullcontext()
-
-    def record_duration(self, system: str, point: str, elapsed_ms: float, *, metadata: Optional[Dict[str, Any]] = None) -> None:
-        return None
-
-
-def _telemetry_collector():
-    try:
-        from gui_do.core.telemetry import telemetry_collector
-
-        return telemetry_collector()
-    except ImportError:
-        return _NoopTelemetryCollector()
-
+from .telemetry import telemetry_collector
 
 @dataclass(slots=True)
 class FeatureMessage:
@@ -500,7 +482,7 @@ class FeatureManager:
         return tuple(self._features.values())
 
     def send_message(self, sender_name: str, target_feature_name: str, message: Mapping[str, Any]) -> bool:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         if not isinstance(message, Mapping):
             raise logical_error(
                 "feature messages must be mappings",
@@ -612,7 +594,7 @@ class FeatureManager:
         return runnable(*args, **kwargs)
 
     def handle_event(self, event, host=None) -> bool:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not self._is_feature_active_for_scene(feature):
                 continue
@@ -623,7 +605,7 @@ class FeatureManager:
         return False
 
     def update_features(self, host=None) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not self._is_feature_active_for_scene(feature):
                 continue
@@ -632,7 +614,7 @@ class FeatureManager:
                 feature.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not self._is_feature_active_for_scene(feature):
                 continue
@@ -641,7 +623,7 @@ class FeatureManager:
                 feature.draw(host_obj, surface, theme)
 
     def handle_direct_event(self, event, host=None) -> bool:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not isinstance(feature, DirectFeature):
                 continue
@@ -654,7 +636,7 @@ class FeatureManager:
         return False
 
     def update_direct_features(self, dt_seconds: float, host=None) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not isinstance(feature, DirectFeature):
                 continue
@@ -665,7 +647,7 @@ class FeatureManager:
                 feature.on_direct_update(host_obj, dt_seconds)
 
     def draw_direct_features(self, surface, theme, host=None) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             if not isinstance(feature, DirectFeature):
                 continue
@@ -718,14 +700,14 @@ class FeatureManager:
             return
 
     def build_features(self, host) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             feature.validate_host_for(host, "build")
             with collector.span("feature_lifecycle", "feature_build", metadata={"feature_name": feature.name}):
                 feature.build(host)
 
     def bind_runtime(self, host) -> None:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in self._features.values():
             feature.validate_host_for(host, "bind_runtime")
             with collector.span("feature_lifecycle", "feature_bind_runtime", metadata={"feature_name": feature.name}):
@@ -734,7 +716,7 @@ class FeatureManager:
 
     def shutdown_runtime(self, host=None) -> None:
         """Call shutdown_runtime(host) for features with active runtime bindings."""
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         for feature in reversed(tuple(self._features.values())):
             if feature.name not in self._runtime_bound:
                 continue
@@ -744,7 +726,7 @@ class FeatureManager:
             self._runtime_bound.discard(feature.name)
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
-        collector = _telemetry_collector()
+        collector = telemetry_collector()
         next_index = int(tab_index_start)
         for feature in self._features.values():
             feature.validate_host_for(host, "configure_accessibility")

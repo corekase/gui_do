@@ -36,7 +36,7 @@ class _TelemetrySpan(ContextDecorator):
             self._start = perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(self, exc_type, exc, _tb) -> None:
         if not self._active:
             return None
         metadata = dict(self._metadata)

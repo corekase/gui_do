@@ -67,8 +67,6 @@ BOUNDARY_RULE_REQUIRED_PHRASES = (
         "from gui_do import ...",
         "without aliases",
         "single from gui_do import (...) block",
-        "Rebase migration is complete",
-        "no previous-track baggage",
     )
     if not DEMO_CONTRACTS_ENABLED
     else (
@@ -76,8 +74,6 @@ BOUNDARY_RULE_REQUIRED_PHRASES = (
         "from gui_do import ...",
         "without aliases",
         "single from gui_do import (...) block",
-        "Rebase migration is complete",
-        "no previous-track baggage",
     )
 )
 

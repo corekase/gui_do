@@ -734,10 +734,10 @@ scheduler = TaskScheduler(max_workers=workers)
 
 ### Value Change Callbacks
 
-`SliderControl` and `ScrollbarControl` support two callback modes:
+`SliderControl` and `ScrollbarControl` use a strict callback signature:
 
-- `compat` (default): callback may accept `value` only or `(value, reason)`
-- `reason-required`: callback must accept `(value, reason)`
+- callback receives `(value, reason)` where `reason` is a `ValueChangeReason`
+- compatibility callback modes are not supported
 
 ```python
 from gui_do import SliderControl, LayoutAxis, ValueChangeReason
@@ -969,7 +969,7 @@ Clicking a `LabelControl` never steals or clears keyboard focus — labels are i
 
 ### Slider Control
 
-Capture numeric input with mouse drag or keyboard. `SliderControl` and `ScrollbarControl` use the dual-mode value-change callback system.
+Capture numeric input with mouse drag or keyboard. `SliderControl` and `ScrollbarControl` use the strict `(value, reason)` callback contract.
 
 ```python
 from gui_do import SliderControl, LayoutAxis, ValueChangeReason
@@ -990,7 +990,6 @@ slider = parent.add(
         maximum=100,
         value=50,
         on_change=on_value_changed,
-        on_change_mode="reason-required",
     )
 )
 
@@ -1001,9 +1000,8 @@ slider.set_normalized(0.5)     # set from a 0.0–1.0 ratio; returns True if cha
 slider.value                   # read current value (plain attribute)
 slider.normalized              # read current value as 0.0–1.0 ratio within range
 
-# Replace callback or mode at runtime
-slider.set_on_change_callback(new_callback)   # validated against current mode
-slider.set_on_change_mode("compat")           # returns normalized mode string
+# Replace callback at runtime
+slider.set_on_change_callback(new_callback)
 ```
 
 ### Scrollbar Control
@@ -1045,9 +1043,8 @@ scrollbar.set_offset(100)      # absolute position, clamped; returns True if cha
 scrollbar.adjust_offset(20)    # relative move, clamped; returns True if changed
 fraction = scrollbar.scroll_fraction  # 0.0–1.0 normalized position
 
-# Replace callback or mode at runtime
-scrollbar.set_on_change_callback(new_callback)   # validated against current mode
-scrollbar.set_on_change_mode("reason-required")  # returns normalized mode string
+# Replace callback at runtime
+scrollbar.set_on_change_callback(new_callback)
 ```
 
 ### Button Group Control
@@ -1060,7 +1057,7 @@ from gui_do import ButtonGroupControl
 # Create one ButtonGroupControl per option, sharing the same group name.
 btn_a = parent.add(
     ButtonGroupControl("option_a", rect_a, group="view_mode", text="List", selected=True,
-                       on_activate=lambda: print("List selected"))
+                       on_activate=lambda: print("List selected"), font_role="body")
 )
 btn_b = parent.add(
     ButtonGroupControl("option_b", rect_b, group="view_mode", text="Grid")
@@ -1079,6 +1076,9 @@ selected_id = btn_a.button_id  # returns the control_id of whichever is selected
 # Replace or remove the activation callback at runtime
 btn_a.set_on_activate(lambda: print("New callback"))
 btn_a.set_on_activate(None)   # remove callback
+
+# Font role uses the same validation contract as ButtonControl/ToggleControl
+btn_a.font_role = "body"     # must be a registered role name
 
 # Clear stale group entries between independent app instances (e.g., in tests)
 ButtonGroupControl.clear_group_registry("view_mode")
@@ -2398,6 +2398,12 @@ from gui_do import (
     render_telemetry_report,
     BuiltInGraphicsFactory,
     ColorTheme,
+    Feature,
+    DirectFeature,
+    LogicFeature,
+    RoutedFeature,
+    FeatureMessage,
+    FeatureManager,
 )
 
 # Demo-only contracts are intentionally outside gui_do package:
@@ -2420,7 +2426,7 @@ from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ## Run Boundary Contract Tests
 
 ```bash
-python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_readme_public_api_contracts tests.test_readme_docs_contracts tests.test_contract_docs_helpers tests.test_core_only_bootstrap_contracts tests.test_contract_catalog_consistency -v
+python -m unittest tests.test_boundary_contracts tests.test_public_api_exports tests.test_mandel_event_schema_exports tests.test_public_api_docs_contracts tests.test_architecture_boundary_docs_contracts tests.test_contract_command_parity tests.test_package_contracts_public_api tests.test_package_contracts_docs tests.test_contract_docs_helpers tests.test_core_only_bootstrap_contracts tests.test_contract_catalog_consistency -v
 python -m pytest -q tests/test_boundary_contracts.py
-python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_readme_public_api_contracts.py tests/test_readme_docs_contracts.py tests/test_contract_docs_helpers.py tests/test_core_only_bootstrap_contracts.py tests/test_contract_catalog_consistency.py
+python -m pytest -q tests/test_boundary_contracts.py tests/test_public_api_exports.py tests/test_mandel_event_schema_exports.py tests/test_public_api_docs_contracts.py tests/test_architecture_boundary_docs_contracts.py tests/test_contract_command_parity.py tests/test_package_contracts_public_api.py tests/test_package_contracts_docs.py tests/test_contract_docs_helpers.py tests/test_core_only_bootstrap_contracts.py tests/test_contract_catalog_consistency.py
 ```
