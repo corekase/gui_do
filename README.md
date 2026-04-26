@@ -9,7 +9,11 @@ Architecture-first pygame GUI framework focused on strict contracts, scene isola
 ### Installation
 
 ```bash
+# repository workflow (run demo + tests from this checkout)
 pip install pygame numpy
+
+# optional: install package from this checkout into current environment
+pip install -e .
 ```
 
 ### Run the Demo
@@ -74,11 +78,23 @@ python scripts/manage.py init --scaffold --verify
 What `init` does:
 
 - sets `DEMO_CONTRACTS_ENABLED = False` in `tests/contract_test_catalog.py`
-- removes `gui_do_demo.py`, the `demo_features/` package, and demo-specific test files
+- removes `gui_do_demo.py`
+- removes the entire `demo_features/` tree as demo-owned content (including `demo_features/data/` and any future demo files/folders)
+- removes demo-specific tests discovered by rule (any `tests/test_*.py` importing `demo_features`)
 - applies the package-only docs and CI workflow updates
 - creates a starter `myapp.py` and `features/` package (only when `--scaffold` is passed)
 
 Add `--dry-run` to preview what `init` would do without writing any files.
+
+Recommended first-run sequence:
+
+```bash
+# preview all file removals/edits first
+python scripts/manage.py init --dry-run
+
+# apply, scaffold starter app, and verify contracts in one pass
+python scripts/manage.py init --scaffold --verify
+```
 
 Then open `myapp.py` and adapt the Minimal Runnable Example above to your project.
 
@@ -119,6 +135,8 @@ python scripts/manage.py apply --verify
 ```
 
 `apply` runs the same policy steps as `init` without the scaffold step: it sets `DEMO_CONTRACTS_ENABLED = False`, removes any remaining demo files, and updates the docs and CI workflow. It is safe to run more than once.
+
+Like `init`, `apply` removes demo content by general boundary rules (entire `demo_features/` tree and discovered demo tests), not by a fixed per-file list.
 
 Add `--dry-run` to preview what `apply` would do without writing any files.
 
@@ -2412,7 +2430,9 @@ from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ## Demo/Package Boundary
 
 - `gui_do/` contains reusable framework/runtime functionality.
-- `demo_features/` contains demo-specific contracts and helpers.
+- `demo_features/` contains demo-specific contracts, helpers, and assets.
+- Everything inside `demo_features/` is treated as demo-owned content, including `demo_features/data/` and any future subfolders/files.
+- `scripts/manage.py init` and `scripts/manage.py apply` remove `demo_features/` as one tree, so demo data/assets are not retained in package-only starter mode.
 - Boundary scope for demo entrypoints is `*_demo.py`.
 - Active demo entrypoints should consume the framework through `from gui_do import ...`, without aliases, and with a single `from gui_do import (...)` block.
 
