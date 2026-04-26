@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gui_do"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Architecture-first pygame GUI framework focused on strict contracts, scene isolation, and composable Features."
 readme = "README.md"
 license = "MIT"
@@ -19,6 +19,9 @@ dev = [
     "coverage",
     "pytest",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "gui_do._version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
