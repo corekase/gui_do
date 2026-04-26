@@ -75,6 +75,14 @@ What it does:
 - rewrites boundary command/docs parity surfaces (`README.md`, `docs/architecture_boundary_spec.md`,
   `docs/public_api_spec.md`, and `.github/workflows/unittest.yml`) to match core-only contracts
 
+Working directory note:
+
+- The wrapper scripts under `scripts/` can be run from any current working directory because they
+    resolve paths from their own file location.
+- The direct `python scripts/bootstrap_new_project.py ...` examples below assume you are in the
+    project root directory.
+- If you are not in project root, run the script by absolute/relative path to that file.
+
 1. Run the bootstrap wrapper (sync + scaffold + verification):
 
 ```bash
@@ -155,6 +163,7 @@ python scripts/bootstrap_new_project.py verify
 4. After running either upgrade wrapper or `python scripts/bootstrap_new_project.py upgrade`, validate all tests:
 
 ```bash
+# run from project root
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
