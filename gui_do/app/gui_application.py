@@ -733,7 +733,11 @@ class GuiApplication:
         try:
             root = Path(__file__).resolve().parents[2]
             path = root / "demo_features" / "data" / "cursors" / filename
-            cursor_surface = pygame.image.load(str(path)).convert_alpha()
+            loaded = pygame.image.load(str(path))
+            try:
+                cursor_surface = loaded.convert_alpha()
+            except pygame.error:
+                cursor_surface = loaded
         except Exception as exc:
             report_nonfatal_error(
                 "failed to load cursor asset; using fallback cursor",

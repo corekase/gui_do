@@ -61,159 +61,71 @@ app.run(target_fps=60)
 pygame.quit()
 ```
 
-## Merging into an Existing Project
-
-Before copying this package's files into a project that already has its own code and tests, run the
-readiness check script pointing it at your existing project directory. The script does a direct
-filesystem check — no Python environment setup required. Run it from anywhere; pass the path to your
-existing project as `--target`:
-
-```bash
-# Linux/macOS
-sh scripts/check_merge_readiness.sh --target /path/to/your/project
-
-# Windows (cmd or PowerShell)
-scripts\check_merge_readiness.bat --target C:\path\to\your\project
-
-# Or directly:
-python scripts/check_merge_readiness.py --target /path/to/your/project
-```
-
-The script checks the two potential conflict areas described below.
-
-**Top-level package name collisions**
-
-`gui_do/` is an unqualified top-level package name. If your existing project already has a
-`gui_do/` directory, copying gui_do's files in would overwrite or conflict with it. The
-check script looks for those directories in your target project and reports any it finds. Resolve
-conflicts by renaming one of the packages before copying.
-
-**Demo test file names**
-
-The bootstrap `new` command deletes these specific test files from `tests/`:
-
-- `test_bouncing_shapes_demo_feature.py`
-- `test_controls_demo_feature.py`
-- `test_demo_features_gui_portability.py`
-- `test_feature_lifecycle_host_parameter_contracts.py`
-- `test_gui_do_demo_life_runtime.py`
-- `test_gui_do_demo_presentation_model.py`
-- `test_mandel_event_schema_exports.py`
-- `test_mandel_logic_feature_runtime.py`
-- `test_styles_demo_feature.py`
-
-If your existing project already has test files with any of those exact names, they will be deleted
-when bootstrap runs. The check script looks for those names in your target project's `tests/`
-directory. Rename your files first before running bootstrap.
-
-**Multiple independent projects**
-
-Each core-only project is a self-contained directory. The bootstrap and upgrade scripts resolve all
-paths from their own file location, so running the script in project A has no effect on project B.
-Upgrades are applied independently per project.
-
 ## Start a New Project
 
-This repository includes a CLI bootstrap tool that converts the demo repository into a core-only
-starter project.
+This is a current-folder workflow. Open a terminal in the folder that contains `scripts/manage.py`, then run the command there. It converts that current folder from a demo repo into a starter project.
 
-What it does:
+```bash
+# --scaffold creates a starter myapp.py and features/ package
+# --verify runs the contract tests after init to confirm everything is correct
+python scripts/manage.py init --scaffold --verify
+```
+
+What `init` does:
 
 - sets `DEMO_CONTRACTS_ENABLED = False` in `tests/contract_test_catalog.py`
-- removes `gui_do_demo.py`
-- removes the `demo_features/` package
-- removes demo-specific test files
-- syncs contract docs and CI workflow files to core-only mode
+- removes `gui_do_demo.py`, the `demo_features/` package, and demo-specific test files
+- applies the package-only docs and CI workflow updates
+- creates a starter `myapp.py` and `features/` package (only when `--scaffold` is passed)
 
-Working directory note:
+Add `--dry-run` to preview what `init` would do without writing any files.
 
-- The wrapper scripts under `scripts/` can be run from any current working directory because they
-    resolve paths from their own file location.
-- The direct `python scripts/bootstrap_new_project.py ...` examples below use `scripts/` as a
-    relative path, which requires your current working directory to be the project root.
+Then open `myapp.py` and adapt the Minimal Runnable Example above to your project.
 
-1. Run the bootstrap wrapper (sync + scaffold + verification):
+## Add to or Update an Existing Project
+
+This is a source-to-target workflow. Use `update` both when you are adding `gui_do` to an existing project for the first time and when you are upgrading that project to a newer `gui_do` package version.
+
+For this command, think in terms of a source folder and a target project:
+
+- source folder: the folder you are currently in when you run `python scripts/manage.py update ...`
+- target project: the separate project directory passed in `--target`
+
+Run `update` from the root of the package files you want to copy — the folder that contains `scripts/manage.py`, `README.md`, `pyproject.toml`, and the top-level `gui_do/` directory (not from inside the inner `gui_do/` directory itself). That source folder can be this repository, a git-cloned newer version, or an extracted `.zip` download.
+
+`--target` accepts an absolute path or a relative path resolved from your current working directory.
 
 ```bash
-# Linux/macOS
-sh scripts/bootstrap_new_project.sh
+# optional: check compatibility before the first update into a project
+python scripts/manage.py check --target /path/to/your/project
 
-# Windows (cmd or PowerShell)
-scripts\bootstrap_new_project.bat
+# copy all package files into the target and apply tooling config there
+python scripts/manage.py update --target /path/to/your/project --verify
 ```
 
-2. Preview actions without writing files (optional):
+`update` copies these items from the source folder into the target project:
+
+- `gui_do/` `scripts/` `tests/` `docs/`
+- `README.md` `pyproject.toml` `MANIFEST.in` `LICENSE` `requirements-ci.txt`
+
+Add `--dry-run` to preview what would change without writing anything.
+
+Example: if you opened a terminal in `path/to/gui_do-0.0.2/` (the extracted package root), running `python scripts/manage.py update --target path/to/my_app --verify` copies files from that source folder into `my_app`.
+
+If the updated package files are already in your current project folder and you do not need to copy from a separate source folder, switch to the current-folder workflow and run this from the project folder itself:
 
 ```bash
-python scripts/bootstrap_new_project.py check
+python scripts/manage.py apply --verify
 ```
 
-3. Use direct CLI commands if you need finer control (optional):
+`apply` runs the same policy steps as `init` without the scaffold step: it sets `DEMO_CONTRACTS_ENABLED = False`, removes any remaining demo files, and updates the docs and CI workflow. It is safe to run more than once.
+
+Add `--dry-run` to preview what `apply` would do without writing any files.
+
+To run only the contract tests against the current folder without changing any files:
 
 ```bash
-# apply core-only sync only (no scaffold)
-python scripts/bootstrap_new_project.py new
-
-# apply core-only sync + create starter files
-python scripts/bootstrap_new_project.py new --scaffold
-
-# apply core-only sync + scaffold + verification tests
-python scripts/bootstrap_new_project.py new --scaffold --verify
-```
-
-4. Create a new code file (for example, `your_project.py`) and begin by adapting the `Minimal Runnable Example` in this README to your project.
-
-## Upgrade an Existing Core-Only Project
-
-If your project was already created from this repository and you update from a newer upstream
-version (for example by pulling changes with git, or by downloading a newer `.zip`), first update
-the package files in your project and then re-run the core-only sync script.
-
-- For git-based upgrades: pull/merge the upstream changes as usual.
-- For `.zip`-based upgrades: copy/extract the updated package folders/files into your project,
-  including at minimum `gui_do/`, `scripts/`, `tests/`, `docs/`, and `README.md`.
-
-Important: use the updated script from `scripts/bootstrap_new_project.py` (or the updated upgrade
-wrappers in `scripts/`) after the files above are updated. This reapplies the core-only constraints
-and is safe to run multiple times.
-
-1. Run upgrade sync (re-apply core-only policy + verification):
-
-```bash
-# Linux/macOS
-sh scripts/upgrade_existing_project.sh
-
-# Windows (cmd or PowerShell)
-scripts\upgrade_existing_project.bat
-```
-
-2. Preview upgrade sync without writing files (optional):
-
-```bash
-python scripts/bootstrap_new_project.py check
-```
-
-3. Use direct CLI commands if you need finer control (optional):
-
-```bash
-# apply sync only
-python scripts/bootstrap_new_project.py upgrade
-
-# apply sync and skip docs rewrites
-python scripts/bootstrap_new_project.py upgrade --skip-doc-sync
-
-# apply sync and skip CI workflow rewrite
-python scripts/bootstrap_new_project.py upgrade --skip-workflow-sync
-
-# run verification only (no sync)
-python scripts/bootstrap_new_project.py verify
-```
-
-4. After running either upgrade wrapper or `python scripts/bootstrap_new_project.py upgrade`, validate all tests:
-
-```bash
-# run from project root
-python -m unittest discover -s tests -p "test_*.py" -v
+python scripts/manage.py verify
 ```
 
 ## Core Runtime Concepts

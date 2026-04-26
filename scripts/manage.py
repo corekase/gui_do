@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Manage core-only project setup for gui_do consumers.
+"""Manage gui_do projects from either the current folder or a source-to-target copy flow.
 
-This script is idempotent and supports both first-time setup and ongoing
-upgrade sync.
+Current-folder commands:
+- init: convert the current folder into a starter project
+- apply: apply required project updates to the current folder
+- verify: run the contract verification command for the current folder
+
+Source-to-target commands:
+- check: validate a target project before copying gui_do into it
+- update: copy this source folder into --target and apply required project updates there
 """
 
 from __future__ import annotations
@@ -27,6 +33,25 @@ DEMO_TEST_FILES = (
 
 DEFAULT_SCAFFOLD_FILE = "myapp.py"
 DEFAULT_SCAFFOLD_PACKAGE = "features"
+
+SYNC_DIRS = (
+    "gui_do",
+    "scripts",
+    "tests",
+    "docs",
+)
+
+SYNC_FILES = (
+    "README.md",
+    "pyproject.toml",
+    "MANIFEST.in",
+    "LICENSE",
+    "requirements-ci.txt",
+)
+
+CORE_PACKAGES = ("gui_do",)
+
+DEMO_TEST_NAMES = tuple(Path(path).name for path in DEMO_TEST_FILES)
 
 
 def _replace_optional(text: str, old: str, new: str) -> tuple[str, bool]:
@@ -74,6 +99,134 @@ def _read_if_exists(path: Path) -> str | None:
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")
+
+
+def _check_package_collisions(target: Path) -> tuple[list[str], list[str]]:
+    collisions = []
+    messages = []
+    for pkg in CORE_PACKAGES:
+        existing = target / pkg
+        if existing.exists():
+            collisions.append(pkg)
+            messages.append(
+                f"  COLLISION: `{pkg}/` already exists in target project ({existing}).\n"
+                f"  Rename one of them before copying gui_do files in."
+            )
+        else:
+            messages.append(f"  OK: no `{pkg}/` in target project.")
+    return collisions, messages
+
+
+def _check_demo_test_conflicts(target: Path) -> tuple[list[str], list[str]]:
+    tests_dir = target / "tests"
+    conflicts = []
+    messages = []
+    for name in DEMO_TEST_NAMES:
+        existing = tests_dir / name
+        if existing.exists():
+            conflicts.append(str(existing.relative_to(target)))
+            messages.append(f"  CONFLICT: {existing.relative_to(target)}")
+    return conflicts, messages
+
+
+def _run_merge_readiness_check(target: Path) -> int:
+    if not target.is_dir():
+        print(f"[check] ERROR: target directory not found: {target}")
+        return 2
+
+    print(f"[check] target project: {target}\n")
+    issues: list[str] = []
+
+    print("--- Package name collisions ---")
+    collisions, msgs = _check_package_collisions(target)
+    for msg in msgs:
+        print(msg)
+    issues.extend(f"package collision: {pkg}" for pkg in collisions)
+    print()
+
+    print("--- Demo test file name conflicts ---")
+    conflicts, msgs = _check_demo_test_conflicts(target)
+    if conflicts:
+        print(
+            "  NOTE: The following files exist in the target and share a name with demo test\n"
+            "  files that setup sync deletes. Rename them before running update:\n"
+        )
+        for msg in msgs:
+            print(msg)
+    else:
+        print("  OK: No demo test file name conflicts in target project.")
+    print()
+
+    if issues:
+        print(f"[check] {len(issues)} issue(s) require attention before update:")
+        for issue in issues:
+            print(f"  - {issue}")
+        return 1
+
+    print("[check] All checks passed. Safe to proceed.")
+    return 0
+
+
+def _copy_dir(src: Path, dst: Path, apply: bool) -> None:
+    if not src.exists():
+        return
+    if apply:
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+    print(f"[update] {'copied' if apply else 'would copy'} directory: {src.name}")
+
+
+def _copy_file(src: Path, dst: Path, apply: bool) -> None:
+    if not src.exists():
+        return
+    if apply:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+    print(f"[update] {'copied' if apply else 'would copy'} file: {src.name}")
+
+
+def _run_merge_upgrade(
+    source_root: Path,
+    *,
+    target: Path,
+    apply: bool,
+    verify: bool,
+    skip_doc_sync: bool,
+    skip_workflow_sync: bool,
+) -> int:
+    if not target.is_dir():
+        print(f"[update] ERROR: target directory not found: {target}")
+        return 2
+
+    print(f"[update] source: {source_root}")
+    print(f"[update] target: {target}")
+    print(f"[update] mode: {'apply' if apply else 'dry-run'}")
+
+    for rel in SYNC_DIRS:
+        _copy_dir(source_root / rel, target / rel, apply)
+
+    for rel in SYNC_FILES:
+        _copy_file(source_root / rel, target / rel, apply)
+
+    if not apply:
+        print("[update] dry-run complete (no files changed)")
+        return 0
+
+    bootstrap_path = target / "scripts" / "manage.py"
+    if not bootstrap_path.exists():
+        print("[update] ERROR: target is missing scripts/manage.py after copy.")
+        return 2
+
+    cmd = ["python", str(bootstrap_path), "apply"]
+    if skip_doc_sync:
+        cmd.append("--skip-doc-sync")
+    if skip_workflow_sync:
+        cmd.append("--skip-workflow-sync")
+    if verify:
+        cmd.append("--verify")
+
+    print("[update] running target sync:", " ".join(cmd))
+    completed = subprocess.run(cmd, cwd=str(target), check=False)
+    return int(completed.returncode)
 
 
 def _core_only_catalog_values(catalog_path: Path) -> dict[str, object]:
@@ -280,28 +433,31 @@ def _resolve_mode(args: argparse.Namespace) -> tuple[str, bool]:
     command = args.command
     if command is None:
         if args.apply:
-            return "upgrade", True
-        return "check", False
+            return "apply", True
+        return "help", False
 
-    if command == "check":
+    if command in ("verify", "check"):
         return command, False
-    if command in ("new", "upgrade"):
-        return command, not args.dry_run
-    return command, False
-
+    # command must be "init", "apply", or "update" — the only remaining choices
+    return command, not args.dry_run
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", nargs="?", choices=("new", "upgrade", "check", "verify"))
+    parser.add_argument(
+        "command",
+        nargs="?",
+        choices=("init", "apply", "verify", "check", "update"),
+    )
 
     # Backward-compatibility flag: legacy callers used --apply with no subcommand.
-    parser.add_argument("--apply", action="store_true", help="Legacy mode: equivalent to 'upgrade'")
+    parser.add_argument("--apply", action="store_true", help="Legacy: apply required project updates to the current folder")
 
-    parser.add_argument("--dry-run", action="store_true", help="Preview actions for new/upgrade without writing")
+    parser.add_argument("--dry-run", action="store_true", help="Preview file changes without writing")
+    parser.add_argument("--target", help="Target project root (required for check and update; relative paths are resolved from your shell's current working directory)")
     parser.add_argument("--skip-doc-sync", action="store_true", help="Do not rewrite README/docs parity sections")
     parser.add_argument("--skip-workflow-sync", action="store_true", help="Do not rewrite CI workflow command")
-    parser.add_argument("--verify", action="store_true", help="Run core-only contract verification after sync")
-    parser.add_argument("--scaffold", action="store_true", help="Create starter app scaffolding (new command)")
+    parser.add_argument("--verify", action="store_true", help="Run contract verification after init, apply, or update")
+    parser.add_argument("--scaffold", action="store_true", help="Create starter app scaffolding during init")
     parser.add_argument("--scaffold-file", default=DEFAULT_SCAFFOLD_FILE, help="Scaffold app entrypoint file path")
     parser.add_argument("--scaffold-package", default=DEFAULT_SCAFFOLD_PACKAGE, help="Scaffold package directory")
 
@@ -315,8 +471,29 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     mode, apply = _resolve_mode(args)
 
+    if mode == "help":
+        parser.print_help()
+        return 0
+
     if mode == "verify":
         return _run_verification(root, _core_only_catalog_values(root / "tests" / "contract_test_catalog.py"))
+
+    if mode == "check":
+        if not args.target:
+            parser.error("--target is required for check")
+        return _run_merge_readiness_check(Path(args.target).resolve())
+
+    if mode == "update":
+        if not args.target:
+            parser.error("--target is required for update")
+        return _run_merge_upgrade(
+            root,
+            target=Path(args.target).resolve(),
+            apply=apply,
+            verify=args.verify,
+            skip_doc_sync=args.skip_doc_sync,
+            skip_workflow_sync=args.skip_workflow_sync,
+        )
 
     catalog_values = _sync_core_only(
         root,
@@ -325,7 +502,7 @@ def main() -> int:
         skip_workflow_sync=args.skip_workflow_sync,
     )
 
-    if mode == "new" and args.scaffold:
+    if mode == "init" and args.scaffold:
         _scaffold_starter(
             root,
             apply=apply,

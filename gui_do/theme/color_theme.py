@@ -37,7 +37,11 @@ class ColorTheme:
     def _load_background_bitmap(self):
         try:
             path = self._resource_path("demo_features", "data", "images", "backdrop.jpg")
-            return pygame.image.load(path).convert()
+            loaded = pygame.image.load(path)
+            try:
+                return loaded.convert()
+            except pygame.error:
+                return loaded
         except Exception as exc:
             report_nonfatal_error(
                 "failed to load theme background bitmap; continuing without background image",

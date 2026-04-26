@@ -6,41 +6,12 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
     def _repo_root(self) -> Path:
         return Path(__file__).resolve().parents[1]
 
-    def test_bootstrap_and_upgrade_wrappers_exist(self) -> None:
+    def test_single_user_facing_script_exists(self) -> None:
         root = self._repo_root()
-        required = (
-            "scripts/bootstrap_new_project.py",
-            "scripts/bootstrap_new_project.bat",
-            "scripts/bootstrap_new_project.sh",
-            "scripts/upgrade_existing_project.bat",
-            "scripts/upgrade_existing_project.sh",
-        )
+        required = ("scripts/manage.py",)
 
         for relative_path in required:
             self.assertTrue((root / relative_path).exists(), f"missing required script: {relative_path}")
-
-    def test_wrapper_scripts_call_bootstrap_entrypoint(self) -> None:
-        root = self._repo_root()
-
-        win_bootstrap = (root / "scripts" / "bootstrap_new_project.bat").read_text(encoding="utf-8")
-        win_upgrade = (root / "scripts" / "upgrade_existing_project.bat").read_text(encoding="utf-8")
-        sh_bootstrap = (root / "scripts" / "bootstrap_new_project.sh").read_text(encoding="utf-8")
-        sh_upgrade = (root / "scripts" / "upgrade_existing_project.sh").read_text(encoding="utf-8")
-
-        self.assertIn("bootstrap_new_project.py", win_bootstrap)
-        self.assertIn(" new ", win_bootstrap)
-        self.assertIn("--scaffold", win_bootstrap)
-        self.assertIn("--verify", win_bootstrap)
-        self.assertIn("bootstrap_new_project.py", win_upgrade)
-        self.assertIn(" upgrade ", win_upgrade)
-        self.assertIn("--verify", win_upgrade)
-        self.assertIn("bootstrap_new_project.py", sh_bootstrap)
-        self.assertIn(" new ", sh_bootstrap)
-        self.assertIn("--scaffold", sh_bootstrap)
-        self.assertIn("--verify", sh_bootstrap)
-        self.assertIn("bootstrap_new_project.py", sh_upgrade)
-        self.assertIn(" upgrade ", sh_upgrade)
-        self.assertIn("--verify", sh_upgrade)
 
     def test_contract_catalog_core_only_mode_is_well_formed(self) -> None:
         root = self._repo_root()
@@ -64,7 +35,7 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
 
     def test_bootstrap_script_declares_required_sync_targets(self) -> None:
         root = self._repo_root()
-        bootstrap = (root / "scripts" / "bootstrap_new_project.py").read_text(encoding="utf-8")
+        bootstrap = (root / "scripts" / "manage.py").read_text(encoding="utf-8")
 
         required_markers = (
             "DEMO_CONTRACTS_ENABLED",
@@ -76,10 +47,12 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             "## Current Demo Boundary Assets",
             "## Current Active Demo Entrypoints",
             "## Enforcement",
-            "new",
-            "upgrade",
-            "check",
+            "init",
+            "apply",
             "verify",
+            "check",
+            "update",
+            "--target",
             "--skip-doc-sync",
             "--skip-workflow-sync",
             "--scaffold",
@@ -88,6 +61,11 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
 
         for marker in required_markers:
             self.assertIn(marker, bootstrap, f"bootstrap script missing required sync marker: {marker}")
+
+    def test_manage_script_is_declared_in_manifest(self) -> None:
+        root = self._repo_root()
+        manifest = (root / "MANIFEST.in").read_text(encoding="utf-8")
+        self.assertIn("scripts/manage.py", manifest, "MANIFEST.in must declare scripts/manage.py so it ships in source distributions")
 
 
 if __name__ == "__main__":

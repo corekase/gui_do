@@ -1,4 +1,5 @@
 include README.md
 include LICENSE
+include scripts/manage.py
 recursive-include docs *.md
 recursive-include demo_features/data *
