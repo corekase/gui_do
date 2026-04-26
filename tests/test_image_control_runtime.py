@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect, Surface
 
-from gui.controls.image_control import ImageControl
+from gui_do.controls.image_control import ImageControl
 
 
 class _DisabledFactory:

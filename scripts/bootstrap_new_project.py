@@ -109,23 +109,23 @@ def _sync_core_only(
     boundary_tests = catalog_values["BOUNDARY_ENFORCEMENT_TEST_IDS"]
 
     if not skip_doc_sync:
-        readme_path = root / "README.md"
-        readme_text = _read_if_exists(readme_path)
-        if readme_text is None:
-            print("[bootstrap] skipped README sync (README.md not found)")
+        package_contracts_path = root / "docs" / "package_contracts.md"
+        package_contracts_text = _read_if_exists(package_contracts_path)
+        if package_contracts_text is None:
+            print("[bootstrap] skipped package contracts sync (docs/package_contracts.md not found)")
         else:
-            readme_text = _update_section(
-                readme_text,
+            package_contracts_text = _update_section(
+                package_contracts_text,
                 "## Run Boundary Contract Tests",
                 "```bash\n"
                 f"{unittest_cmd}\n"
                 f"{boundary_pytest_cmd}\n"
                 f"{pytest_cmd}\n"
                 "```",
-                str(readme_path),
+                str(package_contracts_path),
             )
-            _write(readme_path, readme_text, apply)
-            print("[bootstrap] updated README boundary commands")
+            _write(package_contracts_path, package_contracts_text, apply)
+            print("[bootstrap] updated package contracts boundary commands")
 
         boundary_spec_path = root / "docs" / "architecture_boundary_spec.md"
         boundary_spec_text = _read_if_exists(boundary_spec_path)
@@ -217,7 +217,7 @@ def _scaffold_starter(root: Path, *, apply: bool, app_file: str, package_name: s
     app_content = """import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, LabelControl, ButtonControl
+from gui_do import GuiApplication, PanelControl, LabelControl, ButtonControl
 
 
 def main() -> None:
@@ -244,7 +244,7 @@ if __name__ == \"__main__\":
     main()
 """
 
-    feature_content = """from shared.feature_lifecycle import Feature
+    feature_content = """from gui_do import Feature
 
 
 class StarterFeature(Feature):

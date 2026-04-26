@@ -1,7 +1,7 @@
 ﻿import unittest
 from pathlib import Path
 
-from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import package_boundary_commands
 from tests.contract_docs_helpers import workflow_step_names
 from tests.contract_docs_helpers import workflow_step_run_command
 from tests.contract_test_catalog import CONTRACT_PYTEST_COMMAND
@@ -14,8 +14,8 @@ class ContractCommandParityTests(unittest.TestCase):
     def _repo_root(self) -> Path:
         return Path(__file__).resolve().parents[1]
 
-    def test_readme_lists_ci_equivalent_contract_unittest_command(self) -> None:
-        commands = readme_boundary_commands(self._repo_root())
+    def test_package_contracts_lists_ci_equivalent_contract_unittest_command(self) -> None:
+        commands = package_boundary_commands(self._repo_root())
 
         self.assertIn(CONTRACT_UNITTEST_COMMAND, commands)
 
@@ -29,8 +29,8 @@ class ContractCommandParityTests(unittest.TestCase):
 
         self.assertEqual(step_names.count(BOUNDARY_WORKFLOW_STEP_NAME), 1)
 
-    def test_readme_lists_full_contract_pytest_command(self) -> None:
-        commands = readme_boundary_commands(self._repo_root())
+    def test_package_contracts_lists_full_contract_pytest_command(self) -> None:
+        commands = package_boundary_commands(self._repo_root())
 
         self.assertIn(CONTRACT_PYTEST_COMMAND, commands)
 

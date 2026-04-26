@@ -1,7 +1,7 @@
 ﻿import unittest
 from types import SimpleNamespace
 
-from shared.feature_lifecycle import Feature, FeatureManager
+from gui_do import Feature, FeatureManager
 
 
 class _PrewarmPart(Feature):

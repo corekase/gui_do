@@ -7,8 +7,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, ToggleControl, WindowControl
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do import GuiApplication, PanelControl, ToggleControl, WindowControl
+from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ToggleControlRuntimeTests(unittest.TestCase):

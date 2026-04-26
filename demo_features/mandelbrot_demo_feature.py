@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from shared.feature_lifecycle import LogicFeature, RoutedFeature
+from gui_do import LogicFeature, RoutedFeature
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -213,10 +213,10 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "caption": {"size": 14, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "status": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
+                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "caption": {"size": 14, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "status": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
             },
             scene_name="main",
         )

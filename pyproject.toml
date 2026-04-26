@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gui_do"
+version = "0.1.0"
+description = "Architecture-first pygame GUI framework focused on strict contracts, scene isolation, and composable Features."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "pygame>=2.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gui_do*", "demo_features*"]
+
+[tool.setuptools.package-data]
+demo_features = [
+    "data/cursors/*",
+    "data/fonts/*",
+    "data/images/*",
+]

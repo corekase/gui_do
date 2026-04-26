@@ -1,6 +1,6 @@
 ﻿import unittest
 
-from gui import Timers
+from gui_do import Timers
 
 
 class TimersOneShotTests(unittest.TestCase):

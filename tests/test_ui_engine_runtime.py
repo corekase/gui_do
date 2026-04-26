@@ -1,7 +1,7 @@
 ﻿import unittest
 from unittest import mock
 
-from gui.loop.ui_engine import UiEngine
+from gui_do.loop.ui_engine import UiEngine
 
 
 class _StubInputState:

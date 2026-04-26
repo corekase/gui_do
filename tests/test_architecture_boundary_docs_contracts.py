@@ -4,7 +4,7 @@ from pathlib import Path
 
 from tests.contract_docs_helpers import backticked_bullet_items
 from tests.contract_docs_helpers import commands_from_fenced_section
-from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import package_boundary_commands
 from tests.contract_docs_helpers import section_body
 from tests.contract_test_catalog import ACTIVE_DEMO_ENTRYPOINTS
 from tests.contract_test_catalog import BOUNDARY_ASSET_PATHS
@@ -52,11 +52,11 @@ class ArchitectureBoundaryDocsContractsTests(unittest.TestCase):
         commands = commands_from_fenced_section(text, "## Enforcement", "architecture_boundary_spec.md", fence_language="bash")
         self.assertEqual(commands, [BOUNDARY_PYTEST_COMMAND])
 
-    def test_boundary_spec_pytest_command_is_listed_in_readme_boundary_commands(self) -> None:
+    def test_boundary_spec_pytest_command_is_listed_in_package_boundary_commands(self) -> None:
         text = self._read_boundary_spec()
         section = self._section_body(text, "## Enforcement")
         self.assertIn(BOUNDARY_PYTEST_COMMAND, section)
-        self.assertIn(BOUNDARY_PYTEST_COMMAND, readme_boundary_commands(self._repo_root()))
+        self.assertIn(BOUNDARY_PYTEST_COMMAND, package_boundary_commands(self._repo_root()))
 
     def test_boundary_rule_mentions_active_demo_entrypoint_scope(self) -> None:
         text = self._read_boundary_spec()

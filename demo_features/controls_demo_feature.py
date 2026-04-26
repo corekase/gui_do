@@ -6,7 +6,7 @@ import pygame
 from pathlib import Path
 from pygame import Rect
 
-from shared.feature_lifecycle import Feature
+from gui_do import Feature
 
 
 class ControlsShowcaseFeature(Feature):
@@ -46,8 +46,12 @@ class ControlsShowcaseFeature(Feature):
     ARROW_LEFT_DEGREES = 180
     ARROW_RIGHT_DEGREES = 0
     FRAME_BORDER_WIDTH = 2
-    IMAGE_PATH = "data/images/realize.png"
+    IMAGE_PATH = "demo_features/data/images/realize.png"
     IMAGE_BLOCK_HEIGHT_FALLBACK = 120
+    BUTTON_GROUP_FONT_ROLE_LOCAL = "button_group"
+    BUTTON_GROUP_FONT_SIZE = 14
+    BUTTON_GROUP_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
+    BUTTON_GROUP_SYSTEM_FONT = "arial"
 
     SLIDER_MINIMUM = 0.0
     SLIDER_MAXIMUM = 100.0
@@ -88,9 +92,18 @@ class ControlsShowcaseFeature(Feature):
         self._accessibility_focus_controls = []
         self._initial_focus_control = None
         self._pending_initial_focus = False
+        self._button_group_font_role = "body"
 
     def build(self, host) -> None:
         ui = host.app.read_feature_ui_types()
+        self._button_group_font_role = self.register_font_role(
+            host,
+            self.BUTTON_GROUP_FONT_ROLE_LOCAL,
+            size=self.BUTTON_GROUP_FONT_SIZE,
+            file_path=self.BUTTON_GROUP_FONT_PATH,
+            system_name=self.BUTTON_GROUP_SYSTEM_FONT,
+            scene_name=self.scene_name,
+        )
         if self.rect.width <= 0 or self.rect.height <= 0:
             self.rect = self._default_part_rect(host)
         self._load_image_natural_size()
@@ -530,6 +543,7 @@ class ControlsShowcaseFeature(Feature):
                     selected=False,
                     style="box",
                 )
+                btn.font_role = self._button_group_font_role
                 if enabled:
                     btn.set_accessibility(role="button", label=f"Group {letter} option {r + 1}")
                 controls.append(btn)

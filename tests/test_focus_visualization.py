@@ -6,11 +6,11 @@ from types import SimpleNamespace
 import pygame
 from pygame import Rect
 
-from gui.core.focus_visualizer import FocusVisualizer
-from gui.core.focus_manager import FocusManager
-from gui.core.ui_node import UiNode
-from gui.core.scene import Scene
-from gui.theme.color_theme import ColorTheme
+from gui_do.core.focus_visualizer import FocusVisualizer
+from gui_do.core.focus_manager import FocusManager
+from gui_do.core.ui_node import UiNode
+from gui_do.core.scene import Scene
+from gui_do.theme.color_theme import ColorTheme
 
 
 class FocusVisualizerQueryTests(unittest.TestCase):

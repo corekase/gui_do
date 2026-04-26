@@ -6,8 +6,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect, Surface
 
-from gui.controls.canvas_control import CanvasControl
-from gui.core.gui_event import EventType, GuiEvent
+from gui_do.controls.canvas_control import CanvasControl
+from gui_do.core.gui_event import EventType, GuiEvent
 
 
 def _motion(pos):

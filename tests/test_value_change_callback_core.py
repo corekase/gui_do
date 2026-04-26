@@ -1,8 +1,8 @@
 ﻿import unittest
 
-from gui.core.value_change_callback import dispatch_value_change
-from gui.core.value_change_callback import validate_value_change_callback
-from gui.core.value_change_reason import ValueChangeReason
+from gui_do.core.value_change_callback import dispatch_value_change
+from gui_do.core.value_change_callback import validate_value_change_callback
+from gui_do.core.value_change_reason import ValueChangeReason
 
 
 class ValueChangeCallbackCoreTests(unittest.TestCase):

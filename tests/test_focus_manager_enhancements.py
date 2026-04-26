@@ -3,9 +3,9 @@ import unittest
 
 from pygame import Rect
 
-from gui.core.focus_manager import FocusManager
-from gui.core.scene import Scene
-from gui.core.ui_node import UiNode
+from gui_do.core.focus_manager import FocusManager
+from gui_do.core.scene import Scene
+from gui_do.core.ui_node import UiNode
 
 
 def _node(control_id: str, tab_index: int = 0, visible: bool = True, enabled: bool = True) -> UiNode:

@@ -1,11 +1,11 @@
 ﻿import unittest
 from types import SimpleNamespace
 
-from gui import EventBus
-from gui.core.task_scheduler import TaskScheduler
-from gui.core.telemetry import telemetry_collector
-from shared.feature_lifecycle import Feature
-from shared.feature_lifecycle import FeatureManager
+from gui_do import EventBus
+from gui_do.core.task_scheduler import TaskScheduler
+from gui_do.core.telemetry import telemetry_collector
+from gui_do import Feature
+from gui_do import FeatureManager
 
 
 class _StubFeature(Feature):

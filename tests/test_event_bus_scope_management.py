@@ -1,6 +1,6 @@
 ﻿import unittest
 
-from gui import EventBus
+from gui_do import EventBus
 
 
 class EventBusScopeManagementTests(unittest.TestCase):

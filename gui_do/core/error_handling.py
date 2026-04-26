@@ -26,10 +26,10 @@ def _safe_text(value: Any) -> str:
     return text or "unknown"
 
 
-def discover_error_source(*, skip_frames: int = 0, exclude_module_prefixes: tuple[str, ...] = ("gui.", "shared.")) -> str:
+def discover_error_source(*, skip_frames: int = 0, exclude_module_prefixes: tuple[str, ...] = ("gui_do.",)) -> str:
     """Best-effort source attribution for user-facing diagnostics.
 
-    Returns the nearest call frame that is not inside gui/shared internals when
+    Returns the nearest call frame that is not inside gui_do internals when
     possible, so diagnostics point users to their calling site.
     """
     stack = inspect.stack(context=0)

@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
+from gui_do import GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
 
 
 class SceneInteractionDispatchMatrixTests(unittest.TestCase):

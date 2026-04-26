@@ -6,7 +6,7 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from shared.feature_lifecycle import FeatureMessage, LogicFeature, RoutedFeature
+from gui_do import FeatureMessage, LogicFeature, RoutedFeature
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -130,8 +130,8 @@ class LifeSimulationFeature(RoutedFeature):
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 16, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
+                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
             },
             scene_name="main",
         )

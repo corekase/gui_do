@@ -4,7 +4,7 @@ from pathlib import Path
 
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 from ..core.font_manager import FontManager
-from shared.error_handling import report_nonfatal_error
+from ..core.error_handling import report_nonfatal_error
 
 import pygame
 
@@ -23,9 +23,11 @@ class ColorTheme:
         self.shadow = BUILT_IN_COLOURS["none"]
 
         self.fonts = FontManager(resource_root=Path(__file__).resolve().parents[2])
-        self.fonts.register_role("body", file_path="data/fonts/Ubuntu-B.ttf", size=16, system_name="arial")
-        self.fonts.register_role("title", file_path="data/fonts/Gimbot.ttf", size=14, system_name="arial", bold=True)
-        self.fonts.register_role("display", file_path="data/fonts/Gimbot.ttf", size=72, system_name="arial", bold=True)
+        # Package defaults intentionally avoid external font files.
+        # Role rendering resolves through FontManager fallback (system default, then pygame default).
+        self.fonts.register_role("body", size=16)
+        self.fonts.register_role("title", size=14, bold=True)
+        self.fonts.register_role("display", size=72, bold=True)
         self._background_bitmap = self._load_background_bitmap()
 
     def _resource_path(self, *parts: str) -> str:
@@ -34,7 +36,7 @@ class ColorTheme:
 
     def _load_background_bitmap(self):
         try:
-            path = self._resource_path("data", "images", "backdrop.jpg")
+            path = self._resource_path("demo_features", "data", "images", "backdrop.jpg")
             return pygame.image.load(path).convert()
         except Exception as exc:
             report_nonfatal_error(

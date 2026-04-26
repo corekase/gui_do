@@ -8,7 +8,7 @@ from typing import Optional
 import pygame
 
 from .first_frame_profiler import first_frame_profiler
-from shared.error_handling import logical_error, report_nonfatal_error
+from .error_handling import logical_error, report_nonfatal_error
 
 
 @dataclass(frozen=True)
@@ -155,7 +155,10 @@ class FontManager:
                 self._report_load_failure_once(role.name, resolved_size, "system", exc, source=role.system_name)
                 loaded = None
         if loaded is None:
-            loaded = pygame.font.Font(None, resolved_size)
+            try:
+                loaded = pygame.font.SysFont(None, resolved_size, bold=role.bold, italic=role.italic)
+            except Exception:
+                loaded = pygame.font.Font(None, resolved_size)
 
         self._font_cache[cache_key] = loaded
         elapsed_ms = (perf_counter() - load_start) * 1000.0

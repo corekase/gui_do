@@ -41,8 +41,8 @@ from ..controls.image_control import ImageControl
 from ..controls.scrollbar_control import ScrollbarControl
 from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
-from shared.feature_lifecycle import FeatureManager
-from shared.error_handling import logical_error, report_nonfatal_error
+from ..core.feature_lifecycle import FeatureManager
+from ..core.error_handling import logical_error, report_nonfatal_error
 
 
 @dataclass(frozen=True)
@@ -732,7 +732,7 @@ class GuiApplication:
         path = None
         try:
             root = Path(__file__).resolve().parents[2]
-            path = root / "data" / "cursors" / filename
+            path = root / "demo_features" / "data" / "cursors" / filename
             cursor_surface = pygame.image.load(str(path)).convert_alpha()
         except Exception as exc:
             report_nonfatal_error(

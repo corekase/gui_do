@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tests.contract_docs_helpers import commands_from_fenced_section
 from tests.contract_docs_helpers import backticked_bullet_items
-from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import package_boundary_commands
 from tests.contract_docs_helpers import section_body
 from tests.contract_docs_helpers import workflow_step_names
 from tests.contract_docs_helpers import workflow_step_names_from_text
@@ -65,8 +65,8 @@ class ContractDocsHelpersTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             commands_from_fenced_section(text, "## Commands", "sample")
 
-    def test_readme_boundary_commands_include_canonical_contract_commands(self) -> None:
-        commands = readme_boundary_commands(self._repo_root())
+    def test_package_boundary_commands_include_canonical_contract_commands(self) -> None:
+        commands = package_boundary_commands(self._repo_root())
 
         self.assertIn(CONTRACT_UNITTEST_COMMAND, commands)
         self.assertIn(CONTRACT_PYTEST_COMMAND, commands)

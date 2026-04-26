@@ -60,7 +60,7 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
         self.assertEqual(namespace["ACTIVE_DEMO_ENTRYPOINTS"], ())
         self.assertEqual(namespace["BOUNDARY_ASSET_PATHS"], ())
         self.assertEqual(namespace["DEMO_FEATURES_EXPORT_ORDER"], ())
-        self.assertEqual(namespace["README_PUBLIC_API_REQUIRED_DEMO_IMPORTS"], ())
+        self.assertEqual(namespace["PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS"], ())
 
     def test_bootstrap_script_declares_required_sync_targets(self) -> None:
         root = self._repo_root()
@@ -68,7 +68,7 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
 
         required_markers = (
             "DEMO_CONTRACTS_ENABLED",
-            "README.md",
+            "package_contracts.md",
             "architecture_boundary_spec.md",
             "public_api_spec.md",
             ".github/workflows/unittest.yml",

@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pygame
 
-from gui.core.action_manager import ActionManager, KeyBinding
-from gui.core.gui_event import EventType, GuiEvent, EventPhase
+from gui_do.core.action_manager import ActionManager, KeyBinding
+from gui_do.core.gui_event import EventType, GuiEvent, EventPhase
 
 
 def _key_down_event(key: int) -> GuiEvent:

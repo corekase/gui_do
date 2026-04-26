@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import ButtonControl, CanvasControl, GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
+from gui_do import ButtonControl, CanvasControl, GuiApplication, LabelControl, PanelControl, TaskPanelControl, WindowControl
 
 
 class WindowFocusDragLayeringTest(unittest.TestCase):

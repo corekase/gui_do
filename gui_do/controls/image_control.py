@@ -2,7 +2,7 @@ from pathlib import Path
 import pygame
 from typing import TYPE_CHECKING
 from pygame import Rect
-from shared.error_handling import io_error
+from ..core.error_handling import io_error
 
 from ..core.ui_node import UiNode
 
@@ -29,7 +29,7 @@ class ImageControl(UiNode):
         if candidate.is_absolute():
             return candidate
         root = Path(__file__).resolve().parents[2]
-        in_data_images = root / "data" / "images" / str(image_path)
+        in_data_images = root / "demo_features" / "data" / "images" / str(image_path)
         if in_data_images.exists():
             return in_data_images
         return candidate

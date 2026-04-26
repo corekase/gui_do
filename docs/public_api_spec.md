@@ -12,7 +12,7 @@ Terminology in this document aligns with README and architecture docs:
 
 ## Public Exports
 
-The package exports the following symbols via `gui/__init__.py`:
+The package exports the following symbols via `gui_do/__init__.py`:
 
 - `GuiApplication`
 - `UiEngine`
@@ -59,8 +59,14 @@ The package exports the following symbols via `gui/__init__.py`:
 - `render_telemetry_report`
 - `BuiltInGraphicsFactory`
 - `ColorTheme`
+- `Feature`
+- `DirectFeature`
+- `LogicFeature`
+- `RoutedFeature`
+- `FeatureMessage`
+- `FeatureManager`
 
-This `gui.__all__` export set is treated as an exact, locked public surface and is regression-tested.
+This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 
 ## Event Contract
 
@@ -150,8 +156,8 @@ Enforced contract tests:
 - `tests/test_public_api_docs_contracts.py`
 - `tests/test_architecture_boundary_docs_contracts.py`
 - `tests/test_contract_command_parity.py`
-- `tests/test_readme_public_api_contracts.py`
-- `tests/test_readme_docs_contracts.py`
+- `tests/test_package_contracts_public_api.py`
+- `tests/test_package_contracts_docs.py`
 - `tests/test_contract_docs_helpers.py`
 - `tests/test_core_only_bootstrap_contracts.py`
 - `tests/test_contract_catalog_consistency.py`

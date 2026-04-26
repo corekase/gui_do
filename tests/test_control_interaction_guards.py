@@ -2,13 +2,13 @@
 
 from pygame import Rect
 
-from gui.controls.arrow_box_control import ArrowBoxControl
-from gui.controls.button_control import ButtonControl
-from gui.controls.scrollbar_control import ScrollbarControl
-from gui.controls.slider_control import SliderControl
-from gui.controls.toggle_control import ToggleControl
-from gui.core.gui_event import EventType, GuiEvent
-from gui.layout.layout_axis import LayoutAxis
+from gui_do.controls.arrow_box_control import ArrowBoxControl
+from gui_do.controls.button_control import ButtonControl
+from gui_do.controls.scrollbar_control import ScrollbarControl
+from gui_do.controls.slider_control import SliderControl
+from gui_do.controls.toggle_control import ToggleControl
+from gui_do.core.gui_event import EventType, GuiEvent
+from gui_do.layout.layout_axis import LayoutAxis
 
 
 class _StubTimers:

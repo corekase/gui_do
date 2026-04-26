@@ -6,8 +6,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from gui import GuiApplication
-from shared.feature_lifecycle import DirectFeature
+from gui_do import GuiApplication
+from gui_do import DirectFeature
 
 
 class _TrackingDirectFeature(DirectFeature):

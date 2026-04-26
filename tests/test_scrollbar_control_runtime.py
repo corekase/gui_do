@@ -6,8 +6,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, WindowControl
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, WindowControl
+from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ScrollbarControlRuntimeTests(unittest.TestCase):

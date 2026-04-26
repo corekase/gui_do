@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from demo_features.styles_demo_feature import StylesShowcaseFeature
-from gui import GuiApplication, PanelControl
+from gui_do import GuiApplication, PanelControl
 from gui_do_demo import GuiDoDemo
 
 

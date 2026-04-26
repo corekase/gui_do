@@ -5,7 +5,7 @@ from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFea
 from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
 from demo_features.styles_demo_feature import StylesShowcaseFeature
-from shared.feature_lifecycle import Feature, FeatureManager
+from gui_do import Feature, FeatureManager
 
 
 class DemoPartsHostContractTests(unittest.TestCase):

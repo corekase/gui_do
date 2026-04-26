@@ -56,20 +56,30 @@ class BoundaryContractsTests(unittest.TestCase):
 
     def test_gui_package_does_not_depend_on_demo_features(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        gui_root = root / "gui"
+        gui_root = root / "gui_do"
         offenders = self._collect_import_offenders(root, gui_root, ["demo_features"])
 
-        self.assertEqual(offenders, [], f"gui package must not import demo_features; found: {offenders}")
+        self.assertEqual(offenders, [], f"gui_do package must not import demo_features; found: {offenders}")
 
-    def test_demo_features_does_not_depend_on_gui(self) -> None:
+    def test_demo_features_do_not_import_gui_do_internals(self) -> None:
         root = Path(__file__).resolve().parents[1]
         demo_features_root = root / "demo_features"
         if not demo_features_root.exists():
             self.assertFalse(DEMO_CONTRACTS_ENABLED)
             return
-        offenders = self._collect_import_offenders(root, demo_features_root, ["gui"])
+        offenders = []
+        for py_file in demo_features_root.rglob("*.py"):
+            tree = self._parse_python_file(py_file)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("gui_do."):
+                    offenders.append(f"{py_file.name}: {node.module}")
 
-        self.assertEqual(offenders, [], f"demo_features must remain gui-independent; found: {offenders}")
+        self.assertEqual(
+            sorted(set(offenders)),
+            [],
+            "demo_features must only import from the gui_do public root, not internal submodules; "
+            f"found: {sorted(set(offenders))}",
+        )
 
     def test_parse_failure_reports_explicit_boundary_message(self) -> None:
         with mock.patch("ast.parse", side_effect=SyntaxError("invalid syntax", ("x.py", 7, 3, "x"))):
@@ -89,13 +99,13 @@ class BoundaryContractsTests(unittest.TestCase):
             tree = self._parse_python_file(demo_file)
 
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("gui."):
+                if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith("gui_do."):
                     offenders.append(f"{demo_file.name}: {node.module}")
 
         self.assertEqual(
             sorted(set(offenders)),
             [],
-            "demo entrypoints must import gui symbols from package root only; "
+            "demo entrypoints must import gui_do symbols from package root only; "
             f"found internal imports: {sorted(set(offenders))}",
         )
 
@@ -110,13 +120,13 @@ class BoundaryContractsTests(unittest.TestCase):
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name.startswith("gui."):
+                        if alias.name.startswith("gui_do."):
                             offenders.append(f"{demo_file.name}: {alias.name}")
 
         self.assertEqual(
             sorted(set(offenders)),
             [],
-            "demo entrypoints must not import gui submodules via import statements; "
+            "demo entrypoints must not import gui_do submodules via import statements; "
             f"found submodule imports: {sorted(set(offenders))}",
         )
 
@@ -131,23 +141,23 @@ class BoundaryContractsTests(unittest.TestCase):
             tree = self._parse_python_file(demo_file)
 
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                if isinstance(node, ast.ImportFrom) and node.module == "gui_do":
                     for alias in node.names:
                         if alias.name == "*":
-                            wildcard_offenders.append(f"{demo_file.name}: from gui import *")
+                            wildcard_offenders.append(f"{demo_file.name}: from gui_do import *")
                         elif alias.name not in canonical_public_exports:
                             non_public_offenders.append(f"{demo_file.name}: {alias.name}")
 
         self.assertEqual(
             sorted(set(wildcard_offenders)),
             [],
-            "demo entrypoints must not use wildcard imports from gui root; "
+            "demo entrypoints must not use wildcard imports from gui_do root; "
             f"found wildcard imports: {sorted(set(wildcard_offenders))}",
         )
         self.assertEqual(
             sorted(set(non_public_offenders)),
             [],
-            "demo entrypoints must import only canonical public gui exports; "
+            "demo entrypoints must import only canonical public gui_do exports; "
             f"found non-public imports: {sorted(set(non_public_offenders))}",
         )
 
@@ -161,7 +171,7 @@ class BoundaryContractsTests(unittest.TestCase):
             tree = self._parse_python_file(demo_file)
 
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                if isinstance(node, ast.ImportFrom) and node.module == "gui_do":
                     imported_names = [alias.name for alias in node.names if alias.name != "*"]
                     imported_indices = [canonical_index[name] for name in imported_names if name in canonical_index]
                     if imported_indices != sorted(imported_indices):
@@ -170,7 +180,7 @@ class BoundaryContractsTests(unittest.TestCase):
         self.assertEqual(
             sorted(set(ordering_offenders)),
             [],
-            "demo entrypoints should keep gui root imports in canonical public export order; "
+            "demo entrypoints should keep gui_do root imports in canonical public export order; "
             f"found ordering violations: {sorted(set(ordering_offenders))}",
         )
 
@@ -183,7 +193,7 @@ class BoundaryContractsTests(unittest.TestCase):
             tree = self._parse_python_file(demo_file)
 
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module == "gui":
+                if isinstance(node, ast.ImportFrom) and node.module == "gui_do":
                     for alias in node.names:
                         if alias.asname is not None:
                             alias_offenders.append(f"{demo_file.name}: {alias.name} as {alias.asname}")
@@ -191,7 +201,7 @@ class BoundaryContractsTests(unittest.TestCase):
         self.assertEqual(
             sorted(set(alias_offenders)),
             [],
-            "demo entrypoints should import gui root names without aliases; "
+            "demo entrypoints should import gui_do root names without aliases; "
             f"found aliased imports: {sorted(set(alias_offenders))}",
         )
 
@@ -205,15 +215,15 @@ class BoundaryContractsTests(unittest.TestCase):
             gui_root_import_count = sum(
                 1
                 for node in ast.walk(tree)
-                if isinstance(node, ast.ImportFrom) and node.module == "gui"
+                if isinstance(node, ast.ImportFrom) and node.module == "gui_do"
             )
             if gui_root_import_count != 1:
-                offenders.append(f"{demo_file.name}: gui root import blocks={gui_root_import_count}")
+                offenders.append(f"{demo_file.name}: gui_do root import blocks={gui_root_import_count}")
 
         self.assertEqual(
             sorted(set(offenders)),
             [],
-            "active demo entrypoints should use a single from gui import (...) block; "
+            "active demo entrypoints should use a single from gui_do import (...) block; "
             f"found violations: {sorted(set(offenders))}",
         )
 

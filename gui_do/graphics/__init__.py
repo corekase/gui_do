@@ -1,6 +1,6 @@
 from pathlib import Path
 import pygame
-from shared.error_handling import io_error, logical_error
+from ..core.error_handling import io_error, logical_error
 
 from .built_in_definitions import BUILT_IN_COLOURS
 from .built_in_factory import InteractiveVisuals, BuiltInGraphicsFactory, WindowChromeVisuals
@@ -25,7 +25,7 @@ def load_pristine_surface(source):
     Accepted *source* values:
     - ``None``   → returns ``None`` (no pristine background)
     - ``pygame.Surface`` → returned as-is after ``convert()``
-    - ``str`` or ``Path`` → resolved relative to the repo ``data/images/`` directory
+    - ``str`` or ``Path`` → resolved relative to the repo ``demo_features/data/images/`` directory
     """
     if source is None:
         return None
@@ -35,7 +35,7 @@ def load_pristine_surface(source):
         candidate = Path(source)
         if not candidate.is_absolute():
             root = Path(__file__).resolve().parents[2]
-            candidate = root / "data" / "images" / str(source)
+            candidate = root / "demo_features" / "data" / "images" / str(source)
         try:
             return _convert_if_available(pygame.image.load(str(candidate)))
         except Exception as exc:

@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, WindowControl
+from gui_do import GuiApplication, PanelControl, WindowControl
 
 
 class PanelWindowActivationSequencesTests(unittest.TestCase):

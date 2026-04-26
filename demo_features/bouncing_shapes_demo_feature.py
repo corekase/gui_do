@@ -9,7 +9,7 @@ from typing import Optional
 
 import pygame
 
-from shared.feature_lifecycle import DirectFeature
+from gui_do import DirectFeature
 
 
 DEMO_SHAPE_COLOURS = (

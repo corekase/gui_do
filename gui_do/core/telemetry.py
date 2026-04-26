@@ -10,7 +10,7 @@ from time import perf_counter, time
 from typing import Any, Dict, Optional
 
 from .telemetry_analyzer import analyze_telemetry_records, render_telemetry_report
-from shared.error_handling import io_error, logical_error
+from .error_handling import io_error, logical_error
 
 
 @dataclass(frozen=True)

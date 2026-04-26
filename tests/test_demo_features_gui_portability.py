@@ -9,7 +9,7 @@ import pygame
 from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.mandelbrot_demo_feature import MANDEL_KIND_STATUS
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
-from shared.feature_lifecycle import FeatureMessage
+from gui_do import FeatureMessage
 
 
 class _Packet:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pygame import Rect
 
-from shared.feature_lifecycle import Feature
+from gui_do import Feature
 
 
 class StylesShowcaseFeature(Feature):
@@ -65,10 +65,10 @@ class StylesShowcaseFeature(Feature):
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "heading": {"size": 18, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 15, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "footer": {"size": 14, "file_path": "data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                    "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
+                    "heading": {"size": 18, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial", "bold": True},
+                    "control": {"size": 15, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                    "footer": {"size": 14, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
             },
             scene_name="control_showcase",
         )
@@ -173,6 +173,7 @@ class StylesShowcaseFeature(Feature):
                         selected=False,
                         style=style_sequence[row_index],
                         on_activate=lambda target=footer, token=footer_token: self._update_footer_label(target, token),
+                        font_role=self.font_role("control"),
                     )
                 )
                 control.set_tab_index(focus_index)

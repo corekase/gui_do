@@ -15,17 +15,17 @@ import unittest
 import pygame
 from pygame import Rect, Surface
 
-from gui.app.gui_application import GuiApplication
-from gui.controls.button_control import ButtonControl
-from gui.controls.label_control import LabelControl
-from gui.controls.panel_control import PanelControl
-from gui.controls.scrollbar_control import ScrollbarControl
-from gui.controls.slider_control import SliderControl
-from gui.controls.window_control import WindowControl
-from gui.core.action_manager import ActionManager
-from gui.core.event_bus import EventBus
-from gui.core.ui_node import UiNode
-from gui.layout.layout_axis import LayoutAxis
+from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.button_control import ButtonControl
+from gui_do.controls.label_control import LabelControl
+from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.scrollbar_control import ScrollbarControl
+from gui_do.controls.slider_control import SliderControl
+from gui_do.controls.window_control import WindowControl
+from gui_do.core.action_manager import ActionManager
+from gui_do.core.event_bus import EventBus
+from gui_do.core.ui_node import UiNode
+from gui_do.layout.layout_axis import LayoutAxis
 
 
 # ---------------------------------------------------------------------------

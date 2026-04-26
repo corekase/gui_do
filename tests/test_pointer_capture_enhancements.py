@@ -3,7 +3,7 @@ import unittest
 
 from pygame import Rect
 
-from gui.core.pointer_capture import PointerCapture
+from gui_do.core.pointer_capture import PointerCapture
 
 
 class PointerCaptureIsActiveTests(unittest.TestCase):

@@ -20,11 +20,11 @@ from tests.contract_test_catalog import DEMO_FEATURES_EXPORT_ORDER
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_PHRASES
 from tests.contract_test_catalog import PUBLIC_API_REQUIRED_REFERENCES
-from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_DEMO_IMPORTS
-from tests.contract_test_catalog import README_PUBLIC_API_GUI_IMPORT_ORDER
-from tests.contract_test_catalog import README_BOUNDARY_REQUIRED_PHRASES
-from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_GUI_IMPORTS
-from tests.contract_test_catalog import README_PUBLIC_API_REQUIRED_PHRASES
+from tests.contract_test_catalog import PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS
+from tests.contract_test_catalog import PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER
+from tests.contract_test_catalog import PACKAGE_BOUNDARY_REQUIRED_PHRASES
+from tests.contract_test_catalog import PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS
+from tests.contract_test_catalog import PACKAGE_PUBLIC_API_REQUIRED_PHRASES
 
 
 class ContractCatalogConsistencyTests(unittest.TestCase):
@@ -152,60 +152,60 @@ class ContractCatalogConsistencyTests(unittest.TestCase):
         for export_name in PUBLIC_API_EXPORT_ORDER:
             self.assertTrue(export_name.strip())
 
-    def test_readme_public_api_required_import_constants_are_well_formed(self) -> None:
-        self.assertTrue(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)
-        self.assertTrue(README_PUBLIC_API_GUI_IMPORT_ORDER)
+    def test_package_public_api_required_import_constants_are_well_formed(self) -> None:
+        self.assertTrue(PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS)
+        self.assertTrue(PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER)
         self.assertEqual(
-            len(README_PUBLIC_API_REQUIRED_GUI_IMPORTS),
-            len(set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS)),
+            len(PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS),
+            len(set(PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS)),
         )
 
         if DEMO_CONTRACTS_ENABLED:
-            self.assertTrue(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
+            self.assertTrue(PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS)
             self.assertEqual(
-                len(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
-                len(set(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
+                len(PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS),
+                len(set(PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS)),
             )
         else:
-            self.assertEqual(README_PUBLIC_API_REQUIRED_DEMO_IMPORTS, ())
+            self.assertEqual(PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS, ())
 
         self.assertEqual(
-            len(README_PUBLIC_API_GUI_IMPORT_ORDER),
-            len(set(README_PUBLIC_API_GUI_IMPORT_ORDER)),
+            len(PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER),
+            len(set(PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER)),
         )
 
         canonical_public_exports = set(PUBLIC_API_EXPORT_ORDER)
-        for required_export in README_PUBLIC_API_REQUIRED_GUI_IMPORTS:
+        for required_export in PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS:
             self.assertIn(required_export, canonical_public_exports)
 
-        for imported_export in README_PUBLIC_API_GUI_IMPORT_ORDER:
+        for imported_export in PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER:
             self.assertIn(imported_export, canonical_public_exports)
 
         self.assertTrue(
-            set(README_PUBLIC_API_REQUIRED_GUI_IMPORTS).issubset(set(README_PUBLIC_API_GUI_IMPORT_ORDER))
+            set(PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS).issubset(set(PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER))
         )
 
-        for required_import_line in README_PUBLIC_API_REQUIRED_DEMO_IMPORTS:
+        for required_import_line in PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS:
             self.assertTrue(required_import_line.startswith("from demo_features."))
 
-    def test_readme_public_api_required_phrases_constant_is_well_formed(self) -> None:
-        self.assertTrue(README_PUBLIC_API_REQUIRED_PHRASES)
+    def test_package_public_api_required_phrases_constant_is_well_formed(self) -> None:
+        self.assertTrue(PACKAGE_PUBLIC_API_REQUIRED_PHRASES)
         self.assertEqual(
-            len(README_PUBLIC_API_REQUIRED_PHRASES),
-            len(set(README_PUBLIC_API_REQUIRED_PHRASES)),
+            len(PACKAGE_PUBLIC_API_REQUIRED_PHRASES),
+            len(set(PACKAGE_PUBLIC_API_REQUIRED_PHRASES)),
         )
 
-        for phrase in README_PUBLIC_API_REQUIRED_PHRASES:
+        for phrase in PACKAGE_PUBLIC_API_REQUIRED_PHRASES:
             self.assertTrue(phrase.strip())
 
-    def test_readme_boundary_required_phrases_constant_is_well_formed(self) -> None:
-        self.assertTrue(README_BOUNDARY_REQUIRED_PHRASES)
+    def test_package_boundary_required_phrases_constant_is_well_formed(self) -> None:
+        self.assertTrue(PACKAGE_BOUNDARY_REQUIRED_PHRASES)
         self.assertEqual(
-            len(README_BOUNDARY_REQUIRED_PHRASES),
-            len(set(README_BOUNDARY_REQUIRED_PHRASES)),
+            len(PACKAGE_BOUNDARY_REQUIRED_PHRASES),
+            len(set(PACKAGE_BOUNDARY_REQUIRED_PHRASES)),
         )
 
-        for phrase in README_BOUNDARY_REQUIRED_PHRASES:
+        for phrase in PACKAGE_BOUNDARY_REQUIRED_PHRASES:
             self.assertTrue(phrase.strip())
 
 

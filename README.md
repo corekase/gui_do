@@ -29,7 +29,7 @@ The demo ships with two scenes:
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, LabelControl, ButtonControl
+from gui_do import GuiApplication, PanelControl, LabelControl, ButtonControl
 
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
@@ -61,6 +61,57 @@ app.run(target_fps=60)
 pygame.quit()
 ```
 
+## Merging into an Existing Project
+
+Before copying this package's files into a project that already has its own code and tests, run the
+readiness check script pointing it at your existing project directory. The script does a direct
+filesystem check — no Python environment setup required. Run it from anywhere; pass the path to your
+existing project as `--target`:
+
+```bash
+# Linux/macOS
+sh scripts/check_merge_readiness.sh --target /path/to/your/project
+
+# Windows (cmd or PowerShell)
+scripts\check_merge_readiness.bat --target C:\path\to\your\project
+
+# Or directly:
+python scripts/check_merge_readiness.py --target /path/to/your/project
+```
+
+The script checks the two potential conflict areas described below.
+
+**Top-level package name collisions**
+
+`gui_do/` is an unqualified top-level package name. If your existing project already has a
+`gui_do/` directory, copying gui_do's files in would overwrite or conflict with it. The
+check script looks for those directories in your target project and reports any it finds. Resolve
+conflicts by renaming one of the packages before copying.
+
+**Demo test file names**
+
+The bootstrap `new` command deletes these specific test files from `tests/`:
+
+- `test_bouncing_shapes_demo_feature.py`
+- `test_controls_demo_feature.py`
+- `test_demo_features_gui_portability.py`
+- `test_feature_lifecycle_host_parameter_contracts.py`
+- `test_gui_do_demo_life_runtime.py`
+- `test_gui_do_demo_presentation_model.py`
+- `test_mandel_event_schema_exports.py`
+- `test_mandel_logic_feature_runtime.py`
+- `test_styles_demo_feature.py`
+
+If your existing project already has test files with any of those exact names, they will be deleted
+when bootstrap runs. The check script looks for those names in your target project's `tests/`
+directory. Rename your files first before running bootstrap.
+
+**Multiple independent projects**
+
+Each core-only project is a self-contained directory. The bootstrap and upgrade scripts resolve all
+paths from their own file location, so running the script in project A has no effect on project B.
+Upgrades are applied independently per project.
+
 ## Start a New Project
 
 This repository includes a CLI bootstrap tool that converts the demo repository into a core-only
@@ -72,8 +123,7 @@ What it does:
 - removes `gui_do_demo.py`
 - removes the `demo_features/` package
 - removes demo-specific test files
-- rewrites boundary command/docs parity surfaces (`README.md`, `docs/architecture_boundary_spec.md`,
-  `docs/public_api_spec.md`, and `.github/workflows/unittest.yml`) to match core-only contracts
+- syncs contract docs and CI workflow files to core-only mode
 
 Working directory note:
 
@@ -121,7 +171,7 @@ the package files in your project and then re-run the core-only sync script.
 
 - For git-based upgrades: pull/merge the upstream changes as usual.
 - For `.zip`-based upgrades: copy/extract the updated package folders/files into your project,
-  including at minimum `gui/`, `shared/`, `scripts/`, `tests/`, `docs/`, and `README.md`.
+  including at minimum `gui_do/`, `scripts/`, `tests/`, `docs/`, and `README.md`.
 
 Important: use the updated script from `scripts/bootstrap_new_project.py` (or the updated upgrade
 wrappers in `scripts/`) after the files above are updated. This reapplies the core-only constraints
@@ -149,7 +199,7 @@ python scripts/bootstrap_new_project.py check
 # apply sync only
 python scripts/bootstrap_new_project.py upgrade
 
-# apply sync and skip README/docs rewrites
+# apply sync and skip docs rewrites
 python scripts/bootstrap_new_project.py upgrade --skip-doc-sync
 
 # apply sync and skip CI workflow rewrite
@@ -270,7 +320,7 @@ Default behavior:
 - live analyzer is disabled
 - file logging is disabled
 
-Telemetry API (`from gui import ...`):
+Telemetry API (`from gui_do import ...`):
 
 - `configure_telemetry(...)`
 - `telemetry_collector()`
@@ -293,7 +343,7 @@ Analyzer note: per-feature hotspot aggregation reads `metadata.feature_name` on 
 #### Quick Telemetry Tutorial
 
 ```python
-from gui import GuiApplication
+from gui_do import GuiApplication
 
 app = GuiApplication(screen)
 
@@ -337,8 +387,8 @@ Live analyzer shutdown behavior:
 Analyzer workflow for offline logs:
 
 ```python
-from gui import analyze_telemetry_log_file
-from gui import render_telemetry_report
+from gui_do import analyze_telemetry_log_file
+from gui_do import render_telemetry_report
 
 analysis = analyze_telemetry_log_file("gui_do_telemetry_20260425_171200_samples.jsonl", top_n=20)
 print(render_telemetry_report(analysis, source="offline-log"))
@@ -346,7 +396,7 @@ print(render_telemetry_report(analysis, source="offline-log"))
 
 ### Feature Types: `Feature`, `RoutedFeature`, `LogicFeature`, and `DirectFeature`
 
-There are four Feature base classes in `shared.feature_lifecycle`. Choosing between them depends on what the feature owns and how it runs.
+There are four Feature base classes exposed from `gui_do` (implemented in `gui_do/core/feature_lifecycle.py`). Choosing between them depends on what the feature owns and how it runs.
 
 #### Feature Lifecycle Hooks: `on_register` and `on_unregister`
 
@@ -356,7 +406,7 @@ Two additional hooks are called by `FeatureManager` outside the main lifecycle s
 - `on_unregister(host)` — called when the Feature is removed via `app.unregister_feature(...)`, after `shutdown_runtime`. Use it for final cleanup.
 
 ```python
-from shared.feature_lifecycle import Feature
+from gui_do import Feature
 
 class MyFeature(Feature):
     def on_register(self, host) -> None:
@@ -380,7 +430,7 @@ Use `Feature` for features that:
 The demo's `LifeSimulationFeature` and `MandelbrotRenderFeature` both extend `RoutedFeature`. Each owns a `WindowControl` containing `CanvasControl` and control widgets. Their screen-drawing responsibilities are delegated to those controls — the Feature itself is responsible for wiring and orchestration, not raw pixel output.
 
 ```python
-from shared.feature_lifecycle import RoutedFeature
+from gui_do import RoutedFeature
 
 class LifeSimulationFeature(RoutedFeature):
     HOST_REQUIREMENTS = {
@@ -444,7 +494,7 @@ Private and shared logic are both supported:
 The current preferred pattern is: register companion `LogicFeature` providers from `on_register`, then bind aliases in `bind_runtime`. This keeps bootstrap wiring local to the owning Feature so your app/demo only registers the top-level render Feature.
 
 ```python
-from shared.feature_lifecycle import FeatureMessage, LogicFeature, RoutedFeature
+from gui_do import FeatureMessage, LogicFeature, RoutedFeature
 
 TOPIC = "counter"
 
@@ -516,7 +566,7 @@ Practical notes:
 `RoutedFeature` extends `Feature` with topic-based message dispatch, so you can avoid manual `pop_message()` loop inspection. It adds one override point — `message_handlers()` — which returns a dictionary mapping topic strings to handler callables. `on_update` drains the queue and dispatches each message automatically.
 
 ```python
-from shared.feature_lifecycle import RoutedFeature, FeatureMessage
+from gui_do import RoutedFeature, FeatureMessage
 
 class StatusConsumerFeature(RoutedFeature):
     # Override MESSAGE_TOPIC_KEY if the sending party uses a different field name.
@@ -552,7 +602,7 @@ This matters for performance. A standard `Feature` drawing onto the screen via `
 The demo's `BouncingShapesBackdropFeature` extends `DirectFeature` for exactly this reason: it renders many translucent animated circles and diamonds as a fullscreen backdrop every frame, and any per-frame widget pipeline overhead would compound noticeably at 60 fps.
 
 ```python
-from shared.feature_lifecycle import DirectFeature
+from gui_do import DirectFeature
 
 class BouncingShapesBackdropFeature(DirectFeature):
     HOST_REQUIREMENTS = {
@@ -690,7 +740,7 @@ scheduler = TaskScheduler(max_workers=workers)
 - `reason-required`: callback must accept `(value, reason)`
 
 ```python
-from gui import SliderControl, LayoutAxis, ValueChangeReason
+from gui_do import SliderControl, LayoutAxis, ValueChangeReason
 
 def on_zoom_changed(value, reason):
     if reason is ValueChangeReason.MOUSE_DRAG:
@@ -712,7 +762,7 @@ slider = SliderControl(
 ## Feature Example: Feature Registration and Runtime Binding
 
 ```python
-from shared.feature_lifecycle import Feature
+from gui_do import Feature
 
 class StatusFeature(Feature):
     HOST_REQUIREMENTS = {
@@ -745,7 +795,7 @@ class StatusFeature(Feature):
 All controls follow a consistent pattern: create with a unique ID, bounding rect, and options, then add to a parent.
 
 ```python
-from gui import ButtonControl, ToggleControl, LabelControl
+from gui_do import ButtonControl, ToggleControl, LabelControl
 
 # Add a button
 button = parent.add(
@@ -829,7 +879,7 @@ node.invalidate()           # mark as dirty for next draw pass
 Clickable push button that fires a callback on activation.
 
 ```python
-from gui import ButtonControl
+from gui_do import ButtonControl
 
 button = parent.add(
     ButtonControl(
@@ -863,7 +913,7 @@ Keyboard: when the button has focus, `Space` or `Return` activates it (fires `on
 Use `ToggleControl` for two-state buttons that track a `pushed` boolean. It fires `on_toggle(pushed: bool)` each time the state changes.
 
 ```python
-from gui import ToggleControl
+from gui_do import ToggleControl
 
 toggle = parent.add(
     ToggleControl(
@@ -897,7 +947,7 @@ Keyboard: when the toggle has focus, `Space` or `Return` activates it.
 Display read-only text. Useful for status, titles, and information display.
 
 ```python
-from gui import LabelControl
+from gui_do import LabelControl
 
 label = parent.add(
     LabelControl("label_id", rect, "Initial Text", align="left")
@@ -922,7 +972,7 @@ Clicking a `LabelControl` never steals or clears keyboard focus — labels are i
 Capture numeric input with mouse drag or keyboard. `SliderControl` and `ScrollbarControl` use the dual-mode value-change callback system.
 
 ```python
-from gui import SliderControl, LayoutAxis, ValueChangeReason
+from gui_do import SliderControl, LayoutAxis, ValueChangeReason
 
 def on_value_changed(value, reason):
     print(f"Value: {value}, Reason: {reason}")
@@ -961,7 +1011,7 @@ slider.set_on_change_mode("compat")           # returns normalized mode string
 Scrollbar for viewport scrolling. Unlike `SliderControl`, it describes a viewport position within content: `content_size` is the total scrollable length, `viewport_size` is the visible window, and `offset` is the current scroll position.
 
 ```python
-from gui import ScrollbarControl, LayoutAxis, ValueChangeReason
+from gui_do import ScrollbarControl, LayoutAxis, ValueChangeReason
 
 def on_scroll(offset, reason):
     if reason == ValueChangeReason.MOUSE_DRAG:
@@ -1005,7 +1055,7 @@ scrollbar.set_on_change_mode("reason-required")  # returns normalized mode strin
 Mutually exclusive selection (radio button behavior). Each `ButtonGroupControl` instance represents one option in a named group. Selecting any option in the group clears the previous selection.
 
 ```python
-from gui import ButtonGroupControl
+from gui_do import ButtonGroupControl
 
 # Create one ButtonGroupControl per option, sharing the same group name.
 btn_a = parent.add(
@@ -1041,14 +1091,14 @@ ButtonGroupControl.clear_group_registry("view_mode")
 Display PNG/JPG images scaled to fit a rectangle.
 
 ```python
-from gui import ImageControl
+from gui_do import ImageControl
 
 image = parent.add(
-    ImageControl("image_id", rect, image_path="data/images/backdrop.jpg")
+    ImageControl("image_id", rect, image_path="demo_features/data/images/backdrop.jpg")
 )
 
 # Update image
-image.set_image("data/images/new_image.png")
+image.set_image("demo_features/data/images/new_image.png")
 ```
 
 ### Frame Control
@@ -1056,7 +1106,7 @@ image.set_image("data/images/new_image.png")
 A decorative border frame that groups content visually.
 
 ```python
-from gui import FrameControl
+from gui_do import FrameControl
 
 frame = parent.add(
     FrameControl("frame_id", rect, border_width=2)
@@ -1076,7 +1126,7 @@ frame.border_width = 3
 Clickable arrow button with optional hold-repeat activation. Direction is specified in degrees: 0 = right, 90 = down, 180 = left, 270 = up. Used internally by scrollbars but usable standalone.
 
 ```python
-from gui import ArrowBoxControl
+from gui_do import ArrowBoxControl
 
 up_arrow = parent.add(
     ArrowBoxControl(
@@ -1100,7 +1150,7 @@ up_arrow.set_on_activate(None)
 Floating, draggable window with title bar and frame.
 
 ```python
-from gui import WindowControl
+from gui_do import WindowControl
 
 window = parent.add(
     WindowControl(
@@ -1137,7 +1187,7 @@ See [Window and Layout Management](#window-and-layout-management) for the comple
 `PanelControl` serves as the base container for child controls. Use it to group related widgets, manage windows, and build layout regions. It can optionally draw a theme background fill.
 
 ```python
-from gui import PanelControl
+from gui_do import PanelControl
 
 # A region panel that draws a background
 panel = root.add(
@@ -1164,7 +1214,7 @@ panel.remove(label)
 `TaskPanelControl` provides a slide-in/slide-out panel along a screen edge. Create it directly and add it to a root container. See the [Task Panel Configuration](#task-panel-configuration) section for a complete example.
 
 ```python
-from gui import TaskPanelControl, ButtonControl
+from gui_do import TaskPanelControl, ButtonControl
 from pygame import Rect
 
 task_panel = root.add(
@@ -1188,7 +1238,7 @@ button = task_panel.add(
 High-performance drawable surface with an internal event queue. Incoming mouse events are stored as `CanvasEventPacket` objects and drained by the caller each frame.
 
 ```python
-from gui import CanvasControl, CanvasEventPacket
+from gui_do import CanvasControl, CanvasEventPacket
 
 canvas = parent.add(
     CanvasControl(
@@ -1227,7 +1277,7 @@ pygame.draw.circle(canvas_surface, (255, 0, 0), (100, 100), 50)
 `TaskPanelControl` provides a panel that slides in/out from an edge of the screen, typically for application-level action buttons. Construct it like any other control and add it to a root container.
 
 ```python
-from gui import TaskPanelControl, ButtonControl
+from gui_do import TaskPanelControl, ButtonControl
 from pygame import Rect
 
 # Create task panel docked at the top of the screen
@@ -1259,7 +1309,7 @@ task_panel.set_animation_step_px(6)
 The `CanvasControl` provides a drawable surface for custom graphics and interactive content. Mouse events that land on the canvas are queued as `CanvasEventPacket` objects. Drain the queue in your update hook each frame using `read_event()`.
 
 ```python
-from gui import CanvasControl, CanvasEventPacket
+from gui_do import CanvasControl, CanvasEventPacket
 
 canvas = parent.add(
     CanvasControl("canvas_id", rect, max_events=256)
@@ -1318,7 +1368,7 @@ The framework uses canonical `GuiEvent` objects with three-phase dispatch: captu
 ### GuiEvent Helper Methods
 
 ```python
-from gui import GuiEvent, EventPhase, EventType
+from gui_do import GuiEvent, EventPhase, EventType
 import pygame
 
 def handle_event(event: GuiEvent) -> bool:
@@ -1380,7 +1430,7 @@ Containers automatically propagate events to children. Call `stop_propagation()`
 ### Keyboard and Action Handling
 
 ```python
-from gui import ActionManager
+from gui_do import ActionManager
 
 # Register actions
 app.actions.register_action("zoom_in", lambda event: (print("Zooming in"), True))
@@ -1437,7 +1487,7 @@ input_field.set_tab_index(2)
 The `FocusManager` is available directly on the `GuiApplication` instance as `app.focus`.
 
 ```python
-from gui import FocusManager
+from gui_do import FocusManager
 
 # Access the application-wide focus manager
 focus_manager = app.focus
@@ -1470,7 +1520,7 @@ count = focus_manager.focusable_count(app.scene, window=my_window)  # scoped to 
 `FocusVisualizer` renders a dashed rectangle around the currently focused control and fades it out after `FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS` (1.5 s). It is accessible directly as `app.focus_visualizer`.
 
 ```python
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 # 1.5 — shared timeout for both traversal hints and activation hints.
 
 visualizer = app.focus_visualizer
@@ -1518,7 +1568,7 @@ for control in [btn1, btn2, inp]:
 `WindowControl` provides a floating, draggable window with a title bar. Add it to a `PanelControl`, which manages window ordering and activation.
 
 ```python
-from gui import WindowControl
+from gui_do import WindowControl
 
 window = panel.add(
     WindowControl(
@@ -1596,7 +1646,7 @@ tiler.prime_registration()  # stamp registration order now; idempotent for exist
 Position widgets using absolute coordinates or anchor-based relative positioning.
 
 ```python
-from gui import LayoutAxis
+from gui_do import LayoutAxis
 
 # Set anchor bounds (usually screen rect)
 app.layout.set_anchor_bounds(screen.get_rect())
@@ -1654,7 +1704,7 @@ rect_b = app.layout.next_gridded(columns=3)
 Use `ObservableValue` to create reactive data that automatically notifies subscribers when it changes.
 
 ```python
-from gui import ObservableValue, PresentationModel
+from gui_do import ObservableValue, PresentationModel
 
 # Create an observable value
 count = ObservableValue(0)
@@ -1706,7 +1756,7 @@ view_model.dispose()
 `ColorTheme` is constructed without arguments; its palette uses built-in colors. Each scene runtime gets its own theme. Register font roles per-scene via `app.register_font_role(...)`.
 
 ```python
-from gui import ColorTheme, BuiltInGraphicsFactory
+from gui_do import ColorTheme, BuiltInGraphicsFactory
 
 # Each scene has a theme accessible as app.theme (for the active scene).
 # Full built-in palette:
@@ -1722,7 +1772,7 @@ shadow_col  = app.theme.shadow      # text drop-shadow color
 app.register_font_role(
     role_name="body",
     size=14,
-    file_path="data/fonts/Ubuntu-B.ttf",   # relative to repo root, or absolute
+    file_path="demo_features/data/fonts/Ubuntu-B.ttf",   # relative to repo root, or absolute
     system_name="arial",                    # pygame system font fallback
     bold=False,
     italic=False,
@@ -1732,7 +1782,7 @@ app.register_font_role(
 app.register_font_role(
     role_name="heading",
     size=24,
-    file_path="data/fonts/Gimbot.ttf",
+    file_path="demo_features/data/fonts/Gimbot.ttf",
     system_name="arial",
     bold=True,
     scene_name="main",
@@ -1756,12 +1806,12 @@ Three roles are pre-registered by default for every scene:
 
 | Role | Typeface | Default size |
 |---|---|---|
-| `"body"` | Ubuntu-B.ttf / arial | 16 |
-| `"title"` | Gimbot.ttf / arial bold | 14 |
-| `"display"` | Gimbot.ttf / arial bold | 72 |
+| `"body"` | pygame system default (fallback: pygame default) | 16 |
+| `"title"` | pygame system default bold (fallback: pygame default) | 14 |
+| `"display"` | pygame system default bold (fallback: pygame default) | 72 |
 
 ```python
-from gui import FontManager
+from gui_do import FontManager
 
 fonts = app.theme.fonts   # active scene's FontManager
 
@@ -1769,7 +1819,7 @@ fonts = app.theme.fonts   # active scene's FontManager
 fonts.register_role(
     "heading",
     size=24,
-    file_path="data/fonts/Ubuntu-B.ttf",   # relative to resource root, or absolute
+    file_path="demo_features/data/fonts/Ubuntu-B.ttf",   # relative to resource root, or absolute
     system_name="arial",                   # pygame system-font fallback
     bold=True,
     italic=False,
@@ -1824,7 +1874,7 @@ label.rect.size = fi.text_surface_size(label.text, shadow=True)
 `EventManager` converts raw pygame events to canonical `GuiEvent` objects. It is accessible as `app.event_manager`, but in most cases `GuiApplication.process_event(event)` calls it automatically. Use it directly when you need a standalone conversion outside the main loop.
 
 ```python
-from gui import EventManager, GuiEvent
+from gui_do import EventManager, GuiEvent
 
 manager = EventManager()
 gui_event: GuiEvent = manager.to_gui_event(raw_pygame_event)
@@ -1837,7 +1887,7 @@ gui_event = manager.to_gui_event(raw_event, pointer_pos=(x, y))
 `EventBus` provides scoped publish-subscribe delivery for non-input UI events. Access it as `app.events`.
 
 ```python
-from gui import EventBus
+from gui_do import EventBus
 
 bus = app.events
 
@@ -1874,7 +1924,7 @@ for_topic = bus.subscriber_count("status_changed")
 Features communicate by sending dictionary messages to named target Features. The receiver drains its queue each frame.
 
 ```python
-from shared.feature_lifecycle import Feature, FeatureMessage
+from gui_do import Feature, FeatureMessage
 
 class ProducerFeature(Feature):
     def on_update(self, host):
@@ -1903,7 +1953,7 @@ class ConsumerFeature(Feature):
 Features can register their own namespaced font roles without colliding with other Features or application-level roles. Roles are stored under a qualified name `feature.<feature_name>.<role_name>` and resolved via `self.font_role(...)`.
 
 ```python
-from shared.feature_lifecycle import Feature
+from gui_do import Feature
 
 class MyFeature(Feature):
     def __init__(self):
@@ -1915,7 +1965,7 @@ class MyFeature(Feature):
             host,
             "heading",
             size=20,
-            file_path="data/fonts/Ubuntu-B.ttf",
+            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
             system_name="arial",
             bold=True,
             scene_name="main",
@@ -1942,7 +1992,7 @@ class MyFeature(Feature):
 For compute-heavy features, keep scheduler control flow in a render Feature and move pixel/algorithm work into one or more `LogicFeature` providers. Register worker entrypoints as named runnables in the logic Feature, then invoke them from scheduler tasks via `app.run_feature_runnable(...)`.
 
 ```python
-from shared.feature_lifecycle import LogicFeature, RoutedFeature
+from gui_do import LogicFeature, RoutedFeature
 
 class MandelbrotLogicFeature(LogicFeature):
     def bind_runtime(self, host) -> None:
@@ -2019,7 +2069,7 @@ x, y = app.logical_pointer_pos
 The active tracker is available as `app.invalidation`. The renderer calls it internally each frame, and you can force a full redraw from application code:
 
 ```python
-from gui import InvalidationTracker
+from gui_do import InvalidationTracker
 
 # Force a full redraw on the next frame (e.g., after a theme change)
 app.invalidation.invalidate_all()
@@ -2220,8 +2270,8 @@ app.tile_windows(newly_visible=[win])  # hint which window was just made visible
 settings = app.read_window_tiling_settings()  # current tiling configuration dict
 
 # Scene backdrop (pristine background image blit before every frame)
-# source can be a path string (relative to data/images/), a pygame.Surface, or None
-app.set_pristine("backdrop.jpg", scene_name="main")        # load from data/images/
+# source can be a path string (relative to demo_features/data/images/), a pygame.Surface, or None
+app.set_pristine("backdrop.jpg", scene_name="main")        # load from demo_features/data/images/
 app.set_pristine(my_surface, scene_name="main")            # use an existing Surface
 app.set_pristine(None, scene_name="main")                  # clear backdrop
 app.restore_pristine()                                     # blit active scene backdrop to display
@@ -2248,7 +2298,7 @@ frames = app.run(target_fps=60, max_frames=300)
 Use `UiEngine` directly only when you need frame-level control from an outer runner.
 
 ```python
-from gui import UiEngine
+from gui_do import UiEngine
 
 engine = UiEngine(app, target_fps=60)
 
@@ -2266,7 +2316,7 @@ The engine calls `app.process_event(event)`, `app.update(dt_seconds)`, `app.draw
 `GuiApplication` hides the system cursor at startup and renders a software cursor each frame. Two built-in cursors are registered by default: `normal` and `hand`.
 
 ```python
-# Register a custom cursor (image looked up under data/cursors/ or absolute path)
+# Register a custom cursor (image looked up under demo_features/data/cursors/ or absolute path)
 app.register_cursor("crosshair", "crosshair.png", hotspot=(8, 8))
 
 # Switch the active cursor
@@ -2302,7 +2352,7 @@ python -m pytest -q
 ## Public API
 
 ```python
-from gui import (
+from gui_do import (
     GuiApplication,
     UiEngine,
     PanelControl,
@@ -2350,16 +2400,16 @@ from gui import (
     ColorTheme,
 )
 
-# Demo-only contracts are intentionally outside gui package:
+# Demo-only contracts are intentionally outside gui_do package:
 from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
 
-- `gui/` contains reusable framework/runtime functionality.
+- `gui_do/` contains reusable framework/runtime functionality.
 - `demo_features/` contains demo-specific contracts and helpers.
 - Boundary scope for demo entrypoints is `*_demo.py`.
-- Active demo entrypoints should consume the framework through `from gui import ...`, without aliases, and with a single `from gui import (...)` block.
+- Active demo entrypoints should consume the framework through `from gui_do import ...`, without aliases, and with a single `from gui_do import (...)` block.
 
 ## Architecture Docs
 

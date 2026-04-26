@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, Iterable, List, Sequence
-from shared.error_handling import io_error
+from .error_handling import io_error
 
 
 @dataclass(frozen=True)

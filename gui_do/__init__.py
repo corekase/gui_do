@@ -1,5 +1,7 @@
 """GUI package entry point."""
 
+__version__ = "0.1.0"
+
 import ctypes
 import os
 
@@ -54,6 +56,14 @@ from .core.telemetry_analyzer import load_telemetry_log_file
 from .core.telemetry_analyzer import render_telemetry_report
 from .graphics.built_in_factory import BuiltInGraphicsFactory
 from .theme.color_theme import ColorTheme
+from .core.feature_lifecycle import (
+    Feature,
+    DirectFeature,
+    LogicFeature,
+    RoutedFeature,
+    FeatureMessage,
+    FeatureManager,
+)
 
 __all__ = [
     "GuiApplication",
@@ -101,4 +111,10 @@ __all__ = [
     "render_telemetry_report",
     "BuiltInGraphicsFactory",
     "ColorTheme",
+    "Feature",
+    "DirectFeature",
+    "LogicFeature",
+    "RoutedFeature",
+    "FeatureMessage",
+    "FeatureManager",
 ]

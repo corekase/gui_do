@@ -3,11 +3,11 @@ import unittest
 from pathlib import Path
 
 from tests.contract_docs_helpers import backticked_bullet_items
-from tests.contract_docs_helpers import readme_boundary_commands
+from tests.contract_docs_helpers import package_boundary_commands
 from tests.contract_docs_helpers import section_body
 from tests.contract_test_catalog import ARCHITECTURE_DOC_PATHS
 from tests.contract_test_catalog import BOUNDARY_COMMAND_SEQUENCE
-from tests.contract_test_catalog import README_BOUNDARY_REQUIRED_PHRASES
+from tests.contract_test_catalog import PACKAGE_BOUNDARY_REQUIRED_PHRASES
 
 EXPECTED_ARCHITECTURE_DOCS = set(ARCHITECTURE_DOC_PATHS)
 EXPECTED_BOUNDARY_COMMANDS = list(BOUNDARY_COMMAND_SEQUENCE)
@@ -17,14 +17,14 @@ class ReadmeDocsContractsTests(unittest.TestCase):
     def _repo_root(self) -> Path:
         return Path(__file__).resolve().parents[1]
 
-    def _read_readme(self) -> str:
-        return (self._repo_root() / "README.md").read_text(encoding="utf-8")
+    def _read_contract_doc(self) -> str:
+        return (self._repo_root() / "docs" / "package_contracts.md").read_text(encoding="utf-8")
 
     def _section_body(self, text: str, heading: str) -> str:
-        return section_body(text, heading, "README")
+        return section_body(text, heading, "docs/package_contracts.md")
 
     def test_architecture_docs_section_lists_expected_documents(self) -> None:
-        section = self._section_body(self._read_readme(), "## Architecture Docs")
+        section = self._section_body(self._read_contract_doc(), "## Architecture Docs")
         documented = {
             item
             for item in backticked_bullet_items(section)
@@ -39,13 +39,13 @@ class ReadmeDocsContractsTests(unittest.TestCase):
             self.assertTrue((root / doc_path).exists(), f"documented architecture path does not exist: {doc_path}")
 
     def test_boundary_commands_match_expected_bundle_and_order(self) -> None:
-        self.assertEqual(readme_boundary_commands(self._repo_root()), EXPECTED_BOUNDARY_COMMANDS)
+        self.assertEqual(package_boundary_commands(self._repo_root()), EXPECTED_BOUNDARY_COMMANDS)
 
     def test_demo_package_boundary_section_contains_required_phrases(self) -> None:
-        section = self._section_body(self._read_readme(), "## Demo/Package Boundary")
+        section = self._section_body(self._read_contract_doc(), "## Demo/Package Boundary")
         normalized_section = section.replace("`", "")
 
-        for phrase in README_BOUNDARY_REQUIRED_PHRASES:
+        for phrase in PACKAGE_BOUNDARY_REQUIRED_PHRASES:
             normalized_phrase = phrase.replace("`", "")
             self.assertIn(normalized_phrase, normalized_section)
 

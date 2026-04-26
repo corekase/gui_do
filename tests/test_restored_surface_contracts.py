@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect, Surface
 
-from gui import (
+from gui_do import (
     ArrowBoxControl,
     ButtonControl,
     ButtonGroupControl,
@@ -26,9 +26,9 @@ from gui import (
     WindowControl,
     WindowTilingManager,
 )
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
-from gui.core.ui_node import UiNode
-from shared.feature_lifecycle import Feature
+from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.core.ui_node import UiNode
+from gui_do import Feature
 
 
 class RestoredSurfaceContractsTests(unittest.TestCase):

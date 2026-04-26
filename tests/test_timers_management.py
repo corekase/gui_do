@@ -1,7 +1,7 @@
 ﻿"""Tests for Timers management APIs: timer_ids, cancel_all, reschedule."""
 import unittest
 
-from gui.core.timers import Timers
+from gui_do.core.timers import Timers
 
 
 class TimerIdsTests(unittest.TestCase):

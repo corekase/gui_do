@@ -4,6 +4,9 @@ import re
 from pathlib import Path
 
 
+PACKAGE_CONTRACTS_DOC = "docs/package_contracts.md"
+
+
 def section_body(text: str, heading: str, source_name: str) -> str:
     start = text.find(heading)
     if start == -1:
@@ -40,9 +43,18 @@ def commands_from_fenced_section(
     return commands
 
 
-def readme_boundary_commands(repo_root: Path) -> list[str]:
-    text = (repo_root / "README.md").read_text(encoding="utf-8")
-    return commands_from_fenced_section(text, "## Run Boundary Contract Tests", "README", fence_language="bash")
+def package_contracts_text(repo_root: Path) -> str:
+    return (repo_root / PACKAGE_CONTRACTS_DOC).read_text(encoding="utf-8")
+
+
+def package_boundary_commands(repo_root: Path) -> list[str]:
+    text = package_contracts_text(repo_root)
+    return commands_from_fenced_section(
+        text,
+        "## Run Boundary Contract Tests",
+        PACKAGE_CONTRACTS_DOC,
+        fence_language="bash",
+    )
 
 
 def backticked_bullet_items(section_text: str) -> list[str]:

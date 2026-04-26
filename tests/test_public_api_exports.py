@@ -2,20 +2,20 @@
 from collections.abc import Callable as AbcCallable
 from typing import get_origin
 
-import gui
+import gui_do
 from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
 
-from gui import ActionManager
-from gui import EventBus
-from gui import EventPhase
-from gui import EventType
-from gui import FocusManager
-from gui import FontManager
-from gui import GuiEvent
-from gui import InvalidationTracker
-from gui import ObservableValue
-from gui import PresentationModel
-from gui import ValueChangeCallback
+from gui_do import ActionManager
+from gui_do import EventBus
+from gui_do import EventPhase
+from gui_do import EventType
+from gui_do import FocusManager
+from gui_do import FontManager
+from gui_do import GuiEvent
+from gui_do import InvalidationTracker
+from gui_do import ObservableValue
+from gui_do import PresentationModel
+from gui_do import ValueChangeCallback
 
 
 EXPECTED_PUBLIC_EXPORTS = set(PUBLIC_API_EXPORT_ORDER)
@@ -39,25 +39,25 @@ class PublicApiExportsTests(unittest.TestCase):
         self.assertEqual(event.phase, EventPhase.CAPTURE)
 
     def test_demo_specific_mandel_symbols_not_exported_from_gui(self) -> None:
-        self.assertFalse(hasattr(gui, "MANDEL_STATUS_TOPIC"))
-        self.assertFalse(hasattr(gui, "MandelStatusEvent"))
+        self.assertFalse(hasattr(gui_do, "MANDEL_STATUS_TOPIC"))
+        self.assertFalse(hasattr(gui_do, "MandelStatusEvent"))
 
     def test_public_all_excludes_demo_symbols(self) -> None:
-        exported = set(gui.__all__)
+        exported = set(gui_do.__all__)
 
         self.assertNotIn("MandelStatusEvent", exported)
         self.assertFalse(any(name.startswith("MANDEL_") for name in exported))
         self.assertFalse(any("mandel" in name.lower() for name in exported))
 
     def test_public_all_matches_expected_export_surface(self) -> None:
-        self.assertEqual(set(gui.__all__), EXPECTED_PUBLIC_EXPORTS)
+        self.assertEqual(set(gui_do.__all__), EXPECTED_PUBLIC_EXPORTS)
 
     def test_public_all_matches_expected_export_order(self) -> None:
-        self.assertEqual(tuple(gui.__all__), PUBLIC_API_EXPORT_ORDER)
+        self.assertEqual(tuple(gui_do.__all__), PUBLIC_API_EXPORT_ORDER)
 
     def test_public_all_names_are_resolvable_attributes(self) -> None:
-        for export_name in gui.__all__:
-            self.assertTrue(hasattr(gui, export_name), f"gui missing attribute for __all__ export: {export_name}")
+        for export_name in gui_do.__all__:
+            self.assertTrue(hasattr(gui_do, export_name), f"gui_do missing attribute for __all__ export: {export_name}")
 
     def test_value_change_callback_type_alias_export_shape(self) -> None:
         self.assertIs(get_origin(ValueChangeCallback), AbcCallable)

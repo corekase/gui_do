@@ -4,9 +4,9 @@ from types import SimpleNamespace
 from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
 from demo_features.mandelbrot_demo_feature import MANDEL_KIND_COMPLETE, MANDEL_KIND_FAILED, MANDEL_KIND_RUNNING_ITERATIVE, MANDEL_KIND_STATUS, MandelStatusEvent
-from gui import EventBus
+from gui_do import EventBus
 from gui_do_demo import GuiDoDemo
-from shared.feature_lifecycle import FeatureManager
+from gui_do import FeatureManager
 
 class GuiDoDemoPresentationModelTests(unittest.TestCase):
     def _make_part(self):

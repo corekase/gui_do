@@ -2,7 +2,7 @@
 is_middle_down/up, is_text_event, and clone."""
 import unittest
 
-from gui.core.gui_event import EventPhase, EventType, GuiEvent
+from gui_do.core.gui_event import EventPhase, EventType, GuiEvent
 
 
 def _make(kind: EventType, **kwargs) -> GuiEvent:

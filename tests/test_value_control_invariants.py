@@ -2,9 +2,9 @@
 
 from pygame import Rect
 
-from gui.controls.scrollbar_control import ScrollbarControl
-from gui.controls.slider_control import SliderControl
-from gui.layout.layout_axis import LayoutAxis
+from gui_do.controls.scrollbar_control import ScrollbarControl
+from gui_do.controls.slider_control import SliderControl
+from gui_do.layout.layout_axis import LayoutAxis
 
 
 class ValueControlInvariantsTests(unittest.TestCase):

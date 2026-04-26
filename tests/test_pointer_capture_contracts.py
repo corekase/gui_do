@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl
+from gui_do import GuiApplication, LayoutAxis, PanelControl, ScrollbarControl, SliderControl
 
 
 class PointerCaptureContractsTest(unittest.TestCase):

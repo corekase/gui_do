@@ -7,10 +7,10 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui.controls.image_control import ImageControl
-from gui.graphics import load_pristine_surface
-from gui.core.telemetry_analyzer import load_telemetry_log_file
-from shared.feature_lifecycle import Feature, FeatureManager
+from gui_do.controls.image_control import ImageControl
+from gui_do.graphics import load_pristine_surface
+from gui_do.core.telemetry_analyzer import load_telemetry_log_file
+from gui_do import Feature, FeatureManager
 
 
 class ErrorHandlingRuntimeTests(unittest.TestCase):

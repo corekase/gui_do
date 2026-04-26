@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect, Surface
 
-from gui.controls.label_control import LabelControl
+from gui_do.controls.label_control import LabelControl
 
 
 class _FakeTheme:

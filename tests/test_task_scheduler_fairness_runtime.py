@@ -2,7 +2,7 @@
 import time
 import unittest
 
-from gui.core.task_scheduler import TaskScheduler
+from gui_do.core.task_scheduler import TaskScheduler
 
 
 class TaskSchedulerFairnessRuntimeTests(unittest.TestCase):

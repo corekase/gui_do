@@ -6,7 +6,7 @@ from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFea
 from demo_features.controls_demo_feature import ControlsShowcaseFeature
 from demo_features.styles_demo_feature import StylesShowcaseFeature
 
-from gui import (
+from gui_do import (
     GuiApplication,
     PanelControl,
     LabelControl,
@@ -107,28 +107,28 @@ class GuiDoDemo:
         self.app.register_font_role(
             self.TASK_PANEL_CONTROL_FONT_ROLE,
             size=16,
-            file_path="data/fonts/Ubuntu-B.ttf",
+            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
             system_name="arial",
             scene_name="main",
         )
         self.app.register_font_role(
             self.TASK_PANEL_CONTROL_FONT_ROLE,
             size=16,
-            file_path="data/fonts/Ubuntu-B.ttf",
+            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
             system_name="arial",
             scene_name="control_showcase",
         )
         self.app.register_font_role(
             self.SCREEN_TITLE_FONT_ROLE,
             size=72,
-            file_path="data/fonts/Gimbot.ttf",
+            file_path="demo_features/data/fonts/Gimbot.ttf",
             system_name="arial",
             scene_name="main",
         )
         self.app.register_font_role(
             self.SCREEN_TITLE_FONT_ROLE,
             size=72,
-            file_path="data/fonts/Gimbot.ttf",
+            file_path="demo_features/data/fonts/Gimbot.ttf",
             system_name="arial",
             scene_name="control_showcase",
         )

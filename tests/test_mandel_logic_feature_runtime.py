@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from demo_features.mandelbrot_demo_feature import MandelbrotLogicFeature, MandelbrotRenderFeature
-from shared.feature_lifecycle import FeatureManager
+from gui_do import FeatureManager
 
 
 class _ActionsStub:

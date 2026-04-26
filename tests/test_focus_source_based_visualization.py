@@ -5,16 +5,16 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect, Surface
 
-from gui.app.gui_application import GuiApplication
-from gui.controls.button_control import ButtonControl
-from gui.controls.label_control import LabelControl
-from gui.controls.panel_control import PanelControl
-from gui.controls.window_control import WindowControl
-from gui.core.focus_manager import FocusManager
-from gui.core.focus_visualizer import FocusVisualizer
-from gui.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
-from gui.core.scene import Scene
-from gui.core.ui_node import UiNode
+from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.button_control import ButtonControl
+from gui_do.controls.label_control import LabelControl
+from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.window_control import WindowControl
+from gui_do.core.focus_manager import FocusManager
+from gui_do.core.focus_visualizer import FocusVisualizer
+from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.core.scene import Scene
+from gui_do.core.ui_node import UiNode
 
 
 class FocusVisualizerKeyboardHintTests(unittest.TestCase):

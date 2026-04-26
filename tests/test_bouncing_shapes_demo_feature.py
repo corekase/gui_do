@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
-from shared.feature_lifecycle import DirectFeature
+from gui_do import DirectFeature
 
 
 class BouncingShapesBackdropFeatureTests(unittest.TestCase):

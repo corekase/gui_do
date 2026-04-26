@@ -2,10 +2,10 @@
 import unittest
 from pathlib import Path
 
-from gui.core.telemetry import TelemetryCollector
-from gui.core.telemetry_analyzer import analyze_telemetry_records
-from gui.core.telemetry_analyzer import load_telemetry_log_file
-from gui.core.telemetry_analyzer import render_telemetry_report
+from gui_do.core.telemetry import TelemetryCollector
+from gui_do.core.telemetry_analyzer import analyze_telemetry_records
+from gui_do.core.telemetry_analyzer import load_telemetry_log_file
+from gui_do.core.telemetry_analyzer import render_telemetry_report
 
 
 class TelemetryCoreRuntimeTests(unittest.TestCase):

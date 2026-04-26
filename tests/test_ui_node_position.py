@@ -3,7 +3,7 @@ import unittest
 
 from pygame import Rect
 
-from gui.core.ui_node import UiNode
+from gui_do.core.ui_node import UiNode
 
 
 def _node(control_id: str = "n") -> UiNode:

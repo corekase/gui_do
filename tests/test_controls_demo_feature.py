@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from demo_features.controls_demo_feature import ControlsShowcaseFeature
-from gui import (
+from gui_do import (
     ArrowBoxControl,
     ButtonControl,
     ButtonGroupControl,

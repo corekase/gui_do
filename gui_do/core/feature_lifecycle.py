@@ -8,20 +8,20 @@ from dataclasses import dataclass
 import inspect
 from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, Mapping, Optional
-from shared.error_handling import logical_error, report_nonfatal_error
+from .error_handling import logical_error, report_nonfatal_error
 
 
 class _NoopTelemetryCollector:
-    def span(self, _system: str, _point: str, _metadata: Optional[Dict[str, Any]] = None):
+    def span(self, system: str, point: str, metadata: Optional[Dict[str, Any]] = None):
         return nullcontext()
 
-    def record_duration(self, _system: str, _point: str, _elapsed_ms: float, *, _metadata: Optional[Dict[str, Any]] = None) -> None:
+    def record_duration(self, system: str, point: str, elapsed_ms: float, *, metadata: Optional[Dict[str, Any]] = None) -> None:
         return None
 
 
 def _telemetry_collector():
     try:
-        from gui.core.telemetry import telemetry_collector
+        from gui_do.core.telemetry import telemetry_collector
 
         return telemetry_collector()
     except ImportError:
@@ -697,7 +697,7 @@ class FeatureManager:
     @staticmethod
     def _record_prewarm_sample(scene_name: str, feature_name: str, elapsed_ms: float) -> None:
         try:
-            from gui.core.first_frame_profiler import first_frame_profiler
+            from gui_do.core.first_frame_profiler import first_frame_profiler
 
             first_frame_profiler().record_once(
                 "feature.prewarm",

@@ -7,7 +7,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect, Surface
 
-from gui.controls.frame_control import FrameControl
+from gui_do.controls.frame_control import FrameControl
 
 
 class _FakeFactory:

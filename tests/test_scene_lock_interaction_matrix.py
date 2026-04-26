@@ -7,8 +7,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui import GuiApplication, PanelControl, WindowControl
-from gui.core.ui_node import UiNode
+from gui_do import GuiApplication, PanelControl, WindowControl
+from gui_do.core.ui_node import UiNode
 
 
 class _FocusableProbe(UiNode):

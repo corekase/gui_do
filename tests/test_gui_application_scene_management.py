@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 
 import pygame
 
-from gui.app.gui_application import GuiApplication
-from gui.controls.window_control import WindowControl
-from gui.controls.label_control import LabelControl
-from gui.controls.button_control import ButtonControl
-from gui.controls.canvas_control import CanvasControl
-from gui.controls.slider_control import SliderControl
-from gui.controls.toggle_control import ToggleControl
-from gui.layout.layout_axis import LayoutAxis
-from shared.feature_lifecycle import FeatureMessage, LogicFeature, Feature, RoutedFeature
+from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.window_control import WindowControl
+from gui_do.controls.label_control import LabelControl
+from gui_do.controls.button_control import ButtonControl
+from gui_do.controls.canvas_control import CanvasControl
+from gui_do.controls.slider_control import SliderControl
+from gui_do.controls.toggle_control import ToggleControl
+from gui_do.layout.layout_axis import LayoutAxis
+from gui_do import FeatureMessage, LogicFeature, Feature, RoutedFeature
 
 
 def _make_app() -> GuiApplication:
@@ -334,7 +334,7 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertTrue(self.app.theme.fonts.has_role("feature.alpha.window_title"))
 
     def test_app_run_delegates_to_ui_engine(self) -> None:
-        with patch("gui.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
+        with patch("gui_do.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
             frames = self.app.run(target_fps=75, max_frames=3)
 
         self.assertEqual(12, frames)

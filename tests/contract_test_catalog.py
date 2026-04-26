@@ -8,8 +8,8 @@ CORE_CONTRACT_TEST_MODULES = (
     "tests.test_public_api_docs_contracts",
     "tests.test_architecture_boundary_docs_contracts",
     "tests.test_contract_command_parity",
-    "tests.test_readme_public_api_contracts",
-    "tests.test_readme_docs_contracts",
+    "tests.test_package_contracts_public_api",
+    "tests.test_package_contracts_docs",
     "tests.test_contract_docs_helpers",
     "tests.test_core_only_bootstrap_contracts",
     "tests.test_contract_catalog_consistency",
@@ -27,8 +27,8 @@ CONTRACT_TEST_MODULES = (
         "tests.test_public_api_docs_contracts",
         "tests.test_architecture_boundary_docs_contracts",
         "tests.test_contract_command_parity",
-        "tests.test_readme_public_api_contracts",
-        "tests.test_readme_docs_contracts",
+        "tests.test_package_contracts_public_api",
+        "tests.test_package_contracts_docs",
         "tests.test_contract_docs_helpers",
         "tests.test_core_only_bootstrap_contracts",
         "tests.test_contract_catalog_consistency",
@@ -64,18 +64,18 @@ ACTIVE_DEMO_ENTRYPOINTS = (
 
 BOUNDARY_RULE_REQUIRED_PHRASES = (
     (
-        "from gui import ...",
+        "from gui_do import ...",
         "without aliases",
-        "single from gui import (...) block",
+        "single from gui_do import (...) block",
         "Rebase migration is complete",
         "no previous-track baggage",
     )
     if not DEMO_CONTRACTS_ENABLED
     else (
         ACTIVE_DEMO_ENTRYPOINT_GLOB,
-        "from gui import ...",
+        "from gui_do import ...",
         "without aliases",
-        "single from gui import (...) block",
+        "single from gui_do import (...) block",
         "Rebase migration is complete",
         "no previous-track baggage",
     )
@@ -84,12 +84,12 @@ BOUNDARY_RULE_REQUIRED_PHRASES = (
 BOUNDARY_ENFORCEMENT_TEST_IDS = (
     (
         "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features",
-        "tests/test_boundary_contracts.py::test_demo_features_does_not_depend_on_gui",
+        "tests/test_boundary_contracts.py::test_demo_features_do_not_import_gui_do_internals",
     )
     if not DEMO_CONTRACTS_ENABLED
     else (
         "tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features",
-        "tests/test_boundary_contracts.py::test_demo_features_does_not_depend_on_gui",
+        "tests/test_boundary_contracts.py::test_demo_features_do_not_import_gui_do_internals",
         "tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only",
         "tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement",
         "tests/test_boundary_contracts.py::test_demo_entrypoints_import_only_named_public_gui_exports",
@@ -170,6 +170,12 @@ PUBLIC_API_EXPORT_ORDER = (
     "render_telemetry_report",
     "BuiltInGraphicsFactory",
     "ColorTheme",
+    "Feature",
+    "DirectFeature",
+    "LogicFeature",
+    "RoutedFeature",
+    "FeatureMessage",
+    "FeatureManager",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (
@@ -181,13 +187,13 @@ PUBLIC_API_REQUIRED_PHRASES = (
     "demo_features.mandelbrot_demo_feature.__all__ export surface/order is treated as a locked contract",
 ) if DEMO_CONTRACTS_ENABLED else ()
 
-README_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
+PACKAGE_PUBLIC_API_REQUIRED_GUI_IMPORTS = (
     "GuiApplication",
     "UiEngine",
     "ColorTheme",
 )
 
-README_PUBLIC_API_GUI_IMPORT_ORDER = (
+PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "GuiApplication",
     "UiEngine",
     "PanelControl",
@@ -235,28 +241,28 @@ README_PUBLIC_API_GUI_IMPORT_ORDER = (
     "ColorTheme",
 )
 
-README_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
+PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
     "from demo_features.mandelbrot_demo_feature import MandelStatusEvent",
 ) if DEMO_CONTRACTS_ENABLED else ()
 
-README_PUBLIC_API_REQUIRED_PHRASES = (
-    "Demo-only contracts are intentionally outside gui package",
+PACKAGE_PUBLIC_API_REQUIRED_PHRASES = (
+    "Demo-only contracts are intentionally outside gui_do package",
 )
 
-README_BOUNDARY_REQUIRED_PHRASES = (
+PACKAGE_BOUNDARY_REQUIRED_PHRASES = (
     (
-        "gui/",
-        "from gui import ...",
+        "gui_do/",
+        "from gui_do import ...",
         "without aliases",
-        "single from gui import (...) block",
+        "single from gui_do import (...) block",
     )
     if not DEMO_CONTRACTS_ENABLED
     else (
-        "gui/",
+        "gui_do/",
         "demo_features/",
         "*_demo.py",
-        "from gui import ...",
+        "from gui_do import ...",
         "without aliases",
-        "single from gui import (...) block",
+        "single from gui_do import (...) block",
     )
 )

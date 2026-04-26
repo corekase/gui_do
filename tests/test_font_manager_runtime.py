@@ -5,8 +5,8 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from gui import FontManager, GuiApplication
-from shared.feature_lifecycle import Feature
+from gui_do import FontManager, GuiApplication
+from gui_do import Feature
 
 
 class FontManagerRoleTests(unittest.TestCase):

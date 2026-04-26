@@ -3,7 +3,7 @@ import unittest
 
 import pygame
 
-from gui.core.action_manager import ActionManager
+from gui_do.core.action_manager import ActionManager
 
 
 class BindingCountTests(unittest.TestCase):

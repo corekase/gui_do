@@ -27,8 +27,18 @@ class ButtonGroupControl(ToggleControl):
         selected: bool = False,
         style: str = "box",
         on_activate: Optional[Callable[[], None]] = None,
+        font_role: str = "body",
     ) -> None:
-        super().__init__(control_id, rect, text_on=text, text_off=text, pushed=selected, on_toggle=None, style=style)
+        super().__init__(
+            control_id,
+            rect,
+            text_on=text,
+            text_off=text,
+            pushed=selected,
+            on_toggle=None,
+            style=style,
+            font_role=font_role,
+        )
         self.group = group
         self.on_activate = on_activate
         if selected:
