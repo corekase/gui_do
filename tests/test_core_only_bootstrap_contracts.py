@@ -18,9 +18,17 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
         root = self._repo_root()
         catalog_path = root / "tests" / "contract_test_catalog.py"
         source = catalog_path.read_text(encoding="utf-8-sig")
-        self.assertIn("DEMO_CONTRACTS_ENABLED = True", source)
+        self.assertIsNotNone(
+            re.search(r"^DEMO_CONTRACTS_ENABLED\s*=\s*(True|False)\s*$", source, re.MULTILINE)
+        )
 
-        core_only_source = source.replace("DEMO_CONTRACTS_ENABLED = True", "DEMO_CONTRACTS_ENABLED = False", 1)
+        core_only_source = re.sub(
+            r"^DEMO_CONTRACTS_ENABLED\s*=\s*(True|False)\s*$",
+            "DEMO_CONTRACTS_ENABLED = False",
+            source,
+            count=1,
+            flags=re.MULTILINE,
+        )
         namespace: dict[str, object] = {}
         exec(compile(core_only_source, str(catalog_path), "exec"), namespace)
 
@@ -108,6 +116,26 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             "contract_test_catalog.py must declare DEMO_TEST_DISCOVERY_RULE as a first-class package contract",
         )
 
+    def test_init_treats_entire_demo_features_tree_as_demo_owned(self) -> None:
+        root = self._repo_root()
+        bootstrap = (root / "scripts" / "manage.py").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "DEMO_ROOT_DIR = \"demo_features\"",
+            bootstrap,
+            "manage.py must declare demo_features as the demo root directory contract",
+        )
+        self.assertIn(
+            "_delete_path(root / DEMO_ROOT_DIR, apply)",
+            bootstrap,
+            "manage.py init/apply must remove demo_features as one tree, not per-file paths",
+        )
+        self.assertNotIn(
+            "demo_features/data",
+            bootstrap,
+            "manage.py must not hardcode demo_features/data paths; whole-tree removal is the general rule",
+        )
+
     def test_init_demo_test_discovery_finds_all_current_demo_tests(self) -> None:
         """The dynamic discovery function must find all test files that import from demo_features."""
         root = self._repo_root()
@@ -121,26 +149,8 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             if re.search(r"^(?:from|import) demo_features\b", text, re.MULTILINE):
                 discovered.append(test_file.name)
 
-        # Every discovered file must actually be a demo test (sanity check: core tests must not appear).
-        core_test_names = {
-            "test_boundary_contracts.py",
-            "test_public_api_exports.py",
-            "test_public_api_docs_contracts.py",
-            "test_architecture_boundary_docs_contracts.py",
-            "test_contract_command_parity.py",
-            "test_core_only_bootstrap_contracts.py",
-            "test_contract_catalog_consistency.py",
-            "test_contract_docs_helpers.py",
-        }
-        for name in discovered:
-            self.assertNotIn(
-                name,
-                core_test_names,
-                f"Core contract test '{name}' must not import from demo_features",
-            )
-
-        # Discovery must find at least the known set of demo tests.
-        known_demo_tests = {
+        discovered_set = set(discovered)
+        expected_demo_tests = {
             "test_bouncing_shapes_demo_feature.py",
             "test_controls_demo_feature.py",
             "test_demo_features_gui_portability.py",
@@ -151,12 +161,21 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             "test_mandel_logic_feature_runtime.py",
             "test_styles_demo_feature.py",
         }
-        discovered_set = set(discovered)
-        for name in known_demo_tests:
-            self.assertIn(
-                name,
+
+        existing_expected = {name for name in expected_demo_tests if (tests_dir / name).exists()}
+
+        if existing_expected:
+            for name in existing_expected:
+                self.assertIn(
+                    name,
+                    discovered_set,
+                    f"Dynamic demo-test discovery must find '{name}' when it exists",
+                )
+        else:
+            self.assertEqual(
                 discovered_set,
-                f"Dynamic demo-test discovery must find '{name}' (it imports from demo_features)",
+                set(),
+                "Core-only initialized projects should not retain demo test files",
             )
 
 

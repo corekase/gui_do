@@ -20,6 +20,8 @@ import subprocess
 from pathlib import Path
 
 DEMO_TEST_DISCOVERY_RULE = "any test file in tests/ that imports from demo_features"
+DEMO_ROOT_DIR = "demo_features"
+DEMO_ENTRYPOINT_FILE = "gui_do_demo.py"
 
 DEFAULT_SCAFFOLD_FILE = "myapp.py"
 DEFAULT_SCAFFOLD_PACKAGE = "features"
@@ -151,8 +153,8 @@ def _run_merge_readiness_check(target: Path) -> int:
     conflicts, msgs = _check_demo_test_conflicts(target)
     if conflicts:
         print(
-            "  NOTE: The following files exist in the target and share a name with demo test\n"
-            "  files that setup sync deletes. Rename them before running update:\n"
+            "  NOTE: The following files in target match demo-test discovery and would be\n"
+            "  deleted by update/apply. Rename or relocate them before running update:\n"
         )
         for msg in msgs:
             print(msg)
@@ -263,6 +265,10 @@ def _sync_core_only(
     pytest_cmd = catalog_values["CONTRACT_PYTEST_COMMAND"]
     boundary_pytest_cmd = catalog_values["BOUNDARY_PYTEST_COMMAND"]
     boundary_tests = catalog_values["BOUNDARY_ENFORCEMENT_TEST_IDS"]
+    demo_test_rel_paths = [
+        str(test_file.relative_to(root)).replace("\\", "/")
+        for test_file in _find_demo_test_files(root)
+    ]
 
     if not skip_doc_sync:
         package_contracts_path = root / "docs" / "package_contracts.md"
@@ -318,11 +324,14 @@ def _sync_core_only(
         if public_api_spec_text is None:
             print("[bootstrap] skipped public API doc sync (file not found)")
         else:
-            public_api_spec_text, removed_demo_test_ref = _replace_optional(
-                public_api_spec_text,
-                "- `tests/test_mandel_event_schema_exports.py`\n",
-                "",
-            )
+            removed_demo_test_ref = False
+            for rel_path in demo_test_rel_paths:
+                public_api_spec_text, removed = _replace_optional(
+                    public_api_spec_text,
+                    f"- `{rel_path}`\n",
+                    "",
+                )
+                removed_demo_test_ref = removed_demo_test_ref or removed
             _write(public_api_spec_path, public_api_spec_text, apply)
             if removed_demo_test_ref:
                 print("[bootstrap] updated public API enforced test list")
@@ -350,10 +359,12 @@ def _sync_core_only(
     else:
         print("[bootstrap] skipped workflow sync (--skip-workflow-sync)")
 
-    _delete_path(root / "gui_do_demo.py", apply)
-    _delete_path(root / "demo_features", apply)
-    for test_file in _find_demo_test_files(root):
-        _delete_path(test_file, apply)
+    # General rule: all demo assets live under demo_features/ and are removed as a tree.
+    # This includes data/ and any future demo folders/files with no per-file hardcoding.
+    _delete_path(root / DEMO_ENTRYPOINT_FILE, apply)
+    _delete_path(root / DEMO_ROOT_DIR, apply)
+    for rel_path in demo_test_rel_paths:
+        _delete_path(root / rel_path, apply)
     print("[bootstrap] removed demo entrypoint, demo_features package, and demo-specific tests")
 
     if apply:
