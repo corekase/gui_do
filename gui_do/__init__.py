@@ -89,6 +89,14 @@ from .controls.text_area_control import TextAreaControl
 from .controls.rich_label_control import RichLabelControl
 from .controls.tab_control import TabControl, TabItem
 from .core.resize_manager import ResizeManager
+from .controls.menu_bar_control import MenuBarControl, MenuEntry
+from .core.menu_bar_manager import MenuBarManager
+from .controls.tree_control import TreeControl, TreeNode
+from .core.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
+from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
+from .core.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
+from .core.notification_center import NotificationCenter, NotificationRecord
+from .controls.notification_panel_control import NotificationPanelControl
 
 __all__ = [
     "GuiApplication",
@@ -188,4 +196,22 @@ __all__ = [
     "TabControl",
     "TabItem",
     "ResizeManager",
+    "MenuBarControl",
+    "MenuEntry",
+    "MenuBarManager",
+    "TreeControl",
+    "TreeNode",
+    "FileDialogManager",
+    "FileDialogOptions",
+    "FileDialogHandle",
+    "FlexLayout",
+    "FlexItem",
+    "FlexDirection",
+    "FlexAlign",
+    "FlexJustify",
+    "SceneTransitionManager",
+    "SceneTransitionStyle",
+    "NotificationCenter",
+    "NotificationRecord",
+    "NotificationPanelControl",
 ]
