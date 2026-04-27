@@ -2,7 +2,7 @@
 
 # gui_do
 
-gui_do is a pygame GUI framework for building scene-driven desktop interfaces with reusable controls, runtime services, and feature composition. It gives developers a public API that combines UI controls, event and focus routing, state and data management, overlays, scheduling, animation, file dialogs, menus, notifications, and telemetry in one coherent runtime. The package targets tools, editors, dashboards, simulation frontends, and application UIs where composability, predictable behavior, and explicit architecture boundaries matter.
+gui_do is a pygame GUI toolkit for building scene-driven desktop applications with one package-level public API for controls, layout, input routing, background work, overlays, theming, state, and feature composition. It is designed for tools, editors, dashboards, simulation frontends, and other application UIs that benefit from explicit runtime services and reusable widgets. The exported surface in `gui_do.__all__` is the authoritative public boundary.
 
 <a id="table-of-contents"></a>
 
@@ -19,13 +19,10 @@ gui_do is a pygame GUI framework for building scene-driven desktop interfaces wi
   - [UiEngine](#uiengine)
   - [Scene Management](#scene-management)
 - [Controls](#controls)
-  - [UiNode Pattern](#uinode-pattern)
-  - [Basic Controls](#basic-controls)
+  - [Display and Container Controls](#display-and-container-controls)
   - [Text Controls](#text-controls)
-  - [Value and Selection Controls](#value-and-selection-controls)
-  - [Data Grid](#data-grid)
-  - [Container and Tab Controls](#container-and-tab-controls)
-  - [Navigation and Hierarchy Controls](#navigation-and-hierarchy-controls)
+  - [Selection, Range, and Data Controls](#selection-range-and-data-controls)
+  - [Canvas, Scroll, and Advanced Inputs](#canvas-scroll-and-advanced-inputs)
 - [Layout](#layout)
   - [LayoutAxis](#layoutaxis)
   - [LayoutManager](#layoutmanager)
@@ -37,40 +34,43 @@ gui_do is a pygame GUI framework for building scene-driven desktop interfaces wi
   - [EventBus](#eventbus)
   - [ActionManager](#actionmanager)
   - [FocusManager](#focusmanager)
+  - [ValueChangeReason and ValueChangeCallback](#valuechangereason-and-valuechangecallback)
 - [Data and State](#data-and-state)
-  - [ObservableValue and PresentationModel](#observablevalue-and-presentationmodel)
+  - [ObservableValue, ComputedValue, and PresentationModel](#observablevalue-computedvalue-and-presentationmodel)
   - [InvalidationTracker](#invalidationtracker)
   - [FormModel](#formmodel)
   - [CommandHistory](#commandhistory)
   - [StateMachine and Router](#statemachine-and-router)
   - [SettingsRegistry](#settingsregistry)
-- [Value Change Contracts](#value-change-contracts)
-  - [ValueChangeReason and ValueChangeCallback](#valuechangereason-and-valuechangecallback)
 - [Scheduling and Animation](#scheduling-and-animation)
   - [TaskScheduler](#taskscheduler)
   - [Timers](#timers)
   - [TweenManager](#tweenmanager)
-- [Overlay and Dialog Services](#overlay-and-dialog-services)
-  - [OverlayManager and OverlayPanelControl](#overlaymanager-and-overlaypanelcontrol)
-  - [ToastManager](#toastmanager)
-  - [DialogManager](#dialogmanager)
-  - [ContextMenuManager](#contextmenumanager)
-  - [DragDropManager](#dragdropmanager)
-  - [FileDialogManager](#filedialogmanager)
+  - [AnimationSequence](#animationsequence)
+- [Overlay and Runtime Services](#overlay-and-runtime-services)
+  - [OverlayManager and OverlayHandle](#overlaymanager-and-overlayhandle)
+  - [ToastManager and ToastHandle](#toastmanager-and-toasthandle)
+  - [DialogManager and DialogHandle](#dialogmanager-and-dialoghandle)
+  - [ContextMenuManager and ContextMenuHandle](#contextmenumanager-and-contextmenuhandle)
+  - [DragDropManager and DragPayload](#dragdropmanager-and-dragpayload)
+  - [FileDialogManager, FileDialogOptions, and FileDialogHandle](#filedialogmanager-filedialogoptions-and-filedialoghandle)
   - [ResizeManager](#resizemanager)
+  - [ClipboardManager](#clipboardmanager)
+  - [CommandPaletteManager, CommandEntry, and CommandPaletteHandle](#commandpalettemanager-commandentry-and-commandpalettehandle)
 - [Menu System](#menu-system)
   - [MenuBarControl and MenuEntry](#menubarcontrol-and-menuentry)
   - [MenuBarManager](#menubarmanager)
 - [Notification System](#notification-system)
-  - [NotificationCenter](#notificationcenter)
+  - [NotificationCenter and NotificationRecord](#notificationcenter-and-notificationrecord)
   - [NotificationPanelControl](#notificationpanelcontrol)
 - [Scene Transitions](#scene-transitions)
-  - [SceneTransitionManager](#scenetransitionmanager)
+  - [SceneTransitionManager and SceneTransitionStyle](#scenetransitionmanager-and-scenetransitionstyle)
 - [Feature System](#feature-system)
-  - [Feature Types](#feature-types)
+  - [Feature Types and FeatureMessage](#feature-types-and-featuremessage)
   - [FeatureManager](#featuremanager)
 - [Theme and Graphics](#theme-and-graphics)
-  - [ColorTheme and ThemeManager](#colortheme-and-thememanager)
+  - [ColorTheme](#colortheme)
+  - [ThemeManager and DesignTokens](#thememanager-and-designtokens)
   - [BuiltInGraphicsFactory](#builtingraphicsfactory)
   - [FontManager](#fontmanager)
 - [Telemetry](#telemetry)
@@ -78,9 +78,7 @@ gui_do is a pygame GUI framework for building scene-driven desktop interfaces wi
 
 ---
 
-<a id="quick-start"></a>
-
-## Quick Start — [Back to Top](#table-of-contents)
+## Quick Start [Back to Top](#table-of-contents)
 
 ```bash
 pip install gui_do
@@ -89,7 +87,7 @@ pip install gui_do
 ```python
 import pygame
 from pygame import Rect
-from gui_do import GuiApplication, UiEngine, LabelControl
+from gui_do import GuiApplication, LabelControl, UiEngine
 
 pygame.init()
 surface = pygame.display.set_mode((800, 600))
@@ -101,48 +99,20 @@ pygame.quit()
 
 ---
 
-<a id="overview"></a>
+## Overview [Back to Top](#table-of-contents)
 
-## Overview — [Back to Top](#table-of-contents)
+gui_do centers everything around a `GuiApplication` and one active scene. The application owns scene-local services such as scheduling, timers, tweens, overlays, drag-drop, and window tiling, while controls form a scene graph that receives normalized `GuiEvent` input and renders against a `ColorTheme` plus `BuiltInGraphicsFactory`.
 
-gui_do is built around a **scene runtime**. `GuiApplication` is the top-level host: it owns the display surface, manages a collection of named scenes, and exposes every runtime service — focus, event routing, scheduling, overlays, dialogs, drag-drop, tweens, window tiling, and theme — through a stable public API. Only one scene is active at a time; each scene carries its own scheduler, timers, tween manager, overlay stack, and event context. This makes multi-screen apps naturally isolated without any custom plumbing between scenes.
-
-**Controls** are all `UiNode` subclasses. They live in a scene tree, share a consistent event/update/draw contract, and respond to normalized `GuiEvent` objects. The control library covers: labels, buttons, toggles, sliders, scrollbars, list views, dropdowns, data grids, text inputs, text areas, rich labels, canvases, frames, images, tab controls, splitters, windows, task panels, menu bars, tree views, and notification panels.
-
-**Layout** systems include a grid-placement `LayoutManager`, anchor-driven `ConstraintLayout`, a CSS-flex-style `FlexLayout`, and a `WindowTilingManager` that registers and tiles floating windows within a scene.
-
-**Events** flow from pygame through `EventManager`, which normalizes raw events into `GuiEvent` objects before dispatch. `FocusManager` owns keyboard focus and Tab traversal. `EventBus` carries typed pub/sub messages between decoupled components. `ActionManager` maps keyboard chords to named actions.
-
-**State and data** are handled by `ObservableValue` and `PresentationModel` for reactive bindings, `FormModel`/`FormField`/`ValidationRule` for validated form state, `CommandHistory` with undo/redo and transactions, `StateMachine` for explicit state transitions, `Router`/`RouteEntry` for navigation tables, and `SettingsRegistry` for namespaced persistent settings.
-
-**Value change contracts** are explicit: slider and scrollbar `on_change` callbacks receive the new value and optionally a `ValueChangeReason` enum tag (`KEYBOARD`, `PROGRAMMATIC`, `MOUSE_DRAG`, `WHEEL`). The `ValueChangeCallback` type alias and `ValueChangeReason` are first-class public exports.
-
-**Background work** uses `TaskScheduler`, which runs tasks in a thread pool and delivers `TaskEvent` progress/completion/error updates back to the UI via the event bus. Scene-local `Timers` schedule one-shot and repeating callbacks in frame time. `TweenManager` with `TweenHandle` and `Easing` curves animates numeric properties.
-
-**Overlay and dialog services** integrate cleanly with the scene runtime: `OverlayManager` shows and dismisses floating `OverlayPanelControl` nodes, `ToastManager` manages transient notification banners with severity levels, `DialogManager` provides modal alert/confirm/prompt flows, `ContextMenuManager` shows pointer-anchored menus, `DragDropManager` coordinates typed drag sessions, `FileDialogManager` provides modal file-open and file-save dialogs with filters and multi-select, and `ResizeManager` centralizes app/scene geometry change callbacks.
-
-**Menu system**: `MenuBarControl` renders a horizontal menu bar with flyout sub-menus. `MenuBarManager` lets independently developed features register their own top-level menus and items before a merged `MenuBarControl` is built and added to the scene.
-
-**Notification system**: `NotificationCenter` subscribes to one or more `EventBus` topics and stores bounded `NotificationRecord` entries with reactive `unread_count` and `records` `ObservableValue` fields. `NotificationPanelControl` is an overlay that renders the center's log sorted by recency with severity-colored stripes and a "Mark all read" action.
-
-**Scene transitions**: `SceneTransitionManager` wraps `switch_scene` with animated cross-scene transitions — `FADE`, `SLIDE_LEFT`, `SLIDE_RIGHT`, `SLIDE_UP`, `SLIDE_DOWN`, or `NONE` — driven by the active scene's `TweenManager`.
-
-**Feature system**: `Feature`, `DirectFeature`, `LogicFeature`, and `RoutedFeature` are lifecycle base classes for composing reusable behavior units. `FeatureManager` registers features, validates host-field contracts, calls lifecycle hooks (`build`, `bind_runtime`, `configure_accessibility`, `on_update`, `handle_event`, `shutdown_runtime`), and routes `FeatureMessage` envelopes between features.
-
-**Theme and graphics**: `ColorTheme` supplies semantic color tokens and text rendering. `ThemeManager` and `DesignTokens` enable runtime theme switching. `FontManager` provides role-based font access and rendering. `BuiltInGraphicsFactory` constructs cached visual surfaces for all built-in controls.
-
-**Telemetry**: A structured opt-in metrics system (`configure_telemetry`, `telemetry_collector`, `TelemetryCollector`, `TelemetrySample`) and offline analysis tools (`analyze_telemetry_records`, `analyze_telemetry_log_file`, `load_telemetry_log_file`, `render_telemetry_report`) for performance profiling and feature hotspot detection.
+The exported package surface combines four layers that are often split across separate libraries: controls and layout primitives, runtime services and overlays, data/state helpers, and lifecycle-managed feature composition. That makes gui_do a good fit for desktop-style interfaces where predictable event routing, reusable widgets, and explicit application structure matter more than document-style layout.
 
 ---
 
-<a id="minimal-runnable-example"></a>
-
-## Minimal Runnable Example — [Back to Top](#table-of-contents)
+## Minimal Runnable Example [Back to Top](#table-of-contents)
 
 ```python
 import pygame
 from pygame import Rect
-from gui_do import GuiApplication, UiEngine, ButtonControl, LabelControl
+from gui_do import ButtonControl, GuiApplication, LabelControl, UiEngine
 
 
 def main() -> None:
@@ -150,13 +120,12 @@ def main() -> None:
     surface = pygame.display.set_mode((640, 480))
     app = GuiApplication(surface)
 
-    label = app.scene.add(LabelControl("status", Rect(20, 20, 280, 30), "Ready"))
+    status = app.scene.add(LabelControl("status", Rect(20, 20, 220, 30), "Ready"))
 
     def on_click() -> None:
-        label.text = "Clicked"
+        status.text = "Clicked"
 
-    app.scene.add(ButtonControl("click", Rect(20, 64, 120, 32), "Click", on_click=on_click))
-
+    app.scene.add(ButtonControl("go", Rect(20, 64, 120, 32), "Click", on_click=on_click))
     UiEngine(app, target_fps=60).run()
     pygame.quit()
 
@@ -167,23 +136,19 @@ if __name__ == "__main__":
 
 ---
 
-<a id="package-management"></a>
+## Package Management [Back to Top](#table-of-contents)
 
-## Package Management — [Back to Top](#table-of-contents)
+The repository includes `scripts/manage.py` for consumer-project bootstrap and upgrade flows. The tool supports `init`, `apply`, `verify`, `check`, and `update` so a developer can start from a clean library-first checkout or sync a newer gui_do version into an existing project.
 
-`gui_do` ships with `scripts/manage.py` for repository bootstrap and update workflows. The script supports `init`, `apply`, `verify`, `check`, and `update` commands.
+### Start a New Project [Back to Top](#table-of-contents)
 
-<a id="start-a-new-project"></a>
-
-### Start a New Project — [Back to Top](#table-of-contents)
-
-Use this when you have cloned or downloaded the gui_do repository and want a clean, library-first base without demo content:
+Use `init` in a cloned or downloaded gui_do repository when you want to strip bundled demo content and keep the library plus its support files:
 
 ```bash
 python scripts/manage.py init --verify
 ```
 
-Optional starter scaffold:
+Optional scaffold generation:
 
 ```bash
 python scripts/manage.py init --scaffold --scaffold-file myapp.py --scaffold-package features --verify
@@ -191,39 +156,33 @@ python scripts/manage.py init --scaffold --scaffold-file myapp.py --scaffold-pac
 
 Useful flags:
 
-- `--dry-run` — preview changes without writing anything
-- `--skip-doc-sync` — skip README and docs parity rewrites
-- `--skip-workflow-sync` — skip CI workflow synchronization
+- `--dry-run` previews changes.
+- `--skip-doc-sync` skips README and docs synchronization.
+- `--skip-workflow-sync` skips CI workflow synchronization.
 
-<a id="add-to-or-update-an-existing-project"></a>
+### Add to or Update an Existing Project [Back to Top](#table-of-contents)
 
-### Add to or Update an Existing Project — [Back to Top](#table-of-contents)
-
-Validate a target project before copying library assets into it:
+Use `check` before copying gui_do into another project:
 
 ```bash
 python scripts/manage.py check --target D:/Code/my_app
 ```
 
-Then update the target project with the current library version:
+Then use `update` to copy the current library-only directories and root files into the target project and run `apply` there:
 
 ```bash
 python scripts/manage.py update --target D:/Code/my_app --verify
 ```
 
-`update` syncs library-only directories and files (`gui_do/`, `scripts/`, `tests/`, `docs/`, `pyproject.toml`, and related root files) then runs `apply` in the target to maintain contract parity.
+The update flow copies `gui_do/`, `scripts/`, `tests/`, `docs/`, `README.md`, and the packaging files that define the public package contract.
 
 ---
 
-<a id="application-bootstrap"></a>
+## Application Bootstrap [Back to Top](#table-of-contents)
 
-## Application Bootstrap — [Back to Top](#table-of-contents)
+### GuiApplication [Back to Top](#table-of-contents)
 
-<a id="guiapplication"></a>
-
-### GuiApplication — [Back to Top](#table-of-contents)
-
-`GuiApplication(surface)` is the runtime root. It owns scenes, controls, managers, and rendering. Pass the pygame display surface created with `pygame.display.set_mode(...)`.
+`GuiApplication(surface)` is the runtime root. It owns the active scene, scene-local services, event normalization, rendering orchestration, and feature coordination.
 
 ```python
 import pygame
@@ -234,368 +193,194 @@ surface = pygame.display.set_mode((1024, 720))
 app = GuiApplication(surface)
 ```
 
-Key public services on `app`:
+Common application properties:
 
-| Attribute | Description |
-|---|---|
-| `app.scene` | Active scene root node |
-| `app.focus` | `FocusManager` |
-| `app.events` | `EventBus` |
-| `app.actions` | `ActionManager` |
-| `app.overlay` | `OverlayManager` |
-| `app.toasts` | `ToastManager` |
-| `app.dialogs` | `DialogManager` |
-| `app.drag_drop` | `DragDropManager` |
-| `app.scheduler` | `TaskScheduler` |
-| `app.timers` | `Timers` |
-| `app.tweens` | `TweenManager` |
-| `app.features` | `FeatureManager` |
-| `app.window_tiling` | `WindowTilingManager` |
-| `app.layout` | `LayoutManager` |
-| `app.theme` | `ColorTheme` |
-| `app.graphics_factory` | `BuiltInGraphicsFactory` |
+| Attribute | Type | Notes |
+|---|---|---|
+| `app.scene` | scene root | Active scene graph root |
+| `app.focus` | `FocusManager` | Keyboard focus and traversal |
+| `app.actions` | `ActionManager` | Key-to-action routing |
+| `app.events` | `EventBus` | Pub/sub messaging |
+| `app.scheduler` | `TaskScheduler` | Scene-local background tasks |
+| `app.timers` | `Timers` | Scene-local frame timers |
+| `app.tweens` | `TweenManager` | Scene-local tween animation |
+| `app.overlay` | `OverlayManager` | Overlay stack |
+| `app.drag_drop` | `DragDropManager` | Drag session state |
+| `app.layout` | `LayoutManager` | Grid placement helper |
+| `app.window_tiling` | `WindowTilingManager` | Floating-window tiling |
+| `app.theme` | `ColorTheme` | Active theme object |
+| `app.graphics_factory` | `BuiltInGraphicsFactory` | Cached built-in visuals |
+| `app.features` | `FeatureManager` | Feature registration and lifecycle |
+| `app.toasts` | `ToastManager` | App-level toast banners |
+| `app.dialogs` | `DialogManager` | Lazy modal dialog service |
 
-Key lifecycle methods:
+Common application methods:
 
-- `app.process_event(event)` — normalize and dispatch one pygame event
-- `app.update(dt)` — update all runtime systems
-- `app.draw()` — render the active scene
-- `app.create_scene(name)` — register a new scene
-- `app.switch_scene(name)` — activate a scene by name
-- `app.scene_names()` — list all registered scene names
-- `app.shutdown()` — tear down all runtime systems
+- `app.add(node, scene_name=None)` adds a root node to the active or named scene.
+- `app.create_scene(name)` creates or returns a named scene.
+- `app.switch_scene(name)` activates a scene.
+- `app.scene_names()` lists registered scenes.
+- `app.has_scene(name)` checks whether a scene exists.
+- `app.remove_scene(name)` removes a non-active scene.
+- `app.process_event(event)`, `app.update(dt_seconds)`, and `app.draw()` form the low-level runtime loop.
 
-<a id="uiengine"></a>
+### UiEngine [Back to Top](#table-of-contents)
 
-### UiEngine — [Back to Top](#table-of-contents)
-
-`UiEngine(app, target_fps=60)` runs the main event loop, calling `process_event`, `update`, and `draw` each frame.
+`UiEngine` is the packaged event loop. It forwards pygame events through `GuiApplication.process_event(...)`, advances scene-local services, and draws each frame.
 
 ```python
 from gui_do import UiEngine
 
 engine = UiEngine(app, target_fps=60)
-engine.run()               # runs until the window closes
-engine.run(max_frames=300) # bounded run useful for testing
+engine.run()
 ```
 
-<a id="scene-management"></a>
+Use `max_frames=` when you want a bounded run for tests or deterministic demos.
 
-### Scene Management — [Back to Top](#table-of-contents)
+### Scene Management [Back to Top](#table-of-contents)
 
-Each named scene carries its own isolated runtime context. Only the active scene receives updates and input events.
+Each scene has its own scheduler, timers, tween manager, overlay manager, drag-drop manager, tiling manager, and theme/graphics bundle. That keeps multi-screen applications isolated without custom bookkeeping.
 
 ```python
 app.create_scene("main")
 app.create_scene("settings")
 
 app.switch_scene("settings")
-print(app.active_scene_name)   # "settings"
-print(app.scene_names())       # ["main", "settings"]
+print(app.active_scene_name)
+print(app.scene_names())
 ```
 
-Scene-local systems (scheduler, timers, tweens, overlay stack) are automatically suspended and resumed on scene switches.
+Standalone helpers such as `ContextMenuManager`, `FileDialogManager`, `SceneTransitionManager`, `ResizeManager`, `ThemeManager`, and `CommandPaletteManager` are instantiated explicitly and composed with the current application or scene services as needed.
 
 ---
 
-<a id="controls"></a>
+## Controls [Back to Top](#table-of-contents)
 
-## Controls — [Back to Top](#table-of-contents)
+All built-in controls are added to a scene or container with `parent.add(child)` and expose geometry, visibility, enable/disable, focus, and draw/update behavior through the public control classes exported at the package root.
 
-<a id="uinode-pattern"></a>
+### Display and Container Controls [Back to Top](#table-of-contents)
 
-### UiNode Pattern — [Back to Top](#table-of-contents)
+Use these for structure, chrome, and general interaction:
 
-All built-in controls inherit from `UiNode` and share a consistent contract:
-
-- **Identity and geometry**: `control_id`, `rect`
-- **Visibility and interaction**: `visible`, `enabled`, `tab_index`
-- **Tree management**: `add(child)`, `remove(child)`, `children`, `parent`
-- **Lifecycle**: `invalidate()`, `show()`, `hide()`, `enable()`, `disable()`
-- **Geometry helpers**: `set_pos(x, y)`, `resize(w, h)`, `set_rect(rect)`
-- **Accessibility**: `set_accessibility(role=..., label=...)`
-
-Controls are added to a scene or to another container node via `parent.add(child)`.
+- `PanelControl` is the general-purpose rectangular container.
+- `LabelControl` renders single-line text with `align="left"`, `"center"`, or `"right"`.
+- `ButtonControl` exposes click and focused keyboard activation.
+- `ToggleControl` holds a boolean pushed state.
+- `ButtonGroupControl` gives radio-style mutually exclusive selection by group name.
+- `ArrowBoxControl` is a directional button with repeat support.
+- `FrameControl` draws a decorative border.
+- `ImageControl` displays a file path, `Path`, or `pygame.Surface`.
+- `WindowControl` is a floating draggable titled window.
+- `TaskPanelControl` is an auto-hide task strip.
+- `OverlayPanelControl` is the overlay-safe panel used by services such as dialogs and menus.
 
 ```python
 from pygame import Rect
-from gui_do import PanelControl, LabelControl
+from gui_do import ButtonControl, LabelControl, PanelControl, ToggleControl
 
-panel = app.scene.add(PanelControl("panel", Rect(20, 20, 400, 300)))
-panel.add(LabelControl("title", Rect(8, 8, 200, 28), "My Panel"))
+panel = app.scene.add(PanelControl("panel", Rect(20, 20, 340, 180)))
+panel.add(LabelControl("title", Rect(12, 12, 200, 24), "Settings"))
+panel.add(ButtonControl("save", Rect(12, 48, 100, 28), "Save", on_click=lambda: None))
+panel.add(ToggleControl("autosave", Rect(12, 84, 140, 28), "On", "Off", pushed=True))
 ```
 
-<a id="basic-controls"></a>
+### Text Controls [Back to Top](#table-of-contents)
 
-### Basic Controls — [Back to Top](#table-of-contents)
-
-**PanelControl** — rectangular container, optionally draws a background fill.
+`TextInputControl`, `TextAreaControl`, and `RichLabelControl` cover editable single-line input, editable multi-line input, and styled rich text.
 
 ```python
-PanelControl(control_id, rect, draw_background=True, constraints=None)
+from gui_do import RichLabelControl, TextAreaControl, TextInputControl
+
+name_input = TextInputControl(
+    "name",
+    Rect(20, 20, 240, 28),
+    placeholder="Project name",
+    on_submit=lambda value: print("submit", value),
+)
+
+notes = TextAreaControl(
+    "notes",
+    Rect(20, 60, 320, 140),
+    value="Initial text",
+    read_only=False,
+)
+
+hint = RichLabelControl(
+    "hint",
+    Rect(20, 210, 320, 60),
+    text="**Bold**, _italic_, and `code` spans are supported.",
+)
 ```
 
-**LabelControl** — single-line text display with alignment.
+### Selection, Range, and Data Controls [Back to Top](#table-of-contents)
+
+gui_do includes small-value widgets and larger selection/data widgets in the same public surface:
+
+- `SliderControl` and `ScrollbarControl` report a new value plus optional `ValueChangeReason`.
+- `SpinnerControl` is numeric input with buttons, keyboard input, and wheel support.
+- `RangeSliderControl` exposes `low_value` and `high_value`.
+- `DropdownControl` selects one `DropdownOption` and calls `on_change(value, index)`.
+- `ListViewControl` renders `ListItem` rows with single or multi-select.
+- `DataGridControl` displays `GridColumn` and `GridRow` tables.
+- `TreeControl` renders hierarchical `TreeNode` data.
+- `TabControl` switches among `TabItem` definitions.
+- `SplitterControl` provides two resizable panes.
 
 ```python
-LabelControl(control_id, rect, text, align="left")
-label.text = "Updated text"
-label.title = True   # use title font role
+from gui_do import (
+    DropdownControl,
+    DropdownOption,
+    ListItem,
+    ListViewControl,
+    RangeSliderControl,
+    SpinnerControl,
+)
+
+spinner = SpinnerControl("count", Rect(20, 20, 120, 28), value=5, min_value=0, max_value=20)
+price = RangeSliderControl("range", Rect(20, 60, 260, 28), min_value=0, max_value=100, low_value=20, high_value=80)
+
+choices = DropdownControl(
+    "color",
+    Rect(20, 100, 180, 28),
+    options=[DropdownOption("Red", "red"), DropdownOption("Blue", "blue")],
+    on_change=lambda value, index: print(value, index),
+)
+
+items = [ListItem("Alpha"), ListItem("Beta"), ListItem("Gamma")]
+listing = ListViewControl("list", Rect(20, 140, 220, 150), items=items, on_select=lambda index, item: print(item.label))
 ```
 
-**ButtonControl** — clickable button with optional keyboard activation on focus.
+### Canvas, Scroll, and Advanced Inputs [Back to Top](#table-of-contents)
+
+Use these controls when the built-in list/form widgets are not enough:
+
+- `CanvasControl` gives you a bounded event queue of `CanvasEventPacket` values for custom drawing and interaction.
+- `ScrollViewControl` hosts child controls in content-local coordinates and clips them to a viewport.
+- `ColorPickerControl` provides inline HSV picking plus hex text entry.
 
 ```python
-ButtonControl(control_id, rect, text, on_click=None, style="box", font_role="body")
+from gui_do import CanvasControl, ColorPickerControl, LabelControl, ScrollViewControl
+
+canvas = CanvasControl("canvas", Rect(20, 20, 300, 180), max_events=256)
+
+scroll = ScrollViewControl("scroll", Rect(340, 20, 220, 180), content_height=400, scroll_y=True)
+scroll.add(LabelControl("row1", Rect(0, 0, 180, 24), "Scrollable row"), 0, 0)
+scroll.add(LabelControl("row2", Rect(0, 0, 180, 24), "Another row"), 0, 36)
+
+picker = ColorPickerControl("picker", Rect(20, 220, 220, 200), color=(255, 128, 0))
 ```
-
-**ToggleControl** — two-state toggle button with distinct on/off labels.
-
-```python
-ToggleControl(control_id, rect, text_on, text_off=None, pushed=False,
-              on_toggle=None, style="box", font_role="body")
-toggle.pushed   # current state
-```
-
-**ArrowBoxControl** — directional arrow button with configurable hold-repeat.
-
-```python
-ArrowBoxControl(control_id, rect, direction, on_activate=None,
-                repeat_interval_seconds=0.08)
-```
-
-**ButtonGroupControl** — radio-style group button: selecting one peer deselects others sharing the same group name.
-
-```python
-ButtonGroupControl(control_id, rect, group, text, selected=False,
-                   style="box", on_activate=None, font_role="body")
-```
-
-**FrameControl** — thin bordered rectangle for visual grouping.
-
-```python
-FrameControl(control_id, rect, border_width=1)
-frame.border_width = 2
-```
-
-**ImageControl** — displays an image from a file path, `Path`, or an existing `pygame.Surface`. Rescales to fill rect by default.
-
-```python
-ImageControl(control_id, rect, image_path, scale=True)
-ctrl.set_image("assets/logo.png")
-```
-
-<a id="text-controls"></a>
-
-### Text Controls — [Back to Top](#table-of-contents)
-
-**TextInputControl** — single-line editable text field with placeholder, masking, and submission callback.
-
-```python
-TextInputControl(control_id, rect, value="", placeholder="", max_length=None,
-                 masked=False, on_change=None, on_submit=None, font_role="body")
-ctrl.value = "initial text"
-ctrl.set_value("new text")
-```
-
-**TextAreaControl** — multi-line editable text area with word wrap and optional read-only mode.
-
-```python
-TextAreaControl(control_id, rect, value="", placeholder="", max_length=None,
-                read_only=False, on_change=None, font_role="body", font_size=16)
-ctrl.value
-ctrl.cursor_pos
-ctrl.selection_range
-ctrl.select_all()
-```
-
-**RichLabelControl** — multi-line text with inline style markers: `**bold**`, `_italic_`, `` `code` ``, and nested combinations such as `**_bold italic_**`.
-
-```python
-RichLabelControl(control_id, rect, text="", font_role="body", font_size=16,
-                 align="left", color=None)
-ctrl.text = "**Warning:** _check your input_"
-```
-
-<a id="value-and-selection-controls"></a>
-
-### Value and Selection Controls — [Back to Top](#table-of-contents)
-
-**SliderControl** — draggable value control. Keyboard-accessible: arrow keys nudge by 5% of range, Home/End jump to bounds.
-
-```python
-from gui_do import LayoutAxis, SliderControl, ValueChangeReason
-
-def on_zoom(value, reason=None):
-    if reason == ValueChangeReason.KEYBOARD:
-        print(f"Keyboard adjusted zoom to {value}")
-
-slider = SliderControl("zoom", Rect(20, 20, 240, 24),
-                       LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0,
-                       on_change=on_zoom)
-slider.set_value(75.0)
-slider.adjust_value(5.0)
-```
-
-**ScrollbarControl** — scroll offset control. Keyboard-accessible: arrow keys step by `step`, Page Up/Down step by 90% of viewport, Home/End jump to bounds.
-
-```python
-ScrollbarControl(control_id, rect, axis, content_size, viewport_size,
-                 offset=0, step=16, on_change=None)
-bar.set_offset(120)
-bar.adjust_offset(16)
-```
-
-**ListViewControl** — scrollable list of `ListItem` rows with optional multi-select.
-
-```python
-from gui_do import ListViewControl, ListItem
-
-items = [ListItem("alpha"), ListItem("beta"), ListItem("gamma")]
-lv = ListViewControl("list", Rect(20, 60, 240, 180), items=items,
-                     row_height=28, on_select=lambda idx, item: print(item.label))
-lv.set_items(new_items)
-lv.selected_index
-```
-
-**DropdownControl** — collapsed selection control that expands to a popup list.
-
-```python
-from gui_do import DropdownControl, DropdownOption
-
-options = [DropdownOption("Red", value="red"), DropdownOption("Blue", value="blue")]
-dd = DropdownControl("color", Rect(20, 60, 180, 28), options=options,
-                     on_change=lambda idx, opt: print(opt.value))
-dd.selected_index
-dd.selected_option   # DropdownOption or None
-```
-
-<a id="data-grid"></a>
-
-### Data Grid — [Back to Top](#table-of-contents)
-
-`DataGridControl` renders a sortable, scrollable table. Columns are resizable by dragging header separators. Clicking a sortable column header cycles ascending/descending sort.
-
-```python
-from gui_do import DataGridControl, GridColumn, GridRow
-
-columns = [
-    GridColumn(key="name",  title="Name",  width=160, sortable=True),
-    GridColumn(key="value", title="Value", width=80,  sortable=True),
-    GridColumn(key="note",  title="Note",  width=200),
-]
-rows = [
-    GridRow({"name": "Alpha", "value": 1, "note": "first"}),
-    GridRow({"name": "Beta",  "value": 2, "note": "second"}),
-]
-grid = DataGridControl("grid", Rect(20, 20, 480, 220),
-                       columns=columns, rows=rows,
-                       on_select=lambda idx, row: print(row.data),
-                       on_sort=lambda col_key, asc: print(col_key, asc))
-grid.set_rows(updated_rows)
-grid.selected_index
-```
-
-<a id="container-and-tab-controls"></a>
-
-### Container and Tab Controls — [Back to Top](#table-of-contents)
-
-**CanvasControl** — custom-rendered drawing surface with a bounded event queue. Delivers `CanvasEventPacket` objects including a `local_pos` field (canvas-relative coordinates).
-
-```python
-from gui_do import CanvasControl
-
-canvas = CanvasControl("canvas", Rect(20, 20, 400, 300), max_events=256)
-# Read packets each frame:
-packets = canvas.drain()
-for pkt in packets:
-    print(pkt.local_pos, pkt.event.type)
-```
-
-**WindowControl** — draggable titled floating window, managed by the parent `PanelControl`.
-
-```python
-WindowControl(control_id, rect, title, *, use_frame_backdrop=False)
-win.visible = True    # activates the window
-win.visible = False   # hides and demotes active state
-```
-
-**SplitterControl** — two-pane resizable split container.
-
-```python
-SplitterControl(control_id, rect, axis, split_pos=None)
-```
-
-**TaskPanelControl** — auto-hide slide-in/out task strip for persistent bottom-bar or side-bar controls.
-
-```python
-TaskPanelControl(control_id, rect)
-```
-
-**OverlayPanelControl** — floating overlay container used directly or via overlay services.
-
-```python
-OverlayPanelControl(control_id, rect, draw_background=True, constraints=None)
-```
-
-**TabControl** — tabbed panel switcher. Each `TabItem` carries a `key`, `label`, and optional `content` node.
-
-```python
-from gui_do import TabControl, TabItem
-
-tabs = TabControl("tabs", Rect(20, 20, 400, 300),
-                  items=[TabItem("a", "Files"), TabItem("b", "Search")],
-                  selected_key="a",
-                  on_change=lambda key: print(key))
-tabs.selected_key
-```
-
-<a id="navigation-and-hierarchy-controls"></a>
-
-### Navigation and Hierarchy Controls — [Back to Top](#table-of-contents)
-
-**MenuBarControl** — horizontal application menu bar with flyout sub-menus. See [Menu System](#menu-system).
-
-**TreeControl** — virtualized hierarchical tree view with expand/collapse.
-
-```python
-from gui_do import TreeControl, TreeNode
-
-root_nodes = [
-    TreeNode("Folder A", children=[
-        TreeNode("File 1"),
-        TreeNode("File 2"),
-    ], expanded=True),
-    TreeNode("Folder B", children=[TreeNode("File 3")]),
-]
-tree = TreeControl("tree", Rect(20, 20, 240, 300), nodes=root_nodes,
-                   on_select=lambda node, idx: print(node.label),
-                   on_expand=lambda node, expanded: None)
-tree.set_nodes(new_nodes)
-tree.selected_node
-```
-
-`TreeNode` fields: `label`, `children`, `expanded`, `enabled`, `data` (any application payload), `icon` (reserved), `is_leaf`.
-
-**NotificationPanelControl** — overlay log panel backed by a `NotificationCenter`. See [Notification System](#notification-system).
 
 ---
 
-<a id="layout"></a>
+## Layout [Back to Top](#table-of-contents)
 
-## Layout — [Back to Top](#table-of-contents)
+### LayoutAxis [Back to Top](#table-of-contents)
 
-<a id="layoutaxis"></a>
+`LayoutAxis.HORIZONTAL` and `LayoutAxis.VERTICAL` are the axis enums used by `SliderControl`, `ScrollbarControl`, `SplitterControl`, and related layout helpers.
 
-### LayoutAxis — [Back to Top](#table-of-contents)
+### LayoutManager [Back to Top](#table-of-contents)
 
-`LayoutAxis.HORIZONTAL` and `LayoutAxis.VERTICAL` are used by `SliderControl`, `ScrollbarControl`, `SplitterControl`, and layout helpers.
-
-<a id="layoutmanager"></a>
-
-### LayoutManager — [Back to Top](#table-of-contents)
-
-`app.layout` provides grid-based placement helpers for evenly spaced controls.
+`LayoutManager` is a small grid-placement helper for consistent row/column spacing.
 
 ```python
 app.layout.set_grid_properties(
@@ -608,68 +393,53 @@ app.layout.set_grid_properties(
 rect = app.layout.grid(col=1, row=2)
 ```
 
-<a id="constraintlayout"></a>
+### ConstraintLayout [Back to Top](#table-of-contents)
 
-### ConstraintLayout — [Back to Top](#table-of-contents)
-
-`ConstraintLayout` and `AnchorConstraint` enable anchor-relative positioning of child controls within a container.
+`ConstraintLayout` and `AnchorConstraint` support anchor-relative positioning inside a container or window-sized parent rect.
 
 ```python
-from gui_do import ConstraintLayout, AnchorConstraint
+from gui_do import AnchorConstraint, ConstraintLayout
 
-layout = ConstraintLayout(container_rect)
-layout.add(AnchorConstraint(child_ctrl, left=8, right=8, top=8, height=32))
-layout.apply()
+layout = ConstraintLayout()
+layout.add(AnchorConstraint(save_button, left=12, bottom=12, width=100, height=28))
+layout.apply(Rect(0, 0, 640, 480))
 ```
 
-<a id="flexlayout"></a>
+### FlexLayout [Back to Top](#table-of-contents)
 
-### FlexLayout — [Back to Top](#table-of-contents)
-
-`FlexLayout` computes CSS-flex-style row or column arrangements and mutates child rects in place. Wrap each child node in a `FlexItem` to configure grow, shrink, and basis.
+`FlexLayout` computes row or column layouts using `FlexItem`, `FlexDirection`, `FlexAlign`, and `FlexJustify`.
 
 ```python
-from gui_do import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
+from gui_do import FlexAlign, FlexDirection, FlexItem, FlexJustify, FlexLayout
 
-layout = FlexLayout(
-    direction=FlexDirection.ROW,
-    gap=8,
-    align=FlexAlign.CENTER,
-    justify=FlexJustify.START,
-)
+layout = FlexLayout(direction=FlexDirection.ROW, gap=8, align=FlexAlign.CENTER, justify=FlexJustify.START)
 items = [
-    FlexItem(label_ctrl, grow=0, basis=120),
-    FlexItem(input_ctrl, grow=1),
-    FlexItem(btn_ctrl,   grow=0, basis=80),
+    FlexItem(name_input, basis=180, grow=1),
+    FlexItem(save_button, basis=100, grow=0),
 ]
-layout.apply(items, container_rect)
-for item in items:
-    item.node.invalidate()
+layout.apply(items, Rect(20, 20, 420, 32))
 ```
 
-`FlexDirection`: `ROW`, `COLUMN`.
-`FlexAlign` (cross-axis): `START`, `CENTER`, `END`, `STRETCH`.
-`FlexJustify` (main-axis): `START`, `CENTER`, `END`, `SPACE_BETWEEN`, `SPACE_AROUND`.
+### WindowTilingManager [Back to Top](#table-of-contents)
 
-`FlexItem` options: `grow` (surplus space factor), `shrink` (shrink factor), `basis` (base size in pixels or `None` to use current rect), `min_size`, `max_size`, `align_self` (override container `align` for this item).
+`WindowTilingManager` arranges visible `WindowControl` nodes without overlap inside the active scene. It is scene-local through `app.window_tiling`.
 
-<a id="windowtilingmanager"></a>
-
-### WindowTilingManager — [Back to Top](#table-of-contents)
-
-`app.window_tiling` manages registration and automatic tiling of floating `WindowControl` nodes within a scene. `GuiApplication.build_parts(...)` primes tiling registrations automatically at startup.
+```python
+tiling = app.window_tiling
+tiling.prime_registration()
+tiling.configure(gap=12, padding=12, avoid_task_panel=True, relayout=False)
+tiling.set_enabled(True)
+tiling.arrange_windows()
+print(tiling.read_settings())
+```
 
 ---
 
-<a id="events-and-input"></a>
+## Events and Input [Back to Top](#table-of-contents)
 
-## Events and Input — [Back to Top](#table-of-contents)
+### GuiEvent and EventManager [Back to Top](#table-of-contents)
 
-<a id="guievent-and-eventmanager"></a>
-
-### GuiEvent and EventManager — [Back to Top](#table-of-contents)
-
-All raw pygame events are normalized to `GuiEvent` by `EventManager` before dispatch. `GuiEvent` exposes semantic helpers:
+`EventManager` normalizes raw pygame input into `GuiEvent`. Controls and services consume `GuiEvent`, not raw pygame events.
 
 ```python
 event.is_key_down(pygame.K_RETURN)
@@ -677,137 +447,135 @@ event.is_mouse_down(button=1)
 event.is_mouse_up(button=1)
 event.is_mouse_motion()
 event.is_mouse_wheel()
-event.wheel_delta()       # int: +1 up, -1 down
-event.collides(rect)      # True if event position is inside rect
-event.type                # raw pygame event type int
-event.kind                # EventType enum
-event.pos                 # (x, y) tuple
-event.key                 # int key code (key events)
-event.mod                 # modifier flags
+event.pos
+event.rel
+event.raw_pos
+event.raw_rel
+event.kind
 ```
 
-`EventType` and `EventPhase` are public enums used in routing contracts.
+`EventType` and `EventPhase` are also exported for routing-aware code.
 
-<a id="eventbus"></a>
+### EventBus [Back to Top](#table-of-contents)
 
-### EventBus — [Back to Top](#table-of-contents)
-
-`EventBus` carries typed pub/sub messages between decoupled components. Subscriptions receive the published payload dict.
+`EventBus` is a scoped publish/subscribe channel for non-input runtime events.
 
 ```python
-bus = app.events   # scene-local EventBus, or EventBus() for a standalone instance
-
-token = bus.subscribe("task.done", lambda payload: print(payload))
-bus.publish("task.done", {"result": 42})
-bus.unsubscribe(token)
+bus = app.events
+subscription = bus.subscribe("task.done", lambda payload: print(payload), scope="main")
+bus.publish("task.done", {"result": 42}, scope="main")
+bus.unsubscribe(subscription)
 ```
 
-<a id="actionmanager"></a>
+Use `once(...)` for one-shot subscriptions and `unsubscribe_scope(...)` to remove all handlers in one scope.
 
-### ActionManager — [Back to Top](#table-of-contents)
+### ActionManager [Back to Top](#table-of-contents)
 
-`ActionManager` maps keyboard input chords to named actions.
+`ActionManager` maps keys to named actions with optional scene and active-window scoping.
 
 ```python
+import pygame
+
 actions = app.actions
-actions.bind("save", pygame.K_s, mods=pygame.KMOD_CTRL,
-             callback=lambda: save_file())
+actions.register_action("save", lambda event: (print("save"), True)[1])
+actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 ```
 
-<a id="focusmanager"></a>
+For a one-call setup, use `register_and_bind(...)`.
 
-### FocusManager — [Back to Top](#table-of-contents)
+### FocusManager [Back to Top](#table-of-contents)
 
-`FocusManager` owns keyboard focus. Tab traversal follows ascending `tab_index` values. Mouse clicks transfer focus to a control when it returns `True` from `accepts_mouse_focus()`.
+`FocusManager` controls keyboard focus. Controls participate by exposing `tab_index >= 0` and accepting focus.
 
 ```python
 focus = app.focus
-focus.set_focus(my_ctrl, via_keyboard=False)
-focus.current   # currently focused UiNode or None
+focus.set_focus(name_input, via_keyboard=False)
+print(focus.current)
 ```
 
-Set `ctrl.tab_index = N` (any non-negative integer) to include a control in keyboard Tab traversal. Controls with `tab_index == -1` are excluded.
+### ValueChangeReason and ValueChangeCallback [Back to Top](#table-of-contents)
+
+`ValueChangeReason` tags slider- and scrollbar-style callbacks with the source of the change.
+
+```python
+from gui_do import SliderControl, ValueChangeReason
+
+def on_change(value: float, reason: ValueChangeReason) -> None:
+    print(value, reason)
+
+slider = SliderControl("zoom", Rect(20, 20, 240, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0, on_change=on_change)
+```
+
+Members are `KEYBOARD`, `PROGRAMMATIC`, `MOUSE_DRAG`, and `WHEEL`.
 
 ---
 
-<a id="data-and-state"></a>
+## Data and State [Back to Top](#table-of-contents)
 
-## Data and State — [Back to Top](#table-of-contents)
+### ObservableValue, ComputedValue, and PresentationModel [Back to Top](#table-of-contents)
 
-<a id="observablevalue-and-presentationmodel"></a>
-
-### ObservableValue and PresentationModel — [Back to Top](#table-of-contents)
-
-`ObservableValue[T]` is a reactive value holder. Subscribers receive the new value on every change.
+`ObservableValue` is the base reactive primitive. `ComputedValue` derives a read-only value from other observables. `PresentationModel` is a small subscription-owning base class for view-model style objects.
 
 ```python
-from gui_do import ObservableValue
+from gui_do import ComputedValue, ObservableValue, PresentationModel
 
-count = ObservableValue(0)
-count.on_change(lambda v: label.__setattr__("text", str(v)))
-count.value = 5    # triggers all listeners
-print(count.value) # 5
+a = ObservableValue(2)
+b = ObservableValue(3)
+total = ComputedValue(lambda: a.value + b.value, deps=[a, b])
+total.subscribe(lambda value: print("total", value))
+
+
+class CounterModel(PresentationModel):
+    def __init__(self) -> None:
+        super().__init__()
+        self.count = ObservableValue(0)
+
+
+a.value = 10
 ```
 
-`PresentationModel` is a base class for view models that aggregate multiple `ObservableValue` fields.
+### InvalidationTracker [Back to Top](#table-of-contents)
+
+`InvalidationTracker` collects dirty regions and can promote to full redraw when necessary.
 
 ```python
-from gui_do import PresentationModel, ObservableValue
-
-class AppModel(PresentationModel):
-    def __init__(self):
-        self.status = ObservableValue("idle")
-        self.count  = ObservableValue(0)
+tracker = app.invalidation
+tracker.set_screen_size((800, 600))
+tracker.invalidate_rect(Rect(20, 20, 100, 40))
+is_full, dirty_rects = tracker.begin_frame()
+tracker.end_frame()
 ```
 
-<a id="invalidationtracker"></a>
+### FormModel [Back to Top](#table-of-contents)
 
-### InvalidationTracker — [Back to Top](#table-of-contents)
-
-`InvalidationTracker` monitors a set of `ObservableValue` fields and fires a combined callback when any of them changes.
+`FormModel` manages named `FormField` instances, per-field validation, cross-field validation, dirty tracking, and commit/reset behavior.
 
 ```python
-from gui_do import InvalidationTracker, ObservableValue
-
-a = ObservableValue(1)
-b = ObservableValue("x")
-tracker = InvalidationTracker([a, b], on_invalidate=lambda: rebuild_ui())
-```
-
-<a id="formmodel"></a>
-
-### FormModel — [Back to Top](#table-of-contents)
-
-`FormModel`, `FormField`, `ValidationRule`, and `FieldError` provide form-state management with per-field validation, dirty tracking, commit, and reset.
-
-```python
-from gui_do import FormModel, FormField
-
-def not_empty(v):
-    return None if v.strip() else "Required"
+from gui_do import FieldError, FormModel
 
 form = FormModel()
-name_field = form.add_field(FormField("name", "", validators=[not_empty], required=True))
-email_field = form.add_field(FormField("email", ""))
+name = form.add_field("name", "", required=True)
+email = form.add_field("email", "")
 
-name_field.value.value = "Alice"
-is_ok = form.validate()    # True/False
-errors = form.errors()      # list[FieldError]
-form.commit()               # mark all as committed
-form.reset()                # revert to committed values
+name.value.value = "Alice"
+form.add_cross_validator(
+    lambda model: None if model.field("email").value.value else [FieldError("email", "Email required")]
+)
+
+ok = form.validate_all()
+print(ok, form.get_errors())
+form.commit_all()
 ```
 
-<a id="commandhistory"></a>
+`ValidationRule` is the callable type exported for field validators, and `FieldError` is the exported error record type.
 
-### CommandHistory — [Back to Top](#table-of-contents)
+### CommandHistory [Back to Top](#table-of-contents)
 
-`CommandHistory` manages an undo/redo stack. Any object satisfying the `Command` protocol (`description` property, `execute()`, `undo()`) can be pushed. `CommandTransaction` groups multiple commands into a single undoable unit.
+`CommandHistory` implements bounded undo/redo stacks and `CommandTransaction` grouping for objects matching the exported `Command` protocol.
 
 ```python
-from gui_do import CommandHistory, CommandTransaction
-
 history = CommandHistory(max_size=100)
-history.push(my_command)   # executes and records
+history.push(my_command)
 history.undo()
 history.redo()
 
@@ -816,591 +584,453 @@ with history.transaction("Bulk edit") as tx:
     tx.add(cmd_b)
 ```
 
-<a id="statemachine-and-router"></a>
+### StateMachine and Router [Back to Top](#table-of-contents)
 
-### StateMachine and Router — [Back to Top](#table-of-contents)
-
-`StateMachine(initial_state)` coordinates explicit state transitions with optional enter/exit callbacks.
+`StateMachine` models finite-state transitions with observable current state. `Router` models application navigation history and can switch scenes when supplied with a `GuiApplication`.
 
 ```python
-from gui_do import StateMachine
+from gui_do import Router, StateMachine
 
 sm = StateMachine("idle")
-sm.add_transition("idle", "running", trigger="start",
-                  on_enter=lambda: print("started"))
+sm.add_state("running")
+sm.add_transition("idle", "running", trigger="start")
+sm.current.subscribe(lambda value: print("state", value))
 sm.trigger("start")
-print(sm.state)   # "running"
-```
-
-`Router` and `RouteEntry` support path-style navigation tables for multi-screen apps.
-
-```python
-from gui_do import Router, RouteEntry
 
 router = Router()
-router.add(RouteEntry("/home",     handler=show_home))
-router.add(RouteEntry("/settings", handler=show_settings))
-router.navigate("/settings")
+router.register("/home", "home_scene")
+router.register("/settings", "settings_scene")
+router.push("/home", app=app)
+router.push("/settings", app=app)
+router.pop(app=app)
 ```
 
-<a id="settingsregistry"></a>
+### SettingsRegistry [Back to Top](#table-of-contents)
 
-### SettingsRegistry — [Back to Top](#table-of-contents)
-
-`SettingsRegistry` stores and loads namespaced settings backed by a JSON file. `SettingDescriptor` carries name, default value, and optional validation.
+`SettingsRegistry` is a namespaced settings store where each declared setting is backed by an `ObservableValue`. `SettingDescriptor` is the exported metadata object used for introspection.
 
 ```python
-from gui_do import SettingsRegistry, SettingDescriptor
+from gui_do import SettingsRegistry
 
-reg = SettingsRegistry("myapp.settings.json")
-reg.declare(SettingDescriptor("theme", default="dark"))
-reg.set("theme", "light")
-value = reg.get("theme")   # "light"
-reg.save()
-reg.load()
+settings = SettingsRegistry("settings.json")
+volume = settings.declare("audio", "volume", 1.0, label="Master Volume")
+volume.subscribe(lambda value: print("volume", value))
+
+settings.load()
+settings.set_value("audio", "volume", 0.5)
+settings.save()
 ```
 
 ---
 
-<a id="value-change-contracts"></a>
+## Scheduling and Animation [Back to Top](#table-of-contents)
 
-## Value Change Contracts — [Back to Top](#table-of-contents)
+### TaskScheduler [Back to Top](#table-of-contents)
 
-<a id="valuechangereason-and-valuechangecallback"></a>
-
-### ValueChangeReason and ValueChangeCallback — [Back to Top](#table-of-contents)
-
-`ValueChangeReason` is a `str` enum that tags the source of a slider or scrollbar value change. It is passed as the optional second argument to `on_change` callbacks.
+`TaskScheduler` runs background callables in a thread pool and lets the UI poll for completions, failures, and task messages during `update()`.
 
 ```python
-from gui_do import ValueChangeReason
+def work(task_id, payload):
+    return payload * 2
 
-# Members:
-ValueChangeReason.KEYBOARD       # arrow key or Page/Home/End
-ValueChangeReason.PROGRAMMATIC   # set_value / adjust_value
-ValueChangeReason.MOUSE_DRAG     # pointer drag
-ValueChangeReason.WHEEL          # mouse wheel
+
+app.scheduler.add_task("double", work, parameters=21)
+finished = app.scheduler.update()
+if "double" in finished:
+    print(app.scheduler.pop_result("double"))
 ```
 
-`ValueChangeCallback` is a type alias for `on_change` callbacks. Both one-argument (`value`) and two-argument (`value, reason`) signatures are accepted by default (compat mode). Pass `on_change_mode="reason-required"` to enforce the two-argument form at construction time.
+Use `send_message(...)` for in-flight task progress, `get_failed_tasks()` for errors, and `clear_events()` after consuming finished/failed event lists.
 
-```python
-from gui_do import SliderControl, ValueChangeReason
+### Timers [Back to Top](#table-of-contents)
 
-def on_change(value: float, reason: ValueChangeReason | None = None) -> None:
-    print(f"{value} via {reason}")
-
-slider = SliderControl("s", rect, axis, 0, 100, 50, on_change=on_change)
-slider.set_on_change_mode("reason-required")
-slider.set_on_change_callback(on_change)
-```
-
----
-
-<a id="scheduling-and-animation"></a>
-
-## Scheduling and Animation — [Back to Top](#table-of-contents)
-
-<a id="taskscheduler"></a>
-
-### TaskScheduler — [Back to Top](#table-of-contents)
-
-`TaskScheduler` runs background tasks in a thread pool and delivers `TaskEvent` progress, completion, and error updates back to the UI through the event bus.
-
-```python
-scheduler = app.scheduler   # scene-local instance
-
-task_id = scheduler.submit(
-    "render",
-    work_fn=lambda: heavy_computation(),
-    on_progress=lambda pct: update_progress(pct),
-    on_done=lambda result: show_result(result),
-    on_error=lambda exc: show_error(str(exc)),
-)
-scheduler.cancel(task_id)
-```
-
-<a id="timers"></a>
-
-### Timers — [Back to Top](#table-of-contents)
-
-`Timers` schedules one-shot and repeating callbacks in frame time. Scene-local timers are suspended when the scene is inactive.
+`Timers` is a frame-driven repeating and one-shot timer registry.
 
 ```python
 timers = app.timers
-
-token = timers.after(2.0, lambda: print("two seconds later"))
-repeat_token = timers.every(0.5, lambda: tick())
-timers.cancel(token)
+timers.add_timer("blink", 0.5, lambda: print("tick"))
+timers.add_once("intro", 2.0, lambda: print("ready"))
+timers.remove_timer("blink")
 ```
 
-<a id="tweenmanager"></a>
+### TweenManager [Back to Top](#table-of-contents)
 
-### TweenManager — [Back to Top](#table-of-contents)
-
-`TweenManager` animates numeric properties over time. `TweenHandle` allows cancelling in-flight tweens. `Easing` provides standard curves.
+`TweenManager` animates numeric attributes or arbitrary functions over time. `TweenHandle` lets you cancel a tween or inspect completion.
 
 ```python
 from gui_do import Easing
 
-tweens = app.tweens
-
-handle = tweens.tween(
-    target=my_ctrl,
-    attr="rect.x",
-    end=200,
-    duration=0.4,
-    easing=Easing.EASE_IN_OUT,
-    on_done=lambda: print("done"),
-)
+handle = app.tweens.tween(button.rect, "x", 240, 0.25, easing=Easing.EASE_IN_OUT)
+print(handle.elapsed_fraction())
 handle.cancel()
+```
 
-# Easing members: LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, BOUNCE, ELASTIC
+Use `tween_fn(...)` when you want eased callback-driven animation instead of direct attribute interpolation.
+
+### AnimationSequence [Back to Top](#table-of-contents)
+
+`AnimationSequence` builds sequential and parallel animation flows on top of `TweenManager`. `AnimationHandle` cancels remaining steps.
+
+```python
+from gui_do import AnimationSequence
+
+sequence = AnimationSequence(app.tweens)
+handle = (
+    sequence
+    .then(target=button.rect, attr="x", end_value=200, duration_seconds=0.2)
+    .wait(0.1)
+    .parallel([
+        {"target": button.rect, "attr": "x", "end_value": 260, "duration_seconds": 0.2},
+        {"target": button.rect, "attr": "y", "end_value": 140, "duration_seconds": 0.2},
+    ])
+    .start()
+)
 ```
 
 ---
 
-<a id="overlay-and-dialog-services"></a>
+## Overlay and Runtime Services [Back to Top](#table-of-contents)
 
-## Overlay and Dialog Services — [Back to Top](#table-of-contents)
+### OverlayManager and OverlayHandle [Back to Top](#table-of-contents)
 
-<a id="overlaymanager-and-overlaypanelcontrol"></a>
-
-### OverlayManager and OverlayPanelControl — [Back to Top](#table-of-contents)
-
-`OverlayManager` shows and dismisses floating overlay nodes above the main scene. The returned `OverlayHandle` tracks the overlay lifetime.
+`OverlayManager` owns transient overlay controls drawn above the scene graph. `OverlayHandle` dismisses a specific overlay and reports whether it is still open.
 
 ```python
-from gui_do import OverlayPanelControl
+from gui_do import LabelControl, OverlayPanelControl
 
-panel = OverlayPanelControl("popup", Rect(100, 100, 300, 200))
-panel.add(LabelControl("msg", Rect(8, 8, 284, 28), "Hello from overlay"))
-
+panel = OverlayPanelControl("popup_panel", Rect(120, 120, 260, 120))
+panel.add(LabelControl("msg", Rect(12, 12, 220, 24), "Hello from overlay"))
 handle = app.overlay.show("popup", panel, dismiss_on_outside_click=True)
+print(handle.is_open)
 handle.dismiss()
 ```
 
-<a id="toastmanager"></a>
+### ToastManager and ToastHandle [Back to Top](#table-of-contents)
 
-### ToastManager — [Back to Top](#table-of-contents)
-
-`ToastManager` displays transient notification banners with severity classification.
+`ToastManager` shows transient or persistent banners. `ToastHandle` can dismiss a single toast.
 
 ```python
 from gui_do import ToastSeverity
 
-app.toasts.show("File saved",  severity=ToastSeverity.SUCCESS, duration=3.0)
-app.toasts.show("Low memory",  severity=ToastSeverity.WARNING)
-app.toasts.show("Write error", severity=ToastSeverity.ERROR)
-app.toasts.show("Tip",         severity=ToastSeverity.INFO)
-
-# ToastSeverity members: INFO, SUCCESS, WARNING, ERROR
+toast = app.toasts.show(
+    "File saved",
+    title="Success",
+    severity=ToastSeverity.SUCCESS,
+    duration_seconds=3.0,
+)
 ```
 
-<a id="dialogmanager"></a>
+Use `show_persistent(...)` for a toast that stays open until dismissed.
 
-### DialogManager — [Back to Top](#table-of-contents)
+### DialogManager and DialogHandle [Back to Top](#table-of-contents)
 
-`DialogManager` presents modal alert, confirm, and prompt dialogs. The returned `DialogHandle` can be used to dismiss programmatically.
+`DialogManager` provides alert, confirm, and prompt modals. `DialogHandle` dismisses a specific modal or reports whether it is open.
 
 ```python
-handle = app.dialogs.alert("Operation complete", title="Done")
-handle = app.dialogs.confirm("Delete file?",
-                             on_confirm=lambda: do_delete(),
-                             on_cancel=lambda: None)
-handle = app.dialogs.prompt("Enter name:", on_submit=lambda v: use_name(v))
-handle.dismiss()
+app.dialogs.show_alert("Done", "Operation complete")
+app.dialogs.show_confirm("Delete", "Delete file?", on_confirm=lambda: print("confirmed"))
+app.dialogs.show_prompt("Rename", "New name", on_submit=lambda value: print(value))
 ```
 
-<a id="contextmenumanager"></a>
+### ContextMenuManager and ContextMenuHandle [Back to Top](#table-of-contents)
 
-### ContextMenuManager — [Back to Top](#table-of-contents)
-
-`ContextMenuManager` displays a pointer-anchored context menu from a list of `ContextMenuItem` entries. Use `separator=True` to insert a visual divider.
+`ContextMenuManager` renders a pointer-anchored menu from `ContextMenuItem` values. `ContextMenuHandle` closes a menu programmatically.
 
 ```python
-from gui_do import ContextMenuItem
+from gui_do import ContextMenuItem, ContextMenuManager
 
-items = [
-    ContextMenuItem("Cut",   action=do_cut),
-    ContextMenuItem("Copy",  action=do_copy),
-    ContextMenuItem(separator=True),
-    ContextMenuItem("Paste", action=do_paste, enabled=False),
-]
-handle = app.context_menus.show(items, anchor_pos=(x, y))
+menus = ContextMenuManager(app)
+handle = menus.show(
+    (x, y),
+    [
+        ContextMenuItem("Cut", action=lambda: None),
+        ContextMenuItem("Copy", action=lambda: None),
+        ContextMenuItem("", separator=True),
+        ContextMenuItem("Paste", action=lambda: None),
+    ],
+)
 ```
 
-<a id="dragdropmanager"></a>
+### DragDropManager and DragPayload [Back to Top](#table-of-contents)
 
-### DragDropManager — [Back to Top](#table-of-contents)
-
-`DragDropManager` coordinates typed drag sessions between source and target controls using `DragPayload`.
+`DragDropManager` coordinates typed drag sessions between source and target controls. `DragPayload` carries the drag kind and arbitrary data.
 
 ```python
 from gui_do import DragPayload
 
-drag_drop = app.drag_drop
-
-drag_drop.begin_drag(DragPayload(kind="file", data={"path": "/tmp/x.txt"}))
-drag_drop.register_drop_target(
-    drop_zone_ctrl,
-    accepts=lambda payload: payload.kind == "file",
-    on_drop=lambda payload: handle_drop(payload.data),
-)
+payload = DragPayload(kind="file", data={"path": "notes.txt"})
+app.drag_drop.begin_drag(payload)
 ```
 
-<a id="filedialogmanager"></a>
+### FileDialogManager, FileDialogOptions, and FileDialogHandle [Back to Top](#table-of-contents)
 
-### FileDialogManager — [Back to Top](#table-of-contents)
-
-`FileDialogManager` presents modal file-open and file-save dialogs. Configure with `FileDialogOptions`. The returned `FileDialogHandle` resolves asynchronously via the `on_close` callback.
+`FileDialogManager` exposes separate open/save flows. `FileDialogOptions` configures title, start directory, filters, and selection rules. `FileDialogHandle` tracks the modal dialog state.
 
 ```python
 from gui_do import FileDialogManager, FileDialogOptions
 
-mgr = FileDialogManager(app)
+files = FileDialogManager(app)
 
-# Open dialog:
-opts = FileDialogOptions(
-    title="Open Image",
-    filters=[("Images", [".png", ".jpg", ".bmp"]), ("All", ["*"])],
-    allow_new_file=False,
-    multi_select=False,
+files.show_open(
+    FileDialogOptions(title="Open Image", filters=[("Images", [".png", ".jpg"]), ("All", ["*"])]),
+    on_close=lambda paths: print(paths),
 )
-handle = mgr.open(opts, on_close=lambda paths: load_image(paths[0]) if paths else None)
 
-# Save dialog:
-save_opts = FileDialogOptions(title="Save As", allow_new_file=True)
-handle = mgr.open(save_opts, on_close=lambda paths: save_to(paths[0]) if paths else None)
-
-handle.is_open   # True until closed
-handle.result    # None while open; list[str] of selected paths after close
+files.show_save(
+    FileDialogOptions(title="Save As"),
+    on_close=lambda paths: print(paths),
+)
 ```
 
-`FileDialogOptions` fields: `title`, `start_dir` (defaults to CWD), `filters` (list of `(label, [ext, ...])` pairs), `allow_new_file` (editable filename for save dialogs), `multi_select`.
+### ResizeManager [Back to Top](#table-of-contents)
 
-<a id="resizemanager"></a>
-
-### ResizeManager — [Back to Top](#table-of-contents)
-
-`ResizeManager` centralizes callbacks for application window and scene geometry changes.
+`ResizeManager` updates registered `ConstraintLayout` instances and notifies subscribers when the window size changes.
 
 ```python
 from gui_do import ResizeManager
 
-resize = ResizeManager(app)
-resize.on_resize(lambda new_rect: relayout(new_rect))
+resize = ResizeManager(initial_size=(800, 600), event_bus=app.events)
+resize.on_resize(lambda width, height: print(width, height))
+resize.notify_resize(1024, 768)
+```
+
+### ClipboardManager [Back to Top](#table-of-contents)
+
+`ClipboardManager` is a thin wrapper over `pygame.scrap` with safe fallbacks when clipboard access is unavailable.
+
+```python
+from gui_do import ClipboardManager
+
+ClipboardManager.copy("hello")
+print(ClipboardManager.paste())
+```
+
+### CommandPaletteManager, CommandEntry, and CommandPaletteHandle [Back to Top](#table-of-contents)
+
+`CommandPaletteManager` shows a searchable command launcher using the overlay system. `CommandEntry` is the exported command record, and `CommandPaletteHandle` closes an open palette.
+
+```python
+from gui_do import CommandEntry, CommandPaletteManager
+
+palette = CommandPaletteManager(app.overlay)
+palette.register(CommandEntry("save", "Save File", action=lambda: print("save"), category="File"))
+palette.register(CommandEntry("open", "Open File", action=lambda: print("open"), category="File"))
+handle = palette.show(app)
+print(handle.is_open)
 ```
 
 ---
 
-<a id="menu-system"></a>
+## Menu System [Back to Top](#table-of-contents)
 
-## Menu System — [Back to Top](#table-of-contents)
+### MenuBarControl and MenuEntry [Back to Top](#table-of-contents)
 
-<a id="menubarcontrol-and-menuentry"></a>
-
-### MenuBarControl and MenuEntry — [Back to Top](#table-of-contents)
-
-`MenuBarControl` renders a horizontal application menu bar with flyout sub-menus. Each top-level menu is a `MenuEntry` (a `label` plus a list of `ContextMenuItem` items). It is most commonly constructed via `MenuBarManager.build(...)` rather than directly.
+`MenuBarControl` renders a horizontal top-level menu bar. Each `MenuEntry` contains a label plus `ContextMenuItem` rows for its flyout.
 
 ```python
-from gui_do import MenuBarControl, MenuEntry, ContextMenuItem
+from gui_do import ContextMenuItem, MenuBarControl, MenuEntry
 
 bar = MenuBarControl(
     "menubar",
     Rect(0, 0, 800, 28),
     entries=[
-        MenuEntry("File", items=[
-            ContextMenuItem("New",  action=on_new),
-            ContextMenuItem("Open", action=on_open),
-            ContextMenuItem(separator=True),
-            ContextMenuItem("Exit", action=on_exit),
-        ]),
-        MenuEntry("Edit", items=[
-            ContextMenuItem("Undo", action=on_undo),
-            ContextMenuItem("Redo", action=on_redo),
-        ]),
+        MenuEntry("File", items=[ContextMenuItem("Open", action=lambda: None)]),
+        MenuEntry("Edit", items=[ContextMenuItem("Undo", action=lambda: None)]),
     ],
 )
 app.scene.add(bar)
 ```
 
-<a id="menubarmanager"></a>
+### MenuBarManager [Back to Top](#table-of-contents)
 
-### MenuBarManager — [Back to Top](#table-of-contents)
-
-`MenuBarManager` lets independently developed features register their own top-level menus before a single merged `MenuBarControl` is built. Multiple `register_menu` calls with the same label append items to that menu, which is useful for shared menus like File or Edit.
+`MenuBarManager` is the feature-friendly registration layer for top-level menus. It accumulates menu contributions and builds one `MenuBarControl` in registration order.
 
 ```python
-from gui_do import MenuBarManager, ContextMenuItem
+from gui_do import ContextMenuItem, MenuBarManager
 
-mgr = MenuBarManager()
+manager = MenuBarManager()
+manager.register_menu("File", [ContextMenuItem("Open", action=lambda: None)])
+manager.register_menu("File", [ContextMenuItem("Save", action=lambda: None)])
+manager.register_menu("View", [ContextMenuItem("Zoom In", action=lambda: None)])
 
-# Feature A:
-mgr.register_menu("File", [
-    ContextMenuItem("New",  action=on_new),
-    ContextMenuItem("Open", action=on_open),
-])
-
-# Feature B appends to File and adds its own menu:
-mgr.register_menu("File", [ContextMenuItem("Save", action=on_save)])
-mgr.register_menu("View", [ContextMenuItem("Zoom In", action=zoom_in)])
-
-# Build once and add to the scene:
-bar = mgr.build("menubar", Rect(0, 0, app_width, 28), app)
+bar = manager.build("menubar", Rect(0, 0, 800, 28), app)
 app.scene.add(bar)
 ```
 
 ---
 
-<a id="notification-system"></a>
+## Notification System [Back to Top](#table-of-contents)
 
-## Notification System — [Back to Top](#table-of-contents)
+### NotificationCenter and NotificationRecord [Back to Top](#table-of-contents)
 
-<a id="notificationcenter"></a>
-
-### NotificationCenter — [Back to Top](#table-of-contents)
-
-`NotificationCenter` subscribes to `EventBus` topics and accumulates `NotificationRecord` entries. The `unread_count` and `records` properties are `ObservableValue` instances that can drive badge labels or list views reactively.
+`NotificationCenter` stores an activity log, optionally sourced from `EventBus` topics. `NotificationRecord` is the exported record shape.
 
 ```python
 from gui_do import NotificationCenter, NotificationRecord, ToastSeverity
 
-nc = NotificationCenter(app.events, max_records=200)
-nc.subscribe("build.done",   severity=ToastSeverity.SUCCESS)
-nc.subscribe("build.failed", severity=ToastSeverity.ERROR, title="Build Error")
-
-# Reactive badge:
-nc.unread_count.on_change(lambda v: badge_label.__setattr__("text", str(v)))
-
-# Manual record:
-nc.add(NotificationRecord("Deployment complete", severity=ToastSeverity.SUCCESS))
-
-nc.mark_all_read()
-nc.clear()
-nc.records.value       # list[NotificationRecord]
-nc.unread_count.value  # int
+notifications = NotificationCenter(app.events, max_records=200)
+notifications.subscribe("build.done", severity=ToastSeverity.SUCCESS, title="Build")
+notifications.unread_count.subscribe(lambda value: print("unread", value))
+notifications.add(NotificationRecord("Deployment complete", severity=ToastSeverity.SUCCESS))
 ```
 
-`NotificationRecord` fields: `message`, `title`, `severity` (`ToastSeverity`), `topic`, `timestamp` (ISO-8601 string), `read`, `data`.
+### NotificationPanelControl [Back to Top](#table-of-contents)
 
-<a id="notificationpanelcontrol"></a>
-
-### NotificationPanelControl — [Back to Top](#table-of-contents)
-
-`NotificationPanelControl` is an overlay panel that renders the `NotificationCenter` log in reverse-chronological order. Each entry shows a severity-colored stripe, title, message, and timestamp. A "Mark all read" button appears in the header when unread items exist.
+`NotificationPanelControl` renders a `NotificationCenter` inside an overlay-friendly panel.
 
 ```python
 from gui_do import NotificationPanelControl
 
-panel = NotificationPanelControl("notif", Rect(600, 30, 320, 460), nc)
-handle = app.overlay.show("notif", panel, dismiss_on_outside_click=True)
+panel = NotificationPanelControl("notifications", Rect(560, 40, 320, 420), notifications)
+app.overlay.show("notifications", panel, dismiss_on_outside_click=True)
 ```
 
 ---
 
-<a id="scene-transitions"></a>
+## Scene Transitions [Back to Top](#table-of-contents)
 
-## Scene Transitions — [Back to Top](#table-of-contents)
+### SceneTransitionManager and SceneTransitionStyle [Back to Top](#table-of-contents)
 
-<a id="scenetransitionmanager"></a>
-
-### SceneTransitionManager — [Back to Top](#table-of-contents)
-
-`SceneTransitionManager` wraps `app.switch_scene(...)` with animated transitions. Call `go(scene_name)` instead of `switch_scene(...)` to get the animation. The transition snapshots the current scene, switches immediately, then uses the new scene's `TweenManager` to animate the snapshot away.
+`SceneTransitionManager` animates scene changes instead of switching instantly. `SceneTransitionStyle` enumerates the built-in transition styles.
 
 ```python
 from gui_do import SceneTransitionManager, SceneTransitionStyle
 
-transitions = SceneTransitionManager(
-    app,
-    default_style=SceneTransitionStyle.FADE,
-    default_duration=0.35,
-)
+transitions = SceneTransitionManager(app, default_style=SceneTransitionStyle.FADE, default_duration=0.3)
 transitions.set_style("editor", SceneTransitionStyle.SLIDE_LEFT, duration=0.25)
-transitions.set_style("home",   SceneTransitionStyle.SLIDE_RIGHT)
-
 transitions.go("editor")
-transitions.go("home")
 ```
 
-`SceneTransitionStyle` members: `NONE`, `FADE`, `SLIDE_LEFT`, `SLIDE_RIGHT`, `SLIDE_UP`, `SLIDE_DOWN`.
+Available styles are `NONE`, `FADE`, `SLIDE_LEFT`, `SLIDE_RIGHT`, `SLIDE_UP`, and `SLIDE_DOWN`.
 
 ---
 
-<a id="feature-system"></a>
+## Feature System [Back to Top](#table-of-contents)
 
-## Feature System — [Back to Top](#table-of-contents)
+### Feature Types and FeatureMessage [Back to Top](#table-of-contents)
 
-<a id="feature-types"></a>
-
-### Feature Types — [Back to Top](#table-of-contents)
-
-Features are the primary unit of composable, lifecycle-managed behavior. All types inherit from `Feature`.
+Features are the reusable lifecycle unit for gui_do application composition.
 
 | Type | Purpose |
 |---|---|
-| `Feature` | Base class. Override any lifecycle hook. |
-| `DirectFeature` | Owns UI construction and handles rendering directly. |
-| `LogicFeature` | Pure computation, no direct UI. Receives commands and returns results. |
-| `RoutedFeature` | Dispatches `FeatureMessage` payloads by topic or command key. |
+| `Feature` | Base lifecycle class |
+| `DirectFeature` | Owns direct UI and direct draw/update hooks |
+| `LogicFeature` | Provides pure logic endpoints for other features |
+| `RoutedFeature` | Routes incoming feature messages by topic or command |
 
-`FeatureMessage` is the structured inter-feature envelope: `sender`, `target`, `payload` dict, plus `.topic`, `.command`, and `.event` convenience properties.
-
-Lifecycle hooks (all optional):
+`FeatureMessage` is the exported envelope passed between features.
 
 ```python
-class MyFeature(Feature):
+from pygame import Rect
+from gui_do import Feature, LabelControl
+
+
+class StatusFeature(Feature):
     def build(self, host) -> None:
-        """Create controls and attach them to host.scene."""
-
-    def bind_runtime(self, host) -> None:
-        """Wire callbacks, subscribe to event bus, bind actions."""
-
-    def configure_accessibility(self, host, tab_index_start: int) -> int:
-        """Assign tab_index values; return the next available index."""
-
-    def on_update(self, host) -> None:
-        """Called each frame while the feature's scene is active."""
+        self.label = host.scene.add(LabelControl("status", Rect(20, 20, 200, 24), "Ready"))
 
     def handle_event(self, host, event) -> bool:
-        """Return True if the event was consumed."""
-
-    def draw(self, host, surface, theme) -> None:
-        """Custom rendering pass."""
-
-    def shutdown_runtime(self, host) -> None:
-        """Release resources on unregister or app shutdown."""
+        return False
 ```
 
-Inter-feature messaging:
+Within a feature, use `self.send_message(...)`, `self.bind_logic(...)`, and `self.send_logic_message(...)` to communicate with other registered features.
 
-```python
-# Send from within a feature:
-self.send_message("other_feature", {"command": "refresh", "data": 42})
+### FeatureManager [Back to Top](#table-of-contents)
 
-# Logic feature binding and command:
-self.bind_logic("my_logic_feature", alias="calc")
-self.send_logic_message({"command": "compute", "input": x}, alias="calc")
-```
-
-<a id="featuremanager"></a>
-
-### FeatureManager — [Back to Top](#table-of-contents)
-
-`FeatureManager` registers features, validates `HOST_REQUIREMENTS` field contracts, dispatches lifecycle hooks in order, and routes `FeatureMessage` envelopes between features.
+`FeatureManager` registers features, validates host requirements, dispatches lifecycle hooks, and routes messages between features.
 
 ```python
 features = app.features
-
-features.register(MyFeature("my_feature", scene_name="main"))
-features.build_all(host)
-features.bind_runtime_all(host)
-features.configure_accessibility_all(host, tab_index_start=10)
-
-features.send_message("sender_name", "receiver_name", {"command": "ping"})
-features.unregister("my_feature")
+features.register(StatusFeature("status", scene_name="main"), host=app)
+features.build_features(app)
+features.bind_runtime(app)
+next_tab_index = features.configure_accessibility(app, 10)
+features.send_message("status", "other_feature", {"command": "refresh"})
 ```
+
+It also exposes direct-feature update/draw helpers, feature prewarm support, state save/restore, logic binding, and runnable registration.
 
 ---
 
-<a id="theme-and-graphics"></a>
+## Theme and Graphics [Back to Top](#table-of-contents)
 
-## Theme and Graphics — [Back to Top](#table-of-contents)
+### ColorTheme [Back to Top](#table-of-contents)
 
-<a id="colortheme-and-thememanager"></a>
-
-### ColorTheme and ThemeManager — [Back to Top](#table-of-contents)
-
-`ColorTheme` supplies semantic color tokens and text rendering. Access it through `app.theme`.
+`ColorTheme` is the built-in semantic palette plus text-rendering helper used by the runtime. The active scene theme is available as `app.theme`.
 
 ```python
 theme = app.theme
-color = theme.accent   # pygame Color
-theme.render_text(surface, "Hello", rect, role="body", align="left")
+text_surface = theme.render_text("Hello", role="body")
+print(theme.font_roles())
 ```
 
-`ThemeManager` and `DesignTokens` enable runtime theme switching and token-level customization.
+`ColorTheme` also exposes `register_font_role(...)` for adding or replacing named font roles.
+
+### ThemeManager and DesignTokens [Back to Top](#table-of-contents)
+
+`ThemeManager` manages named token sets and exposes reactive `active_theme` and `active_tokens` observables. `DesignTokens` is the exported token container.
 
 ```python
-from gui_do import ThemeManager, DesignTokens
+from gui_do import ThemeManager
 
-tokens = DesignTokens(accent=(80, 140, 255), background=(20, 20, 28))
-tm = ThemeManager(app)
-tm.apply(tokens)
+theme_manager = ThemeManager()
+theme_manager.register_theme("contrast", {"primary": (255, 220, 0), "background": (20, 20, 20)})
+theme_manager.switch("contrast")
+print(theme_manager.token("primary"))
 ```
 
-<a id="builtingraphicsfactory"></a>
+### BuiltInGraphicsFactory [Back to Top](#table-of-contents)
 
-### BuiltInGraphicsFactory — [Back to Top](#table-of-contents)
+`BuiltInGraphicsFactory` builds cached visual surfaces for built-in widgets. It is exposed as `app.graphics_factory` and used internally by control drawing. When the active theme or fonts change, controls can invalidate themselves and rebuild against the current factory output.
 
-`BuiltInGraphicsFactory` constructs cached visual surfaces used by all built-in controls (`InteractiveVisuals`, `ToggleVisuals`, `FrameVisuals`, `WindowChromeVisuals`). Access it through `app.graphics_factory`. After a theme or font change, incrementing `font_revision()` signals controls to rebuild their cached visuals.
+### FontManager [Back to Top](#table-of-contents)
 
-<a id="fontmanager"></a>
-
-### FontManager — [Back to Top](#table-of-contents)
-
-`FontManager` provides role-based font access. Built-in roles are `"body"`, `"title"`, and `"display"`. Access it through `app.theme.fonts`.
+`FontManager` is the role-based font registry used by `ColorTheme`. Through `app.theme.fonts`, you can register named roles and resolve font instances by role and size.
 
 ```python
-font = app.theme.fonts.font_instance("body", size=16)
-font.text_size("Hello")   # (width, height)
-font.line_height           # int
+fonts = app.theme.fonts
+fonts.register_role("caption", size=12, bold=False)
+font = fonts.resolve("caption", 12)
+print(font.text_size("gui_do"))
 ```
 
 ---
 
-<a id="telemetry"></a>
+## Telemetry [Back to Top](#table-of-contents)
 
-## Telemetry — [Back to Top](#table-of-contents)
-
-gui_do includes an opt-in structured metrics system for runtime profiling and post-run hotspot analysis.
-
-**Configuration and collection**:
-
-```python
-from gui_do import configure_telemetry, telemetry_collector, TelemetrySample
-
-configure_telemetry(enabled=True, log_file="telemetry.jsonl", max_samples=10_000)
-collector = telemetry_collector()   # TelemetryCollector singleton
-
-collector.record(TelemetrySample(feature_name="render", duration_ms=12.4))
-```
-
-**Offline analysis**:
+gui_do includes opt-in runtime telemetry plus offline analysis helpers.
 
 ```python
 from gui_do import (
-    load_telemetry_log_file,
-    analyze_telemetry_records,
+    TelemetrySample,
     analyze_telemetry_log_file,
+    configure_telemetry,
     render_telemetry_report,
+    telemetry_collector,
 )
 
-records = load_telemetry_log_file("telemetry.jsonl")
-analysis = analyze_telemetry_records(records)
-# or equivalently:
-analysis = analyze_telemetry_log_file("telemetry.jsonl")
+configure_telemetry(enabled=True, log_file="telemetry.jsonl", max_samples=10000)
+collector = telemetry_collector()
+collector.record(TelemetrySample(feature_name="render", duration_ms=12.4))
 
+analysis = analyze_telemetry_log_file("telemetry.jsonl")
 print(render_telemetry_report(analysis))
-# analysis.feature_hotspots — per-feature aggregated breakdown
 ```
+
+The telemetry exports are `TelemetryCollector`, `TelemetrySample`, `configure_telemetry`, `telemetry_collector`, `analyze_telemetry_records`, `analyze_telemetry_log_file`, `load_telemetry_log_file`, and `render_telemetry_report`.
 
 ---
 
-<a id="public-api-index"></a>
+## Public API Index [Back to Top](#table-of-contents)
 
-## Public API Index — [Back to Top](#table-of-contents)
+The following list is the complete public package export surface from `gui_do.__all__`, grouped by concept.
 
-The following is the complete public export surface of `gui_do.__all__`.
-
-### Application and Loop
+### Application and Loop [Back to Top](#table-of-contents)
 
 - `GuiApplication`
 - `UiEngine`
 
-### Controls
+### Controls [Back to Top](#table-of-contents)
 
 - `PanelControl`
 - `LabelControl`
@@ -1435,8 +1065,12 @@ The following is the complete public export surface of `gui_do.__all__`.
 - `TreeControl`
 - `TreeNode`
 - `NotificationPanelControl`
+- `ScrollViewControl`
+- `SpinnerControl`
+- `RangeSliderControl`
+- `ColorPickerControl`
 
-### Layout
+### Layout [Back to Top](#table-of-contents)
 
 - `LayoutAxis`
 - `LayoutManager`
@@ -1449,26 +1083,25 @@ The following is the complete public export surface of `gui_do.__all__`.
 - `FlexAlign`
 - `FlexJustify`
 
-### Events, Focus, and Input
+### Events, Input, and Core Runtime [Back to Top](#table-of-contents)
 
 - `ActionManager`
 - `EventManager`
 - `EventBus`
 - `FocusManager`
+- `FontManager`
 - `EventPhase`
 - `EventType`
 - `GuiEvent`
-
-### Value Change Contracts
-
 - `ValueChangeCallback`
 - `ValueChangeReason`
-
-### Data and State
-
 - `InvalidationTracker`
+
+### Data and State [Back to Top](#table-of-contents)
+
 - `ObservableValue`
 - `PresentationModel`
+- `ComputedValue`
 - `FormModel`
 - `FormField`
 - `ValidationRule`
@@ -1482,11 +1115,19 @@ The following is the complete public export surface of `gui_do.__all__`.
 - `Router`
 - `RouteEntry`
 
-### Runtime Services
+### Scheduling and Animation [Back to Top](#table-of-contents)
 
 - `TaskEvent`
 - `TaskScheduler`
 - `Timers`
+- `TweenManager`
+- `TweenHandle`
+- `Easing`
+- `AnimationSequence`
+- `AnimationHandle`
+
+### Overlay and Runtime Services [Back to Top](#table-of-contents)
+
 - `OverlayManager`
 - `OverlayHandle`
 - `ToastManager`
@@ -1499,18 +1140,22 @@ The following is the complete public export surface of `gui_do.__all__`.
 - `ContextMenuManager`
 - `ContextMenuItem`
 - `ContextMenuHandle`
-- `ResizeManager`
-- `MenuBarManager`
 - `FileDialogManager`
 - `FileDialogOptions`
 - `FileDialogHandle`
+- `ResizeManager`
+- `ClipboardManager`
+- `CommandPaletteManager`
+- `CommandEntry`
+- `CommandPaletteHandle`
+
+### Menu and Notifications [Back to Top](#table-of-contents)
+
+- `MenuBarManager`
 - `NotificationCenter`
 - `NotificationRecord`
-- `SceneTransitionManager`
-- `SceneTransitionStyle`
-- `FontManager`
 
-### Features
+### Features and Scene Composition [Back to Top](#table-of-contents)
 
 - `Feature`
 - `DirectFeature`
@@ -1518,21 +1163,17 @@ The following is the complete public export surface of `gui_do.__all__`.
 - `RoutedFeature`
 - `FeatureMessage`
 - `FeatureManager`
+- `SceneTransitionManager`
+- `SceneTransitionStyle`
 
-### Animation
-
-- `TweenManager`
-- `TweenHandle`
-- `Easing`
-
-### Theme and Graphics
+### Theme and Graphics [Back to Top](#table-of-contents)
 
 - `BuiltInGraphicsFactory`
 - `ColorTheme`
 - `ThemeManager`
 - `DesignTokens`
 
-### Telemetry
+### Telemetry [Back to Top](#table-of-contents)
 
 - `TelemetryCollector`
 - `TelemetrySample`
