@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from gui_do import LogicFeature, RoutedFeature
+from gui_do import ContextMenuItem, LogicFeature, MenuBarControl, MenuEntry, RoutedFeature
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -177,6 +177,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.scheduler = None
         self.demo = None  # Will be set during build_window
         self.window = None
+        self.menu_bar = None
         self.help_label = None
         self.status_label = None
         self.primary_canvas = None
@@ -380,21 +381,31 @@ class MandelbrotRenderFeature(RoutedFeature):
     ) -> None:
         """Create the Mandelbrot window, canvases, controls, and status labels."""
         self.demo = host  # Store host reference for callbacks
-        mandel_rect = host.app.layout.anchored((640, 717), anchor="top_right", margin=(28, 92), use_rect=True)
+        mandel_rect = host.app.layout.anchored((660, 760), anchor="top_right", margin=(28, 92), use_rect=True)
         self.window = host.root.add(
             window_control_cls(
                 "mandel_window",
                 mandel_rect,
                 "Mandelbrot",
                 title_font_role=self.font_role("window_title"),
+                event_handler=self._window_event_handler,
                 use_frame_backdrop=True,
             )
         )
         content_rect = self.window.content_rect()
         padding = 8
+        menu_h = 28
+
+        self.menu_bar = self.window.add(
+            MenuBarControl(
+                "mandel_window_menu",
+                Rect(content_rect.left + padding, content_rect.top + padding, content_rect.width - (padding * 2), menu_h),
+                self._menu_entries(),
+            )
+        )
 
         # Help label at top
-        help_rect = Rect(content_rect.left + padding, content_rect.top, content_rect.width - padding * 2, 20)
+        help_rect = Rect(content_rect.left + padding, self.menu_bar.rect.bottom + 6, content_rect.width - padding * 2, 20)
         self.help_label = host.app.style_label(
             self.window.add(
                 label_control_cls(
@@ -530,6 +541,32 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.set_task_buttons_disabled(host, False)
         self.clear(host)
         self.window.visible = False
+
+    def _window_event_handler(self, event) -> bool:
+        demo = self.demo
+        if self.menu_bar is None or demo is None:
+            return False
+        return self.menu_bar.handle_event(event, demo.app)
+
+    def _menu_entries(self) -> list[MenuEntry]:
+        return [
+            MenuEntry(
+                "File",
+                [
+                    ContextMenuItem("Minimize", action=self._minimize_window),
+                ],
+            )
+        ]
+
+    def _minimize_window(self) -> None:
+        if self.window is not None:
+            self.window.visible = False
+        demo = self.demo
+        if demo is not None:
+            if hasattr(demo, "set_mandel_window_visible"):
+                demo.set_mandel_window_visible(False)
+            elif hasattr(demo, "mandel_toggle_window") and demo.mandel_toggle_window is not None:
+                demo.mandel_toggle_window.pushed = False
 
     def on_status_event(self, host, payload) -> None:
         """Handle status-bus events and render normalized status text."""

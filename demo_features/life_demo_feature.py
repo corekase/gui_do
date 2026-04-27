@@ -6,7 +6,7 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from gui_do import FeatureMessage, LogicFeature, RoutedFeature
+from gui_do import ContextMenuItem, FeatureMessage, LogicFeature, MenuBarControl, MenuEntry, RoutedFeature
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -115,6 +115,7 @@ class LifeSimulationFeature(RoutedFeature):
         self.scheduler = None
         self.demo = None  # Will be set during build_window
         self.window = None
+        self.menu_bar = None
         self.canvas = None
         self.reset_button = None
         self.toggle = None
@@ -223,7 +224,7 @@ class LifeSimulationFeature(RoutedFeature):
     ) -> None:
         """Create the Life window, canvas, and interaction controls."""
         self.demo = host  # Store host reference for use in callback methods
-        life_rect = host.app.layout.anchored((640, 640), anchor="top_right", margin=(28, 92), use_rect=True)
+        life_rect = host.app.layout.anchored((660, 688), anchor="top_right", margin=(28, 92), use_rect=True)
         self.window = host.root.add(
             window_control_cls(
                 "life_window",
@@ -241,10 +242,21 @@ class LifeSimulationFeature(RoutedFeature):
         top = content_rect.top
         width = content_rect.width
         height = content_rect.height
+        menu_h = 28
         widget_height = 28
         padding = 10
         controls_gap = padding
         control_spacing = 12
+
+        self.menu_bar = self.window.add(
+            MenuBarControl(
+                "life_window_menu",
+                Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
+                self._menu_entries(),
+            )
+        )
+        top = self.menu_bar.rect.bottom + padding
+        height = max(1, content_rect.bottom - top)
 
         controls_y = top + height - widget_height - padding
         canvas_height = max(1, controls_y - controls_gap - (top + padding))
@@ -355,6 +367,8 @@ class LifeSimulationFeature(RoutedFeature):
         demo = self.demo
         canvas = self.canvas
         window = self.window
+        if self.menu_bar is not None and self.menu_bar.handle_event(event, demo.app):
+            return True
         if event.is_mouse_down(3) and event.collides(canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -402,6 +416,26 @@ class LifeSimulationFeature(RoutedFeature):
     def life_window_postamble(self) -> None:
         """Window postamble hook that drains queued events and renders the board."""
         self.update_life()
+
+    def _menu_entries(self) -> list[MenuEntry]:
+        return [
+            MenuEntry(
+                "File",
+                [
+                    ContextMenuItem("Minimize", action=self._minimize_window),
+                ],
+            )
+        ]
+
+    def _minimize_window(self) -> None:
+        if self.window is not None:
+            self.window.visible = False
+        demo = self.demo
+        if demo is not None:
+            if hasattr(demo, "set_life_window_visible"):
+                demo.set_life_window_visible(False)
+            elif hasattr(demo, "life_toggle_window") and demo.life_toggle_window is not None:
+                demo.life_toggle_window.pushed = False
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""

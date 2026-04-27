@@ -12,6 +12,7 @@ from gui_do import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    ContextMenuItem,
     DataGridControl,
     DropdownControl,
     DropdownOption,
@@ -24,6 +25,11 @@ from gui_do import (
     LayoutAxis,
     ListItem,
     ListViewControl,
+    MenuBarControl,
+    MenuEntry,
+    NotificationCenter,
+    NotificationPanelControl,
+    NotificationRecord,
     OverlayPanelControl,
     PanelControl,
     RichLabelControl,
@@ -35,7 +41,10 @@ from gui_do import (
     TaskPanelControl,
     TextAreaControl,
     TextInputControl,
+    ToastSeverity,
     ToggleControl,
+    TreeControl,
+    TreeNode,
 )
 
 
@@ -113,8 +122,8 @@ class ControlsShowcaseFeature(Feature):
         self._pending_initial_focus = False
 
         self.task_panel = None
-        self.showcase_exit_button = None
-        self.showcase_apps_button = None
+        self.showcase_return_button = None
+        self._showcase_notification_center: NotificationCenter | None = None
 
     def build(self, host) -> None:
         self._label_font_role = self.register_font_role(
@@ -697,6 +706,77 @@ class ControlsShowcaseFeature(Feature):
             row_index=82,
         )
 
+        # New rightmost columns for recently added controls.
+        new_col_x = new_row_x2 + new_row_col_w + col_gap
+        new_col_w = 220
+
+        menu_slot_h = slot_h(28)
+        self._place_control(
+            host,
+            "menu_bar",
+            "Menu Bar",
+            MenuBarControl(
+                "control_menu_bar",
+                Rect(0, 0, 1, 1),
+                [
+                    MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
+                    MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")]),
+                ],
+            ),
+            Rect(new_col_x, new_row_y, new_col_w, menu_slot_h),
+            focusable=True,
+            accessibility_role="menubar",
+            accessibility_label="Menu bar",
+            column_index=5,
+            row_index=90,
+        )
+
+        tree_slot_h = slot_h(150)
+        self._place_control(
+            host,
+            "tree",
+            "Tree",
+            TreeControl(
+                "control_tree",
+                Rect(0, 0, 1, 1),
+                [
+                    TreeNode("Desktop", expanded=True, children=[TreeNode("Window A"), TreeNode("Window B")]),
+                    TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")]),
+                ],
+            ),
+            Rect(new_col_x, new_row_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
+            focusable=True,
+            accessibility_role="tree",
+            accessibility_label="Tree control",
+            column_index=5,
+            row_index=91,
+        )
+
+        self._showcase_notification_center = NotificationCenter(None, max_records=6)
+        self._showcase_notification_center.add(
+            NotificationRecord("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS)
+        )
+        self._showcase_notification_center.add(
+            NotificationRecord("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING)
+        )
+        notif_col_x = new_col_x + new_col_w + col_gap
+        notif_col_w = 240
+        notif_slot_h = slot_h(220)
+        self._place_control(
+            host,
+            "notification_panel",
+            "Notification Panel",
+            NotificationPanelControl(
+                "control_notification_panel",
+                Rect(0, 0, 1, 1),
+                self._showcase_notification_center,
+            ),
+            Rect(notif_col_x, new_row_y, notif_col_w, notif_slot_h),
+            focusable=False,
+            column_index=6,
+            row_index=92,
+        )
+
         self._build_scene_task_panel(host)
 
         if self._focus_controls:
@@ -728,7 +808,7 @@ class ControlsShowcaseFeature(Feature):
         self._pending_initial_focus = False
 
     def prewarm(self, _host, surface, theme) -> None:
-        for control in [*self.control_labels, *self.controls, self.task_panel, self.showcase_exit_button, self.showcase_apps_button]:
+        for control in [*self.control_labels, *self.controls, self.task_panel, self.showcase_return_button]:
             if control is None:
                 continue
             control.draw(surface, theme)
@@ -890,43 +970,25 @@ class ControlsShowcaseFeature(Feature):
             scene_name=self.scene_name,
         )
 
-        exit_rect = Rect(
+        return_rect = Rect(
             self.TASK_PANEL_BUTTON_LEFT,
             self.task_panel.rect.top + self.TASK_PANEL_BUTTON_TOP_OFFSET,
             self.TASK_PANEL_BUTTON_WIDTH,
             self.TASK_PANEL_BUTTON_HEIGHT,
         )
-        apps_rect = Rect(
-            exit_rect.right + self.TASK_PANEL_BUTTON_GAP,
-            self.task_panel.rect.top + self.TASK_PANEL_BUTTON_TOP_OFFSET,
-            self.TASK_PANEL_BUTTON_WIDTH,
-            self.TASK_PANEL_BUTTON_HEIGHT,
-        )
 
-        self.showcase_exit_button = self.task_panel.add(
+        self.showcase_return_button = self.task_panel.add(
             ButtonControl(
-                "showcase_exit",
-                exit_rect,
-                "Exit",
-                lambda: setattr(host.app, "running", False),
-                style="angle",
-                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
-            )
-        )
-        self.showcase_apps_button = self.task_panel.add(
-            ButtonControl(
-                "showcase_apps",
-                apps_rect,
-                "Apps",
-                lambda: host.app.switch_scene("main"),
+                "showcase_return",
+                return_rect,
+                "Return",
+                (host.go_to_main if hasattr(host, "go_to_main") else (lambda: host.app.switch_scene("main"))),
                 style="angle",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
 
-        self.showcase_exit_button.set_accessibility(role="button", label="Exit")
-        self.showcase_apps_button.set_accessibility(role="button", label="Apps")
+        self.showcase_return_button.set_accessibility(role="button", label="Return to main")
         # Keep showcase Tab traversal within the feature surface; task panel
         # actions remain clickable but are not part of feature focus cycling.
-        self.showcase_exit_button.set_tab_index(-1)
-        self.showcase_apps_button.set_tab_index(-1)
+        self.showcase_return_button.set_tab_index(-1)

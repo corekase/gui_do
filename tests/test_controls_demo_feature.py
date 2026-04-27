@@ -18,6 +18,8 @@ from gui_do import (
     GuiApplication,
     ImageControl,
     ListViewControl,
+    MenuBarControl,
+    NotificationPanelControl,
     PanelControl,
     RichLabelControl,
     ScrollbarControl,
@@ -26,6 +28,7 @@ from gui_do import (
     TabControl,
     TextAreaControl,
     TextInputControl,
+    TreeControl,
     ToggleControl,
 )
 
@@ -69,6 +72,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             FrameControl,
             ImageControl,
             ListViewControl,
+            MenuBarControl,
+            NotificationPanelControl,
             PanelControl,
             RichLabelControl,
             ScrollbarControl,
@@ -77,6 +82,7 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             TabControl,
             TextAreaControl,
             TextInputControl,
+            TreeControl,
             ToggleControl,
         }
         self.assertEqual({type(control) for control in feature.controls}, expected_types)
@@ -262,7 +268,7 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         app.focus.cycle_focus(app.scene, forward=True)
         app.focus.cycle_focus(app.scene, forward=True)
         self.assertIsNotNone(app.focus.focused_node)
-        self.assertIn(app.focus.focused_node.control_id, arrow_ids)
+        self.assertIn(app.focus.focused_node.control_id, arrow_ids | {"control_tree"})
 
     def test_columns_wrap_to_new_row_of_columns_from_left(self) -> None:
         _app, _host, feature = self._build_feature(width=900, height=720)
@@ -315,20 +321,15 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             self.assertEqual(control.tab_index, 5 + offset)
         self.assertEqual(next_index, 5 + len(feature._focus_controls))
 
-    def test_task_panel_buttons_exist_and_actions_are_wired(self) -> None:
+    def test_task_panel_return_button_exists_and_action_is_wired(self) -> None:
         app, _host, feature = self._build_feature()
 
         self.assertIsNotNone(feature.task_panel)
         self.assertTrue(feature.task_panel.auto_hide)
-        self.assertEqual(feature.showcase_exit_button.style, "angle")
-        self.assertEqual(feature.showcase_apps_button.style, "angle")
-
-        app.running = True
-        feature.showcase_exit_button._invoke_click()
-        self.assertFalse(app.running)
+        self.assertEqual(feature.showcase_return_button.style, "angle")
 
         app.switch_scene("control_showcase")
-        feature.showcase_apps_button._invoke_click()
+        feature.showcase_return_button._invoke_click()
         self.assertEqual(app.active_scene_name, "main")
 
     def test_on_update_sets_initial_focus_to_first_focusable_control(self) -> None:

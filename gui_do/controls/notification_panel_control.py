@@ -159,7 +159,7 @@ class NotificationPanelControl(OverlayPanelControl):
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
-            if self._center.unread_count.get() > 0:
+            if self._center.unread_count.value > 0:
                 mf = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
                 mt = mf.render("Mark all read", True, (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
