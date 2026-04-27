@@ -4,7 +4,6 @@ from collections import deque
 from typing import Callable, ClassVar, Dict, Optional
 from typing import TYPE_CHECKING
 
-import pygame
 from pygame import Rect
 
 from ..core.gui_event import GuiEvent

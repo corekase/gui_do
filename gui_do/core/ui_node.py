@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Callable, List, Optional
+from typing import Callable, Generator, List, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect

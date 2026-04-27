@@ -137,7 +137,7 @@ class StylesShowcaseFeature(Feature):
         toggle_column_index = button_column_index + 1
 
         for column_index, (slug, heading_text, style_sequence) in enumerate(group_columns):
-            heading = host.app.style_label(
+            host.app.style_label(
                 self.window.add(label_control_cls(f"styles_heading_{slug}", Rect(content_rect.left + self.PADDING_X + (column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), heading_text, align="center")),
                 size=18,
                 role=self.font_role("heading"),

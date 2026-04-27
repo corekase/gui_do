@@ -5,8 +5,6 @@ from pathlib import Path
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 from ..core.font_manager import FontManager
 
-import pygame
-
 
 class ColorTheme:
     """Classic gui_do-inspired palette and text services."""

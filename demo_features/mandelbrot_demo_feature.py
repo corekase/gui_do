@@ -576,7 +576,6 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def publish_running_status(self) -> None:
         """Publish running-mode telemetry with current active task count."""
-        demo = self.demo
         if not self.task_ids:
             return
         mode = self.running_mode if self.running_mode is not None else "running"
