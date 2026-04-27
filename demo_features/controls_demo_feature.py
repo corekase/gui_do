@@ -70,6 +70,10 @@ class ControlsShowcaseFeature(Feature):
     SCROLLBAR_VIEWPORT_SIZE = 240
     SCROLLBAR_DEFAULT_OFFSET = 0
     SCROLLBAR_STEP = 24
+    SLIDER_HANDLE_SIZE = 16
+    SLIDER_VISUAL_THICKNESS = SLIDER_HANDLE_SIZE + 4
+    SCROLLBAR_BAR_THICKNESS = 10
+    SCROLLBAR_VISUAL_THICKNESS = SCROLLBAR_BAR_THICKNESS + 4
 
     PANEL_DRAW_BACKGROUND = True
 
@@ -314,11 +318,11 @@ class ControlsShowcaseFeature(Feature):
             "arrow_cluster": 70,
             "button_groups": 84,
             "buttons_and_indicators": 84,
-            "horizontal_sliders": 88,
-            "vertical_sliders": 88,
+            "horizontal_sliders": 40,
+            "vertical_sliders": 40,
             "canvas_panel_block": 100,
             "text_input_block": 30,
-            "list_view_block": 108,
+            "list_view_block": 120,
             "dropdown_block": 30,
         }
 
@@ -339,9 +343,10 @@ class ControlsShowcaseFeature(Feature):
             # Layout has three regions: (num_columns-1) greedy cols, 1 vertical_sliders col,
             # and 1 image col.  vertical_sliders width is derived so each vertical control can
             # sit side-by-side with width equal to horizontal control height (track_size).
-            h_track_size = max(1, (block_heights_map["horizontal_sliders"] - self.BLOCK_INTERNAL_SPACING) // 2)
-            # Column width accounts for: 4px left padding + track_size + 4px gap + track_size
-            v_col_width = max(56, 4 + 2 * h_track_size + 4)
+            slider_thickness = self.SLIDER_VISUAL_THICKNESS
+            scrollbar_thickness = self.SCROLLBAR_VISUAL_THICKNESS
+            # Column width accounts for: 4px left padding + slider + 4px gap + scrollbar
+            v_col_width = max(42, 4 + slider_thickness + 4 + scrollbar_thickness)
 
             # Recalculate column_width to fit all regions without overlap:
             #   num_columns * column_width + v_col_width + num_columns * COLUMN_GAP = available_width
@@ -427,8 +432,9 @@ class ControlsShowcaseFeature(Feature):
                 # Center label above just the slider+scrollbar pair, not the full column.
                 v_left_pad = 4
                 v_gap = 4
-                v_track_size = (88 - self.BLOCK_INTERNAL_SPACING) // 2
-                v_pair_width = 2 * v_track_size + v_gap
+                v_slider_width = self.SLIDER_VISUAL_THICKNESS
+                v_scrollbar_width = self.SCROLLBAR_VISUAL_THICKNESS
+                v_pair_width = v_slider_width + v_gap + v_scrollbar_width
                 label_rect = Rect(block_rect.left + v_left_pad, block_rect.top, v_pair_width, self.BLOCK_LABEL_HEIGHT)
                 label_align = "center"
             elif is_image_block:
@@ -656,13 +662,15 @@ class ControlsShowcaseFeature(Feature):
         h_x = content_rect.left + h_pad
         h_width = max(1, content_rect.width - 2 * h_pad)
 
-        # Use the horizontal slider block height from _calculate_block_layout.
-        base_block_height = 88
-        track_size = (base_block_height - self.BLOCK_INTERNAL_SPACING) // 2
+        slider_height = self.SLIDER_VISUAL_THICKNESS
+        scrollbar_height = self.SCROLLBAR_VISUAL_THICKNESS
+        control_gap = self.BLOCK_INTERNAL_SPACING
+        total_controls_height = slider_height + control_gap + scrollbar_height
+        start_y = content_rect.top + max(0, (content_rect.height - total_controls_height) // 2)
 
         slider = ui.slider_control_cls(
             f"slider_{section}",
-            Rect(h_x, content_rect.top, h_width, track_size),
+            Rect(h_x, start_y, h_width, slider_height),
             ui.layout_axis_cls.HORIZONTAL,
             self.SLIDER_MINIMUM,
             self.SLIDER_MAXIMUM,
@@ -673,7 +681,7 @@ class ControlsShowcaseFeature(Feature):
 
         scrollbar = ui.scrollbar_control_cls(
             f"scrollbar_{section}",
-            Rect(h_x, content_rect.top + track_size + self.BLOCK_INTERNAL_SPACING, h_width, track_size),
+            Rect(h_x, start_y + slider_height + control_gap, h_width, scrollbar_height),
             ui.layout_axis_cls.HORIZONTAL,
             self.SCROLLBAR_CONTENT_SIZE,
             self.SCROLLBAR_VIEWPORT_SIZE,
@@ -690,17 +698,15 @@ class ControlsShowcaseFeature(Feature):
         with 10px left padding and 10px spacing between controls.
         track_size matches horizontal_sliders' track_size since both blocks use the same base height."""
         section = "enabled" if enabled else "disabled"
-        # Compute track_size from the standard slider block height, not from
-        # content_rect.height which spans the full dedicated column.
-        base_block_height = 88
-        track_size = (base_block_height - self.BLOCK_INTERNAL_SPACING) // 2
+        slider_width = self.SLIDER_VISUAL_THICKNESS
+        scrollbar_width = self.SCROLLBAR_VISUAL_THICKNESS
         left_pad = 4
-        gap = 4
+        gap = self.BLOCK_INTERNAL_SPACING
         pair_x = content_rect.left + left_pad
 
         v_slider = ui.slider_control_cls(
             f"v_slider_{section}",
-            Rect(pair_x, content_rect.top, track_size, content_rect.height),
+            Rect(pair_x, content_rect.top, slider_width, content_rect.height),
             ui.layout_axis_cls.VERTICAL,
             self.SLIDER_MINIMUM,
             self.SLIDER_MAXIMUM,
@@ -711,7 +717,7 @@ class ControlsShowcaseFeature(Feature):
 
         v_scrollbar = ui.scrollbar_control_cls(
             f"v_scrollbar_{section}",
-            Rect(pair_x + track_size + gap, content_rect.top, track_size, content_rect.height),
+            Rect(pair_x + slider_width + gap, content_rect.top, scrollbar_width, content_rect.height),
             ui.layout_axis_cls.VERTICAL,
             self.SCROLLBAR_CONTENT_SIZE,
             self.SCROLLBAR_VIEWPORT_SIZE,

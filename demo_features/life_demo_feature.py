@@ -287,10 +287,12 @@ class LifeSimulationFeature(RoutedFeature):
 
         slider_left = zoom_slider_slot_1.left
         slider_right = zoom_slider_slot_2.right
+        slider_height = 20
+        slider_y = controls_y + max(0, (widget_height - slider_height) // 2)
         self.zoom_slider = self.window.add(
             slider_control_cls(
                 "life_zoom",
-                Rect(slider_left, controls_y, max(80, slider_right - slider_left), widget_height),
+            Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
                 layout_axis_cls.HORIZONTAL,
                 0.0,
                 11.0,
