@@ -283,7 +283,7 @@ class SpinnerControl(UiNode):
             parsed: Union[int, float] = (
                 int(self._edit_text) if self._decimals == 0 else float(self._edit_text)
             )
-            self._set_value(parsed, ValueChangeReason.USER_INTERACTION)
+            self._set_value(parsed, ValueChangeReason.KEYBOARD)
         except (ValueError, OverflowError):
             pass
         self.invalidate()

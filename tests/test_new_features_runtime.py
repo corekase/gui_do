@@ -553,6 +553,31 @@ class TestRangeSliderControl(unittest.TestCase):
         rs.set_values(20, 80)
         self.assertEqual(len(events), 0)  # set_values is programmatic (no on_change)
 
+    def test_high_handle_drag_begins_pointer_capture(self) -> None:
+        from types import SimpleNamespace
+
+        from gui_do.core.gui_event import EventType, GuiEvent
+        from gui_do.core.pointer_capture import PointerCapture
+
+        rs = RangeSliderControl(
+            "rs", Rect(0, 0, 300, 28),
+            min_value=0, max_value=100,
+            low_value=20, high_value=80,
+        )
+        app = SimpleNamespace(pointer_capture=PointerCapture())
+        event = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(rs._value_to_x(rs.high_value), rs.rect.centery),
+            button=1,
+        )
+
+        handled = rs.handle_event(event, app)
+
+        self.assertTrue(handled)
+        self.assertEqual(rs._dragging, 2)
+        self.assertTrue(app.pointer_capture.is_owned_by("rs"))
+
     def test_exported_from_gui_do_root(self) -> None:
         import gui_do
         self.assertIn("RangeSliderControl", gui_do.__all__)

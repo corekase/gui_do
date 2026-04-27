@@ -116,7 +116,7 @@ class RangeSliderControl(UiNode):
             else:
                 self._dragging = 2
             self._drag_to(px)
-            app.pointer_capture.begin(self.control_id, owner=self)
+            app.pointer_capture.begin(self.control_id, self.rect)
             return True
 
         if event.kind == EventType.MOUSE_MOTION and self._dragging:
@@ -142,11 +142,11 @@ class RangeSliderControl(UiNode):
     def _handle_key(self, key: int) -> bool:
         if key == pygame.K_LEFT:
             new_low = self._snap(self._low - self._step)
-            self._set_low(new_low, ValueChangeReason.USER_INTERACTION)
+            self._set_low(new_low, ValueChangeReason.KEYBOARD)
             return True
         if key == pygame.K_RIGHT:
             new_low = self._snap(self._low + self._step)
-            self._set_low(new_low, ValueChangeReason.USER_INTERACTION)
+            self._set_low(new_low, ValueChangeReason.KEYBOARD)
             return True
         return False
 
@@ -227,9 +227,9 @@ class RangeSliderControl(UiNode):
     def _drag_to(self, px: int) -> None:
         v = self._x_to_value(px)
         if self._dragging == 1:
-            self._set_low(min(v, self._high), ValueChangeReason.USER_INTERACTION)
+            self._set_low(min(v, self._high), ValueChangeReason.MOUSE_DRAG)
         elif self._dragging == 2:
-            self._set_high(max(v, self._low), ValueChangeReason.USER_INTERACTION)
+            self._set_high(max(v, self._low), ValueChangeReason.MOUSE_DRAG)
 
     def _set_low(self, v: float, reason: ValueChangeReason) -> None:
         new_low = max(self._min, min(float(v), self._high))
