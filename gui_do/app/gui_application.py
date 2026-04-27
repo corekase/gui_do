@@ -722,18 +722,14 @@ class GuiApplication:
 
     def _init_cursor_system(self) -> None:
         pygame.mouse.set_visible(False)
-        self.register_cursor("normal", "cursor.png", (1, 1))
-        self.register_cursor("hand", "hand.png", (12, 12))
-        if "normal" in self._cursor_assets:
-            self._active_cursor_name = "normal"
 
-    def register_cursor(self, name: str, filename: str, hotspot=(0, 0)) -> None:
+    def register_cursor(self, name: str, path: str | Path, hotspot=(0, 0)) -> None:
+        """Register a named cursor image. *path* is resolved relative to the application CWD."""
         cursor_surface = None
-        path = None
+        resolved_path = None
         try:
-            root = Path(__file__).resolve().parents[2]
-            path = root / "demo_features" / "data" / "cursors" / filename
-            loaded = pygame.image.load(str(path))
+            resolved_path = Path(path) if Path(path).is_absolute() else Path.cwd() / path
+            loaded = pygame.image.load(str(resolved_path))
             try:
                 cursor_surface = loaded.convert_alpha()
             except pygame.error:
@@ -745,8 +741,8 @@ class GuiApplication:
                 subsystem="gui.application",
                 operation="GuiApplication.register_cursor",
                 cause=exc,
-                path=None if path is None else str(path),
-                details={"cursor_name": name, "filename": filename},
+                path=None if resolved_path is None else str(resolved_path),
+                details={"cursor_name": name, "path": str(path)},
                 source_skip_frames=1,
             )
             cursor_surface = None

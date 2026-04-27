@@ -25,7 +25,7 @@ def load_pristine_surface(source):
     Accepted *source* values:
     - ``None``   → returns ``None`` (no pristine background)
     - ``pygame.Surface`` → returned as-is after ``convert()``
-    - ``str`` or ``Path`` → resolved relative to the repo ``demo_features/data/images/`` directory
+    - ``str`` or ``Path`` → resolved relative to the application CWD when not absolute
     """
     if source is None:
         return None
@@ -34,8 +34,7 @@ def load_pristine_surface(source):
     if isinstance(source, (str, Path)):
         candidate = Path(source)
         if not candidate.is_absolute():
-            root = Path(__file__).resolve().parents[2]
-            candidate = root / "demo_features" / "data" / "images" / str(source)
+            candidate = Path.cwd() / candidate
         try:
             return _convert_if_available(pygame.image.load(str(candidate)))
         except Exception as exc:

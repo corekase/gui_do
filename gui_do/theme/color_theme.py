@@ -4,7 +4,6 @@ from pathlib import Path
 
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 from ..core.font_manager import FontManager
-from ..core.error_handling import report_nonfatal_error
 
 import pygame
 
@@ -28,31 +27,7 @@ class ColorTheme:
         self.fonts.register_role("body", size=16)
         self.fonts.register_role("title", size=14, bold=True)
         self.fonts.register_role("display", size=72, bold=True)
-        self._background_bitmap = self._load_background_bitmap()
-
-    def _resource_path(self, *parts: str) -> str:
-        root = Path(__file__).resolve().parents[2]
-        return str(root.joinpath(*parts))
-
-    def _load_background_bitmap(self):
-        try:
-            path = self._resource_path("demo_features", "data", "images", "backdrop.jpg")
-            loaded = pygame.image.load(path)
-            try:
-                return loaded.convert()
-            except pygame.error:
-                return loaded
-        except Exception as exc:
-            report_nonfatal_error(
-                "failed to load theme background bitmap; continuing without background image",
-                kind="io",
-                subsystem="gui.theme",
-                operation="ColorTheme._load_background_bitmap",
-                cause=exc,
-                path=path,
-                source_skip_frames=1,
-            )
-            return None
+        self._background_bitmap = None
 
     @property
     def background_bitmap(self):

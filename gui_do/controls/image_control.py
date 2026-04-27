@@ -28,11 +28,7 @@ class ImageControl(UiNode):
         candidate = Path(image_path)
         if candidate.is_absolute():
             return candidate
-        root = Path(__file__).resolve().parents[2]
-        in_data_images = root / "demo_features" / "data" / "images" / str(image_path)
-        if in_data_images.exists():
-            return in_data_images
-        return candidate
+        return Path.cwd() / candidate
 
     @classmethod
     def _load_image(cls, image_path: str | Path | pygame.Surface) -> pygame.Surface:

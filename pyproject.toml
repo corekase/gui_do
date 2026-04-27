@@ -25,11 +25,4 @@ version = {attr = "gui_do._version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["gui_do*", "demo_features*"]
-
-[tool.setuptools.package-data]
-demo_features = [
-    "data/cursors/*",
-    "data/fonts/*",
-    "data/images/*",
-]
+include = ["gui_do*"]

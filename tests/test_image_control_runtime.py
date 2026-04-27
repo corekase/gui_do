@@ -29,8 +29,8 @@ class ImageControlRuntimeTests(unittest.TestCase):
     def tearDown(self) -> None:
         pygame.quit()
 
-    def test_relative_image_path_loads_from_data_images(self) -> None:
-        control = ImageControl("img", Rect(10, 10, 80, 40), "realize.png", scale=False)
+    def test_relative_image_path_resolves_from_cwd(self) -> None:
+        control = ImageControl("img", Rect(10, 10, 80, 40), "demo_features/data/images/realize.png", scale=False)
         target = Surface((200, 120), pygame.SRCALPHA)
 
         control.draw(target, SimpleNamespace(graphics_factory=_DisabledFactory()))

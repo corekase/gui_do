@@ -31,6 +31,9 @@ class GuiDoDemo:
 
         self.screen_rect = self.screen.get_rect()
         self.app = GuiApplication(self.screen)
+        self.app.register_cursor("normal", "demo_features/data/cursors/cursor.png", (1, 1))
+        self.app.register_cursor("hand", "demo_features/data/cursors/hand.png", (12, 12))
+        self.app.set_cursor("normal")
         self.app.configure_telemetry(
             enabled=False,
             live_analysis_enabled=True,
@@ -76,8 +79,8 @@ class GuiDoDemo:
         self.life_window.visible = False
         self.mandel_window.visible = False
         self.styles_window.visible = False
-        self.app.set_pristine("backdrop.jpg", scene_name="main")
-        self.app.set_pristine("backdrop.jpg", scene_name="control_showcase")
+        self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="main")
+        self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
