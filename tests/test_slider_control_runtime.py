@@ -1,5 +1,6 @@
 ﻿import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -151,6 +152,30 @@ class SliderControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertTrue(slider.dragging)
         self.assertTrue(self.app.pointer_capture.is_owned_by("s"))
+
+    def test_wheel_uses_hardware_mouse_position_when_not_captured(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        self.app.set_logical_pointer_position((0, 0), apply_constraints=False)
+
+        with patch("pygame.mouse.get_pos", return_value=slider.rect.center):
+            consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+
+        self.assertTrue(consumed)
+        self.assertLess(slider.value, 50.0)
+
+    def test_wheel_ignores_hardware_mouse_position_during_relative_capture(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
+        self.app.set_logical_pointer_position(slider.rect.center, apply_constraints=False)
+        self.app.pointer_capture.begin("capture-owner", self.root.rect, use_relative_motion=True)
+
+        try:
+            with patch("pygame.mouse.get_pos", return_value=(0, 0)):
+                consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+        finally:
+            self.app.pointer_capture.end("capture-owner")
+
+        self.assertTrue(consumed)
+        self.assertLess(slider.value, 50.0)
 
 
 if __name__ == "__main__":

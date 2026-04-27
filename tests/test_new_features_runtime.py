@@ -429,6 +429,62 @@ class TestScrollViewControl(unittest.TestCase):
         import gui_do
         self.assertIn("ScrollViewControl", gui_do.__all__)
 
+    def test_drag_vertical_scrollbar_thumb_updates_scroll(self) -> None:
+        from gui_do.core.gui_event import EventType
+        from gui_do.core.pointer_capture import PointerCapture
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        sv = ScrollViewControl("sv", Rect(0, 0, 200, 120), content_width=180, content_height=600, scroll_y=True)
+        for i in range(12):
+            sv.add(_MockNode(f"c{i}", Rect(0, 0, 160, 30)), content_x=0, content_y=i * 48)
+
+        app = SimpleNamespace(
+            logical_pointer_pos=(0, 0),
+            pointer_capture=PointerCapture(),
+            synced_pointer_pos=None,
+        )
+
+        def _set_pointer(pos, apply_constraints=True):
+            app.logical_pointer_pos = (int(pos[0]), int(pos[1]))
+
+        def _sync_pointer(pos):
+            app.synced_pointer_pos = (int(pos[0]), int(pos[1]))
+
+        app.set_logical_pointer_position = _set_pointer
+        app.sync_pointer_to_logical_position = _sync_pointer
+
+        handle = sv._scrollbar_y_handle_rect()
+        self.assertIsNotNone(handle)
+        handle = handle
+
+        down = MagicMock()
+        down.kind = EventType.MOUSE_BUTTON_DOWN
+        down.button = 1
+        down.pos = handle.center
+
+        move = MagicMock()
+        move.kind = EventType.MOUSE_MOTION
+        move.button = None
+        move.pos = (handle.centerx, min(sv.rect.bottom - 4, handle.centery + 36))
+
+        up = MagicMock()
+        up.kind = EventType.MOUSE_BUTTON_UP
+        up.button = 1
+        up.pos = move.pos
+
+        initial = sv.scroll_y
+        self.assertTrue(sv.handle_event(down, app))
+        self.assertTrue(app.pointer_capture.is_owned_by("sv"))
+
+        app.logical_pointer_pos = move.pos
+        self.assertTrue(sv.handle_event(move, app))
+        self.assertGreater(sv.scroll_y, initial)
+
+        self.assertTrue(sv.handle_event(up, app))
+        self.assertFalse(app.pointer_capture.is_owned_by("sv"))
+        self.assertIsNotNone(app.synced_pointer_pos)
+
 
 # ---------------------------------------------------------------------------
 # SpinnerControl tests

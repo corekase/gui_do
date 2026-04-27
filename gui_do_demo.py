@@ -38,6 +38,25 @@ from gui_do import (
     NotificationPanelControl,
     ScrollViewControl,
     ColorPickerControl,
+    TooltipManager,
+    FocusScopeManager,
+    SelectionModel,
+    SelectionMode,
+    NumericFormatter,
+    PatternFormatter,
+    FixedItemSource,
+    CanvasViewport,
+    TransitionManager,
+    TransitionSpec,
+    TransitionEvent,
+    ScopedTheme,
+    ScopedThemeManager,
+    AsyncDataProvider,
+    LoadStateKind,
+    LayoutPass,
+    MeasureContext,
+    ArrangeContext,
+    LayoutRoot,
 )
 
 
@@ -339,6 +358,13 @@ class GuiDoDemo:
         system_x = inbox_x - right_gap - system_w
         self.system_toggle_window.rect.topleft = (system_x, y)
         self.inbox_button.rect.topleft = (inbox_x, y)
+        self._main_tooltip_manager = TooltipManager(default_delay_ms=500)
+        self._main_tooltip_manager.register(self.exit_button, "Exit the application")
+        self._main_tooltip_manager.register(self.showcase_button, "Open the control showcase scene")
+        self._main_tooltip_manager.register(self.life_toggle_window, "Toggle the Life simulation window")
+        self._main_tooltip_manager.register(self.mandel_toggle_window, "Toggle the Mandelbrot fractal window")
+        self._main_tooltip_manager.register(self.system_toggle_window, "Toggle the system utilities window")
+        self._main_tooltip_manager.register(self.inbox_button, "Open the notification inbox panel")
         self._build_main_scene_controls_dock()
         self.app.tile_windows()
 
@@ -521,6 +547,230 @@ class GuiDoDemo:
         )
         y += 216
 
+        # ── New system integrations ───────────────────────────────────────
+        row_lbl_h = 20
+        row_val_h = 22
+        item_gap = 8
+
+        # NumericFormatter — value-based numeric formatting (parse/validate/format).
+        _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
+
+        add_scroll_child(
+            LabelControl("main_num_fmt_label", Rect(0, 0, content_w, row_lbl_h), "Budget USD (NumericFormatter)", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        budget_input = _num_fmt.create_text_input(
+            "main_budget_input",
+            Rect(0, 0, 220, 30),
+            raw_value="12500",
+            placeholder="0.00",
+            font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+        )
+        add_scroll_child(
+            budget_input,
+            0, y, focusable=True,
+        )
+        y += 30 + item_gap
+
+        # PatternFormatter — structure-based masked formatting.
+        _pat_fmt = PatternFormatter("###-###-####")
+
+        add_scroll_child(
+            LabelControl("main_phone_label", Rect(0, 0, content_w, row_lbl_h), "Phone (PatternFormatter)", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        phone_input = _pat_fmt.create_text_input(
+            "main_phone_input",
+            Rect(0, 0, 220, 30),
+            raw_value="5551234567",
+            placeholder="###-###-####",
+            font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+        )
+        add_scroll_child(
+            phone_input,
+            0, y, focusable=True,
+        )
+        y += 30 + item_gap
+
+        # SelectionModel — MULTI mode with two pre-selected indices.
+        self._main_sel_model = SelectionModel(mode=SelectionMode.MULTI, item_count=4)
+        self._main_sel_model.select(0)
+        self._main_sel_model.select(2)
+        add_scroll_child(
+            LabelControl("main_sel_label", Rect(0, 0, content_w, row_lbl_h), "Selection Model (MULTI)", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_sel_value",
+                Rect(0, 0, content_w, row_val_h),
+                f"Selected: {sorted(self._main_sel_model.selected_indices)}",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # FixedItemSource — asset library listing.
+        self._main_asset_source = FixedItemSource(["backdrop.jpg", "cursor.png", "hand.png", "realize.png"])
+        add_scroll_child(
+            LabelControl("main_src_label", Rect(0, 0, content_w, row_lbl_h), "Asset Library (FixedItemSource)", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        for _idx in range(self._main_asset_source.item_count()):
+            add_scroll_child(
+                LabelControl(
+                    f"main_src_item_{_idx}",
+                    Rect(0, 0, content_w - 12, row_val_h),
+                    f"  {self._main_asset_source.item_at(_idx)}",
+                    align="left",
+                ),
+                12, y,
+            )
+            y += row_val_h
+        y += item_gap
+
+        # CanvasViewport — coordinate transform for a 1280×960 content canvas.
+        self._main_canvas_viewport = CanvasViewport(
+            content_size=(1280, 960),
+            min_scale=0.1,
+            max_scale=8.0,
+        )
+        _vp = self._main_canvas_viewport
+        add_scroll_child(
+            LabelControl("main_vp_label", Rect(0, 0, content_w, row_lbl_h), "Canvas Viewport", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_vp_value",
+                Rect(0, 0, content_w, row_val_h),
+                f"Scale: {_vp.scale:.2f}  Content: {_vp.content_size[0]}\u00d7{_vp.content_size[1]}  Offset: {_vp.offset}",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # AsyncDataProvider — IDLE state display (scheduler required to load).
+        add_scroll_child(
+            LabelControl("main_adp_label", Rect(0, 0, content_w, row_lbl_h), "Async Data Provider", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_adp_value",
+                Rect(0, 0, content_w, row_val_h),
+                "State: IDLE  \u2014  call .load(fn) to start a background fetch",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # ScopedThemeManager — accent color override for a dock scope.
+        self._main_scoped_theme_mgr = ScopedThemeManager({"color.accent": (64, 128, 255), "color.surface": (30, 30, 40)})
+        self._main_scoped_theme_mgr.push(ScopedTheme({"color.accent": (255, 140, 0)}, name="dock-theme"))
+        _accent = self._main_scoped_theme_mgr.resolve("color.accent", (0, 0, 0))
+        add_scroll_child(
+            LabelControl("main_theme_label", Rect(0, 0, content_w, row_lbl_h), "Scoped Theme", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_theme_value",
+                Rect(0, 0, content_w, row_val_h),
+                f"Depth: {self._main_scoped_theme_mgr.depth}  accent \u2192 {_accent}",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # FocusScopeManager — guards modal Tab traversal.
+        add_scroll_child(
+            LabelControl("main_fscope_label", Rect(0, 0, content_w, row_lbl_h), "Focus Scope Manager", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_fscope_value",
+                Rect(0, 0, content_w, row_val_h),
+                "push(FocusScope(root, id)) \u2192 Tab contained to modal subtree",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # LayoutRoot — two-pass measure/arrange driven by dirty flag.
+        class _DockLayout:
+            def measure(self, ctx: MeasureContext) -> tuple:
+                return (content_w, 200)
+
+            def arrange(self, ctx: ArrangeContext) -> None:
+                pass
+
+        self._main_layout_root = LayoutRoot(layout=_DockLayout())
+        self._main_layout_root.update(Rect(0, 0, content_w, 200))
+        add_scroll_child(
+            LabelControl("main_layout_label", Rect(0, 0, content_w, row_lbl_h), "Layout Root (two-pass)", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_layout_value",
+                Rect(0, 0, content_w, row_val_h),
+                f"Preferred: {self._main_layout_root.preferred_size[0]}\u00d7{self._main_layout_root.preferred_size[1]}  dirty: {self._main_layout_root.is_dirty}",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # TransitionManager — declarative show/hide animation hooks.
+        add_scroll_child(
+            LabelControl("main_trans_label", Rect(0, 0, content_w, row_lbl_h), "Transition Manager", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_trans_value",
+                Rect(0, 0, content_w, row_val_h),
+                "register(id, SHOW, TransitionSpec(attr, val, secs)) \u2192 tween on state change",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
+        # TooltipManager — registered on task panel buttons in _build_main_scene.
+        add_scroll_child(
+            LabelControl("main_tooltip_label", Rect(0, 0, content_w, row_lbl_h), "Tooltip Manager", align="left"),
+            0, y,
+        )
+        y += row_lbl_h + 4
+        add_scroll_child(
+            LabelControl(
+                "main_tooltip_value",
+                Rect(0, 0, content_w, row_val_h),
+                "Delay: 500 ms  6 tooltips registered on task panel buttons",
+                align="left",
+            ),
+            0, y,
+        )
+        y += row_val_h + item_gap
+
         self.main_controls_scroll.set_content_size(content_w, y + 12)
 
         preview_top = scroll_rect.bottom + preview_gap
@@ -584,10 +834,9 @@ class GuiDoDemo:
             scene_name="control_showcase",
         )
 
-    def run(self) -> None:
-        """Run demo engine and perform shutdown cleanup on exit."""
-        self.app.run(target_fps=120)
-        pygame.quit()
+    def run(self) -> int:
+        """Run demo with final-layer app error handling and return OS exit code."""
+        return self.app.run_entrypoint(target_fps=120)
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")
@@ -635,7 +884,7 @@ class GuiDoDemo:
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""
-    GuiDoDemo().run()
+    raise SystemExit(GuiDoDemo().run())
 
 
 if __name__ == "__main__":

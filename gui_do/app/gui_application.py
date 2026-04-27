@@ -431,10 +431,20 @@ class GuiApplication:
                 return True
             self.input_state.update_from_event(gui_event)
             if gui_event.kind == EventType.MOUSE_WHEEL:
-                wheel_pos = pygame.mouse.get_pos()
-                self._logical_pointer_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
-                self.input_state.pointer_pos = self._logical_pointer_pos
-                gui_event = replace(gui_event, pos=self._logical_pointer_pos, raw_pos=self._logical_pointer_pos)
+                can_sync_from_hardware = (
+                    not self.mouse_point_locked
+                    and not (
+                        self.pointer_capture.lock_rect is not None
+                        and self.pointer_capture.use_relative_motion
+                    )
+                )
+                if can_sync_from_hardware:
+                    wheel_pos = pygame.mouse.get_pos()
+                    if isinstance(wheel_pos, tuple) and len(wheel_pos) == 2:
+                        wheel_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
+                        self._logical_pointer_pos = wheel_pos
+                        self.input_state.pointer_pos = wheel_pos
+                        gui_event = replace(gui_event, pos=wheel_pos, raw_pos=wheel_pos)
             raw_pos = gui_event.pos
             if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
                 self._pending_warp_target = None
@@ -926,6 +936,34 @@ class GuiApplication:
         from ..loop.ui_engine import UiEngine
 
         return UiEngine(self, target_fps=target_fps).run(max_frames=max_frames)
+
+    def run_entrypoint(self, target_fps: int = 60) -> int:
+        """Run app loop with final-layer exception handling and pygame shutdown.
+
+        This helper is intended for top-level script entrypoints. It ensures
+        that any unhandled runtime error is routed through gui_do's built-in
+        nonfatal error reporting before returning a non-zero OS exit code.
+
+        Returns
+        -------
+        int
+            ``0`` on a clean shutdown, ``1`` when an exception occurred.
+        """
+        try:
+            self.run(target_fps=target_fps)
+            return 0
+        except Exception as exc:
+            report_nonfatal_error(
+                "top-level application run failed",
+                kind="runtime",
+                subsystem="app",
+                operation="run_entrypoint",
+                cause=exc,
+                details={"target_fps": int(target_fps)},
+            )
+            return 1
+        finally:
+            pygame.quit()
 
     def quit(self) -> None:
         """Signal the engine to exit the run loop at the end of the current frame."""

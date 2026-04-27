@@ -1,5 +1,6 @@
 ﻿import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -248,6 +249,50 @@ class ScrollbarControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertTrue(bar.dragging)
         self.assertTrue(self.app.pointer_capture.is_owned_by("sb"))
+
+    def test_wheel_uses_hardware_mouse_position_when_not_captured(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        self.app.set_logical_pointer_position((0, 0), apply_constraints=False)
+
+        with patch("pygame.mouse.get_pos", return_value=bar.rect.center):
+            consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+
+        self.assertTrue(consumed)
+        self.assertEqual(bar.offset, 90)
+
+    def test_wheel_ignores_hardware_mouse_position_during_relative_capture(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sb",
+                Rect(20, 20, 180, 24),
+                LayoutAxis.HORIZONTAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        self.app.set_logical_pointer_position(bar.rect.center, apply_constraints=False)
+        self.app.pointer_capture.begin("capture-owner", self.root.rect, use_relative_motion=True)
+
+        try:
+            with patch("pygame.mouse.get_pos", return_value=(0, 0)):
+                consumed = self.app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+        finally:
+            self.app.pointer_capture.end("capture-owner")
+
+        self.assertTrue(consumed)
+        self.assertEqual(bar.offset, 90)
 
 
 if __name__ == "__main__":

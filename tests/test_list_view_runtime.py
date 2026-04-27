@@ -33,9 +33,10 @@ def _key(k: int) -> GuiEvent:
     return GuiEvent(kind=EventType.KEY_DOWN, type=0, key=k, mod=0)
 
 
-def _wheel(delta: int) -> GuiEvent:
+def _wheel(delta: int, *, pos=(10, 10)) -> GuiEvent:
     e = GuiEvent(kind=EventType.MOUSE_WHEEL, type=0)
     e.y = delta
+    e.pos = pos
     return e
 
 
@@ -151,6 +152,13 @@ class TestWheelScrolls(unittest.TestCase):
         initial_scroll = ctrl.scroll_offset
         ctrl.handle_event(_wheel(-1), _app())
         self.assertGreater(ctrl.scroll_offset, initial_scroll)
+
+    def test_mouse_wheel_outside_bounds_does_not_scroll(self) -> None:
+        ctrl = _ctrl(20, row_height=24)
+        initial_scroll = ctrl.scroll_offset
+        handled = ctrl.handle_event(_wheel(-1, pos=(500, 500)), _app())
+        self.assertFalse(handled)
+        self.assertEqual(ctrl.scroll_offset, initial_scroll)
 
 
 class TestScrollToItem(unittest.TestCase):

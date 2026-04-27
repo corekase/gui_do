@@ -158,6 +158,31 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `KeyChord`
 - `ChordStep`
 - `ErrorBoundary`
+- `TooltipManager`
+- `TooltipHandle`
+- `FocusScope`
+- `FocusScopeManager`
+- `SelectionModel`
+- `SelectionMode`
+- `TextFormatter`
+- `NumericFormatter`
+- `PatternFormatter`
+- `FixedPatternFormatter`
+- `VirtualItemSource`
+- `FixedItemSource`
+- `CanvasViewport`
+- `TransitionManager`
+- `TransitionSpec`
+- `TransitionEvent`
+- `ScopedTheme`
+- `ScopedThemeManager`
+- `AsyncDataProvider`
+- `LoadState`
+- `LoadStateKind`
+- `LayoutPass`
+- `MeasureContext`
+- `ArrangeContext`
+- `LayoutRoot`
 
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 

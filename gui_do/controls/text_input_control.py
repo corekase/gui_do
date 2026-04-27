@@ -31,6 +31,7 @@ class TextInputControl(UiNode):
         masked: bool = False,
         on_change: Optional[Callable[[str], None]] = None,
         on_submit: Optional[Callable[[str], None]] = None,
+        input_filter: Optional[Callable[[str], str]] = None,
         font_role: str = "body",
     ) -> None:
         super().__init__(control_id, rect)
@@ -40,6 +41,7 @@ class TextInputControl(UiNode):
         self._masked = bool(masked)
         self._on_change = on_change
         self._on_submit = on_submit
+        self._input_filter = input_filter
         self._font_role = str(font_role)
         self.tab_index = 0  # focusable by default
         # Cursor / selection
@@ -79,6 +81,17 @@ class TextInputControl(UiNode):
         self._sel_anchor = None
         self._sel_active = None
         self._scroll_offset_px = 0
+        self.invalidate()
+
+    def set_value_with_cursor(self, value: str, cursor_pos: int) -> None:
+        """Set value programmatically while preserving an explicit cursor index."""
+        self._value = str(value)
+        if self._max_length is not None:
+            self._value = self._value[: self._max_length]
+        self._cursor_pos = max(0, min(int(cursor_pos), len(self._value)))
+        self._sel_anchor = None
+        self._sel_active = None
+        self._scroll_to_cursor()
         self.invalidate()
 
     @property
@@ -345,6 +358,10 @@ class TextInputControl(UiNode):
         return self._value
 
     def _insert_text(self, text: str) -> None:
+        if self._input_filter is not None:
+            text = self._input_filter(str(text))
+            if not text:
+                return
         sel = self.selection_range
         if sel[0] != sel[1]:
             self._delete_selection()

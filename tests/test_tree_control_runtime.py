@@ -8,6 +8,8 @@ pygame.init()
 pygame.display.set_mode((1, 1), pygame.NOFRAME)
 
 from gui_do.controls.tree_control import TreeControl, TreeNode, _flatten
+from gui_do.core.gui_event import EventType
+from gui_do.core.pointer_capture import PointerCapture
 
 
 class TestTreeNode(unittest.TestCase):
@@ -132,6 +134,55 @@ class TestTreeControlBasics(unittest.TestCase):
         theme.surface = (50, 50, 60)
         theme.medium = (150, 150, 160)
         tree.draw(surface, theme)
+
+    def test_dragging_scrollbar_thumb_updates_scroll_offset(self):
+        nodes = [TreeNode(f"Row {i}") for i in range(40)]
+        tree = TreeControl("tree", Rect(0, 0, 220, 160), nodes)
+        class _AppStub:
+            def __init__(self):
+                self.logical_pointer_pos = (0, 0)
+                self.pointer_capture = PointerCapture()
+                self.synced_pointer_pos = None
+
+            def set_logical_pointer_position(self, pos, apply_constraints=True):
+                self.logical_pointer_pos = (int(pos[0]), int(pos[1]))
+
+            def sync_pointer_to_logical_position(self, pos):
+                self.synced_pointer_pos = (int(pos[0]), int(pos[1]))
+
+        app = _AppStub()
+
+        self.assertGreater(tree._total_height(), tree.rect.height)
+        handle = tree._scrollbar_handle_rect()
+        self.assertIsNotNone(handle)
+        handle = handle
+
+        down = MagicMock()
+        down.kind = EventType.MOUSE_BUTTON_DOWN
+        down.button = 1
+        down.pos = handle.center
+
+        move = MagicMock()
+        move.kind = EventType.MOUSE_MOTION
+        move.button = None
+        move.pos = (handle.centerx, min(tree.rect.bottom - 4, handle.centery + 40))
+
+        up = MagicMock()
+        up.kind = EventType.MOUSE_BUTTON_UP
+        up.button = 1
+        up.pos = move.pos
+
+        initial = tree.scroll_offset
+        self.assertTrue(tree.handle_event(down, app))
+        self.assertTrue(app.pointer_capture.is_owned_by("tree"))
+
+        app.logical_pointer_pos = move.pos
+        self.assertTrue(tree.handle_event(move, app))
+        self.assertGreater(tree.scroll_offset, initial)
+
+        self.assertTrue(tree.handle_event(up, app))
+        self.assertFalse(app.pointer_capture.is_owned_by("tree"))
+        self.assertIsNotNone(app.synced_pointer_pos)
 
 
 if __name__ == "__main__":

@@ -249,6 +249,9 @@ class ListViewControl(UiNode):
             return False
 
         if event.kind == EventType.MOUSE_WHEEL:
+            pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else app.logical_pointer_pos
+            if not (isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer)):
+                return False
             delta = getattr(event, "y", 0)
             self._scroll_offset -= int(delta) * self._row_height * 3
             self._clamp_scroll()

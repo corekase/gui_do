@@ -1,6 +1,7 @@
 import os
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -286,6 +287,20 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         ]
         self.assertEqual(set(controls_in_vertical_column), {"vertical_slider", "vertical_scrollbar"})
 
+    def test_scroll_view_children_are_projected_on_initial_layout(self) -> None:
+        _app, _host, feature = self._build_feature()
+
+        scroll_view = next(placed.control for placed in feature.placed_controls if placed.name == "scroll_view")
+        self.assertIsInstance(scroll_view, ScrollViewControl)
+        self.assertGreater(len(scroll_view.children), 0)
+
+        viewport_rect = pygame.Rect(scroll_view.rect)
+        first_child = scroll_view.children[0]
+        self.assertTrue(
+            viewport_rect.colliderect(first_child.rect),
+            "ScrollView children should be projected into viewport immediately after layout",
+        )
+
     def test_rich_label_uses_multiline_rich_text_content(self) -> None:
         _app, _host, feature = self._build_feature()
 
@@ -341,6 +356,26 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
 
         self.assertIsNotNone(feature._initial_focus_control)
         self.assertIs(app.focus.focused_node, feature._initial_focus_control)
+
+    def test_showcase_slider_and_scrollbar_handle_mouse_wheel(self) -> None:
+        app, _host, feature = self._build_feature()
+        app.switch_scene("control_showcase")
+
+        horizontal_slider = next(placed.control for placed in feature.placed_controls if placed.name == "horizontal_slider")
+        horizontal_scrollbar = next(placed.control for placed in feature.placed_controls if placed.name == "horizontal_scrollbar")
+
+        slider_before = float(horizontal_slider.value)
+        scrollbar_before = int(horizontal_scrollbar.offset)
+
+        with patch("pygame.mouse.get_pos", return_value=horizontal_slider.rect.center):
+            slider_consumed = app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": 1}))
+        with patch("pygame.mouse.get_pos", return_value=horizontal_scrollbar.rect.center):
+            scrollbar_consumed = app.process_event(pygame.event.Event(pygame.MOUSEWHEEL, {"x": 0, "y": -1}))
+
+        self.assertTrue(slider_consumed)
+        self.assertTrue(scrollbar_consumed)
+        self.assertLess(float(horizontal_slider.value), slider_before)
+        self.assertGreater(int(horizontal_scrollbar.offset), scrollbar_before)
 
 
 if __name__ == "__main__":

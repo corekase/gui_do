@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -111,6 +112,8 @@ class TreeControl(UiNode):
         self._selected_node: Optional[TreeNode] = None
         self._scroll_offset: int = 0  # pixels
         self._rows: List[_FlatRow] = []
+        self._scrollbar_dragging: bool = False
+        self._scrollbar_drag_anchor: int = 0
         self._rebuild_rows()
         self.tab_index = 0
 
@@ -235,27 +238,94 @@ class TreeControl(UiNode):
         ay = row_rect.y + (row_rect.height - _ARROW_SIZE) // 2
         return Rect(ax, ay, _ARROW_SIZE, _ARROW_SIZE)
 
+    def _scrollbar_rect(self) -> Optional[Rect]:
+        total = self._total_height()
+        if not (self._show_scrollbar and total > self.rect.height):
+            return None
+        sb_x = self.rect.right - _SCROLLBAR_WIDTH
+        return Rect(sb_x, self.rect.y, _SCROLLBAR_WIDTH, self.rect.height)
+
+    def _scrollbar_handle_rect(self) -> Optional[Rect]:
+        sb_rect = self._scrollbar_rect()
+        if sb_rect is None:
+            return None
+        total = self._total_height()
+        handle_h = max(20, int(self.rect.height * self.rect.height / total))
+        max_scroll = max(1, total - self.rect.height)
+        handle_y = self.rect.y + int((self._scroll_offset / max_scroll) * (self.rect.height - handle_h))
+        return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h)
+
+    def _set_scroll_from_handle_top(self, handle_top: int) -> None:
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is None or handle_rect is None:
+            return
+        travel = max(1, sb_rect.height - handle_rect.height)
+        ratio = (int(handle_top) - sb_rect.y) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self._scroll_offset = int(round(ratio * self._max_scroll()))
+        self._clamp_scroll()
+
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
+            if self._scrollbar_dragging:
+                end_thumb_drag(app, self.control_id)
+            self._scrollbar_dragging = False
             return False
 
         vr = self._visible_rect()
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        if event.kind == EventType.MOUSE_MOTION and self._scrollbar_dragging:
+            pointer_pos = captured_pointer_pos(app, self.control_id, "y")
+            if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+                handle_rect = self._scrollbar_handle_rect()
+                sb_rect = self._scrollbar_rect()
+                if handle_rect is not None and sb_rect is not None:
+                    handle_top = pointer_pos[1] - self._scrollbar_drag_anchor
+                    handle_top = min(max(handle_top, sb_rect.y), sb_rect.bottom - handle_rect.height)
+                    self._set_scroll_from_handle_top(handle_top)
+                    self.invalidate()
+                    return True
+
+        if event.kind == EventType.MOUSE_BUTTON_UP and event.button == 1 and self._scrollbar_dragging:
+            self._scrollbar_dragging = False
+            end_thumb_drag(app, self.control_id)
+            return True
+
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle_rect = self._scrollbar_handle_rect()
+            sb_rect = self._scrollbar_rect()
+            if handle_rect is not None and sb_rect is not None and handle_rect.collidepoint(pointer):
+                self._scrollbar_dragging = True
+                self._scrollbar_drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "y",
+                    sb_rect,
+                    (int(pointer[0]), int(pointer[1])),
+                    handle_rect,
+                )
+                return True
 
         # Mouse wheel scrolling
-        if event.kind == EventType.MOUSE_WHEEL and vr.collidepoint(event.pos):
+        if event.kind == EventType.MOUSE_WHEEL and isinstance(pointer, tuple) and self.rect.collidepoint(pointer):
             self._scroll_offset -= event.wheel_delta * self._row_height
             self._clamp_scroll()
             self.invalidate()
             return True
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
-            row_idx = self._row_at(event.pos)
+            if not (isinstance(pointer, tuple) and len(pointer) == 2):
+                return False
+            row_idx = self._row_at(pointer)
             if row_idx < 0:
-                return vr.collidepoint(event.pos)
+                return vr.collidepoint(pointer)
             row = self._rows[row_idx]
             node = row.node
             if not node.enabled:
@@ -264,7 +334,7 @@ class TreeControl(UiNode):
             row_y = vr.y + row_idx * self._row_height - self._scroll_offset
             rr = Rect(vr.x, row_y, vr.width, self._row_height)
             ar = self._arrow_rect(rr, row.depth)
-            if not node.is_leaf and ar.collidepoint(event.pos):
+            if not node.is_leaf and isinstance(pointer, tuple) and ar.collidepoint(pointer):
                 self.toggle(node)
             else:
                 # Single-click on node label selects and also toggles expand
@@ -393,11 +463,8 @@ class TreeControl(UiNode):
             surface.set_clip(old_clip)
 
         # Scrollbar
-        total = self._total_height()
-        if self._show_scrollbar and total > self.rect.height:
-            sb_x = self.rect.right - _SCROLLBAR_WIDTH
-            sb_rect = Rect(sb_x, self.rect.y, _SCROLLBAR_WIDTH, self.rect.height)
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is not None and handle_rect is not None:
             pygame.draw.rect(surface, _c("surface", (50, 50, 60)), sb_rect)
-            handle_h = max(20, int(self.rect.height * self.rect.height / total))
-            handle_y = self.rect.y + int((self._scroll_offset / max(1, total - self.rect.height)) * (self.rect.height - handle_h))
-            pygame.draw.rect(surface, _c("medium", (110, 110, 120)), Rect(sb_x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h))
+            pygame.draw.rect(surface, _c("medium", (110, 110, 120)), handle_rect)

@@ -10,6 +10,7 @@ from ..core.gui_event import EventType, GuiEvent
 from ..controls.overlay_panel_control import OverlayPanelControl
 from ..core.notification_center import NotificationCenter
 from ..core.toast_manager import ToastSeverity
+from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -64,6 +65,8 @@ class NotificationPanelControl(OverlayPanelControl):
         self._scroll_offset: int = 0
         self._hovered_row: int = -1
         self._mark_all_rect: Optional[Rect] = None
+        self._scrollbar_dragging: bool = False
+        self._scrollbar_drag_anchor: int = 0
 
     # ------------------------------------------------------------------
     # UiNode overrides
@@ -71,18 +74,56 @@ class NotificationPanelControl(OverlayPanelControl):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible:
+            if self._scrollbar_dragging:
+                end_thumb_drag(app, self.control_id)
+            self._scrollbar_dragging = False
             return False
 
-        if event.kind == EventType.MOUSE_WHEEL and self.rect.collidepoint(event.pos):
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        if event.kind == EventType.MOUSE_MOTION and self._scrollbar_dragging:
+            pointer_pos = captured_pointer_pos(app, self.control_id, "y")
+            if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+                handle_rect = self._scrollbar_handle_rect()
+                sb_rect = self._scrollbar_rect()
+                if handle_rect is not None and sb_rect is not None:
+                    top = pointer_pos[1] - self._scrollbar_drag_anchor
+                    top = min(max(top, sb_rect.y), sb_rect.bottom - handle_rect.height)
+                    self._set_scroll_from_handle_top(top)
+                    self.invalidate()
+                    return True
+
+        if event.kind == EventType.MOUSE_BUTTON_UP and event.button == 1 and self._scrollbar_dragging:
+            self._scrollbar_dragging = False
+            end_thumb_drag(app, self.control_id)
+            return True
+
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle_rect = self._scrollbar_handle_rect()
+            sb_rect = self._scrollbar_rect()
+            if handle_rect is not None and sb_rect is not None and handle_rect.collidepoint(pointer):
+                self._scrollbar_dragging = True
+                self._scrollbar_drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "y",
+                    sb_rect,
+                    (int(pointer[0]), int(pointer[1])),
+                    handle_rect,
+                )
+                return True
+
+        if event.kind == EventType.MOUSE_WHEEL and isinstance(pointer, tuple) and self.rect.collidepoint(pointer):
             self._scroll_offset -= event.wheel_delta * _ROW_H
             self._clamp_scroll()
             self.invalidate()
             return True
 
         if event.kind == EventType.MOUSE_MOTION:
-            self._hovered_row = self._row_at(event.pos)
+            self._hovered_row = self._row_at(pointer)
             self.invalidate()
-            return self.rect.collidepoint(event.pos)
+            return isinstance(pointer, tuple) and self.rect.collidepoint(pointer)
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             # Mark all read button
@@ -104,6 +145,36 @@ class NotificationPanelControl(OverlayPanelControl):
             return True
 
         return False
+
+    def _scrollbar_rect(self) -> Optional[Rect]:
+        lr = self._list_rect()
+        if self._total_height() <= lr.height:
+            return None
+        return Rect(self.rect.right - _SCROLLBAR_W, lr.y, _SCROLLBAR_W, lr.height)
+
+    def _scrollbar_handle_rect(self) -> Optional[Rect]:
+        sb_rect = self._scrollbar_rect()
+        if sb_rect is None:
+            return None
+        lr = self._list_rect()
+        total_h = self._total_height()
+        handle_h = max(16, int(lr.height * lr.height / max(1, total_h)))
+        handle_y = lr.y + int(self._scroll_offset / max(1, total_h - lr.height) * (lr.height - handle_h))
+        return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_W - 4, handle_h)
+
+    def _set_scroll_from_handle_top(self, top: int) -> None:
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is None or handle_rect is None:
+            return
+        lr = self._list_rect()
+        total_h = self._total_height()
+        max_scroll = max(0, total_h - lr.height)
+        travel = max(1, sb_rect.height - handle_rect.height)
+        ratio = (int(top) - sb_rect.y) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self._scroll_offset = int(round(ratio * max_scroll))
+        self._clamp_scroll()
 
     def _row_at(self, pos: tuple) -> int:
         """Return the record index at *pos* within the list area, or -1."""
@@ -229,13 +300,11 @@ class NotificationPanelControl(OverlayPanelControl):
             surface.set_clip(old_clip)
 
         # Scrollbar
-        total_h = self._total_height()
-        if total_h > lr.height:
-            sb_rect = Rect(self.rect.right - _SCROLLBAR_W, lr.y, _SCROLLBAR_W, lr.height)
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is not None and handle_rect is not None:
             pygame.draw.rect(surface, _c(theme, "surface", (50, 50, 65)), sb_rect)
-            handle_h = max(16, int(lr.height * lr.height / max(1, total_h)))
-            handle_y = lr.y + int(self._scroll_offset / max(1, total_h - lr.height) * (lr.height - handle_h))
-            pygame.draw.rect(surface, muted_col, Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_W - 4, handle_h))
+            pygame.draw.rect(surface, muted_col, handle_rect)
 
         # Empty state
         if not self._center.all_records:

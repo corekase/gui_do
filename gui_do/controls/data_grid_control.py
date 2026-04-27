@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -91,6 +92,8 @@ class DataGridControl(UiNode):
         self._resize_col: Optional[int] = None  # index being resized
         self._resize_start_x: int = 0
         self._resize_start_w: int = 0
+        self._scrollbar_dragging: bool = False
+        self._scrollbar_drag_anchor: int = 0
 
         # Hot-path caches
         self._col_offsets_cache: List[int] = [0]
@@ -186,6 +189,35 @@ class DataGridControl(UiNode):
     def _clamp_scroll(self) -> None:
         self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
 
+    def _scrollbar_rect(self) -> Optional[Rect]:
+        if not (self._show_scrollbar and self._content_height() > self._viewport_height()):
+            return None
+        cr = self._content_rect()
+        return Rect(cr.right, cr.y, _SCROLLBAR_WIDTH, cr.height)
+
+    def _scrollbar_handle_rect(self) -> Optional[Rect]:
+        sb_rect = self._scrollbar_rect()
+        if sb_rect is None:
+            return None
+        ch = self._content_height()
+        vh = self._viewport_height()
+        ratio = vh / max(1, ch)
+        thumb_h = max(16, int(vh * ratio))
+        thumb_y = int(sb_rect.y + (self._scroll_offset / max(1, ch - vh)) * (sb_rect.height - thumb_h))
+        return Rect(sb_rect.x + 2, thumb_y, sb_rect.width - 4, thumb_h)
+
+    def _set_scroll_from_handle_top(self, top: int) -> None:
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is None or handle_rect is None:
+            return
+        travel = max(1, sb_rect.height - handle_rect.height)
+        ratio = (int(top) - sb_rect.y) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self._scroll_offset = int(round(ratio * self._max_scroll()))
+        self._clamp_scroll()
+        self.invalidate()
+
     def _col_x_offsets(self) -> List[int]:
         """Return list of x pixel offsets (from content_rect.x) for each column."""
         if self._col_offsets_dirty:
@@ -236,7 +268,44 @@ class DataGridControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
+            if self._scrollbar_dragging:
+                end_thumb_drag(app, self.control_id)
+            self._scrollbar_dragging = False
             return False
+
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        if event.kind == EventType.MOUSE_MOTION and self._scrollbar_dragging:
+            pointer_pos = captured_pointer_pos(app, self.control_id, "y")
+            if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+                handle_rect = self._scrollbar_handle_rect()
+                sb_rect = self._scrollbar_rect()
+                if handle_rect is not None and sb_rect is not None:
+                    top = pointer_pos[1] - self._scrollbar_drag_anchor
+                    top = min(max(top, sb_rect.y), sb_rect.bottom - handle_rect.height)
+                    self._set_scroll_from_handle_top(top)
+                    return True
+
+        if event.kind == EventType.MOUSE_BUTTON_UP and event.button == 1 and self._scrollbar_dragging:
+            self._scrollbar_dragging = False
+            end_thumb_drag(app, self.control_id)
+            return True
+
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle_rect = self._scrollbar_handle_rect()
+            sb_rect = self._scrollbar_rect()
+            if handle_rect is not None and sb_rect is not None and handle_rect.collidepoint(pointer):
+                self._scrollbar_dragging = True
+                self._scrollbar_drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "y",
+                    sb_rect,
+                    (int(pointer[0]), int(pointer[1])),
+                    handle_rect,
+                )
+                return True
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             return self._handle_mouse_down(event)
@@ -251,7 +320,10 @@ class DataGridControl(UiNode):
             return False
 
         if event.kind == EventType.MOUSE_WHEEL:
-            delta = getattr(event, "y", 0)
+            pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else app.logical_pointer_pos
+            if not (isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer)):
+                return False
+            delta = event.wheel_delta
             self._scroll_offset -= int(delta) * self._row_height * 3
             self._clamp_scroll()
             self.invalidate()
@@ -442,15 +514,11 @@ class DataGridControl(UiNode):
         surface.set_clip(old_clip)
 
         # --- Scrollbar ---
-        if self._show_scrollbar and self._content_height() > self._viewport_height():
-            sb_rect = Rect(cr.right, cr.y, _SCROLLBAR_WIDTH, cr.height)
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is not None and handle_rect is not None:
             pygame.draw.rect(surface, border_col, sb_rect)
-            ch = self._content_height()
-            vh = self._viewport_height()
-            ratio = vh / ch
-            thumb_h = max(16, int(vh * ratio))
-            thumb_y = int(sb_rect.y + (self._scroll_offset / max(1, ch - vh)) * (sb_rect.height - thumb_h))
-            pygame.draw.rect(surface, sel_col, Rect(sb_rect.x + 2, thumb_y, sb_rect.width - 4, thumb_h))
+            pygame.draw.rect(surface, sel_col, handle_rect)
 
         # --- Focus ring ---
         if self._focused:

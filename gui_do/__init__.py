@@ -118,6 +118,16 @@ from .core.rate_limiter import Debouncer, Throttler
 from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
 from .core.key_chord_manager import KeyChordManager, KeyChord, ChordStep
 from .core.error_boundary import ErrorBoundary
+from .core.tooltip_manager import TooltipManager, TooltipHandle
+from .core.focus_scope import FocusScope, FocusScopeManager
+from .core.selection_model import SelectionModel, SelectionMode
+from .core.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
+from .core.virtual_item_source import VirtualItemSource, FixedItemSource
+from .core.canvas_viewport import CanvasViewport
+from .core.transition_manager import TransitionManager, TransitionSpec, TransitionEvent
+from .theme.scoped_theme import ScopedTheme, ScopedThemeManager
+from .core.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
+from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
 
 __all__ = [
     "GuiApplication",
@@ -264,4 +274,29 @@ __all__ = [
     "KeyChord",
     "ChordStep",
     "ErrorBoundary",
+    "TooltipManager",
+    "TooltipHandle",
+    "FocusScope",
+    "FocusScopeManager",
+    "SelectionModel",
+    "SelectionMode",
+    "TextFormatter",
+    "NumericFormatter",
+    "PatternFormatter",
+    "FixedPatternFormatter",
+    "VirtualItemSource",
+    "FixedItemSource",
+    "CanvasViewport",
+    "TransitionManager",
+    "TransitionSpec",
+    "TransitionEvent",
+    "ScopedTheme",
+    "ScopedThemeManager",
+    "AsyncDataProvider",
+    "LoadState",
+    "LoadStateKind",
+    "LayoutPass",
+    "MeasureContext",
+    "ArrangeContext",
+    "LayoutRoot",
 ]

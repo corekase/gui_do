@@ -49,6 +49,8 @@ from gui_do import (
     ToggleControl,
     TreeControl,
     TreeNode,
+    NumericFormatter,
+    PatternFormatter,
 )
 
 
@@ -906,6 +908,58 @@ class ControlsShowcaseFeature(Feature):
             row_index=110,
         )
 
+        # Column 9: format-aware text inputs.
+        col9_x = col8_x + col8_w + col_gap
+        col9_w = 220
+        col9_y = new_row_y
+
+        _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
+
+        numeric_input_slot_h = slot_h(30)
+        numeric_input = _num_fmt.create_text_input(
+            "control_numeric_fmt_input",
+            Rect(0, 0, col9_w, 30),
+            raw_value="12500",
+            placeholder="0.00",
+            font_role=self._control_font_role,
+        )
+        self._place_control(
+            host,
+            "numeric_fmt_input",
+            "Numeric Format",
+            numeric_input,
+            Rect(col9_x, col9_y, col9_w, numeric_input_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Numeric formatted text input",
+            column_index=9,
+            row_index=120,
+        )
+        col9_y += numeric_input_slot_h + row_gap
+
+        _pat_fmt = PatternFormatter("###-###-####")
+
+        pattern_input_slot_h = slot_h(30)
+        pattern_input = _pat_fmt.create_text_input(
+            "control_pattern_fmt_input",
+            Rect(0, 0, col9_w, 30),
+            raw_value="5551234567",
+            placeholder="###-###-####",
+            font_role=self._control_font_role,
+        )
+        self._place_control(
+            host,
+            "pattern_fmt_input",
+            "Pattern Format",
+            pattern_input,
+            Rect(col9_x, col9_y, col9_w, pattern_input_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Pattern formatted text input",
+            column_index=9,
+            row_index=121,
+        )
+
         self._build_scene_task_panel(host)
 
         if self._focus_controls:
@@ -1021,8 +1075,9 @@ class ControlsShowcaseFeature(Feature):
             host.control_showcase_root.add(label)
             self.control_labels.append(label)
 
-        control.rect.topleft = actual_control_rect.topleft
-        control.rect.size = actual_control_rect.size
+        # Use control geometry APIs so controls can synchronize derived internals
+        # (for example ScrollView child screen rect projections) on placement.
+        control.set_rect(actual_control_rect)
         control.enabled = True
         if hasattr(control, "font_role"):
             try:

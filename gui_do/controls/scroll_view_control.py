@@ -8,6 +8,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -54,6 +55,8 @@ class ScrollViewControl(UiNode):
         self._scroll_y_enabled: bool = bool(scroll_y)
         # Parallel lists: children (also in self.children) + their content-space rects
         self._child_content_rects: List[Rect] = []
+        self._drag_axis: Optional[str] = None
+        self._drag_anchor: int = 0
 
     # ------------------------------------------------------------------
     # Child management
@@ -168,11 +171,69 @@ class ScrollViewControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
+            if self._drag_axis is not None:
+                end_thumb_drag(app, self.control_id)
+            self._drag_axis = None
             return False
 
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        if event.kind == EventType.MOUSE_MOTION and self._drag_axis is not None:
+            pointer_pos = captured_pointer_pos(app, self.control_id, self._drag_axis)
+            if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+                if self._drag_axis == "y":
+                    track_rect = self._scrollbar_y_track_rect()
+                    handle_rect = self._scrollbar_y_handle_rect()
+                    if track_rect is not None and handle_rect is not None:
+                        top = pointer_pos[1] - self._drag_anchor
+                        top = min(max(top, track_rect.y), track_rect.bottom - handle_rect.height)
+                        self._set_scroll_from_y_handle_top(top)
+                        return True
+                if self._drag_axis == "x":
+                    track_rect = self._scrollbar_x_track_rect()
+                    handle_rect = self._scrollbar_x_handle_rect()
+                    if track_rect is not None and handle_rect is not None:
+                        left = pointer_pos[0] - self._drag_anchor
+                        left = min(max(left, track_rect.x), track_rect.right - handle_rect.width)
+                        self._set_scroll_from_x_handle_left(left)
+                        return True
+
+        if event.kind == EventType.MOUSE_BUTTON_UP and event.button == 1 and self._drag_axis is not None:
+            self._drag_axis = None
+            end_thumb_drag(app, self.control_id)
+            return True
+
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
+            y_track = self._scrollbar_y_track_rect()
+            y_handle = self._scrollbar_y_handle_rect()
+            if y_track is not None and y_handle is not None and y_handle.collidepoint(pointer):
+                self._drag_axis = "y"
+                self._drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "y",
+                    y_track,
+                    (int(pointer[0]), int(pointer[1])),
+                    y_handle,
+                )
+                return True
+            x_track = self._scrollbar_x_track_rect()
+            x_handle = self._scrollbar_x_handle_rect()
+            if x_track is not None and x_handle is not None and x_handle.collidepoint(pointer):
+                self._drag_axis = "x"
+                self._drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "x",
+                    x_track,
+                    (int(pointer[0]), int(pointer[1])),
+                    x_handle,
+                )
+                return True
+
         if event.kind == EventType.MOUSE_WHEEL:
-            pos = event.pos
-            if pos is not None and self.rect.collidepoint(pos):
+            if isinstance(pointer, tuple) and self.rect.collidepoint(pointer):
                 wheel_y = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
                 self.scroll_by(dy=int(-wheel_y) * 24)
                 return True
@@ -251,47 +312,93 @@ class ScrollViewControl(UiNode):
             )
 
     def _draw_scrollbar_y(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        if not self._scroll_y_enabled:
+        track_rect = self._scrollbar_y_track_rect()
+        handle_rect = self._scrollbar_y_handle_rect()
+        if track_rect is None or handle_rect is None:
             return
-        content_h = self._content_height
-        vh = self._viewport_h()
-        if content_h <= vh:
-            return
-        w = self._SCROLLBAR_W
-        track_rect = Rect(self.rect.right - w, self.rect.y, w, vh)
         track_color = getattr(theme, "panel", (40, 40, 40))
         if hasattr(track_color, "value"):
             track_color = track_color.value
         pygame.draw.rect(surface, track_color, track_rect)
-
-        handle_h = max(16, int(vh * vh / max(1, content_h)))
-        max_scroll = max(1, content_h - vh)
-        handle_y = track_rect.y + int((vh - handle_h) * self._scroll_y_pos / max_scroll)
-        handle_rect = Rect(track_rect.x + 2, handle_y, w - 4, handle_h)
         handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
         if hasattr(handle_color, "value"):
             handle_color = handle_color.value
         pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)
 
     def _draw_scrollbar_x(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        if not self._scroll_x_enabled:
+        track_rect = self._scrollbar_x_track_rect()
+        handle_rect = self._scrollbar_x_handle_rect()
+        if track_rect is None or handle_rect is None:
             return
-        content_w = self._content_width
-        vw = self._viewport_w()
-        if content_w <= vw:
-            return
-        h = self._SCROLLBAR_W
-        track_rect = Rect(self.rect.x, self.rect.bottom - h, vw, h)
         track_color = getattr(theme, "panel", (40, 40, 40))
         if hasattr(track_color, "value"):
             track_color = track_color.value
         pygame.draw.rect(surface, track_color, track_rect)
-
-        handle_w = max(16, int(vw * vw / max(1, content_w)))
-        max_scroll = max(1, content_w - vw)
-        handle_x = track_rect.x + int((vw - handle_w) * self._scroll_x_pos / max_scroll)
-        handle_rect = Rect(handle_x, track_rect.y + 2, handle_w, h - 4)
         handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
         if hasattr(handle_color, "value"):
             handle_color = handle_color.value
         pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)
+
+    def _scrollbar_y_track_rect(self) -> Optional[Rect]:
+        if not self._scroll_y_enabled:
+            return None
+        content_h = self._content_height
+        vh = self._viewport_h()
+        if content_h <= vh:
+            return None
+        w = self._SCROLLBAR_W
+        return Rect(self.rect.right - w, self.rect.y, w, vh)
+
+    def _scrollbar_y_handle_rect(self) -> Optional[Rect]:
+        track_rect = self._scrollbar_y_track_rect()
+        if track_rect is None:
+            return None
+        content_h = self._content_height
+        vh = self._viewport_h()
+        handle_h = max(16, int(vh * vh / max(1, content_h)))
+        max_scroll = max(1, content_h - vh)
+        handle_y = track_rect.y + int((vh - handle_h) * self._scroll_y_pos / max_scroll)
+        return Rect(track_rect.x + 2, handle_y, track_rect.width - 4, handle_h)
+
+    def _scrollbar_x_track_rect(self) -> Optional[Rect]:
+        if not self._scroll_x_enabled:
+            return None
+        content_w = self._content_width
+        vw = self._viewport_w()
+        if content_w <= vw:
+            return None
+        h = self._SCROLLBAR_W
+        return Rect(self.rect.x, self.rect.bottom - h, vw, h)
+
+    def _scrollbar_x_handle_rect(self) -> Optional[Rect]:
+        track_rect = self._scrollbar_x_track_rect()
+        if track_rect is None:
+            return None
+        content_w = self._content_width
+        vw = self._viewport_w()
+        handle_w = max(16, int(vw * vw / max(1, content_w)))
+        max_scroll = max(1, content_w - vw)
+        handle_x = track_rect.x + int((vw - handle_w) * self._scroll_x_pos / max_scroll)
+        return Rect(handle_x, track_rect.y + 2, handle_w, track_rect.height - 4)
+
+    def _set_scroll_from_y_handle_top(self, top: int) -> None:
+        track_rect = self._scrollbar_y_track_rect()
+        handle_rect = self._scrollbar_y_handle_rect()
+        if track_rect is None or handle_rect is None:
+            return
+        max_scroll = max(0, self._content_height - self._viewport_h())
+        travel = max(1, track_rect.height - handle_rect.height)
+        ratio = (int(top) - track_rect.y) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self.set_scroll(y=int(round(ratio * max_scroll)))
+
+    def _set_scroll_from_x_handle_left(self, left: int) -> None:
+        track_rect = self._scrollbar_x_track_rect()
+        handle_rect = self._scrollbar_x_handle_rect()
+        if track_rect is None or handle_rect is None:
+            return
+        max_scroll = max(0, self._content_width - self._viewport_w())
+        travel = max(1, track_rect.width - handle_rect.width)
+        ratio = (int(left) - track_rect.x) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self.set_scroll(x=int(round(ratio * max_scroll)))

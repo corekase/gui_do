@@ -29,27 +29,42 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - LayoutManager
   - ConstraintLayout
   - FlexLayout
+  - GridLayout
   - WindowTilingManager
+  - LayoutAnimator
+  - LayoutPass
 - [Events and Input](#events-and-input)
   - GuiEvent and EventManager
   - EventBus
   - ActionManager
+  - KeyChordManager
   - FocusManager
+  - FocusScopeManager
+  - GestureRecognizer
   - ValueChangeReason and ValueChangeCallback
 - [Data and State](#data-and-state)
   - ObservableValue, ComputedValue, and PresentationModel
+  - ObservableList and ObservableDict
+  - Binding and BindingGroup
+  - SelectionModel
   - InvalidationTracker
   - FormModel
   - CommandHistory
   - StateMachine and Router
   - SettingsRegistry
+  - TextFormatter
+  - VirtualItemSource and FixedItemSource
+  - AsyncDataProvider
 - [Scheduling and Animation](#scheduling-and-animation)
   - TaskScheduler
   - Timers
   - TweenManager
   - AnimationSequence
+  - TransitionManager
+  - Debouncer and Throttler
 - [Overlay and Runtime Services](#overlay-and-runtime-services)
   - OverlayManager and OverlayHandle
+  - TooltipManager and TooltipHandle
   - ToastManager and ToastHandle
   - DialogManager and DialogHandle
   - ContextMenuManager and ContextMenuHandle
@@ -58,6 +73,8 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ResizeManager
   - ClipboardManager
   - CommandPaletteManager, CommandEntry, and CommandPaletteHandle
+  - CanvasViewport
+  - ErrorBoundary
 - [Menu System](#menu-system)
   - MenuBarControl and MenuEntry
   - MenuBarManager
@@ -72,6 +89,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 - [Theme and Graphics](#theme-and-graphics)
   - ColorTheme
   - ThemeManager and DesignTokens
+  - ScopedTheme and ScopedThemeManager
   - BuiltInGraphicsFactory
   - FontManager
 - [Telemetry](#telemetry)
@@ -456,6 +474,59 @@ tiling.arrange_windows()
 print(tiling.read_settings())
 ```
 
+### GridLayout
+
+`GridLayout` positions children into a structured grid of rows and columns with configurable track sizes, gaps, and cell spanning. `GridTrack` defines each track's sizing (`int` for fixed pixels, `"auto"` for largest child size, or `"Nfr"` for fractional remainder of available space). `GridPlacement` specifies where each node sits with optional row and column spanning.
+
+```python
+from gui_do import GridLayout, GridTrack, GridPlacement
+
+layout = GridLayout(
+    row_tracks=[GridTrack("auto"), GridTrack("1fr"), GridTrack(40)],
+    col_tracks=[GridTrack("1fr"), GridTrack("1fr")],
+    gap=8,
+)
+
+layout.place(header,  GridPlacement(row=0, col=0, colspan=2))
+layout.place(sidebar, GridPlacement(row=1, col=0))
+layout.place(content, GridPlacement(row=1, col=1))
+layout.place(footer,  GridPlacement(row=2, col=0, colspan=2))
+
+layout.apply(container_rect)
+for node in layout.nodes():
+    node.invalidate()
+```
+
+### LayoutAnimator
+
+`LayoutAnimator` intercepts layout reflows and tweens each child from its current rect to its new computed rect, replacing instant position jumps with smooth animated transitions. It works with both `FlexLayout` and `ConstraintLayout`.
+
+```python
+from gui_do import LayoutAnimator, Easing
+
+animator = LayoutAnimator(app.tweens, duration=0.25, easing=Easing.EASE_OUT)
+
+# Animate a FlexLayout reflow after adding a child:
+animator.apply_flex(flex_layout, items, container_rect)
+
+# Animate a ConstraintLayout reflow after a resize:
+animator.apply_constraint(constraint_layout, parent_rect)
+
+animator.cancel()
+```
+
+### LayoutPass
+
+`LayoutPass` is a two-pass measure/arrange protocol that separates sizing queries from final placement, enabling content-wrapping containers and auto-sized overlays. Any class implementing `measure(available)` and `arrange(rect)` satisfies the protocol. `MeasureContext` and `ArrangeContext` carry constraints and final rects through each pass. `LayoutRoot` wraps a layout engine with dirty tracking and drives both passes only when the layout is marked dirty.
+
+```python
+from gui_do import LayoutRoot
+
+root = LayoutRoot(layout=my_layout, invalidation=app.invalidation)
+root.mark_dirty()        # call when content changes
+root.update(container_rect)   # runs measure + arrange only when dirty
+```
+
 ---
 
 ## Events and Input [Back to Top](#table-of-contents)
@@ -506,6 +577,32 @@ actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 
 For a one-call setup, use `register_and_bind(...)`.
 
+### KeyChordManager
+
+`KeyChordManager` dispatches multi-key sequential chords on top of an existing `ActionManager`. A `KeyChord` is a sequence of `ChordStep` values (key code + optional modifier mask). The manager intercepts `KEY_DOWN` events, accumulates partial-chord state, and fires the matched action when the full sequence completes within the configured timeout.
+
+```python
+import pygame
+from gui_do import KeyChordManager, KeyChord, ChordStep
+
+manager = KeyChordManager(app.actions, app.timers, timeout_ms=1500)
+
+# Ctrl+K then Ctrl+C
+manager.bind(
+    KeyChord(steps=[
+        ChordStep(key=pygame.K_k, mod=pygame.KMOD_CTRL),
+        ChordStep(key=pygame.K_c, mod=pygame.KMOD_CTRL),
+    ]),
+    action_name="editor.copy_line",
+)
+
+# In handle_event:
+if manager.process_event(event):
+    return True
+```
+
+Pass `mod=0` on a `ChordStep` to match any modifiers. `KeyChordManager` delegates to the supplied `ActionManager` so chords coexist with simple key bindings in the same instance.
+
 ### FocusManager
 
 `FocusManager` controls keyboard focus. Controls participate by exposing `tab_index >= 0` and accepting focus.
@@ -515,6 +612,48 @@ focus = app.focus
 focus.set_focus(name_input, via_keyboard=False)
 print(focus.current)
 ```
+
+### FocusScopeManager
+
+`FocusScopeManager` constrains Tab traversal to a declared subtree while a scope is active, preventing focus from escaping into background controls. It integrates with `FocusManager` through a push/pop scope stack. Use it when opening modal overlays, dialogs, or dropdowns.
+
+```python
+from gui_do import FocusScope, FocusScopeManager
+
+scope_mgr = FocusScopeManager(app.focus)
+
+scope = scope_mgr.push(dialog_panel, scope_id="main-dialog")
+
+# On close:
+scope_mgr.pop(scope)
+
+# Or pop the most-recently pushed scope:
+scope_mgr.pop_top()
+```
+
+Multiple scopes may be stacked. The innermost scope is always active.
+
+### GestureRecognizer
+
+`GestureRecognizer` detects composed pointer gestures — double-click, long-press, and swipe — from a stream of `GuiEvent` objects. Attach one recognizer per interactive node that needs gesture semantics.
+
+```python
+from gui_do import GestureRecognizer
+
+gr = GestureRecognizer(
+    on_double_click=lambda pos: zoom_in(pos),
+    on_long_press=lambda pos: show_context_menu(pos),
+    on_swipe=lambda direction, velocity: handle_swipe(direction, velocity),
+)
+
+# In update():
+gr.update(dt_seconds)
+
+# In handle_event():
+gr.process_event(event)
+```
+
+All detection thresholds (`double_click_ms`, `long_press_ms`, `swipe_min_px`, etc.) are configurable at construction time.
 
 ### ValueChangeReason and ValueChangeCallback
 
@@ -555,6 +694,68 @@ class CounterModel(PresentationModel):
 
 
 a.value = 10
+```
+
+### ObservableList and ObservableDict
+
+`ObservableList` and `ObservableDict` are reactive collection primitives that fire registered listeners with a `CollectionChange` event on every mutation. `ChangeKind` values are `ADDED`, `REMOVED`, `REPLACED`, `CLEARED`, and `MOVED`. `CollectionChange` carries `kind`, `index`, `key`, `old_value`, and `new_value`.
+
+```python
+from gui_do import ChangeKind, CollectionChange, ObservableDict, ObservableList, ListItem
+
+items = ObservableList([ListItem("Alpha"), ListItem("Beta")])
+items.subscribe(lambda change: list_view.set_items(items.snapshot()))
+
+items.append(ListItem("Gamma"))
+items.remove_at(0)
+
+settings = ObservableDict({"volume": 1.0})
+settings.subscribe(lambda change: print(change.key, "->", change.new_value))
+settings["volume"] = 0.5
+```
+
+### Binding and BindingGroup
+
+`Binding` wires an `ObservableValue` to a named attribute on a target object so that changes on either side propagate automatically. `BindingGroup` collects multiple bindings and disposes them together.
+
+```python
+from gui_do import Binding, BindingGroup, ObservableValue
+
+zoom = ObservableValue(1.0)
+
+# One-way: model → widget
+b = Binding(zoom, slider, "value", mode="one_way")
+
+# Two-way: model ↔ widget
+b = Binding(zoom, slider, "value", mode="two_way", widget_change_signal="on_change")
+b.dispose()
+
+group = BindingGroup()
+group.add(Binding(zoom, slider, "value"))
+group.add(Binding(label_text, label, "text"))
+group.dispose()
+```
+
+Modes: `"one_way"` (default), `"one_way_to_source"`, `"two_way"`. Pass `to_widget` and `to_source` callables for type conversion.
+
+### SelectionModel
+
+`SelectionModel` is a shared observable selection state for data controls. Decoupling selection from rendering lets multiple controls (a list view, a preview pane, a toolbar counter) share one source of truth. Modes are `SINGLE` (default), `MULTI`, and `RANGE`.
+
+```python
+from gui_do import SelectionModel, SelectionMode
+
+model = SelectionModel(mode=SelectionMode.MULTI, item_count=100)
+model.subscribe(lambda m: list_view.invalidate())
+model.select(5)
+model.toggle(10)
+print(model.selected_indices)   # frozenset({5, 10})
+
+# Range selection:
+model2 = SelectionModel(mode=SelectionMode.RANGE, item_count=100)
+model2.set_anchor(3)
+model2.set_active(8)
+print(model2.selected_indices)  # frozenset({3, 4, 5, 6, 7, 8})
 ```
 
 ### InvalidationTracker
@@ -644,6 +845,72 @@ settings.set_value("audio", "volume", 0.5)
 settings.save()
 ```
 
+### TextFormatter
+
+Formatters control how user-typed text is displayed in a `TextInputControl` and how the display value is parsed back to a raw storage string. Attach a formatter via the `formatter` constructor argument.
+
+- `NumericFormatter` — integer or float with optional thousands separator and min/max bounds validation.
+- `PatternFormatter` — positional mask (phone number, date, IP address) using `#` slots for digit positions.
+- `FixedPatternFormatter` — like `PatternFormatter` but requires all digit slots to be filled for validation to pass.
+- `TextFormatter` — the protocol type alias documenting the required `format`, `parse`, `validate`, and `adjust_cursor` interface for custom formatters.
+
+```python
+from gui_do import FixedPatternFormatter, NumericFormatter, PatternFormatter, TextInputControl
+
+age_input = TextInputControl(
+    "age", rect,
+    formatter=NumericFormatter(decimals=0, min_value=0, max_value=100),
+)
+
+phone_input = TextInputControl(
+    "phone", rect,
+    formatter=PatternFormatter("(###) ###-####"),
+)
+```
+
+### VirtualItemSource and FixedItemSource
+
+Data controls accept an optional `source` argument implementing `VirtualItemSource`. The control calls `item_at(index)` only for visible indices, so sources may fetch pages lazily or compute items on demand. `FixedItemSource` wraps a plain Python list for small to medium in-memory datasets.
+
+```python
+from gui_do import FixedItemSource, ListItem, ListViewControl
+
+source = FixedItemSource([ListItem("Alpha"), ListItem("Beta"), ListItem("Gamma")])
+list_view = ListViewControl("list", rect, source=source)
+
+source.append(ListItem("Delta"))
+list_view.invalidate()
+```
+
+Custom sources implement three methods: `item_count() -> int`, `item_at(index: int) -> Any`, and `item_height(index: int) -> int`.
+
+### AsyncDataProvider
+
+`AsyncDataProvider` wraps a `TaskScheduler` task with an `IDLE → LOADING → LOADED / FAILED` state machine and notifies subscribers on every transition. Controls render a loading indicator, an error message, or the loaded content by inspecting `provider.state`. Call `provider.update()` once per frame to advance state transitions.
+
+```python
+from gui_do import AsyncDataProvider, LoadState, LoadStateKind
+
+provider = AsyncDataProvider(scheduler=app.scheduler)
+
+def _fetch_records():
+    return load_json("records.json")   # runs on a background thread
+
+provider.subscribe(lambda state: my_list.invalidate())
+provider.load(_fetch_records)
+provider.update()   # call once per frame
+
+state = provider.state
+if state.is_loading:
+    draw_spinner(surface, rect)
+elif state.is_failed:
+    draw_error(surface, rect, state.error)
+elif state.is_loaded:
+    draw_items(surface, rect, state.data)
+```
+
+`LoadStateKind` values are `IDLE`, `LOADING`, `LOADED`, and `FAILED`. Use `provider.cancel()` to abort an in-flight load and `provider.load(fn)` to reload.
+
 ---
 
 ## Scheduling and Animation [Back to Top](#table-of-contents)
@@ -710,6 +977,50 @@ handle = (
 )
 ```
 
+### TransitionManager
+
+`TransitionManager` connects control state changes (show, hide, enable, disable) to `TweenManager`-driven animations without requiring each control to write tween choreography manually. `TransitionSpec` declares the attribute to animate, start and end values, and duration. `TransitionEvent` values are `SHOW`, `HIDE`, `ENABLE`, and `DISABLE`. Multiple specs per event are supported for simultaneous multi-attribute animations.
+
+```python
+from gui_do import TransitionEvent, TransitionManager, TransitionSpec
+
+tm = TransitionManager(app.tweens)
+
+tm.register(
+    overlay_panel,
+    TransitionEvent.SHOW,
+    TransitionSpec(attr="alpha", start_value=0.0, end_value=1.0, duration_seconds=0.25),
+)
+tm.register(
+    overlay_panel,
+    TransitionEvent.HIDE,
+    TransitionSpec(attr="alpha", start_value=1.0, end_value=0.0, duration_seconds=0.2),
+)
+
+tm.on_show(overlay_panel)
+tm.on_hide(overlay_panel)
+```
+
+Set `start_value=None` to read the current attribute value at trigger time, allowing graceful interruption of an in-progress animation.
+
+### Debouncer and Throttler
+
+`Debouncer` delays a callback until input is idle for a configurable period, restarting the timer on each new call. `Throttler` ensures a callback fires at most once per interval, discarding intermediate calls. Both use the frame-driven `Timers` service and require no OS-level timers.
+
+```python
+from gui_do import Debouncer, Throttler
+
+# Debounce: wait 300 ms of inactivity before firing
+debounce = Debouncer(delay_ms=300, callback=update_search, timers=app.timers)
+text_input.on_change = lambda text: debounce.call(text)
+debounce.cancel()
+debounce.flush()   # fire immediately without waiting
+
+# Throttle: fire at most once every 100 ms
+throttle = Throttler(interval_ms=100, callback=update_preview)
+scrollbar.on_change = lambda offset: throttle.call(offset)
+```
+
 ---
 
 ## Overlay and Runtime Services [Back to Top](#table-of-contents)
@@ -726,6 +1037,27 @@ panel.add(LabelControl("msg", Rect(12, 12, 220, 24), "Hello from overlay"))
 handle = app.overlay.show("popup", panel, dismiss_on_outside_click=True)
 print(handle.is_open)
 handle.dismiss()
+```
+
+### TooltipManager and TooltipHandle
+
+`TooltipManager` tracks pointer hover state and renders a hint label after a configurable delay. Register any `UiNode` with a text string; `TooltipHandle` removes the registration when the control is destroyed.
+
+```python
+from gui_do import TooltipManager, TooltipHandle
+
+tooltip_mgr = TooltipManager(default_delay_ms=500)
+handle = tooltip_mgr.register(my_button, "Click to submit")
+
+# In the scene update:
+tooltip_mgr.update(dt_seconds, hovered_node_id=app.hovered_node_id)
+
+# At the end of the draw pass:
+if tooltip_mgr.is_visible:
+    tooltip_mgr.draw(screen_surface, mouse_pos, app.theme)
+
+# When the control is destroyed:
+handle.unregister()
 ```
 
 ### ToastManager and ToastHandle
@@ -840,6 +1172,58 @@ palette.register(CommandEntry("save", "Save File", action=lambda: print("save"),
 palette.register(CommandEntry("open", "Open File", action=lambda: print("open"), category="File"))
 handle = palette.show(app)
 print(handle.is_open)
+```
+
+### CanvasViewport
+
+`CanvasViewport` provides portable pan/zoom coordinate transform math for `CanvasControl` users. It converts between screen space (relative to the canvas rect) and content space, supporting anchor-preserving zoom, pan, fit-to-content, and reset operations.
+
+```python
+from gui_do import CanvasViewport
+import pygame
+
+vp = CanvasViewport(content_size=(4096, 4096), min_scale=0.05, max_scale=16.0)
+
+# Convert screen position to content coordinates:
+content_pos = vp.to_canvas(packet.local_pos)
+
+# Zoom toward the cursor:
+factor = 1.1 if packet.wheel_delta > 0 else 1.0 / 1.1
+vp.zoom_at(anchor=packet.local_pos, factor=factor)
+
+# Pan from pointer motion:
+vp.pan(packet.rel)
+
+# Fit all content on screen:
+vp.fit_content(canvas.rect.size)
+
+# Reset to 1:1:
+vp.reset()
+
+# Transform a content rect to a screen rect for drawing:
+screen_rect = pygame.Rect(
+    *vp.to_screen(content_rect.topleft),
+    content_rect.w * vp.scale,
+    content_rect.h * vp.scale,
+)
+```
+
+### ErrorBoundary
+
+`ErrorBoundary` wraps a single child `UiNode` and silently catches exceptions thrown during `draw` or `handle_event`. When an error is caught the child is replaced by an error-placeholder visual so the rest of the scene continues rendering normally. Inspired by React error boundaries.
+
+```python
+from gui_do import ErrorBoundary
+
+boundary = ErrorBoundary(
+    child=my_widget,
+    on_error=lambda exc: logger.error("Widget error", exc_info=exc),
+    error_text="Widget unavailable",
+)
+scene.add(boundary)
+
+if boundary.has_error:
+    boundary.recover()
 ```
 
 ---
@@ -1002,6 +1386,31 @@ theme_manager.switch("contrast")
 print(theme_manager.token("primary"))
 ```
 
+### ScopedTheme and ScopedThemeManager
+
+`ScopedTheme` holds a set of design-token overrides that apply to a declared UI subtree without changing the global theme. `ScopedThemeManager` manages a push/pop scope stack and resolves token names by climbing from the innermost scope to the global `DesignTokens`.
+
+```python
+from gui_do import ScopedTheme, ScopedThemeManager
+
+dark_sidebar = ScopedTheme(
+    {"surface": (20, 20, 30), "text": (230, 230, 240)},
+    name="dark-sidebar",
+)
+
+scope_mgr = ScopedThemeManager(app.theme.active_tokens)
+
+# Context-manager style:
+with scope_mgr.scope(dark_sidebar):
+    color = scope_mgr.resolve("surface")   # → (20, 20, 30)
+    color = scope_mgr.resolve("primary")   # falls through to global tokens
+
+# Manual push/pop:
+scope_mgr.push(dark_sidebar)
+color = scope_mgr.resolve("text")
+scope_mgr.pop()
+```
+
 ### BuiltInGraphicsFactory
 
 `BuiltInGraphicsFactory` builds cached visual surfaces for built-in widgets. It is exposed as `app.graphics_factory` and used internally by control drawing. When the active theme or fonts change, controls can invalidate themselves and rebuild against the current factory output.
@@ -1050,6 +1459,7 @@ The following list is the complete public package export surface from `gui_do.__
 
 ### Application and Loop
 
+- `create_display`
 - `GuiApplication`
 - `UiEngine`
 
@@ -1105,6 +1515,14 @@ The following list is the complete public package export surface from `gui_do.__
 - `FlexDirection`
 - `FlexAlign`
 - `FlexJustify`
+- `GridLayout`
+- `GridTrack`
+- `GridPlacement`
+- `LayoutAnimator`
+- `LayoutPass`
+- `MeasureContext`
+- `ArrangeContext`
+- `LayoutRoot`
 
 ### Events, Input, and Core Runtime
 
@@ -1112,6 +1530,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `EventManager`
 - `EventBus`
 - `FocusManager`
+- `FocusScope`
+- `FocusScopeManager`
 - `FontManager`
 - `EventPhase`
 - `EventType`
@@ -1119,12 +1539,24 @@ The following list is the complete public package export surface from `gui_do.__
 - `ValueChangeCallback`
 - `ValueChangeReason`
 - `InvalidationTracker`
+- `GestureRecognizer`
+- `KeyChordManager`
+- `KeyChord`
+- `ChordStep`
 
 ### Data and State
 
 - `ObservableValue`
 - `PresentationModel`
 - `ComputedValue`
+- `ObservableList`
+- `ObservableDict`
+- `ChangeKind`
+- `CollectionChange`
+- `Binding`
+- `BindingGroup`
+- `SelectionModel`
+- `SelectionMode`
 - `FormModel`
 - `FormField`
 - `ValidationRule`
@@ -1137,6 +1569,15 @@ The following list is the complete public package export surface from `gui_do.__
 - `SettingDescriptor`
 - `Router`
 - `RouteEntry`
+- `TextFormatter`
+- `NumericFormatter`
+- `PatternFormatter`
+- `FixedPatternFormatter`
+- `VirtualItemSource`
+- `FixedItemSource`
+- `AsyncDataProvider`
+- `LoadState`
+- `LoadStateKind`
 
 ### Scheduling and Animation
 
@@ -1148,11 +1589,18 @@ The following list is the complete public package export surface from `gui_do.__
 - `Easing`
 - `AnimationSequence`
 - `AnimationHandle`
+- `TransitionManager`
+- `TransitionSpec`
+- `TransitionEvent`
+- `Debouncer`
+- `Throttler`
 
 ### Overlay and Runtime Services
 
 - `OverlayManager`
 - `OverlayHandle`
+- `TooltipManager`
+- `TooltipHandle`
 - `ToastManager`
 - `ToastHandle`
 - `ToastSeverity`
@@ -1171,6 +1619,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `CommandPaletteManager`
 - `CommandEntry`
 - `CommandPaletteHandle`
+- `CanvasViewport`
+- `ErrorBoundary`
 
 ### Menu and Notifications
 
@@ -1195,6 +1645,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `ColorTheme`
 - `ThemeManager`
 - `DesignTokens`
+- `ScopedTheme`
+- `ScopedThemeManager`
 
 ### Telemetry
 

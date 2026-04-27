@@ -274,6 +274,7 @@ class SliderControl(UiNode):
             if event.is_key_down(pygame.K_UP):
                 return self._set_value(self.value - step, reason=ValueChangeReason.KEYBOARD)
 
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         pointer = app.logical_pointer_pos
         if event.is_mouse_down(1):
             if isinstance(pointer, tuple) and len(pointer) == 2 and self.handle_rect().collidepoint(pointer):
@@ -355,9 +356,17 @@ class SliderControl(UiNode):
             self._end_drag(app, sync_pointer=True)
             return True
 
-        if event.is_mouse_wheel() and self.rect.collidepoint(app.logical_pointer_pos):
+        logical_pointer = app.logical_pointer_pos if isinstance(app.logical_pointer_pos, tuple) and len(app.logical_pointer_pos) == 2 else None
+        wheel_hit = (
+            isinstance(event_pointer, tuple)
+            and self.rect.collidepoint(event_pointer)
+        ) or (
+            isinstance(logical_pointer, tuple)
+            and self.rect.collidepoint(logical_pointer)
+        )
+        if event.is_mouse_wheel() and wheel_hit:
             return self._set_value(
-                self.value + (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)),
+                self.value - (float(event.wheel_delta) * ((self.maximum - self.minimum) * 0.05)),
                 reason=ValueChangeReason.WHEEL,
             )
         return False

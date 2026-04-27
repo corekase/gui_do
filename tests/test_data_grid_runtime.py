@@ -6,6 +6,7 @@ import pygame
 from pygame import Rect
 
 from gui_do.controls.data_grid_control import DataGridControl, GridColumn, GridRow
+from gui_do.core.pointer_capture import PointerCapture
 
 
 def _make_grid(**kwargs) -> DataGridControl:
@@ -141,8 +142,19 @@ class TestDataGridEventHandling(unittest.TestCase):
         return evt
 
     def _app(self):
-        from unittest.mock import MagicMock
-        return MagicMock()
+        class _AppStub:
+            def __init__(self):
+                self.logical_pointer_pos = (0, 0)
+                self.pointer_capture = PointerCapture()
+                self.synced_pointer_pos = None
+
+            def set_logical_pointer_position(self, pos, apply_constraints=True):
+                self.logical_pointer_pos = (int(pos[0]), int(pos[1]))
+
+            def sync_pointer_to_logical_position(self, pos):
+                self.synced_pointer_pos = (int(pos[0]), int(pos[1]))
+
+        return _AppStub()
 
     def test_mouse_click_in_content_selects_row(self) -> None:
         from gui_do.core.gui_event import EventType
@@ -238,6 +250,55 @@ class TestDataGridEventHandling(unittest.TestCase):
             evt = self._make_event(EventType.MOUSE_BUTTON_DOWN, button=1, pos=pos)
             g.handle_event(evt, MagicMock())
         self.assertFalse(sorts[-1])  # second click → descending
+
+    def test_wheel_outside_bounds_does_not_scroll_or_consume(self) -> None:
+        from gui_do.core.gui_event import EventType
+
+        g = _make_grid()
+        g._scroll_offset = 10
+        evt = self._make_event(EventType.MOUSE_WHEEL, y=-1, pos=(999, 999))
+
+        consumed = g.handle_event(evt, self._app())
+
+        self.assertFalse(consumed)
+        self.assertEqual(g._scroll_offset, 10)
+
+    def test_dragging_scrollbar_thumb_updates_scroll(self) -> None:
+        from gui_do.core.gui_event import EventType
+
+        rows = [GridRow(data={"name": f"Row {i}", "age": i}) for i in range(40)]
+        g = DataGridControl(
+            "g",
+            Rect(0, 0, 300, 180),
+            [GridColumn(key="name", title="Name", width=160), GridColumn(key="age", title="Age", width=90)],
+            rows,
+            show_scrollbar=True,
+        )
+        app = self._app()
+        app.logical_pointer_pos = (0, 0)
+
+        handle = g._scrollbar_handle_rect()
+        self.assertIsNotNone(handle)
+        handle = handle
+
+        down = self._make_event(EventType.MOUSE_BUTTON_DOWN, button=1, pos=handle.center)
+        move = self._make_event(
+            EventType.MOUSE_MOTION,
+            pos=(handle.centerx, min(g.rect.bottom - 4, handle.centery + 40)),
+        )
+        up = self._make_event(EventType.MOUSE_BUTTON_UP, button=1, pos=move.pos)
+
+        initial = g._scroll_offset
+        self.assertTrue(g.handle_event(down, app))
+        self.assertTrue(app.pointer_capture.is_owned_by("g"))
+
+        app.logical_pointer_pos = move.pos
+        self.assertTrue(g.handle_event(move, app))
+        self.assertGreater(g._scroll_offset, initial)
+
+        self.assertTrue(g.handle_event(up, app))
+        self.assertFalse(app.pointer_capture.is_owned_by("g"))
+        self.assertIsNotNone(app.synced_pointer_pos)
 
 
 class TestDataGridDisabled(unittest.TestCase):
