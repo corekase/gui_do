@@ -103,6 +103,10 @@ class FocusVisualizer:
     ) -> None:
         """Draw a dashed rectangle outline."""
         x, y, w, h = rect.x, rect.y, rect.width, rect.height
+        if w <= 0 or h <= 0:
+            return
+        right = x + w - 1
+        bottom = y + h - 1
 
         def draw_dashes(x1, y1, x2, y2):
             if x1 == x2:  # Vertical line
@@ -121,7 +125,7 @@ class FocusVisualizer:
                     pos = next_pos + self.GAP_WIDTH
 
         # Draw four dashed lines (top, right, bottom, left)
-        draw_dashes(x, y, x + w, y)  # Top
-        draw_dashes(x + w, y, x + w, y + h)  # Right
-        draw_dashes(x + w, y + h, x, y + h)  # Bottom
-        draw_dashes(x, y + h, x, y)  # Left
+        draw_dashes(x, y, right, y)  # Top
+        draw_dashes(right, y, right, bottom)  # Right
+        draw_dashes(right, bottom, x, bottom)  # Bottom
+        draw_dashes(x, bottom, x, y)  # Left

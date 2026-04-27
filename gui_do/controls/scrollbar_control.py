@@ -162,9 +162,7 @@ class ScrollbarControl(UiNode):
         super()._on_visibility_changed(_old_visible, _new_visible)
 
     def _track_rect(self) -> Rect:
-        if self.axis == LayoutAxis.HORIZONTAL:
-            return Rect(self.rect.x + 4, self.rect.centery - 5, max(1, self.rect.width - 8), 10)
-        return Rect(self.rect.centerx - 5, self.rect.y + 4, 10, max(1, self.rect.height - 8))
+        return Rect(self.rect)
 
     def _handle_length(self) -> int:
         track = self._track_rect()

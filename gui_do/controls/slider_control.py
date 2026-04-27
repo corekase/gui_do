@@ -81,26 +81,31 @@ class SliderControl(UiNode):
         self.value = min(max(self.value, self.minimum), self.maximum)
 
     def _travel_rect(self) -> Rect:
+        return Rect(self.rect)
+
+    def _handle_length(self) -> int:
+        return max(1, int(self.handle_size))
+
+    def _travel_span(self) -> int:
+        handle_len = self._handle_length()
         if self.axis == LayoutAxis.HORIZONTAL:
-            return Rect(self.rect.x + 8, self.rect.centery - 4, max(1, self.rect.width - 16), 8)
-        return Rect(self.rect.centerx - 4, self.rect.y + 8, 8, max(1, self.rect.height - 16))
+            return max(0, self.rect.width - handle_len)
+        return max(0, self.rect.height - handle_len)
 
     def _to_pixel(self, value: float) -> int:
         self._normalize_range()
-        travel = self._travel_rect()
         span = self.maximum - self.minimum
         ratio = 0.0 if span <= 0 else (value - self.minimum) / span
-        if self.axis == LayoutAxis.HORIZONTAL:
-            return int(round(travel.left + (ratio * travel.width)))
-        return int(round(travel.top + (ratio * travel.height)))
+        travel = self._travel_rect()
+        handle_len = self._handle_length()
+        return int(round(travel.left + (handle_len / 2.0) + (ratio * self._travel_span())))
 
     def _to_value(self, pixel: int) -> float:
         self._normalize_range()
         travel = self._travel_rect()
-        if self.axis == LayoutAxis.HORIZONTAL:
-            ratio = 0.0 if travel.width <= 0 else (pixel - travel.left) / float(travel.width)
-        else:
-            ratio = 0.0 if travel.height <= 0 else (pixel - travel.top) / float(travel.height)
+        handle_len = self._handle_length()
+        span_pixels = self._travel_span()
+        ratio = 0.0 if span_pixels <= 0 else (pixel - (travel.left + (handle_len / 2.0))) / float(span_pixels)
         ratio = min(max(ratio, 0.0), 1.0)
         return self.minimum + ((self.maximum - self.minimum) * ratio)
 
@@ -185,34 +190,37 @@ class SliderControl(UiNode):
     def handle_rect(self) -> Rect:
         self._normalize_range()
         pixel = self._drag_handle_axis_pixel if self.dragging else self._to_pixel(self.value)
+        handle_len = self._handle_length()
         if self.axis == LayoutAxis.HORIZONTAL:
-            return Rect(pixel - (self.handle_size // 2), self.rect.centery - (self.handle_size // 2), self.handle_size, self.handle_size)
-        return Rect(self.rect.centerx - (self.handle_size // 2), pixel - (self.handle_size // 2), self.handle_size, self.handle_size)
+            return Rect(int(round(pixel - (handle_len / 2.0))), self.rect.y, handle_len, self.rect.height)
+        return Rect(self.rect.x, int(round(pixel - (handle_len / 2.0))), self.rect.width, handle_len)
 
     def _build_lock_rect(self, pointer_pos) -> Rect:
         travel = self._travel_rect()
+        travel_span = self._travel_span()
         if self.axis == LayoutAxis.HORIZONTAL:
-            min_pointer = travel.left + self._drag_anchor_offset - (self.handle_size // 2)
-            max_pointer = travel.right + self._drag_anchor_offset - (self.handle_size // 2)
+            min_pointer = travel.left + self._drag_anchor_offset
+            max_pointer = travel.left + travel_span + self._drag_anchor_offset
             return Rect(min_pointer, pointer_pos[1], max(1, (max_pointer - min_pointer) + 1), 1)
-        min_pointer = travel.top + self._drag_anchor_offset - (self.handle_size // 2)
-        max_pointer = travel.bottom + self._drag_anchor_offset - (self.handle_size // 2)
+        min_pointer = travel.top + self._drag_anchor_offset
+        max_pointer = travel.top + travel_span + self._drag_anchor_offset
         return Rect(pointer_pos[0], min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
 
     def _lock_area_axis_rect(self, app: "GuiApplication", pointer_pos) -> Optional[Rect]:
         if app.lock_area is None:
             return None
         lock = Rect(app.lock_area)
+        handle_len = self._handle_length()
         if self.axis == LayoutAxis.HORIZONTAL:
             # Keep pointer/anchor relationship stable while enforcing lock-area limits
             # for the full handle footprint.
             min_pointer = int(lock.left + self._drag_anchor_offset)
-            max_pointer = int((lock.right - self.handle_size) + self._drag_anchor_offset)
+            max_pointer = int((lock.right - handle_len) + self._drag_anchor_offset)
             if max_pointer < min_pointer:
                 max_pointer = min_pointer
             return Rect(min_pointer, int(pointer_pos[1]), max(1, (max_pointer - min_pointer) + 1), 1)
         min_pointer = int(lock.top + self._drag_anchor_offset)
-        max_pointer = int((lock.bottom - self.handle_size) + self._drag_anchor_offset)
+        max_pointer = int((lock.bottom - handle_len) + self._drag_anchor_offset)
         if max_pointer < min_pointer:
             max_pointer = min_pointer
         return Rect(int(pointer_pos[0]), min_pointer, 1, max(1, (max_pointer - min_pointer) + 1))
@@ -275,8 +283,13 @@ class SliderControl(UiNode):
                 self._refresh_drag_lock_rect(app, pointer)
                 app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
                 pointer_pos = app.logical_pointer_pos
+                travel = self._travel_rect()
+                handle_len = self._handle_length()
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-                self._drag_handle_axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
+                axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
+                min_pixel = int(round(travel.left + (handle_len / 2.0)))
+                max_pixel = int(round(travel.left + (handle_len / 2.0) + self._travel_span()))
+                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
                 self._drag_start_programmatic_epoch = self._programmatic_change_epoch
                 self.dragging = True
                 return True
@@ -299,12 +312,15 @@ class SliderControl(UiNode):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
             travel = self._travel_rect()
+            handle_len = self._handle_length()
+            axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
+            min_pixel = int(round(travel.left + (handle_len / 2.0)))
+            max_pixel = int(round(travel.left + (handle_len / 2.0) + self._travel_span()))
             if self.axis == LayoutAxis.HORIZONTAL:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.left), travel.right)
+                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
             else:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.top), travel.bottom)
+                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
             return self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
@@ -321,12 +337,15 @@ class SliderControl(UiNode):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            axis_pixel = pointer_axis - self._drag_anchor_offset + (self.handle_size // 2)
             travel = self._travel_rect()
+            handle_len = self._handle_length()
+            axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
+            min_pixel = int(round(travel.left + (handle_len / 2.0)))
+            max_pixel = int(round(travel.left + (handle_len / 2.0) + self._travel_span()))
             if self.axis == LayoutAxis.HORIZONTAL:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.left), travel.right)
+                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
             else:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, travel.top), travel.bottom)
+                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
             self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
             return True
