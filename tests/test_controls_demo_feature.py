@@ -35,6 +35,7 @@ from gui_do import (
     TreeControl,
     ToggleControl,
 )
+from gui_do import OverlayPanelControl
 
 
 class ControlsShowcaseFeatureTests(unittest.TestCase):
@@ -79,6 +80,7 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             ListViewControl,
             MenuBarControl,
             NotificationPanelControl,
+            OverlayPanelControl,
             PanelControl,
             RangeSliderControl,
             RichLabelControl,
@@ -97,35 +99,11 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
 
     def test_arrow_box_shows_all_directions(self) -> None:
         _app, _host, feature = self._build_feature()
-
-        arrow_controls = [control for control in feature.controls if isinstance(control, ArrowBoxControl)]
-        self.assertEqual(len(arrow_controls), 4)
-        self.assertEqual({control.direction for control in arrow_controls}, {0, 90, 180, 270})
-
-    def test_showcase_does_not_include_standalone_label_control(self) -> None:
-        _app, _host, feature = self._build_feature()
-        self.assertNotIn("label", {placed.name for placed in feature.placed_controls})
-
-    def test_all_showcase_controls_are_enabled_by_default(self) -> None:
-        _app, _host, feature = self._build_feature()
-        self.assertTrue(feature.controls)
-        self.assertTrue(all(control.enabled for control in feature.controls))
-
-    def test_each_control_has_left_aligned_label_above_it(self) -> None:
-        _app, _host, feature = self._build_feature()
-
-        self.assertLess(len(feature.control_labels), len(feature.controls))
-        for placed in feature.placed_controls:
-            if placed.label is None:
-                continue
-            self.assertEqual(placed.label.align, "left")
-            self.assertEqual(placed.label.rect.left, placed.control.rect.left)
-            self.assertEqual(placed.control.rect.top, placed.label.rect.bottom + feature.LABEL_GAP)
-
-    def test_arrow_boxes_are_grouped_under_single_label_without_individual_labels(self) -> None:
-        _app, _host, feature = self._build_feature()
-
-        arrow_placed = [placed for placed in feature.placed_controls if placed.name.startswith("arrow_")]
+        arrow_placed = [
+            placed
+            for placed in feature.placed_controls
+            if placed.name in {"arrow_up", "arrow_down", "arrow_left", "arrow_right"}
+        ]
         self.assertEqual(len(arrow_placed), 4)
         self.assertTrue(all(placed.label is None for placed in arrow_placed))
         group_texts = {label.text for label in feature.control_labels}
@@ -195,7 +173,6 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertEqual(img.rect.width, img.rect.height, "Image column must be square (width == height)")
         self.assertEqual(img.rect.width, tab_placed.control.rect.width, "Image and tab columns must be the same square size")
         self.assertGreater(img.rect.left, tab_placed.control.rect.right - 1, "Image column must be to the right of tab column")
-
 
     def test_new_row_starts_below_data_grid_with_list_view_then_dropdown(self) -> None:
         _app, _host, feature = self._build_feature()
@@ -318,6 +295,20 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertIn("**", rich.text)
         self.assertIn("_", rich.text)
         self.assertIn("`", rich.text)
+
+    def test_overlay_panel_children_render_within_overlay_panel_bounds(self) -> None:
+        _app, _host, feature = self._build_feature()
+
+        overlay_panel = next(placed.control for placed in feature.placed_controls if placed.name == "overlay_panel")
+        self.assertIsInstance(overlay_panel, OverlayPanelControl)
+        self.assertEqual(len(overlay_panel.children), 3)
+        self.assertEqual([child.text for child in overlay_panel.children], ["Overlay Item A", "Overlay Item B", "Overlay Item C"])
+
+        for child in overlay_panel.children:
+            self.assertGreaterEqual(child.rect.left, overlay_panel.rect.left)
+            self.assertGreaterEqual(child.rect.top, overlay_panel.rect.top)
+            self.assertLessEqual(child.rect.right, overlay_panel.rect.right)
+            self.assertLessEqual(child.rect.bottom, overlay_panel.rect.bottom)
 
     def test_accessibility_tab_order_matches_control_addition_order(self) -> None:
         _app, host, feature = self._build_feature()

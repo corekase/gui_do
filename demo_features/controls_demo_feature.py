@@ -31,6 +31,7 @@ from gui_do import (
     NotificationCenter,
     NotificationPanelControl,
     NotificationRecord,
+    OverlayPanelControl,
     PanelControl,
     RangeSliderControl,
     RichLabelControl,
@@ -839,11 +840,18 @@ class ControlsShowcaseFeature(Feature):
         )
         col7_y += color_slot_h + row_gap
 
+        # -- Column 8: OverlayPanelControl --
+        # Demonstrates OverlayPanelControl as a container panel designed for
+        # overlay usage.  Shown standalone with three child labels to illustrate
+        # its role as a floating overlay surface.
+        col8_x = col7_x + col7_w + col_gap
+        col8_w = 200
+        col8_y = new_row_y
         scroll_inner_h = 26 * 8
         scroll_control = ScrollViewControl(
             "control_scroll_view",
-            Rect(0, 0, col7_w, 120),
-            content_width=col7_w - 20,
+            Rect(0, 0, col8_w, 120),
+            content_width=col8_w - 20,
             content_height=scroll_inner_h,
             scroll_y=True,
         )
@@ -853,7 +861,7 @@ class ControlsShowcaseFeature(Feature):
         ]
         for i, label_text in enumerate(scroll_items):
             scroll_control.add(
-                LabelControl(f"sv_item_{i}", Rect(0, 0, col7_w - 20, 22), label_text, align="left"),
+                LabelControl(f"sv_item_{i}", Rect(0, 0, col8_w - 20, 22), label_text, align="left"),
                 content_x=4,
                 content_y=i * 26,
             )
@@ -863,10 +871,39 @@ class ControlsShowcaseFeature(Feature):
             "scroll_view",
             "Scroll View",
             scroll_control,
-            Rect(col7_x, col7_y, col7_w, scroll_slot_h),
+            Rect(col8_x, col8_y, col8_w, scroll_slot_h),
             focusable=False,
-            column_index=7,
-            row_index=103,
+            column_index=8,
+            row_index=109,
+        )
+        col8_y += scroll_slot_h + row_gap
+
+        overlay_inner_h = 90
+        overlay_slot_h = slot_h(overlay_inner_h)
+        overlay_control_top = col8_y + self.LABEL_HEIGHT + self.LABEL_GAP
+        overlay_panel = OverlayPanelControl(
+            "control_overlay_panel",
+            Rect(col8_x, overlay_control_top, col8_w, overlay_inner_h),
+            draw_background=True,
+        )
+        for i, item_text in enumerate(("Overlay Item A", "Overlay Item B", "Overlay Item C")):
+            child_label = LabelControl(
+                f"overlay_child_{i}",
+                Rect(col8_x + 8, overlay_control_top + 6 + i * 26, col8_w - 16, 22),
+                item_text,
+                align="left",
+            )
+            child_label.font_role = self._control_font_role
+            overlay_panel.add(child_label)
+        self._place_control(
+            host,
+            "overlay_panel",
+            "Overlay Panel",
+            overlay_panel,
+            Rect(col8_x, col8_y, col8_w, overlay_slot_h),
+            focusable=False,
+            column_index=8,
+            row_index=110,
         )
 
         self._build_scene_task_panel(host)
