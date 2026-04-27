@@ -135,7 +135,7 @@ The **DEMO** (not part of the library distribution) consists of:
 - Verifies principle includes demo components (demo_features/, gui_do_demo.py)
 - Verifies principle documents that demo is NOT in distributions
 
-## Contract Tests (8 tests in test_library_demo_separation_contracts.py)
+## Contract Tests (9 tests in test_library_demo_separation_contracts.py)
 
 1. ✅ `test_separation_principle_is_documented` - Principle exists and has required sections
 2. ✅ `test_gui_package_has_no_hardcoded_demo_data_paths` - gui_do/ has no demo_features/data strings
@@ -159,13 +159,11 @@ The **DEMO** (not part of the library distribution) consists of:
 
 ## Test Suite Results
 
-- **Total contract tests**: 15 tests across two test modules
-  - 8 tests in `test_library_demo_separation_contracts.py`
-  - 9 tests in `test_boundary_contracts.py` (demo-related)
+- **Total contract tests**: 17 tests across two test modules
+  - 9 tests in `test_library_demo_separation_contracts.py`
+  - 8 demo-related boundary tests in `test_boundary_contracts.py`
 
-- **Total project tests**: 872 tests (all passing)
-  - 864 core tests (framework, runtime, etc.)
-  - 8 new separation contract tests
+- **Total project tests**: 878 tests (all passing, audited on 2026-04-26)
 
 - **Test execution**: ~20 seconds for full suite
 - **CI integration**: All tests run on every commit; any separation violation fails the suite
