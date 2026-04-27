@@ -134,6 +134,23 @@ from gui_do import (
     CommandPaletteManager,
     CommandEntry,
     CommandPaletteHandle,
+    ChangeKind,
+    CollectionChange,
+    ObservableList,
+    ObservableDict,
+    Binding,
+    BindingGroup,
+    GestureRecognizer,
+    LayoutAnimator,
+    Debouncer,
+    Throttler,
+    GridLayout,
+    GridTrack,
+    GridPlacement,
+    KeyChordManager,
+    KeyChord,
+    ChordStep,
+    ErrorBoundary,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:

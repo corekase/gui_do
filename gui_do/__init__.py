@@ -104,6 +104,19 @@ from .controls.spinner_control import SpinnerControl
 from .controls.range_slider_control import RangeSliderControl
 from .controls.color_picker_control import ColorPickerControl
 from .core.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
+from .core.observable_collections import (
+    ChangeKind,
+    CollectionChange,
+    ObservableList,
+    ObservableDict,
+)
+from .core.binding import Binding, BindingGroup
+from .core.gesture_recognizer import GestureRecognizer
+from .layout.layout_animator import LayoutAnimator
+from .core.rate_limiter import Debouncer, Throttler
+from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
+from .core.key_chord_manager import KeyChordManager, KeyChord, ChordStep
+from .core.error_boundary import ErrorBoundary
 
 __all__ = [
     "GuiApplication",
@@ -232,4 +245,21 @@ __all__ = [
     "CommandPaletteManager",
     "CommandEntry",
     "CommandPaletteHandle",
+    "ChangeKind",
+    "CollectionChange",
+    "ObservableList",
+    "ObservableDict",
+    "Binding",
+    "BindingGroup",
+    "GestureRecognizer",
+    "LayoutAnimator",
+    "Debouncer",
+    "Throttler",
+    "GridLayout",
+    "GridTrack",
+    "GridPlacement",
+    "KeyChordManager",
+    "KeyChord",
+    "ChordStep",
+    "ErrorBoundary",
 ]

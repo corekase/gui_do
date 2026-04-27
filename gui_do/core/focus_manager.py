@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 import pygame
 
@@ -21,6 +21,8 @@ class FocusManager:
         self._armed_focus_target = None
         self._armed_focus_elapsed_seconds = 0.0
         self._scope_focus_memory = {"__screen__": None}
+        # Stack of root nodes that constrain Tab traversal (focus scopes).
+        self._scope_stack: List = []
 
     @property
     def focused_node(self):
@@ -228,6 +230,7 @@ class FocusManager:
         return True
 
     def _focusable_nodes(self, scene, *, window=None) -> list:
+        scope_root = self.active_scope_root
         ordered = []
         for node in scene._walk_nodes():
             if not self._is_effectively_interactive(node) or not node.accepts_focus():
@@ -235,6 +238,8 @@ class FocusManager:
             if not self._is_focus_window_context_valid(node):
                 continue
             if window is not None and not self._is_descendant(node, window):
+                continue
+            if scope_root is not None and not self._is_descendant(node, scope_root):
                 continue
             ordered.append(node)
         ordered.sort(key=lambda node: (node.tab_index, node.control_id))
@@ -339,3 +344,52 @@ class FocusManager:
     def focusable_count(self, scene, *, window=None) -> int:
         """Return the number of focusable nodes in *scene*, optionally scoped to *window*."""
         return len(self._focusable_nodes(scene, window=window))
+
+    # ------------------------------------------------------------------
+    # Focus Scope — modal focus trapping
+    # ------------------------------------------------------------------
+
+    def push_focus_scope(self, root_node) -> None:
+        """Constrain Tab traversal to descendants of *root_node*.
+
+        Pushing a scope is idempotent for the same node — duplicate pushes of
+        the same root are ignored.  Typically called when a dialog or modal
+        overlay opens.  The current focus node is moved inside the new scope
+        if it falls outside the new root's subtree.
+        """
+        if root_node is None:
+            raise ValueError("root_node must not be None")
+        if self._scope_stack and self._scope_stack[-1] is root_node:
+            return  # already the active scope
+        self._scope_stack.append(root_node)
+
+    def pop_focus_scope(self, root_node) -> bool:
+        """Remove *root_node* from the scope stack.
+
+        Returns ``True`` when *root_node* was found and removed.  Pops the
+        topmost matching entry; no-op if not found.  When the popped scope was
+        the active (top) scope the previous scope becomes active again and the
+        current focus is cleared so the caller can restore it explicitly.
+        """
+        for i in range(len(self._scope_stack) - 1, -1, -1):
+            if self._scope_stack[i] is root_node:
+                was_top = (i == len(self._scope_stack) - 1)
+                self._scope_stack.pop(i)
+                if was_top:
+                    # Focus may now be outside the restored scope; clear so the
+                    # caller can set it to an appropriate target.
+                    self.clear_focus()
+                return True
+        return False
+
+    @property
+    def active_scope_root(self):
+        """Return the current scope-constraint root node, or ``None`` if unconstrained."""
+        return self._scope_stack[-1] if self._scope_stack else None
+
+    def is_in_active_scope(self, node) -> bool:
+        """Return whether *node* is within the active focus scope (or scope is unconstrained)."""
+        root = self.active_scope_root
+        if root is None:
+            return True
+        return self._is_descendant(node, root)

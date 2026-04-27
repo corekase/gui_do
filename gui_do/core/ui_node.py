@@ -28,6 +28,8 @@ class UiNode:
         self.tab_index = -1
         self._disposed = False
         self._dirty = True
+        # Set by the scene/app during mount to enable per-rect invalidation.
+        self._invalidation_tracker = None
 
     @property
     def visible(self) -> bool:
@@ -225,8 +227,22 @@ class UiNode:
         if self._dirty:
             return  # already dirty; parent chain was already walked
         self._dirty = True
+        # Notify the per-frame invalidation tracker with this node's rect so
+        # that the renderer can skip unaffected regions (dirty-region rendering).
+        if self._invalidation_tracker is not None:
+            self._invalidation_tracker.invalidate_rect(self.rect)
         if self.parent is not None:
             self.parent.invalidate()
+
+    def set_invalidation_tracker(self, tracker) -> None:
+        """Attach an :class:`~gui_do.InvalidationTracker` to this node and its subtree.
+
+        Called automatically when a node is added to a scene that has an
+        associated tracker.  Pass ``None`` to detach.
+        """
+        self._invalidation_tracker = tracker
+        for child in self.children:
+            child.set_invalidation_tracker(tracker)
 
     def clear_dirty(self) -> None:
         self._dirty = False

@@ -16,10 +16,24 @@ class Scene:
 
     def __init__(self) -> None:
         self.nodes: List[UiNode] = []
+        self._invalidation_tracker = None
+
+    def set_invalidation_tracker(self, tracker) -> None:
+        """Attach *tracker* to the scene and all currently registered nodes.
+
+        Called by :class:`~gui_do.GuiApplication` when the scene becomes
+        active.  Subsequent :meth:`add` calls propagate the tracker to new
+        nodes automatically.
+        """
+        self._invalidation_tracker = tracker
+        for node in self.nodes:
+            node.set_invalidation_tracker(tracker)
 
     def add(self, node: UiNode) -> UiNode:
         self.nodes.append(node)
         node.parent = None
+        if self._invalidation_tracker is not None:
+            node.set_invalidation_tracker(self._invalidation_tracker)
         node.on_mount(None)
         node.invalidate()
         return node

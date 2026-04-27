@@ -167,6 +167,10 @@ class GuiApplication:
         self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
         self._dialogs: Optional[DialogManager] = None
+        # Wire the invalidation tracker into the initial active scene so that
+        # per-control invalidate() calls register dirty rects immediately.
+        self.invalidation.set_screen_size(self.surface.get_size())
+        self.scene.set_invalidation_tracker(self.invalidation)
 
     @property
     def dialogs(self) -> "DialogManager":
@@ -222,6 +226,9 @@ class GuiApplication:
             self.window_tiling = runtime.window_tiling
             self.theme = runtime.theme
             self.graphics_factory = runtime.graphics_factory
+            # Re-wire the global invalidation tracker into the incoming scene so
+            # that all nodes registered to it emit dirty rects on invalidate().
+            self.scene.set_invalidation_tracker(self.invalidation)
             self._apply_screen_lifecycle_chain()
 
     @property

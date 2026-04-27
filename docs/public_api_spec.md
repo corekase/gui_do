@@ -140,6 +140,23 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `CommandPaletteManager`
 - `CommandEntry`
 - `CommandPaletteHandle`
+- `ChangeKind`
+- `CollectionChange`
+- `ObservableList`
+- `ObservableDict`
+- `Binding`
+- `BindingGroup`
+- `GestureRecognizer`
+- `LayoutAnimator`
+- `Debouncer`
+- `Throttler`
+- `GridLayout`
+- `GridTrack`
+- `GridPlacement`
+- `KeyChordManager`
+- `KeyChord`
+- `ChordStep`
+- `ErrorBoundary`
 
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 
