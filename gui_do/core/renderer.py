@@ -8,9 +8,11 @@ class Renderer:
         # Cache for scaled background bitmap: (source_bitmap_id, target_size) → scaled_surface
         self._bg_cache: tuple | None = None
 
-    def render(self, surface, scene, theme, app=None) -> None:
+    def render(self, surface, scene, theme, app=None):
+        is_full_redraw = True
+        dirty_rects = []
         if app is not None:
-            app.invalidation.begin_frame()
+            is_full_redraw, dirty_rects = app.invalidation.begin_frame()
         restored = False
         if app is not None:
             restored = bool(app.restore_pristine(surface=surface))
@@ -28,11 +30,16 @@ class Renderer:
         if app is not None:
             app.draw_screen_features(surface, theme)
         scene.draw(surface, theme, app=app)
+        if app is not None:
+            app.overlay.draw(surface, theme)
+            app.toasts.draw(surface, theme)
+            app.drag_drop.draw(surface, theme)
         if app is None:
             return
         cursor_asset = app.get_active_cursor()
         if cursor_asset is None:
-            return
+            app.invalidation.end_frame()
+            return None if is_full_redraw else dirty_rects
         cursor_surface, hotspot = cursor_asset
         anchor = app.lock_point_pos if app.mouse_point_locked else None
         if anchor is None:
@@ -41,3 +48,4 @@ class Renderer:
         draw_y = int(anchor[1]) - int(hotspot[1])
         surface.blit(cursor_surface, (draw_x, draw_y))
         app.invalidation.end_frame()
+        return None if is_full_redraw else dirty_rects

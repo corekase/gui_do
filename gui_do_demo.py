@@ -255,15 +255,6 @@ class GuiDoDemo:
             ),
             scene_name="control_showcase",
         )
-        self.control_showcase_title = self.control_showcase_root.add(
-            self._make_sized_title_label(
-                "control_showcase_title",
-                "Control Showcase",
-                24,
-                24,
-                fallback_size=(900, 96),
-            )
-        )
         self.showcase_task_panel = self.app.add(
             TaskPanelControl(
                 "control_showcase_task_panel",

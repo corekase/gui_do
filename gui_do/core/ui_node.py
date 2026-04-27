@@ -241,6 +241,34 @@ class UiNode:
     def is_task_panel(self) -> bool:
         return False
 
+    def is_overlay(self) -> bool:
+        return False
+
+    # ------------------------------------------------------------------
+    # Drag-and-drop hooks
+    # ------------------------------------------------------------------
+
+    def on_drag_start(self, event: "GuiEvent") -> "Optional[object]":
+        """Return a DragPayload to initiate drag, or None to ignore."""
+        return None
+
+    def on_drag_end(self, accepted: bool) -> None:
+        """Called when a drag initiated by this node ends."""
+
+    def accepts_drop(self, payload: "object") -> bool:
+        """Return True if this node can accept the given drag payload."""
+        return False
+
+    def on_drag_enter(self, payload: "object") -> None:
+        """Called when a dragged payload enters this node's bounds."""
+
+    def on_drag_leave(self, payload: "object") -> None:
+        """Called when a dragged payload leaves this node's bounds."""
+
+    def on_drop(self, payload: "object", pos: tuple) -> bool:
+        """Called when a payload is dropped onto this node. Return True if accepted."""
+        return False
+
     def set_active(self, _value: bool) -> None:
         """Hook for controls that support active-state semantics."""
 

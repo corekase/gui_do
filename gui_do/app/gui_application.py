@@ -43,6 +43,11 @@ from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
 from ..core.feature_lifecycle import FeatureManager
 from ..core.error_handling import logical_error, report_nonfatal_error
+from ..core.tween_manager import TweenManager
+from ..core.overlay_manager import OverlayManager
+from ..core.toast_manager import ToastManager
+from ..core.dialog_manager import DialogManager
+from ..core.drag_drop_manager import DragDropManager
 
 
 @dataclass
@@ -53,6 +58,9 @@ class _SceneRuntime:
     theme: "ColorTheme"
     graphics_factory: "BuiltInGraphicsFactory"
     window_tiling: "WindowTilingManager"
+    tweens: "TweenManager"
+    overlay: "OverlayManager"
+    drag_drop: "DragDropManager"
     screen_pristine: "Optional[pygame.Surface]"
     screen_pristine_scaled: "Optional[pygame.Surface]"
     screen_pristine_scaled_size: tuple
@@ -110,6 +118,9 @@ class GuiApplication:
         self.renderer = Renderer()
         self.scheduler = active_runtime.scheduler
         self.timers = active_runtime.timers
+        self.tweens = active_runtime.tweens
+        self.overlay = active_runtime.overlay
+        self.drag_drop = active_runtime.drag_drop
         self.layout = LayoutManager()
         self.window_tiling = active_runtime.window_tiling
         self.theme = active_runtime.theme
@@ -130,6 +141,8 @@ class GuiApplication:
             panel_control_cls=PanelControl,
         )
         self.features = FeatureManager(self)
+        self.toasts = ToastManager(self.surface.get_rect())
+        self.events.subscribe("toast", self.toasts.on_event_bus_message)
         self.running = True
         self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
@@ -153,6 +166,14 @@ class GuiApplication:
         self._init_cursor_system()
         self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
+        self._dialogs: Optional[DialogManager] = None
+
+    @property
+    def dialogs(self) -> "DialogManager":
+        """Per-application dialog manager (lazy-initialised)."""
+        if self._dialogs is None:
+            self._dialogs = DialogManager(self)
+        return self._dialogs
 
     def add(self, node, scene_name: Optional[str] = None):
         """Add a root node to the application scene."""
@@ -193,6 +214,11 @@ class GuiApplication:
             self.scene = runtime.scene
             self.scheduler = runtime.scheduler
             self.timers = runtime.timers
+            self.tweens = runtime.tweens
+            if hasattr(self, "overlay") and self.overlay is not runtime.overlay:
+                self.overlay.hide_all()
+            self.overlay = runtime.overlay
+            self.drag_drop = runtime.drag_drop
             self.window_tiling = runtime.window_tiling
             self.theme = runtime.theme
             self.graphics_factory = runtime.graphics_factory
@@ -258,6 +284,9 @@ class GuiApplication:
             theme=theme,
             graphics_factory=factory,
             window_tiling=WindowTilingManager(self, scene=scene),
+            tweens=TweenManager(),
+            overlay=OverlayManager(),
+            drag_drop=DragDropManager(),
             screen_pristine=pristine,
             screen_pristine_scaled=None,
             screen_pristine_scaled_size=(0, 0),
@@ -347,6 +376,8 @@ class GuiApplication:
             self.focus.update(dt_seconds)
             runtime = self._scenes[self._active_scene_name]
             runtime.timers.update(dt_seconds)
+            runtime.tweens.update(dt_seconds)
+            self.toasts.update(dt_seconds, runtime.tweens)
             runtime.scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
             runtime.scheduler.update()
             self.features.update_direct_features(dt_seconds)
@@ -470,7 +501,19 @@ class GuiApplication:
             if target is not None:
                 self.focus.set_focus(target)
 
+        # Route pointer + mouse events to overlays first.
+        # MOUSEBUTTONDOWN outside overlays returns False (pass-through); inside returns True.
+        if logical_event.kind in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP, EventType.MOUSE_MOTION, EventType.MOUSE_WHEEL):
+            overlay_consumed = self.overlay.route_event(logical_event, self)
+            if overlay_consumed:
+                self.invalidation.invalidate_all()
+                return True
+
         if self.keyboard.is_key_event(logical_event):
+            # Give overlays first chance to handle key events (e.g. ESC to dismiss)
+            if self.overlay.route_event(logical_event, self):
+                self.invalidation.invalidate_all()
+                return True
             with collector.span("gui_application", "route_key_event"):
                 consumed = self.keyboard.route_key_event(self.scene, logical_event, self, self._screen_event_handler)
             if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
@@ -780,14 +823,15 @@ class GuiApplication:
             return None
         return self._cursor_assets.get(self._active_cursor_name)
 
-    def draw(self) -> None:
-        """Render one frame."""
+    def draw(self):
+        """Render one frame. Returns list of dirty rects or None (full redraw)."""
         collector = telemetry_collector()
         with collector.span("gui_application", "draw", metadata={"scene_name": self._active_scene_name}):
             first_frame_profiler().begin_frame(self._active_scene_name)
             runtime = self._scenes[self._active_scene_name]
-            self.renderer.render(self.surface, runtime.scene, runtime.theme, app=self)
+            dirty = self.renderer.render(self.surface, runtime.scene, runtime.theme, app=self)
             self.features.draw(self.surface, runtime.theme)
+            return dirty
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
         """Run one-time feature prewarm hooks for a scene using an offscreen surface.

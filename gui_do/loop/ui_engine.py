@@ -29,8 +29,11 @@ class UiEngine:
                     break
                 dt_seconds = self.clock.tick(self.target_fps) / 1000.0
                 self.app.update(dt_seconds)
-                self.app.draw()
-                pygame.display.flip()
+                dirty = self.app.draw()
+                if dirty:
+                    pygame.display.update(dirty)
+                else:
+                    pygame.display.flip()
                 frame_count += 1
         finally:
             self.app.shutdown()

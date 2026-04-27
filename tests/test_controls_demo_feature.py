@@ -12,13 +12,16 @@ from gui_do import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    DropdownControl,
     FrameControl,
     GuiApplication,
     ImageControl,
     LabelControl,
+    ListViewControl,
     PanelControl,
     ScrollbarControl,
     SliderControl,
+    TextInputControl,
     ToggleControl,
 )
 
@@ -46,8 +49,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
     def test_build_creates_enabled_and_disabled_control_catalogs(self) -> None:
         _app, _host, feature = self._build_part()
 
-        self.assertEqual(len(feature.enabled_controls), 24)
-        self.assertEqual(len(feature.disabled_controls), 24)
+        self.assertEqual(len(feature.enabled_controls), 27)
+        self.assertEqual(len(feature.disabled_controls), 27)
         self.assertIsNotNone(feature.enabled_title)
         self.assertIsNotNone(feature.disabled_title)
 
@@ -62,6 +65,9 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             SliderControl,
             ScrollbarControl,
             PanelControl,
+            TextInputControl,
+            ListViewControl,
+            DropdownControl,
         }
         self.assertEqual({type(control) for control in feature.enabled_controls}, expected_types)
 
@@ -91,8 +97,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         _app, _host, feature = self._build_part()
 
         # Should have blocks for both enabled and disabled
-        self.assertEqual(len(feature.enabled_blocks), 7)
-        self.assertEqual(len(feature.disabled_blocks), 7)
+        self.assertEqual(len(feature.enabled_blocks), 10)
+        self.assertEqual(len(feature.disabled_blocks), 10)
 
         # Block names should match definitions
         expected_block_names = [
@@ -103,6 +109,9 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             "vertical_sliders",
             "image_block",
             "canvas_panel_block",
+            "text_input_block",
+            "list_view_block",
+            "dropdown_block",
         ]
         enabled_block_names = [block["name"] for block in feature.enabled_blocks]
         disabled_block_names = [block["name"] for block in feature.disabled_blocks]
@@ -171,8 +180,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
 
         # Both should have same types
         self.assertEqual(set(enabled_types), set(disabled_types))
-        self.assertEqual(len(enabled_types), 24)
-        self.assertEqual(len(disabled_types), 24)
+        self.assertEqual(len(enabled_types), 27)
+        self.assertEqual(len(disabled_types), 27)
 
     def test_configure_accessibility_assigns_enabled_focus_order_in_creation_sequence(self) -> None:
         _app, host, feature = self._build_part()
@@ -183,7 +192,7 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
 
         self.assertTrue(focus_controls)
         self.assertEqual(focus_controls[0].control_id, "arrow_up_enabled")
-        self.assertEqual(focus_controls[-1].control_id, "v_scrollbar_enabled")
+        self.assertEqual(focus_controls[-1].control_id, "dropdown_enabled")
         expected_ids = [
             "arrow_up_enabled",
             "arrow_down_enabled",
@@ -204,9 +213,12 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             "scrollbar_enabled",
             "v_slider_enabled",
             "v_scrollbar_enabled",
+            "text_input_enabled",
+            "list_view_enabled",
+            "dropdown_enabled",
         ]
         self.assertEqual([control.control_id for control in focus_controls], expected_ids)
-        allowed_types = {"ArrowBoxControl", "ButtonControl", "ToggleControl", "ButtonGroupControl", "SliderControl", "ScrollbarControl"}
+        allowed_types = {"ArrowBoxControl", "ButtonControl", "ToggleControl", "ButtonGroupControl", "SliderControl", "ScrollbarControl", "TextInputControl", "ListViewControl", "DropdownControl"}
         self.assertEqual({control.__class__.__name__ for control in focus_controls}, allowed_types)
         self.assertEqual(next_index, 7 + len(focus_controls))
         for offset, control in enumerate(focus_controls):

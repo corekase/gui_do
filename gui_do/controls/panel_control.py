@@ -10,15 +10,17 @@ if TYPE_CHECKING:
     import pygame
     from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
+    from ..layout.constraint_layout import ConstraintLayout
 
 
 class PanelControl(UiNode):
     """Container control that owns child controls."""
 
-    def __init__(self, control_id: str, rect: Rect, draw_background: bool = True) -> None:
+    def __init__(self, control_id: str, rect: Rect, draw_background: bool = True, constraints: "Optional[ConstraintLayout]" = None) -> None:
         super().__init__(control_id, rect)
         self.children: List[UiNode] = []
         self.draw_background = bool(draw_background)
+        self.constraints: "Optional[ConstraintLayout]" = constraints
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
@@ -232,7 +234,17 @@ class PanelControl(UiNode):
         self.invalidate()
         return True
 
+    def set_constraints(self, constraints: "Optional[ConstraintLayout]") -> None:
+        self.constraints = constraints
+        if constraints is not None:
+            constraints.apply(self.rect)
+
+    def _reapply_constraints(self) -> None:
+        if self.constraints is not None:
+            self.constraints.apply(self.rect)
+
     def update(self, dt_seconds: float) -> None:
+        self._reapply_constraints()
         for child in self.children:
             if child.visible:
                 child.update(dt_seconds)

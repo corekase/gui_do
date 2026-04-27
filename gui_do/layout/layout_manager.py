@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 
 from pygame import Rect
+
+if TYPE_CHECKING:
+    from ..core.ui_node import UiNode
+    from .constraint_layout import ConstraintLayout, AnchorConstraint, ConstraintBuilder
 
 
 Geometry = Union[Rect, Tuple[int, int]]
@@ -150,3 +154,31 @@ class LayoutManager:
         if use_rect:
             return rect
         return rect.topleft
+
+    def constrain(
+        self,
+        node: "UiNode",
+        parent_rect: Rect,
+        *,
+        left: Optional[int] = None,
+        right: Optional[int] = None,
+        top: Optional[int] = None,
+        bottom: Optional[int] = None,
+        min_width: Optional[int] = None,
+        max_width: Optional[int] = None,
+        min_height: Optional[int] = None,
+        max_height: Optional[int] = None,
+    ) -> Rect:
+        """One-shot: resolve and return constrained rect for node."""
+        from .constraint_layout import AnchorConstraint
+        c = AnchorConstraint(
+            left=left, right=right, top=top, bottom=bottom,
+            min_width=min_width, max_width=max_width,
+            min_height=min_height, max_height=max_height,
+        )
+        return c.apply(node.rect, parent_rect)
+
+    def anchor(self, node: "UiNode", layout: "ConstraintLayout") -> "ConstraintBuilder":
+        """Start a fluent constraint builder for node within layout."""
+        from .constraint_layout import ConstraintBuilder
+        return ConstraintBuilder(node, layout)

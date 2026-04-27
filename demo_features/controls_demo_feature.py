@@ -6,7 +6,7 @@ import pygame
 from pathlib import Path
 from pygame import Rect
 
-from gui_do import Feature
+from gui_do import Feature, TextInputControl, ListViewControl, ListItem, DropdownControl, DropdownOption
 
 
 class ControlsShowcaseFeature(Feature):
@@ -23,11 +23,10 @@ class ControlsShowcaseFeature(Feature):
     SECTION_TITLE_TEXT_ENABLED = "Enabled Controls"
     SECTION_TITLE_TEXT_DISABLED = "Disabled Controls"
     PART_MARGIN_X = 24
-    PART_MARGIN_TOP = 144
+    PART_MARGIN_TOP = 20
     PART_MARGIN_BOTTOM = 76
     OUTER_PADDING_X = 16
-    OUTER_PADDING_Y = 16
-    SECTION_SPLIT_GAP = 12
+    OUTER_PADDING_Y = 0
     SECTION_TITLE_HEIGHT = 22
     SECTION_TITLE_GAP = 10
 
@@ -83,6 +82,9 @@ class ControlsShowcaseFeature(Feature):
         "vertical_sliders",
         "image_block",
         "canvas_panel_block",
+        "text_input_block",
+        "list_view_block",
+        "dropdown_block",
     ]
 
     def __init__(self, rect: Rect | None = None) -> None:
@@ -160,7 +162,7 @@ class ControlsShowcaseFeature(Feature):
         self.disabled_title.font_size = 22
         self.disabled_title.font_role = self._label_font_role
 
-        # Build enabled blocks
+        # Build enabled blocks.
         self.enabled_controls = []
         self.enabled_control_labels = []
         self.enabled_blocks = []
@@ -179,7 +181,7 @@ class ControlsShowcaseFeature(Feature):
             for label in labels:
                 host.control_showcase_root.add(label)
 
-        # Build disabled blocks (controls disabled, labels enabled)
+        # Build disabled blocks — same layout algorithm, section_bottom_rect anchors from screen bottom.
         self.disabled_controls = []
         self.disabled_control_labels = []
         self.disabled_blocks = []
@@ -264,22 +266,26 @@ class ControlsShowcaseFeature(Feature):
         return Rect(left, top, width, height)
 
     def _split_rect(self, source: Rect) -> tuple[Rect, Rect]:
-        """Split rect into top (enabled) and bottom (disabled) sections."""
-        inset = Rect(source)
-        inset.x += self.OUTER_PADDING_X
-        inset.y += self.OUTER_PADDING_Y
-        inset.width = max(1, inset.width - (self.OUTER_PADDING_X * 2))
-        inset.height = max(1, inset.height - (self.OUTER_PADDING_Y * 2))
+        """Split the available area into two equal-height halves.
 
-        top_height = max(1, (inset.height - self.SECTION_SPLIT_GAP) // 2)
-        bottom_height = max(1, inset.height - self.SECTION_SPLIT_GAP - top_height)
+        Top half:    anchored at source.top  (PART_MARGIN_TOP from screen top).
+        Bottom half: anchored at source.bottom (PART_MARGIN_BOTTOM from screen bottom).
+        Both halves have the same height = source.height // 2.
 
-        top = Rect(inset.left, inset.top, inset.width, top_height)
-        bottom = Rect(inset.left, top.bottom + self.SECTION_SPLIT_GAP, inset.width, bottom_height)
+        Enabled controls fill downward from source.top.
+        Disabled controls fill upward from source.bottom.
+        Unused space naturally collects in the vertical centre of the screen.
+        """
+        inset_left = source.left + self.OUTER_PADDING_X
+        inset_width = max(1, source.width - self.OUTER_PADDING_X * 2)
+        half_h = max(1, source.height // 2)
+
+        top = Rect(inset_left, source.top, inset_width, half_h)
+        bottom = Rect(inset_left, source.bottom - half_h, inset_width, half_h)
         return top, bottom
 
     def _title_rect(self, section_rect: Rect) -> Rect:
-        """Get rect for section title."""
+        """Get rect for the section title at the top of section_rect."""
         return Rect(
             section_rect.left,
             section_rect.top,
@@ -288,16 +294,21 @@ class ControlsShowcaseFeature(Feature):
         )
 
     def _content_rect(self, section_rect: Rect) -> Rect:
-        """Get rect for content area below title."""
+        """Get rect for the controls content area below the section title."""
         content_top = section_rect.top + self.SECTION_TITLE_HEIGHT + self.SECTION_TITLE_GAP
         content_height = max(1, section_rect.height - self.SECTION_TITLE_HEIGHT - self.SECTION_TITLE_GAP)
         return Rect(section_rect.left, content_top, section_rect.width, content_height)
 
     def _calculate_block_layout(self, content_rect: Rect) -> list[Rect]:
-        """
-        Calculate block positions for given content area.
-        Returns list of block rects in column-first order.
-        Image block occupies the last column exclusively, centered vertically.
+        """Calculate block positions laying out downward from content_rect.top.
+
+        Returns list of block rects in BLOCK_DEFINITIONS order.
+        Both enabled and disabled sections use this same algorithm; the difference
+        is purely which section_rect (top half vs bottom half of screen) is passed in.
+
+        Special columns:
+          - vertical_sliders: dedicated thin column spanning full content height.
+          - image_block: centered vertically in its reserved column.
         """
         block_heights_map = {
             "arrow_cluster": 70,
@@ -306,6 +317,9 @@ class ControlsShowcaseFeature(Feature):
             "horizontal_sliders": 100,
             "vertical_sliders": 100,
             "canvas_panel_block": 110,
+            "text_input_block": 30,
+            "list_view_block": 120,
+            "dropdown_block": 30,
         }
 
         available_width = max(1, content_rect.width)
@@ -339,7 +353,7 @@ class ControlsShowcaseFeature(Feature):
             v_col_x = content_rect.left + (num_columns - 1) * (column_width + self.COLUMN_GAP)
             image_col_x = v_col_x + v_col_width + self.COLUMN_GAP
 
-            # Greedy-assign non-special blocks to greedy columns by lowest height.
+            # Greedy-assign non-special blocks to greedy columns by lowest accumulated height.
             column_heights = [0] * num_columns
             for block_name in self.BLOCK_DEFINITIONS:
                 if block_name in ("image_block", "vertical_sliders"):
@@ -355,8 +369,7 @@ class ControlsShowcaseFeature(Feature):
                 block_rects[block_name] = Rect(col_x, col_y, column_width, block_height)
                 column_heights[min_col] += block_height + self.BLOCK_INTERNAL_SPACING
 
-            # Place vertical_sliders in its dedicated column spanning full section content height.
-            # Its internal content area (below label) therefore uses the entire remaining column height.
+            # vertical_sliders: dedicated column spanning full section content height.
             block_rects["vertical_sliders"] = Rect(
                 v_col_x,
                 content_rect.top,
@@ -364,7 +377,7 @@ class ControlsShowcaseFeature(Feature):
                 content_rect.height,
             )
 
-            # Place image_block centered in its reserved column, constrained to section height.
+            # image_block: centered vertically in its column.
             max_image_content_h = max(1, content_rect.height - self.BLOCK_LABEL_HEIGHT - self.BLOCK_LABEL_GAP)
             img_w, img_h = self._image_block_size_for_constraints(column_width, max_image_content_h)
             image_block_total_height = self.BLOCK_LABEL_HEIGHT + self.BLOCK_LABEL_GAP + img_h
@@ -377,7 +390,7 @@ class ControlsShowcaseFeature(Feature):
                 image_block_total_height,
             )
         else:
-            # Single column: stack all blocks including image_block
+            # Single column: stack all blocks downward from content_rect.top.
             col_y = content_rect.top
             for block_name in self.BLOCK_DEFINITIONS:
                 base_height = (
@@ -471,6 +484,12 @@ class ControlsShowcaseFeature(Feature):
             controls = self._build_image_block(ui, content_rect, enabled)
         elif block_name == "canvas_panel_block":
             controls = self._build_canvas_panel_block(ui, content_rect, enabled)
+        elif block_name == "text_input_block":
+            controls = self._build_text_input_block(content_rect, enabled)
+        elif block_name == "list_view_block":
+            controls = self._build_list_view_block(content_rect, enabled)
+        elif block_name == "dropdown_block":
+            controls = self._build_dropdown_block(content_rect, enabled)
 
         return controls, labels
 
@@ -484,6 +503,9 @@ class ControlsShowcaseFeature(Feature):
             "ButtonGroupControl",
             "SliderControl",
             "ScrollbarControl",
+            "TextInputControl",
+            "ListViewControl",
+            "DropdownControl",
         }
         return control.__class__.__name__ in focus_type_names
 
@@ -802,6 +824,49 @@ class ControlsShowcaseFeature(Feature):
         fallback = min(max_width, max_height, self.IMAGE_BLOCK_HEIGHT_FALLBACK)
         return fallback, fallback
 
+    def _build_text_input_block(self, content_rect: Rect, enabled: bool) -> list:
+        """Build a single text input control."""
+        section = "enabled" if enabled else "disabled"
+        ctrl = TextInputControl(
+            f"text_input_{section}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            placeholder="Type here\u2026",
+            font_role=self._control_font_role,
+        )
+        if enabled:
+            ctrl.set_accessibility(role="textbox", label="Text input")
+        return [ctrl]
+
+    def _build_list_view_block(self, content_rect: Rect, enabled: bool) -> list:
+        """Build a list view control with sample items."""
+        section = "enabled" if enabled else "disabled"
+        items = [ListItem(label=f"Item {i + 1}", value=i) for i in range(6)]
+        ctrl = ListViewControl(
+            f"list_view_{section}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            items,
+            row_height=24,
+            font_role=self._control_font_role,
+        )
+        if enabled:
+            ctrl.set_accessibility(role="listbox", label="List view")
+        return [ctrl]
+
+    def _build_dropdown_block(self, content_rect: Rect, enabled: bool) -> list:
+        """Build a dropdown control with sample options."""
+        section = "enabled" if enabled else "disabled"
+        options = [DropdownOption(label=f"Option {i + 1}", value=i) for i in range(4)]
+        ctrl = DropdownControl(
+            f"dropdown_{section}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            options,
+            placeholder="Choose\u2026",
+            font_role=self._control_font_role,
+        )
+        if enabled:
+            ctrl.set_accessibility(role="combobox", label="Dropdown")
+        return [ctrl]
+
     @staticmethod
     def _format_block_name(block_name: str) -> str:
         """Format block name for display as Title Case label."""
@@ -811,6 +876,9 @@ class ControlsShowcaseFeature(Feature):
             "horizontal_sliders": "Horizontal Slider and Scrollbar",
             "vertical_sliders": "Vertical",
             "image_block": "Image",
+            "text_input_block": "Text Input",
+            "list_view_block": "List View",
+            "dropdown_block": "Dropdown",
         }
         if block_name in custom_labels:
             return custom_labels[block_name]

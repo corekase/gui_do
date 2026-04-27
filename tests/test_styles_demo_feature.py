@@ -96,7 +96,7 @@ class StylesShowcaseFeatureTests(unittest.TestCase):
         app.switch_scene("control_showcase")
         feature.window.visible = True
 
-        ordered_ids = [control.control_id for control in (feature.group_controls + feature.button_controls + feature.toggle_controls)]
+        ordered_ids = [control.control_id for control in (feature.group_controls + feature.button_controls + feature.toggle_controls + feature.text_input_controls + feature.list_view_controls + feature.dropdown_controls)]
         focused_ids = []
 
         for _ in range(len(ordered_ids)):

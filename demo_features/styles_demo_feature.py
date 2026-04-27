@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pygame import Rect
 
-from gui_do import Feature
+from gui_do import Feature, TextInputControl, ListViewControl, ListItem, DropdownControl, DropdownOption
 
 
 class StylesShowcaseFeature(Feature):
@@ -17,7 +17,7 @@ class StylesShowcaseFeature(Feature):
 
     STYLE_NAMES = ("box", "radio", "round", "angle", "check")
     ROW_LABELS = ("Item 1", "Item 2", "Item 3", "Item 4", "Item 5")
-    COLUMN_COUNT = 8
+    COLUMN_COUNT = 11
 
     WINDOW_TITLEBAR_HEIGHT = 28
 
@@ -57,6 +57,9 @@ class StylesShowcaseFeature(Feature):
         self.group_controls = []
         self.button_controls = []
         self.toggle_controls = []
+        self.text_input_controls = []
+        self.list_view_controls = []
+        self.dropdown_controls = []
         self.footer_labels = []
         self._group_footer_bindings = []
 
@@ -121,6 +124,9 @@ class StylesShowcaseFeature(Feature):
         self.group_controls = []
         self.button_controls = []
         self.toggle_controls = []
+        self.text_input_controls = []
+        self.list_view_controls = []
+        self.dropdown_controls = []
         self.footer_labels = []
         self._group_footer_bindings = []
         focus_index = 0
@@ -135,6 +141,9 @@ class StylesShowcaseFeature(Feature):
         ]
         button_column_index = len(group_columns)
         toggle_column_index = button_column_index + 1
+        text_input_column_index = toggle_column_index + 1
+        list_view_column_index = text_input_column_index + 1
+        dropdown_column_index = list_view_column_index + 1
 
         for column_index, (slug, heading_text, style_sequence) in enumerate(group_columns):
             host.app.style_label(
@@ -222,6 +231,68 @@ class StylesShowcaseFeature(Feature):
             control.set_tab_index(focus_index)
             focus_index += 1
             self.toggle_controls.append(control)
+
+        host.app.style_label(
+            self.window.add(label_control_cls("styles_heading_text_input", Rect(content_rect.left + self.PADDING_X + (text_input_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "Text Input", align="center")),
+            size=18,
+            role=self.font_role("heading"),
+        )
+        for row_index in range(len(self.ROW_LABELS)):
+            cell = Rect(host.app.layout.gridded(text_input_column_index, row_index))
+            ctrl = self.window.add(
+                TextInputControl(
+                    f"styles_text_input_{row_index + 1}",
+                    cell,
+                    placeholder="Text\u2026",
+                    font_role=self.font_role("control"),
+                )
+            )
+            ctrl.set_tab_index(focus_index)
+            focus_index += 1
+            self.text_input_controls.append(ctrl)
+
+        host.app.style_label(
+            self.window.add(label_control_cls("styles_heading_list_view", Rect(content_rect.left + self.PADDING_X + (list_view_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "List View", align="center")),
+            size=18,
+            role=self.font_role("heading"),
+        )
+        top_cell = Rect(host.app.layout.gridded(list_view_column_index, 0))
+        bottom_cell = Rect(host.app.layout.gridded(list_view_column_index, len(self.ROW_LABELS) - 1))
+        list_rect = Rect(top_cell.left, top_cell.top, top_cell.width, bottom_cell.bottom - top_cell.top)
+        list_items = [ListItem(label=row_label, value=i) for i, row_label in enumerate(self.ROW_LABELS)]
+        list_ctrl = self.window.add(
+            ListViewControl(
+                "styles_list_view",
+                list_rect,
+                list_items,
+                row_height=self.CONTROL_HEIGHT,
+                font_role=self.font_role("control"),
+            )
+        )
+        list_ctrl.set_tab_index(focus_index)
+        focus_index += 1
+        self.list_view_controls.append(list_ctrl)
+
+        host.app.style_label(
+            self.window.add(label_control_cls("styles_heading_dropdown", Rect(content_rect.left + self.PADDING_X + (dropdown_column_index * (self.COLUMN_WIDTH + self.COLUMN_GAP)), heading_y, self.COLUMN_WIDTH, self.HEADING_HEIGHT), "Dropdown", align="center")),
+            size=18,
+            role=self.font_role("heading"),
+        )
+        dropdown_options = [DropdownOption(label=f"Opt {i + 1}", value=i) for i in range(3)]
+        for row_index in range(len(self.ROW_LABELS)):
+            cell = Rect(host.app.layout.gridded(dropdown_column_index, row_index))
+            ctrl = self.window.add(
+                DropdownControl(
+                    f"styles_dropdown_{row_index + 1}",
+                    cell,
+                    list(dropdown_options),
+                    placeholder="Select\u2026",
+                    font_role=self.font_role("control"),
+                )
+            )
+            ctrl.set_tab_index(focus_index)
+            focus_index += 1
+            self.dropdown_controls.append(ctrl)
 
         self.window.visible = False
 
