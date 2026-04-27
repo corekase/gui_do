@@ -4,6 +4,47 @@ DEMO_CONTRACTS_ENABLED = True
 
 DEMO_TEST_DISCOVERY_RULE = "any test file in tests/ that imports from demo_features"
 
+LIBRARY_SEPARATION_PRINCIPLE = """
+GUI_DO LIBRARY vs DEMO SEPARATION:
+
+Complete architectural separation between the reusable gui_do framework and
+demo code that uses it. The demo ships in the same repository as a working
+example but is NOT part of the library distribution.
+
+GUI_DO LIBRARY:
+  - gui_do/ package: Core framework, all controls, event system, layout, theme, etc.
+  - tests/: Unit tests verifying all library contracts and functionality
+  - docs/: Architecture and API documentation
+  - scripts/manage.py: Developer bootstrap tool — strips demo to yield clean library base
+  - Wheel distribution contains only gui_do/ package
+  - Sdist distribution contains gui_do/, tests/, docs/, scripts/ but NOT demo content
+  - Does NOT import from demo_features (enforced by test_gui_package_does_not_depend_on_demo_features)
+  - Does NOT reference demo_features/ paths (all path resolution uses caller-supplied CWD-relative paths)
+
+DEMO (ships with repo, stripped by manage.py init for application developers):
+  - demo_features/: Feature implementations showcasing gui_do capabilities
+  - demo_features/data/: Font, image, cursor assets owned exclusively by the demo
+  - *_demo.py: Demo application entrypoints (discovered by glob, not hardcoded list)
+  - Demo tests: any test file in tests/ that imports from demo_features (content-scan discovered)
+  - Demo imports ONLY from gui_do public root (enforced by test_demo_entrypoints_use_public_gui_api_only)
+  - Demo passes full CWD-relative paths to framework for all asset loading
+  - Demo features do NOT import gui_do internals (enforced by test_demo_features_do_not_import_gui_do_internals)
+  - NOT included in wheel distribution
+  - NOT included in sdist distribution
+
+DEVELOPER WORKFLOW (application developers using gui_do):
+  - Clone or download the repository
+  - Run: python scripts/manage.py init  (strips all demo content)
+  - Result: clean gui_do library base ready for building their own application
+  - manage.py discovers all demo artifacts dynamically (no hardcoded lists)
+
+PACKAGING ENFORCEMENT:
+  - pyproject.toml [tool.setuptools.packages.find] include = ["gui_do*"] only
+  - MANIFEST.in excludes demo_features/ entirely
+  - No hardcoded demo paths in gui_do/ code
+  - All asset loading in framework accepts caller-supplied paths
+"""
+
 CORE_CONTRACT_TEST_MODULES = (
     "tests.test_boundary_contracts",
     "tests.test_public_api_exports",
@@ -15,6 +56,7 @@ CORE_CONTRACT_TEST_MODULES = (
     "tests.test_contract_docs_helpers",
     "tests.test_core_only_bootstrap_contracts",
     "tests.test_contract_catalog_consistency",
+    "tests.test_library_demo_separation_contracts",
 )
 
 DEMO_CONTRACT_TEST_MODULES = (

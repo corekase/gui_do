@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
-"""Manage gui_do projects from either the current folder or a source-to-target copy flow.
+"""Developer bootstrap tool for gui_do projects.
+
+Application developers who download or clone the gui_do repository use this
+script to strip the bundled demo code and receive a clean gui_do library base
+ready for building their own application.
 
 Current-folder commands:
-- init: convert the current folder into a starter project
+- init: strip demo content (demo_features/, *_demo.py, demo tests) from the
+        current folder, yielding a clean gui_do library base
 - apply: apply required project updates to the current folder
 - verify: run the contract verification command for the current folder
 
-Source-to-target commands:
-- check: validate a target project before copying gui_do into it
-- update: copy this source folder into --target and apply required project updates there
+Source-to-target upgrade commands (for upgrading an existing developer project):
+- check: validate a target project for conflicts before copying gui_do into it
+- update: copy the library-only dirs (gui_do/, scripts/, tests/, docs/) and
+          root files (pyproject.toml, MANIFEST.in, etc.) from this source into
+          --target, then run apply on the target to update contract parity.
+          Use this to upgrade a developer project from a newer git clone or
+          zip download of gui_do without polluting it with demo content.
 """
 
 from __future__ import annotations
@@ -20,8 +29,8 @@ import subprocess
 from pathlib import Path
 
 DEMO_TEST_DISCOVERY_RULE = "any test file in tests/ that imports from demo_features"
+DEMO_ENTRYPOINT_DISCOVERY_RULE = "any *_demo.py file in the repo root"
 DEMO_ROOT_DIR = "demo_features"
-DEMO_ENTRYPOINT_FILE = "gui_do_demo.py"
 
 DEFAULT_SCAFFOLD_FILE = "myapp.py"
 DEFAULT_SCAFFOLD_PACKAGE = "features"
@@ -57,6 +66,15 @@ def _find_demo_test_files(root: Path) -> list[Path]:
             continue
         if re.search(r"^(?:from|import) demo_features\b", text, re.MULTILINE):
             results.append(test_file)
+    return results
+
+
+def _find_demo_entrypoints(root: Path) -> list[Path]:
+    """Return all demo entrypoint files matching *_demo.py pattern in repo root."""
+    results = []
+    for py_file in sorted(root.glob("*_demo.py")):
+        if py_file.is_file():
+            results.append(py_file)
     return results
 
 
@@ -361,11 +379,13 @@ def _sync_core_only(
 
     # General rule: all demo assets live under demo_features/ and are removed as a tree.
     # This includes data/ and any future demo folders/files with no per-file hardcoding.
-    _delete_path(root / DEMO_ENTRYPOINT_FILE, apply)
+    # Demo entrypoints are discovered by glob pattern (DEMO_ENTRYPOINT_DISCOVERY_RULE).
+    for entrypoint in _find_demo_entrypoints(root):
+        _delete_path(entrypoint, apply)
     _delete_path(root / DEMO_ROOT_DIR, apply)
     for rel_path in demo_test_rel_paths:
         _delete_path(root / rel_path, apply)
-    print("[bootstrap] removed demo entrypoint, demo_features package, and demo-specific tests")
+    print("[bootstrap] removed demo entrypoints, demo_features package, and demo-specific tests")
 
     if apply:
         print("[bootstrap] sync complete")
