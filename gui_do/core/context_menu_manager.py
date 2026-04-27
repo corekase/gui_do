@@ -1,8 +1,8 @@
 """ContextMenuManager — overlay-based contextual menus."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

@@ -1,8 +1,8 @@
 """OverlayManager — z-ordered transient UI layer above the scene graph."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

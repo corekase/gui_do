@@ -1,7 +1,7 @@
 """TweenManager — frame-driven property interpolation with easing."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, List, Optional, Union
 
@@ -114,7 +114,9 @@ class TweenManager:
 
     def __init__(self) -> None:
         self._entries: List[_TweenEntry] = []
+        self._entry_by_id: dict[int, _TweenEntry] = {}
         self._next_id: int = 1
+        self._has_cancelled: bool = False
 
     def tween_fn(
         self,
@@ -151,6 +153,7 @@ class TweenManager:
                 except Exception:
                     pass
         self._entries.append(entry)
+        self._entry_by_id[tween_id] = entry
         return TweenHandle(tween_id, self)
 
     def tween(
@@ -166,17 +169,33 @@ class TweenManager:
     ) -> TweenHandle:
         """Animate target.attr from its current value to end_value."""
         start_value = getattr(target, attr)
-        is_tuple = isinstance(start_value, tuple) or isinstance(end_value, tuple)
+        start_is_tuple = isinstance(start_value, tuple)
+        end_is_tuple = isinstance(end_value, tuple)
 
-        def _apply(t: float) -> None:
-            if is_tuple:
-                sv = start_value if not isinstance(start_value, tuple) else start_value
-                ev = end_value if isinstance(end_value, tuple) else end_value
-                sv_t = sv if isinstance(sv, tuple) else (sv,) * len(ev)
-                ev_t = ev if isinstance(ev, tuple) else (ev,) * len(sv_t)
-                setattr(target, attr, _lerp_tuple(sv_t, ev_t, t))
+        if start_is_tuple or end_is_tuple:
+            # Pre-compute canonical tuple operands once; avoids per-frame isinstance.
+            if start_is_tuple and end_is_tuple:
+                sv_t: tuple = start_value
+                ev_t: tuple = end_value
+            elif end_is_tuple:
+                sv_t = (start_value,) * len(end_value)
+                ev_t = end_value
             else:
-                setattr(target, attr, _lerp_float(float(start_value), float(end_value), t))
+                sv_t = start_value
+                ev_t = (end_value,) * len(start_value)
+
+            def _apply_tuple(t: float) -> None:
+                setattr(target, attr, _lerp_tuple(sv_t, ev_t, t))
+
+            _apply = _apply_tuple
+        else:
+            start_f = float(start_value)
+            end_f = float(end_value)
+
+            def _apply_float(t: float) -> None:
+                setattr(target, attr, _lerp_float(start_f, end_f, t))
+
+            _apply = _apply_float
 
         return self.tween_fn(
             duration_seconds,
@@ -192,6 +211,7 @@ class TweenManager:
         if entry is None or entry.complete or entry.cancelled:
             return False
         entry.cancelled = True
+        self._has_cancelled = True
         return True
 
     def cancel_all_for_tag(self, tag: str) -> int:
@@ -201,6 +221,8 @@ class TweenManager:
             if entry.tag == tag and not entry.complete and not entry.cancelled:
                 entry.cancelled = True
                 count += 1
+        if count:
+            self._has_cancelled = True
         return count
 
     def cancel_all(self) -> int:
@@ -210,6 +232,8 @@ class TweenManager:
             if not entry.complete and not entry.cancelled:
                 entry.cancelled = True
                 count += 1
+        if count:
+            self._has_cancelled = True
         return count
 
     @property
@@ -219,8 +243,10 @@ class TweenManager:
 
     def update(self, dt_seconds: float) -> None:
         """Advance all active tweens. Called from GuiApplication.update()."""
+        if not self._entries:
+            return
         dt = max(0.0, float(dt_seconds))
-        completed_ids = []
+        had_completions = False
         for entry in self._entries:
             if entry.complete or entry.cancelled:
                 continue
@@ -236,18 +262,17 @@ class TweenManager:
                 pass
             if t >= 1.0:
                 entry.complete = True
-                completed_ids.append(entry.tween_id)
+                had_completions = True
                 if entry.on_complete is not None:
                     try:
                         entry.on_complete()
                     except Exception:
                         pass
         # Remove finished entries to keep memory bounded
-        if completed_ids or any(e.cancelled for e in self._entries):
+        if had_completions or self._has_cancelled:
+            self._has_cancelled = False
             self._entries = [e for e in self._entries if not (e.complete or e.cancelled)]
+            self._entry_by_id = {e.tween_id: e for e in self._entries}
 
     def _get_entry(self, tween_id: int) -> Optional[_TweenEntry]:
-        for entry in self._entries:
-            if entry.tween_id == tween_id:
-                return entry
-        return None
+        return self._entry_by_id.get(tween_id)

@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 import pygame
-from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 
@@ -168,7 +167,6 @@ class DragDropManager:
             if found is not None:
                 return found
         if node.rect.collidepoint(pos):
-            payload = node.on_drag_start.__func__ if hasattr(node.on_drag_start, "__func__") else None
             # Just attempt the call to check overriding — we rely on on_drag_start returning None by default
             try:
                 test_result = node.on_drag_start(GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=pos, button=1))

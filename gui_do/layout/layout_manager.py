@@ -7,7 +7,7 @@ from pygame import Rect
 
 if TYPE_CHECKING:
     from ..core.ui_node import UiNode
-    from .constraint_layout import ConstraintLayout, AnchorConstraint, ConstraintBuilder
+    from .constraint_layout import ConstraintLayout, ConstraintBuilder
 
 
 Geometry = Union[Rect, Tuple[int, int]]

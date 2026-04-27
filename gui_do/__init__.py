@@ -1,6 +1,8 @@
 """GUI package entry point."""
 
-from ._version import __version__  # noqa: F401  (re-exported for `gui.__version__`)
+from . import _version
+
+__version__ = _version.__version__
 
 import ctypes
 import os

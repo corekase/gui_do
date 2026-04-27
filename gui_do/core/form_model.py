@@ -1,8 +1,8 @@
 """FormModel — reactive form fields with validation and dirty tracking."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, List, Optional, Sequence, Tuple, TypeVar
+from dataclasses import dataclass
+from typing import Any, Callable, Generic, List, Optional, Sequence, TypeVar
 
 from .presentation_model import ObservableValue
 

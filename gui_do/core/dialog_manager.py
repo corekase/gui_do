@@ -2,16 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, TYPE_CHECKING
 
-import pygame
 from pygame import Rect
-
-from ..core.gui_event import GuiEvent, EventType
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
 
 
 @dataclass
@@ -184,8 +180,6 @@ class DialogManager:
         width: int,
     ) -> None:
         from ..controls.overlay_panel_control import OverlayPanelControl
-        from ..controls.label_control import LabelControl
-        from ..controls.button_control import ButtonControl
 
         app = self._app
         screen = app.surface.get_rect()

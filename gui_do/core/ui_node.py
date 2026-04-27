@@ -222,6 +222,8 @@ class UiNode:
         return self._disposed
 
     def invalidate(self) -> None:
+        if self._dirty:
+            return  # already dirty; parent chain was already walked
         self._dirty = True
         if self.parent is not None:
             self.parent.invalidate()

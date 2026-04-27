@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
-from ..layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication

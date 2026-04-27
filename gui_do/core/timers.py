@@ -68,7 +68,7 @@ class Timers:
         return True
 
     def update(self, dt_seconds: float) -> None:
-        if dt_seconds <= 0:
+        if dt_seconds <= 0 or not self._timers:
             return
         for timer_id in list(self._timers.keys()):
             timer = self._timers.get(timer_id)

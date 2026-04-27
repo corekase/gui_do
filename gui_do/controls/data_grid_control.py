@@ -1,7 +1,7 @@
 """DataGridControl — multi-column virtualized table with sorting and keyboard nav."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import pygame

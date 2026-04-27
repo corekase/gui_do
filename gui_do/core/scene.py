@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Callable, List, Optional
+from typing import Callable, Generator, List, Optional
 from typing import TYPE_CHECKING
 
 from .gui_event import EventPhase, GuiEvent
@@ -59,18 +59,16 @@ class Scene:
 
     def node_count(self) -> int:
         """Return the total number of nodes reachable from this scene (including descendants)."""
-        return len(self._walk_nodes())
+        return sum(1 for _ in self._walk_nodes())
 
     # --- Internal traversal ---
 
-    def _walk_nodes(self) -> List[UiNode]:
+    def _walk_nodes(self) -> "Generator[UiNode, None, None]":
         queue: deque[UiNode] = deque(self.nodes)
-        ordered: List[UiNode] = []
         while queue:
             node = queue.popleft()
-            ordered.append(node)
+            yield node
             queue.extend(node.children)
-        return ordered
 
     def _window_nodes(self) -> List[UiNode]:
         return [node for node in self._walk_nodes() if self._is_window_like(node)]
@@ -169,7 +167,7 @@ class Scene:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
         # Single BFS walk shared between top-window lookup and focus-target search.
-        all_nodes = self._walk_nodes()
+        all_nodes = list(self._walk_nodes())
         top_window: UiNode | None = None
         for node in reversed(all_nodes):
             if node.visible and node.enabled and self._is_window_like(node) and node.rect.collidepoint(pos):
