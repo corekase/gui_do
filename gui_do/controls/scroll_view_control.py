@@ -1,8 +1,7 @@
 """ScrollViewControl — clipped viewport with scrollable child content."""
 from __future__ import annotations
 
-import dataclasses
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

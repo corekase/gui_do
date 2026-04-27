@@ -1,7 +1,7 @@
 """RangeSliderControl — two-handle slider for selecting a min/max range."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Callable, Optional, Union, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

@@ -42,8 +42,8 @@ A :class:`GridTrack` accepts:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from pygame import Rect
 

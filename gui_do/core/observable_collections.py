@@ -29,9 +29,7 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Tuple,
     TypeVar,
-    Union,
 )
 
 T = TypeVar("T")

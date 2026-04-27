@@ -1041,22 +1041,6 @@ class GuiApplication:
             log_directory=log_directory,
         )
 
-    def set_telemetry_system_enabled(self, system: str, enabled: bool) -> None:
-        """Enable or disable telemetry for one system namespace."""
-        telemetry_collector().set_system_enabled(system, enabled)
-
-    def set_telemetry_point_enabled(self, system: str, point: str, enabled: bool) -> None:
-        """Enable or disable telemetry for one specific telemetry point."""
-        telemetry_collector().set_point_enabled(system, point, enabled)
-
-    def telemetry_summary(self, *, top_n: int = 12):
-        """Return collated telemetry hotspot analysis for currently captured samples."""
-        return telemetry_collector().summary(top_n=top_n)
-
-    def write_telemetry_report(self, *, top_n: int = 12, output_path: Optional[str] = None) -> Optional[str]:
-        """Write a ranked telemetry report and return the generated file path."""
-        return telemetry_collector().write_report(top_n=top_n, output_path=output_path)
-
     def configure_features_accessibility(self, host, tab_index_start: int) -> int:
         """Call optional configure_accessibility(host, index) on features in order."""
         return self.features.configure_accessibility(host, tab_index_start)

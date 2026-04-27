@@ -49,13 +49,10 @@ the main event loop.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import List, Sequence, Tuple
 
 from .gui_event import EventType
-
-if TYPE_CHECKING:
-    pass  # GuiEvent imported at runtime to keep the module importable without pygame
 
 
 # ---------------------------------------------------------------------------

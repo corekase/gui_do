@@ -27,7 +27,6 @@ Recovering from an error::
 """
 from __future__ import annotations
 
-import traceback
 from typing import Callable, Optional, TYPE_CHECKING
 
 from pygame import Rect

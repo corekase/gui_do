@@ -1,8 +1,8 @@
 """CommandPaletteManager — searchable command launcher using an overlay."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -11,11 +11,9 @@ from .overlay_manager import OverlayHandle, OverlayManager
 from ..controls.overlay_panel_control import OverlayPanelControl
 from ..controls.list_view_control import ListItem, ListViewControl
 from ..controls.text_input_control import TextInputControl
-from ..core.gui_event import EventType, GuiEvent
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
 
 _SEARCH_H = 32
 _PAD = 6
