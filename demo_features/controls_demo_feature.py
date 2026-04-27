@@ -12,6 +12,7 @@ from gui_do import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    ColorPickerControl,
     ContextMenuItem,
     DataGridControl,
     DropdownControl,
@@ -31,9 +32,12 @@ from gui_do import (
     NotificationPanelControl,
     NotificationRecord,
     PanelControl,
+    RangeSliderControl,
     RichLabelControl,
     ScrollbarControl,
+    ScrollViewControl,
     SliderControl,
+    SpinnerControl,
     SplitterControl,
     TabControl,
     TabItem,
@@ -773,6 +777,96 @@ class ControlsShowcaseFeature(Feature):
             focusable=False,
             column_index=6,
             row_index=92,
+        )
+
+        # -- Column 7: New controls (SpinnerControl, RangeSliderControl,
+        #    ColorPickerControl, ScrollViewControl) --
+        col7_x = notif_col_x + notif_col_w + col_gap
+        col7_w = 220
+        col7_y = new_row_y
+
+        spinner_slot_h = slot_h(30)
+        self._place_control(
+            host,
+            "spinner",
+            "Spinner",
+            SpinnerControl(
+                "control_spinner",
+                Rect(0, 0, col7_w, 30),
+                value=25, min_value=0, max_value=100, step=1, decimals=0,
+                on_change=lambda v, _r: None,
+            ),
+            Rect(col7_x, col7_y, col7_w, spinner_slot_h),
+            focusable=True,
+            column_index=7,
+            row_index=100,
+        )
+        col7_y += spinner_slot_h + row_gap
+
+        range_slot_h = slot_h(24)
+        self._place_control(
+            host,
+            "range_slider",
+            "Range Slider",
+            RangeSliderControl(
+                "control_range_slider",
+                Rect(0, 0, col7_w, 24),
+                min_value=0, max_value=100, low_value=20, high_value=80,
+                on_change=lambda lo, hi, _r: None,
+            ),
+            Rect(col7_x, col7_y, col7_w, range_slot_h),
+            focusable=True,
+            column_index=7,
+            row_index=101,
+        )
+        col7_y += range_slot_h + row_gap
+
+        color_slot_h = slot_h(180)
+        self._place_control(
+            host,
+            "color_picker",
+            "Color Picker",
+            ColorPickerControl(
+                "control_color_picker",
+                Rect(0, 0, col7_w, 180),
+                color=(64, 128, 255),
+                on_change=lambda c: None,
+            ),
+            Rect(col7_x, col7_y, col7_w, color_slot_h),
+            focusable=True,
+            column_index=7,
+            row_index=102,
+        )
+        col7_y += color_slot_h + row_gap
+
+        scroll_inner_h = 26 * 8
+        scroll_control = ScrollViewControl(
+            "control_scroll_view",
+            Rect(0, 0, col7_w, 120),
+            content_width=col7_w - 20,
+            content_height=scroll_inner_h,
+            scroll_y=True,
+        )
+        scroll_items = [
+            "Alpha", "Bravo", "Charlie", "Delta",
+            "Echo", "Foxtrot", "Golf", "Hotel",
+        ]
+        for i, label_text in enumerate(scroll_items):
+            scroll_control.add(
+                LabelControl(f"sv_item_{i}", Rect(0, 0, col7_w - 20, 22), label_text, align="left"),
+                content_x=4,
+                content_y=i * 26,
+            )
+        scroll_slot_h = slot_h(120)
+        self._place_control(
+            host,
+            "scroll_view",
+            "Scroll View",
+            scroll_control,
+            Rect(col7_x, col7_y, col7_w, scroll_slot_h),
+            focusable=False,
+            column_index=7,
+            row_index=103,
         )
 
         self._build_scene_task_panel(host)
