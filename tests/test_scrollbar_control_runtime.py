@@ -171,29 +171,58 @@ class ScrollbarControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_end)
         self.assertTrue(bar._focus_activation_armed)
 
-    def test_screen_scrollbar_drag_ends_when_pointer_enters_window(self) -> None:
+    def test_screen_vertical_scrollbar_drag_ends_when_logical_pointer_enters_window(self) -> None:
         bar = self.root.add(
             ScrollbarControl(
                 "sb",
-                Rect(20, 20, 180, 24),
-                LayoutAxis.HORIZONTAL,
+                Rect(20, 20, 24, 130),
+                LayoutAxis.VERTICAL,
                 content_size=1000,
                 viewport_size=200,
                 offset=100,
                 step=10,
             )
         )
-        window = self.root.add(WindowControl("win", Rect(120, 60, 120, 80), "Window"))
+        window = self.root.add(WindowControl("win", Rect(24, 70, 140, 100), "Window"))
 
         self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": bar.handle_rect().center, "button": 1}))
 
         self.assertTrue(bar.dragging)
         self.assertTrue(self.app.pointer_capture.is_owned_by("sb"))
 
-        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (20, 20), "buttons": (1, 0, 0)}))
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (0, 40), "buttons": (1, 0, 0)}))
 
         self.assertFalse(bar.dragging)
         self.assertFalse(self.app.pointer_capture.is_owned_by("sb"))
+
+    def test_screen_vertical_scrollbar_drag_does_not_end_when_only_raw_pointer_enters_window(self) -> None:
+        bar = self.root.add(
+            ScrollbarControl(
+                "sv",
+                Rect(20, 20, 24, 130),
+                LayoutAxis.VERTICAL,
+                content_size=1000,
+                viewport_size=200,
+                offset=100,
+                step=10,
+            )
+        )
+        window = self.root.add(WindowControl("win", Rect(120, 40, 120, 90), "Window"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": bar.handle_rect().center, "button": 1}))
+
+        self.assertTrue(bar.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sv"))
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEMOTION,
+                {"pos": window.rect.center, "rel": (window.rect.centerx, 0), "buttons": (1, 0, 0)},
+            )
+        )
+
+        self.assertTrue(bar.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sv"))
 
     def test_window_scrollbar_drag_does_not_end_from_window_entry_rule(self) -> None:
         window = self.root.add(WindowControl("win", Rect(20, 20, 220, 120), "Window"))

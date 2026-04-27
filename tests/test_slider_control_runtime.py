@@ -104,19 +104,38 @@ class SliderControlRuntimeTests(unittest.TestCase):
         self.assertTrue(consumed_end)
         self.assertTrue(slider._focus_activation_armed)
 
-    def test_screen_slider_drag_ends_when_pointer_enters_window(self) -> None:
-        slider = self.root.add(SliderControl("s", Rect(20, 20, 160, 24), LayoutAxis.HORIZONTAL, 0.0, 100.0, 50.0))
-        window = self.root.add(WindowControl("win", Rect(120, 60, 100, 80), "Window"))
+    def test_screen_vertical_slider_drag_ends_when_logical_pointer_enters_window(self) -> None:
+        slider = self.root.add(SliderControl("s", Rect(20, 20, 24, 120), LayoutAxis.VERTICAL, 0.0, 100.0, 50.0))
+        window = self.root.add(WindowControl("win", Rect(24, 110, 140, 60), "Window"))
 
         self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": slider.handle_rect().center, "button": 1}))
 
         self.assertTrue(slider.dragging)
         self.assertTrue(self.app.pointer_capture.is_owned_by("s"))
 
-        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (20, 20), "buttons": (1, 0, 0)}))
+        self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": window.rect.center, "rel": (0, 40), "buttons": (1, 0, 0)}))
 
         self.assertFalse(slider.dragging)
         self.assertFalse(self.app.pointer_capture.is_owned_by("s"))
+
+    def test_screen_vertical_slider_drag_does_not_end_when_only_raw_pointer_enters_window(self) -> None:
+        slider = self.root.add(SliderControl("sv", Rect(20, 20, 24, 120), LayoutAxis.VERTICAL, 0.0, 100.0, 50.0))
+        window = self.root.add(WindowControl("win", Rect(120, 40, 120, 90), "Window"))
+
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"pos": slider.handle_rect().center, "button": 1}))
+
+        self.assertTrue(slider.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sv"))
+
+        self.app.process_event(
+            pygame.event.Event(
+                pygame.MOUSEMOTION,
+                {"pos": window.rect.center, "rel": (window.rect.centerx, 0), "buttons": (1, 0, 0)},
+            )
+        )
+
+        self.assertTrue(slider.dragging)
+        self.assertTrue(self.app.pointer_capture.is_owned_by("sv"))
 
     def test_window_slider_drag_does_not_end_from_window_entry_rule(self) -> None:
         window = self.root.add(WindowControl("win", Rect(20, 20, 200, 120), "Window"))

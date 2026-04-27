@@ -283,9 +283,8 @@ class SliderControl(UiNode):
 
         if event.is_mouse_motion() and self.dragging and app.pointer_capture.is_owned_by(self.control_id):
             pointer_pos = app.logical_pointer_pos
-            raw_pointer_pos = event.raw_pos if isinstance(event.raw_pos, tuple) and len(event.raw_pos) == 2 else event.pos
-            if self._ancestor_window() is None and isinstance(raw_pointer_pos, tuple) and len(raw_pointer_pos) == 2 and app.scene._point_in_window(raw_pointer_pos):
-                self._end_drag(app, sync_pointer=True, release_pos=raw_pointer_pos)
+            if self._ancestor_window() is None and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2 and app.scene._point_in_window(pointer_pos):
+                self._end_drag(app, sync_pointer=True, release_pos=pointer_pos)
                 return False
             self._refresh_drag_lock_rect(app, pointer_pos)
             lock = app.pointer_capture.lock_rect
