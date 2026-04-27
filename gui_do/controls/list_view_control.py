@@ -62,6 +62,7 @@ class ListViewControl(UiNode):
 
         if 0 <= selected_index < len(self._items):
             self._selected_indices = [selected_index]
+        self._ensure_selection_invariant()
 
     # ------------------------------------------------------------------
     # Properties
@@ -81,6 +82,7 @@ class ListViewControl(UiNode):
             self._selected_indices = [value]
         else:
             self._selected_indices = []
+        self._ensure_selection_invariant()
         self.invalidate()
 
     @property
@@ -105,11 +107,13 @@ class ListViewControl(UiNode):
     def set_items(self, items: List[ListItem]) -> None:
         self._items = list(items)
         self._selected_indices = []
+        self._ensure_selection_invariant()
         self._scroll_offset = 0
         self.invalidate()
 
     def append_item(self, item: ListItem) -> None:
         self._items.append(item)
+        self._ensure_selection_invariant()
         self.invalidate()
 
     def insert_item(self, index: int, item: ListItem) -> None:
@@ -119,6 +123,7 @@ class ListViewControl(UiNode):
         self._selected_indices = [
             (i + 1 if i >= index else i) for i in self._selected_indices
         ]
+        self._ensure_selection_invariant()
         self.invalidate()
 
     def remove_item(self, index: int) -> bool:
@@ -128,6 +133,7 @@ class ListViewControl(UiNode):
         self._selected_indices = [
             (i - 1 if i > index else i) for i in self._selected_indices if i != index
         ]
+        self._ensure_selection_invariant()
         self.invalidate()
         return True
 
@@ -152,7 +158,19 @@ class ListViewControl(UiNode):
 
     def deselect_all(self) -> None:
         self._selected_indices = []
+        self._ensure_selection_invariant()
         self.invalidate()
+
+    def _ensure_selection_invariant(self) -> None:
+        """Keep at least one item selected whenever the list has items."""
+        if not self._items:
+            self._selected_indices = []
+            return
+        valid = [i for i in self._selected_indices if 0 <= i < len(self._items)]
+        if valid:
+            self._selected_indices = valid
+            return
+        self._selected_indices = [0]
 
     def scroll_to_item(self, index: int) -> None:
         if not self._items:
@@ -245,12 +263,15 @@ class ListViewControl(UiNode):
 
     def _toggle_or_select(self, idx: int) -> None:
         if self._multi_select and idx in self._selected_indices:
-            self._selected_indices.remove(idx)
+            # Preserve at least one selected item when list has content.
+            if len(self._selected_indices) > 1:
+                self._selected_indices.remove(idx)
         else:
             if not self._multi_select:
                 self._selected_indices = [idx]
             elif idx not in self._selected_indices:
                 self._selected_indices.append(idx)
+        self._ensure_selection_invariant()
         if self._on_select is not None:
             try:
                 self._on_select(idx, self._items[idx])

@@ -109,11 +109,17 @@ class TestSelectedOptionProperty(unittest.TestCase):
         self.assertEqual(ctrl.selected_option.value, 2)
 
 
+class TestDefaultSelectionOnCreation(unittest.TestCase):
+    def test_defaults_to_first_option_when_unspecified(self) -> None:
+        ctrl = _ctrl()
+        self.assertEqual(ctrl.selected_index, 0)
+
+
 class TestSetOptionsResetSelection(unittest.TestCase):
     def test_set_options_resets_selection(self) -> None:
         ctrl = _ctrl(selected_index=1)
         ctrl.set_options([DropdownOption("X")])
-        self.assertEqual(ctrl.selected_index, -1)
+        self.assertEqual(ctrl.selected_index, 0)
 
 
 class TestGuardDisabled(unittest.TestCase):

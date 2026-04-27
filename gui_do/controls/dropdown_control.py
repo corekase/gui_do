@@ -61,6 +61,7 @@ class DropdownControl(UiNode):
 
         if 0 <= selected_index < len(self._options):
             self._selected_index = selected_index
+        self._ensure_selection_invariant()
 
     # ------------------------------------------------------------------
     # Properties
@@ -76,6 +77,7 @@ class DropdownControl(UiNode):
             self._selected_index = value
         else:
             self._selected_index = -1
+        self._ensure_selection_invariant()
         self.invalidate()
 
     @property
@@ -95,7 +97,17 @@ class DropdownControl(UiNode):
     def set_options(self, options: List[DropdownOption]) -> None:
         self._options = list(options)
         self._selected_index = -1
+        self._ensure_selection_invariant()
         self.invalidate()
+
+    def _ensure_selection_invariant(self) -> None:
+        """Keep one selected option whenever options exist."""
+        if not self._options:
+            self._selected_index = -1
+            return
+        if 0 <= self._selected_index < len(self._options):
+            return
+        self._selected_index = 0
 
     def open(self, app: "GuiApplication") -> None:
         if self._is_open or not self._options:

@@ -58,13 +58,19 @@ class TestClickOutsideHorizontalBounds(unittest.TestCase):
         ctrl = _ctrl(row_height=24)
         handled = ctrl.handle_event(_click_at(-1, 25), _app())
         self.assertFalse(handled)
-        self.assertEqual(ctrl.selected_index, -1)
+        self.assertEqual(ctrl.selected_index, 0)
 
     def test_click_right_of_rect_does_not_select(self) -> None:
         ctrl = _ctrl(row_height=24)
         handled = ctrl.handle_event(_click_at(205, 25), _app())
         self.assertFalse(handled)
-        self.assertEqual(ctrl.selected_index, -1)
+        self.assertEqual(ctrl.selected_index, 0)
+
+
+class TestDefaultSelectionOnCreation(unittest.TestCase):
+    def test_defaults_to_first_item_when_unspecified(self) -> None:
+        ctrl = _ctrl(row_height=24)
+        self.assertEqual(ctrl.selected_index, 0)
 
 
 class TestOnSelectCallback(unittest.TestCase):
@@ -113,7 +119,7 @@ class TestSetItemsClearsSelection(unittest.TestCase):
         ctrl = _ctrl(row_height=24)
         ctrl._selected_indices = [1]
         ctrl.set_items([ListItem("x")])
-        self.assertEqual(ctrl.selected_index, -1)
+        self.assertEqual(ctrl.selected_index, 0)
 
 
 class TestAppendItem(unittest.TestCase):
@@ -136,7 +142,7 @@ class TestDisabledItemSkipped(unittest.TestCase):
         items = [ListItem("a"), ListItem("b", enabled=False), ListItem("c")]
         ctrl = ListViewControl("lst", Rect(0, 0, 200, 120), items, row_height=24)
         ctrl.handle_event(_click(25), _app())  # row 1 = disabled
-        self.assertEqual(ctrl.selected_index, -1)
+        self.assertEqual(ctrl.selected_index, 0)
 
 
 class TestWheelScrolls(unittest.TestCase):
@@ -157,7 +163,7 @@ class TestScrollToItem(unittest.TestCase):
 class TestMultiSelectSpaceToggle(unittest.TestCase):
     def test_multi_select_space_toggles_selection(self) -> None:
         ctrl = _ctrl(5, multi_select=True, row_height=24)
-        ctrl._selected_indices = [2]
+        ctrl._selected_indices = [2, 3]
         ctrl._focused = True
         ctrl.handle_event(_key(pygame.K_SPACE), _app())
         self.assertNotIn(2, ctrl.selected_indices)
