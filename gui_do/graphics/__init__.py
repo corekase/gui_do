@@ -2,9 +2,6 @@ from pathlib import Path
 import pygame
 from ..core.error_handling import io_error, logical_error
 
-from .built_in_definitions import BUILT_IN_COLOURS
-from .built_in_factory import InteractiveVisuals, BuiltInGraphicsFactory, WindowChromeVisuals
-
 
 def _convert_if_available(surface: pygame.Surface) -> pygame.Surface:
     """Return a display-formatted surface when possible, otherwise a safe copy.
@@ -59,9 +56,5 @@ def load_pristine_surface(source):
 
 
 __all__ = [
-    "BUILT_IN_COLOURS",
-    "InteractiveVisuals",
-    "BuiltInGraphicsFactory",
-    "WindowChromeVisuals",
     "load_pristine_surface",
 ]
