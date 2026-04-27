@@ -249,6 +249,18 @@ PUBLIC_API_EXPORT_ORDER = (
     "ContextMenuItem",
     "ContextMenuHandle",
     "SplitterControl",
+    "StateMachine",
+    "SettingsRegistry",
+    "SettingDescriptor",
+    "Router",
+    "RouteEntry",
+    "ThemeManager",
+    "DesignTokens",
+    "TextAreaControl",
+    "RichLabelControl",
+    "TabControl",
+    "TabItem",
+    "ResizeManager",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (
@@ -352,6 +364,18 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "ContextMenuItem",
     "ContextMenuHandle",
     "SplitterControl",
+    "StateMachine",
+    "SettingsRegistry",
+    "SettingDescriptor",
+    "Router",
+    "RouteEntry",
+    "ThemeManager",
+    "DesignTokens",
+    "TextAreaControl",
+    "RichLabelControl",
+    "TabControl",
+    "TabItem",
+    "ResizeManager",
 )
 
 PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (

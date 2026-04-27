@@ -155,7 +155,8 @@ class FocusManager:
         target.end_focus_activation_visual()
 
     def _try_activate_focused_button(self, event, target) -> bool:
-        """Handle focused keyboard activation for push buttons in one place.
+        """
+        Handle focused keyboard activation for push buttons in one place.
 
         Activation still occurs exactly once here. The control activation fires first,
         then the armed state (visual-only) is started and held for the shared
@@ -163,7 +164,8 @@ class FocusManager:
         """
         if not (event.is_key_down(pygame.K_RETURN) or event.is_key_down(pygame.K_SPACE)):
             return False
-
+        if not getattr(target, 'key_activatable', True):
+            return False
         target._invoke_click()
         self._begin_focus_activation_visual(target)
         return True

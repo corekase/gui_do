@@ -81,6 +81,14 @@ from .core.command_history import CommandHistory, Command, CommandTransaction
 from .controls.data_grid_control import DataGridControl, GridColumn, GridRow
 from .core.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
 from .controls.splitter_control import SplitterControl
+from .core.state_machine import StateMachine
+from .core.settings_registry import SettingsRegistry, SettingDescriptor
+from .core.router import Router, RouteEntry
+from .theme.theme_manager import ThemeManager, DesignTokens
+from .controls.text_area_control import TextAreaControl
+from .controls.rich_label_control import RichLabelControl
+from .controls.tab_control import TabControl, TabItem
+from .core.resize_manager import ResizeManager
 
 __all__ = [
     "GuiApplication",
@@ -168,4 +176,16 @@ __all__ = [
     "ContextMenuItem",
     "ContextMenuHandle",
     "SplitterControl",
+    "StateMachine",
+    "SettingsRegistry",
+    "SettingDescriptor",
+    "Router",
+    "RouteEntry",
+    "ThemeManager",
+    "DesignTokens",
+    "TextAreaControl",
+    "RichLabelControl",
+    "TabControl",
+    "TabItem",
+    "ResizeManager",
 ]

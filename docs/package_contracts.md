@@ -93,6 +93,18 @@ from gui_do import (
     ContextMenuItem,
     ContextMenuHandle,
     SplitterControl,
+    StateMachine,
+    SettingsRegistry,
+    SettingDescriptor,
+    Router,
+    RouteEntry,
+    ThemeManager,
+    DesignTokens,
+    TextAreaControl,
+    RichLabelControl,
+    TabControl,
+    TabItem,
+    ResizeManager,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:
