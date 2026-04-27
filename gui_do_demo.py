@@ -8,6 +8,7 @@ from demo_features.system_window_demo_feature import SystemWindowDemoFeature
 
 from gui_do import (
     GuiApplication,
+    create_display,
     PanelControl,
     LabelControl,
     ButtonControl,
@@ -49,8 +50,7 @@ class GuiDoDemo:
     def __init__(self) -> None:
         """Initialize pygame, app services, scene state, and demo UI."""
         pygame.init()
-        flags = pygame.FULLSCREEN | pygame.SCALED
-        self.screen = pygame.display.set_mode((1920, 1080), flags=flags, vsync=1)
+        self.screen = create_display((1920, 1080))
         pygame.display.set_caption("gui_do demo")
 
         self.screen_rect = self.screen.get_rect()

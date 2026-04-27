@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple
 
+from pygame import Rect as PygameRect
+
 
 class InvalidationTracker:
     """Tracks dirty regions and exposes a conservative full-redraw fallback."""
@@ -22,7 +24,6 @@ class InvalidationTracker:
 
     def invalidate_rect(self, rect) -> None:
         """Add a dirty region. Promotes to full_redraw when rect covers the screen."""
-        from pygame import Rect as PygameRect
         r = PygameRect(rect)
         if self._screen_size is not None and r.width * r.height >= self._screen_size[0] * self._screen_size[1]:
             self._full_redraw = True
@@ -41,31 +42,20 @@ class InvalidationTracker:
         self._dirty_rects.clear()
 
     def merge_dirty_rects(self) -> List:
-        """Return a merged list of dirty rects (union overlapping pairs)."""
+        """Return a merged list of dirty rects (union overlapping rects).
+
+        Sorts by (y, x) then performs a single greedy sweep, unioning each
+        rect with the last merged rect when they collide.  O(n log n) vs the
+        prior O(n²) while-changed loop.
+        """
         if not self._dirty_rects:
             return []
-        merged = list(self._dirty_rects)
-        changed = True
-        while changed:
-            changed = False
-            next_list: List = []
-            skip: set = set()
-            for i in range(len(merged)):
-                if i in skip:
-                    continue
-                r1 = merged[i]
-                merged_flag = False
-                for j in range(i + 1, len(merged)):
-                    if j in skip:
-                        continue
-                    r2 = merged[j]
-                    if r1.colliderect(r2):
-                        next_list.append(r1.union(r2))
-                        skip.add(j)
-                        merged_flag = True
-                        changed = True
-                        break
-                if not merged_flag:
-                    next_list.append(r1)
-            merged = next_list
+        rects = sorted(self._dirty_rects, key=lambda r: (r.y, r.x))
+        merged: List = [rects[0].copy()]
+        for r in rects[1:]:
+            last = merged[-1]
+            if last.colliderect(r):
+                merged[-1] = last.union(r)
+            else:
+                merged.append(r.copy())
         return merged

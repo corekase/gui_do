@@ -12,67 +12,68 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 - [Overview](#overview)
 - [Minimal Runnable Example](#minimal-runnable-example)
 - [Package Management](#package-management)
-  - [Start a New Project](#start-a-new-project)
-  - [Add to or Update an Existing Project](#add-to-or-update-an-existing-project)
+  - Start a New Project
+  - Add to or Update an Existing Project
 - [Application Bootstrap](#application-bootstrap)
-  - [GuiApplication](#guiapplication)
-  - [UiEngine](#uiengine)
-  - [Scene Management](#scene-management)
+  - Display Creation
+  - GuiApplication
+  - UiEngine
+  - Scene Management
 - [Controls](#controls)
-  - [Display and Container Controls](#display-and-container-controls)
-  - [Text Controls](#text-controls)
-  - [Selection, Range, and Data Controls](#selection-range-and-data-controls)
-  - [Canvas, Scroll, and Advanced Inputs](#canvas-scroll-and-advanced-inputs)
+  - Display and Container Controls
+  - Text Controls
+  - Selection, Range, and Data Controls
+  - Canvas, Scroll, and Advanced Inputs
 - [Layout](#layout)
-  - [LayoutAxis](#layoutaxis)
-  - [LayoutManager](#layoutmanager)
-  - [ConstraintLayout](#constraintlayout)
-  - [FlexLayout](#flexlayout)
-  - [WindowTilingManager](#windowtilingmanager)
+  - LayoutAxis
+  - LayoutManager
+  - ConstraintLayout
+  - FlexLayout
+  - WindowTilingManager
 - [Events and Input](#events-and-input)
-  - [GuiEvent and EventManager](#guievent-and-eventmanager)
-  - [EventBus](#eventbus)
-  - [ActionManager](#actionmanager)
-  - [FocusManager](#focusmanager)
-  - [ValueChangeReason and ValueChangeCallback](#valuechangereason-and-valuechangecallback)
+  - GuiEvent and EventManager
+  - EventBus
+  - ActionManager
+  - FocusManager
+  - ValueChangeReason and ValueChangeCallback
 - [Data and State](#data-and-state)
-  - [ObservableValue, ComputedValue, and PresentationModel](#observablevalue-computedvalue-and-presentationmodel)
-  - [InvalidationTracker](#invalidationtracker)
-  - [FormModel](#formmodel)
-  - [CommandHistory](#commandhistory)
-  - [StateMachine and Router](#statemachine-and-router)
-  - [SettingsRegistry](#settingsregistry)
+  - ObservableValue, ComputedValue, and PresentationModel
+  - InvalidationTracker
+  - FormModel
+  - CommandHistory
+  - StateMachine and Router
+  - SettingsRegistry
 - [Scheduling and Animation](#scheduling-and-animation)
-  - [TaskScheduler](#taskscheduler)
-  - [Timers](#timers)
-  - [TweenManager](#tweenmanager)
-  - [AnimationSequence](#animationsequence)
+  - TaskScheduler
+  - Timers
+  - TweenManager
+  - AnimationSequence
 - [Overlay and Runtime Services](#overlay-and-runtime-services)
-  - [OverlayManager and OverlayHandle](#overlaymanager-and-overlayhandle)
-  - [ToastManager and ToastHandle](#toastmanager-and-toasthandle)
-  - [DialogManager and DialogHandle](#dialogmanager-and-dialoghandle)
-  - [ContextMenuManager and ContextMenuHandle](#contextmenumanager-and-contextmenuhandle)
-  - [DragDropManager and DragPayload](#dragdropmanager-and-dragpayload)
-  - [FileDialogManager, FileDialogOptions, and FileDialogHandle](#filedialogmanager-filedialogoptions-and-filedialoghandle)
-  - [ResizeManager](#resizemanager)
-  - [ClipboardManager](#clipboardmanager)
-  - [CommandPaletteManager, CommandEntry, and CommandPaletteHandle](#commandpalettemanager-commandentry-and-commandpalettehandle)
+  - OverlayManager and OverlayHandle
+  - ToastManager and ToastHandle
+  - DialogManager and DialogHandle
+  - ContextMenuManager and ContextMenuHandle
+  - DragDropManager and DragPayload
+  - FileDialogManager, FileDialogOptions, and FileDialogHandle
+  - ResizeManager
+  - ClipboardManager
+  - CommandPaletteManager, CommandEntry, and CommandPaletteHandle
 - [Menu System](#menu-system)
-  - [MenuBarControl and MenuEntry](#menubarcontrol-and-menuentry)
-  - [MenuBarManager](#menubarmanager)
+  - MenuBarControl and MenuEntry
+  - MenuBarManager
 - [Notification System](#notification-system)
-  - [NotificationCenter and NotificationRecord](#notificationcenter-and-notificationrecord)
-  - [NotificationPanelControl](#notificationpanelcontrol)
+  - NotificationCenter and NotificationRecord
+  - NotificationPanelControl
 - [Scene Transitions](#scene-transitions)
-  - [SceneTransitionManager and SceneTransitionStyle](#scenetransitionmanager-and-scenetransitionstyle)
+  - SceneTransitionManager and SceneTransitionStyle
 - [Feature System](#feature-system)
-  - [Feature Types and FeatureMessage](#feature-types-and-featuremessage)
-  - [FeatureManager](#featuremanager)
+  - Feature Types and FeatureMessage
+  - FeatureManager
 - [Theme and Graphics](#theme-and-graphics)
-  - [ColorTheme](#colortheme)
-  - [ThemeManager and DesignTokens](#thememanager-and-designtokens)
-  - [BuiltInGraphicsFactory](#builtingraphicsfactory)
-  - [FontManager](#fontmanager)
+  - ColorTheme
+  - ThemeManager and DesignTokens
+  - BuiltInGraphicsFactory
+  - FontManager
 - [Telemetry](#telemetry)
 - [Public API Index](#public-api-index)
 
@@ -87,10 +88,10 @@ pip install gui_do
 ```python
 import pygame
 from pygame import Rect
-from gui_do import GuiApplication, LabelControl, UiEngine
+from gui_do import create_display, GuiApplication, LabelControl, UiEngine
 
 pygame.init()
-surface = pygame.display.set_mode((800, 600))
+surface = create_display((800, 600))
 app = GuiApplication(surface)
 app.scene.add(LabelControl("hello", Rect(24, 24, 280, 32), "Hello, gui_do"))
 UiEngine(app, target_fps=60).run()
@@ -112,12 +113,12 @@ The exported package surface combines four layers that are often split across se
 ```python
 import pygame
 from pygame import Rect
-from gui_do import ButtonControl, GuiApplication, LabelControl, UiEngine
+from gui_do import ButtonControl, create_display, GuiApplication, LabelControl, UiEngine
 
 
 def main() -> None:
     pygame.init()
-    surface = pygame.display.set_mode((640, 480))
+    surface = create_display((640, 480))
     app = GuiApplication(surface)
 
     status = app.scene.add(LabelControl("status", Rect(20, 20, 220, 30), "Ready"))
@@ -140,7 +141,7 @@ if __name__ == "__main__":
 
 The repository includes `scripts/manage.py` for consumer-project bootstrap and upgrade flows. The tool supports `init`, `apply`, `verify`, `check`, and `update` so a developer can start from a clean library-first checkout or sync a newer gui_do version into an existing project.
 
-### Start a New Project [Back to Top](#table-of-contents)
+### Start a New Project
 
 Use `init` in a cloned or downloaded gui_do repository when you want to strip bundled demo content and keep the library plus its support files:
 
@@ -160,7 +161,7 @@ Useful flags:
 - `--skip-doc-sync` skips README and docs synchronization.
 - `--skip-workflow-sync` skips CI workflow synchronization.
 
-### Add to or Update an Existing Project [Back to Top](#table-of-contents)
+### Add to or Update an Existing Project
 
 Use `check` before copying gui_do into another project:
 
@@ -180,16 +181,38 @@ The update flow copies `gui_do/`, `scripts/`, `tests/`, `docs/`, `README.md`, an
 
 ## Application Bootstrap [Back to Top](#table-of-contents)
 
-### GuiApplication [Back to Top](#table-of-contents)
+### Display Creation
+
+`create_display(size, *, fullscreen=True, scaled=True, vsync=True)` creates and returns a pygame display surface, optionally requesting vertical synchronization with graceful fallback when the display driver cannot provide it.
+
+```python
+import pygame
+from gui_do import create_display
+
+pygame.init()
+
+# Fullscreen with vsync (scaled to fit physical display)
+surface = create_display((1920, 1080))
+
+# Windowed, no vsync
+surface = create_display((1024, 768), fullscreen=False, vsync=False)
+
+# Fullscreen, no scaling
+surface = create_display((1920, 1080), scaled=False)
+```
+
+The helper suppresses the pygame-ce `"no fast renderer available"` warning and silently degrades to `vsync=0` when hardware vsync is unavailable, so your application does not need to manage that fallback.
+
+### GuiApplication
 
 `GuiApplication(surface)` is the runtime root. It owns the active scene, scene-local services, event normalization, rendering orchestration, and feature coordination.
 
 ```python
 import pygame
-from gui_do import GuiApplication
+from gui_do import create_display, GuiApplication
 
 pygame.init()
-surface = pygame.display.set_mode((1024, 720))
+surface = create_display((1024, 720))
 app = GuiApplication(surface)
 ```
 
@@ -224,7 +247,7 @@ Common application methods:
 - `app.remove_scene(name)` removes a non-active scene.
 - `app.process_event(event)`, `app.update(dt_seconds)`, and `app.draw()` form the low-level runtime loop.
 
-### UiEngine [Back to Top](#table-of-contents)
+### UiEngine
 
 `UiEngine` is the packaged event loop. It forwards pygame events through `GuiApplication.process_event(...)`, advances scene-local services, and draws each frame.
 
@@ -237,7 +260,7 @@ engine.run()
 
 Use `max_frames=` when you want a bounded run for tests or deterministic demos.
 
-### Scene Management [Back to Top](#table-of-contents)
+### Scene Management
 
 Each scene has its own scheduler, timers, tween manager, overlay manager, drag-drop manager, tiling manager, and theme/graphics bundle. That keeps multi-screen applications isolated without custom bookkeeping.
 
@@ -258,7 +281,7 @@ Standalone helpers such as `ContextMenuManager`, `FileDialogManager`, `SceneTran
 
 All built-in controls are added to a scene or container with `parent.add(child)` and expose geometry, visibility, enable/disable, focus, and draw/update behavior through the public control classes exported at the package root.
 
-### Display and Container Controls [Back to Top](#table-of-contents)
+### Display and Container Controls
 
 Use these for structure, chrome, and general interaction:
 
@@ -284,7 +307,7 @@ panel.add(ButtonControl("save", Rect(12, 48, 100, 28), "Save", on_click=lambda: 
 panel.add(ToggleControl("autosave", Rect(12, 84, 140, 28), "On", "Off", pushed=True))
 ```
 
-### Text Controls [Back to Top](#table-of-contents)
+### Text Controls
 
 `TextInputControl`, `TextAreaControl`, and `RichLabelControl` cover editable single-line input, editable multi-line input, and styled rich text.
 
@@ -312,7 +335,7 @@ hint = RichLabelControl(
 )
 ```
 
-### Selection, Range, and Data Controls [Back to Top](#table-of-contents)
+### Selection, Range, and Data Controls
 
 gui_do includes small-value widgets and larger selection/data widgets in the same public surface:
 
@@ -350,7 +373,7 @@ items = [ListItem("Alpha"), ListItem("Beta"), ListItem("Gamma")]
 listing = ListViewControl("list", Rect(20, 140, 220, 150), items=items, on_select=lambda index, item: print(item.label))
 ```
 
-### Canvas, Scroll, and Advanced Inputs [Back to Top](#table-of-contents)
+### Canvas, Scroll, and Advanced Inputs
 
 Use these controls when the built-in list/form widgets are not enough:
 
@@ -374,11 +397,11 @@ picker = ColorPickerControl("picker", Rect(20, 220, 220, 200), color=(255, 128, 
 
 ## Layout [Back to Top](#table-of-contents)
 
-### LayoutAxis [Back to Top](#table-of-contents)
+### LayoutAxis
 
 `LayoutAxis.HORIZONTAL` and `LayoutAxis.VERTICAL` are the axis enums used by `SliderControl`, `ScrollbarControl`, `SplitterControl`, and related layout helpers.
 
-### LayoutManager [Back to Top](#table-of-contents)
+### LayoutManager
 
 `LayoutManager` is a small grid-placement helper for consistent row/column spacing.
 
@@ -393,7 +416,7 @@ app.layout.set_grid_properties(
 rect = app.layout.grid(col=1, row=2)
 ```
 
-### ConstraintLayout [Back to Top](#table-of-contents)
+### ConstraintLayout
 
 `ConstraintLayout` and `AnchorConstraint` support anchor-relative positioning inside a container or window-sized parent rect.
 
@@ -405,7 +428,7 @@ layout.add(AnchorConstraint(save_button, left=12, bottom=12, width=100, height=2
 layout.apply(Rect(0, 0, 640, 480))
 ```
 
-### FlexLayout [Back to Top](#table-of-contents)
+### FlexLayout
 
 `FlexLayout` computes row or column layouts using `FlexItem`, `FlexDirection`, `FlexAlign`, and `FlexJustify`.
 
@@ -420,7 +443,7 @@ items = [
 layout.apply(items, Rect(20, 20, 420, 32))
 ```
 
-### WindowTilingManager [Back to Top](#table-of-contents)
+### WindowTilingManager
 
 `WindowTilingManager` arranges visible `WindowControl` nodes without overlap inside the active scene. It is scene-local through `app.window_tiling`.
 
@@ -437,7 +460,7 @@ print(tiling.read_settings())
 
 ## Events and Input [Back to Top](#table-of-contents)
 
-### GuiEvent and EventManager [Back to Top](#table-of-contents)
+### GuiEvent and EventManager
 
 `EventManager` normalizes raw pygame input into `GuiEvent`. Controls and services consume `GuiEvent`, not raw pygame events.
 
@@ -456,7 +479,7 @@ event.kind
 
 `EventType` and `EventPhase` are also exported for routing-aware code.
 
-### EventBus [Back to Top](#table-of-contents)
+### EventBus
 
 `EventBus` is a scoped publish/subscribe channel for non-input runtime events.
 
@@ -469,7 +492,7 @@ bus.unsubscribe(subscription)
 
 Use `once(...)` for one-shot subscriptions and `unsubscribe_scope(...)` to remove all handlers in one scope.
 
-### ActionManager [Back to Top](#table-of-contents)
+### ActionManager
 
 `ActionManager` maps keys to named actions with optional scene and active-window scoping.
 
@@ -483,7 +506,7 @@ actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 
 For a one-call setup, use `register_and_bind(...)`.
 
-### FocusManager [Back to Top](#table-of-contents)
+### FocusManager
 
 `FocusManager` controls keyboard focus. Controls participate by exposing `tab_index >= 0` and accepting focus.
 
@@ -493,7 +516,7 @@ focus.set_focus(name_input, via_keyboard=False)
 print(focus.current)
 ```
 
-### ValueChangeReason and ValueChangeCallback [Back to Top](#table-of-contents)
+### ValueChangeReason and ValueChangeCallback
 
 `ValueChangeReason` tags slider- and scrollbar-style callbacks with the source of the change.
 
@@ -512,7 +535,7 @@ Members are `KEYBOARD`, `PROGRAMMATIC`, `MOUSE_DRAG`, and `WHEEL`.
 
 ## Data and State [Back to Top](#table-of-contents)
 
-### ObservableValue, ComputedValue, and PresentationModel [Back to Top](#table-of-contents)
+### ObservableValue, ComputedValue, and PresentationModel
 
 `ObservableValue` is the base reactive primitive. `ComputedValue` derives a read-only value from other observables. `PresentationModel` is a small subscription-owning base class for view-model style objects.
 
@@ -534,7 +557,7 @@ class CounterModel(PresentationModel):
 a.value = 10
 ```
 
-### InvalidationTracker [Back to Top](#table-of-contents)
+### InvalidationTracker
 
 `InvalidationTracker` collects dirty regions and can promote to full redraw when necessary.
 
@@ -546,7 +569,7 @@ is_full, dirty_rects = tracker.begin_frame()
 tracker.end_frame()
 ```
 
-### FormModel [Back to Top](#table-of-contents)
+### FormModel
 
 `FormModel` manages named `FormField` instances, per-field validation, cross-field validation, dirty tracking, and commit/reset behavior.
 
@@ -569,7 +592,7 @@ form.commit_all()
 
 `ValidationRule` is the callable type exported for field validators, and `FieldError` is the exported error record type.
 
-### CommandHistory [Back to Top](#table-of-contents)
+### CommandHistory
 
 `CommandHistory` implements bounded undo/redo stacks and `CommandTransaction` grouping for objects matching the exported `Command` protocol.
 
@@ -584,7 +607,7 @@ with history.transaction("Bulk edit") as tx:
     tx.add(cmd_b)
 ```
 
-### StateMachine and Router [Back to Top](#table-of-contents)
+### StateMachine and Router
 
 `StateMachine` models finite-state transitions with observable current state. `Router` models application navigation history and can switch scenes when supplied with a `GuiApplication`.
 
@@ -605,7 +628,7 @@ router.push("/settings", app=app)
 router.pop(app=app)
 ```
 
-### SettingsRegistry [Back to Top](#table-of-contents)
+### SettingsRegistry
 
 `SettingsRegistry` is a namespaced settings store where each declared setting is backed by an `ObservableValue`. `SettingDescriptor` is the exported metadata object used for introspection.
 
@@ -625,7 +648,7 @@ settings.save()
 
 ## Scheduling and Animation [Back to Top](#table-of-contents)
 
-### TaskScheduler [Back to Top](#table-of-contents)
+### TaskScheduler
 
 `TaskScheduler` runs background callables in a thread pool and lets the UI poll for completions, failures, and task messages during `update()`.
 
@@ -642,7 +665,7 @@ if "double" in finished:
 
 Use `send_message(...)` for in-flight task progress, `get_failed_tasks()` for errors, and `clear_events()` after consuming finished/failed event lists.
 
-### Timers [Back to Top](#table-of-contents)
+### Timers
 
 `Timers` is a frame-driven repeating and one-shot timer registry.
 
@@ -653,7 +676,7 @@ timers.add_once("intro", 2.0, lambda: print("ready"))
 timers.remove_timer("blink")
 ```
 
-### TweenManager [Back to Top](#table-of-contents)
+### TweenManager
 
 `TweenManager` animates numeric attributes or arbitrary functions over time. `TweenHandle` lets you cancel a tween or inspect completion.
 
@@ -667,7 +690,7 @@ handle.cancel()
 
 Use `tween_fn(...)` when you want eased callback-driven animation instead of direct attribute interpolation.
 
-### AnimationSequence [Back to Top](#table-of-contents)
+### AnimationSequence
 
 `AnimationSequence` builds sequential and parallel animation flows on top of `TweenManager`. `AnimationHandle` cancels remaining steps.
 
@@ -691,7 +714,7 @@ handle = (
 
 ## Overlay and Runtime Services [Back to Top](#table-of-contents)
 
-### OverlayManager and OverlayHandle [Back to Top](#table-of-contents)
+### OverlayManager and OverlayHandle
 
 `OverlayManager` owns transient overlay controls drawn above the scene graph. `OverlayHandle` dismisses a specific overlay and reports whether it is still open.
 
@@ -705,7 +728,7 @@ print(handle.is_open)
 handle.dismiss()
 ```
 
-### ToastManager and ToastHandle [Back to Top](#table-of-contents)
+### ToastManager and ToastHandle
 
 `ToastManager` shows transient or persistent banners. `ToastHandle` can dismiss a single toast.
 
@@ -722,7 +745,7 @@ toast = app.toasts.show(
 
 Use `show_persistent(...)` for a toast that stays open until dismissed.
 
-### DialogManager and DialogHandle [Back to Top](#table-of-contents)
+### DialogManager and DialogHandle
 
 `DialogManager` provides alert, confirm, and prompt modals. `DialogHandle` dismisses a specific modal or reports whether it is open.
 
@@ -732,7 +755,7 @@ app.dialogs.show_confirm("Delete", "Delete file?", on_confirm=lambda: print("con
 app.dialogs.show_prompt("Rename", "New name", on_submit=lambda value: print(value))
 ```
 
-### ContextMenuManager and ContextMenuHandle [Back to Top](#table-of-contents)
+### ContextMenuManager and ContextMenuHandle
 
 `ContextMenuManager` renders a pointer-anchored menu from `ContextMenuItem` values. `ContextMenuHandle` closes a menu programmatically.
 
@@ -751,7 +774,7 @@ handle = menus.show(
 )
 ```
 
-### DragDropManager and DragPayload [Back to Top](#table-of-contents)
+### DragDropManager and DragPayload
 
 `DragDropManager` coordinates typed drag sessions between source and target controls. `DragPayload` carries the drag kind and arbitrary data.
 
@@ -762,7 +785,7 @@ payload = DragPayload(kind="file", data={"path": "notes.txt"})
 app.drag_drop.begin_drag(payload)
 ```
 
-### FileDialogManager, FileDialogOptions, and FileDialogHandle [Back to Top](#table-of-contents)
+### FileDialogManager, FileDialogOptions, and FileDialogHandle
 
 `FileDialogManager` exposes separate open/save flows. `FileDialogOptions` configures title, start directory, filters, and selection rules. `FileDialogHandle` tracks the modal dialog state.
 
@@ -782,7 +805,7 @@ files.show_save(
 )
 ```
 
-### ResizeManager [Back to Top](#table-of-contents)
+### ResizeManager
 
 `ResizeManager` updates registered `ConstraintLayout` instances and notifies subscribers when the window size changes.
 
@@ -794,7 +817,7 @@ resize.on_resize(lambda width, height: print(width, height))
 resize.notify_resize(1024, 768)
 ```
 
-### ClipboardManager [Back to Top](#table-of-contents)
+### ClipboardManager
 
 `ClipboardManager` is a thin wrapper over `pygame.scrap` with safe fallbacks when clipboard access is unavailable.
 
@@ -805,7 +828,7 @@ ClipboardManager.copy("hello")
 print(ClipboardManager.paste())
 ```
 
-### CommandPaletteManager, CommandEntry, and CommandPaletteHandle [Back to Top](#table-of-contents)
+### CommandPaletteManager, CommandEntry, and CommandPaletteHandle
 
 `CommandPaletteManager` shows a searchable command launcher using the overlay system. `CommandEntry` is the exported command record, and `CommandPaletteHandle` closes an open palette.
 
@@ -823,7 +846,7 @@ print(handle.is_open)
 
 ## Menu System [Back to Top](#table-of-contents)
 
-### MenuBarControl and MenuEntry [Back to Top](#table-of-contents)
+### MenuBarControl and MenuEntry
 
 `MenuBarControl` renders a horizontal top-level menu bar. Each `MenuEntry` contains a label plus `ContextMenuItem` rows for its flyout.
 
@@ -841,7 +864,7 @@ bar = MenuBarControl(
 app.scene.add(bar)
 ```
 
-### MenuBarManager [Back to Top](#table-of-contents)
+### MenuBarManager
 
 `MenuBarManager` is the feature-friendly registration layer for top-level menus. It accumulates menu contributions and builds one `MenuBarControl` in registration order.
 
@@ -861,7 +884,7 @@ app.scene.add(bar)
 
 ## Notification System [Back to Top](#table-of-contents)
 
-### NotificationCenter and NotificationRecord [Back to Top](#table-of-contents)
+### NotificationCenter and NotificationRecord
 
 `NotificationCenter` stores an activity log, optionally sourced from `EventBus` topics. `NotificationRecord` is the exported record shape.
 
@@ -874,7 +897,7 @@ notifications.unread_count.subscribe(lambda value: print("unread", value))
 notifications.add(NotificationRecord("Deployment complete", severity=ToastSeverity.SUCCESS))
 ```
 
-### NotificationPanelControl [Back to Top](#table-of-contents)
+### NotificationPanelControl
 
 `NotificationPanelControl` renders a `NotificationCenter` inside an overlay-friendly panel.
 
@@ -889,7 +912,7 @@ app.overlay.show("notifications", panel, dismiss_on_outside_click=True)
 
 ## Scene Transitions [Back to Top](#table-of-contents)
 
-### SceneTransitionManager and SceneTransitionStyle [Back to Top](#table-of-contents)
+### SceneTransitionManager and SceneTransitionStyle
 
 `SceneTransitionManager` animates scene changes instead of switching instantly. `SceneTransitionStyle` enumerates the built-in transition styles.
 
@@ -907,7 +930,7 @@ Available styles are `NONE`, `FADE`, `SLIDE_LEFT`, `SLIDE_RIGHT`, `SLIDE_UP`, an
 
 ## Feature System [Back to Top](#table-of-contents)
 
-### Feature Types and FeatureMessage [Back to Top](#table-of-contents)
+### Feature Types and FeatureMessage
 
 Features are the reusable lifecycle unit for gui_do application composition.
 
@@ -935,7 +958,7 @@ class StatusFeature(Feature):
 
 Within a feature, use `self.send_message(...)`, `self.bind_logic(...)`, and `self.send_logic_message(...)` to communicate with other registered features.
 
-### FeatureManager [Back to Top](#table-of-contents)
+### FeatureManager
 
 `FeatureManager` registers features, validates host requirements, dispatches lifecycle hooks, and routes messages between features.
 
@@ -954,7 +977,7 @@ It also exposes direct-feature update/draw helpers, feature prewarm support, sta
 
 ## Theme and Graphics [Back to Top](#table-of-contents)
 
-### ColorTheme [Back to Top](#table-of-contents)
+### ColorTheme
 
 `ColorTheme` is the built-in semantic palette plus text-rendering helper used by the runtime. The active scene theme is available as `app.theme`.
 
@@ -966,7 +989,7 @@ print(theme.font_roles())
 
 `ColorTheme` also exposes `register_font_role(...)` for adding or replacing named font roles.
 
-### ThemeManager and DesignTokens [Back to Top](#table-of-contents)
+### ThemeManager and DesignTokens
 
 `ThemeManager` manages named token sets and exposes reactive `active_theme` and `active_tokens` observables. `DesignTokens` is the exported token container.
 
@@ -979,11 +1002,11 @@ theme_manager.switch("contrast")
 print(theme_manager.token("primary"))
 ```
 
-### BuiltInGraphicsFactory [Back to Top](#table-of-contents)
+### BuiltInGraphicsFactory
 
 `BuiltInGraphicsFactory` builds cached visual surfaces for built-in widgets. It is exposed as `app.graphics_factory` and used internally by control drawing. When the active theme or fonts change, controls can invalidate themselves and rebuild against the current factory output.
 
-### FontManager [Back to Top](#table-of-contents)
+### FontManager
 
 `FontManager` is the role-based font registry used by `ColorTheme`. Through `app.theme.fonts`, you can register named roles and resolve font instances by role and size.
 
@@ -1025,12 +1048,12 @@ The telemetry exports are `TelemetryCollector`, `TelemetrySample`, `configure_te
 
 The following list is the complete public package export surface from `gui_do.__all__`, grouped by concept.
 
-### Application and Loop [Back to Top](#table-of-contents)
+### Application and Loop
 
 - `GuiApplication`
 - `UiEngine`
 
-### Controls [Back to Top](#table-of-contents)
+### Controls
 
 - `PanelControl`
 - `LabelControl`
@@ -1070,7 +1093,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `RangeSliderControl`
 - `ColorPickerControl`
 
-### Layout [Back to Top](#table-of-contents)
+### Layout
 
 - `LayoutAxis`
 - `LayoutManager`
@@ -1083,7 +1106,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `FlexAlign`
 - `FlexJustify`
 
-### Events, Input, and Core Runtime [Back to Top](#table-of-contents)
+### Events, Input, and Core Runtime
 
 - `ActionManager`
 - `EventManager`
@@ -1097,7 +1120,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `ValueChangeReason`
 - `InvalidationTracker`
 
-### Data and State [Back to Top](#table-of-contents)
+### Data and State
 
 - `ObservableValue`
 - `PresentationModel`
@@ -1115,7 +1138,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `Router`
 - `RouteEntry`
 
-### Scheduling and Animation [Back to Top](#table-of-contents)
+### Scheduling and Animation
 
 - `TaskEvent`
 - `TaskScheduler`
@@ -1126,7 +1149,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `AnimationSequence`
 - `AnimationHandle`
 
-### Overlay and Runtime Services [Back to Top](#table-of-contents)
+### Overlay and Runtime Services
 
 - `OverlayManager`
 - `OverlayHandle`
@@ -1149,13 +1172,13 @@ The following list is the complete public package export surface from `gui_do.__
 - `CommandEntry`
 - `CommandPaletteHandle`
 
-### Menu and Notifications [Back to Top](#table-of-contents)
+### Menu and Notifications
 
 - `MenuBarManager`
 - `NotificationCenter`
 - `NotificationRecord`
 
-### Features and Scene Composition [Back to Top](#table-of-contents)
+### Features and Scene Composition
 
 - `Feature`
 - `DirectFeature`
@@ -1166,14 +1189,14 @@ The following list is the complete public package export surface from `gui_do.__
 - `SceneTransitionManager`
 - `SceneTransitionStyle`
 
-### Theme and Graphics [Back to Top](#table-of-contents)
+### Theme and Graphics
 
 - `BuiltInGraphicsFactory`
 - `ColorTheme`
 - `ThemeManager`
 - `DesignTokens`
 
-### Telemetry [Back to Top](#table-of-contents)
+### Telemetry
 
 - `TelemetryCollector`
 - `TelemetrySample`
@@ -1183,3 +1206,4 @@ The following list is the complete public package export surface from `gui_do.__
 - `analyze_telemetry_log_file`
 - `load_telemetry_log_file`
 - `render_telemetry_report`
+

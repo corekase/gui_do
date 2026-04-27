@@ -165,6 +165,7 @@ DEMO_FEATURES_EXPORT_ORDER = (
 
 PUBLIC_API_EXPORT_ORDER = (
     "GuiApplication",
+    "create_display",
     "UiEngine",
     "PanelControl",
     "LabelControl",

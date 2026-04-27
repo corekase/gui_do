@@ -56,7 +56,7 @@ class EventBus:
         if not subscribers:
             return
         # Snapshot for safe iteration (handlers may mutate the subscriber list).
-        snapshot = list(subscribers)
+        snapshot = tuple(subscribers)
         collector = telemetry_collector()
         # Fast path: skip all span/metadata overhead when telemetry is off.
         if not collector._enabled:  # noqa: SLF001 — intentional lock-free check

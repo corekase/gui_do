@@ -19,6 +19,7 @@ def _enable_windows_dpi_awareness() -> None:
 _enable_windows_dpi_awareness()
 
 from .app.gui_application import GuiApplication
+from .app.display import create_display
 from .loop.ui_engine import UiEngine
 from .controls.panel_control import PanelControl
 from .controls.label_control import LabelControl
@@ -120,6 +121,7 @@ from .core.error_boundary import ErrorBoundary
 
 __all__ = [
     "GuiApplication",
+    "create_display",
     "UiEngine",
     "PanelControl",
     "LabelControl",

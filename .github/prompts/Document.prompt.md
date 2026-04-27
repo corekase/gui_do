@@ -1,6 +1,6 @@
 ---
 name: Document
-description: Describe when to use this prompt
+description: trigger a full readme rebuild
 ---
 
 <!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
@@ -9,11 +9,11 @@ Determine current state of the package API, update sections if they already exis
 
 Follows this format: gui_do as a project name, and then at most a few-sentence higher-level overview in plain English of what the package provides to a developer audience.
 
-After that section will be a table of contents links to sections and lists but does not link to sub-sections.  Sections titles include a link on their right side linking back to the top of the table of contents. In each section title there is another link to the right of the section title "Back to Top" which links back to the top of the table of contents. Sub-sections do not have links. Format the table of contents using indentation for sections and sub-sections.
+After that section will be a table of contents with links to sections as each section's name and for sub-sections does not link to them.  Sections titles include a link on their right side linking back to the top of the table of contents. Sub-sections do not have links. Format the table of contents using indentation for sections and sub-sections.
 
-The next section is a quick start section.
+The next section is quick start.
 
-The next section is an overview section written in plain English of what the major systems are in the package, how they work together with each other, and what kind of applications the faculties they provide are best suited for.  This overview should be fairly comprehensive and everything that helps primarily developers an audience as end-users aren't likely to be reading package documentation.
+The next section is a overview written in plain English of what the major systems are in the package, how they work together with each other, and what kind of applications the faculties they provide are best suited for.  This overview should be fairly comprehensive and everything that helps primarily developers an audience as end-users aren't likely to be reading package documentation.
 
 The next section should be called "Minimal Runnable Example" and have only a code listing which is what the title describes.
 

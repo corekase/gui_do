@@ -15,6 +15,7 @@ Terminology in this document aligns with README and architecture docs:
 The package exports the following symbols via `gui_do/__init__.py`:
 
 - `GuiApplication`
+- `create_display`
 - `UiEngine`
 - `PanelControl`
 - `LabelControl`

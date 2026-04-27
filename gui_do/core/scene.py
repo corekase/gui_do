@@ -180,20 +180,21 @@ class Scene:
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
-        # Avoid materializing a full node list in this hot path.
+        # Single BFS pass: track top window hit and best focusable node together.
         top_window: UiNode | None = None
-        for node in self._walk_nodes():
-            if node.visible and node.enabled and self._is_window_like(node) and node.rect.collidepoint(pos):
-                top_window = node
-
         best: UiNode | None = None
         for node in self._walk_nodes():
-            if top_window is not None and not self._is_descendant_of(node, top_window):
+            if not (node.visible and node.enabled):
                 continue
+            if self._is_window_like(node) and node.rect.collidepoint(pos):
+                top_window = node
+                # A new top window candidate invalidates any best found outside it.
+                best = None
             if (
                 self._is_effectively_interactive(node)
                 and node.accepts_mouse_focus()
                 and node.hit_test(pos)
+                and (top_window is None or self._is_descendant_of(node, top_window))
             ):
                 best = node
         return best

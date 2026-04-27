@@ -270,7 +270,9 @@ class FocusManager:
             self.show_keyboard_hint_for_current_focus()
             return True
 
-        current_index = candidates.index(focused)
+        current_index = next(
+            (i for i, c in enumerate(candidates) if c is focused), 0
+        )
         offset = 1 if forward else -1
         next_index = (current_index + offset) % len(candidates)
         next_node = candidates[next_index]

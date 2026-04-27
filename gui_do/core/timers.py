@@ -70,16 +70,14 @@ class Timers:
     def update(self, dt_seconds: float) -> None:
         if dt_seconds <= 0 or not self._timers:
             return
-        for timer_id in list(self._timers.keys()):
-            timer = self._timers.get(timer_id)
-            if timer is None:
-                continue
-            timer.elapsed_seconds += dt_seconds
+        for timer_id, timer in list(self._timers.items()):
             if timer.once:
+                timer.elapsed_seconds += dt_seconds
                 if timer.elapsed_seconds >= timer.interval_seconds:
                     self._timers.pop(timer_id, None)
                     timer.callback()
             else:
+                timer.elapsed_seconds += dt_seconds
                 while timer.elapsed_seconds >= timer.interval_seconds:
                     timer.elapsed_seconds -= timer.interval_seconds
                     timer.callback()
