@@ -4,6 +4,7 @@ from time import perf_counter
 
 from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
+from ..core.error_handling import logical_error
 
 if TYPE_CHECKING:
     import pygame
@@ -21,7 +22,7 @@ class LabelControl(UiNode):
         self._font_role = "body"
         self._font_size = 16
         if align not in self._VALID_ALIGNS:
-            raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}")
+            raise logical_error(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}", subsystem="gui.controls", operation="LabelControl.__init__", source_skip_frames=1)
         self._align = align
         self._rendered_surface: Optional["pygame.Surface"] = None
         self._render_key: Optional[tuple] = None
@@ -50,7 +51,7 @@ class LabelControl(UiNode):
     def font_role(self, value: str) -> None:
         next_role = str(value).strip()
         if not next_role:
-            raise ValueError("font_role must be a non-empty string")
+            raise logical_error("font_role must be a non-empty string", subsystem="gui.controls", operation="LabelControl.font_role", source_skip_frames=1)
         if self._font_role == next_role:
             return
         self._font_role = next_role
@@ -75,7 +76,7 @@ class LabelControl(UiNode):
     @align.setter
     def align(self, value: str) -> None:
         if value not in self._VALID_ALIGNS:
-            raise ValueError(f"align must be one of {self._VALID_ALIGNS!r}, got {value!r}")
+            raise logical_error(f"align must be one of {self._VALID_ALIGNS!r}, got {value!r}", subsystem="gui.controls", operation="LabelControl.align", source_skip_frames=1)
         if self._align == value:
             return
         self._align = value

@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
@@ -63,12 +64,12 @@ class Scene:
     # --- Internal traversal ---
 
     def _walk_nodes(self) -> List[UiNode]:
-        stack = list(self.nodes)
+        queue: deque[UiNode] = deque(self.nodes)
         ordered: List[UiNode] = []
-        while stack:
-            node = stack.pop(0)
+        while queue:
+            node = queue.popleft()
             ordered.append(node)
-            stack.extend(node.children)
+            queue.extend(node.children)
         return ordered
 
     def _window_nodes(self) -> List[UiNode]:

@@ -9,6 +9,7 @@ from ..core.gui_event import GuiEvent
 from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
 from ..graphics import load_pristine_surface
+from ..core.error_handling import logical_error
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -62,7 +63,7 @@ class WindowControl(UiNode):
     def title_font_role(self, value: str) -> None:
         next_role = str(value).strip()
         if not next_role:
-            raise ValueError("title_font_role must be a non-empty string")
+            raise logical_error("title_font_role must be a non-empty string", subsystem="gui.controls", operation="WindowControl.title_font_role", source_skip_frames=1)
         self._title_font_role = next_role
 
     def is_window(self) -> bool:

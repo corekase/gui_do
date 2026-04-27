@@ -8,6 +8,7 @@ from pygame import Rect
 from ..core.gui_event import GuiEvent
 from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
+from ..core.error_handling import logical_error
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -46,7 +47,7 @@ class ButtonControl(UiNode):
     def font_role(self, value: str) -> None:
         next_role = str(value).strip()
         if not next_role:
-            raise ValueError("font_role must be a non-empty string")
+            raise logical_error("font_role must be a non-empty string", subsystem="gui.controls", operation="ButtonControl.font_role", source_skip_frames=1)
         self._font_role = next_role
 
     def _invoke_click(self) -> None:
@@ -56,7 +57,7 @@ class ButtonControl(UiNode):
     def set_on_click(self, callback: Optional[Callable[[], None]]) -> None:
         """Replace the click callback at runtime. Pass None to remove it."""
         if callback is not None and not callable(callback):
-            raise ValueError("on_click callback must be callable or None")
+            raise logical_error("on_click callback must be callable or None", subsystem="gui.controls", operation="ButtonControl.set_on_click", source_skip_frames=1)
         self.on_click = callback
 
     def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:

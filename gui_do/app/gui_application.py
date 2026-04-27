@@ -45,6 +45,29 @@ from ..core.feature_lifecycle import FeatureManager
 from ..core.error_handling import logical_error, report_nonfatal_error
 
 
+@dataclass
+class _SceneRuntime:
+    scene: "Scene"
+    scheduler: "TaskScheduler"
+    timers: "Timers"
+    theme: "ColorTheme"
+    graphics_factory: "BuiltInGraphicsFactory"
+    window_tiling: "WindowTilingManager"
+    screen_pristine: "Optional[pygame.Surface]"
+    screen_pristine_scaled: "Optional[pygame.Surface]"
+    screen_pristine_scaled_size: tuple
+    scene_auto_suspended: set
+
+
+@dataclass
+class _ScreenLifecycleEntry:
+    preamble: "Optional[Callable[[], None]]" = None
+    event_handler: "Optional[Callable[[object], bool]]" = None
+    postamble: "Optional[Callable[[], None]]" = None
+    scene_name: "Optional[str]" = None
+    entry_id: int = 0
+
+
 @dataclass(frozen=True)
 class FeatureUiTypes:
     window_control_cls: type
@@ -83,14 +106,14 @@ class GuiApplication:
         self._scenes = {"default": self._create_scene_runtime()}
         self._active_scene_name = "default"
         active_runtime = self._scenes[self._active_scene_name]
-        self.scene = active_runtime["scene"]
+        self.scene = active_runtime.scene
         self.renderer = Renderer()
-        self.scheduler = active_runtime["scheduler"]
-        self.timers = active_runtime["timers"]
+        self.scheduler = active_runtime.scheduler
+        self.timers = active_runtime.timers
         self.layout = LayoutManager()
-        self.window_tiling = active_runtime["window_tiling"]
-        self.theme = active_runtime["theme"]
-        self.graphics_factory = active_runtime["graphics_factory"]
+        self.window_tiling = active_runtime.window_tiling
+        self.theme = active_runtime.theme
+        self.graphics_factory = active_runtime.graphics_factory
         self._feature_ui_types = FeatureUiTypes(
             window_control_cls=WindowControl,
             label_control_cls=LabelControl,
@@ -123,12 +146,8 @@ class GuiApplication:
         self._screen_preamble: Optional[Callable[[], None]] = None
         self._screen_event_handler: Optional[Callable[[object], bool]] = None
         self._screen_postamble: Optional[Callable[[], None]] = None
-        self._screen_lifecycle_base = {
-            "preamble": None,
-            "event_handler": None,
-            "postamble": None,
-        }
-        self._screen_lifecycle_layers = []
+        self._screen_lifecycle_base = _ScreenLifecycleEntry()
+        self._screen_lifecycle_layers: list[_ScreenLifecycleEntry] = []
         self._screen_lifecycle_next_layer_id = 1
         self._screen_lifecycle_active = False
         self._init_cursor_system()
@@ -140,7 +159,7 @@ class GuiApplication:
         if scene_name is None:
             return self.scene.add(node)
         target = self._scene_runtime(scene_name)
-        return target["scene"].add(node)
+        return target.scene.add(node)
 
     def read_feature_ui_types(self) -> FeatureUiTypes:
         """Return GUI constructor classes used by feature build routines."""
@@ -154,7 +173,7 @@ class GuiApplication:
 
     def create_scene(self, name: str) -> Scene:
         runtime = self._scene_runtime(name)
-        return runtime["scene"]
+        return runtime.scene
 
     def switch_scene(self, name: str) -> None:
         collector = telemetry_collector()
@@ -171,12 +190,12 @@ class GuiApplication:
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
             runtime = self._scenes[name]
-            self.scene = runtime["scene"]
-            self.scheduler = runtime["scheduler"]
-            self.timers = runtime["timers"]
-            self.window_tiling = runtime["window_tiling"]
-            self.theme = runtime["theme"]
-            self.graphics_factory = runtime["graphics_factory"]
+            self.scene = runtime.scene
+            self.scheduler = runtime.scheduler
+            self.timers = runtime.timers
+            self.window_tiling = runtime.window_tiling
+            self.theme = runtime.theme
+            self.graphics_factory = runtime.graphics_factory
             self._apply_screen_lifecycle_chain()
 
     @property
@@ -203,7 +222,7 @@ class GuiApplication:
             return False
         runtime = self._scenes.pop(name)
         try:
-            runtime["scheduler"].shutdown()
+            runtime.scheduler.shutdown()
         except Exception as exc:
             report_nonfatal_error(
                 "scene scheduler shutdown failed during remove_scene",
@@ -217,12 +236,12 @@ class GuiApplication:
         return True
 
     def get_scene_scheduler(self, name: str) -> TaskScheduler:
-        return self._scene_runtime(name)["scheduler"]
+        return self._scene_runtime(name).scheduler
 
     def get_scene_graphics_factory(self, name: str) -> BuiltInGraphicsFactory:
-        return self._scene_runtime(name)["graphics_factory"]
+        return self._scene_runtime(name).graphics_factory
 
-    def _create_scene_runtime(self):
+    def _create_scene_runtime(self) -> "_SceneRuntime":
         scene = Scene()
         theme = ColorTheme()
         factory = BuiltInGraphicsFactory(theme)
@@ -232,18 +251,18 @@ class GuiApplication:
         scheduler = TaskScheduler(max_workers=TaskScheduler.recommended_worker_count())
         # Seed with the nominal 60 FPS frame budget; update() recalculates per-frame.
         scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(1.0 / 60.0))
-        return {
-            "scene": scene,
-            "scheduler": scheduler,
-            "timers": Timers(),
-            "theme": theme,
-            "graphics_factory": factory,
-            "window_tiling": WindowTilingManager(self, scene=scene),
-            "screen_pristine": pristine,
-            "screen_pristine_scaled": None,
-            "screen_pristine_scaled_size": (0, 0),
-            "scene_auto_suspended": set(),
-        }
+        return _SceneRuntime(
+            scene=scene,
+            scheduler=scheduler,
+            timers=Timers(),
+            theme=theme,
+            graphics_factory=factory,
+            window_tiling=WindowTilingManager(self, scene=scene),
+            screen_pristine=pristine,
+            screen_pristine_scaled=None,
+            screen_pristine_scaled_size=(0, 0),
+            scene_auto_suspended=set(),
+        )
 
     def _scene_runtime(self, name: str):
         runtime = self._scenes.get(name)
@@ -254,8 +273,8 @@ class GuiApplication:
 
     def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:
         for scene_name, runtime in self._scenes.items():
-            scheduler = runtime["scheduler"]
-            auto_suspended = runtime["scene_auto_suspended"]
+            scheduler = runtime.scheduler
+            auto_suspended = runtime.scene_auto_suspended
             if scene_name == active_scene_name:
                 scheduler.set_execution_paused(False)
                 if auto_suspended:
@@ -271,13 +290,13 @@ class GuiApplication:
 
     def set_pristine(self, source, scene_name: Optional[str] = None) -> None:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        runtime["screen_pristine"] = load_pristine_surface(source)
-        runtime["screen_pristine_scaled"] = None
-        runtime["screen_pristine_scaled_size"] = (0, 0)
+        runtime.screen_pristine = load_pristine_surface(source)
+        runtime.screen_pristine_scaled = None
+        runtime.screen_pristine_scaled_size = (0, 0)
 
     def restore_pristine(self, scene_name: Optional[str] = None, surface: Optional[pygame.Surface] = None) -> bool:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        pristine = runtime["screen_pristine"]
+        pristine = runtime.screen_pristine
         if pristine is None:
             return False
 
@@ -285,8 +304,8 @@ class GuiApplication:
         target_size = target.get_size()
         bitmap = pristine
         if pristine.get_size() != target_size:
-            cached = runtime["screen_pristine_scaled"]
-            cached_size = runtime["screen_pristine_scaled_size"]
+            cached = runtime.screen_pristine_scaled
+            cached_size = runtime.screen_pristine_scaled_size
             if cached is None or cached_size != target_size:
                 scale_start = perf_counter()
                 cached = pygame.transform.smoothscale(pristine, target_size)
@@ -298,8 +317,8 @@ class GuiApplication:
                     scale_elapsed_ms,
                     detail="restore_pristine smoothscale",
                 )
-                runtime["screen_pristine_scaled"] = cached
-                runtime["screen_pristine_scaled_size"] = target_size
+                runtime.screen_pristine_scaled = cached
+                runtime.screen_pristine_scaled_size = target_size
             bitmap = cached
         target.blit(bitmap, (0, 0))
         return True
@@ -327,13 +346,13 @@ class GuiApplication:
                 self._screen_preamble()
             self.focus.update(dt_seconds)
             runtime = self._scenes[self._active_scene_name]
-            runtime["timers"].update(dt_seconds)
-            runtime["scheduler"].set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
-            runtime["scheduler"].update()
+            runtime.timers.update(dt_seconds)
+            runtime.scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
+            runtime.scheduler.update()
             self.features.update_direct_features(dt_seconds)
-            runtime["scene"].update(dt_seconds)
+            runtime.scene.update(dt_seconds)
             self.invalidation.invalidate_all()
-            self.focus.revalidate_focus(runtime["scene"])
+            self.focus.revalidate_focus(runtime.scene)
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()
             self.features.update_features()
@@ -356,7 +375,7 @@ class GuiApplication:
             self.features.shutdown_runtime()
             seen = set()
             for runtime in self._scenes.values():
-                scheduler = runtime["scheduler"]
+                scheduler = runtime.scheduler
                 marker = id(scheduler)
                 if marker in seen:
                     continue
@@ -477,12 +496,12 @@ class GuiApplication:
         return False
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None) -> None:
-        self._screen_lifecycle_base = {
-            "preamble": preamble,
-            "event_handler": event_handler,
-            "postamble": postamble,
-            "scene_name": scene_name,
-        }
+        self._screen_lifecycle_base = _ScreenLifecycleEntry(
+            preamble=preamble,
+            event_handler=event_handler,
+            postamble=postamble,
+            scene_name=scene_name,
+        )
         self._screen_lifecycle_layers.clear()
         self._apply_screen_lifecycle_chain()
 
@@ -494,13 +513,13 @@ class GuiApplication:
         layer_id = self._screen_lifecycle_next_layer_id
         self._screen_lifecycle_next_layer_id += 1
         self._screen_lifecycle_layers.append(
-            {
-                "id": layer_id,
-                "preamble": preamble,
-                "event_handler": event_handler,
-                "postamble": postamble,
-                "scene_name": scene_name,
-            }
+            _ScreenLifecycleEntry(
+                preamble=preamble,
+                event_handler=event_handler,
+                postamble=postamble,
+                scene_name=scene_name,
+                entry_id=layer_id,
+            )
         )
         self._apply_screen_lifecycle_chain()
 
@@ -508,7 +527,7 @@ class GuiApplication:
             removed = False
             retained_layers = []
             for layer in self._screen_lifecycle_layers:
-                if layer.get("id") == layer_id:
+                if layer.entry_id == layer_id:
                     removed = True
                     continue
                 retained_layers.append(layer)
@@ -526,7 +545,7 @@ class GuiApplication:
             if self._screen_callback_matches_scene(entry)
         ]
 
-        preambles = [entry.get("preamble") for entry in callbacks if callable(entry.get("preamble"))]
+        preambles = [entry.preamble for entry in callbacks if callable(entry.preamble)]
         if not preambles:
             self._screen_preamble = None
         elif len(preambles) == 1:
@@ -538,7 +557,7 @@ class GuiApplication:
 
             self._screen_preamble = _composed_preamble
 
-        handlers = [entry.get("event_handler") for entry in callbacks if callable(entry.get("event_handler"))]
+        handlers = [entry.event_handler for entry in callbacks if callable(entry.event_handler)]
         if not handlers:
             self._screen_event_handler = None
         elif len(handlers) == 1:
@@ -552,7 +571,7 @@ class GuiApplication:
 
             self._screen_event_handler = _composed_event_handler
 
-        postambles = [entry.get("postamble") for entry in callbacks if callable(entry.get("postamble"))]
+        postambles = [entry.postamble for entry in callbacks if callable(entry.postamble)]
         if not postambles:
             self._screen_postamble = None
         elif len(postambles) == 1:
@@ -566,8 +585,8 @@ class GuiApplication:
 
         self._screen_lifecycle_active = bool(preambles or handlers or postambles)
 
-    def _screen_callback_matches_scene(self, callback_entry) -> bool:
-        scene_name = callback_entry.get("scene_name")
+    def _screen_callback_matches_scene(self, callback_entry: "_ScreenLifecycleEntry") -> bool:
+        scene_name = callback_entry.scene_name
         if scene_name is None:
             return True
         return str(scene_name) == str(self._active_scene_name)
@@ -767,8 +786,8 @@ class GuiApplication:
         with collector.span("gui_application", "draw", metadata={"scene_name": self._active_scene_name}):
             first_frame_profiler().begin_frame(self._active_scene_name)
             runtime = self._scenes[self._active_scene_name]
-            self.renderer.render(self.surface, runtime["scene"], runtime["theme"], app=self)
-            self.features.draw(self.surface, runtime["theme"])
+            self.renderer.render(self.surface, runtime.scene, runtime.theme, app=self)
+            self.features.draw(self.surface, runtime.theme)
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
         """Run one-time feature prewarm hooks for a scene using an offscreen surface.
@@ -781,7 +800,7 @@ class GuiApplication:
         return self.features.prewarm_features(
             host,
             warm_surface,
-            runtime["theme"],
+            runtime.theme,
             scene_name=target_scene,
             force=force,
         )
@@ -791,7 +810,7 @@ class GuiApplication:
         self.features.draw_direct_features(surface, theme)
 
     def set_window_tiling_enabled(self, enabled: bool, relayout: bool = True, scene_name: Optional[str] = None) -> None:
-        tiling = self._scenes[self._active_scene_name]["window_tiling"] if scene_name is None else self._scene_runtime(scene_name)["window_tiling"]
+        tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         tiling.set_enabled(enabled, relayout=relayout)
 
     def configure_window_tiling(
@@ -804,7 +823,7 @@ class GuiApplication:
         relayout: bool = True,
         scene_name: Optional[str] = None,
     ) -> None:
-        tiling = self._scenes[self._active_scene_name]["window_tiling"] if scene_name is None else self._scene_runtime(scene_name)["window_tiling"]
+        tiling = self._scenes[self._active_scene_name].window_tiling if scene_name is None else self._scene_runtime(scene_name).window_tiling
         tiling.configure(
             gap=gap,
             padding=padding,
@@ -831,7 +850,7 @@ class GuiApplication:
         scene_name: Optional[str] = None,
     ) -> None:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        runtime["theme"].register_font_role(
+        runtime.theme.register_font_role(
             role_name,
             size=size,
             file_path=file_path,
@@ -843,7 +862,7 @@ class GuiApplication:
 
     def font_roles(self, scene_name: Optional[str] = None) -> tuple[str, ...]:
         runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        return runtime["theme"].font_roles()
+        return runtime.theme.font_roles()
 
     # --- Convenience helpers ---
 
@@ -867,7 +886,7 @@ class GuiApplication:
         Shorthand for ``app.scene.find(control_id)``.
         Returns the node, or ``None`` if not found.
         """
-        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         return scene.find(control_id)
 
     def find_all(self, predicate, scene_name: Optional[str] = None) -> list:
@@ -875,7 +894,7 @@ class GuiApplication:
 
         Shorthand for ``app.scene.find_all(predicate)``.
         """
-        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         return scene.find_all(predicate)
 
     def focus_on(self, control_id: str, scene_name: Optional[str] = None) -> bool:
@@ -884,7 +903,7 @@ class GuiApplication:
         Shorthand for ``app.focus.set_focus_by_id(app.scene, control_id)``.
         Returns ``True`` when a matching focusable node was found and focused.
         """
-        scene = self.scene if scene_name is None else self._scene_runtime(scene_name)["scene"]
+        scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         return self.focus.set_focus_by_id(scene, control_id)
 
     # --- Feature helpers ---
@@ -946,7 +965,7 @@ class GuiApplication:
     def _prime_scene_window_tiling_registrations(self) -> None:
         """Prime per-scene window registration order without forcing relayout."""
         for runtime in self._scenes.values():
-            runtime["window_tiling"].prime_registration()
+            runtime.window_tiling.prime_registration()
 
     def bind_features_runtime(self, host) -> None:
         """Call optional bind_runtime(host) on all registered features."""

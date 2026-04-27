@@ -52,7 +52,7 @@ class BuiltInGraphicsFactory:
         return self.fonts.render_text_with_shadow(text, text_colour, self.theme.shadow, role_name=role_name)
 
     @staticmethod
-    def _centre(bigger: int, smaller: int) -> int:
+    def _center(bigger: int, smaller: int) -> int:
         return int((bigger / 2) - (smaller / 2))
 
     def _flood_fill(self, surface: Surface, start: Tuple[int, int], colour: Tuple[int, int, int]) -> None:
@@ -187,7 +187,7 @@ class BuiltInGraphicsFactory:
 
     def _draw_check_bitmap(self, state: int, size: int) -> Surface:
         shrink = int(size * 0.65)
-        offset = self._centre(size, shrink)
+        offset = self._center(size, shrink)
         box_bitmap = Surface((shrink, shrink)).convert()
         if state == 2:
             draw_box_bitmap(box_bitmap, "armed", Rect(0, 0, shrink, shrink), BUILT_IN_COLOURS)
@@ -209,7 +209,7 @@ class BuiltInGraphicsFactory:
     def _draw_check_style_surface(self, text: str, rect: Rect, state: int, *, font_role: str = "body", highlight: bool = False) -> Surface:
         text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
-        y_offset = self._centre(rect.height, text_height)
+        y_offset = self._center(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
         complete.blit(self._draw_check_bitmap(state, text_height), (0, y_offset))
         complete.blit(text_bitmap, (text_height + 2, y_offset))
@@ -218,7 +218,7 @@ class BuiltInGraphicsFactory:
     def _draw_radio_style_surface(self, text: str, rect: Rect, col1, col2, *, font_role: str = "body", highlight: bool = False) -> Surface:
         text_bitmap = self.render_text(text, colour=self.theme.highlight if highlight else self.theme.text, shadow=True, role_name=font_role)
         _, _, _, text_height = text_bitmap.get_rect()
-        y_offset = self._centre(rect.height, text_height)
+        y_offset = self._center(rect.height, text_height)
         complete = Surface((rect.width, rect.height), pygame.SRCALPHA).convert_alpha()
         radio_bitmap = self.draw_radio_bitmap(text_height, col1, col2)
         complete.blit(radio_bitmap, (0, y_offset))
@@ -300,7 +300,7 @@ class BuiltInGraphicsFactory:
         panel_size = int(size * 0.45)
         offset = int(size * 0.2)
         offset_b = max(1, offset // 2)
-        base = self._centre(size, panel_size + offset)
+        base = self._center(size, panel_size + offset)
         panel1 = Rect(base, base - gutter, panel_size + offset_b, panel_size + gutter + offset_b)
         panel2 = Rect(base + offset, base + gutter + offset_b, panel_size + offset_b, panel_size + gutter + offset_b)
         draw_rect(surface, col1, panel1)
@@ -340,8 +340,8 @@ class BuiltInGraphicsFactory:
         inactive_text = self.render_text(title, colour=self.theme.text, shadow=True, role_name=title_font_role)
         active_text = self.render_text(title, colour=self.theme.highlight, shadow=True, role_name=title_font_role)
 
-        inactive_y = self._centre(chrome_height, inactive_text.get_rect().height)
-        active_y = self._centre(chrome_height, active_text.get_rect().height)
+        inactive_y = self._center(chrome_height, inactive_text.get_rect().height)
+        active_y = self._center(chrome_height, active_text.get_rect().height)
         inactive.blit(inactive_text, (5, inactive_y))
         active.blit(active_text, (5, active_y))
 
@@ -365,8 +365,8 @@ class BuiltInGraphicsFactory:
         polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
         glyph = rotate(glyph, int(direction) % 360)
         glyph = smoothscale(glyph, (size, size))
-        glyph_x = self._centre(rect.width, size)
-        glyph_y = self._centre(rect.height, size)
+        glyph_x = self._center(rect.width, size)
+        glyph_y = self._center(rect.height, size)
         for surf in (visuals.idle, visuals.hover, visuals.armed):
             surf.blit(glyph, (glyph_x, glyph_y))
         # Disabled state should include the arrow glyph as a dimmed variant of idle.

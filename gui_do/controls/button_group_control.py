@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from typing import Callable, ClassVar, Dict, Optional
 from typing import TYPE_CHECKING
 
@@ -147,10 +148,10 @@ class ButtonGroupControl(ToggleControl):
 
     @staticmethod
     def _walk_nodes(nodes) -> list:
-        queue = [node for node in nodes if node is not None]
+        queue: deque = deque(node for node in nodes if node is not None)
         visited = []
         while queue:
-            node = queue.pop(0)
+            node = queue.popleft()
             visited.append(node)
             queue.extend(node.children)
         return visited

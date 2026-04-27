@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from typing import Dict, Iterable, List, Optional
 
 from pygame import Rect
@@ -26,10 +27,10 @@ class WindowTilingManager:
 
     def _scene_windows(self) -> List[object]:
         windows: List[object] = []
-        stack = list(self._bound_scene().nodes)
-        while stack:
-            node = stack.pop(0)
-            stack.extend(node.children)
+        queue: deque = deque(self._bound_scene().nodes)
+        while queue:
+            node = queue.popleft()
+            queue.extend(node.children)
             if self._is_window_like(node):
                 windows.append(node)
         return windows
@@ -60,10 +61,10 @@ class WindowTilingManager:
     def _work_area_rect(self) -> Rect:
         work = Rect(self.app.surface.get_rect())
         if self.avoid_task_panel:
-            stack = list(self._bound_scene().nodes)
-            while stack:
-                node = stack.pop(0)
-                stack.extend(node.children)
+            queue: deque = deque(self._bound_scene().nodes)
+            while queue:
+                node = queue.popleft()
+                queue.extend(node.children)
                 if node.is_task_panel() and node.visible:
                     panel_rect = node.rect
                     if panel_rect.top < work.bottom:

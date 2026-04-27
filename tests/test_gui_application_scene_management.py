@@ -523,7 +523,7 @@ class ScenePrewarmTests(GuiApplicationSceneManagementSetup):
         prewarm_mock.assert_called_once()
         args, kwargs = prewarm_mock.call_args
         self.assertIsNone(args[0])
-        self.assertIs(args[2], self.app._scene_runtime("control_showcase")["theme"])
+        self.assertIs(args[2], self.app._scene_runtime("control_showcase").theme)
         self.assertEqual(kwargs["scene_name"], "control_showcase")
         self.assertFalse(kwargs["force"])
 

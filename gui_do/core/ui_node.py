@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
@@ -143,9 +144,9 @@ class UiNode:
 
     def find_descendant(self, control_id: str) -> "Optional[UiNode]":
         """Return the first descendant (BFS) whose ``control_id`` matches, or ``None``."""
-        queue: List[UiNode] = list(self.children)
+        queue: deque[UiNode] = deque(self.children)
         while queue:
-            candidate = queue.pop(0)
+            candidate = queue.popleft()
             if candidate.control_id == control_id:
                 return candidate
             queue.extend(candidate.children)
@@ -154,9 +155,9 @@ class UiNode:
     def find_descendants(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
         """Return all descendants (BFS) that satisfy *predicate*."""
         result: List[UiNode] = []
-        queue: List[UiNode] = list(self.children)
+        queue: deque[UiNode] = deque(self.children)
         while queue:
-            candidate = queue.pop(0)
+            candidate = queue.popleft()
             if predicate(candidate):
                 result.append(candidate)
             queue.extend(candidate.children)

@@ -8,6 +8,7 @@ from pygame import Rect
 from ..core.gui_event import GuiEvent
 from ..core.first_frame_profiler import first_frame_profiler
 from ..core.ui_node import UiNode
+from ..core.error_handling import logical_error
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -50,7 +51,7 @@ class ToggleControl(UiNode):
     def font_role(self, value: str) -> None:
         next_role = str(value).strip()
         if not next_role:
-            raise ValueError("font_role must be a non-empty string")
+            raise logical_error("font_role must be a non-empty string", subsystem="gui.controls", operation="ToggleControl.font_role", source_skip_frames=1)
         self._font_role = next_role
 
     @property
