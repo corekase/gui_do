@@ -108,7 +108,9 @@ class FocusManager:
         target = self._focused_node
         if target is None:
             return False
-        if target not in app.scene._walk_nodes():
+        # Check scene membership via parent chain (O(depth)) instead of a full
+        # BFS list creation (O(nodes)), which matters on every key event.
+        if not self._is_node_in_scene(target, app.scene):
             self.clear_focus()
             return False
         if not target.visible or not target.enabled:
@@ -192,6 +194,17 @@ class FocusManager:
             pygame.K_LALT, pygame.K_RALT,
             pygame.K_LGUI, pygame.K_RGUI,
         )
+
+    @staticmethod
+    def _is_node_in_scene(node, scene) -> bool:
+        """Return True when *node* is reachable from *scene* via parent-chain walk.
+
+        O(depth) instead of a full BFS list creation — safe to call on every key event.
+        """
+        current = node
+        while current.parent is not None:
+            current = current.parent
+        return current in scene.nodes
 
     @staticmethod
     def _is_descendant(node, ancestor) -> bool:

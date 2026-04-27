@@ -22,12 +22,28 @@ class TelemetrySample:
     metadata: Dict[str, Any]
 
 
+class _NullTelemetrySpan(ContextDecorator):
+    """No-op span returned when telemetry is disabled; avoids all allocation overhead."""
+
+    __slots__ = ()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, _tb) -> None:
+        return None
+
+
+# Single reusable instance — safe because it carries no mutable state.
+_NULL_SPAN = _NullTelemetrySpan()
+
+
 class _TelemetrySpan(ContextDecorator):
     def __init__(self, collector, system: str, point: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         self._collector = collector
         self._system = str(system)
         self._point = str(point)
-        self._metadata = dict(metadata or {})
+        self._metadata = dict(metadata) if metadata else {}
         self._start = 0.0
         self._active = collector.should_record(self._system, self._point)
 
@@ -176,6 +192,10 @@ class TelemetryCollector:
             self._point_overrides.clear()
 
     def should_record(self, system: str, point: str) -> bool:
+        # Lock-free fast path: avoid RLock acquisition and string normalization
+        # when telemetry is globally disabled (the common case).
+        if not self._enabled:
+            return False
         normalized_system, _, key = self._normalize_key(system, point)
         with self._lock:
             if not self._enabled:
@@ -186,13 +206,19 @@ class TelemetryCollector:
                 return bool(self._system_overrides[normalized_system])
             return True
 
-    def span(self, system: str, point: str, metadata: Optional[Dict[str, Any]] = None) -> _TelemetrySpan:
+    def span(self, system: str, point: str, metadata: Optional[Dict[str, Any]] = None) -> "_TelemetrySpan | _NullTelemetrySpan":
+        # Lock-free fast path: return the shared no-op span when disabled.
+        if not self._enabled:
+            return _NULL_SPAN
         return _TelemetrySpan(self, system, point, metadata=metadata)
 
     def record_duration(self, system: str, point: str, elapsed_ms: float, *, metadata: Optional[Dict[str, Any]] = None) -> None:
+        # Lock-free fast path: skip all work when globally disabled.
+        if not self._enabled:
+            return
         normalized_system, normalized_point, key = self._normalize_key(system, point)
         elapsed = max(0.0, float(elapsed_ms))
-        payload = dict(metadata or {})
+        payload = dict(metadata) if metadata else {}
         with self._lock:
             if not self._enabled:
                 return

@@ -128,7 +128,16 @@ class Scene:
         if event.is_mouse_down(1):
             pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
-                if not self._point_in_task_panel(pos) and not self._point_in_window(pos):
+                # Single walk to check both task-panel and window hit; avoids two
+                # separate BFS traversals (_point_in_task_panel + _point_in_window).
+                hit_interactive = False
+                for node in self._walk_nodes():
+                    if not (node.visible and node.enabled):
+                        continue
+                    if (self._is_task_panel(node) or self._is_window_like(node)) and node.rect.collidepoint(pos):
+                        hit_interactive = True
+                        break
+                if not hit_interactive:
                     self._clear_active_windows()
         capture_event = event.with_phase(EventPhase.CAPTURE)
         for node in self.nodes:
@@ -159,8 +168,14 @@ class Scene:
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
-        top_window = self.top_window_at(pos)
-        for node in reversed(self._walk_nodes()):
+        # Single BFS walk shared between top-window lookup and focus-target search.
+        all_nodes = self._walk_nodes()
+        top_window: UiNode | None = None
+        for node in reversed(all_nodes):
+            if node.visible and node.enabled and self._is_window_like(node) and node.rect.collidepoint(pos):
+                top_window = node
+                break
+        for node in reversed(all_nodes):
             if top_window is not None and not self._is_descendant_of(node, top_window):
                 continue
             if (

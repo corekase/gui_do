@@ -52,17 +52,28 @@ class EventBus:
 
     def publish(self, topic: str, payload: object = None, *, scope: str | None = None) -> None:
         topic_name = str(topic)
+        subscribers = self._subscribers.get(topic_name)
+        if not subscribers:
+            return
+        # Snapshot for safe iteration (handlers may mutate the subscriber list).
+        snapshot = list(subscribers)
         collector = telemetry_collector()
+        # Fast path: skip all span/metadata overhead when telemetry is off.
+        if not collector._enabled:  # noqa: SLF001 — intentional lock-free check
+            for sub in snapshot:
+                if sub.scope is None or sub.scope == scope:
+                    sub.handler(payload)
+            return
         with collector.span(
             "event_bus",
             "publish",
             metadata={
                 "topic": topic_name,
                 "scope": "" if scope is None else str(scope),
-                "subscriber_count": len(self._subscribers.get(topic_name, ())),
+                "subscriber_count": len(snapshot),
             },
         ):
-            for sub in list(self._subscribers.get(topic_name, ())):
+            for sub in snapshot:
                 if sub.scope is None or sub.scope == scope:
                     with collector.span(
                         "event_bus",

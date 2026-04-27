@@ -4,6 +4,10 @@ import pygame
 class Renderer:
     """Renderer that draws one scene with one color theme."""
 
+    def __init__(self) -> None:
+        # Cache for scaled background bitmap: (source_bitmap_id, target_size) → scaled_surface
+        self._bg_cache: tuple | None = None
+
     def render(self, surface, scene, theme, app=None) -> None:
         if app is not None:
             app.invalidation.begin_frame()
@@ -13,8 +17,14 @@ class Renderer:
         if not restored:
             surface.fill(theme.background)
             if theme.background_bitmap is not None:
-                scaled = pygame.transform.smoothscale(theme.background_bitmap, surface.get_size())
-                surface.blit(scaled, (0, 0))
+                target_size = surface.get_size()
+                bitmap = theme.background_bitmap
+                cache = self._bg_cache
+                if cache is None or cache[0] is not bitmap or cache[1] != target_size:
+                    scaled = pygame.transform.smoothscale(bitmap, target_size)
+                    self._bg_cache = (bitmap, target_size, scaled)
+                    cache = self._bg_cache
+                surface.blit(cache[2], (0, 0))
         if app is not None:
             app.draw_screen_features(surface, theme)
         scene.draw(surface, theme, app=app)
