@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
-from math import cos, radians, sin
 from time import perf_counter
 from typing import Optional, Tuple
 
@@ -33,6 +32,21 @@ class WindowChromeVisuals:
     title_bar_inactive: Surface
     title_bar_active: Surface
     lower_widget: Surface
+
+
+# Normalized right-arrow polygon points derived from the original high-res shape
+# and translated to a tight 0,0-based bounds box (width=300, height=300).
+_ARROW_POLYGON_BOUNDS = (300, 300)
+_ARROW_POLYGON_POINTS_NORMALIZED = (
+    (300, 150),
+    (50, 300),
+    (50, 190),
+    (0, 190),
+    (0, 110),
+    (50, 110),
+    (50, 0),
+    (300, 150),
+)
 
 
 class BuiltInGraphicsFactory:
@@ -186,7 +200,7 @@ class BuiltInGraphicsFactory:
         return surface
 
     def _draw_check_bitmap(self, state: int, size: int) -> Surface:
-        shrink = int(size * 0.65)
+        shrink = max(2, int(size))
         offset = self._center(size, shrink)
         box_bitmap = Surface((shrink, shrink)).convert()
         if state == 2:
@@ -199,11 +213,12 @@ class BuiltInGraphicsFactory:
         complete = Surface((size, size), pygame.SRCALPHA).convert_alpha()
         complete.blit(box_bitmap, (offset, offset))
         if state in (1, 2):
-            glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
-            points = ((20, 200), (80, 140), (160, 220), (360, 0), (400, 60), (160, 320), (20, 200))
-            polygon(glyph, BUILT_IN_COLOURS["full"], points, 0)
-            polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
-            complete.blit(smoothscale(glyph, (size, size)), (0, 0))
+            thickness = max(2, size // 6)
+            p1 = (max(1, size // 6), max(1, int(size * 0.55)))
+            p2 = (max(1, int(size * 0.42)), max(1, int(size * 0.80)))
+            p3 = (max(1, int(size * 0.86)), max(1, int(size * 0.16)))
+            pygame.draw.lines(complete, BUILT_IN_COLOURS["full"], False, [p1, p2, p3], thickness)
+            pygame.draw.lines(complete, BUILT_IN_COLOURS["none"], False, [p1, p2, p3], max(1, thickness // 3))
         return complete
 
     def _draw_check_style_surface(self, text: str, rect: Rect, state: int, *, font_role: str = "body", highlight: bool = False) -> Surface:
@@ -281,17 +296,13 @@ class BuiltInGraphicsFactory:
         return InteractiveVisuals(idle=idle, hover=hover, armed=armed, disabled=disabled, disabled_armed=disabled_armed, hidden=hidden, hit_rect=Rect(rect))
 
     def draw_radio_bitmap(self, size: int, col1, col2) -> Surface:
-        supersampled = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
-        centre_point = 200
-        radius = 128
-        points = []
-        for point in range(0, 360, 5):
-            x1 = int(round(radius * cos(radians(point))))
-            y1 = int(round(radius * sin(radians(point))))
-            points.append((centre_point + x1, centre_point + y1))
-        polygon(supersampled, col1, points, 0)
-        polygon(supersampled, col2, points, 24)
-        return smoothscale(supersampled, (size, size))
+        surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
+        centre = (size // 2, size // 2)
+        outer_radius = max(2, size // 2)
+        ring_width = max(1, size // 8)
+        circle(surface, col1, centre, outer_radius)
+        circle(surface, col2, centre, outer_radius, ring_width)
+        return surface
 
     def draw_window_lower_widget_bitmap(self, size: int, col1, col2) -> Surface:
         surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
@@ -359,12 +370,23 @@ class BuiltInGraphicsFactory:
     def draw_arrow_visuals(self, rect: Rect, direction: int) -> InteractiveVisuals:
         visuals = self.build_frame_visuals(rect)
         size = min(rect.width, rect.height)
-        glyph = Surface((400, 400), pygame.SRCALPHA).convert_alpha()
-        points = ((350, 200), (100, 350), (100, 240), (50, 240), (50, 160), (100, 160), (100, 50), (350, 200))
-        polygon(glyph, BUILT_IN_COLOURS["full"], points, 0)
-        polygon(glyph, BUILT_IN_COLOURS["none"], points, 20)
-        glyph = rotate(glyph, int(direction) % 360)
-        glyph = smoothscale(glyph, (size, size))
+        supersample = max(32, size * 8)
+        glyph_supersampled = Surface((supersample, supersample), pygame.SRCALPHA).convert_alpha()
+        inset_sup = max(1, int(round(supersample * 0.10)))
+        draw_w = max(1, supersample - (2 * inset_sup))
+        draw_h = max(1, supersample - (2 * inset_sup))
+        src_w, src_h = _ARROW_POLYGON_BOUNDS
+        sx = (draw_w - 1) / max(1, src_w)
+        sy = (draw_h - 1) / max(1, src_h)
+        scaled_points = [
+            (int(round(inset_sup + (px * sx))), int(round(inset_sup + (py * sy))))
+            for px, py in _ARROW_POLYGON_POINTS_NORMALIZED
+        ]
+        polygon(glyph_supersampled, BUILT_IN_COLOURS["full"], scaled_points, 0)
+        outline = max(1, int(round(supersample * (20.0 / 400.0))))
+        polygon(glyph_supersampled, BUILT_IN_COLOURS["none"], scaled_points, outline)
+        glyph_rotated = rotate(glyph_supersampled, int(direction) % 360)
+        glyph = smoothscale(glyph_rotated, (size, size))
         glyph_x = self._center(rect.width, size)
         glyph_y = self._center(rect.height, size)
         for surf in (visuals.idle, visuals.hover, visuals.armed):

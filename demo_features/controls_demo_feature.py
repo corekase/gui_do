@@ -31,13 +31,13 @@ class ControlsShowcaseFeature(Feature):
     SECTION_TITLE_GAP = 10
 
     # Block layout constants (parametric - adjustable for layout tuning)
-    BLOCK_PADDING_X = 12
+    BLOCK_PADDING_X = 6
     BLOCK_PADDING_Y = 10
-    BLOCK_INTERNAL_SPACING = 8
+    BLOCK_INTERNAL_SPACING = 4
     BLOCK_LABEL_HEIGHT = 14
     BLOCK_LABEL_GAP = 6
     COLUMN_GAP = 16
-    CONTROL_GRID_GAP = 6
+    CONTROL_GRID_GAP = 4
     # Control constants
     LABEL_ALIGN = "center"
     ARROW_UP_DEGREES = 90
@@ -313,12 +313,12 @@ class ControlsShowcaseFeature(Feature):
         block_heights_map = {
             "arrow_cluster": 70,
             "button_groups": 84,
-            "buttons_and_indicators": 100,
-            "horizontal_sliders": 100,
-            "vertical_sliders": 100,
-            "canvas_panel_block": 110,
+            "buttons_and_indicators": 84,
+            "horizontal_sliders": 88,
+            "vertical_sliders": 88,
+            "canvas_panel_block": 100,
             "text_input_block": 30,
-            "list_view_block": 120,
+            "list_view_block": 108,
             "dropdown_block": 30,
         }
 
@@ -340,8 +340,8 @@ class ControlsShowcaseFeature(Feature):
             # and 1 image col.  vertical_sliders width is derived so each vertical control can
             # sit side-by-side with width equal to horizontal control height (track_size).
             h_track_size = max(1, (block_heights_map["horizontal_sliders"] - self.BLOCK_INTERNAL_SPACING) // 2)
-            # Column width accounts for: 10px left padding + track_size + 10px gap + track_size
-            v_col_width = max(56, 10 + 2 * h_track_size + 10)
+            # Column width accounts for: 4px left padding + track_size + 4px gap + track_size
+            v_col_width = max(56, 4 + 2 * h_track_size + 4)
 
             # Recalculate column_width to fit all regions without overlap:
             #   num_columns * column_width + v_col_width + num_columns * COLUMN_GAP = available_width
@@ -424,10 +424,10 @@ class ControlsShowcaseFeature(Feature):
         # Create block label (always enabled, even in disabled section)
         if not has_no_block_label:
             if block_name == "vertical_sliders":
-                # Center label above just the slider+scrollbar pair, not the full column
-                v_left_pad = 10
-                v_gap = 10
-                v_track_size = (100 - self.BLOCK_INTERNAL_SPACING) // 2
+                # Center label above just the slider+scrollbar pair, not the full column.
+                v_left_pad = 4
+                v_gap = 4
+                v_track_size = (88 - self.BLOCK_INTERNAL_SPACING) // 2
                 v_pair_width = 2 * v_track_size + v_gap
                 label_rect = Rect(block_rect.left + v_left_pad, block_rect.top, v_pair_width, self.BLOCK_LABEL_HEIGHT)
                 label_align = "center"
@@ -651,14 +651,13 @@ class ControlsShowcaseFeature(Feature):
         subtracted label height, leading to dimension mismatches.
         """
         section = "enabled" if enabled else "disabled"
-        # Fixed 10px padding on left and right, centered within content_rect
-        h_pad = 10
+        # Keep a minimal horizontal inset so tracks are visually dense.
+        h_pad = 4
         h_x = content_rect.left + h_pad
         h_width = max(1, content_rect.width - 2 * h_pad)
 
-        # Use base block height (100px) for track_size to match h_track_size calculation
-        # in _calculate_block_layout: (100 - 8) // 2 = 46px per track.
-        base_block_height = 100
+        # Use the horizontal slider block height from _calculate_block_layout.
+        base_block_height = 88
         track_size = (base_block_height - self.BLOCK_INTERNAL_SPACING) // 2
 
         slider = ui.slider_control_cls(
@@ -691,13 +690,12 @@ class ControlsShowcaseFeature(Feature):
         with 10px left padding and 10px spacing between controls.
         track_size matches horizontal_sliders' track_size since both blocks use the same base height."""
         section = "enabled" if enabled else "disabled"
-        # Compute track_size from the standard block height (100px), not from content_rect.height
-        # which spans the full column for vertical_sliders. This ensures consistent proportions
-        # with the horizontal sliders: (100 - 8) // 2 = 46px per track.
-        base_block_height = 100
+        # Compute track_size from the standard slider block height, not from
+        # content_rect.height which spans the full dedicated column.
+        base_block_height = 88
         track_size = (base_block_height - self.BLOCK_INTERNAL_SPACING) // 2
-        left_pad = 10
-        gap = 10
+        left_pad = 4
+        gap = 4
         pair_x = content_rect.left + left_pad
 
         v_slider = ui.slider_control_cls(
