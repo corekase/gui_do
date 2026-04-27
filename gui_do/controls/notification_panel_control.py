@@ -171,10 +171,13 @@ class NotificationPanelControl(OverlayPanelControl):
         except Exception:
             pass
 
-        # Content list
+        # Content list — intersect with the caller's clip so this control
+        # renders correctly when hosted inside a ScrollViewControl or any
+        # other clipped container.
         lr = self._list_rect()
         old_clip = surface.get_clip()
-        surface.set_clip(lr)
+        effective_clip = lr.clip(old_clip) if old_clip else lr
+        surface.set_clip(effective_clip)
 
         try:
             records = self._center.all_records

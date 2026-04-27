@@ -321,7 +321,7 @@ class ListViewControl(UiNode):
         last_row = min(len(self._items), first_row + vh // self._row_height + 2)
 
         clip = surface.get_clip()
-        surface.set_clip(r)
+        surface.set_clip(r.clip(clip) if clip else r)
 
         for i in range(first_row, last_row):
             if i >= len(self._items):

@@ -364,7 +364,7 @@ class TextAreaControl(UiNode):
         # Clip to content area
         clip_rect = pygame.Rect(r.left, r.top, r.width, r.height)
         old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
+        surface.set_clip(clip_rect.clip(old_clip) if old_clip else clip_rect)
 
         sel_lo, sel_hi = self.selection_range
         abs_offset = 0

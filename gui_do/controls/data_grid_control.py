@@ -410,7 +410,7 @@ class DataGridControl(UiNode):
 
         # --- Rows (clipped to content rect) ---
         old_clip = surface.get_clip()
-        surface.set_clip(cr)
+        surface.set_clip(cr.clip(old_clip) if old_clip else cr)
 
         first_row = self._scroll_offset // self._row_height
         last_row = min(len(self._rows), first_row + self._viewport_height() // self._row_height + 2)

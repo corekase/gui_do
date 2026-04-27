@@ -11,12 +11,32 @@ from gui_do import (
     PanelControl,
     LabelControl,
     ButtonControl,
+    ArrowBoxControl,
+    ButtonGroupControl,
+    FrameControl,
+    ImageControl,
+    ScrollbarControl,
     TaskPanelControl,
     ToggleControl,
+    LayoutAxis,
+    OverlayPanelControl,
+    DropdownControl,
+    DropdownOption,
+    ToastSeverity,
+    DataGridControl,
+    GridColumn,
+    GridRow,
     ContextMenuItem,
+    SplitterControl,
+    RichLabelControl,
     MenuBarManager,
     SceneTransitionManager,
     SceneTransitionStyle,
+    NotificationCenter,
+    NotificationRecord,
+    NotificationPanelControl,
+    ScrollViewControl,
+    ColorPickerControl,
 )
 
 
@@ -319,7 +339,239 @@ class GuiDoDemo:
         system_x = inbox_x - right_gap - system_w
         self.system_toggle_window.rect.topleft = (system_x, y)
         self.inbox_button.rect.topleft = (inbox_x, y)
+        self._build_main_scene_controls_dock()
         self.app.tile_windows()
+
+    def _build_main_scene_controls_dock(self) -> None:
+        dock_width = 560
+        dock_margin_right = 24
+        dock_top = 112
+        dock_left = self.screen_rect.right - dock_margin_right - dock_width
+        dock_bottom = self.task_panel.rect.top - 18
+        dock_height = max(320, dock_bottom - dock_top)
+        header_h = 28
+        scroll_margin = 12
+        notification_panel_h = 188
+        notification_label_h = 20
+        notification_gap = 8
+        preview_gap = 14
+        overlay_h = 88
+
+        self.main_controls_dock = self.root.add(
+            PanelControl(
+                "main_controls_dock",
+                Rect(dock_left, dock_top, dock_width, dock_height),
+                draw_background=True,
+            )
+        )
+
+        dock_title = LabelControl(
+            "main_controls_dock_title",
+            Rect(dock_left + scroll_margin, dock_top + 10, dock_width - (scroll_margin * 2), header_h),
+            "Main Scene Control Dock",
+            align="left",
+        )
+        dock_title.font_role = self.TASK_PANEL_CONTROL_FONT_ROLE
+        self.main_controls_dock.add(dock_title)
+
+        scroll_top = dock_top + header_h + 18
+        fixed_preview_h = notification_label_h + notification_gap + notification_panel_h
+        scroll_bottom = dock_top + dock_height - overlay_h - fixed_preview_h - (preview_gap * 2)
+        scroll_rect = Rect(
+            dock_left + scroll_margin,
+            scroll_top,
+            dock_width - (scroll_margin * 2),
+            max(160, scroll_bottom - scroll_top),
+        )
+        self.main_controls_scroll = self.main_controls_dock.add(
+            ScrollViewControl(
+                "main_controls_scroll",
+                scroll_rect,
+                content_width=scroll_rect.width - 14,
+                content_height=1050,
+                scroll_y=True,
+            )
+        )
+        self.main_controls_scroll.set_tab_index(-1)
+
+        content_w = scroll_rect.width - 24
+        y = 0
+
+        def add_scroll_child(control, x: int, y_pos: int, *, focusable: bool = False) -> None:
+            if not focusable:
+                control.set_tab_index(-1)
+            self.main_controls_scroll.add(control, content_x=x, content_y=y_pos)
+
+        add_scroll_child(
+            RichLabelControl(
+                "main_controls_intro",
+                Rect(0, 0, content_w, 68),
+                text="This dock integrates the remaining gui_do controls directly into the main scene using concrete utility-style samples.",
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            ),
+            0,
+            y,
+        )
+        y += 82
+
+        add_scroll_child(LabelControl("main_controls_nav_label", Rect(0, 0, 180, 20), "Arrow Pad", align="left"), 0, y)
+        arrow_y = y + 24
+        arrow_size = 34
+        arrow_gap = 8
+        add_scroll_child(ArrowBoxControl("main_arrow_up", Rect(0, 0, arrow_size, arrow_size), 90), 0, arrow_y)
+        add_scroll_child(ArrowBoxControl("main_arrow_down", Rect(0, 0, arrow_size, arrow_size), 270), arrow_size + arrow_gap, arrow_y)
+        add_scroll_child(ArrowBoxControl("main_arrow_left", Rect(0, 0, arrow_size, arrow_size), 180), (arrow_size + arrow_gap) * 2, arrow_y)
+        add_scroll_child(ArrowBoxControl("main_arrow_right", Rect(0, 0, arrow_size, arrow_size), 0), (arrow_size + arrow_gap) * 3, arrow_y)
+        y = arrow_y + arrow_size + 22
+
+        add_scroll_child(LabelControl("main_controls_group_label", Rect(0, 0, 180, 20), "View Mode", align="left"), 0, y)
+        group_y = y + 24
+        group_w = 104
+        add_scroll_child(ButtonGroupControl("main_group_overview", Rect(0, 0, group_w, 28), "main_scene_mode", "Overview", selected=True, font_role=self.TASK_PANEL_CONTROL_FONT_ROLE), 0, group_y)
+        add_scroll_child(ButtonGroupControl("main_group_logs", Rect(0, 0, group_w, 28), "main_scene_mode", "Logs", font_role=self.TASK_PANEL_CONTROL_FONT_ROLE), group_w + 8, group_y)
+        add_scroll_child(ButtonGroupControl("main_group_assets", Rect(0, 0, group_w, 28), "main_scene_mode", "Assets", font_role=self.TASK_PANEL_CONTROL_FONT_ROLE), (group_w + 8) * 2, group_y)
+        y = group_y + 44
+
+        add_scroll_child(LabelControl("main_controls_dropdown_label", Rect(0, 0, 220, 20), "Scene Preset", align="left"), 0, y)
+        add_scroll_child(
+            DropdownControl(
+                "main_scene_preset_dropdown",
+                Rect(0, 0, 220, 30),
+                [
+                    DropdownOption("Presentation"),
+                    DropdownOption("Diagnostics"),
+                    DropdownOption("Quiet Mode"),
+                ],
+                selected_index=0,
+                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
+            ),
+            0,
+            y + 24,
+        )
+        y += 68
+
+        add_scroll_child(LabelControl("main_controls_splitter_label", Rect(0, 0, 220, 20), "Split Workspace", align="left"), 0, y)
+        add_scroll_child(
+            SplitterControl(
+                "main_scene_splitter",
+                Rect(0, 0, content_w, 48),
+                axis=LayoutAxis.HORIZONTAL,
+                ratio=0.62,
+            ),
+            0,
+            y + 24,
+        )
+        y += 88
+
+        add_scroll_child(LabelControl("main_controls_color_label", Rect(0, 0, 220, 20), "Accent Color", align="left"), 0, y)
+        picker_y = y + 24
+        add_scroll_child(
+            ColorPickerControl(
+                "main_scene_color_picker",
+                Rect(0, 0, 220, 180),
+                color=(64, 128, 255),
+            ),
+            0,
+            picker_y,
+        )
+        add_scroll_child(
+            ScrollbarControl(
+                "main_scene_scrollbar",
+                Rect(0, 0, 18, 180),
+                LayoutAxis.VERTICAL,
+                content_size=1000,
+                viewport_size=220,
+                offset=140,
+                step=24,
+            ),
+            232,
+            picker_y,
+        )
+        add_scroll_child(FrameControl("main_scene_preview_frame", Rect(0, 0, 120, 120), border_width=2), 276, picker_y)
+        add_scroll_child(
+            ImageControl(
+                "main_scene_preview_image",
+                Rect(0, 0, 104, 104),
+                "demo_features/data/images/realize.png",
+            ),
+            284,
+            picker_y + 8,
+        )
+        y = picker_y + 198
+
+        add_scroll_child(LabelControl("main_controls_grid_label", Rect(0, 0, 220, 20), "Job Queue", align="left"), 0, y)
+        add_scroll_child(
+            DataGridControl(
+                "main_scene_data_grid",
+                Rect(0, 0, content_w, 176),
+                columns=[
+                    GridColumn("task", "Task", width=200),
+                    GridColumn("state", "State", width=120),
+                    GridColumn("owner", "Owner", width=120),
+                ],
+                rows=[
+                    GridRow({"task": "Build main scene", "state": "Ready", "owner": "UI"}, row_id="job-1"),
+                    GridRow({"task": "Tile windows", "state": "Queued", "owner": "Layout"}, row_id="job-2"),
+                    GridRow({"task": "Publish toast", "state": "Done", "owner": "Events"}, row_id="job-3"),
+                ],
+                show_scrollbar=True,
+            ),
+            0,
+            y + 24,
+        )
+        y += 216
+
+        self.main_controls_scroll.set_content_size(content_w, y + 12)
+
+        preview_top = scroll_rect.bottom + preview_gap
+        self.main_controls_notifications_label = LabelControl(
+            "main_controls_notifications_label",
+            Rect(dock_left + scroll_margin, preview_top, dock_width - (scroll_margin * 2), notification_label_h),
+            "Inbox Preview",
+            align="left",
+        )
+        self.main_controls_notifications_label.font_role = self.TASK_PANEL_CONTROL_FONT_ROLE
+        self.main_controls_dock.add(self.main_controls_notifications_label)
+
+        self.main_scene_notification_center = NotificationCenter(self.app.events, max_records=16)
+        self.main_scene_notification_center.add(NotificationRecord("Main scene controls dock ready", title="Dock", severity=ToastSeverity.SUCCESS))
+        self.main_scene_notification_center.add(NotificationRecord("Window tiling available", title="Workspace", severity=ToastSeverity.INFO))
+        self.main_scene_notification_center.add(NotificationRecord("Two background tasks queued", title="Scheduler", severity=ToastSeverity.WARNING))
+        self.main_scene_notification_panel = NotificationPanelControl(
+            "main_scene_notification_panel",
+            Rect(
+                dock_left + scroll_margin,
+                preview_top + notification_label_h + notification_gap,
+                dock_width - (scroll_margin * 2),
+                notification_panel_h,
+            ),
+            self.main_scene_notification_center,
+        )
+        self.main_scene_notification_panel.set_tab_index(-1)
+        self.main_controls_dock.add(self.main_scene_notification_panel)
+
+        overlay_top = dock_top + dock_height - overlay_h - 10
+        self.main_scene_overlay_panel = self.main_controls_dock.add(
+            OverlayPanelControl(
+                "main_scene_overlay_panel",
+                Rect(dock_left + 12, overlay_top, dock_width - 24, overlay_h),
+                draw_background=True,
+            )
+        )
+        overlay_items = (
+            "Overlay HUD",
+            "Pinned status card",
+            "Quick glance summary",
+        )
+        for index, text in enumerate(overlay_items):
+            label = LabelControl(
+                f"main_scene_overlay_label_{index}",
+                Rect(0, 0, self.main_scene_overlay_panel.rect.width - 20, 18),
+                text,
+                align="left",
+            )
+            label.font_role = self.TASK_PANEL_CONTROL_FONT_ROLE
+            self.main_scene_overlay_panel.add_at(label, rel_x=10, rel_y=8 + index * 22)
 
     def _build_control_showcase_scene(self) -> None:
         """Build the control showcase scene and provide a way back to main."""

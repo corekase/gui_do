@@ -889,12 +889,12 @@ class ControlsShowcaseFeature(Feature):
         for i, item_text in enumerate(("Overlay Item A", "Overlay Item B", "Overlay Item C")):
             child_label = LabelControl(
                 f"overlay_child_{i}",
-                Rect(col8_x + 8, overlay_control_top + 6 + i * 26, col8_w - 16, 22),
+                Rect(0, 0, col8_w - 16, 22),
                 item_text,
                 align="left",
             )
             child_label.font_role = self._control_font_role
-            overlay_panel.add(child_label)
+            overlay_panel.add_at(child_label, rel_x=8, rel_y=6 + i * 26)
         self._place_control(
             host,
             "overlay_panel",

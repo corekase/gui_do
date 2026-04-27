@@ -432,7 +432,7 @@ class TextInputControl(UiNode):
             self.rect.height,
         )
         old_clip = surface.get_clip()
-        surface.set_clip(clip_rect)
+        surface.set_clip(clip_rect.clip(old_clip) if old_clip else clip_rect)
 
         font = self._get_font()
         display = self._get_display_value()

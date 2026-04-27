@@ -178,6 +178,22 @@ class PanelControl(UiNode):
         child.invalidate()
         return child
 
+    def add_at(self, child: UiNode, rel_x: int = 0, rel_y: int = 0) -> UiNode:
+        """Attach *child* at a position relative to this panel's top-left corner.
+
+        The child's rect dimensions are preserved; only its position is adjusted
+        so that ``(0, 0)`` maps to this panel's ``rect.topleft``.  This is the
+        preferred way to add children whose layout is expressed in panel-local
+        coordinates rather than screen-space coordinates.
+
+        Example::
+
+            overlay.add_at(label, rel_x=8, rel_y=6)
+        """
+        child.rect.left = self.rect.left + int(rel_x)
+        child.rect.top = self.rect.top + int(rel_y)
+        return self.add(child)
+
     @property
     def child_count(self) -> int:
         """Return the number of direct children."""

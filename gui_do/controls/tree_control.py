@@ -351,7 +351,7 @@ class TreeControl(UiNode):
 
         # Clip rendering to visible area
         old_clip = surface.get_clip()
-        surface.set_clip(vr)
+        surface.set_clip(vr.clip(old_clip) if old_clip else vr)
 
         try:
             for i, row in enumerate(self._rows):
