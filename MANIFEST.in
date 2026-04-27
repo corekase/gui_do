@@ -1,4 +1,6 @@
 include README.md
 include LICENSE
+include requirements-ci.txt
 include scripts/manage.py
 recursive-include docs *.md
+recursive-include tests *.py
