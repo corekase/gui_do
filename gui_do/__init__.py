@@ -45,7 +45,7 @@ from .core.gui_event import EventPhase, EventType, GuiEvent
 from .core.value_change_callback import ValueChangeCallback
 from .core.value_change_reason import ValueChangeReason
 from .core.invalidation import InvalidationTracker
-from .core.presentation_model import ObservableValue, PresentationModel
+from .core.presentation_model import ObservableValue, PresentationModel, ComputedValue
 from .core.task_scheduler import TaskEvent, TaskScheduler
 from .core.timers import Timers
 from .core.telemetry import TelemetryCollector
@@ -97,6 +97,13 @@ from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, 
 from .core.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
 from .core.notification_center import NotificationCenter, NotificationRecord
 from .controls.notification_panel_control import NotificationPanelControl
+from .core.clipboard import ClipboardManager
+from .core.animation_sequence import AnimationSequence, AnimationHandle
+from .controls.scroll_view_control import ScrollViewControl
+from .controls.spinner_control import SpinnerControl
+from .controls.range_slider_control import RangeSliderControl
+from .controls.color_picker_control import ColorPickerControl
+from .core.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
 
 __all__ = [
     "GuiApplication",
@@ -131,6 +138,7 @@ __all__ = [
     "InvalidationTracker",
     "ObservableValue",
     "PresentationModel",
+    "ComputedValue",
     "TaskEvent",
     "TaskScheduler",
     "Timers",
@@ -214,4 +222,14 @@ __all__ = [
     "NotificationCenter",
     "NotificationRecord",
     "NotificationPanelControl",
+    "ClipboardManager",
+    "AnimationSequence",
+    "AnimationHandle",
+    "ScrollViewControl",
+    "SpinnerControl",
+    "RangeSliderControl",
+    "ColorPickerControl",
+    "CommandPaletteManager",
+    "CommandEntry",
+    "CommandPaletteHandle",
 ]

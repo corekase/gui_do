@@ -109,6 +109,21 @@ class Feature:
     def prewarm(self, host, surface, theme) -> None:
         return None
 
+    def save_state(self) -> dict:
+        """Return a JSON-serializable dict of persistent feature state.
+
+        Override to capture state that should survive across sessions.
+        The default implementation returns an empty dict.
+        """
+        return {}
+
+    def restore_state(self, state: dict) -> None:
+        """Apply previously saved state produced by :meth:`save_state`.
+
+        Called by :meth:`FeatureManager.restore_feature_states` after
+        :meth:`build` completes.  Override to apply persisted values.
+        """
+
     def send_message(self, target_feature_name: str, message: Mapping[str, Any]) -> bool:
         if self._feature_manager is None:
             raise logical_error(
@@ -801,3 +816,40 @@ class FeatureManager:
                 source_skip_frames=1,
             )
         return alias_name
+
+    def save_feature_states(self) -> Dict[str, dict]:
+        """Collect persistent state from every registered feature.
+
+        Returns a ``{feature_name: state_dict}`` mapping suitable for
+        JSON serialisation and later passing to :meth:`restore_feature_states`.
+        Features that raise during :meth:`Feature.save_state` are skipped with
+        an empty dict recorded under their name.
+        """
+        states: Dict[str, dict] = {}
+        for feature in self._features.values():
+            try:
+                state = feature.save_state()
+            except Exception:
+                state = {}
+            states[feature.name] = state if isinstance(state, dict) else {}
+        return states
+
+    def restore_feature_states(self, states: Dict[str, dict]) -> None:
+        """Distribute saved states to registered features.
+
+        *states* should be a ``{feature_name: state_dict}`` mapping as produced
+        by :meth:`save_feature_states`.  Features with no entry in *states* are
+        silently skipped.  Errors during :meth:`Feature.restore_state` are
+        swallowed so that a corrupt state block cannot prevent other features
+        from restoring.
+        """
+        if not isinstance(states, dict):
+            return
+        for name, state in states.items():
+            feature = self._features.get(str(name))
+            if feature is None or not isinstance(state, dict):
+                continue
+            try:
+                feature.restore_state(state)
+            except Exception:
+                pass

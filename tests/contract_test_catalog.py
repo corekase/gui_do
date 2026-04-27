@@ -196,6 +196,7 @@ PUBLIC_API_EXPORT_ORDER = (
     "InvalidationTracker",
     "ObservableValue",
     "PresentationModel",
+    "ComputedValue",
     "TaskEvent",
     "TaskScheduler",
     "Timers",
@@ -279,6 +280,16 @@ PUBLIC_API_EXPORT_ORDER = (
     "NotificationCenter",
     "NotificationRecord",
     "NotificationPanelControl",
+    "ClipboardManager",
+    "AnimationSequence",
+    "AnimationHandle",
+    "ScrollViewControl",
+    "SpinnerControl",
+    "RangeSliderControl",
+    "ColorPickerControl",
+    "CommandPaletteManager",
+    "CommandEntry",
+    "CommandPaletteHandle",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (
@@ -329,6 +340,7 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "InvalidationTracker",
     "ObservableValue",
     "PresentationModel",
+    "ComputedValue",
     "TaskEvent",
     "TaskScheduler",
     "Timers",
@@ -412,6 +424,16 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "NotificationCenter",
     "NotificationRecord",
     "NotificationPanelControl",
+    "ClipboardManager",
+    "AnimationSequence",
+    "AnimationHandle",
+    "ScrollViewControl",
+    "SpinnerControl",
+    "RangeSliderControl",
+    "ColorPickerControl",
+    "CommandPaletteManager",
+    "CommandEntry",
+    "CommandPaletteHandle",
 )
 
 PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (

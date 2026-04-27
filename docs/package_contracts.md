@@ -40,6 +40,7 @@ from gui_do import (
     InvalidationTracker,
     ObservableValue,
     PresentationModel,
+    ComputedValue,
     TaskEvent,
     TaskScheduler,
     Timers,
@@ -123,6 +124,16 @@ from gui_do import (
     NotificationCenter,
     NotificationRecord,
     NotificationPanelControl,
+    ClipboardManager,
+    AnimationSequence,
+    AnimationHandle,
+    ScrollViewControl,
+    SpinnerControl,
+    RangeSliderControl,
+    ColorPickerControl,
+    CommandPaletteManager,
+    CommandEntry,
+    CommandPaletteHandle,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:

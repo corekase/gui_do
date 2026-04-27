@@ -46,6 +46,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `InvalidationTracker`
 - `ObservableValue`
 - `PresentationModel`
+- `ComputedValue`
 - `TaskEvent`
 - `TaskScheduler`
 - `Timers`
@@ -129,6 +130,16 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `NotificationCenter`
 - `NotificationRecord`
 - `NotificationPanelControl`
+- `ClipboardManager`
+- `AnimationSequence`
+- `AnimationHandle`
+- `ScrollViewControl`
+- `SpinnerControl`
+- `RangeSliderControl`
+- `ColorPickerControl`
+- `CommandPaletteManager`
+- `CommandEntry`
+- `CommandPaletteHandle`
 
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 
