@@ -43,8 +43,8 @@ class LibraryDemoSeparationTests(unittest.TestCase):
         self.assertIn("DEMO", LIBRARY_SEPARATION_PRINCIPLE)
         self.assertIn("PACKAGING ENFORCEMENT", LIBRARY_SEPARATION_PRINCIPLE)
 
-    def test_gui_package_has_no_hardcoded_demo_data_paths(self) -> None:
-        """Verify gui_do/ has no hardcoded demo_features/data/ paths."""
+    def test_gui_package_has_no_hardcoded_consumer_paths(self) -> None:
+        """Verify gui_do/ has no hardcoded consumer/demo paths."""
         self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         gui_root = root / "gui_do"
@@ -52,18 +52,18 @@ class LibraryDemoSeparationTests(unittest.TestCase):
 
         for py_file in gui_root.rglob("*.py"):
             text = py_file.read_text(encoding="utf-8")
-            # Check for hardcoded demo_features paths
-            if "demo_features/data" in text or "demo_features" + "/" + "data" in text:
+            # Check for hardcoded consumer/demo path roots
+            if "demo_features/" in text or "demo_features" + "/" in text:
                 offenders.append(str(py_file.relative_to(root)))
 
         self.assertEqual(
             offenders,
             [],
-            f"gui_do package must not contain hardcoded demo_features/data paths; found in: {offenders}",
+            f"gui_do package must not contain hardcoded consumer/demo paths; found in: {offenders}",
         )
 
     def test_path_resolution_functions_accept_caller_paths(self) -> None:
-        """Verify asset loading functions resolve from CWD or absolute paths, not demo_features/data."""
+        """Verify asset loading functions resolve from CWD or absolute paths, not consumer/demo roots."""
         self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
 
@@ -136,8 +136,8 @@ class LibraryDemoSeparationTests(unittest.TestCase):
         self.assertNotIn('demo_features', text.split("packages.find")[1].split("[tool.setuptools")[0],
                         "pyproject.toml packages.find must not include demo_features")
 
-    def test_manifest_in_excludes_demo_features_data(self) -> None:
-        """Verify MANIFEST.in does not include demo_features/data (sdist exclusion)."""
+    def test_manifest_in_excludes_consumer_demo_trees(self) -> None:
+        """Verify MANIFEST.in does not include consumer/demo trees in sdist."""
         self._require_demo_contracts()
         root = Path(__file__).resolve().parents[1]
         manifest = root / "MANIFEST.in"
@@ -146,7 +146,7 @@ class LibraryDemoSeparationTests(unittest.TestCase):
 
         # Should NOT have recursive-include demo_features
         self.assertNotIn("demo_features", text,
-                        "MANIFEST.in must not include demo_features or demo_features/data")
+                        "MANIFEST.in must not include consumer/demo trees")
 
     def test_library_composition_documented(self) -> None:
         """Verify what constitutes the library is clearly documented."""
@@ -160,7 +160,7 @@ class LibraryDemoSeparationTests(unittest.TestCase):
         self.assertIn("scripts/manage.py", principle, "Library composition must include scripts/manage.py")
 
         # Demo components
-        self.assertIn("demo_features/", principle, "Demo composition must include demo_features/")
+        self.assertIn("outside gui_do/", principle, "Demo composition must describe consumer code outside gui_do/")
         self.assertIn("*_demo.py", principle, "Demo composition must document demo entrypoints by glob")
 
         # Developer workflow must be documented

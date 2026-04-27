@@ -6,7 +6,8 @@ script to strip the bundled demo code and receive a clean gui_do library base
 ready for building their own application.
 
 Current-folder commands:
-- init: strip demo content (demo_features/, *_demo.py, demo tests) from the
+- init: strip consumer/demo content outside gui_do/ (currently demo_features/,
+    *_demo.py, and demo tests) from the
         current folder, yielding a clean gui_do library base
 - apply: apply required project updates to the current folder
 - verify: run the contract verification command for the current folder

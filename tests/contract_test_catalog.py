@@ -18,12 +18,11 @@ GUI_DO LIBRARY:
   - scripts/manage.py: Developer bootstrap tool — strips demo to yield clean library base
   - Wheel distribution contains only gui_do/ package
   - Sdist distribution contains gui_do/, tests/, docs/, scripts/ but NOT demo content
-  - Does NOT import from demo_features (enforced by test_gui_package_does_not_depend_on_demo_features)
-  - Does NOT reference demo_features/ paths (all path resolution uses caller-supplied CWD-relative paths)
+    - Does NOT import from demo_features (enforced by test_gui_package_does_not_depend_on_demo_features)
+    - Does NOT reference consumer/demo-owned paths (all path resolution uses caller-supplied CWD-relative paths)
 
 DEMO (ships with repo, stripped by manage.py init for application developers):
-  - demo_features/: Feature implementations showcasing gui_do capabilities
-  - demo_features/data/: Font, image, cursor assets owned exclusively by the demo
+    - Consumer/demo code outside gui_do/ (currently demo_features/ and *_demo.py)
   - *_demo.py: Demo application entrypoints (discovered by glob, not hardcoded list)
   - Demo tests: any test file in tests/ that imports from demo_features (content-scan discovered)
   - Demo imports ONLY from gui_do public root (enforced by test_demo_entrypoints_use_public_gui_api_only)
@@ -40,7 +39,7 @@ DEVELOPER WORKFLOW (application developers using gui_do):
 
 PACKAGING ENFORCEMENT:
   - pyproject.toml [tool.setuptools.packages.find] include = ["gui_do*"] only
-  - MANIFEST.in excludes demo_features/ entirely
+    - MANIFEST.in ships package sources/docs/tests without bundling consumer/demo trees
   - No hardcoded demo paths in gui_do/ code
   - All asset loading in framework accepts caller-supplied paths
 """
@@ -286,7 +285,7 @@ PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
 ) if DEMO_CONTRACTS_ENABLED else ()
 
 PACKAGE_PUBLIC_API_REQUIRED_PHRASES = (
-    "Demo-only contracts are intentionally outside gui_do package",
+    "Consumer-side contracts are intentionally outside the gui_do library boundary",
 )
 
 PACKAGE_BOUNDARY_REQUIRED_PHRASES = (
@@ -299,7 +298,7 @@ PACKAGE_BOUNDARY_REQUIRED_PHRASES = (
     if not DEMO_CONTRACTS_ENABLED
     else (
         "gui_do/",
-        "demo_features/",
+        "outside `gui_do/`",
         "*_demo.py",
         "from gui_do import ...",
         "without aliases",

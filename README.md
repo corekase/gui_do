@@ -79,8 +79,8 @@ What `init` does:
 
 - sets `DEMO_CONTRACTS_ENABLED = False` in `tests/contract_test_catalog.py`
 - removes `gui_do_demo.py`
-- removes the entire `demo_features/` tree as demo-owned content (including `demo_features/data/` and any future demo files/folders)
-- removes demo-specific tests discovered by rule (any `tests/test_*.py` importing `demo_features`)
+- removes consumer/demo content outside `gui_do/` (currently the `demo_features/` tree)
+- removes consumer-facing tests discovered by rule (currently any `tests/test_*.py` importing `demo_features`)
 - applies the package-only docs and CI workflow updates
 - creates a starter `myapp.py` and `features/` package (only when `--scaffold` is passed)
 
@@ -136,7 +136,7 @@ python scripts/manage.py apply --verify
 
 `apply` runs the same policy steps as `init` without the scaffold step: it sets `DEMO_CONTRACTS_ENABLED = False`, removes any remaining demo files, and updates the docs and CI workflow. It is safe to run more than once.
 
-Like `init`, `apply` removes demo content by general boundary rules (entire `demo_features/` tree and discovered demo tests), not by a fixed per-file list.
+Like `init`, `apply` removes non-`gui_do` consumer/demo content by boundary rules (currently the `demo_features/` tree and discovered demo tests), not by a fixed per-file list.
 
 Add `--dry-run` to preview what `apply` would do without writing any files.
 
@@ -1064,11 +1064,11 @@ Display PNG/JPG images scaled to fit a rectangle.
 from gui_do import ImageControl
 
 image = parent.add(
-    ImageControl("image_id", rect, image_path="demo_features/data/images/backdrop.jpg")
+    ImageControl("image_id", rect, image_path="assets/images/backdrop.jpg")
 )
 
 # Update image
-image.set_image("demo_features/data/images/new_image.png")
+image.set_image("assets/images/new_image.png")
 ```
 
 ### Frame Control
@@ -1784,7 +1784,7 @@ shadow_col  = app.theme.shadow      # text drop-shadow color
 app.register_font_role(
     role_name="body",
     size=14,
-    file_path="demo_features/data/fonts/Ubuntu-B.ttf",   # relative to repo root, or absolute
+    file_path="assets/fonts/Ubuntu-B.ttf",   # CWD-relative or absolute
     system_name="arial",                    # pygame system font fallback
     bold=False,
     italic=False,
@@ -1794,7 +1794,7 @@ app.register_font_role(
 app.register_font_role(
     role_name="heading",
     size=24,
-    file_path="demo_features/data/fonts/Gimbot.ttf",
+    file_path="assets/fonts/Gimbot.ttf",
     system_name="arial",
     bold=True,
     scene_name="main",
@@ -1831,7 +1831,7 @@ fonts = app.theme.fonts   # active scene's FontManager
 fonts.register_role(
     "heading",
     size=24,
-    file_path="demo_features/data/fonts/Ubuntu-B.ttf",   # relative to resource root, or absolute
+    file_path="assets/fonts/Ubuntu-B.ttf",   # CWD-relative or absolute
     system_name="arial",                   # pygame system-font fallback
     bold=True,
     italic=False,
@@ -1977,7 +1977,7 @@ class MyFeature(Feature):
             host,
             "heading",
             size=20,
-            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
+            file_path="assets/fonts/Ubuntu-B.ttf",
             system_name="arial",
             bold=True,
             scene_name="main",
@@ -2282,8 +2282,8 @@ app.tile_windows(newly_visible=[win])  # hint which window was just made visible
 settings = app.read_window_tiling_settings()  # current tiling configuration dict
 
 # Scene backdrop (pristine background image blit before every frame)
-# source can be a path string (relative to demo_features/data/images/), a pygame.Surface, or None
-app.set_pristine("backdrop.jpg", scene_name="main")        # load from demo_features/data/images/
+# source can be a path string (CWD-relative or absolute), a pygame.Surface, or None
+app.set_pristine("assets/images/backdrop.jpg", scene_name="main")
 app.set_pristine(my_surface, scene_name="main")            # use an existing Surface
 app.set_pristine(None, scene_name="main")                  # clear backdrop
 app.restore_pristine()                                     # blit active scene backdrop to display
@@ -2328,8 +2328,8 @@ The engine calls `app.process_event(event)`, `app.update(dt_seconds)`, `app.draw
 `GuiApplication` hides the system cursor at startup and renders a software cursor each frame. Two built-in cursors are registered by default: `normal` and `hand`.
 
 ```python
-# Register a custom cursor (image looked up under demo_features/data/cursors/ or absolute path)
-app.register_cursor("crosshair", "crosshair.png", hotspot=(8, 8))
+# Register a custom cursor (path is CWD-relative or absolute)
+app.register_cursor("crosshair", "assets/cursors/crosshair.png", hotspot=(8, 8))
 
 # Switch the active cursor
 app.set_cursor("hand")
@@ -2423,16 +2423,15 @@ from gui_do import (
     FeatureManager,
 )
 
-# Demo-only contracts are intentionally outside gui_do package:
+# Consumer-side contracts are intentionally outside the gui_do library boundary:
 from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
 
 - `gui_do/` contains reusable framework/runtime functionality.
-- `demo_features/` contains demo-specific contracts, helpers, and assets.
-- Everything inside `demo_features/` is treated as demo-owned content, including `demo_features/data/` and any future subfolders/files.
-- `scripts/manage.py init` and `scripts/manage.py apply` remove `demo_features/` as one tree, so demo data/assets are not retained in package-only starter mode.
+- Consumer/demo code lives outside `gui_do/` (in this repository currently under `demo_features/` and `*_demo.py`).
+- `scripts/manage.py init` and `scripts/manage.py apply` remove consumer/demo artifacts to produce a package-only starter mode.
 - Boundary scope for demo entrypoints is `*_demo.py`.
 - Active demo entrypoints should consume the framework through `from gui_do import ...`, without aliases, and with a single `from gui_do import (...)` block.
 

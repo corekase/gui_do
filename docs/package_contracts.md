@@ -55,14 +55,14 @@ from gui_do import (
     ColorTheme,
 )
 
-# Demo-only contracts are intentionally outside gui_do package:
+# Consumer-side contracts are intentionally outside the gui_do library boundary:
 from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
 
 - `gui_do/` contains reusable framework/runtime functionality.
-- `demo_features/` contains demo-specific contracts and helpers.
+- Consumer/demo code lives outside `gui_do/` (in this repository currently under `demo_features/` and `*_demo.py`).
 - Boundary scope for demo entrypoints is `*_demo.py`.
 - Active demo entrypoints should consume the framework through `from gui_do import ...`, without aliases, and with a single `from gui_do import (...)` block.
 

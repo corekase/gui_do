@@ -30,24 +30,22 @@ The **GUI_DO LIBRARY** consists of:
 
 ### What the Library Does NOT Include
 
-- ❌ demo_features/ package
-- ❌ demo_features/data/ (fonts, images, cursors)
-- ❌ gui_do_demo.py (demo entrypoint)
+- ❌ Consumer/demo code outside `gui_do/`
+- ❌ Demo entrypoints (`*_demo.py`)
 - ❌ Any demo-specific code or assets
 
 ## Demo Definition
 
-The **DEMO** (not part of the library distribution) consists of:
+The **DEMO** (not part of the library distribution) consists of consumer code
+outside `gui_do/` (currently under `demo_features/` plus `*_demo.py` entrypoints):
 
 - **demo_features/**: Demo feature implementations
   - Showcases framework capabilities (controls, layout, scenes, events)
   - ControlsShowcaseFeature, StylesShowcaseFeature, etc.
   - Importable only from gui_do public root (enforced)
 
-- **demo_features/data/**: Demo-owned assets
-  - Fonts: Ubuntu-B.ttf, Gimbot.ttf
-  - Images: backdrop.jpg, realize.png
-  - Cursors: cursor.png, hand.png
+- **Demo-owned assets** (currently under `demo_features/`)
+  - Fonts, images, cursors used by demo features
 
 - **gui_do_demo.py**: Demo application entrypoint
   - Imports demo_features only
@@ -82,13 +80,13 @@ The **DEMO** (not part of the library distribution) consists of:
 
 ### 2. Path Separation (Code Level)
 
-**gui_do/ must not reference demo_features/data/ paths**
-- Test: `test_gui_package_has_no_hardcoded_demo_data_paths` (test_library_demo_separation_contracts.py)
-- Verification: No `demo_features/data` strings in gui_do/ code
+**gui_do/ must not reference consumer/demo paths**
+- Test: `test_gui_package_has_no_hardcoded_consumer_paths` (test_library_demo_separation_contracts.py)
+- Verification: No `demo_features/` path roots in gui_do/ code
 
 **Framework path resolution must accept caller-supplied paths**
 - Functions:
-  - `load_pristine_surface(source)` - resolves from CWD or absolute, not demo_features/data/images/
+  - `load_pristine_surface(source)` - resolves from CWD or absolute, never from hardcoded consumer/demo roots
   - `register_cursor(name, path, hotspot)` - takes full path parameter, resolves from CWD
   - `ImageControl._resolve_image_path()` - resolves from CWD only
   - `ColorTheme._background_bitmap` - defaults to None, not auto-loaded from demo
@@ -97,8 +95,7 @@ The **DEMO** (not part of the library distribution) consists of:
 **Demo must provide all asset paths as CWD-relative**
 - Test: `test_demo_provides_full_paths_to_framework` (test_library_demo_separation_contracts.py)
 - Verification:
-  - `register_cursor("normal", "demo_features/data/cursors/cursor.png", ...)`
-  - `set_pristine("demo_features/data/images/backdrop.jpg", ...)`
+  - Demo passes explicit CWD-relative asset paths into framework APIs
   - No bare filenames passed to framework functions
 
 ### 3. Packaging Separation (Distribution Level)
@@ -108,10 +105,10 @@ The **DEMO** (not part of the library distribution) consists of:
 - Verification: Build wheel, inspect zipfile, confirm only `gui_do/` and `gui_do-X.Y.Z.dist-info/`
 - Test: `test_pyproject_packages_find_includes_only_gui_do` (test_library_demo_separation_contracts.py)
 
-**Source distribution (.tar.gz) contains gui_do/, tests/, docs/, scripts/manage.py but NOT demo_features/**
-- Configuration: `MANIFEST.in` explicitly excludes `demo_features/data`
-- Verification: Extract sdist, confirm no demo_features/ directory
-- Test: `test_manifest_in_excludes_demo_features_data` (test_library_demo_separation_contracts.py)
+**Source distribution (.tar.gz) contains gui_do/, tests/, docs/, scripts/manage.py but NOT consumer/demo trees**
+- Configuration: `MANIFEST.in` includes package/docs/tests/script content only
+- Verification: Extract sdist, confirm no consumer/demo source tree is bundled
+- Test: `test_manifest_in_excludes_consumer_demo_trees` (test_library_demo_separation_contracts.py)
 
 **Editable install (pip install -e .) includes everything for development**
 - Contains gui_do/, demo_features/, tests/, docs/, scripts/
@@ -132,17 +129,17 @@ The **DEMO** (not part of the library distribution) consists of:
 **Library composition clearly defined**
 - Test: `test_library_composition_documented` (test_library_demo_separation_contracts.py)
 - Verifies principle includes library components (gui_do/, tests/, docs/, scripts/manage.py)
-- Verifies principle includes demo components (demo_features/, gui_do_demo.py)
+- Verifies principle includes consumer/demo components outside gui_do/ (including *_demo.py)
 - Verifies principle documents that demo is NOT in distributions
 
 ## Contract Tests (9 tests in test_library_demo_separation_contracts.py)
 
 1. ✅ `test_separation_principle_is_documented` - Principle exists and has required sections
-2. ✅ `test_gui_package_has_no_hardcoded_demo_data_paths` - gui_do/ has no demo_features/data strings
+2. ✅ `test_gui_package_has_no_hardcoded_consumer_paths` - gui_do/ has no hardcoded consumer/demo path roots
 3. ✅ `test_path_resolution_functions_accept_caller_paths` - load_pristine_surface, register_cursor support CWD resolution
 4. ✅ `test_demo_provides_full_paths_to_framework` - gui_do_demo.py passes full demo_features/ paths
 5. ✅ `test_pyproject_packages_find_includes_only_gui_do` - packages.find includes only gui_do*
-6. ✅ `test_manifest_in_excludes_demo_features_data` - MANIFEST.in has no demo_features reference
+6. ✅ `test_manifest_in_excludes_consumer_demo_trees` - MANIFEST.in has no consumer/demo tree references
 7. ✅ `test_library_composition_documented` - Principle documents library and demo composition
 8. ✅ `test_all_separation_rules_consolidated` - All rules consolidated in one test suite
 

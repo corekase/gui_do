@@ -81,9 +81,9 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
                      "manage.py docstring must describe init as stripping demo content")
         self.assertIn("demo content", bootstrap,
                      "manage.py docstring must mention demo content removal")
-        # init description must mention demo_features removal
-        self.assertIn("demo_features/", bootstrap,
-                     "manage.py docstring must name demo_features/ as a removed artifact")
+        # init description must mention removal of content outside gui_do/
+        self.assertIn("outside gui_do/", bootstrap,
+                 "manage.py docstring must describe removal of consumer/demo content outside gui_do/")
         self.assertIn("*_demo.py", bootstrap,
                      "manage.py docstring must name *_demo.py as a removed artifact")
 
@@ -149,7 +149,7 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
         self.assertNotIn(
             "demo_features/data",
             bootstrap,
-            "manage.py must not hardcode demo_features/data paths; whole-tree removal is the general rule",
+            "manage.py must not hardcode nested consumer/demo asset paths; whole-tree removal is the general rule",
         )
 
     def test_init_demo_test_discovery_finds_all_current_demo_tests(self) -> None:
