@@ -1,7 +1,7 @@
 """MenuBarManager — feature-registration surface for application menu entries."""
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from ..core.context_menu_manager import ContextMenuItem
 from ..controls.menu_bar_control import MenuBarControl, MenuEntry

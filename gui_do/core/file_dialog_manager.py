@@ -13,7 +13,6 @@ from ..controls.overlay_panel_control import OverlayPanelControl
 from ..controls.list_view_control import ListViewControl, ListItem
 from ..controls.text_input_control import TextInputControl
 from ..controls.button_control import ButtonControl
-from ..controls.label_control import LabelControl
 from ..core.gui_event import EventType, GuiEvent
 
 if TYPE_CHECKING:

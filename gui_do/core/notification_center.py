@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from .toast_manager import ToastSeverity
 from .presentation_model import ObservableValue

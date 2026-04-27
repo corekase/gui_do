@@ -7,7 +7,6 @@ import pygame
 from pygame import Rect
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
     from ..layout.constraint_layout import ConstraintLayout
     from ..core.event_bus import EventBus
 

@@ -5,9 +5,8 @@ from enum import Enum
 from typing import Callable, Dict, Optional, Tuple, TYPE_CHECKING
 
 import pygame
-from pygame import Rect
 
-from .tween_manager import TweenManager, Easing
+from .tween_manager import Easing
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication

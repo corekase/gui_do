@@ -339,7 +339,6 @@ class TreeControl(UiNode):
         text_col = _c("text", (220, 220, 220))
         disabled_col = tuple(max(0, min(255, c // 2)) for c in text_col)
         sel_col = _c("highlight", (0, 100, 200))
-        hover_col = _c("surface", (50, 50, 60))
         arrow_col = _c("medium", (150, 150, 160))
 
         try:

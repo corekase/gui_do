@@ -10,7 +10,6 @@ from pygame import Rect
 from ..core.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
 _V_PAD = 4

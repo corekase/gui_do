@@ -30,7 +30,6 @@ from gui_do import (
     NotificationCenter,
     NotificationPanelControl,
     NotificationRecord,
-    OverlayPanelControl,
     PanelControl,
     RichLabelControl,
     ScrollbarControl,
@@ -92,7 +91,6 @@ class ControlsShowcaseFeature(Feature):
     TASK_PANEL_ANIMATION_STEP_PX = 8
     TASK_PANEL_BUTTON_WIDTH = 110
     TASK_PANEL_BUTTON_HEIGHT = 30
-    TASK_PANEL_BUTTON_GAP = 10
     TASK_PANEL_BUTTON_LEFT = 16
     TASK_PANEL_BUTTON_TOP_OFFSET = 10
 

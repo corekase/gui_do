@@ -8,7 +8,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..controls.overlay_panel_control import OverlayPanelControl
-from ..core.notification_center import NotificationCenter, NotificationRecord
+from ..core.notification_center import NotificationCenter
 from ..core.toast_manager import ToastSeverity
 
 if TYPE_CHECKING:
