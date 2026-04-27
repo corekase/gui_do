@@ -166,14 +166,14 @@ class Scene:
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
-        # Single BFS walk shared between top-window lookup and focus-target search.
-        all_nodes = list(self._walk_nodes())
+        # Avoid materializing a full node list in this hot path.
         top_window: UiNode | None = None
-        for node in reversed(all_nodes):
+        for node in self._walk_nodes():
             if node.visible and node.enabled and self._is_window_like(node) and node.rect.collidepoint(pos):
                 top_window = node
-                break
-        for node in reversed(all_nodes):
+
+        best: UiNode | None = None
+        for node in self._walk_nodes():
             if top_window is not None and not self._is_descendant_of(node, top_window):
                 continue
             if (
@@ -181,8 +181,8 @@ class Scene:
                 and node.accepts_mouse_focus()
                 and node.hit_test(pos)
             ):
-                return node
-        return None
+                best = node
+        return best
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         for node in self.nodes:

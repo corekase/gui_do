@@ -92,6 +92,11 @@ class DataGridControl(UiNode):
         self._resize_start_x: int = 0
         self._resize_start_w: int = 0
 
+        # Hot-path caches
+        self._col_offsets_cache: List[int] = [0]
+        self._col_offsets_dirty: bool = True
+        self._draw_font = None
+
         self.tab_index = 0
 
     # ------------------------------------------------------------------
@@ -100,6 +105,7 @@ class DataGridControl(UiNode):
 
     def set_columns(self, columns: List[GridColumn]) -> None:
         self._columns = list(columns)
+        self._col_offsets_dirty = True
         self.invalidate()
 
     def set_rows(self, rows: List[GridRow]) -> None:
@@ -182,10 +188,13 @@ class DataGridControl(UiNode):
 
     def _col_x_offsets(self) -> List[int]:
         """Return list of x pixel offsets (from content_rect.x) for each column."""
-        offsets = [0]
-        for col in self._columns:
-            offsets.append(offsets[-1] + col.width)
-        return offsets
+        if self._col_offsets_dirty:
+            offsets = [0]
+            for col in self._columns:
+                offsets.append(offsets[-1] + col.width)
+            self._col_offsets_cache = offsets
+            self._col_offsets_dirty = False
+        return self._col_offsets_cache
 
     def _col_at_x(self, x: int) -> int:
         """Return column index at pixel x relative to content_rect.x."""
@@ -308,8 +317,10 @@ class DataGridControl(UiNode):
             return False
         dx = event.pos[0] - self._resize_start_x
         new_w = max(self._columns[self._resize_col].min_width, self._resize_start_w + dx)
-        self._columns[self._resize_col].width = new_w
-        self.invalidate()
+        if self._columns[self._resize_col].width != new_w:
+            self._columns[self._resize_col].width = new_w
+            self._col_offsets_dirty = True
+            self.invalidate()
         return True
 
     def _handle_key(self, key: int) -> bool:
@@ -367,7 +378,12 @@ class DataGridControl(UiNode):
         border_col = _color("border", (80, 80, 90))
         focus_col = _color("focus", (100, 160, 255))
 
-        font = pygame.font.SysFont(None, 18)
+        if self._draw_font is None:
+            try:
+                self._draw_font = pygame.font.SysFont(None, 18)
+            except Exception:
+                self._draw_font = False
+        font = self._draw_font
         r = self.rect
         pygame.draw.rect(surface, bg, r)
 
@@ -385,8 +401,9 @@ class DataGridControl(UiNode):
             title = col.title
             if col.sortable and self._sort_col == col.key:
                 title += " ▲" if self._sort_asc else " ▼"
-            ts = font.render(title, True, text_col)
-            surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
+            if font:
+                ts = font.render(title, True, text_col)
+                surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
 
         # Header bottom border
         pygame.draw.line(surface, border_col, (header.x, header.bottom - 1), (header.right, header.bottom - 1))
@@ -413,8 +430,9 @@ class DataGridControl(UiNode):
                 col_x = cr.x + offsets[j]
                 cell_rect = Rect(col_x, row_y, col.width, self._row_height)
                 val = row.data.get(col.key, "")
-                ts = font.render(str(val), True, text_col)
-                surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
+                if font:
+                    ts = font.render(str(val), True, text_col)
+                    surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
                 # column separator
                 pygame.draw.line(surface, border_col, (col_x + col.width - 1, row_y), (col_x + col.width - 1, row_y + self._row_height - 1))
 

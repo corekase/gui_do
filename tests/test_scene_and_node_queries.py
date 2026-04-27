@@ -86,6 +86,42 @@ class SceneFindTests(unittest.TestCase):
         self.assertEqual(s.node_count(), 2)
 
 
+class SceneTopFocusTargetTests(unittest.TestCase):
+    def test_returns_last_matching_focusable_root(self) -> None:
+        scene = Scene()
+        low = _node("low", Rect(0, 0, 100, 100))
+        high = _node("high", Rect(0, 0, 100, 100))
+        low.set_tab_index(0)
+        high.set_tab_index(1)
+        scene.add(low)
+        scene.add(high)
+
+        target = scene.top_focus_target_at((10, 10))
+
+        self.assertIs(target, high)
+
+    def test_scopes_to_top_window(self) -> None:
+        scene = Scene()
+        w1 = _node("w1", Rect(0, 0, 120, 120))
+        w2 = _node("w2", Rect(0, 0, 120, 120))
+        w1.is_window = lambda: True
+        w2.is_window = lambda: True
+        c1 = _node("c1", Rect(0, 0, 120, 120))
+        c2 = _node("c2", Rect(0, 0, 120, 120))
+        c1.set_tab_index(0)
+        c2.set_tab_index(1)
+        c1.parent = w1
+        c2.parent = w2
+        w1.children.append(c1)
+        w2.children.append(c2)
+        scene.add(w1)
+        scene.add(w2)
+
+        target = scene.top_focus_target_at((10, 10))
+
+        self.assertIs(target, c2)
+
+
 class UiNodeAncestorsTests(unittest.TestCase):
     """UiNode.ancestors() generator."""
 

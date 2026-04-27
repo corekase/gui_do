@@ -103,6 +103,32 @@ class TestDataGridGeometry(unittest.TestCase):
         offsets = g._col_x_offsets()
         self.assertEqual(len(offsets), 3)  # N cols + 1
 
+    def test_col_x_offsets_uses_cache_instance_until_invalidated(self) -> None:
+        g = _make_grid()
+        first = g._col_x_offsets()
+        second = g._col_x_offsets()
+        self.assertIs(first, second)
+
+        g.set_columns([
+            GridColumn(key="name", title="Name", width=120),
+            GridColumn(key="age", title="Age", width=60),
+        ])
+        third = g._col_x_offsets()
+        self.assertIsNot(first, third)
+
+    def test_resize_motion_invalidates_offset_cache(self) -> None:
+        g = _make_grid()
+        _ = g._col_x_offsets()
+        g._resize_col = 0
+        g._resize_start_x = 0
+        g._resize_start_w = g._columns[0].width
+
+        evt = MagicMock()
+        evt.pos = (25, 0)
+        g._handle_mouse_motion(evt)
+
+        self.assertTrue(g._col_offsets_dirty)
+
 
 class TestDataGridEventHandling(unittest.TestCase):
     def _make_event(self, kind, **kwargs):

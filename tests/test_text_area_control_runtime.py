@@ -1,5 +1,7 @@
 import os
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
@@ -171,6 +173,34 @@ class TextAreaControlRuntimeTests(unittest.TestCase):
     def test_accepts_mouse_focus(self) -> None:
         ctrl = TextAreaControl("ta", Rect(10, 10, 300, 200))
         self.assertTrue(ctrl.accepts_mouse_focus())
+
+    # ------------------------------------------------------------------
+    # Position mapping optimization regressions
+    # ------------------------------------------------------------------
+
+    def test_pos_to_char_clamps_within_line_bounds(self) -> None:
+        ctrl = TextAreaControl("ta", Rect(10, 10, 300, 200), value="abcdef")
+        app = SimpleNamespace()  # Force fallback measurement path.
+
+        before = ctrl._pos_to_char((ctrl.rect.left - 50, ctrl.rect.top + 4), app)
+        after = ctrl._pos_to_char((ctrl.rect.right + 500, ctrl.rect.top + 4), app)
+
+        self.assertEqual(before, 0)
+        self.assertEqual(after, len(ctrl.value))
+
+    def test_pos_to_char_reuses_fallback_font_instance(self) -> None:
+        ctrl = TextAreaControl("ta", Rect(10, 10, 300, 200), value="abcdef")
+        app = SimpleNamespace()  # No theme/fonts -> fallback SysFont path.
+
+        with patch("gui_do.controls.text_area_control.pygame.font.SysFont") as sys_font:
+            fake_font = unittest.mock.Mock()
+            fake_font.size.side_effect = lambda text: (len(text) * 8, 12)
+            sys_font.return_value = fake_font
+
+            _ = ctrl._pos_to_char((ctrl.rect.left + 30, ctrl.rect.top + 4), app)
+            _ = ctrl._pos_to_char((ctrl.rect.left + 40, ctrl.rect.top + 4), app)
+
+            self.assertEqual(sys_font.call_count, 1)
 
     # ------------------------------------------------------------------
     # Drawing (smoke test)

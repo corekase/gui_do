@@ -80,6 +80,7 @@ class TextAreaControl(UiNode):
         # Render cache
         self._line_cache_key: Optional[tuple] = None
         self._wrapped_lines: List[str] = []  # wrapped text segments
+        self._measure_font = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -502,19 +503,63 @@ class TextAreaControl(UiNode):
         abs_offset = sum(len(lines[i]) + 1 for i in range(line_idx))
         line_text = lines[line_idx]
         rel_x = pos[0] - self.rect.left - _H_PAD
-        # Binary-search for closest character
-        best = 0
-        best_dist = abs(rel_x)
-        for i in range(1, len(line_text) + 1):
-            try:
-                w, _ = pygame.font.SysFont(None, self._font_size).size(line_text[:i])
-            except Exception:
-                w = i * (self._font_size // 2)
-            dist = abs(rel_x - w)
-            if dist < best_dist:
-                best = i
-                best_dist = dist
-        return abs_offset + best
+        if rel_x <= 0:
+            return abs_offset
+        if not line_text:
+            return abs_offset
+
+        measure = self._measure_prefix_width(app, line_text)
+
+        lo = 0
+        hi = len(line_text)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if measure(mid) < rel_x:
+                lo = mid + 1
+            else:
+                hi = mid
+
+        idx = lo
+        if idx <= 0:
+            return abs_offset
+        if idx >= len(line_text):
+            return abs_offset + len(line_text)
+
+        left_w = measure(idx - 1)
+        right_w = measure(idx)
+        if abs(rel_x - left_w) <= abs(rel_x - right_w):
+            idx -= 1
+        return abs_offset + idx
+
+    def _measure_prefix_width(self, app: "GuiApplication", line_text: str):
+        """Return a callable that measures width of line_text[:n] with cached font usage."""
+        try:
+            theme_font = app.theme.fonts.font_instance(self._font_role, size=self._font_size)
+
+            def _measure(n: int) -> int:
+                w, _ = theme_font.text_size(line_text[:n])
+                return int(w)
+
+            return _measure
+        except Exception:
+            if self._measure_font is None:
+                try:
+                    self._measure_font = pygame.font.SysFont(None, self._font_size)
+                except Exception:
+                    self._measure_font = False
+
+            if self._measure_font:
+
+                def _measure(n: int) -> int:
+                    w, _ = self._measure_font.size(line_text[:n])
+                    return int(w)
+
+                return _measure
+
+            def _measure(n: int) -> int:
+                return int(n * (self._font_size // 2))
+
+            return _measure
 
     def _text_width(self, theme: "ColorTheme", text: str) -> int:
         try:
