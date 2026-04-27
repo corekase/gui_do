@@ -222,9 +222,9 @@ class ListViewControl(UiNode):
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             pos = event.pos
-            rel_y = pos[1] - self.rect.y
-            if rel_y < 0:
+            if not self.rect.collidepoint(pos):
                 return False
+            rel_y = pos[1] - self.rect.y
             idx = self._row_at_y(rel_y)
             if 0 <= idx < len(self._items) and self._items[idx].enabled:
                 self._toggle_or_select(idx)

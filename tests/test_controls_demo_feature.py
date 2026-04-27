@@ -12,6 +12,7 @@ from gui_do import (
     ButtonControl,
     ButtonGroupControl,
     CanvasControl,
+    DataGridControl,
     DropdownControl,
     FrameControl,
     GuiApplication,
@@ -21,6 +22,7 @@ from gui_do import (
     PanelControl,
     ScrollbarControl,
     SliderControl,
+    SplitterControl,
     TextInputControl,
     ToggleControl,
 )
@@ -49,8 +51,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
     def test_build_creates_enabled_and_disabled_control_catalogs(self) -> None:
         _app, _host, feature = self._build_part()
 
-        self.assertEqual(len(feature.enabled_controls), 27)
-        self.assertEqual(len(feature.disabled_controls), 27)
+        self.assertEqual(len(feature.enabled_controls), 30)
+        self.assertEqual(len(feature.disabled_controls), 30)
         self.assertIsNotNone(feature.enabled_title)
         self.assertIsNotNone(feature.disabled_title)
 
@@ -68,6 +70,9 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             TextInputControl,
             ListViewControl,
             DropdownControl,
+            DataGridControl,
+            SplitterControl,
+            FrameControl,
         }
         self.assertEqual({type(control) for control in feature.enabled_controls}, expected_types)
 
@@ -97,8 +102,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         _app, _host, feature = self._build_part()
 
         # Should have blocks for both enabled and disabled
-        self.assertEqual(len(feature.enabled_blocks), 10)
-        self.assertEqual(len(feature.disabled_blocks), 10)
+        self.assertEqual(len(feature.enabled_blocks), 13)
+        self.assertEqual(len(feature.disabled_blocks), 13)
 
         # Block names should match definitions
         expected_block_names = [
@@ -107,6 +112,9 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             "buttons_and_indicators",
             "horizontal_sliders",
             "vertical_sliders",
+            "frame_block",
+            "splitter_block",
+            "data_grid_block",
             "image_block",
             "canvas_panel_block",
             "text_input_block",
@@ -159,16 +167,35 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertIsInstance(feature.enabled_blocks[4]["controls"][0], SliderControl)
         self.assertIsInstance(feature.enabled_blocks[4]["controls"][1], ScrollbarControl)
 
-        # image_block: image (1)
+        # frame_block: frame (1)
         self.assertEqual(len(feature.enabled_blocks[5]["controls"]), 1)
-        self.assertIsInstance(feature.enabled_blocks[5]["controls"][0], ImageControl)
+        self.assertIsInstance(feature.enabled_blocks[5]["controls"][0], FrameControl)
+
+        # splitter_block: splitter (1)
+        self.assertEqual(len(feature.enabled_blocks[6]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[6]["controls"][0], SplitterControl)
+
+        # data_grid_block: data grid (1)
+        self.assertEqual(len(feature.enabled_blocks[7]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[7]["controls"][0], DataGridControl)
+
+        # image_block: image (1)
+        self.assertEqual(len(feature.enabled_blocks[8]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[8]["controls"][0], ImageControl)
 
         # canvas_panel_block: canvas_label, canvas, panel_label, panel (4)
-        self.assertEqual(len(feature.enabled_blocks[6]["controls"]), 4)
-        self.assertIsInstance(feature.enabled_blocks[6]["controls"][0], LabelControl)
-        self.assertIsInstance(feature.enabled_blocks[6]["controls"][1], CanvasControl)
-        self.assertIsInstance(feature.enabled_blocks[6]["controls"][2], LabelControl)
-        self.assertIsInstance(feature.enabled_blocks[6]["controls"][3], PanelControl)
+        self.assertEqual(len(feature.enabled_blocks[9]["controls"]), 4)
+        self.assertIsInstance(feature.enabled_blocks[9]["controls"][0], LabelControl)
+        self.assertIsInstance(feature.enabled_blocks[9]["controls"][1], CanvasControl)
+        self.assertIsInstance(feature.enabled_blocks[9]["controls"][2], LabelControl)
+        self.assertIsInstance(feature.enabled_blocks[9]["controls"][3], PanelControl)
+
+        self.assertEqual(len(feature.enabled_blocks[10]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[10]["controls"][0], TextInputControl)
+        self.assertEqual(len(feature.enabled_blocks[11]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[11]["controls"][0], ListViewControl)
+        self.assertEqual(len(feature.enabled_blocks[12]["controls"]), 1)
+        self.assertIsInstance(feature.enabled_blocks[12]["controls"][0], DropdownControl)
 
     def test_all_controls_mirrored_between_sections(self) -> None:
         """Verify all controls exist in both enabled and disabled sections."""
@@ -180,8 +207,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
 
         # Both should have same types
         self.assertEqual(set(enabled_types), set(disabled_types))
-        self.assertEqual(len(enabled_types), 27)
-        self.assertEqual(len(disabled_types), 27)
+        self.assertEqual(len(enabled_types), 30)
+        self.assertEqual(len(disabled_types), 30)
 
     def test_configure_accessibility_assigns_enabled_focus_order_in_creation_sequence(self) -> None:
         _app, host, feature = self._build_part()
@@ -213,12 +240,26 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             "scrollbar_enabled",
             "v_slider_enabled",
             "v_scrollbar_enabled",
+            "splitter_enabled",
+            "data_grid_enabled",
             "text_input_enabled",
             "list_view_enabled",
             "dropdown_enabled",
         ]
         self.assertEqual([control.control_id for control in focus_controls], expected_ids)
-        allowed_types = {"ArrowBoxControl", "ButtonControl", "ToggleControl", "ButtonGroupControl", "SliderControl", "ScrollbarControl", "TextInputControl", "ListViewControl", "DropdownControl"}
+        allowed_types = {
+            "ArrowBoxControl",
+            "ButtonControl",
+            "ToggleControl",
+            "ButtonGroupControl",
+            "SliderControl",
+            "ScrollbarControl",
+            "SplitterControl",
+            "DataGridControl",
+            "TextInputControl",
+            "ListViewControl",
+            "DropdownControl",
+        }
         self.assertEqual({control.__class__.__name__ for control in focus_controls}, allowed_types)
         self.assertEqual(next_index, 7 + len(focus_controls))
         for offset, control in enumerate(focus_controls):
@@ -240,8 +281,21 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertEqual(feature.enabled_blocks[4]["controls"][0].accessibility_label, "Vertical slider")
         self.assertEqual(feature.enabled_blocks[4]["controls"][1].accessibility_role, "scrollbar")
         self.assertEqual(feature.enabled_blocks[4]["controls"][1].accessibility_label, "Vertical scrollbar")
+        self.assertEqual(feature.enabled_blocks[6]["controls"][0].accessibility_role, "separator")
+        self.assertEqual(feature.enabled_blocks[6]["controls"][0].accessibility_label, "Splitter")
+        self.assertEqual(feature.enabled_blocks[7]["controls"][0].accessibility_role, "table")
+        self.assertEqual(feature.enabled_blocks[7]["controls"][0].accessibility_label, "Data grid")
 
-        explicit_types = (ArrowBoxControl, ButtonControl, ButtonGroupControl, ToggleControl, SliderControl, ScrollbarControl)
+        explicit_types = (
+            ArrowBoxControl,
+            ButtonControl,
+            ButtonGroupControl,
+            ToggleControl,
+            SliderControl,
+            ScrollbarControl,
+            SplitterControl,
+            DataGridControl,
+        )
         non_registered_focusables = [
             control
             for control in feature.enabled_controls
@@ -265,7 +319,7 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
     def test_canvas_panel_and_image_are_not_focus_accessible(self) -> None:
         _app, _host, feature = self._build_part()
 
-        blocked_types = {CanvasControl, PanelControl, ImageControl}
+        blocked_types = {CanvasControl, PanelControl, ImageControl, FrameControl}
         blocked = [control for control in feature.enabled_controls if type(control) in blocked_types]
         self.assertTrue(blocked)
         for control in blocked:

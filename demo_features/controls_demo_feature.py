@@ -6,7 +6,19 @@ import pygame
 from pathlib import Path
 from pygame import Rect
 
-from gui_do import Feature, TextInputControl, ListViewControl, ListItem, DropdownControl, DropdownOption
+from gui_do import (
+    Feature,
+    TextInputControl,
+    ListViewControl,
+    ListItem,
+    DropdownControl,
+    DropdownOption,
+    DataGridControl,
+    GridColumn,
+    GridRow,
+    SplitterControl,
+    LayoutAxis,
+)
 
 
 class ControlsShowcaseFeature(Feature):
@@ -84,6 +96,9 @@ class ControlsShowcaseFeature(Feature):
         "buttons_and_indicators",
         "horizontal_sliders",
         "vertical_sliders",
+        "frame_block",
+        "splitter_block",
+        "data_grid_block",
         "image_block",
         "canvas_panel_block",
         "text_input_block",
@@ -320,6 +335,9 @@ class ControlsShowcaseFeature(Feature):
             "buttons_and_indicators": 84,
             "horizontal_sliders": 40,
             "vertical_sliders": 40,
+            "frame_block": 48,
+            "splitter_block": 40,
+            "data_grid_block": 120,
             "canvas_panel_block": 100,
             "text_input_block": 30,
             "list_view_block": 120,
@@ -330,7 +348,9 @@ class ControlsShowcaseFeature(Feature):
 
         # Determine column count based on content
         num_columns = 2
-        if available_width > 900:
+        if available_width > 1100:
+            num_columns = 4
+        elif available_width > 800:
             num_columns = 3
         elif available_width < 600:
             num_columns = 1
@@ -486,6 +506,12 @@ class ControlsShowcaseFeature(Feature):
             controls = self._build_horizontal_sliders(ui, content_rect, enabled)
         elif block_name == "vertical_sliders":
             controls = self._build_vertical_sliders(ui, content_rect, enabled)
+        elif block_name == "frame_block":
+            controls = self._build_frame_block(ui, content_rect, enabled)
+        elif block_name == "splitter_block":
+            controls = self._build_splitter_block(content_rect, enabled)
+        elif block_name == "data_grid_block":
+            controls = self._build_data_grid_block(content_rect, enabled)
         elif block_name == "image_block":
             controls = self._build_image_block(ui, content_rect, enabled)
         elif block_name == "canvas_panel_block":
@@ -512,6 +538,8 @@ class ControlsShowcaseFeature(Feature):
             "TextInputControl",
             "ListViewControl",
             "DropdownControl",
+            "DataGridControl",
+            "SplitterControl",
         }
         return control.__class__.__name__ in focus_type_names
 
@@ -740,6 +768,53 @@ class ControlsShowcaseFeature(Feature):
         image.set_tab_index(-1)
         return [image]
 
+    def _build_frame_block(self, ui, content_rect: Rect, enabled: bool) -> list:
+        """Build a decorative frame control."""
+        frame = ui.frame_control_cls(
+            f"frame_{'enabled' if enabled else 'disabled'}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            border_width=self.FRAME_BORDER_WIDTH,
+        )
+        frame.set_tab_index(-1)
+        return [frame]
+
+    def _build_splitter_block(self, content_rect: Rect, enabled: bool) -> list:
+        """Build a splitter control."""
+        splitter = SplitterControl(
+            f"splitter_{'enabled' if enabled else 'disabled'}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            axis=LayoutAxis.HORIZONTAL,
+            ratio=0.5,
+            min_pane_size=16,
+        )
+        if enabled:
+            splitter.set_accessibility(role="separator", label="Splitter")
+        return [splitter]
+
+    def _build_data_grid_block(self, content_rect: Rect, enabled: bool) -> list:
+        """Build a compact data grid control."""
+        section = "enabled" if enabled else "disabled"
+        columns = [
+            GridColumn(key="name", title="Name", width=max(60, int(content_rect.width * 0.55))),
+            GridColumn(key="value", title="Value", width=max(40, int(content_rect.width * 0.40))),
+        ]
+        rows = [
+            GridRow(data={"name": "Alpha", "value": 10}, row_id="alpha"),
+            GridRow(data={"name": "Beta", "value": 20}, row_id="beta"),
+            GridRow(data={"name": "Gamma", "value": 30}, row_id="gamma"),
+            GridRow(data={"name": "Delta", "value": 40}, row_id="delta"),
+        ]
+        grid = DataGridControl(
+            f"data_grid_{section}",
+            Rect(content_rect.left, content_rect.top, content_rect.width, content_rect.height),
+            columns,
+            rows,
+            row_height=24,
+        )
+        if enabled:
+            grid.set_accessibility(role="table", label="Data grid")
+        return [grid]
+
     def _build_canvas_panel_block(self, ui, content_rect: Rect, enabled: bool) -> list:
         """Build canvas and panel side-by-side, each with its own label positioned above.
 
@@ -822,11 +897,16 @@ class ControlsShowcaseFeature(Feature):
             nat_w, nat_h = self._image_natural_size
             h_for_width = int(max_width * nat_h / nat_w)
             if h_for_width <= max_height:
-                return max_width, max(1, h_for_width)
+                scaled_w = max(1, int(round(max_width * 0.75)))
+                scaled_h = max(1, int(round(h_for_width * 0.75)))
+                return scaled_w, scaled_h
             w_for_height = int(max_height * nat_w / nat_h)
-            return max(1, w_for_height), max_height
+            scaled_w = max(1, int(round(w_for_height * 0.75)))
+            scaled_h = max(1, int(round(max_height * 0.75)))
+            return scaled_w, scaled_h
         fallback = min(max_width, max_height, self.IMAGE_BLOCK_HEIGHT_FALLBACK)
-        return fallback, fallback
+        scaled = max(1, int(round(fallback * 0.75)))
+        return scaled, scaled
 
     def _build_text_input_block(self, content_rect: Rect, enabled: bool) -> list:
         """Build a single text input control."""
@@ -879,6 +959,9 @@ class ControlsShowcaseFeature(Feature):
             "buttons_and_indicators": "Button and Toggle Button",
             "horizontal_sliders": "Horizontal Slider and Scrollbar",
             "vertical_sliders": "Vertical",
+            "frame_block": "Frame",
+            "splitter_block": "Splitter",
+            "data_grid_block": "Data Grid",
             "image_block": "Image",
             "text_input_block": "Text Input",
             "list_view_block": "List View",

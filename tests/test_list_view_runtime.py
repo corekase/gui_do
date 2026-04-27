@@ -25,6 +25,10 @@ def _click(y: int) -> GuiEvent:
     return GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(10, y), button=1)
 
 
+def _click_at(x: int, y: int) -> GuiEvent:
+    return GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(x, y), button=1)
+
+
 def _key(k: int) -> GuiEvent:
     return GuiEvent(kind=EventType.KEY_DOWN, type=0, key=k, mod=0)
 
@@ -47,6 +51,20 @@ class TestClickSecondRow(unittest.TestCase):
         ctrl = _ctrl(row_height=24)
         ctrl.handle_event(_click(25), _app())
         self.assertEqual(ctrl.selected_index, 1)
+
+
+class TestClickOutsideHorizontalBounds(unittest.TestCase):
+    def test_click_left_of_rect_does_not_select(self) -> None:
+        ctrl = _ctrl(row_height=24)
+        handled = ctrl.handle_event(_click_at(-1, 25), _app())
+        self.assertFalse(handled)
+        self.assertEqual(ctrl.selected_index, -1)
+
+    def test_click_right_of_rect_does_not_select(self) -> None:
+        ctrl = _ctrl(row_height=24)
+        handled = ctrl.handle_event(_click_at(205, 25), _app())
+        self.assertFalse(handled)
+        self.assertEqual(ctrl.selected_index, -1)
 
 
 class TestOnSelectCallback(unittest.TestCase):
