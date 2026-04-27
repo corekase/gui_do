@@ -122,6 +122,16 @@ class RichLabelControlRuntimeTests(unittest.TestCase):
         ctrl = self.root.add(RichLabelControl("rl", Rect(10, 10, 300, 100), text=long_text))
         self.app.draw()
 
+    def test_draw_inline_styled_text_does_not_raise(self) -> None:
+        ctrl = self.root.add(
+            RichLabelControl(
+                "rl",
+                Rect(10, 10, 300, 120),
+                text="**Bold** _Italic_ `Code` and **_Both_** styles",
+            )
+        )
+        self.app.draw()
+
     def test_draw_empty_text_does_not_raise(self) -> None:
         ctrl = self.root.add(RichLabelControl("rl", Rect(10, 10, 300, 200), text=""))
         self.app.draw()

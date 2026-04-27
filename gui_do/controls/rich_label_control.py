@@ -1,6 +1,7 @@
-"""RichLabelControl — read-only word-wrapping text display."""
+"""RichLabelControl — read-only word-wrapping text display with inline styles."""
 from __future__ import annotations
 
+import re
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import pygame
@@ -19,9 +20,13 @@ _H_PAD = 6
 class RichLabelControl(UiNode):
     """Read-only multi-line label with automatic word wrapping.
 
-    Text is reflowed when the control's rect or text changes.  Vertical
+    Text is reflowed when the control's rect or text changes. Vertical
     overflow is silently clipped; horizontal padding is ``6`` pixels on
-    each side.
+    each side. Inline style markers are supported:
+
+    - ``**bold**``
+    - ``_italic_``
+    - ```code```
 
     Usage::
 
@@ -51,6 +56,7 @@ class RichLabelControl(UiNode):
         # Render cache
         self._lines: List[pygame.Surface] = []
         self._cache_key: Optional[tuple] = None
+        self._style_role_cache: dict[tuple[str, int], dict[str, str]] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -143,7 +149,7 @@ class RichLabelControl(UiNode):
             y += lh
 
     def _wrap_text(self, theme: "ColorTheme", color: tuple) -> List[pygame.Surface]:
-        """Word-wrap self._text into a list of rendered line surfaces."""
+        """Word-wrap styled text into rendered line surfaces."""
         max_width = self.rect.width - _H_PAD * 2
         if max_width < 1:
             return []
@@ -151,34 +157,7 @@ class RichLabelControl(UiNode):
         result: List[pygame.Surface] = []
         paragraphs = self._text.split("\n")
         for para in paragraphs:
-            words = para.split(" ")
-            current_line = ""
-            for word in words:
-                test = (current_line + " " + word).strip() if current_line else word
-                tw, _ = theme.fonts.font_instance(self._font_role, size=self._font_size).text_size(test)
-                if tw <= max_width:
-                    current_line = test
-                else:
-                    if current_line:
-                        result.append(
-                            theme.render_text(
-                                current_line,
-                                role=self._font_role,
-                                size=self._font_size,
-                                color=color,
-                            )
-                        )
-                    current_line = word
-            if current_line:
-                result.append(
-                    theme.render_text(
-                        current_line,
-                        role=self._font_role,
-                        size=self._font_size,
-                        color=color,
-                    )
-                )
-            elif not para:
+            if not para:
                 # Blank line — emit a small spacer
                 result.append(
                     theme.render_text(
@@ -188,7 +167,133 @@ class RichLabelControl(UiNode):
                         color=color,
                     )
                 )
+                continue
+
+            line_tokens: List[tuple[str, str]] = []
+            line_width = 0
+            for segment_text, segment_style in self._parse_inline_segments(para):
+                for token in re.findall(r"\s+|\S+", segment_text):
+                    if not line_tokens and token.isspace():
+                        continue
+                    token_width = self._measure_text(theme, token, segment_style)
+                    if line_tokens and (line_width + token_width) > max_width:
+                        result.append(self._render_line(theme, line_tokens, color))
+                        line_tokens = []
+                        line_width = 0
+                        if token.isspace():
+                            continue
+                    line_tokens.append((token, segment_style))
+                    line_width += token_width
+
+            if line_tokens:
+                result.append(self._render_line(theme, line_tokens, color))
         return result
+
+    def _parse_inline_segments(self, text: str) -> List[tuple[str, str]]:
+        """Parse a line with simple inline style markers into text/style segments."""
+        segments: List[tuple[str, str]] = []
+        buf: List[str] = []
+        bold = False
+        italic = False
+        code = False
+        i = 0
+
+        def style_name() -> str:
+            if code:
+                return "code"
+            if bold and italic:
+                return "bold_italic"
+            if bold:
+                return "bold"
+            if italic:
+                return "italic"
+            return "base"
+
+        def flush() -> None:
+            if not buf:
+                return
+            piece = "".join(buf)
+            buf.clear()
+            if segments and segments[-1][1] == style_name():
+                prev_text, prev_style = segments[-1]
+                segments[-1] = (prev_text + piece, prev_style)
+            else:
+                segments.append((piece, style_name()))
+
+        while i < len(text):
+            if text.startswith("**", i) and not code:
+                flush()
+                bold = not bold
+                i += 2
+                continue
+            ch = text[i]
+            if ch == "_" and not code:
+                flush()
+                italic = not italic
+                i += 1
+                continue
+            if ch == "`":
+                flush()
+                code = not code
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
+        flush()
+        return segments
+
+    def _style_roles(self, theme: "ColorTheme") -> dict[str, str]:
+        cache_key = (self._font_role, self._font_size)
+        cached = self._style_role_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        base = self._font_role
+        size = self._font_size
+        roles = {
+            "base": base,
+            "bold": f"{base}.rich.bold.{size}",
+            "italic": f"{base}.rich.italic.{size}",
+            "bold_italic": f"{base}.rich.bold_italic.{size}",
+            "code": f"{base}.rich.code.{size}",
+        }
+
+        if not theme.fonts.has_role(roles["bold"]):
+            theme.fonts.register_role(roles["bold"], size=size, bold=True)
+        if not theme.fonts.has_role(roles["italic"]):
+            theme.fonts.register_role(roles["italic"], size=size, italic=True)
+        if not theme.fonts.has_role(roles["bold_italic"]):
+            theme.fonts.register_role(roles["bold_italic"], size=size, bold=True, italic=True)
+        if not theme.fonts.has_role(roles["code"]):
+            theme.fonts.register_role(roles["code"], size=size, system_name="consolas")
+
+        self._style_role_cache[cache_key] = roles
+        return roles
+
+    def _role_for_style(self, theme: "ColorTheme", style: str) -> str:
+        roles = self._style_roles(theme)
+        return roles.get(style, self._font_role)
+
+    def _measure_text(self, theme: "ColorTheme", text: str, style: str) -> int:
+        role = self._role_for_style(theme, style)
+        width, _ = theme.fonts.font_instance(role, size=self._font_size).text_size(text)
+        return int(width)
+
+    def _render_piece(self, theme: "ColorTheme", text: str, style: str, base_color: tuple) -> pygame.Surface:
+        role = self._role_for_style(theme, style)
+        color = theme.highlight if style == "code" else base_color
+        return theme.render_text(text, role=role, size=self._font_size, color=color, shadow=False)
+
+    def _render_line(self, theme: "ColorTheme", tokens: List[tuple[str, str]], color: tuple) -> pygame.Surface:
+        pieces = [self._render_piece(theme, token, style, color) for token, style in tokens]
+        width = sum(piece.get_width() for piece in pieces)
+        height = max((piece.get_height() for piece in pieces), default=1)
+        line_surface = pygame.Surface((max(1, width), max(1, height)), pygame.SRCALPHA)
+        x = 0
+        for piece in pieces:
+            line_surface.blit(piece, (x, 0))
+            x += piece.get_width()
+        return line_surface
 
     def _x_for_line(self, line_width: int) -> int:
         if self._align == "center":

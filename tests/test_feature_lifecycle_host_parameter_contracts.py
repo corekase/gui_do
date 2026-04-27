@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
 from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
-from demo_features.styles_demo_feature import StylesShowcaseFeature
 from gui_do import Feature, FeatureManager
 
 
@@ -50,19 +49,10 @@ class DemoPartsHostContractTests(unittest.TestCase):
         with self.assertRaisesRegex(AttributeError, "BouncingShapesBackdropFeature.bind_runtime requires host fields: screen_rect"):
             manager.bind_runtime(SimpleNamespace(app=SimpleNamespace()))
 
-    def test_styles_build_requires_control_showcase_root(self) -> None:
-        feature = StylesShowcaseFeature()
-        manager = FeatureManager(SimpleNamespace())
-        manager.register(feature)
-
-        with self.assertRaisesRegex(AttributeError, "StylesShowcaseFeature.build requires host fields: control_showcase_root"):
-            manager.build_features(SimpleNamespace(app=SimpleNamespace()))
-
     def test_demo_parts_inherit_host_parameter_contract_from_lifecycle(self) -> None:
         manager = FeatureManager(SimpleNamespace())
         parts = (
             BouncingShapesBackdropFeature(),
-            StylesShowcaseFeature(),
             LifeSimulationFeature(),
             MandelbrotRenderFeature(),
         )

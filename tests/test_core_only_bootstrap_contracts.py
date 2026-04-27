@@ -175,7 +175,6 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             "test_gui_do_demo_presentation_model.py",
             "test_mandel_event_schema_exports.py",
             "test_mandel_logic_feature_runtime.py",
-            "test_styles_demo_feature.py",
         }
 
         existing_expected = {name for name in expected_demo_tests if (tests_dir / name).exists()}
