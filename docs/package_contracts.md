@@ -79,6 +79,20 @@ from gui_do import (
     DialogHandle,
     DragDropManager,
     DragPayload,
+    FormModel,
+    FormField,
+    ValidationRule,
+    FieldError,
+    CommandHistory,
+    Command,
+    CommandTransaction,
+    DataGridControl,
+    GridColumn,
+    GridRow,
+    ContextMenuManager,
+    ContextMenuItem,
+    ContextMenuHandle,
+    SplitterControl,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:

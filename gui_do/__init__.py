@@ -74,6 +74,11 @@ from .controls.dropdown_control import DropdownControl, DropdownOption
 from .core.toast_manager import ToastManager, ToastHandle, ToastSeverity
 from .core.dialog_manager import DialogManager, DialogHandle
 from .core.drag_drop_manager import DragDropManager, DragPayload
+from .core.form_model import FormModel, FormField, ValidationRule, FieldError
+from .core.command_history import CommandHistory, Command, CommandTransaction
+from .controls.data_grid_control import DataGridControl, GridColumn, GridRow
+from .core.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
+from .controls.splitter_control import SplitterControl
 
 __all__ = [
     "GuiApplication",
@@ -147,4 +152,18 @@ __all__ = [
     "DialogHandle",
     "DragDropManager",
     "DragPayload",
+    "FormModel",
+    "FormField",
+    "ValidationRule",
+    "FieldError",
+    "CommandHistory",
+    "Command",
+    "CommandTransaction",
+    "DataGridControl",
+    "GridColumn",
+    "GridRow",
+    "ContextMenuManager",
+    "ContextMenuItem",
+    "ContextMenuHandle",
+    "SplitterControl",
 ]

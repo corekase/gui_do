@@ -85,6 +85,20 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `DialogHandle`
 - `DragDropManager`
 - `DragPayload`
+- `FormModel`
+- `FormField`
+- `ValidationRule`
+- `FieldError`
+- `CommandHistory`
+- `Command`
+- `CommandTransaction`
+- `DataGridControl`
+- `GridColumn`
+- `GridRow`
+- `ContextMenuManager`
+- `ContextMenuItem`
+- `ContextMenuHandle`
+- `SplitterControl`
 
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 

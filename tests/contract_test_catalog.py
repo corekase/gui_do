@@ -235,6 +235,20 @@ PUBLIC_API_EXPORT_ORDER = (
     "DialogHandle",
     "DragDropManager",
     "DragPayload",
+    "FormModel",
+    "FormField",
+    "ValidationRule",
+    "FieldError",
+    "CommandHistory",
+    "Command",
+    "CommandTransaction",
+    "DataGridControl",
+    "GridColumn",
+    "GridRow",
+    "ContextMenuManager",
+    "ContextMenuItem",
+    "ContextMenuHandle",
+    "SplitterControl",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (
@@ -324,6 +338,20 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "DialogHandle",
     "DragDropManager",
     "DragPayload",
+    "FormModel",
+    "FormField",
+    "ValidationRule",
+    "FieldError",
+    "CommandHistory",
+    "Command",
+    "CommandTransaction",
+    "DataGridControl",
+    "GridColumn",
+    "GridRow",
+    "ContextMenuManager",
+    "ContextMenuItem",
+    "ContextMenuHandle",
+    "SplitterControl",
 )
 
 PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (
