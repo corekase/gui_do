@@ -32,6 +32,7 @@ from gui_do import (
     EventBus,
     FocusManager,
     FontManager,
+    FontRoleRegistry,
     EventPhase,
     EventType,
     GuiEvent,

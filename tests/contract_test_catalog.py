@@ -1,4 +1,4 @@
-﻿"""Canonical contract-test catalog shared by docs/parity regression tests."""
+"""Canonical contract-test catalog shared by docs/parity regression tests."""
 
 DEMO_CONTRACTS_ENABLED = True
 
@@ -189,6 +189,7 @@ PUBLIC_API_EXPORT_ORDER = (
     "EventBus",
     "FocusManager",
     "FontManager",
+    "FontRoleRegistry",
     "EventPhase",
     "EventType",
     "GuiEvent",
@@ -375,6 +376,7 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "EventBus",
     "FocusManager",
     "FontManager",
+    "FontRoleRegistry",
     "EventPhase",
     "EventType",
     "GuiEvent",

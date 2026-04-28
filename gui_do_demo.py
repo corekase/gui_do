@@ -20,6 +20,7 @@ from gui_do import (
     TaskPanelControl,
     ToggleControl,
     LayoutAxis,
+    FontRoleRegistry,
     OverlayPanelControl,
     DropdownControl,
     DropdownOption,
@@ -82,6 +83,37 @@ class GuiDoDemo:
             live_analysis_enabled=True,
             file_logging_enabled=False,
         )
+
+        # Font roles are defined here during demo startup, independent of any
+        # scene.  Features bind local role names to these pre-defined global
+        # roles (via Feature.use_font_roles) instead of redefining sizes/files.
+        self.font_roles = FontRoleRegistry()
+        self.font_roles.define("body",    size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("title",   size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf", bold=True)
+        self.font_roles.define("display", size=72, file_path="demo_features/data/fonts/Gimbot.ttf")
+        self.font_roles.define("controls.label", size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("controls.control", size=15, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("life.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
+        self.font_roles.define("life.control", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("mandelbrot.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
+        self.font_roles.define("mandelbrot.control", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("mandelbrot.caption", size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("mandelbrot.status", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("system.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
+        self.font_roles.define("system.control", size=15, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("system.label", size=13, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define("system.status", size=13, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
+        self.font_roles.define(
+            self.TASK_PANEL_CONTROL_FONT_ROLE,
+            size=16,
+            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
+        )
+        self.font_roles.define(
+            self.SCREEN_TITLE_FONT_ROLE,
+            size=72,
+            file_path="demo_features/data/fonts/Gimbot.ttf",
+        )
+
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.create_scene("main")
         self.app.create_scene("control_showcase")
@@ -153,53 +185,9 @@ class GuiDoDemo:
         self.app.configure_features_accessibility(self, len(base_controls))
 
     def _register_screen_font_roles(self) -> None:
-        """Register screen-owned font roles for non-part scene composition."""
+        """Apply the demo font role registry to all scenes."""
         for scene_name in ("main", "control_showcase"):
-            # Ensure all default role rendering in the demo resolves to bundled font assets.
-            self.app.register_font_role(
-                "body",
-                size=16,
-                file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-                scene_name=scene_name,
-            )
-            self.app.register_font_role(
-                "title",
-                size=14,
-                file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-                bold=True,
-                scene_name=scene_name,
-            )
-            self.app.register_font_role(
-                "display",
-                size=72,
-                file_path="demo_features/data/fonts/Gimbot.ttf",
-                scene_name=scene_name,
-            )
-
-        self.app.register_font_role(
-            self.TASK_PANEL_CONTROL_FONT_ROLE,
-            size=16,
-            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-            scene_name="main",
-        )
-        self.app.register_font_role(
-            self.TASK_PANEL_CONTROL_FONT_ROLE,
-            size=16,
-            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-            scene_name="control_showcase",
-        )
-        self.app.register_font_role(
-            self.SCREEN_TITLE_FONT_ROLE,
-            size=72,
-            file_path="demo_features/data/fonts/Gimbot.ttf",
-            scene_name="main",
-        )
-        self.app.register_font_role(
-            self.SCREEN_TITLE_FONT_ROLE,
-            size=72,
-            file_path="demo_features/data/fonts/Gimbot.ttf",
-            scene_name="control_showcase",
-        )
+            self.font_roles.apply(self.app, scene_name=scene_name)
 
     def _make_sized_title_label(
         self,

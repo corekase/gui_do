@@ -268,6 +268,21 @@ class Feature:
             )
         return registered
 
+    def use_font_roles(self, role_names: Mapping[str, str] | Iterable[str]) -> Dict[str, str]:
+        """Bind local feature role names to already-registered global role names."""
+        registered: Dict[str, str] = {}
+        if isinstance(role_names, Mapping):
+            items = role_names.items()
+        else:
+            items = ((name, name) for name in role_names)
+
+        for local_name, global_name in items:
+            normalized_local = self._normalize_font_role_name(local_name)
+            normalized_global = self._normalize_font_role_name(global_name)
+            self._font_roles[normalized_local] = normalized_global
+            registered[normalized_local] = normalized_global
+        return registered
+
     def font_role(self, role_name: str) -> str:
         """Resolve a local feature font role name to its registered global role."""
         local_name = self._normalize_font_role_name(role_name)

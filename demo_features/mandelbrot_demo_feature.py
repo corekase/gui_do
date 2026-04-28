@@ -220,15 +220,13 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
-        self.register_font_roles(
-            host,
+        self.use_font_roles(
             {
-                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "bold": True},
-                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-                "caption": {"size": 14, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-                "status": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-            },
-            scene_name="main",
+                "window_title": "mandelbrot.window_title",
+                "control": "mandelbrot.control",
+                "caption": "mandelbrot.caption",
+                "status": "mandelbrot.status",
+            }
         )
         self.build_window(
             host,

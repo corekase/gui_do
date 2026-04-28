@@ -101,13 +101,8 @@ class ControlsShowcaseFeature(Feature):
     TASK_PANEL_BUTTON_LEFT = 16
     TASK_PANEL_BUTTON_TOP_OFFSET = 10
 
-    LABEL_FONT_ROLE_LOCAL = "label"
-    LABEL_FONT_SIZE = 14
-    LABEL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
-
-    CONTROL_FONT_ROLE_LOCAL = "control"
-    CONTROL_FONT_SIZE = 15
-    CONTROL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
+    LABEL_FONT_ROLE = "controls.label"
+    CONTROL_FONT_ROLE = "controls.control"
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
 
@@ -129,20 +124,8 @@ class ControlsShowcaseFeature(Feature):
         self._showcase_notification_center: NotificationCenter | None = None
 
     def build(self, host) -> None:
-        self._label_font_role = self.register_font_role(
-            host,
-            self.LABEL_FONT_ROLE_LOCAL,
-            size=self.LABEL_FONT_SIZE,
-            file_path=self.LABEL_FONT_PATH,
-            scene_name=self.scene_name,
-        )
-        self._control_font_role = self.register_font_role(
-            host,
-            self.CONTROL_FONT_ROLE_LOCAL,
-            size=self.CONTROL_FONT_SIZE,
-            file_path=self.CONTROL_FONT_PATH,
-            scene_name=self.scene_name,
-        )
+        self._label_font_role = self.LABEL_FONT_ROLE
+        self._control_font_role = self.CONTROL_FONT_ROLE
 
         if self.rect.width <= 0 or self.rect.height <= 0:
             self.rect = self._default_rect(host)

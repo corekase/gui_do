@@ -39,6 +39,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `EventBus`
 - `FocusManager`
 - `FontManager`
+- `FontRoleRegistry`
 - `EventPhase`
 - `EventType`
 - `GuiEvent`

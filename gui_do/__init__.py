@@ -42,6 +42,7 @@ from .core.event_manager import EventManager
 from .core.event_bus import EventBus
 from .core.focus_manager import FocusManager
 from .core.font_manager import FontManager
+from .core.font_role_registry import FontRoleRegistry
 from .core.gui_event import EventPhase, EventType, GuiEvent
 from .core.value_change_callback import ValueChangeCallback
 from .core.value_change_reason import ValueChangeReason
@@ -155,6 +156,7 @@ __all__ = [
     "EventBus",
     "FocusManager",
     "FontManager",
+    "FontRoleRegistry",
     "EventPhase",
     "EventType",
     "GuiEvent",

@@ -124,15 +124,13 @@ class SystemWindowDemoFeature(RoutedFeature):
 
     def build(self, host) -> None:
         self._host = host
-        self.register_font_roles(
-            host,
+        self.use_font_roles(
             {
-                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "bold": True},
-                "control": {"size": 15, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-                "label": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-                "status": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
-            },
-            scene_name="main",
+                "window_title": "system.window_title",
+                "control": "system.control",
+                "label": "system.label",
+                "status": "system.status",
+            }
         )
         self.notification_center = NotificationCenter(host.app.events, max_records=200)
         self.notification_center.subscribe("demo.system.status", severity=ToastSeverity.INFO, title="System")
