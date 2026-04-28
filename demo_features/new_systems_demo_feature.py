@@ -22,6 +22,10 @@ from gui_do import (
     CursorHandle,
     CursorManager,
     CursorShape,
+    DockPane,
+    DockTabs,
+    DockWorkspace,
+    DockWorkspacePanel,
     EventPlayback,
     EventRecorder,
     FixedItemSource,
@@ -30,6 +34,8 @@ from gui_do import (
     ListItem,
     LocaleRegistry,
     PropertyDescriptor,
+    PropertyInspectorModel,
+    PropertyInspectorPanel,
     PropertyRegistry,
     property_registry,
     RecordedEvent,
@@ -45,10 +51,61 @@ from gui_do import (
     TextInputControl,
     TextSpan,
     ToggleControl,
+    ui_property,
     WindowControl,
 )
 
 _TAB_H = 36
+
+
+# ---------------------------------------------------------------------------
+# Inspectable demo target
+# ---------------------------------------------------------------------------
+
+class _DemoInspectable:
+    """Simple object decorated with ``@ui_property`` for PropertyInspectorPanel demo."""
+
+    def __init__(self) -> None:
+        self._opacity: float = 1.0
+        self._speed: int = 50
+        self._label: str = "demo"
+        self._active: bool = True
+
+    @property
+    @ui_property(label="Opacity", type="float", min=0.0, max=1.0, group="Appearance")
+    def opacity(self) -> float:
+        return self._opacity
+
+    @opacity.setter
+    def opacity(self, v: float) -> None:
+        self._opacity = float(v)
+
+    @property
+    @ui_property(label="Speed", type="int", min=0, max=200, group="Behaviour")
+    def speed(self) -> int:
+        return self._speed
+
+    @speed.setter
+    def speed(self, v: int) -> None:
+        self._speed = int(v)
+
+    @property
+    @ui_property(label="Label", type="str", group="Content")
+    def label(self) -> str:
+        return self._label
+
+    @label.setter
+    def label(self, v: str) -> None:
+        self._label = str(v)
+
+    @property
+    @ui_property(label="Active", type="bool", group="Behaviour")
+    def active(self) -> bool:
+        return self._active
+
+    @active.setter
+    def active(self, v: bool) -> None:
+        self._active = bool(v)
 
 
 class NewSystemsDemoFeature(RoutedFeature):
@@ -107,6 +164,17 @@ class NewSystemsDemoFeature(RoutedFeature):
         self._spatial_label: Optional[LabelControl] = None
         self._main_scene = None
 
+        # Props tab — PropertyInspectorPanel demo
+        self._demo_inspectable = _DemoInspectable()
+        self._prop_inspector_panel: Optional[PropertyInspectorPanel] = None
+        self._prop_selected_label: Optional[LabelControl] = None
+
+        # Dock tab — DockWorkspacePanel demo
+        self._dock_workspace: Optional[DockWorkspace] = None
+        self._dock_panel: Optional[DockWorkspacePanel] = None
+        self._dock_active_label: Optional[LabelControl] = None
+        self._dock_model_label: Optional[LabelControl] = None
+
     # ------------------------------------------------------------------
     # Feature lifecycle
     # ------------------------------------------------------------------
@@ -157,6 +225,8 @@ class NewSystemsDemoFeature(RoutedFeature):
                     TabItem("input", "Input"),
                     TabItem("event", "Event"),
                     TabItem("inspect", "Inspect"),
+                    TabItem("props", "Props"),
+                    TabItem("dock", "Dock"),
                 ],
                 selected_key="cursor",
                 on_change=self._on_tab_change,
@@ -170,6 +240,8 @@ class NewSystemsDemoFeature(RoutedFeature):
         self._tab_panels["input"] = self._build_input_tab(host, Rect(body_content_rect))
         self._tab_panels["event"] = self._build_event_tab(host, Rect(body_content_rect))
         self._tab_panels["inspect"] = self._build_inspect_tab(host, Rect(body_content_rect))
+        self._tab_panels["props"] = self._build_props_tab(host, Rect(body_content_rect))
+        self._tab_panels["dock"] = self._build_dock_tab(host, Rect(body_content_rect))
 
         self._on_tab_change("cursor")
 
@@ -1042,6 +1114,255 @@ class NewSystemsDemoFeature(RoutedFeature):
         controls.append(self._spatial_label)
 
         return controls
+
+    # ------------------------------------------------------------------
+    # Tab: Props — PropertyInspectorPanel
+    # ------------------------------------------------------------------
+
+    def _build_props_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        title = self.window.add(
+            LabelControl(
+                "nsdf_props_title",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "PropertyInspectorPanel — inspect _DemoInspectable properties:",
+                align="left",
+            )
+        )
+        title.font_role = self.font_role("label")
+        controls.append(title)
+        y += 28
+
+        hint = self.window.add(
+            LabelControl(
+                "nsdf_props_hint",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "Click a property row to select it. Use refresh to re-read values.",
+                align="left",
+            )
+        )
+        hint.font_role = self.font_role("label")
+        controls.append(hint)
+        y += 26
+
+        panel_h = max(120, rect.bottom - y - 60 - pad)
+        self._prop_inspector_panel = self.window.add(
+            PropertyInspectorPanel(
+                "nsdf_prop_inspector",
+                Rect(x, y, rect.width - pad * 2, panel_h),
+                PropertyInspectorModel(self._demo_inspectable),
+                on_select=self._on_prop_selected,
+                font_role=self.font_role("label"),
+            )
+        )
+        controls.append(self._prop_inspector_panel)
+        y += panel_h + 6
+
+        self._prop_selected_label = self.window.add(
+            LabelControl(
+                "nsdf_prop_selected",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "Select a property above…",
+                align="left",
+            )
+        )
+        self._prop_selected_label.font_role = self.font_role("label")
+        controls.append(self._prop_selected_label)
+        y += 26
+
+        refresh_btn = self.window.add(
+            ButtonControl(
+                "nsdf_props_refresh",
+                Rect(x, y, 100, 28),
+                "Refresh",
+                self._refresh_prop_inspector,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.append(refresh_btn)
+
+        return controls
+
+    def _on_prop_selected(self, prop) -> None:
+        if self._prop_selected_label is None:
+            return
+        try:
+            val = self._demo_inspectable.__class__.__dict__.get(prop.descriptor.name)
+            current = getattr(self._demo_inspectable, prop.descriptor.name, "?")
+            self._prop_selected_label.text = (
+                f"Selected: [{prop.descriptor.group}] {prop.descriptor.label} = {current!r}"
+            )
+        except Exception:
+            self._prop_selected_label.text = f"Selected: {prop.descriptor.name}"
+
+    def _refresh_prop_inspector(self) -> None:
+        if self._prop_inspector_panel is not None:
+            self._prop_inspector_panel.refresh()
+
+    # ------------------------------------------------------------------
+    # Tab: Dock — DockWorkspacePanel
+    # ------------------------------------------------------------------
+
+    def _build_dock_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        title = self.window.add(
+            LabelControl(
+                "nsdf_dock_title",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "DockWorkspacePanel — interactive tab bar backed by DockWorkspace model:",
+                align="left",
+            )
+        )
+        title.font_role = self.font_role("label")
+        controls.append(title)
+        y += 28
+
+        hint = self.window.add(
+            LabelControl(
+                "nsdf_dock_hint",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "Click a tab below to switch the active pane.",
+                align="left",
+            )
+        )
+        hint.font_role = self.font_role("label")
+        controls.append(hint)
+        y += 26
+
+        # Build a demo DockWorkspace with tabs
+        self._dock_workspace = DockWorkspace(
+            DockTabs(
+                "demo_tabs",
+                panes=[
+                    DockPane("editor", "Editor"),
+                    DockPane("preview", "Preview"),
+                    DockPane("console", "Console"),
+                    DockPane("output", "Output"),
+                ],
+            )
+        )
+
+        panel_h = 36
+        self._dock_panel = self.window.add(
+            DockWorkspacePanel(
+                "nsdf_dock_panel",
+                Rect(x, y, rect.width - pad * 2, panel_h),
+                self._dock_workspace,
+                on_change=self._on_dock_pane_changed,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.append(self._dock_panel)
+        y += panel_h + 12
+
+        self._dock_active_label = self.window.add(
+            LabelControl(
+                "nsdf_dock_active",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "Active pane: editor",
+                align="left",
+            )
+        )
+        self._dock_active_label.font_role = self.font_role("label")
+        controls.append(self._dock_active_label)
+        y += 26
+
+        # Buttons: add/remove pane
+        add_btn = self.window.add(
+            ButtonControl(
+                "nsdf_dock_add",
+                Rect(x, y, 120, 28),
+                "Add Extra Pane",
+                self._dock_add_pane,
+                font_role=self.font_role("control"),
+            )
+        )
+        remove_btn = self.window.add(
+            ButtonControl(
+                "nsdf_dock_remove",
+                Rect(x + 128, y, 120, 28),
+                "Remove Active",
+                self._dock_remove_active,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([add_btn, remove_btn])
+        y += 36
+
+        # Show serialized model
+        model_title = self.window.add(
+            LabelControl(
+                "nsdf_dock_model_title",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "DockWorkspace.to_dict() — model serializes cleanly:",
+                align="left",
+            )
+        )
+        model_title.font_role = self.font_role("label")
+        controls.append(model_title)
+        y += 24
+
+        self._dock_model_label = self.window.add(
+            LabelControl(
+                "nsdf_dock_model_label",
+                Rect(x, y, rect.width - pad * 2, 20),
+                self._dock_model_summary(),
+                align="left",
+            )
+        )
+        self._dock_model_label.font_role = self.font_role("label")
+        controls.append(self._dock_model_label)
+
+        return controls
+
+    def _on_dock_pane_changed(self, pane_id: str) -> None:
+        if self._dock_active_label is not None:
+            self._dock_active_label.text = f"Active pane: {pane_id}"
+        if hasattr(self, "_dock_model_label") and self._dock_model_label is not None:
+            self._dock_model_label.text = self._dock_model_summary()
+
+    def _dock_add_pane(self) -> None:
+        if self._dock_workspace is None or self._dock_panel is None:
+            return
+        root = self._dock_workspace.root
+        if not isinstance(root, DockTabs):
+            return
+        idx = len(root.panes) + 1
+        root.add_pane(DockPane(f"extra_{idx}", f"Extra {idx}"))
+        self._dock_panel.invalidate()
+        if hasattr(self, "_dock_model_label") and self._dock_model_label is not None:
+            self._dock_model_label.text = self._dock_model_summary()
+
+    def _dock_remove_active(self) -> None:
+        if self._dock_workspace is None or self._dock_panel is None:
+            return
+        active = self._dock_panel.active_pane_id
+        if active is None:
+            return
+        self._dock_workspace.remove_pane(active)
+        self._dock_panel.invalidate()
+        if self._dock_active_label is not None:
+            new_active = self._dock_panel.active_pane_id
+            self._dock_active_label.text = f"Active pane: {new_active or '(none)'}"
+        if hasattr(self, "_dock_model_label") and self._dock_model_label is not None:
+            self._dock_model_label.text = self._dock_model_summary()
+
+    def _dock_model_summary(self) -> str:
+        if self._dock_workspace is None:
+            return "(no workspace)"
+        d = self._dock_workspace.to_dict()
+        root = d.get("root", {})
+        kind = root.get("kind", "?")
+        if kind == "tabs":
+            pane_ids = [p["pane_id"] for p in root.get("panes", [])]
+            return f"kind=tabs, panes={pane_ids}, active={root.get('active_pane_id')!r}"
+        return str(d)[:100]
 
     def _capture_snapshot(self) -> None:
         if self.window is None:

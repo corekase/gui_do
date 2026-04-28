@@ -97,6 +97,22 @@ class CommandPaletteManager:
         """Register a command entry.  Replaces any existing entry with the same id."""
         self._entries[str(entry.entry_id)] = entry
 
+    def register_action_registry(
+        self,
+        action_registry,
+        *,
+        context=None,
+        category: str | None = None,
+        clear_existing: bool = False,
+    ) -> None:
+        """Register entries projected from an ActionRegistry."""
+        if clear_existing:
+            self._entries.clear()
+        for entry in action_registry.command_entries(context=context):
+            if category is not None and str(entry.category) != str(category):
+                continue
+            self.register(entry)
+
     def unregister(self, entry_id: str) -> bool:
         """Remove a registered entry. Returns ``True`` if it existed."""
         return bool(self._entries.pop(str(entry_id), None))

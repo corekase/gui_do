@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
@@ -112,6 +113,44 @@ class ListViewControl(UiNode):
         self._ensure_selection_invariant()
         self._scroll_offset = 0
         self.invalidate()
+
+    def set_collection_view(self, cv: "CollectionView | None") -> None:
+        """Populate the list from a :class:`~gui_do.core.collection_view.CollectionView`.
+
+        Converts each item in *cv* to a :class:`ListItem` if it is not already
+        one (using ``str(item)`` for the label and the raw item as the value).
+        Pass ``None`` to clear without replacing the source.
+        """
+        if cv is None:
+            self.set_items([])
+            return
+        converted: List[ListItem] = []
+        for item in cv.items:
+            if isinstance(item, ListItem):
+                converted.append(item)
+            else:
+                converted.append(ListItem(label=str(item), value=item))
+        self.set_items(converted)
+
+    def bind_collection_view(
+        self,
+        cv: "CollectionView",
+        on_refresh: Optional[Callable[[], None]] = None,
+    ) -> Callable[[], None]:
+        """Subscribe to *cv* so this control auto-updates whenever *cv* refreshes.
+
+        Immediately populates the control from *cv* and registers a subscriber.
+        Returns an unsub callable; call it to detach the live subscription.
+        An optional *on_refresh* callback is fired after each sync.
+        """
+        self.set_collection_view(cv)
+
+        def _on_cv_refresh() -> None:
+            self.set_collection_view(cv)
+            if on_refresh is not None:
+                on_refresh()
+
+        return cv.subscribe(_on_cv_refresh)
 
     def append_item(self, item: ListItem) -> None:
         self._items.append(item)

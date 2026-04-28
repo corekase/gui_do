@@ -37,7 +37,10 @@ from .controls.window_control import WindowControl
 from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
 from .layout.window_tiling_manager import WindowTilingManager
+from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
+from .controls.dock_workspace_panel import DockWorkspacePanel
 from .core.action_manager import ActionManager
+from .core.action_registry import ActionDescriptor, ActionRegistry
 from .core.event_manager import EventManager
 from .core.event_bus import EventBus
 from .core.focus_manager import FocusManager
@@ -79,12 +82,15 @@ from .core.toast_manager import ToastManager, ToastHandle, ToastSeverity
 from .core.dialog_manager import DialogManager, DialogHandle
 from .core.drag_drop_manager import DragDropManager, DragPayload
 from .core.form_model import FormModel, FormField, ValidationRule, FieldError
+from .core.form_schema import FormSchema, SchemaField
 from .core.command_history import CommandHistory, Command, CommandTransaction
+from .core.document_model import DocumentModel
 from .controls.data_grid_control import DataGridControl, GridColumn, GridRow
 from .core.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
 from .controls.splitter_control import SplitterControl
 from .core.state_machine import StateMachine
 from .core.settings_registry import SettingsRegistry, SettingDescriptor
+from .core.workspace_persistence import WorkspaceState, WorkspacePersistenceManager
 from .core.router import Router, RouteEntry
 from .theme.theme_manager import ThemeManager, DesignTokens
 from .controls.text_area_control import TextAreaControl
@@ -100,6 +106,7 @@ from .core.scene_transition_manager import SceneTransitionManager, SceneTransiti
 from .core.notification_center import NotificationCenter, NotificationRecord
 from .controls.notification_panel_control import NotificationPanelControl
 from .core.clipboard import ClipboardManager
+from .core.transfer_data import TransferData, TransferManager
 from .core.animation_sequence import AnimationSequence, AnimationHandle
 from .controls.scroll_view_control import ScrollViewControl
 from .controls.spinner_control import SpinnerControl
@@ -112,6 +119,7 @@ from .core.observable_collections import (
     ObservableList,
     ObservableDict,
 )
+from .core.collection_view import CollectionViewQuery, CollectionView
 from .core.binding import Binding, BindingGroup
 from .core.gesture_recognizer import GestureRecognizer
 from .layout.layout_animator import LayoutAnimator
@@ -138,6 +146,8 @@ from .core.text_flow import TextFlow, TextSpan
 from .layout.responsive_layout import ResponsiveLayout, Breakpoint
 from .core.event_recorder import EventRecorder, EventPlayback, RecordedEvent
 from .core.property_registry import ui_property, PropertyDescriptor, PropertyRegistry, property_registry
+from .core.property_inspector import PropertyInspectorModel, InspectedProperty
+from .controls.property_inspector_panel import PropertyInspectorPanel
 from .core.scene_snapshot import SceneSnapshot, NodeSnapshot
 
 __all__ = [
@@ -161,7 +171,14 @@ __all__ = [
     "LayoutAxis",
     "LayoutManager",
     "WindowTilingManager",
+    "DockPane",
+    "DockTabs",
+    "DockSplit",
+    "DockWorkspace",
+    "DockWorkspacePanel",
     "ActionManager",
+    "ActionDescriptor",
+    "ActionRegistry",
     "EventManager",
     "EventBus",
     "FocusManager",
@@ -219,9 +236,12 @@ __all__ = [
     "FormField",
     "ValidationRule",
     "FieldError",
+    "FormSchema",
+    "SchemaField",
     "CommandHistory",
     "Command",
     "CommandTransaction",
+    "DocumentModel",
     "DataGridControl",
     "GridColumn",
     "GridRow",
@@ -232,6 +252,8 @@ __all__ = [
     "StateMachine",
     "SettingsRegistry",
     "SettingDescriptor",
+    "WorkspaceState",
+    "WorkspacePersistenceManager",
     "Router",
     "RouteEntry",
     "ThemeManager",
@@ -260,6 +282,8 @@ __all__ = [
     "NotificationRecord",
     "NotificationPanelControl",
     "ClipboardManager",
+    "TransferData",
+    "TransferManager",
     "AnimationSequence",
     "AnimationHandle",
     "ScrollViewControl",
@@ -273,6 +297,8 @@ __all__ = [
     "CollectionChange",
     "ObservableList",
     "ObservableDict",
+    "CollectionViewQuery",
+    "CollectionView",
     "Binding",
     "BindingGroup",
     "GestureRecognizer",
@@ -330,6 +356,9 @@ __all__ = [
     "ui_property",
     "PropertyDescriptor",
     "PropertyRegistry",
+    "PropertyInspectorModel",
+    "InspectedProperty",
+    "PropertyInspectorPanel",
     "property_registry",
     "SceneSnapshot",
     "NodeSnapshot",

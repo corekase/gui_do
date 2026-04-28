@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
@@ -144,6 +145,48 @@ class TreeControl(UiNode):
         self._scroll_offset = 0
         self._rebuild_rows()
         self.invalidate()
+
+    def set_collection_view(self, cv: "CollectionView | None") -> None:
+        """Populate root nodes from a :class:`~gui_do.core.collection_view.CollectionView`.
+
+        Converts each item in *cv* to a :class:`TreeNode` if it is not already
+        one.  The conversion rules are:
+
+        * :class:`TreeNode` items are passed through unchanged.
+        * Any other value uses ``str(item)`` as the label, with no children.
+
+        Pass ``None`` to clear the tree.
+        """
+        if cv is None:
+            self.set_nodes([])
+            return
+        converted: List[TreeNode] = []
+        for item in cv.items:
+            if isinstance(item, TreeNode):
+                converted.append(item)
+            else:
+                converted.append(TreeNode(label=str(item)))
+        self.set_nodes(converted)
+
+    def bind_collection_view(
+        self,
+        cv: "CollectionView",
+        on_refresh: Optional[Callable[[], None]] = None,
+    ) -> Callable[[], None]:
+        """Subscribe to *cv* so this control auto-updates whenever *cv* refreshes.
+
+        Immediately populates the control from *cv* and registers a subscriber.
+        Returns an unsub callable; call it to detach the live subscription.
+        An optional *on_refresh* callback is fired after each sync.
+        """
+        self.set_collection_view(cv)
+
+        def _on_cv_refresh() -> None:
+            self.set_collection_view(cv)
+            if on_refresh is not None:
+                on_refresh()
+
+        return cv.subscribe(_on_cv_refresh)
 
     def expand(self, node: TreeNode) -> None:
         """Expand *node* and rebuild the flat row cache."""

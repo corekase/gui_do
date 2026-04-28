@@ -1,7 +1,7 @@
 """CommandHistory — undo/redo stack with optional transaction grouping."""
 from __future__ import annotations
 
-from typing import List, Optional, Protocol, runtime_checkable
+from typing import Callable, List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -82,6 +82,7 @@ class CommandHistory:
         self._undo_stack: List[Command] = []
         self._redo_stack: List[Command] = []
         self._open_transaction: Optional[CommandTransaction] = None
+        self._change_listeners: List[Callable[[str], None]] = []
 
     # ------------------------------------------------------------------
     # Properties
@@ -147,9 +148,7 @@ class CommandHistory:
         self._undo_stack.append(command)
         if len(self._undo_stack) > self._max_size:
             self._undo_stack.pop(0)
-
-    # ------------------------------------------------------------------
-    # Undo / redo
+        self._notify("push")
     # ------------------------------------------------------------------
 
     def undo(self) -> bool:
@@ -162,6 +161,7 @@ class CommandHistory:
         except Exception:
             return False
         self._redo_stack.append(command)
+        self._notify("undo")
         return True
 
     def redo(self) -> bool:
@@ -174,6 +174,7 @@ class CommandHistory:
         except Exception:
             return False
         self._undo_stack.append(command)
+        self._notify("redo")
         return True
 
     # ------------------------------------------------------------------
@@ -202,6 +203,7 @@ class CommandHistory:
             self._undo_stack.append(tx)
             if len(self._undo_stack) > self._max_size:
                 self._undo_stack.pop(0)
+            self._notify("push")
 
     def abort_transaction(self) -> None:
         """Discard the open transaction without recording it."""
@@ -241,6 +243,28 @@ class CommandHistory:
     # ------------------------------------------------------------------
     # Maintenance
     # ------------------------------------------------------------------
+
+    def subscribe(self, callback: "Callable[[str], None]") -> "Callable[[], None]":
+        """Register *callback* to be called after each push/undo/redo.
+
+        The argument passed to *callback* is a string event name:
+        ``'push'``, ``'undo'``, or ``'redo'``.
+
+        Returns an unsubscribe callable.
+        """
+        self._change_listeners.append(callback)
+
+        def _unsub() -> None:
+            try:
+                self._change_listeners.remove(callback)
+            except ValueError:
+                pass
+
+        return _unsub
+
+    def _notify(self, event: str) -> None:
+        for cb in list(self._change_listeners):
+            cb(event)
 
     def clear(self) -> None:
         """Discard all undo and redo history."""

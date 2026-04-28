@@ -141,9 +141,9 @@ class GestureRecognizer:
         from .gui_event import EventType
         kind = getattr(event, "kind", None)
 
-        if kind == EventType.MOUSE_DOWN and getattr(event, "button", None) == self._button:
+        if kind == EventType.MOUSE_BUTTON_DOWN and getattr(event, "button", None) == self._button:
             self._on_mouse_down(event)
-        elif kind == EventType.MOUSE_UP and getattr(event, "button", None) == self._button:
+        elif kind == EventType.MOUSE_BUTTON_UP and getattr(event, "button", None) == self._button:
             self._on_mouse_up(event)
         elif kind == EventType.MOUSE_MOTION:
             self._on_mouse_motion(event)

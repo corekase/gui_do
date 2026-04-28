@@ -62,6 +62,19 @@ class MenuBarManager:
             self._enabled[label] = enabled
         self._menus[label].extend(items)
 
+    def register_actions(
+        self,
+        label: str,
+        action_registry,
+        *,
+        context=None,
+        category: str | None = None,
+        enabled: bool = True,
+    ) -> None:
+        """Declare a top-level menu from an ActionRegistry projection."""
+        items = action_registry.context_menu_items(context=context, category=category)
+        self.register_menu(label, items, enabled=enabled)
+
     def set_enabled(self, label: str, enabled: bool) -> None:
         """Enable or disable an entire top-level menu."""
         if label in self._enabled:

@@ -12,10 +12,14 @@ from gui_do import (
     GuiApplication,
     create_display,
     PanelControl,
+    ActionRegistry,
     FontRoleRegistry,
+    WorkspacePersistenceManager,
     SceneTransitionManager,
     SceneTransitionStyle,
 )
+
+_WORKSPACE_SAVE_PATH = "demo_features/data/workspace_autosave.json"
 
 
 class GuiDoDemo:
@@ -110,6 +114,12 @@ class GuiDoDemo:
             self.app.register_feature(feature, host=self)
 
         self._build_control_showcase_scene()
+
+        # ActionRegistry must be created before build_features so MainDemoFeature
+        # can access it during its build hook.
+        self.action_registry = ActionRegistry()
+        self._register_app_actions()
+
         self.app.build_features(self)
         self.life_window = self._life_feature.window
         self.mandel_window = self._mandel_feature.window
@@ -124,6 +134,10 @@ class GuiDoDemo:
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
+
+        # WorkspacePersistenceManager — auto-save/restore between sessions.
+        self.workspace_manager = WorkspacePersistenceManager()
+
         self.app.bind_features_runtime(self)
         self.app.prewarm_scene("control_showcase")
 
@@ -147,6 +161,11 @@ class GuiDoDemo:
         self.new_systems_toggle_window.set_accessibility(role="toggle", label="Show New Systems window")
         self.inbox_button.set_accessibility(role="button", label="Open notification panel")
         self.app.configure_features_accessibility(self, len(base_controls))
+        # Attempt to restore a previously saved workspace (best-effort; silently skipped on first run).
+        try:
+            self.app.load_workspace(self.workspace_manager, _WORKSPACE_SAVE_PATH)
+        except Exception:
+            pass
         self.app.switch_scene("main")
 
     def _build_control_showcase_scene(self) -> None:
@@ -162,7 +181,42 @@ class GuiDoDemo:
 
     def run(self) -> int:
         """Run demo with final-layer app error handling and return OS exit code."""
-        return self.app.run_entrypoint(target_fps=120)
+        result = self.app.run_entrypoint(target_fps=120)
+        # Auto-save workspace layout so it can be restored on next launch.
+        try:
+            self.app.save_workspace(self.workspace_manager, _WORKSPACE_SAVE_PATH)
+        except Exception:
+            pass
+        return result
+
+    def _register_app_actions(self) -> None:
+        """Declare all top-level demo actions on the shared ActionRegistry."""
+        r = self.action_registry
+        r.declare("exit",                "Exit",                          lambda _ctx, _ev: (setattr(self.app, "running", False) or True), category="File")
+        r.declare("file_open",           "Open File…",                    lambda _ctx, _ev: (self._open_file_dialog_from_main() or True),  category="File")
+        r.declare("file_save",           "Save File…",                    lambda _ctx, _ev: (self._save_file_dialog_from_main() or True),  category="File")
+        r.declare("nav_main",            "Go to Main Scene",              lambda _ctx, _ev: (self.go_to_main() or True),                   category="Scenes")
+        r.declare("nav_showcase",        "Go to Controls Showcase",       lambda _ctx, _ev: (self.go_to_control_showcase() or True),       category="Scenes")
+        r.declare("win_life",            "Show Life Window",              lambda _ctx, _ev: (self.set_life_window_visible(True) or True),  category="Windows")
+        r.declare("win_mandel",          "Show Mandelbrot Window",        lambda _ctx, _ev: (self.set_mandel_window_visible(True) or True), category="Windows")
+        r.declare("win_system",          "Show System Window",            lambda _ctx, _ev: (self.set_system_window_visible(True) or True), category="Windows")
+        r.declare("tools_notifications", "Notifications",                 lambda _ctx, _ev: (self._open_notifications_panel_from_main() or True),  category="Tools")
+        r.declare("tools_publish_event", "Publish Test Event",            lambda _ctx, _ev: (self._publish_system_test_event_from_main() or True), category="Tools")
+        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._open_command_palette() or True),                category="Tools")
+
+        # Bind F5 globally to open the command palette.
+        self.app.actions.register_action(
+            "open_palette",
+            lambda _event: (self._open_command_palette() or True),
+        )
+        self.app.actions.bind_key(pygame.K_F5, "open_palette", scene="main")
+        self.app.actions.bind_key(pygame.K_F5, "open_palette", scene="control_showcase")
+
+    def _open_command_palette(self) -> None:
+        """Open the command palette pre-populated from the ActionRegistry."""
+        if self._system_feature is not None and self._system_feature._palette_mgr is not None:
+            self._system_feature._palette_mgr.register_action_registry(self.action_registry)
+            self._system_feature._open_palette()
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")

@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
@@ -116,6 +117,47 @@ class DataGridControl(UiNode):
         self._scroll_offset = 0
         self.invalidate()
 
+    def set_collection_view(self, cv: "CollectionView | None") -> None:
+        """Populate rows from a :class:`~gui_do.core.collection_view.CollectionView`.
+
+        Each item in *cv* is converted to a :class:`GridRow` if it is not
+        already one — plain dicts become ``GridRow(data=item)`` and other
+        values are wrapped as ``GridRow(data={"value": item})``.
+        Pass ``None`` to clear without replacing the source.
+        """
+        if cv is None:
+            self.set_rows([])
+            return
+        converted: List[GridRow] = []
+        for item in cv.items:
+            if isinstance(item, GridRow):
+                converted.append(item)
+            elif isinstance(item, dict):
+                converted.append(GridRow(data=item))
+            else:
+                converted.append(GridRow(data={"value": item}))
+        self.set_rows(converted)
+
+    def bind_collection_view(
+        self,
+        cv: "CollectionView",
+        on_refresh: Optional[Callable[[], None]] = None,
+    ) -> Callable[[], None]:
+        """Subscribe to *cv* so this control auto-updates whenever *cv* refreshes.
+
+        Immediately populates the control from *cv* and registers a subscriber.
+        Returns an unsub callable; call it to detach the live subscription.
+        An optional *on_refresh* callback is fired after each sync.
+        """
+        self.set_collection_view(cv)
+
+        def _on_cv_refresh() -> None:
+            self.set_collection_view(cv)
+            if on_refresh is not None:
+                on_refresh()
+
+        return cv.subscribe(_on_cv_refresh)
+
     def append_row(self, row: GridRow) -> None:
         self._rows.append(row)
         self.invalidate()
@@ -138,6 +180,10 @@ class DataGridControl(UiNode):
     @property
     def row_count(self) -> int:
         return len(self._rows)
+
+    @property
+    def rows(self) -> "List[GridRow]":
+        return list(self._rows)
 
     @property
     def selected_row_index(self) -> int:

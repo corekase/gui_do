@@ -34,7 +34,14 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `LayoutAxis`
 - `LayoutManager`
 - `WindowTilingManager`
+- `DockPane`
+- `DockTabs`
+- `DockSplit`
+- `DockWorkspace`
+- `DockWorkspacePanel`
 - `ActionManager`
+- `ActionDescriptor`
+- `ActionRegistry`
 - `EventManager`
 - `EventBus`
 - `FocusManager`
@@ -92,9 +99,12 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `FormField`
 - `ValidationRule`
 - `FieldError`
+- `FormSchema`
+- `SchemaField`
 - `CommandHistory`
 - `Command`
 - `CommandTransaction`
+- `DocumentModel`
 - `DataGridControl`
 - `GridColumn`
 - `GridRow`
@@ -105,6 +115,8 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `StateMachine`
 - `SettingsRegistry`
 - `SettingDescriptor`
+- `WorkspaceState`
+- `WorkspacePersistenceManager`
 - `Router`
 - `RouteEntry`
 - `ThemeManager`
@@ -133,6 +145,8 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `NotificationRecord`
 - `NotificationPanelControl`
 - `ClipboardManager`
+- `TransferData`
+- `TransferManager`
 - `AnimationSequence`
 - `AnimationHandle`
 - `ScrollViewControl`
@@ -146,6 +160,8 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `CollectionChange`
 - `ObservableList`
 - `ObservableDict`
+- `CollectionViewQuery`
+- `CollectionView`
 - `Binding`
 - `BindingGroup`
 - `GestureRecognizer`
@@ -203,6 +219,9 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `ui_property`
 - `PropertyDescriptor`
 - `PropertyRegistry`
+- `PropertyInspectorModel`
+- `InspectedProperty`
+- `PropertyInspectorPanel`
 - `property_registry`
 - `SceneSnapshot`
 - `NodeSnapshot`

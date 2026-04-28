@@ -14,7 +14,6 @@ from gui_do import (
     CanvasViewport,
     ColorPickerControl,
     CommandHistory,
-    ContextMenuItem,
     DataGridControl,
     DesignTokens,
     DropdownControl,
@@ -80,6 +79,7 @@ class MainDemoFeature(Feature):
             "_save_file_dialog_from_main",
             "_open_notifications_panel_from_main",
             "_publish_system_test_event_from_main",
+            "action_registry",
         )
     }
 
@@ -95,37 +95,13 @@ class MainDemoFeature(Feature):
         )
 
         menu_manager = MenuBarManager()
-        menu_manager.register_menu(
-            "File",
-            [
-                ContextMenuItem("Open...", action=host._open_file_dialog_from_main),
-                ContextMenuItem("Save As...", action=host._save_file_dialog_from_main),
-                ContextMenuItem("", separator=True),
-                ContextMenuItem("Exit", action=lambda: setattr(host.app, "running", False)),
-            ],
-        )
-        menu_manager.register_menu(
-            "Scenes",
-            [
-                ContextMenuItem("Main", action=host.go_to_main),
-                ContextMenuItem("Control Showcase", action=host.go_to_control_showcase),
-            ],
-        )
-        menu_manager.register_menu(
-            "Windows",
-            [
-                ContextMenuItem("Life", action=lambda: host.set_life_window_visible(True)),
-                ContextMenuItem("Mandelbrot", action=lambda: host.set_mandel_window_visible(True)),
-                ContextMenuItem("System", action=lambda: host.set_system_window_visible(True)),
-            ],
-        )
-        menu_manager.register_menu(
-            "Tools",
-            [
-                ContextMenuItem("Notifications", action=host._open_notifications_panel_from_main),
-                ContextMenuItem("Publish Test Event", action=host._publish_system_test_event_from_main),
-            ],
-        )
+        # Populate menus from the shared ActionRegistry; each category becomes
+        # a named top-level menu, preserving the single source of truth for
+        # all app commands declared in GuiDoDemo._register_app_actions().
+        menu_manager.register_actions("File",    host.action_registry, category="File")
+        menu_manager.register_actions("Scenes",  host.action_registry, category="Scenes")
+        menu_manager.register_actions("Windows", host.action_registry, category="Windows")
+        menu_manager.register_actions("Tools",   host.action_registry, category="Tools")
         host.desktop_menu_bar = host.root.add(
             menu_manager.build("desktop_menu_bar", Rect(0, 0, host.screen_rect.width, 28), host.app)
         )

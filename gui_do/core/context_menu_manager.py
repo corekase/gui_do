@@ -158,6 +158,19 @@ class ContextMenuManager:
         )
         return ContextMenuHandle(menu_id, self)
 
+    def show_actions(
+        self,
+        pos: Tuple[int, int],
+        action_registry,
+        *,
+        context=None,
+        category: str | None = None,
+        on_dismiss: Optional[Callable[[], None]] = None,
+    ) -> ContextMenuHandle:
+        """Display a context menu built from an ActionRegistry projection."""
+        items = action_registry.context_menu_items(context=context, category=category)
+        return self.show(pos, items, on_dismiss=on_dismiss)
+
     def dismiss(self, menu_id: str) -> bool:
         """Dismiss a specific context menu by id."""
         if menu_id in self._open_ids:

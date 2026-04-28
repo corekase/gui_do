@@ -78,7 +78,7 @@ class ErrorBoundary(UiNode):
     ) -> None:
         if child is None:
             raise ValueError("ErrorBoundary child must not be None")
-        super().__init__(Rect(child.rect))
+        super().__init__(f"_error_boundary_{id(child)}", Rect(child.rect))
         self._child: UiNode = child
         self._on_error: Optional[Callable[[BaseException], None]] = on_error
         self._error_text: str = str(error_text)
