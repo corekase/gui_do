@@ -99,6 +99,9 @@ class DataGridControl(UiNode):
         self._col_offsets_cache: List[int] = [0]
         self._col_offsets_dirty: bool = True
         self._draw_font = None
+        # Cache rendered text surfaces: (str_value, color_rgb) -> Surface.
+        # Avoids re-rendering identical cell text on every frame.
+        self._text_cache: Dict[tuple, "pygame.Surface"] = {}
 
         self.tab_index = 0
 
@@ -495,6 +498,7 @@ class DataGridControl(UiNode):
         if self._draw_font is None:
             try:
                 self._draw_font = pygame.font.SysFont(None, 18)
+                self._text_cache.clear()  # new font object; discard stale surfaces
             except Exception:
                 self._draw_font = False
         font = self._draw_font
@@ -516,7 +520,11 @@ class DataGridControl(UiNode):
             if col.sortable and self._sort_col == col.key:
                 title += " ▲" if self._sort_asc else " ▼"
             if font:
-                ts = font.render(title, True, text_col)
+                cache_key = (title, text_col)
+                ts = self._text_cache.get(cache_key)
+                if ts is None:
+                    ts = font.render(title, True, text_col)
+                    self._text_cache[cache_key] = ts
                 surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
 
         # Header bottom border
@@ -526,15 +534,18 @@ class DataGridControl(UiNode):
         old_clip = surface.get_clip()
         surface.set_clip(cr.clip(old_clip) if old_clip else cr)
 
-        first_row = self._scroll_offset // self._row_height
-        last_row = min(len(self._rows), first_row + self._viewport_height() // self._row_height + 2)
+        row_height = self._row_height
+        content_height = len(self._rows) * row_height
+        viewport_height = max(1, self.rect.height - _HEADER_HEIGHT)
+        first_row = self._scroll_offset // row_height
+        last_row = min(len(self._rows), first_row + viewport_height // row_height + 2)
 
         for i in range(first_row, last_row):
             if i >= len(self._rows):
                 break
             row = self._rows[i]
-            row_y = cr.y + i * self._row_height - self._scroll_offset
-            row_rect = Rect(cr.x, row_y, cr.width, self._row_height)
+            row_y = cr.y + i * row_height - self._scroll_offset
+            row_rect = Rect(cr.x, row_y, cr.width, row_height)
 
             if i == self._selected_row:
                 pygame.draw.rect(surface, sel_col, row_rect)
@@ -542,23 +553,32 @@ class DataGridControl(UiNode):
             # Draw cells
             for j, col in enumerate(self._columns):
                 col_x = cr.x + offsets[j]
-                cell_rect = Rect(col_x, row_y, col.width, self._row_height)
+                cell_rect = Rect(col_x, row_y, col.width, row_height)
                 val = row.data.get(col.key, "")
                 if font:
-                    ts = font.render(str(val), True, text_col)
+                    val_str = str(val)
+                    cache_key = (val_str, text_col)
+                    ts = self._text_cache.get(cache_key)
+                    if ts is None:
+                        ts = font.render(val_str, True, text_col)
+                        self._text_cache[cache_key] = ts
                     surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
                 # column separator
-                pygame.draw.line(surface, border_col, (col_x + col.width - 1, row_y), (col_x + col.width - 1, row_y + self._row_height - 1))
+                pygame.draw.line(surface, border_col, (col_x + col.width - 1, row_y), (col_x + col.width - 1, row_y + row_height - 1))
 
             # row bottom border
-            pygame.draw.line(surface, border_col, (cr.x, row_y + self._row_height - 1), (cr.x + cr.width, row_y + self._row_height - 1))
+            pygame.draw.line(surface, border_col, (cr.x, row_y + row_height - 1), (cr.x + cr.width, row_y + row_height - 1))
 
         surface.set_clip(old_clip)
 
-        # --- Scrollbar ---
-        sb_rect = self._scrollbar_rect()
-        handle_rect = self._scrollbar_handle_rect()
-        if sb_rect is not None and handle_rect is not None:
+        # --- Scrollbar (computed inline using already-derived cr/content/viewport) ---
+        if self._show_scrollbar and content_height > viewport_height:
+            sb_rect = Rect(cr.right, cr.y, _SCROLLBAR_WIDTH, cr.height)
+            ratio = viewport_height / content_height
+            thumb_h = max(16, int(viewport_height * ratio))
+            travel = max(1, sb_rect.height - thumb_h)
+            thumb_y = int(sb_rect.y + (self._scroll_offset / max(1, content_height - viewport_height)) * travel)
+            handle_rect = Rect(sb_rect.x + 2, thumb_y, sb_rect.width - 4, thumb_h)
             pygame.draw.rect(surface, border_col, sb_rect)
             pygame.draw.rect(surface, sel_col, handle_rect)
 

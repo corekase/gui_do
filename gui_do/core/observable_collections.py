@@ -132,7 +132,8 @@ class ObservableList(Generic[T]):
         listeners = self._listeners
         if not listeners:
             return
-        for listener in tuple(listeners):
+        snapshot = listeners if len(listeners) == 1 else tuple(listeners)
+        for listener in snapshot:
             listener(change)
 
     # ------------------------------------------------------------------
@@ -299,7 +300,8 @@ class ObservableDict(Generic[K, V]):
         listeners = self._listeners
         if not listeners:
             return
-        for listener in tuple(listeners):
+        snapshot = listeners if len(listeners) == 1 else tuple(listeners)
+        for listener in snapshot:
             listener(change)
 
     # ------------------------------------------------------------------

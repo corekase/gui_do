@@ -65,6 +65,10 @@ class SceneSpatialIndex:
         self._node_cells: Dict[str, Set[Tuple[int, int]]] = {}
         # BFS order of all nodes (for stable result ordering)
         self._order: List[str] = []
+        # control_id -> insertion-order index; used as sort key in queries so
+        # we can iterate only the candidate set instead of all nodes.
+        # Stale values after removal still give correct relative ordering.
+        self._order_index: Dict[str, int] = {}
 
     # ------------------------------------------------------------------
     # Build / rebuild
@@ -88,6 +92,7 @@ class SceneSpatialIndex:
         self._nodes.clear()
         self._node_cells.clear()
         self._order.clear()
+        self._order_index.clear()
 
     # ------------------------------------------------------------------
     # Incremental update
@@ -127,6 +132,7 @@ class SceneSpatialIndex:
             self._order.remove(cid)
         except ValueError:
             pass
+        self._order_index.pop(cid, None)
 
     # ------------------------------------------------------------------
     # Queries
@@ -138,16 +144,19 @@ class SceneSpatialIndex:
         Results are in back-to-front scene-graph order.
         """
         cell = self._cell_for(x, y)
-        candidates = self._cells.get(cell, [])
+        candidates = self._cells.get(cell)
+        if not candidates:
+            return []
+        order_index = self._order_index
         results = []
-        for cid in self._order:
-            if cid not in candidates:
-                continue
+        for cid in candidates:
             node = self._nodes.get(cid)
             if node is None:
                 continue
             if self._node_visible(node) and self._rect(node).collidepoint(x, y):
                 results.append(node)
+        if len(results) > 1:
+            results.sort(key=lambda n: order_index.get(getattr(n, "control_id", ""), 0))
         return results
 
     def query_rect(self, rect) -> list:
@@ -160,16 +169,18 @@ class SceneSpatialIndex:
         candidate_set: Set[str] = set()
         for cell in touched_cells:
             candidate_set.update(self._cells.get(cell, []))
-
+        if not candidate_set:
+            return []
+        order_index = self._order_index
         results = []
-        for cid in self._order:
-            if cid not in candidate_set:
-                continue
+        for cid in candidate_set:
             node = self._nodes.get(cid)
             if node is None:
                 continue
             if self._node_visible(node) and self._rect(node).colliderect(r):
                 results.append(node)
+        if len(results) > 1:
+            results.sort(key=lambda n: order_index.get(getattr(n, "control_id", ""), 0))
         return results
 
     # ------------------------------------------------------------------
@@ -186,7 +197,8 @@ class SceneSpatialIndex:
         self._node_cells[cid] = cells
         for cell in cells:
             self._cells[cell].append(cid)
-        if cid not in self._order:
+        if cid not in self._order_index:
+            self._order_index[cid] = len(self._order)
             self._order.append(cid)
 
     def _rect(self, node: object) -> Rect:

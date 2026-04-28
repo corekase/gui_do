@@ -186,7 +186,6 @@ class PropertyRegistry:
 
     def all_classes(self) -> List[type]:
         """Return all classes that have at least one registered descriptor."""
-        self._ensure_scanned()
         return [c for c, descs in self._cache.items() if descs]
 
     # ------------------------------------------------------------------
@@ -232,10 +231,6 @@ class PropertyRegistry:
 
         self._cache[cls] = descs
         return list(descs)
-
-    def _ensure_scanned(self) -> None:
-        # No-op; scanning is lazy. This exists for future eager-scan extension.
-        pass
 
     def clear(self) -> None:
         """Clear the entire registry and scan cache (useful in tests)."""

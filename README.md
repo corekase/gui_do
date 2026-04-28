@@ -32,6 +32,8 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ConstraintLayout
   - FlexLayout
   - GridLayout
+  - DockWorkspace
+  - DockWorkspacePanel
   - WindowTilingManager
   - LayoutAnimator
   - LayoutPass
@@ -40,6 +42,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - GuiEvent and EventManager
   - EventBus
   - ActionManager
+  - ActionDescriptor and ActionRegistry
   - KeyChordManager
   - InputMap and InputBinding
   - FocusManager
@@ -50,11 +53,14 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 - [Data and State](#data-and-state)
   - ObservableValue, ComputedValue, and PresentationModel
   - ObservableList and ObservableDict
+  - CollectionView and CollectionViewQuery
   - Binding and BindingGroup
   - SelectionModel
   - InvalidationTracker
   - FormModel
+  - FormSchema
   - CommandHistory
+  - DocumentModel
   - StateMachine and Router
   - SettingsRegistry
   - TextFormatter
@@ -62,6 +68,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - SortFilterProxySource
   - AsyncDataProvider
   - SceneSnapshot and NodeSnapshot
+  - WorkspaceState and WorkspacePersistenceManager
 - [Scheduling and Animation](#scheduling-and-animation)
   - TaskScheduler
   - Timers
@@ -76,6 +83,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - DialogManager and DialogHandle
   - ContextMenuManager and ContextMenuHandle
   - DragDropManager and DragPayload
+  - TransferData and TransferManager
   - FileDialogManager, FileDialogOptions, and FileDialogHandle
   - ResizeManager
   - ClipboardManager
@@ -106,6 +114,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 - [Introspection](#introspection)
   - ui_property and PropertyDescriptor
   - PropertyRegistry
+  - PropertyInspectorModel and PropertyInspectorPanel
 - [Telemetry](#telemetry)
 - [Public API Index](#public-api-index)
 
@@ -524,6 +533,35 @@ items = [
 layout.apply(items, Rect(20, 20, 420, 32))
 ```
 
+### DockWorkspace and DockWorkspacePanel
+
+`DockWorkspace` is a serializable pane-layout model that represents an IDE-style dock arrangement as a tree of `DockPane`, `DockTabs`, and `DockSplit` nodes. The model carries no rendering logic; it is persisted via `to_dict` / `from_dict` and can be embedded inside a `WorkspaceState` for full session save/restore.
+
+- `DockPane` — a single named content slot with a `pane_id`, `title`, and `payload` dict.
+- `DockTabs` — a tab group that owns an ordered list of `DockPane` nodes and tracks the `active_pane_id`.
+- `DockSplit` — a horizontal or vertical split whose children are any mix of pane/tabs/split nodes with proportional `ratios`.
+- `DockWorkspace` — the root container; provides `find_pane`, `remove_pane`, and serialization helpers.
+- `DockWorkspacePanel` — a `UiNode` control that renders the top-level `DockTabs` or `DockPane` of a `DockWorkspace` as a clickable tab strip.
+
+```python
+from gui_do import DockPane, DockSplit, DockTabs, DockWorkspace, DockWorkspacePanel
+from pygame import Rect
+
+workspace = DockWorkspace(
+    DockSplit("horizontal", children=[
+        DockTabs("left", panes=[DockPane("files", "Files"), DockPane("outline", "Outline")]),
+        DockPane("editor", "Editor"),
+    ], ratios=[0.25, 0.75]),
+)
+
+panel = DockWorkspacePanel("dock_panel", Rect(0, 0, 800, 36), workspace,
+                           on_change=lambda pid: print("active pane", pid))
+app.scene.add_node(panel)
+
+state = workspace.to_dict()          # persist
+workspace2 = DockWorkspace.from_dict(state)  # restore
+```
+
 ### WindowTilingManager
 
 `WindowTilingManager` arranges visible `WindowControl` nodes without overlap inside the active scene. It is scene-local through `app.window_tiling`.
@@ -662,6 +700,36 @@ actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 ```
 
 For a one-call setup, use `register_and_bind(...)`.
+
+### ActionDescriptor and ActionRegistry
+
+`ActionDescriptor` is a self-contained action definition that centralises label, category, shortcut hint, and enablement/checked-state logic so that the command palette, menus, toolbars, and keyboard routing all read from one source. `ActionRegistry` is a process-wide catalog of descriptors.
+
+```python
+from gui_do import ActionDescriptor, ActionRegistry
+
+registry = ActionRegistry()
+
+registry.declare(
+    "file.save",
+    "Save",
+    callback=lambda ctx, evt: (do_save(), True)[1],
+    category="File",
+    shortcut_hint="Ctrl+S",
+    description="Save the current document",
+    enabled=lambda ctx: ctx.document.is_dirty,
+)
+
+desc = registry.get("file.save")
+if desc and desc.is_enabled(context):
+    desc.invoke(context)
+
+# Iterate by category:
+for action in registry.by_category("File"):
+    print(action.action_id, action.label)
+```
+
+`ActionDescriptor` fields: `action_id`, `label`, `callback`, `category`, `shortcut_hint`, `description`, `enabled` (bool or predicate), `checked` (bool or predicate), `metadata`.
 
 ### InputMap and InputBinding
 
@@ -862,6 +930,34 @@ settings.subscribe(lambda change: print(change.key, "->", change.new_value))
 settings["volume"] = 0.5
 ```
 
+### CollectionView and CollectionViewQuery
+
+`CollectionView` is a materialized, filterable, sortable, and projectable pipeline over any iterable or callable source. `CollectionViewQuery` is the filter/sort/project specification applied during each `refresh`.
+
+```python
+from gui_do import CollectionView, CollectionViewQuery
+
+# Build a view of in-stock products sorted by price:
+query = CollectionViewQuery(
+    filters=[lambda p: p.in_stock],
+    sort_key=lambda p: p.price,
+)
+view = CollectionView(lambda: product_repository.all(), query=query)
+
+# Read items:
+for product in view.items:
+    print(product.name, product.price)
+
+# Subscribe to refresh notifications:
+unsub = view.subscribe(lambda: grid.set_items(view.items))
+
+# Reapply after the underlying source changes:
+view.refresh()
+unsub()
+```
+
+`CollectionViewQuery` fields: `filters` (list of predicates), `sort_key`, `reverse`, `projector`. All fields are optional. `CollectionView.set_source` replaces the underlying source and triggers a refresh.
+
 ### Binding and BindingGroup
 
 `Binding` wires an `ObservableValue` to a named attribute on a target object so that changes on either side propagate automatically. `BindingGroup` collects multiple bindings and disposes them together.
@@ -941,6 +1037,29 @@ form.commit_all()
 
 `ValidationRule` is the callable type exported for field validators, and `FieldError` is the exported error record type.
 
+### FormSchema
+
+`FormSchema` is a declarative, reusable field specification that can stamp out pre-configured `FormModel` instances or validate a plain dict of values without building a UI.
+
+```python
+from gui_do import FieldError, FormSchema, SchemaField
+
+schema = FormSchema([
+    SchemaField("username", default="", label="Username", required=True),
+    SchemaField("age",      default=0,  label="Age",      required=False),
+])
+
+# Build a FormModel pre-populated with the schema's fields and defaults:
+form = schema.build_form()
+form.field("username").value.value = "alice"
+errors: list[FieldError] = schema.validate_values({"username": "alice", "age": 30})
+
+# Get a dict of field defaults:
+print(schema.defaults())   # {"username": "", "age": 0}
+```
+
+`SchemaField` fields: `name`, `default`, `label`, `required`, `validators`. `FormSchema.apply_to` writes values into an existing `FormModel`; `FormSchema.extract_from` reads current values back out.
+
 ### CommandHistory
 
 `CommandHistory` implements bounded undo/redo stacks and `CommandTransaction` grouping for objects matching the exported `Command` protocol.
@@ -955,6 +1074,27 @@ with history.transaction("Bulk edit") as tx:
     tx.add(cmd_a)
     tx.add(cmd_b)
 ```
+
+### DocumentModel
+
+`DocumentModel` is a generic document state container for editor-style applications. It tracks content, file path, revision number, and a dirty flag — making it easy to wire a Save button that is enabled only when unsaved changes exist.
+
+```python
+from gui_do import DocumentModel
+
+doc = DocumentModel("main", content="Hello, world")
+doc.set_content("Updated text")
+print(doc.is_dirty)     # True
+doc.save("notes.txt")   # writes to disk and updates saved_revision
+print(doc.is_dirty)     # False
+
+# Custom save/load callables:
+import json
+doc.save("data.json", saver=lambda path, c: path.write_text(json.dumps(c)))
+doc.load("data.json",  loader=lambda path:   json.loads(path.read_text()))
+```
+
+`DocumentModel` fields: `document_id`, `content`, `path`, `metadata`, `revision`, `saved_revision`. `is_dirty` is `True` when `revision != saved_revision`.
 
 ### StateMachine and Router
 
@@ -1109,6 +1249,27 @@ snap.restore(app.scene)
 ```
 
 Each `NodeSnapshot` carries `control_id`, `rect`, `visible`, `enabled`, and an `extra` dict for app-specific string payload.
+
+### WorkspaceState and WorkspacePersistenceManager
+
+`WorkspaceState` is a serializable session payload that bundles the active scene name, a `SceneSnapshot` dict, per-feature state blobs, settings values, and an optional dock layout. `WorkspacePersistenceManager` coordinates capture and restore across the scene, a `FeatureManager`, and any registered `SettingsRegistry` blocks.
+
+```python
+from gui_do import WorkspacePersistenceManager, WorkspaceState
+
+manager = WorkspacePersistenceManager()
+manager.register_settings("app", app.settings)   # optional
+
+# Capture full session state:
+state = manager.capture(app, feature_manager=app.features)
+state.save("session.json")
+
+# Restore on next launch:
+state = WorkspaceState.load("session.json")
+manager.restore(state, app, feature_manager=app.features)
+```
+
+`WorkspaceState` fields: `version`, `active_scene_name`, `scene_snapshot`, `feature_states`, `settings_blocks`, `metadata`, `dock_state`. `WorkspaceState.save` / `WorkspaceState.load` write and read JSON.
 
 ---
 
@@ -1314,6 +1475,29 @@ from gui_do import DragPayload
 
 payload = DragPayload(kind="file", data={"path": "notes.txt"})
 app.drag_drop.begin_drag(payload)
+```
+
+### TransferData and TransferManager
+
+`TransferData` is a multi-format transfer payload used for both clipboard and in-process drag exchanges. Each format is stored under a MIME-style key so consumers can request the most appropriate representation. `TransferManager` maintains a clipboard slot and an in-flight drag slot.
+
+```python
+from gui_do import TransferData, TransferManager
+
+payload = TransferData(preferred_format="text/plain")
+payload.set("text/plain", "Hello")
+payload.set("application/json", '{"msg": "Hello"}')
+
+tm = TransferManager()
+tm.set_clipboard(payload)
+
+data = tm.get_clipboard()
+if data and data.has_format("text/plain"):
+    print(data.get("text/plain"))
+
+# Drag lifecycle:
+tm.begin_drag(payload)
+dropped = tm.end_drag()   # returns TransferData or None
 ```
 
 ### FileDialogManager, FileDialogOptions, and FileDialogHandle
@@ -1750,6 +1934,37 @@ classes = property_registry.all_classes()
 
 Descriptors are automatically collected the first time `descriptors_for` is called for a class and cached for subsequent look-ups.
 
+### PropertyInspectorModel and PropertyInspectorPanel
+
+`PropertyInspectorModel` wraps a live object and surfaces its `ui_property`-annotated attributes as `InspectedProperty` records, grouped by the `group` field of each `PropertyDescriptor`. `PropertyInspectorPanel` renders the model as a scrollable two-column panel (label | value).
+
+```python
+from gui_do import PropertyInspectorModel, PropertyInspectorPanel, InspectedProperty
+from pygame import Rect
+
+model = PropertyInspectorModel(my_button)
+
+# Read all properties:
+for prop in model.properties():           # List[InspectedProperty]
+    print(prop.descriptor.label, prop.value)
+
+# Read by group:
+for group, props in model.grouped().items():
+    print(f"-- {group} --")
+    for p in props:
+        print(" ", p.descriptor.name, "=", p.value)
+
+# Set a property value programmatically:
+model.set_value("width", 200)
+
+# Render as a scrollable panel:
+panel = PropertyInspectorPanel("inspector", Rect(0, 0, 300, 400), model)
+app.scene.add_node(panel)
+panel.refresh()   # call after mutating the target object
+```
+
+`InspectedProperty` fields: `descriptor` (`PropertyDescriptor`), `value` (current attribute value). `PropertyInspectorPanel` is read-only by default.
+
 ---
 
 ## Telemetry [Back to Top](#table-of-contents)
@@ -1851,10 +2066,17 @@ The following list is the complete public package export surface from `gui_do.__
 - `LayoutRoot`
 - `ResponsiveLayout`
 - `Breakpoint`
+- `DockPane`
+- `DockTabs`
+- `DockSplit`
+- `DockWorkspace`
+- `DockWorkspacePanel`
 
 ### Events, Input, and Core Runtime
 
 - `ActionManager`
+- `ActionDescriptor`
+- `ActionRegistry`
 - `EventManager`
 - `EventBus`
 - `FocusManager`
@@ -1887,6 +2109,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `ObservableDict`
 - `ChangeKind`
 - `CollectionChange`
+- `CollectionView`
+- `CollectionViewQuery`
 - `Binding`
 - `BindingGroup`
 - `SelectionModel`
@@ -1895,7 +2119,10 @@ The following list is the complete public package export surface from `gui_do.__
 - `FormField`
 - `ValidationRule`
 - `FieldError`
+- `FormSchema`
+- `SchemaField`
 - `CommandHistory`
+- `DocumentModel`
 - `Command`
 - `CommandTransaction`
 - `StateMachine`
@@ -1915,6 +2142,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `LoadStateKind`
 - `SceneSnapshot`
 - `NodeSnapshot`
+- `WorkspaceState`
+- `WorkspacePersistenceManager`
 
 ### Scheduling and Animation
 
@@ -1945,6 +2174,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `DialogHandle`
 - `DragDropManager`
 - `DragPayload`
+- `TransferData`
+- `TransferManager`
 - `ContextMenuManager`
 - `ContextMenuItem`
 - `ContextMenuHandle`
@@ -1999,6 +2230,9 @@ The following list is the complete public package export surface from `gui_do.__
 - `PropertyDescriptor`
 - `PropertyRegistry`
 - `property_registry`
+- `PropertyInspectorModel`
+- `InspectedProperty`
+- `PropertyInspectorPanel`
 
 ### Spatial
 

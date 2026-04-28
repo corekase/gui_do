@@ -161,8 +161,7 @@ class DragDropManager:
         if not node.visible or not node.enabled:
             return None
         # Check children first (depth-first)
-        children = getattr(node, "children", [])
-        for child in reversed(children):
+        for child in reversed(node.children):
             found = self._find_draggable_in_node(child, pos)
             if found is not None:
                 return found
@@ -186,8 +185,7 @@ class DragDropManager:
     def _find_drop_target_in_node(self, node: "UiNode", pos: Tuple[int, int], payload: DragPayload) -> "Optional[UiNode]":
         if not node.visible or not node.enabled:
             return None
-        children = getattr(node, "children", [])
-        for child in reversed(children):
+        for child in reversed(node.children):
             found = self._find_drop_target_in_node(child, pos, payload)
             if found is not None:
                 return found

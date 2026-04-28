@@ -196,7 +196,7 @@ class TestCursorBlinkDrivesInvalidate(unittest.TestCase):
         ctrl._focused = True
         ctrl._dirty = False
         # Force blink to trigger on next update by presetting elapsed past threshold
-        ctrl._cursor_blink_elapsed = 0.4
+        ctrl._blink_elapsed = 0.4
         ctrl.update(0.15)  # total = 0.55 >= 0.5
         self.assertTrue(ctrl._dirty)
 

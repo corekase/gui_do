@@ -406,15 +406,6 @@ class TextInputControl(_TextEditFocusBase):
     def _reset_blink(self) -> None:
         self._reset_text_edit_blink()
 
-    @property
-    def _cursor_blink_elapsed(self) -> float:
-        """Backward-compatible alias for tests and internal callers."""
-        return self._blink_elapsed
-
-    @_cursor_blink_elapsed.setter
-    def _cursor_blink_elapsed(self, value: float) -> None:
-        self._blink_elapsed = float(value)
-
     # ------------------------------------------------------------------
     # Drawing
     # ------------------------------------------------------------------
