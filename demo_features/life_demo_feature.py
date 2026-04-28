@@ -418,7 +418,7 @@ class LifeSimulationFeature(RoutedFeature):
                     anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
                 else:
                     anchor_local = (pointer_pos[0] - canvas.rect.left, pointer_pos[1] - canvas.rect.top)
-                self.zoom_life_view_about(anchor_local, self.life_cell_size + (event.wheel_delta * 2))
+                self.zoom_life_view_about(anchor_local, self.life_cell_size - (event.wheel_delta * 2))
                 return True
 
         return False
