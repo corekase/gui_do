@@ -6,6 +6,7 @@ from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFea
 from demo_features.main_demo_feature import MainDemoFeature
 from demo_features.controls_demo_feature import ControlsShowcaseFeature
 from demo_features.system_window_demo_feature import SystemWindowDemoFeature
+from demo_features.new_systems_demo_feature import NewSystemsDemoFeature
 
 from gui_do import (
     GuiApplication,
@@ -96,6 +97,7 @@ class GuiDoDemo:
         self._controls_feature = ControlsShowcaseFeature()
         self._mandel_feature = MandelbrotRenderFeature()
         self._system_feature = SystemWindowDemoFeature()
+        self._new_systems_feature = NewSystemsDemoFeature()
         for feature in [
             self._main_feature,
             self._shapes_feature,
@@ -103,6 +105,7 @@ class GuiDoDemo:
             self._controls_feature,
             self._mandel_feature,
             self._system_feature,
+            self._new_systems_feature,
         ]:
             self.app.register_feature(feature, host=self)
 
@@ -111,9 +114,11 @@ class GuiDoDemo:
         self.life_window = self._life_feature.window
         self.mandel_window = self._mandel_feature.window
         self.system_window = self._system_feature.window
+        self.new_systems_window = self._new_systems_feature.window
         self.life_window.visible = False
         self.mandel_window.visible = False
         self.system_window.visible = False
+        self.new_systems_window.visible = False
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="main")
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
@@ -128,6 +133,7 @@ class GuiDoDemo:
             self.life_toggle_window,
             self.mandel_toggle_window,
             self.system_toggle_window,
+            self.new_systems_toggle_window,
             self.inbox_button,
         ]
         for index, control in enumerate(base_controls):
@@ -138,6 +144,7 @@ class GuiDoDemo:
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
         self.system_toggle_window.set_accessibility(role="toggle", label="Show System window")
+        self.new_systems_toggle_window.set_accessibility(role="toggle", label="Show New Systems window")
         self.inbox_button.set_accessibility(role="button", label="Open notification panel")
         self.app.configure_features_accessibility(self, len(base_controls))
         self.app.switch_scene("main")
@@ -183,6 +190,13 @@ class GuiDoDemo:
         if not from_toggle and self.system_toggle_window is not None:
             self.system_toggle_window.pushed = show
         self.app.tile_windows(newly_visible=[self.system_window] if show else None)
+
+    def set_new_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
+        show = bool(visible)
+        self.new_systems_window.visible = show
+        if not from_toggle and self.new_systems_toggle_window is not None:
+            self.new_systems_toggle_window.pushed = show
+        self.app.tile_windows(newly_visible=[self.new_systems_window] if show else None)
 
     def _open_file_dialog_from_main(self) -> None:
         if self._system_feature is not None:

@@ -184,6 +184,28 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `MeasureContext`
 - `ArrangeContext`
 - `LayoutRoot`
+- `CursorManager`
+- `CursorHandle`
+- `CursorShape`
+- `SortFilterProxySource`
+- `StringTable`
+- `LocaleRegistry`
+- `InputMap`
+- `InputBinding`
+- `SceneSpatialIndex`
+- `TextFlow`
+- `TextSpan`
+- `ResponsiveLayout`
+- `Breakpoint`
+- `EventRecorder`
+- `EventPlayback`
+- `RecordedEvent`
+- `ui_property`
+- `PropertyDescriptor`
+- `PropertyRegistry`
+- `property_registry`
+- `SceneSnapshot`
+- `NodeSnapshot`
 
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 

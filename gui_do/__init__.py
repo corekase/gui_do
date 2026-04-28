@@ -129,6 +129,16 @@ from .core.transition_manager import TransitionManager, TransitionSpec, Transiti
 from .theme.scoped_theme import ScopedTheme, ScopedThemeManager
 from .core.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
 from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
+from .core.cursor_manager import CursorManager, CursorHandle, CursorShape
+from .core.sort_filter_proxy import SortFilterProxySource
+from .core.localization import StringTable, LocaleRegistry
+from .core.input_map import InputMap, InputBinding
+from .core.spatial_index import SceneSpatialIndex
+from .core.text_flow import TextFlow, TextSpan
+from .layout.responsive_layout import ResponsiveLayout, Breakpoint
+from .core.event_recorder import EventRecorder, EventPlayback, RecordedEvent
+from .core.property_registry import ui_property, PropertyDescriptor, PropertyRegistry, property_registry
+from .core.scene_snapshot import SceneSnapshot, NodeSnapshot
 
 __all__ = [
     "GuiApplication",
@@ -301,4 +311,26 @@ __all__ = [
     "MeasureContext",
     "ArrangeContext",
     "LayoutRoot",
+    "CursorManager",
+    "CursorHandle",
+    "CursorShape",
+    "SortFilterProxySource",
+    "StringTable",
+    "LocaleRegistry",
+    "InputMap",
+    "InputBinding",
+    "SceneSpatialIndex",
+    "TextFlow",
+    "TextSpan",
+    "ResponsiveLayout",
+    "Breakpoint",
+    "EventRecorder",
+    "EventPlayback",
+    "RecordedEvent",
+    "ui_property",
+    "PropertyDescriptor",
+    "PropertyRegistry",
+    "property_registry",
+    "SceneSnapshot",
+    "NodeSnapshot",
 ]
