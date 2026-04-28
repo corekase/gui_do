@@ -92,6 +92,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ScopedTheme and ScopedThemeManager
   - BuiltInGraphicsFactory
   - FontManager
+    - FontRoleRegistry
 - [Telemetry](#telemetry)
 - [Public API Index](#public-api-index)
 
@@ -1428,6 +1429,23 @@ font = fonts.resolve("caption", 12)
 print(font.text_size("gui_do"))
 ```
 
+### FontRoleRegistry
+
+`FontRoleRegistry` is the centralized role-definition manager for font roles. Define role specs once, then apply them to a `FontManager` (directly or through `ColorTheme.fonts`) so all scenes and features resolve consistent typography roles.
+
+```python
+from gui_do import FontRoleRegistry
+
+registry = FontRoleRegistry()
+registry.define("body", size=16)
+registry.define("caption", size=12)
+
+# Apply role definitions to the runtime font manager.
+registry.apply(app.theme.fonts)
+
+body_font = app.theme.fonts.resolve("body", 16)
+```
+
 ---
 
 ## Telemetry [Back to Top](#table-of-contents)
@@ -1535,6 +1553,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `FocusScope`
 - `FocusScopeManager`
 - `FontManager`
+- `FontRoleRegistry`
 - `EventPhase`
 - `EventType`
 - `GuiEvent`

@@ -209,6 +209,29 @@ class Scene:
                 best = node
         return best
 
+    def pointer_context_at(self, pos) -> tuple[bool, UiNode | None]:
+        """Return ``(window_hit, focus_target)`` for one pointer position in one pass."""
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return (False, None)
+
+        top_window: UiNode | None = None
+        best: UiNode | None = None
+        for node in self._walk_nodes():
+            if not (node.visible and node.enabled):
+                continue
+            if self._is_window_like(node) and node.rect.collidepoint(pos):
+                top_window = node
+                # A new top window candidate invalidates any best found outside it.
+                best = None
+            if (
+                self._is_effectively_interactive(node)
+                and node.accepts_mouse_focus()
+                and node.hit_test(pos)
+                and (top_window is None or self._is_descendant_of(node, top_window))
+            ):
+                best = node
+        return (top_window is not None, best)
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme", app: "GuiApplication | None" = None) -> None:
         for node in self.nodes:
             if not node.visible:

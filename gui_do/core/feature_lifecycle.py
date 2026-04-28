@@ -6,7 +6,7 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass
 import inspect
 from time import perf_counter
-from typing import Any, Callable, Deque, Dict, Iterable, Mapping, Optional
+from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional
 from .error_handling import logical_error, report_nonfatal_error
 from .telemetry import telemetry_collector
 
@@ -634,8 +634,10 @@ class FeatureManager:
 
     def handle_event(self, event, host=None) -> bool:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._features.values():
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "feature_handle_event", metadata={"feature_name": feature.name}):
@@ -645,8 +647,10 @@ class FeatureManager:
 
     def update_features(self, host=None) -> None:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._features.values():
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "feature_update", metadata={"feature_name": feature.name}):
@@ -654,8 +658,10 @@ class FeatureManager:
 
     def draw(self, surface, theme, host=None) -> None:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._features.values():
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "feature_draw", metadata={"feature_name": feature.name}):
@@ -663,8 +669,10 @@ class FeatureManager:
 
     def handle_direct_event(self, event, host=None) -> bool:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._direct_features:
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "direct_feature_handle_event", metadata={"feature_name": feature.name}):
@@ -674,8 +682,10 @@ class FeatureManager:
 
     def update_direct_features(self, dt_seconds: float, host=None) -> None:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._direct_features:
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "direct_feature_update", metadata={"feature_name": feature.name}):
@@ -683,8 +693,10 @@ class FeatureManager:
 
     def draw_direct_features(self, surface, theme, host=None) -> None:
         collector = telemetry_collector()
+        target_scene_name = self.app.active_scene_name
         for feature in self._direct_features:
-            if not self._is_feature_active_for_scene(feature):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "direct_feature_draw", metadata={"feature_name": feature.name}):
@@ -694,7 +706,8 @@ class FeatureManager:
         target_scene_name = str(self.app.active_scene_name if scene_name is None else scene_name)
         warmed = 0
         for feature in self._features.values():
-            if not self._is_feature_active_for_scene(feature, scene_name=target_scene_name):
+            feature_scene = feature.scene_name
+            if feature_scene is not None and feature_scene != target_scene_name:
                 continue
             cache_key = (feature.name, target_scene_name)
             if cache_key in self._prewarmed and not force:

@@ -176,7 +176,18 @@ class MandelbrotRenderFeature(RoutedFeature):
     LOGIC_ALIAS_CAN3 = "can3"
     LOGIC_ALIAS_CAN4 = "can4"
     DEFAULT_MESSAGE_DISPATCH_LIMIT = 512
-    BUSY_MESSAGE_DISPATCH_LIMIT = 128
+    BUSY_STARTUP_MESSAGE_DISPATCH_LIMIT = 32
+    BUSY_MESSAGE_DISPATCH_LIMIT = 96
+    DEFAULT_MESSAGE_INGEST_LIMIT = 512
+    BUSY_MESSAGE_INGEST_LIMIT = 96
+    DEFAULT_MAX_QUEUED_MESSAGES_PER_TASK = 1024
+    BUSY_MAX_QUEUED_MESSAGES_PER_TASK = 192
+    BUSY_STARTUP_FRAMES = 6
+    ITERATIVE_BUSY_STARTUP_MESSAGE_DISPATCH_LIMIT = 16
+    ITERATIVE_BUSY_MESSAGE_DISPATCH_LIMIT = 72
+    ITERATIVE_BUSY_MESSAGE_INGEST_LIMIT = 64
+    ITERATIVE_BUSY_MAX_QUEUED_MESSAGES_PER_TASK = 128
+    ITERATIVE_BUSY_STARTUP_FRAMES = 10
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")
@@ -200,6 +211,8 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.status_bus_ready = False
         self.status_subscription = None
         self._busy_dispatch_mode = False
+        self._busy_startup_frames_remaining = 0
+        self._busy_profile_name = "default"
         self._task_logic_alias = {
             "can1": self.LOGIC_ALIAS_CAN1,
             "can2": self.LOGIC_ALIAS_CAN2,
@@ -295,7 +308,31 @@ class MandelbrotRenderFeature(RoutedFeature):
             host.app.events.unsubscribe(self.status_subscription)
             self.status_subscription = None
         self.status_bus_ready = False
+        self._busy_profile_name = "default"
         self._set_busy_dispatch_mode(False)
+
+    def _set_busy_profile(self, profile_name: str) -> None:
+        if str(profile_name) == "iterative":
+            self._busy_profile_name = "iterative"
+        else:
+            self._busy_profile_name = "default"
+
+    def _active_busy_scheduler_profile(self) -> tuple[int, int, int, int, int]:
+        if self._busy_profile_name == "iterative":
+            return (
+                self.ITERATIVE_BUSY_STARTUP_MESSAGE_DISPATCH_LIMIT,
+                self.ITERATIVE_BUSY_MESSAGE_DISPATCH_LIMIT,
+                self.ITERATIVE_BUSY_MESSAGE_INGEST_LIMIT,
+                self.ITERATIVE_BUSY_MAX_QUEUED_MESSAGES_PER_TASK,
+                self.ITERATIVE_BUSY_STARTUP_FRAMES,
+            )
+        return (
+            self.BUSY_STARTUP_MESSAGE_DISPATCH_LIMIT,
+            self.BUSY_MESSAGE_DISPATCH_LIMIT,
+            self.BUSY_MESSAGE_INGEST_LIMIT,
+            self.BUSY_MAX_QUEUED_MESSAGES_PER_TASK,
+            self.BUSY_STARTUP_FRAMES,
+        )
 
     def _set_busy_dispatch_mode(self, busy: bool) -> None:
         scheduler = self.scheduler
@@ -305,10 +342,53 @@ class MandelbrotRenderFeature(RoutedFeature):
         if target_busy == self._busy_dispatch_mode:
             return
         if target_busy:
-            scheduler.set_message_dispatch_limit(self.BUSY_MESSAGE_DISPATCH_LIMIT)
+            startup_dispatch_limit, _steady_dispatch_limit, busy_ingest_limit, busy_max_queued_messages, startup_frames = self._active_busy_scheduler_profile()
+            self._busy_startup_frames_remaining = startup_frames
+            self._configure_scheduler_limits(
+                scheduler,
+                dispatch_limit=startup_dispatch_limit,
+                ingest_limit=busy_ingest_limit,
+                max_queued_messages_per_task=busy_max_queued_messages,
+            )
         else:
-            scheduler.set_message_dispatch_limit(self.DEFAULT_MESSAGE_DISPATCH_LIMIT)
+            self._busy_startup_frames_remaining = 0
+            self._busy_profile_name = "default"
+            self._configure_scheduler_limits(
+                scheduler,
+                dispatch_limit=self.DEFAULT_MESSAGE_DISPATCH_LIMIT,
+                ingest_limit=self.DEFAULT_MESSAGE_INGEST_LIMIT,
+                max_queued_messages_per_task=self.DEFAULT_MAX_QUEUED_MESSAGES_PER_TASK,
+            )
         self._busy_dispatch_mode = target_busy
+
+    @staticmethod
+    def _configure_scheduler_limits(
+        scheduler,
+        *,
+        dispatch_limit: int,
+        ingest_limit: int,
+        max_queued_messages_per_task: int,
+    ) -> None:
+        # Test doubles for scheduler may expose only a subset of configuration APIs.
+        if hasattr(scheduler, "set_message_dispatch_limit"):
+            scheduler.set_message_dispatch_limit(dispatch_limit)
+        if hasattr(scheduler, "set_message_ingest_limit"):
+            scheduler.set_message_ingest_limit(ingest_limit)
+        if hasattr(scheduler, "set_max_queued_messages_per_task"):
+            scheduler.set_max_queued_messages_per_task(max_queued_messages_per_task)
+
+    def _tick_busy_scheduler_startup(self) -> None:
+        scheduler = self.scheduler
+        if scheduler is None:
+            return
+        if not self._busy_dispatch_mode:
+            return
+        if self._busy_startup_frames_remaining <= 0:
+            return
+        self._busy_startup_frames_remaining -= 1
+        _startup_dispatch_limit, steady_dispatch_limit, _busy_ingest_limit, _busy_max_queued_messages, _startup_frames = self._active_busy_scheduler_profile()
+        if self._busy_startup_frames_remaining == 0 and hasattr(scheduler, "set_message_dispatch_limit"):
+            scheduler.set_message_dispatch_limit(steady_dispatch_limit)
 
     def _get_scheduler(self, host):
         """Resolve and memoize the scene scheduler used by render tasks."""
@@ -781,6 +861,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         scheduler.remove_tasks(*self.task_id_pool)
         self.task_ids.clear()
         self.running_mode = None
+        self._busy_profile_name = "default"
         self._set_busy_dispatch_mode(False)
         self.show_single_canvas(host)
         self.set_task_buttons_disabled(host, False)
@@ -821,6 +902,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         scheduler = self._get_scheduler(host)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_profile("iterative")
         self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(host)
         width, height = self.primary_canvas.canvas.get_size()
@@ -841,6 +923,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         scheduler = self._get_scheduler(host)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_profile("default")
         self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(host)
         width, height = self.primary_canvas.canvas.get_size()
@@ -863,6 +946,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         scheduler = self._get_scheduler(host)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_profile("default")
         self._set_busy_dispatch_mode(True)
         self.prepare_single_canvas_run(host)
         width, height = self.primary_canvas.canvas.get_size()
@@ -914,6 +998,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         scheduler = self._get_scheduler(host)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
             return
+        self._set_busy_profile("default")
         self._set_busy_dispatch_mode(True)
         self.prepare_split_canvas_run(host)
         width, height = self.split_canvases["can1"].canvas.get_size()
@@ -957,6 +1042,8 @@ class MandelbrotRenderFeature(RoutedFeature):
 
         busy = scheduler.tasks_busy_match_any(*self.task_id_pool)
         self._set_busy_dispatch_mode(busy)
+        if busy:
+            self._tick_busy_scheduler_startup()
         self.set_task_buttons_disabled(demo, busy)
         if busy:
             self.publish_running_status()

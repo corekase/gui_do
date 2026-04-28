@@ -544,15 +544,14 @@ class GuiApplication:
         logical_event = self._logicalize_pointer_event(gui_event)
 
         pointer_event_in_window = False
+        pointer_focus_target = None
         if logical_event.kind in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP, EventType.MOUSE_MOTION, EventType.MOUSE_WHEEL):
-            pos = logical_event.pos
-            if isinstance(pos, tuple) and len(pos) == 2 and self.scene.top_window_at(pos) is not None:
-                pointer_event_in_window = True
+            pointer_event_in_window, pointer_focus_target = self.scene.pointer_context_at(logical_event.pos)
 
         if logical_event.is_mouse_down(1):
             # Mouse click focus: only change focus when a valid mouse-focus target exists.
             # Background clicks intentionally do not mutate focus state.
-            target = self.scene.top_focus_target_at(logical_event.pos)
+            target = pointer_focus_target
             if target is not None:
                 self.focus.set_focus(target)
 
