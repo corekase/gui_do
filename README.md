@@ -100,8 +100,10 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 ## Quick Start [Back to Top](#table-of-contents)
 
 ```bash
-pip install gui_do
+pip install -e .
 ```
+
+gui_do is not published to PyPI. Install it from a local clone with the command above, or see the [Package Management](#package-management) section for project bootstrap and update workflows.
 
 ```python
 import pygame
