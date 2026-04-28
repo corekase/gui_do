@@ -329,7 +329,7 @@ class PanelControl(UiNode):
             window = self._top_window_at(raw)
             if window is not None:
                 self._set_active_window(window)
-                if window.lower_widget_rect().collidepoint(raw):
+                if window.lower_control_rect().collidepoint(raw):
                     self._lower_window(window)
                     new_top = self._top_visible_window()
                     if new_top is None:

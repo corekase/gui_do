@@ -19,7 +19,7 @@ class EventType(Enum):
     MOUSE_WHEEL = "mouse_wheel"
     TEXT_INPUT = "text_input"
     TEXT_EDITING = "text_editing"
-    WIDGET = "widget"
+    CONTROL = "control"
     GROUP = "group"
     TASK = "task"
 
@@ -59,7 +59,7 @@ class GuiEvent:
     wheel_y: int = 0
     mod: int = 0
     text: Optional[str] = None
-    widget_id: Optional[str] = None
+    control_id: Optional[str] = None
     group: Optional[str] = None
     window: Optional[object] = None
     task_panel: bool = False

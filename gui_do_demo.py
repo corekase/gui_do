@@ -225,7 +225,7 @@ class GuiDoDemo:
         return label
 
     # ---------------------------------------------------------------------
-    # Scene construction and widget composition.
+    # Scene construction and control composition.
     # ---------------------------------------------------------------------
     def _build_main_scene(self) -> None:
         """Build root scene container, windows, and bottom task panel controls."""

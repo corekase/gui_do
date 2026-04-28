@@ -124,16 +124,16 @@ class WindowControl(UiNode):
         self._active = is_active
 
     def title_bar_rect(self) -> Rect:
-        lower_rect = self.lower_widget_rect()
+        lower_rect = self.lower_control_rect()
         width = max(0, lower_rect.left - self.rect.left)
         return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
 
     def content_rect(self) -> Rect:
         return Rect(self.rect.left, self.rect.top + self.titlebar_height, self.rect.width, self.rect.height - self.titlebar_height)
 
-    def lower_widget_rect(self) -> Rect:
+    def lower_control_rect(self) -> Rect:
         if self._chrome is not None:
-            lower_rect = self._chrome.lower_widget.get_rect()
+            lower_rect = self._chrome.lower_control.get_rect()
             return Rect(self.rect.right - lower_rect.width, self.rect.top, lower_rect.width, lower_rect.height)
         size = max(12, self.titlebar_height)
         top = self.rect.top
@@ -290,7 +290,7 @@ class WindowControl(UiNode):
         source_rect = Rect(0, 0, title_rect.width, title_rect.height)
         surface.blit(title_bitmap, title_rect.topleft, source_rect)
         draw_rect(surface, theme.dark, self.rect, 2)
-        surface.blit(self._chrome.lower_widget, self.lower_widget_rect().topleft)
+        surface.blit(self._chrome.lower_control, self.lower_control_rect().topleft)
         if not self.enabled:
             overlay_size = (self.rect.width, self.rect.height)
             if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:

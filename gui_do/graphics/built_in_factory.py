@@ -31,7 +31,7 @@ class InteractiveVisuals:
 class WindowChromeVisuals:
     title_bar_inactive: Surface
     title_bar_active: Surface
-    lower_widget: Surface
+    lower_control: Surface
 
 
 # Normalized right-arrow polygon points derived from the original high-res shape
@@ -304,7 +304,7 @@ class BuiltInGraphicsFactory:
         circle(surface, col2, centre, outer_radius, ring_width)
         return surface
 
-    def draw_window_lower_widget_bitmap(self, size: int, col1, col2) -> Surface:
+    def draw_window_lower_control_bitmap(self, size: int, col1, col2) -> Surface:
         surface = Surface((size, size), pygame.SRCALPHA).convert_alpha()
         draw_box_bitmap(surface, "idle", Rect(0, 0, size, size), BUILT_IN_COLOURS)
         gutter = max(1, int(size * 0.1) // 2)
@@ -356,7 +356,7 @@ class BuiltInGraphicsFactory:
         inactive.blit(inactive_text, (5, inactive_y))
         active.blit(active_text, (5, active_y))
 
-        lower = self.draw_window_lower_widget_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"])
+        lower = self.draw_window_lower_control_bitmap(chrome_height, BUILT_IN_COLOURS["full"], BUILT_IN_COLOURS["medium"])
 
         first_frame_profiler().record_once(
             "visual.window_chrome",
@@ -365,7 +365,7 @@ class BuiltInGraphicsFactory:
             detail="build_window_chrome_visuals",
         )
 
-        return WindowChromeVisuals(title_bar_inactive=inactive, title_bar_active=active, lower_widget=lower)
+        return WindowChromeVisuals(title_bar_inactive=inactive, title_bar_active=active, lower_control=lower)
 
     def draw_arrow_visuals(self, rect: Rect, direction: int) -> InteractiveVisuals:
         visuals = self.build_frame_visuals(rect)

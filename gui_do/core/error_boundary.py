@@ -6,16 +6,16 @@ an error is caught the child is replaced by an error-placeholder visual so
 the rest of the scene continues rendering normally.
 
 This is modelled loosely on React error boundaries — the purpose is to prevent
-one misbehaving widget from crashing the entire application frame loop.
+one misbehaving control from crashing the entire application frame loop.
 
 Usage::
 
     from gui_do import ErrorBoundary
 
     boundary = ErrorBoundary(
-        child=my_widget,
-        on_error=lambda exc: logger.error("Widget error", exc_info=exc),
-        error_text="Widget unavailable",
+        child=my_control,
+        on_error=lambda exc: logger.error("Control error", exc_info=exc),
+        error_text="Control unavailable",
     )
     scene.add(boundary)
 

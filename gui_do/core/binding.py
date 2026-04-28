@@ -1,4 +1,4 @@
-"""Binding — reactive two-way bridges between ObservableValue and widget properties.
+"""Binding — reactive two-way bridges between ObservableValue and control properties.
 
 A :class:`Binding` wires an :class:`~gui_do.ObservableValue` to a named
 attribute on a target object (typically a control) so that changes on either
@@ -9,13 +9,13 @@ Usage::
 
     zoom = ObservableValue(1.0)
 
-    # One-way: model → widget
+    # One-way: model → control
     b = Binding(zoom, slider, "value", mode="one_way")
 
-    # Two-way: model ↔ widget (widget publishes via on_change callback)
+    # Two-way: model ↔ control (control publishes via on_change callback)
     b = Binding(zoom, slider, "value",
                 mode="two_way",
-                widget_change_signal="on_change")
+                control_change_signal="on_change")
 
     # Later dispose to stop receiving updates:
     b.dispose()
@@ -28,21 +28,21 @@ Usage::
 
 Supported modes
 ---------------
-- ``"one_way"`` (default): model value → widget attribute only.
-- ``"one_way_to_source"``: widget attribute → model value only (requires
-  ``widget_change_signal``).
-- ``"two_way"``: bidirectional (requires ``widget_change_signal``).
+- ``"one_way"`` (default): model value → control attribute only.
+- ``"one_way_to_source"``: control attribute → model value only (requires
+  ``control_change_signal``).
+- ``"two_way"``: bidirectional (requires ``control_change_signal``).
 
-``widget_change_signal`` must name a setter attribute on the target that
+``control_change_signal`` must name a setter attribute on the target that
 accepts a callable, e.g. ``"on_change"`` for
-:class:`~gui_do.SliderControl`.  When the widget fires the callback the model
-is updated, which in turn sets the widget attribute — a ``_updating`` guard
+:class:`~gui_do.SliderControl`.  When the control fires the callback the model
+is updated, which in turn sets the control attribute — a ``_updating`` guard
 prevents infinite loops.
 
 Type conversion
 ---------------
-Pass ``to_widget`` and/or ``to_source`` callables to convert values between
-model and widget representations, e.g. ``to_widget=int, to_source=float``.
+Pass ``to_control`` and/or ``to_source`` callables to convert values between
+model and control representations, e.g. ``to_control=int, to_source=float``.
 """
 from __future__ import annotations
 
@@ -68,14 +68,14 @@ class Binding:
         Name of the attribute on *target* to set (e.g. ``"value"``, ``"text"``).
     mode:
         ``"one_way"`` (default), ``"one_way_to_source"``, or ``"two_way"``.
-    widget_change_signal:
+    control_change_signal:
         Name of the callback-setter attribute on *target* used to receive
-        change notifications from the widget (e.g. ``"on_change"``).
+        change notifications from the control (e.g. ``"on_change"``).
         Required for ``"two_way"`` and ``"one_way_to_source"`` modes.
-    to_widget:
+    to_control:
         Optional converter applied to the source value before setting *attr*.
     to_source:
-        Optional converter applied to the widget value before updating source.
+        Optional converter applied to the control value before updating source.
     """
 
     def __init__(
@@ -85,28 +85,28 @@ class Binding:
         attr: str,
         *,
         mode: BindingMode = "one_way",
-        widget_change_signal: Optional[str] = None,
-        to_widget: Optional[Callable[[Any], Any]] = None,
+        control_change_signal: Optional[str] = None,
+        to_control: Optional[Callable[[Any], Any]] = None,
         to_source: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         if mode not in _VALID_MODES:
             raise ValueError(f"mode must be one of {_VALID_MODES!r}, got {mode!r}")
-        if mode in ("two_way", "one_way_to_source") and widget_change_signal is None:
+        if mode in ("two_way", "one_way_to_source") and control_change_signal is None:
             raise ValueError(
-                f"widget_change_signal is required for mode {mode!r}"
+                f"control_change_signal is required for mode {mode!r}"
             )
 
         self._source = source
         self._target = target
         self._attr = str(attr)
         self._mode: BindingMode = mode
-        self._widget_change_signal = widget_change_signal
-        self._to_widget = to_widget
+        self._control_change_signal = control_change_signal
+        self._to_control = to_control
         self._to_source = to_source
         self._updating = False
         self._disposed = False
         self._unsub_source: Optional[Callable[[], None]] = None
-        self._prev_widget_signal: Any = None
+        self._prev_control_signal: Any = None
 
         self._setup()
 
@@ -117,24 +117,24 @@ class Binding:
     def _setup(self) -> None:
         mode = self._mode
 
-        # Model → widget direction
+        # Model → control direction
         if mode in ("one_way", "two_way"):
             self._unsub_source = self._source.subscribe(self._on_source_changed)
             # Apply initial value immediately
-            self._apply_to_widget(self._source.value)
+            self._apply_to_control(self._source.value)
 
-        # Widget → model direction: hook the widget's change callback
-        if mode in ("two_way", "one_way_to_source") and self._widget_change_signal is not None:
-            self._install_widget_callback()
+        # Control → model direction: hook the control's change callback
+        if mode in ("two_way", "one_way_to_source") and self._control_change_signal is not None:
+            self._install_control_callback()
 
-    def _install_widget_callback(self) -> None:
+    def _install_control_callback(self) -> None:
         """Save the existing callback (if any) and chain our own hook."""
-        signal = self._widget_change_signal
+        signal = self._control_change_signal
         try:
-            self._prev_widget_signal = getattr(self._target, signal)
+            self._prev_control_signal = getattr(self._target, signal)
         except AttributeError:
-            self._prev_widget_signal = None
-        setattr(self._target, signal, self._on_widget_changed)
+            self._prev_control_signal = None
+        setattr(self._target, signal, self._on_control_changed)
 
     # ------------------------------------------------------------------
     # Callbacks
@@ -143,19 +143,19 @@ class Binding:
     def _on_source_changed(self, value: Any) -> None:
         if self._updating or self._disposed:
             return
-        self._apply_to_widget(value)
+        self._apply_to_control(value)
 
-    def _apply_to_widget(self, value: Any) -> None:
-        converted = self._to_widget(value) if self._to_widget is not None else value
+    def _apply_to_control(self, value: Any) -> None:
+        converted = self._to_control(value) if self._to_control is not None else value
         self._updating = True
         try:
             setattr(self._target, self._attr, converted)
         finally:
             self._updating = False
 
-    def _on_widget_changed(self, value: Any) -> None:
-        # Forward to any previously registered widget callback first
-        prev = self._prev_widget_signal
+    def _on_control_changed(self, value: Any) -> None:
+        # Forward to any previously registered control callback first
+        prev = self._prev_control_signal
         if callable(prev):
             prev(value)
         if self._updating or self._disposed:
@@ -172,17 +172,17 @@ class Binding:
     # ------------------------------------------------------------------
 
     def dispose(self) -> None:
-        """Stop all change propagation and restore previous widget callbacks."""
+        """Stop all change propagation and restore previous control callbacks."""
         if self._disposed:
             return
         self._disposed = True
         if self._unsub_source is not None:
             self._unsub_source()
             self._unsub_source = None
-        # Restore previous widget callback if we chained it
-        if self._widget_change_signal is not None:
+        # Restore previous control callback if we chained it
+        if self._control_change_signal is not None:
             try:
-                setattr(self._target, self._widget_change_signal, self._prev_widget_signal)
+                setattr(self._target, self._control_change_signal, self._prev_control_signal)
             except AttributeError:
                 pass
 
@@ -194,10 +194,10 @@ class Binding:
     # Manual sync
     # ------------------------------------------------------------------
 
-    def sync_to_widget(self) -> None:
-        """Force an immediate model → widget synchronisation."""
+    def sync_to_control(self) -> None:
+        """Force an immediate model → control synchronisation."""
         if not self._disposed and self._mode in ("one_way", "two_way"):
-            self._apply_to_widget(self._source.value)
+            self._apply_to_control(self._source.value)
 
 
 # ---------------------------------------------------------------------------
@@ -212,9 +212,9 @@ class BindingGroup:
 
         group = BindingGroup()
         group.add(Binding(model.name, name_input, "text",
-                          mode="two_way", widget_change_signal="on_change"))
+                          mode="two_way", control_change_signal="on_change"))
         group.add(Binding(model.volume, volume_slider, "value",
-                          mode="two_way", widget_change_signal="on_change"))
+                          mode="two_way", control_change_signal="on_change"))
 
         # When the form closes:
         group.dispose()
@@ -234,10 +234,10 @@ class BindingGroup:
             binding.dispose()
         self._bindings.clear()
 
-    def sync_all_to_widget(self) -> None:
-        """Force all bindings to re-synchronise their widget from the model."""
+    def sync_all_to_control(self) -> None:
+        """Force all bindings to re-synchronise their control from the model."""
         for binding in self._bindings:
-            binding.sync_to_widget()
+            binding.sync_to_control()
 
     def __len__(self) -> int:
         return len(self._bindings)

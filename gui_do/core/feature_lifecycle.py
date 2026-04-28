@@ -339,7 +339,7 @@ class Feature:
 class DirectFeature(Feature):
     """Feature subtype for direct screen event/update/draw integration.
 
-    Bypasses the widget pipeline entirely, receiving raw per-frame dt_seconds
+    Bypasses the control pipeline entirely, receiving raw per-frame dt_seconds
     and drawing directly to the restored pristine surface — analogous to how
     DirectX bypasses the Windows GDI for direct hardware access.
     """

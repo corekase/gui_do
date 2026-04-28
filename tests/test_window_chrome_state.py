@@ -38,7 +38,7 @@ class _FakeFactory:
         active.fill((0, 200, 0, 255))
         lower = Surface((24, 24), pygame.SRCALPHA)
         lower.fill((0, 0, 200, 255))
-        return SimpleNamespace(title_bar_inactive=inactive, title_bar_active=active, lower_widget=lower)
+        return SimpleNamespace(title_bar_inactive=inactive, title_bar_active=active, lower_control=lower)
 
     @staticmethod
     def build_disabled_bitmap(surface):

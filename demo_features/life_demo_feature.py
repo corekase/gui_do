@@ -255,7 +255,7 @@ class LifeSimulationFeature(RoutedFeature):
         width = content_rect.width
         height = content_rect.height
         menu_h = 28
-        widget_height = 28
+        control_height = 28
         padding = 10
         controls_gap = padding
         control_spacing = 12
@@ -270,7 +270,7 @@ class LifeSimulationFeature(RoutedFeature):
         top = self.menu_bar.rect.bottom + padding
         height = max(1, content_rect.bottom - top)
 
-        controls_y = top + height - widget_height - padding
+        controls_y = top + height - control_height - padding
         canvas_height = max(1, controls_y - controls_gap - (top + padding))
 
         self.canvas = self.window.add(
@@ -285,7 +285,7 @@ class LifeSimulationFeature(RoutedFeature):
         host.app.layout.set_linear_properties(
             anchor=(strip_left, controls_y),
             item_width=slot_width,
-            item_height=widget_height,
+            item_height=control_height,
             spacing=control_spacing,
             horizontal=True,
         )
@@ -312,7 +312,7 @@ class LifeSimulationFeature(RoutedFeature):
         slider_left = zoom_slider_slot_1.left
         slider_right = zoom_slider_slot_2.right
         slider_height = 20
-        slider_y = controls_y + max(0, (widget_height - slider_height) // 2)
+        slider_y = controls_y + max(0, (control_height - slider_height) // 2)
         self.zoom_slider = self.window.add(
             slider_control_cls(
                 "life_zoom",

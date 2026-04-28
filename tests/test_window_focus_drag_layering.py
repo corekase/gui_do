@@ -39,11 +39,11 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         self.assertFalse(win_b.active)
         self.assertEqual(self.root.children[-1], win_a)
 
-    def test_clicking_lower_widget_lowers_window(self) -> None:
+    def test_clicking_lower_control_lowers_window(self) -> None:
         win_a = self.root.add(WindowControl("win_a", Rect(20, 20, 180, 140), "A"))
         win_b = self.root.add(WindowControl("win_b", Rect(120, 40, 180, 140), "B"))
 
-        lower_pos = win_b.lower_widget_rect().center
+        lower_pos = win_b.lower_control_rect().center
         self.app.process_event(
             pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN,
@@ -68,12 +68,12 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         )
         self.assertTrue(win_a.active)
 
-    def test_lower_widget_sets_active_to_new_top_window(self) -> None:
+    def test_lower_control_sets_active_to_new_top_window(self) -> None:
         win_a = self.root.add(WindowControl("win_a", Rect(20, 20, 180, 140), "A"))
         win_b = self.root.add(WindowControl("win_b", Rect(120, 40, 180, 140), "B"))
 
         self.assertEqual(self.root.children[-1], win_b)
-        lower_pos = win_b.lower_widget_rect().center
+        lower_pos = win_b.lower_control_rect().center
         self.app.process_event(
             pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN,
@@ -89,13 +89,13 @@ class WindowFocusDragLayeringTest(unittest.TestCase):
         self.assertTrue(win_a.active)
         self.assertFalse(win_b.active)
 
-    def test_lower_widget_keeps_window_above_non_window_layers(self) -> None:
+    def test_lower_control_keeps_window_above_non_window_layers(self) -> None:
         bg = self.root.add(CanvasControl("bg", Rect(0, 0, 500, 360), max_events=1))
         win_a = self.root.add(WindowControl("win_a", Rect(20, 20, 180, 140), "A"))
         win_b = self.root.add(WindowControl("win_b", Rect(120, 40, 180, 140), "B"))
 
         self.assertLess(self.root.children.index(bg), self.root.children.index(win_a))
-        lower_pos = win_b.lower_widget_rect().center
+        lower_pos = win_b.lower_control_rect().center
         self.app.process_event(
             pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN,

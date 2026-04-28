@@ -23,7 +23,7 @@ class UiNode:
         self._focused = False
         self.parent: Optional["UiNode"] = None
         self.children: list["UiNode"] = []
-        self.accessibility_role = "widget"
+        self.accessibility_role = "control"
         self.accessibility_label: Optional[str] = None
         self.tab_index = -1
         self._disposed = False

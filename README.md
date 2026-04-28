@@ -2,7 +2,7 @@
 
 # gui_do
 
-gui_do is a pygame GUI toolkit for building scene-driven desktop applications with one package-level public API for controls, layout, input routing, background work, overlays, theming, state, and feature composition. It is designed for tools, editors, dashboards, simulation frontends, and other application UIs that benefit from explicit runtime services and reusable widgets. The exported surface in `gui_do.__all__` is the authoritative public boundary.
+gui_do is a pygame GUI toolkit for building scene-driven desktop applications with one package-level public API for controls, layout, input routing, background work, overlays, theming, state, and feature composition. It is designed for tools, editors, dashboards, simulation frontends, and other application UIs that benefit from explicit runtime services and reusable controls. The exported surface in `gui_do.__all__` is the authoritative public boundary.
 
 <a id="table-of-contents"></a>
 
@@ -124,7 +124,7 @@ pygame.quit()
 
 gui_do centers everything around a `GuiApplication` and one active scene. The application owns scene-local services such as scheduling, timers, tweens, overlays, drag-drop, and window tiling, while controls form a scene graph that receives normalized `GuiEvent` input and renders against a `ColorTheme` plus `BuiltInGraphicsFactory`.
 
-The exported package surface combines four layers that are often split across separate libraries: controls and layout primitives, runtime services and overlays, data/state helpers, and lifecycle-managed feature composition. That makes gui_do a good fit for desktop-style interfaces where predictable event routing, reusable widgets, and explicit application structure matter more than document-style layout.
+The exported package surface combines four layers that are often split across separate libraries: controls and layout primitives, runtime services and overlays, data/state helpers, and lifecycle-managed feature composition. That makes gui_do a good fit for desktop-style interfaces where predictable event routing, reusable controls, and explicit application structure matter more than document-style layout.
 
 ---
 
@@ -357,7 +357,7 @@ hint = RichLabelControl(
 
 ### Selection, Range, and Data Controls
 
-gui_do includes small-value widgets and larger selection/data widgets in the same public surface:
+gui_do includes small-value controls and larger selection/data controls in the same public surface:
 
 - `SliderControl` and `ScrollbarControl` report a new value plus optional `ValueChangeReason`.
 - `SpinnerControl` is numeric input with buttons, keyboard input, and wheel support.
@@ -395,7 +395,7 @@ listing = ListViewControl("list", Rect(20, 140, 220, 150), items=items, on_selec
 
 ### Canvas, Scroll, and Advanced Inputs
 
-Use these controls when the built-in list/form widgets are not enough:
+Use these controls when the built-in list/form controls are not enough:
 
 - `CanvasControl` gives you a bounded event queue of `CanvasEventPacket` values for custom drawing and interaction.
 - `ScrollViewControl` hosts child controls in content-local coordinates and clips them to a viewport.
@@ -725,11 +725,11 @@ from gui_do import Binding, BindingGroup, ObservableValue
 
 zoom = ObservableValue(1.0)
 
-# One-way: model → widget
+# One-way: model → control
 b = Binding(zoom, slider, "value", mode="one_way")
 
-# Two-way: model ↔ widget
-b = Binding(zoom, slider, "value", mode="two_way", widget_change_signal="on_change")
+# Two-way: model ↔ control
+b = Binding(zoom, slider, "value", mode="two_way", control_change_signal="on_change")
 b.dispose()
 
 group = BindingGroup()
@@ -738,7 +738,7 @@ group.add(Binding(label_text, label, "text"))
 group.dispose()
 ```
 
-Modes: `"one_way"` (default), `"one_way_to_source"`, `"two_way"`. Pass `to_widget` and `to_source` callables for type conversion.
+Modes: `"one_way"` (default), `"one_way_to_source"`, `"two_way"`. Pass `to_control` and `to_source` callables for type conversion.
 
 ### SelectionModel
 
@@ -1218,8 +1218,8 @@ screen_rect = pygame.Rect(
 from gui_do import ErrorBoundary
 
 boundary = ErrorBoundary(
-    child=my_widget,
-    on_error=lambda exc: logger.error("Widget error", exc_info=exc),
+    child=my_control,
+    on_error=lambda exc: logger.error("Control error", exc_info=exc),
     error_text="Widget unavailable",
 )
 scene.add(boundary)
@@ -1415,7 +1415,7 @@ scope_mgr.pop()
 
 ### BuiltInGraphicsFactory
 
-`BuiltInGraphicsFactory` builds cached visual surfaces for built-in widgets. It is exposed as `app.graphics_factory` and used internally by control drawing. When the active theme or fonts change, controls can invalidate themselves and rebuild against the current factory output.
+`BuiltInGraphicsFactory` builds cached visual surfaces for built-in controls. It is exposed as `app.graphics_factory` and used internally by control drawing. When the active theme or fonts change, controls can invalidate themselves and rebuild against the current factory output.
 
 ### FontManager
 
