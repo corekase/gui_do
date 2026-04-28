@@ -60,9 +60,7 @@ class DialogManager:
                 except Exception:
                     pass
 
-        self._show_modal(dialog_id, title, message, [
-            (button_label, _handle_close, False),
-        ], width=width)
+        self._show_modal(dialog_id, title, message, width=width)
         return DialogHandle(dialog_id, self)
 
     def show_confirm(
@@ -96,10 +94,7 @@ class DialogManager:
                 except Exception:
                     pass
 
-        self._show_modal(dialog_id, title, message, [
-            (confirm_label, _confirm, dangerous),
-            (cancel_label, _cancel, False),
-        ], width=width)
+        self._show_modal(dialog_id, title, message, width=width)
         return DialogHandle(dialog_id, self)
 
     def show_prompt(
@@ -175,7 +170,6 @@ class DialogManager:
         dialog_id: int,
         title: str,
         message: str,
-        buttons: list,
         *,
         width: int,
     ) -> None:

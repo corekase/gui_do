@@ -4,16 +4,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 
-import pygame
 from pygame import Rect
 
-from ..controls.overlay_panel_control import OverlayPanelControl
-from ..core.gui_event import EventType, GuiEvent
 from ..core.menu_overlay_panel_base import _MenuOverlayPanelBase
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
 
 
 _ITEM_HEIGHT = 28

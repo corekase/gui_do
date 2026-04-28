@@ -31,7 +31,7 @@ Usage::
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import Dict, List, Set, Tuple, TYPE_CHECKING
 
 from pygame import Rect
 

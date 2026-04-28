@@ -81,7 +81,6 @@ class ToastManager:
         title: Optional[str] = None,
         severity: ToastSeverity = ToastSeverity.INFO,
         duration_seconds: Optional[float] = None,
-        icon: Optional[str] = None,
     ) -> ToastHandle:
         toast_id = self._next_id
         self._next_id += 1

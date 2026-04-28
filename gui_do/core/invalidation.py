@@ -34,6 +34,8 @@ class InvalidationTracker:
 
     def begin_frame(self) -> tuple:
         """Return (is_full_redraw, dirty_rects_snapshot)."""
+        if self._full_redraw or not self._dirty_rects:
+            return self._full_redraw, []
         return self._full_redraw, list(self._dirty_rects)
 
     def end_frame(self) -> None:

@@ -214,10 +214,6 @@ class TextFlow:
         """
         if not self._laid_out or not self._lines:
             return 0
-        try:
-            import pygame
-        except ImportError:
-            return self._height
 
         space_width = max(4, self._width // 80)
         cursor_y = y
@@ -237,11 +233,6 @@ class TextFlow:
 
     def _tokenize(self, theme: "ColorTheme") -> List:
         """Return a list of _Word objects, with None for paragraph breaks."""
-        try:
-            import pygame
-        except ImportError:
-            return []
-
         result = []
         for span in self._spans:
             color = span.color if span.color is not None else theme.text

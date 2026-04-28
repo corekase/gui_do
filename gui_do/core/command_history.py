@@ -221,7 +221,7 @@ class CommandHistory:
         def __enter__(self) -> CommandTransaction:
             return self._tx
 
-        def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        def __exit__(self, exc_type, _exc_val, _exc_tb) -> bool:
             if exc_type is None:
                 self._history.end_transaction()
             else:

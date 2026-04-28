@@ -202,11 +202,11 @@ class GridLayout:
 
         row_sizes = self._resolve_tracks(
             self._row_tracks, container_rect.height, self._row_gap,
-            axis="row", placements=self._placements, n_tracks=n_rows,
+            axis="row", placements=self._placements,
         )
         col_sizes = self._resolve_tracks(
             self._col_tracks, container_rect.width, self._col_gap,
-            axis="col", placements=self._placements, n_tracks=n_cols,
+            axis="col", placements=self._placements,
         )
 
         # Compute track origins (cumulative offset)
@@ -244,7 +244,6 @@ class GridLayout:
         *,
         axis: str,
         placements: List[Tuple["UiNode", GridPlacement]],
-        n_tracks: int,
     ) -> List[int]:
         """Return a list of resolved pixel sizes, one per track."""
         n = len(tracks)
