@@ -44,6 +44,7 @@ from gui_do import (
     ToastSeverity,
     TreeControl,
     TreeNode,
+    WindowControl,
 )
 
 _TAB_H = 32   # matches tab_control._TAB_H
@@ -123,21 +124,20 @@ class SystemWindowDemoFeature(RoutedFeature):
 
     def build(self, host) -> None:
         self._host = host
-        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 15, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "label": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "status": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "bold": True},
+                "control": {"size": 15, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
+                "label": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
+                "status": {"size": 13, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
             },
             scene_name="main",
         )
         self.notification_center = NotificationCenter(host.app.events, max_records=200)
         self.notification_center.subscribe("demo.system.status", severity=ToastSeverity.INFO, title="System")
         self.file_dialogs = FileDialogManager(host.app)
-        self._build_window(host, window_control_cls=ui.window_control_cls, button_control_cls=ui.button_control_cls)
+        self._build_window(host, window_control_cls=WindowControl, button_control_cls=ButtonControl)
 
     def configure_accessibility(self, _host, tab_index_start: int) -> int:
         next_index = int(tab_index_start)
@@ -869,7 +869,7 @@ class SystemWindowDemoFeature(RoutedFeature):
             return []
         return [
             ListItem(label=f"[{e.category}] {e.title}" if e.category else e.title, value=e.entry_id)
-            for e in self._palette_mgr._entries.values()
+            for e in self._palette_mgr.entries()
         ]
 
     def _pal_log(self, message: str) -> None:

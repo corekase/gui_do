@@ -73,6 +73,15 @@ class FocusVisualizer:
             current = current.parent
         return None
 
+    @staticmethod
+    def _find_ancestor_scroll_view(node):
+        current = node.parent
+        while current is not None:
+            if all(hasattr(current, name) for name in ("scroll_y", "set_scroll", "_viewport_w", "_viewport_h")):
+                return current
+            current = current.parent
+        return None
+
     def _draw_dashed_rect(
         self,
         surface: "pygame.Surface",
@@ -91,6 +100,12 @@ class FocusVisualizer:
         rect = node.rect
         if rect.width < 2 or rect.height < 2:
             return
+
+        scroll_view = self._find_ancestor_scroll_view(node)
+        if scroll_view is not None and not scroll_view.rect.contains(rect):
+            # When focus is on an oversized descendant inside a scroll view,
+            # show the hint on the visible scroll view control bounds.
+            rect = scroll_view.rect
 
         focus_rect = rect.inflate(2 * self.PADDING, 2 * self.PADDING)
         self._draw_dashed_rectangle(surface, focus_rect, theme.highlight)

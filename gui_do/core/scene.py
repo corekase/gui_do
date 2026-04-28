@@ -71,6 +71,10 @@ class Scene:
         """Return all nodes in BFS order that satisfy *predicate*."""
         return [node for node in self._walk_nodes() if predicate(node)]
 
+    def contains(self, node: UiNode) -> bool:
+        """Return ``True`` when *node* is reachable from this scene graph."""
+        return any(candidate is node for candidate in self._walk_nodes())
+
     def node_count(self) -> int:
         """Return the total number of nodes reachable from this scene (including descendants)."""
         return sum(1 for _ in self._walk_nodes())

@@ -104,12 +104,10 @@ class ControlsShowcaseFeature(Feature):
     LABEL_FONT_ROLE_LOCAL = "label"
     LABEL_FONT_SIZE = 14
     LABEL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
-    LABEL_SYSTEM_FONT = "arial"
 
     CONTROL_FONT_ROLE_LOCAL = "control"
     CONTROL_FONT_SIZE = 15
     CONTROL_FONT_PATH = "demo_features/data/fonts/Ubuntu-B.ttf"
-    CONTROL_SYSTEM_FONT = "arial"
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
 
@@ -136,7 +134,6 @@ class ControlsShowcaseFeature(Feature):
             self.LABEL_FONT_ROLE_LOCAL,
             size=self.LABEL_FONT_SIZE,
             file_path=self.LABEL_FONT_PATH,
-            system_name=self.LABEL_SYSTEM_FONT,
             scene_name=self.scene_name,
         )
         self._control_font_role = self.register_font_role(
@@ -144,7 +141,6 @@ class ControlsShowcaseFeature(Feature):
             self.CONTROL_FONT_ROLE_LOCAL,
             size=self.CONTROL_FONT_SIZE,
             file_path=self.CONTROL_FONT_PATH,
-            system_name=self.CONTROL_SYSTEM_FONT,
             scene_name=self.scene_name,
         )
 
@@ -849,24 +845,34 @@ class ControlsShowcaseFeature(Feature):
         col8_x = col7_x + col7_w + col_gap
         col8_w = 200
         col8_y = new_row_y
-        scroll_inner_h = 26 * 8
+        scroll_viewport_h = 120
+        scroll_content_h = 24 * 8
         scroll_control = ScrollViewControl(
             "control_scroll_view",
-            Rect(0, 0, col8_w, 120),
+            Rect(0, 0, col8_w, scroll_viewport_h),
             content_width=col8_w - 20,
-            content_height=scroll_inner_h,
+            content_height=scroll_content_h,
             scroll_y=True,
         )
-        scroll_items = [
-            "Alpha", "Bravo", "Charlie", "Delta",
-            "Echo", "Foxtrot", "Golf", "Hotel",
-        ]
-        for i, label_text in enumerate(scroll_items):
-            scroll_control.add(
-                LabelControl(f"sv_item_{i}", Rect(0, 0, col8_w - 20, 22), label_text, align="left"),
-                content_x=4,
-                content_y=i * 26,
-            )
+        scroll_items = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"]
+        scroll_selection_label = LabelControl("sv_selected_label", Rect(0, 0, col8_w, 22), "Selected: Alpha", align="left")
+        scroll_selection_label.font_role = self._control_font_role
+
+        scroll_select_list = ListViewControl(
+            "sv_select_list",
+            Rect(0, 0, col8_w - 20, scroll_content_h),
+            [ListItem(label=item, value=item) for item in scroll_items],
+            row_height=24,
+            show_scrollbar=False,
+            font_role=self._control_font_role,
+            on_select=lambda _idx, item: setattr(scroll_selection_label, "text", f"Selected: {item.label}"),
+        )
+        # Managed by configure_accessibility ordering; keep out of default tab order.
+        scroll_select_list.set_tab_index(-1)
+        scroll_select_list.set_accessibility(role="listbox", label="Scroll view list")
+        self._focus_controls.append(scroll_select_list)
+        scroll_control.add(scroll_select_list, content_x=4, content_y=0)
+        scroll_control.set_content_size(col8_w - 20, scroll_content_h)
         scroll_slot_h = slot_h(120)
         self._place_control(
             host,
@@ -879,6 +885,11 @@ class ControlsShowcaseFeature(Feature):
             row_index=109,
         )
         col8_y += scroll_slot_h + row_gap
+
+        scroll_selection_label.set_rect(Rect(col8_x, col8_y, col8_w, 22))
+        host.control_showcase_root.add(scroll_selection_label)
+        self.control_labels.append(scroll_selection_label)
+        col8_y += 22 + row_gap
 
         overlay_inner_h = 90
         overlay_slot_h = slot_h(overlay_inner_h)
@@ -984,7 +995,7 @@ class ControlsShowcaseFeature(Feature):
         if target is None:
             self._pending_initial_focus = False
             return
-        if target not in host.app.scene._walk_nodes() or not target.visible or not target.enabled:
+        if not host.app.scene.contains(target) or not target.visible or not target.enabled:
             self._pending_initial_focus = False
             return
         host.app.focus.set_focus(target)

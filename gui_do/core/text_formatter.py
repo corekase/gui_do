@@ -37,7 +37,6 @@ Any object implementing ``format``, ``parse``, ``validate``, and
 """
 from __future__ import annotations
 
-import re
 from typing import Any, Callable, Optional, Protocol, TYPE_CHECKING, runtime_checkable
 
 if TYPE_CHECKING:

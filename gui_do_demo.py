@@ -154,32 +154,50 @@ class GuiDoDemo:
 
     def _register_screen_font_roles(self) -> None:
         """Register screen-owned font roles for non-part scene composition."""
+        for scene_name in ("main", "control_showcase"):
+            # Ensure all default role rendering in the demo resolves to bundled font assets.
+            self.app.register_font_role(
+                "body",
+                size=16,
+                file_path="demo_features/data/fonts/Ubuntu-B.ttf",
+                scene_name=scene_name,
+            )
+            self.app.register_font_role(
+                "title",
+                size=14,
+                file_path="demo_features/data/fonts/Ubuntu-B.ttf",
+                bold=True,
+                scene_name=scene_name,
+            )
+            self.app.register_font_role(
+                "display",
+                size=72,
+                file_path="demo_features/data/fonts/Gimbot.ttf",
+                scene_name=scene_name,
+            )
+
         self.app.register_font_role(
             self.TASK_PANEL_CONTROL_FONT_ROLE,
             size=16,
             file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-            system_name="arial",
             scene_name="main",
         )
         self.app.register_font_role(
             self.TASK_PANEL_CONTROL_FONT_ROLE,
             size=16,
             file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-            system_name="arial",
             scene_name="control_showcase",
         )
         self.app.register_font_role(
             self.SCREEN_TITLE_FONT_ROLE,
             size=72,
             file_path="demo_features/data/fonts/Gimbot.ttf",
-            system_name="arial",
             scene_name="main",
         )
         self.app.register_font_role(
             self.SCREEN_TITLE_FONT_ROLE,
             size=72,
             file_path="demo_features/data/fonts/Gimbot.ttf",
-            system_name="arial",
             scene_name="control_showcase",
         )
 

@@ -7,7 +7,17 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from gui_do import ContextMenuItem, LogicFeature, MenuBarControl, MenuEntry, RoutedFeature
+from gui_do import (
+    ButtonControl,
+    CanvasControl,
+    ContextMenuItem,
+    LabelControl,
+    LogicFeature,
+    MenuBarControl,
+    MenuEntry,
+    RoutedFeature,
+    WindowControl,
+)
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -210,23 +220,22 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
-        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "caption": {"size": 14, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
-                "status": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "bold": True},
+                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
+                "caption": {"size": 14, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
+                "status": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
             },
             scene_name="main",
         )
         self.build_window(
             host,
-            window_control_cls=ui.window_control_cls,
-            label_control_cls=ui.label_control_cls,
-            canvas_control_cls=ui.canvas_control_cls,
-            button_control_cls=ui.button_control_cls,
+            window_control_cls=WindowControl,
+            label_control_cls=LabelControl,
+            canvas_control_cls=CanvasControl,
+            button_control_cls=ButtonControl,
         )
 
     def bind_runtime(self, host) -> None:

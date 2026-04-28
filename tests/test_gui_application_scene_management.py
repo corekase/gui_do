@@ -6,13 +6,6 @@ from unittest.mock import MagicMock, patch
 import pygame
 
 from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.window_control import WindowControl
-from gui_do.controls.label_control import LabelControl
-from gui_do.controls.button_control import ButtonControl
-from gui_do.controls.canvas_control import CanvasControl
-from gui_do.controls.slider_control import SliderControl
-from gui_do.controls.toggle_control import ToggleControl
-from gui_do.layout.layout_axis import LayoutAxis
 from gui_do import FeatureMessage, LogicFeature, Feature, RoutedFeature
 
 
@@ -361,24 +354,6 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.app.features.update_features()
 
         self.assertEqual(routed.seen, [])
-
-
-class FeatureUiTypesTests(GuiApplicationSceneManagementSetup):
-
-    def test_read_feature_ui_types_returns_same_instance(self) -> None:
-        ui_types_a = self.app.read_feature_ui_types()
-        ui_types_b = self.app.read_feature_ui_types()
-        self.assertIs(ui_types_a, ui_types_b)
-
-    def test_read_feature_ui_types_contains_expected_bindings(self) -> None:
-        ui_types = self.app.read_feature_ui_types()
-        self.assertIs(ui_types.window_control_cls, WindowControl)
-        self.assertIs(ui_types.label_control_cls, LabelControl)
-        self.assertIs(ui_types.button_control_cls, ButtonControl)
-        self.assertIs(ui_types.canvas_control_cls, CanvasControl)
-        self.assertIs(ui_types.slider_control_cls, SliderControl)
-        self.assertIs(ui_types.toggle_control_cls, ToggleControl)
-        self.assertIs(ui_types.layout_axis_cls, LayoutAxis)
 
 
 class PristineDefaultsTests(GuiApplicationSceneManagementSetup):

@@ -9,6 +9,7 @@ from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
+from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -57,6 +58,8 @@ class ListViewControl(UiNode):
         self._font_role: str = font_role
         self._selected_indices: List[int] = []
         self._scroll_offset: int = 0  # in pixels
+        self._scrollbar_dragging: bool = False
+        self._scrollbar_drag_anchor: int = 0
         self.tab_index = 0
 
         if 0 <= selected_index < len(self._items):
@@ -160,6 +163,9 @@ class ListViewControl(UiNode):
         if not self._items:
             return
         index = max(0, min(index, len(self._items) - 1))
+        if self._try_scroll_parent_to_item(index):
+            self.invalidate()
+            return
         item_top = index * self._row_height
         item_bottom = item_top + self._row_height
         vh = self._viewport_height()
@@ -175,7 +181,47 @@ class ListViewControl(UiNode):
     # ------------------------------------------------------------------
 
     def _viewport_height(self) -> int:
+        parent_scroll = self._parent_scroll_view()
+        if parent_scroll is not None:
+            try:
+                parent_vh = int(parent_scroll._viewport_h())
+                return max(1, min(int(self.rect.height), parent_vh))
+            except Exception:
+                pass
         return max(1, self.rect.height)
+
+    def _parent_scroll_view(self):
+        parent = self.parent
+        if parent is None:
+            return None
+        required = ("set_scroll", "scroll_y", "_viewport_h", "children", "_child_content_rects")
+        if all(hasattr(parent, name) for name in required):
+            return parent
+        return None
+
+    def _try_scroll_parent_to_item(self, index: int) -> bool:
+        parent_scroll = self._parent_scroll_view()
+        if parent_scroll is None or self._show_scrollbar:
+            return False
+        try:
+            child_idx = parent_scroll.children.index(self)
+            content_rect = parent_scroll._child_content_rects[child_idx]
+            parent_view_h = int(parent_scroll._viewport_h())
+            parent_scroll_y = int(parent_scroll.scroll_y)
+        except Exception:
+            return False
+
+        item_top = int(content_rect.y) + (int(index) * self._row_height)
+        item_bottom = item_top + self._row_height
+        viewport_bottom = parent_scroll_y + parent_view_h
+
+        if item_top < parent_scroll_y:
+            parent_scroll.set_scroll(y=item_top)
+            return True
+        if item_bottom > viewport_bottom:
+            parent_scroll.set_scroll(y=item_bottom - parent_view_h)
+            return True
+        return True
 
     def _content_height(self) -> int:
         return len(self._items) * self._row_height
@@ -185,6 +231,43 @@ class ListViewControl(UiNode):
 
     def _clamp_scroll(self) -> None:
         self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
+
+    def _content_rect(self) -> Rect:
+        width = self.rect.width
+        if self._scrollbar_rect() is not None:
+            width -= _SCROLLBAR_WIDTH
+        return Rect(self.rect.x, self.rect.y, max(1, width), self.rect.height)
+
+    def _scrollbar_rect(self) -> Optional[Rect]:
+        if not self._show_scrollbar:
+            return None
+        if self._content_height() <= self._viewport_height():
+            return None
+        return Rect(self.rect.right - _SCROLLBAR_WIDTH, self.rect.y, _SCROLLBAR_WIDTH, self.rect.height)
+
+    def _scrollbar_handle_rect(self) -> Optional[Rect]:
+        sb_rect = self._scrollbar_rect()
+        if sb_rect is None:
+            return None
+        content_h = self._content_height()
+        viewport_h = self._viewport_height()
+        handle_h = max(16, int(viewport_h * viewport_h / max(1, content_h)))
+        max_scroll = max(1, content_h - viewport_h)
+        handle_y = sb_rect.y + int((sb_rect.height - handle_h) * self._scroll_offset / max_scroll)
+        return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h)
+
+    def _set_scroll_from_handle_top(self, top: int) -> None:
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is None or handle_rect is None:
+            return
+        max_scroll = max(0, self._content_height() - self._viewport_height())
+        travel = max(1, sb_rect.height - handle_rect.height)
+        ratio = (int(top) - sb_rect.y) / float(travel)
+        ratio = min(max(ratio, 0.0), 1.0)
+        self._scroll_offset = int(round(ratio * max_scroll))
+        self._clamp_scroll()
+        self.invalidate()
 
     def _row_at_y(self, y: int) -> int:
         """Return item index at pixel y (relative to control top)."""
@@ -199,11 +282,54 @@ class ListViewControl(UiNode):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
+            if self._scrollbar_dragging:
+                end_thumb_drag(app, self.control_id)
+            self._scrollbar_dragging = False
             return False
+
+        event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+
+        if event.kind == EventType.MOUSE_MOTION and self._scrollbar_dragging:
+            pointer_pos = captured_pointer_pos(app, self.control_id, "y")
+            if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+                handle_rect = self._scrollbar_handle_rect()
+                sb_rect = self._scrollbar_rect()
+                if handle_rect is not None and sb_rect is not None:
+                    top = pointer_pos[1] - self._scrollbar_drag_anchor
+                    top = min(max(top, sb_rect.y), sb_rect.bottom - handle_rect.height)
+                    self._set_scroll_from_handle_top(top)
+                    return True
+
+        if event.kind == EventType.MOUSE_BUTTON_UP and event.button == 1 and self._scrollbar_dragging:
+            self._scrollbar_dragging = False
+            end_thumb_drag(app, self.control_id)
+            return True
+
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle_rect = self._scrollbar_handle_rect()
+            sb_rect = self._scrollbar_rect()
+            if handle_rect is not None and sb_rect is not None and handle_rect.collidepoint(pointer):
+                self._scrollbar_dragging = True
+                self._scrollbar_drag_anchor = begin_thumb_drag(
+                    app,
+                    self.control_id,
+                    "y",
+                    sb_rect,
+                    (int(pointer[0]), int(pointer[1])),
+                    handle_rect,
+                )
+                return True
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             pos = event.pos
             if not self.rect.collidepoint(pos):
+                return False
+            sb_rect = self._scrollbar_rect()
+            if sb_rect is not None and sb_rect.collidepoint(pos):
+                return True
+            content_rect = self._content_rect()
+            if not content_rect.collidepoint(pos):
                 return False
             rel_y = pos[1] - self.rect.y
             idx = self._row_at_y(rel_y)
@@ -216,8 +342,15 @@ class ListViewControl(UiNode):
             pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else app.logical_pointer_pos
             if not (isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer)):
                 return False
-            delta = getattr(event, "y", 0)
-            self._scroll_offset -= int(delta) * self._row_height * 3
+            if self._parent_scroll_view() is not None and not self._show_scrollbar:
+                # Embedded lists can delegate wheel scrolling to parent scrollviews.
+                return False
+            if self._max_scroll() <= 0:
+                return False
+            delta = getattr(event, "wheel_delta", 0)
+            if int(delta) == 0:
+                delta = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
+            self._scroll_offset -= int(delta) * self._row_height
             self._clamp_scroll()
             self.invalidate()
             return True
@@ -284,18 +417,29 @@ class ListViewControl(UiNode):
 
         font = pygame.font.SysFont(None, 18)
         vh = self._viewport_height()
-        first_row = self._scroll_offset // self._row_height
-        last_row = min(len(self._items), first_row + vh // self._row_height + 2)
+        if self._parent_scroll_view() is not None and not self._show_scrollbar:
+            # Parent ScrollView movement determines visibility; render full list
+            # so clip-based culling can show the correct rows at all offsets.
+            first_row = 0
+            last_row = len(self._items)
+        else:
+            first_row = self._scroll_offset // self._row_height
+            last_row = min(len(self._items), first_row + vh // self._row_height + 2)
+
+        content_w = r.width
+        if self._scrollbar_rect() is not None:
+            content_w = max(1, content_w - _SCROLLBAR_WIDTH)
+        content_rect = Rect(r.x, r.y, content_w, r.height)
 
         clip = surface.get_clip()
-        surface.set_clip(r.clip(clip) if clip else r)
+        surface.set_clip(content_rect.clip(clip) if clip else content_rect)
 
         for i in range(first_row, last_row):
             if i >= len(self._items):
                 break
             item = self._items[i]
             row_y = r.y + i * self._row_height - self._scroll_offset
-            row_rect = Rect(r.x, row_y, r.width, self._row_height)
+            row_rect = Rect(content_rect.x, row_y, content_rect.width, self._row_height)
 
             if i in self._selected_indices:
                 sel_color = getattr(theme, "highlight", (0, 100, 200))
@@ -312,3 +456,16 @@ class ListViewControl(UiNode):
             surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
         surface.set_clip(clip)
+
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is not None and handle_rect is not None:
+            track_color = getattr(theme, "panel", (40, 40, 40))
+            if hasattr(track_color, "value"):
+                track_color = track_color.value
+            pygame.draw.rect(surface, track_color, sb_rect)
+
+            handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
+            if hasattr(handle_color, "value"):
+                handle_color = handle_color.value
+            pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)

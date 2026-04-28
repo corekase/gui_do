@@ -105,6 +105,10 @@ class CommandPaletteManager:
         """Return the number of registered entries."""
         return len(self._entries)
 
+    def entries(self) -> List[CommandEntry]:
+        """Return a snapshot list of currently registered entries."""
+        return list(self._entries.values())
+
     # ------------------------------------------------------------------
     # Palette lifecycle
     # ------------------------------------------------------------------

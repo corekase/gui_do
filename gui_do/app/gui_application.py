@@ -27,19 +27,6 @@ from ..core.task_scheduler import TaskScheduler
 from ..core.timers import Timers
 from ..layout.layout_manager import LayoutManager
 from ..layout.window_tiling_manager import WindowTilingManager
-from ..layout.layout_axis import LayoutAxis
-from ..controls.window_control import WindowControl
-from ..controls.label_control import LabelControl
-from ..controls.button_control import ButtonControl
-from ..controls.canvas_control import CanvasControl
-from ..controls.slider_control import SliderControl
-from ..controls.toggle_control import ToggleControl
-from ..controls.button_group_control import ButtonGroupControl
-from ..controls.arrow_box_control import ArrowBoxControl
-from ..controls.frame_control import FrameControl
-from ..controls.image_control import ImageControl
-from ..controls.scrollbar_control import ScrollbarControl
-from ..controls.panel_control import PanelControl
 from ..theme.color_theme import ColorTheme
 from ..core.feature_lifecycle import FeatureManager
 from ..core.error_handling import logical_error, report_nonfatal_error
@@ -76,23 +63,6 @@ class _ScreenLifecycleEntry:
     entry_id: int = 0
 
 
-@dataclass(frozen=True)
-class FeatureUiTypes:
-    window_control_cls: type
-    label_control_cls: type
-    button_control_cls: type
-    canvas_control_cls: type
-    slider_control_cls: type
-    toggle_control_cls: type
-    layout_axis_cls: type
-    button_group_control_cls: type
-    arrow_box_control_cls: type
-    frame_control_cls: type
-    image_control_cls: type
-    scrollbar_control_cls: type
-    panel_control_cls: type
-
-
 class GuiApplication:
     """Application runtime coordinator for scene, input, capture, and rendering."""
 
@@ -125,21 +95,6 @@ class GuiApplication:
         self.window_tiling = active_runtime.window_tiling
         self.theme = active_runtime.theme
         self.graphics_factory = active_runtime.graphics_factory
-        self._feature_ui_types = FeatureUiTypes(
-            window_control_cls=WindowControl,
-            label_control_cls=LabelControl,
-            button_control_cls=ButtonControl,
-            canvas_control_cls=CanvasControl,
-            slider_control_cls=SliderControl,
-            toggle_control_cls=ToggleControl,
-            layout_axis_cls=LayoutAxis,
-            button_group_control_cls=ButtonGroupControl,
-            arrow_box_control_cls=ArrowBoxControl,
-            frame_control_cls=FrameControl,
-            image_control_cls=ImageControl,
-            scrollbar_control_cls=ScrollbarControl,
-            panel_control_cls=PanelControl,
-        )
         self.features = FeatureManager(self)
         self.toasts = ToastManager(self.surface.get_rect())
         self.events.subscribe("toast", self.toasts.on_event_bus_message)
@@ -185,10 +140,6 @@ class GuiApplication:
             return self.scene.add(node)
         target = self._scene_runtime(scene_name)
         return target.scene.add(node)
-
-    def read_feature_ui_types(self) -> FeatureUiTypes:
-        """Return GUI constructor classes used by feature build routines."""
-        return self._feature_ui_types
 
     def style_label(self, label, size: int = 16, role: str = "body"):
         """Apply consistent demo-friendly defaults to a label-like control."""

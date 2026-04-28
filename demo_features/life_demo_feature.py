@@ -6,7 +6,20 @@ import math
 from typing import Any, Dict, Set, Tuple
 
 from pygame import Rect
-from gui_do import ContextMenuItem, FeatureMessage, LogicFeature, MenuBarControl, MenuEntry, RoutedFeature
+from gui_do import (
+    ButtonControl,
+    CanvasControl,
+    ContextMenuItem,
+    FeatureMessage,
+    LayoutAxis,
+    LogicFeature,
+    MenuBarControl,
+    MenuEntry,
+    RoutedFeature,
+    SliderControl,
+    ToggleControl,
+    WindowControl,
+)
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -127,23 +140,22 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""
-        ui = host.app.read_feature_ui_types()
         self.register_font_roles(
             host,
             {
-                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "system_name": "arial", "bold": True},
-                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf", "system_name": "arial"},
+                "window_title": {"size": 14, "file_path": "demo_features/data/fonts/Gimbot.ttf", "bold": True},
+                "control": {"size": 16, "file_path": "demo_features/data/fonts/Ubuntu-B.ttf"},
             },
             scene_name="main",
         )
         self.build_window(
             host,
-            window_control_cls=ui.window_control_cls,
-            canvas_control_cls=ui.canvas_control_cls,
-            button_control_cls=ui.button_control_cls,
-            toggle_control_cls=ui.toggle_control_cls,
-            slider_control_cls=ui.slider_control_cls,
-            layout_axis_cls=ui.layout_axis_cls,
+            window_control_cls=WindowControl,
+            canvas_control_cls=CanvasControl,
+            button_control_cls=ButtonControl,
+            toggle_control_cls=ToggleControl,
+            slider_control_cls=SliderControl,
+            layout_axis_cls=LayoutAxis,
         )
 
     def bind_runtime(self, host) -> None:
