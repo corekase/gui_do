@@ -59,6 +59,25 @@ def _lerp_float(start: float, end: float, t: float) -> float:
 
 
 def _lerp_tuple(start: tuple, end: tuple, t: float) -> tuple:
+    n = len(start)
+    if n == 3:
+        return (
+            start[0] + (end[0] - start[0]) * t,
+            start[1] + (end[1] - start[1]) * t,
+            start[2] + (end[2] - start[2]) * t,
+        )
+    if n == 4:
+        return (
+            start[0] + (end[0] - start[0]) * t,
+            start[1] + (end[1] - start[1]) * t,
+            start[2] + (end[2] - start[2]) * t,
+            start[3] + (end[3] - start[3]) * t,
+        )
+    if n == 2:
+        return (
+            start[0] + (end[0] - start[0]) * t,
+            start[1] + (end[1] - start[1]) * t,
+        )
     return tuple(s + (e - s) * t for s, e in zip(start, end))
 
 

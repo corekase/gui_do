@@ -610,7 +610,7 @@ Pass `mod=0` on a `ChordStep` to match any modifiers. `KeyChordManager` delegate
 ```python
 focus = app.focus
 focus.set_focus(name_input, via_keyboard=False)
-print(focus.current)
+print(focus.focused_node)
 ```
 
 ### FocusScopeManager

@@ -6,6 +6,13 @@ import pygame
 
 from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
+_MODIFIER_KEYS: frozenset = frozenset((
+    pygame.K_LSHIFT, pygame.K_RSHIFT,
+    pygame.K_LCTRL, pygame.K_RCTRL,
+    pygame.K_LALT, pygame.K_RALT,
+    pygame.K_LGUI, pygame.K_RGUI,
+))
+
 
 
 class FocusManager:
@@ -192,12 +199,7 @@ class FocusManager:
     def _is_modifier_key_event(event) -> bool:
         """Return True when the event's key is a bare modifier (Shift, Ctrl, Alt, Meta)."""
         key = getattr(event, "key", None)
-        return key in (
-            pygame.K_LSHIFT, pygame.K_RSHIFT,
-            pygame.K_LCTRL, pygame.K_RCTRL,
-            pygame.K_LALT, pygame.K_RALT,
-            pygame.K_LGUI, pygame.K_RGUI,
-        )
+        return key in _MODIFIER_KEYS
 
     @staticmethod
     def _is_node_in_scene(node, scene) -> bool:
@@ -233,9 +235,29 @@ class FocusManager:
         scope_root = self.active_scope_root
         ordered = []
         for node in scene._walk_nodes():
-            if not self._is_effectively_interactive(node) or not node.accepts_focus():
+            if not node.accepts_focus():
                 continue
-            if not self._is_focus_window_context_valid(node):
+            # Combined ancestor walk: check visible/enabled chain AND find nearest
+            # ancestor window in a single pass — avoids two separate ancestor walks
+            # that the old _is_effectively_interactive + _is_focus_window_context_valid
+            # pair would have performed.
+            if not node.visible or not node.enabled:
+                continue
+            ancestor_window = None
+            current = node.parent
+            interactive = True
+            while current is not None:
+                if not current.visible or not current.enabled:
+                    interactive = False
+                    break
+                if ancestor_window is None and current.is_window():
+                    ancestor_window = current
+                current = current.parent
+            if not interactive:
+                continue
+            if ancestor_window is not None and not (
+                ancestor_window.visible and ancestor_window.enabled and ancestor_window.active
+            ):
                 continue
             if window is not None and not self._is_descendant(node, window):
                 continue

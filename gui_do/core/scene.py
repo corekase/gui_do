@@ -39,9 +39,10 @@ class Scene:
         return node
 
     def remove(self, node: UiNode, *, dispose: bool = False) -> bool:
-        if node not in self.nodes:
+        try:
+            self.nodes.remove(node)
+        except ValueError:
             return False
-        self.nodes.remove(node)
         node.on_unmount(None)
         if dispose:
             node.dispose()
@@ -73,7 +74,10 @@ class Scene:
 
     def contains(self, node: UiNode) -> bool:
         """Return ``True`` when *node* is reachable from this scene graph."""
-        return any(candidate is node for candidate in self._walk_nodes())
+        current = node
+        while current.parent is not None:
+            current = current.parent
+        return any(current is n for n in self.nodes)
 
     def node_count(self) -> int:
         """Return the total number of nodes reachable from this scene (including descendants)."""
@@ -92,10 +96,11 @@ class Scene:
         return [node for node in self._walk_nodes() if self._is_window_like(node)]
 
     def active_window(self) -> UiNode | None:
-        for window in reversed(self._window_nodes()):
-            if window.active and window.visible and window.enabled:
-                return window
-        return None
+        result = None
+        for node in self._walk_nodes():
+            if self._is_window_like(node) and node.active and node.visible and node.enabled:
+                result = node
+        return result
 
     def _point_in_task_panel(self, pos) -> bool:
         for node in self._walk_nodes():
@@ -104,18 +109,19 @@ class Scene:
         return False
 
     def _point_in_window(self, pos) -> bool:
-        for window in reversed(self._window_nodes()):
-            if window.visible and window.enabled and window.rect.collidepoint(pos):
+        for node in self._walk_nodes():
+            if self._is_window_like(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
                 return True
         return False
 
     def top_window_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
-        for window in reversed(self._window_nodes()):
-            if window.visible and window.enabled and window.rect.collidepoint(pos):
-                return window
-        return None
+        result = None
+        for node in self._walk_nodes():
+            if self._is_window_like(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
+                result = node
+        return result
 
     @staticmethod
     def _is_descendant_of(node: UiNode, ancestor: UiNode) -> bool:

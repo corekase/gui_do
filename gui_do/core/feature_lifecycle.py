@@ -430,6 +430,8 @@ class FeatureManager:
         self._runtime_bound: set[str] = set()
         self._logic_bindings: Dict[str, Dict[str, str]] = {}
         self._prewarmed: set[tuple[str, str]] = set()
+        # Pre-partitioned list of DirectFeature instances to avoid per-frame isinstance checks.
+        self._direct_features: List["DirectFeature"] = []
 
     def register(self, feature: Feature, host=None) -> Feature:
         if not isinstance(feature, Feature):
@@ -459,6 +461,8 @@ class FeatureManager:
         feature.on_register(host_obj)
         self._features[feature.name] = feature
         self._feature_hosts[feature.name] = host_obj
+        if isinstance(feature, DirectFeature):
+            self._direct_features.append(feature)
         self._runtime_bound.discard(feature.name)
         return feature
 
@@ -477,6 +481,11 @@ class FeatureManager:
         self._feature_hosts.pop(feature.name, None)
         self._runtime_bound.discard(feature.name)
         self._logic_bindings.pop(feature.name, None)
+        if isinstance(feature, DirectFeature):
+            try:
+                self._direct_features.remove(feature)
+            except ValueError:
+                pass
         for consumer_name, alias_map in tuple(self._logic_bindings.items()):
             aliases_to_remove = [alias for alias, provider_name in alias_map.items() if provider_name == feature.name]
             for alias in aliases_to_remove:
@@ -639,9 +648,7 @@ class FeatureManager:
 
     def handle_direct_event(self, event, host=None) -> bool:
         collector = telemetry_collector()
-        for feature in self._features.values():
-            if not isinstance(feature, DirectFeature):
-                continue
+        for feature in self._direct_features:
             if not self._is_feature_active_for_scene(feature):
                 continue
             host_obj = self._resolve_host(feature.name, host)
@@ -652,9 +659,7 @@ class FeatureManager:
 
     def update_direct_features(self, dt_seconds: float, host=None) -> None:
         collector = telemetry_collector()
-        for feature in self._features.values():
-            if not isinstance(feature, DirectFeature):
-                continue
+        for feature in self._direct_features:
             if not self._is_feature_active_for_scene(feature):
                 continue
             host_obj = self._resolve_host(feature.name, host)
@@ -663,9 +668,7 @@ class FeatureManager:
 
     def draw_direct_features(self, surface, theme, host=None) -> None:
         collector = telemetry_collector()
-        for feature in self._features.values():
-            if not isinstance(feature, DirectFeature):
-                continue
+        for feature in self._direct_features:
             if not self._is_feature_active_for_scene(feature):
                 continue
             host_obj = self._resolve_host(feature.name, host)
@@ -772,7 +775,7 @@ class FeatureManager:
         feature_scene = feature.scene_name
         if feature_scene is None:
             return True
-        return str(feature_scene) == str(target_scene_name)
+        return feature_scene == target_scene_name
 
     @classmethod
     def _validate_host_contract(cls, feature: Feature) -> None:
