@@ -725,7 +725,7 @@ class FeatureManager:
     @staticmethod
     def _record_prewarm_sample(scene_name: str, feature_name: str, elapsed_ms: float) -> None:
         try:
-            from gui_do.core.first_frame_profiler import first_frame_profiler
+            from .first_frame_profiler import first_frame_profiler
 
             first_frame_profiler().record_once(
                 "feature.prewarm",
