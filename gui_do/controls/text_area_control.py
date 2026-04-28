@@ -7,20 +7,19 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ..controls._text_edit_focus_base import _TextEditFocusBase
 from ..core.clipboard import ClipboardManager
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
-_BLINK_INTERVAL = 0.5
 _H_PAD = 6
 _V_PAD = 4
 _SCROLL_SPEED = 3  # lines per mouse wheel tick
 
 
-class TextAreaControl(UiNode):
+class TextAreaControl(_TextEditFocusBase):
     """Multi-line editable text area with word wrap, clipboard, and scrolling.
 
     Keyboard shortcuts mirror :class:`TextInputControl`:
@@ -145,34 +144,14 @@ class TextAreaControl(UiNode):
     # ------------------------------------------------------------------
 
     def on_focus_changed(self, is_focused: bool) -> None:
-        if is_focused:
-            try:
-                pygame.key.start_text_input()
-                pygame.key.set_text_input_rect(self.rect)
-            except Exception:
-                pass
-            self._cursor_visible = True
-            self._blink_elapsed = 0.0
-        else:
-            try:
-                pygame.key.stop_text_input()
-            except Exception:
-                pass
-            self._drag_selecting = False
-        self.invalidate()
+        self._on_text_edit_focus_changed(is_focused, invalidate=True)
 
     # ------------------------------------------------------------------
     # Update
     # ------------------------------------------------------------------
 
     def update(self, dt_seconds: float) -> None:
-        if not self._focused:
-            return
-        self._blink_elapsed += dt_seconds
-        if self._blink_elapsed >= _BLINK_INTERVAL:
-            self._blink_elapsed = 0.0
-            self._cursor_visible = not self._cursor_visible
-            self.invalidate()
+        self._update_text_edit_blink(dt_seconds)
 
     # ------------------------------------------------------------------
     # Event handling
@@ -622,5 +601,4 @@ class TextAreaControl(UiNode):
             self._on_change(self._value)
 
     def _reset_blink(self) -> None:
-        self._cursor_visible = True
-        self._blink_elapsed = 0.0
+        self._reset_text_edit_blink()

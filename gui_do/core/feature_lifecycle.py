@@ -215,6 +215,16 @@ class Feature:
     def clear_messages(self) -> None:
         self._message_queue.clear()
 
+    def _drain_messages(self, host, *, should_dispatch: Callable[[FeatureMessage], bool], dispatch: Callable[[object, FeatureMessage], None]) -> None:
+        """Drain queued messages through a shared predicate/dispatch pipeline."""
+        while self.has_messages():
+            message = self.pop_message()
+            if message is None:
+                continue
+            if not should_dispatch(message):
+                continue
+            dispatch(host, message)
+
     def register_font_role(
         self,
         host,
@@ -376,13 +386,11 @@ class LogicFeature(Feature):
         return None
 
     def on_update(self, host) -> None:
-        while self.has_messages():
-            message = self.pop_message()
-            if message is None:
-                continue
-            if message.command is None:
-                continue
-            self.on_logic_command(host, message)
+        self._drain_messages(
+            host,
+            should_dispatch=lambda message: message.command is not None,
+            dispatch=self.on_logic_command,
+        )
 
 
 class RoutedFeature(Feature):
@@ -406,14 +414,11 @@ class RoutedFeature(Feature):
         handler(host, message)
 
     def on_update(self, host) -> None:
-        while self.has_messages():
-            message = self.pop_message()
-            if message is None:
-                continue
-            topic = message.topic
-            if topic is None:
-                continue
-            self.on_message(host, message)
+        self._drain_messages(
+            host,
+            should_dispatch=lambda message: message.topic is not None,
+            dispatch=self.on_message,
+        )
 
 
 class FeatureManager:

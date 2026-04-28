@@ -214,6 +214,56 @@ class UiNode:
     def on_unmount(self, _parent: "UiNode | None") -> None:
         """Hook called when node is detached from a parent or scene."""
 
+    def add_child(self, child: "UiNode") -> "UiNode":
+        """Attach one direct child and return it.
+
+        Container controls should prefer this base helper so child mount/
+        invalidation semantics remain consistent across the hierarchy.
+        """
+        child.parent = self
+        self.children.append(child)
+        child.on_mount(self)
+        child.invalidate()
+        return child
+
+    def remove_child(self, child: "UiNode", *, dispose: bool = False) -> bool:
+        """Detach one direct child.
+
+        Returns ``False`` when *child* is not a direct child.
+        """
+        if child not in self.children:
+            return False
+        self.children.remove(child)
+        child.parent = None
+        child.on_unmount(self)
+        if dispose:
+            child.dispose()
+        self.invalidate()
+        return True
+
+    def clear_children(self, *, dispose: bool = False) -> int:
+        """Remove all direct children and return count removed."""
+        count = 0
+        for child in list(self.children):
+            if self.remove_child(child, dispose=dispose):
+                count += 1
+        return count
+
+    @staticmethod
+    def _dispatch_child_event(child: "UiNode", event: GuiEvent, app: "GuiApplication") -> bool:
+        return bool(child.handle_routed_event(event, app))
+
+    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
+        ordered = list(reversed(self.children)) if reverse else list(self.children)
+        for child in ordered:
+            if not (child.visible and child.enabled):
+                continue
+            if self._dispatch_child_event(child, event, app):
+                return True
+            if event.propagation_stopped:
+                return True
+        return False
+
     def dispose(self) -> None:
         self._disposed = True
         for child in list(self.children):

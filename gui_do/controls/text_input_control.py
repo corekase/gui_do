@@ -7,18 +7,17 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ..controls._text_edit_focus_base import _TextEditFocusBase
 from ..core.clipboard import ClipboardManager
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
     from ..theme.color_theme import ColorTheme
 
-_BLINK_INTERVAL = 0.5
 _H_PADDING = 4
 
 
-class TextInputControl(UiNode):
+class TextInputControl(_TextEditFocusBase):
     """Single-line editable text field with cursor, selection, masking, and clipboard."""
 
     def __init__(
@@ -49,7 +48,7 @@ class TextInputControl(UiNode):
         self._sel_active: Optional[int] = None
         self._scroll_offset_px: int = 0
         # Blink timer
-        self._cursor_blink_elapsed: float = 0.0
+        self._blink_elapsed: float = 0.0
         self._cursor_visible: bool = True
         # Mouse drag selection
         self._drag_selecting: bool = False
@@ -128,33 +127,14 @@ class TextInputControl(UiNode):
     # ------------------------------------------------------------------
 
     def on_focus_changed(self, is_focused: bool) -> None:
-        if is_focused:
-            try:
-                pygame.key.start_text_input()
-                pygame.key.set_text_input_rect(self.rect)
-            except Exception:
-                pass
-            self._cursor_visible = True
-            self._cursor_blink_elapsed = 0.0
-        else:
-            try:
-                pygame.key.stop_text_input()
-            except Exception:
-                pass
-            self._drag_selecting = False
+        self._on_text_edit_focus_changed(is_focused, invalidate=False)
 
     # ------------------------------------------------------------------
     # Update (blink timer)
     # ------------------------------------------------------------------
 
     def update(self, dt_seconds: float) -> None:
-        if not self._focused:
-            return
-        self._cursor_blink_elapsed += dt_seconds
-        if self._cursor_blink_elapsed >= _BLINK_INTERVAL:
-            self._cursor_blink_elapsed = 0.0
-            self._cursor_visible = not self._cursor_visible
-            self.invalidate()
+        self._update_text_edit_blink(dt_seconds)
 
     # ------------------------------------------------------------------
     # Event handling
@@ -424,8 +404,16 @@ class TextInputControl(UiNode):
             return None
 
     def _reset_blink(self) -> None:
-        self._cursor_blink_elapsed = 0.0
-        self._cursor_visible = True
+        self._reset_text_edit_blink()
+
+    @property
+    def _cursor_blink_elapsed(self) -> float:
+        """Backward-compatible alias for tests and internal callers."""
+        return self._blink_elapsed
+
+    @_cursor_blink_elapsed.setter
+    def _cursor_blink_elapsed(self, value: float) -> None:
+        self._blink_elapsed = float(value)
 
     # ------------------------------------------------------------------
     # Drawing

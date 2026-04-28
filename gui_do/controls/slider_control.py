@@ -8,7 +8,7 @@ from ..core.value_change_callback import ValueChangeCallback
 from ..core.value_change_callback import dispatch_value_change
 from ..core.value_change_callback import validate_value_change_callback
 from ..core.value_change_reason import ValueChangeReason
-from ..core.ui_node import UiNode
+from ..controls._axis_drag_control_base import _AxisDragControlBase
 from ..layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
@@ -16,25 +16,8 @@ if TYPE_CHECKING:
     from ..theme.color_theme import ColorTheme
 
 
-class SliderControl(UiNode):
+class SliderControl(_AxisDragControlBase):
     """Single-value slider with capture-locked drag behavior."""
-
-    def _ancestor_window(self):
-        current = self.parent
-        while current is not None:
-            if current.is_window():
-                return current
-            current = current.parent
-        return None
-
-    def _end_drag(self, app: "GuiApplication", *, sync_pointer: bool = False, release_pos=None) -> None:
-        self.dragging = False
-        if app.pointer_capture.is_owned_by(self.control_id):
-            app.pointer_capture.end(self.control_id)
-        if sync_pointer:
-            final_pos = release_pos if release_pos is not None else app.logical_pointer_pos
-            if final_pos is not None:
-                app.sync_pointer_to_logical_position(final_pos)
 
     def __init__(
         self,
@@ -53,13 +36,8 @@ class SliderControl(UiNode):
         self.value = float(value)
         self.on_change = on_change
         validate_value_change_callback(self.on_change)
-        self.dragging = False
+        self._init_axis_drag_state()
         self.handle_size = 16
-        self._drag_anchor_offset = 0
-        self._drag_handle_axis_pixel = 0
-        self._focus_activation_armed = False
-        self._programmatic_change_epoch = 0
-        self._drag_start_programmatic_epoch = 0
         self._track_visuals = None
         self._handle_visuals = None
         self._track_visuals_size = None
@@ -131,28 +109,6 @@ class SliderControl(UiNode):
         # Sliders activate visually on focus key activation; value changes remain
         # driven by directional/home/end keys and pointer interaction.
         return
-
-    def begin_focus_activation_visual(self) -> None:
-        """Show temporary armed handle visual after focus-driven activation."""
-        if self._focus_activation_armed:
-            return
-        self._focus_activation_armed = True
-        self.invalidate()
-
-    def end_focus_activation_visual(self) -> None:
-        """Clear temporary armed handle visual after focus activation timeout."""
-        if not self._focus_activation_armed:
-            return
-        self._focus_activation_armed = False
-        self.invalidate()
-
-    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
-        self._focus_activation_armed = False
-        super()._on_enabled_changed(_old_enabled, _new_enabled)
-
-    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
-        self._focus_activation_armed = False
-        super()._on_visibility_changed(_old_visible, _new_visible)
 
     def set_value(self, value: float) -> bool:
         """Set value programmatically with clamp and on_change callback semantics."""

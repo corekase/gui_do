@@ -10,7 +10,7 @@ from pygame import Rect
 from ..core.gui_event import EventType, GuiEvent
 from ..core.ui_node import UiNode
 from ..core.context_menu_manager import ContextMenuItem
-from ..controls.overlay_panel_control import OverlayPanelControl
+from ..core.menu_overlay_panel_base import _MenuOverlayPanelBase
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -30,7 +30,7 @@ class MenuEntry:
     enabled: bool = True
 
 
-class _FlyoutPanel(OverlayPanelControl):
+class _FlyoutPanel(_MenuOverlayPanelBase):
     """Internal overlay panel rendering one flyout sub-menu."""
 
     _ITEM_H = 26
@@ -46,126 +46,30 @@ class _FlyoutPanel(OverlayPanelControl):
         items: List[ContextMenuItem],
         on_close: Callable[[], None],
     ) -> None:
-        super().__init__(control_id, rect, draw_background=False)
-        self._items = list(items)
-        self._on_close = on_close
-        self._hovered = -1
-        self._keyboard_idx = -1
+        super().__init__(
+            control_id,
+            rect,
+            items,
+            on_close,
+            item_height=self._ITEM_H,
+            separator_height=self._SEP_H,
+            padding=self._PAD,
+            text_padding=self._TEXT_PAD,
+            min_width=self._MIN_W,
+            font_size=_FONT_SIZE,
+        )
 
     @classmethod
     def measure(cls, items: List[ContextMenuItem]) -> Tuple[int, int]:
-        h = cls._PAD * 2
-        for it in items:
-            h += cls._SEP_H if it.separator else cls._ITEM_H
-        try:
-            font = pygame.font.SysFont(None, _FONT_SIZE)
-            ws = [font.size(it.label)[0] + cls._TEXT_PAD * 2 + 8 for it in items if not it.separator]
-            w = max(cls._MIN_W, max(ws, default=cls._MIN_W))
-        except Exception:
-            w = cls._MIN_W
-        return w, h
-
-    def _item_rects(self) -> List[Rect]:
-        rects: List[Rect] = []
-        y = self.rect.y + self._PAD
-        for it in self._items:
-            h = self._SEP_H if it.separator else self._ITEM_H
-            rects.append(Rect(self.rect.x, y, self.rect.width, h))
-            y += h
-        return rects
-
-    def _selectable(self) -> List[int]:
-        return [i for i, it in enumerate(self._items) if not it.separator and it.enabled]
-
-    def _activate(self, idx: int) -> None:
-        if 0 <= idx < len(self._items):
-            it = self._items[idx]
-            if not it.separator and it.enabled and it.action is not None:
-                try:
-                    self._on_close()
-                    it.action()
-                except Exception:
-                    pass
-                return
-        self._on_close()
-
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        rects = self._item_rects()
-
-        if event.kind == EventType.MOUSE_MOTION:
-            self._hovered = -1
-            for i, r in enumerate(rects):
-                if r.collidepoint(event.pos) and not self._items[i].separator:
-                    self._hovered = i
-                    self._keyboard_idx = i
-                    break
-            self.invalidate()
-            return self.rect.collidepoint(event.pos)
-
-        if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
-            for i, r in enumerate(rects):
-                if r.collidepoint(event.pos) and not self._items[i].separator:
-                    if self._items[i].enabled:
-                        self._activate(i)
-                    return True
-            return False
-
-        if event.kind == EventType.KEY_DOWN:
-            sel = self._selectable()
-            if not sel:
-                return False
-            if event.key == pygame.K_DOWN:
-                nxt = [i for i in sel if i > self._keyboard_idx]
-                self._keyboard_idx = nxt[0] if nxt else sel[0]
-                self._hovered = self._keyboard_idx
-                self.invalidate()
-                return True
-            if event.key == pygame.K_UP:
-                prev = [i for i in sel if i < self._keyboard_idx]
-                self._keyboard_idx = prev[-1] if prev else sel[-1]
-                self._hovered = self._keyboard_idx
-                self.invalidate()
-                return True
-            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                self._activate(self._keyboard_idx)
-                return True
-        return False
-
-    def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
-        if not self.visible:
-            return
-
-        def _c(name: str, fallback: Tuple) -> Tuple:
-            v = getattr(theme, name, fallback)
-            return v.value if hasattr(v, "value") else v
-
-        bg = _c("panel", (45, 45, 55))
-        text_col = _c("text", (220, 220, 220))
-        disabled_col = tuple(max(0, min(255, c // 2)) for c in text_col)
-        hover_col = _c("highlight", (0, 100, 200))
-        border_col = _c("border", (80, 80, 90))
-
-        font = pygame.font.SysFont(None, _FONT_SIZE)
-
-        # Shadow
-        sh = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        sh.fill((0, 0, 0, 70))
-        surface.blit(sh, (self.rect.x + 3, self.rect.y + 3))
-
-        pygame.draw.rect(surface, bg, self.rect)
-        pygame.draw.rect(surface, border_col, self.rect, 1)
-
-        rects = self._item_rects()
-        for i, (it, r) in enumerate(zip(self._items, rects)):
-            if it.separator:
-                sy = r.y + r.height // 2
-                pygame.draw.line(surface, border_col, (r.x + 4, sy), (r.x + r.width - 4, sy))
-                continue
-            if i == self._hovered:
-                pygame.draw.rect(surface, hover_col, r)
-            col = disabled_col if not it.enabled else text_col
-            txt = font.render(it.label, True, col)
-            surface.blit(txt, (r.x + self._TEXT_PAD, r.y + (r.height - txt.get_height()) // 2))
+        return _MenuOverlayPanelBase.measure(
+            items,
+            item_height=cls._ITEM_H,
+            separator_height=cls._SEP_H,
+            padding=cls._PAD,
+            text_padding=cls._TEXT_PAD,
+            min_width=cls._MIN_W,
+            font_size=_FONT_SIZE,
+        )
 
 
 class MenuBarControl(UiNode):

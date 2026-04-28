@@ -172,11 +172,7 @@ class PanelControl(UiNode):
 
     def add(self, child: UiNode) -> UiNode:
         """Attach one child control and return it."""
-        child.parent = self
-        self.children.append(child)
-        child.on_mount(self)
-        child.invalidate()
-        return child
+        return self.add_child(child)
 
     def add_at(self, child: UiNode, rel_x: int = 0, rel_y: int = 0) -> UiNode:
         """Attach *child* at a position relative to this panel's top-left corner.
@@ -232,9 +228,11 @@ class PanelControl(UiNode):
             self._drag_window = None
             self._drag_last_pos = None
 
-        self.children.remove(child)
         if was_window:
             self._set_window_active_state(child, False)
+
+        if not self.remove_child(child, dispose=dispose):
+            return False
 
         if was_active_window:
             next_window = self._top_visible_window()
@@ -242,12 +240,6 @@ class PanelControl(UiNode):
                 self._clear_active_windows()
             else:
                 self._set_active_window(next_window)
-
-        child.parent = None
-        child.on_unmount(self)
-        if dispose:
-            child.dispose()
-        self.invalidate()
         return True
 
     def set_constraints(self, constraints: "Optional[ConstraintLayout]") -> None:
@@ -264,21 +256,6 @@ class PanelControl(UiNode):
         for child in self.children:
             if child.visible:
                 child.update(dt_seconds)
-
-    @staticmethod
-    def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
-        return bool(child.handle_routed_event(event, app))
-
-    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
-        ordered = list(reversed(self.children)) if reverse else list(self.children)
-        for child in ordered:
-            if not (child.visible and child.enabled):
-                continue
-            if self._dispatch_child_event(child, event, app):
-                return True
-            if event.propagation_stopped:
-                return True
-        return False
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if self._pending_capture_release_owner_id is not None:

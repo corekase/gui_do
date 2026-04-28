@@ -168,33 +168,17 @@ class WindowControl(UiNode):
             child.rect.y += int(dy)
 
     def add(self, child: UiNode) -> UiNode:
-        child.parent = self
-        self.children.append(child)
-        child.on_mount(self)
-        child.invalidate()
-        return child
+        return self.add_child(child)
 
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
-        if child not in self.children:
-            return False
-        self.children.remove(child)
-        child.parent = None
-        child.on_unmount(self)
-        if dispose:
-            child.dispose()
-        self.invalidate()
-        return True
+        return self.remove_child(child, dispose=dispose)
 
     def clear_children(self, *, dispose: bool = False) -> int:
         """Remove all direct children and return the count removed.
 
         Pass ``dispose=True`` to also call ``dispose()`` on every removed child.
         """
-        count = 0
-        for child in list(self.children):
-            if self.remove(child, dispose=dispose):
-                count += 1
-        return count
+        return super().clear_children(dispose=dispose)
 
     def update(self, dt_seconds: float) -> None:
         if self._preamble is not None:
@@ -226,21 +210,6 @@ class WindowControl(UiNode):
             if not (lock_active and self._owns_node(lock_object)):
                 return False
         return True
-
-    @staticmethod
-    def _dispatch_child_event(child: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
-        return bool(child.handle_routed_event(event, app))
-
-    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
-        ordered = list(reversed(self.children)) if reverse else list(self.children)
-        for child in ordered:
-            if not (child.visible and child.enabled):
-                continue
-            if self._dispatch_child_event(child, event, app):
-                return True
-            if event.propagation_stopped:
-                return True
-        return False
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self._accepts_event_scope(event, app):
