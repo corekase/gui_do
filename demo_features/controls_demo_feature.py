@@ -51,6 +51,7 @@ from gui_do import (
     TreeNode,
     NumericFormatter,
     PatternFormatter,
+    FixedPatternFormatter,
 )
 
 
@@ -952,6 +953,29 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Pattern formatted text input",
             column_index=9,
             row_index=121,
+        )
+        col9_y += pattern_input_slot_h + row_gap
+
+        _fixed_pat_fmt = FixedPatternFormatter("#####-####")
+        fixed_pattern_input_slot_h = slot_h(30)
+        fixed_pattern_input = _fixed_pat_fmt.create_text_input(
+            "control_fixed_pattern_fmt_input",
+            Rect(0, 0, col9_w, 30),
+            raw_value="941010001",
+            placeholder="#####-####",
+            font_role=self._control_font_role,
+        )
+        self._place_control(
+            host,
+            "fixed_pattern_fmt_input",
+            "Fixed Pattern",
+            fixed_pattern_input,
+            Rect(col9_x, col9_y, col9_w, fixed_pattern_input_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Fixed pattern formatted text input",
+            column_index=9,
+            row_index=122,
         )
 
         self._build_scene_task_panel(host)

@@ -7,16 +7,22 @@ from pygame import Rect
 from gui_do import (
     ArrowBoxControl,
     ArrangeContext,
+    Binding,
+    BindingGroup,
     ButtonControl,
     ButtonGroupControl,
     CanvasViewport,
     ColorPickerControl,
+    CommandHistory,
     ContextMenuItem,
     DataGridControl,
+    DesignTokens,
     DropdownControl,
     DropdownOption,
+    ErrorBoundary,
     Feature,
     FixedItemSource,
+    FixedPatternFormatter,
     FrameControl,
     GridColumn,
     GridRow,
@@ -30,18 +36,25 @@ from gui_do import (
     NotificationPanelControl,
     NotificationRecord,
     NumericFormatter,
+    ObservableDict,
+    ObservableList,
+    ObservableValue,
     OverlayPanelControl,
     PanelControl,
     PatternFormatter,
     RichLabelControl,
+    Router,
     ScrollbarControl,
     ScrollViewControl,
     ScopedTheme,
     ScopedThemeManager,
     SelectionMode,
     SelectionModel,
+    SettingsRegistry,
     SplitterControl,
+    StateMachine,
     TaskPanelControl,
+    ThemeManager,
     ToastSeverity,
     ToggleControl,
     TooltipManager,
@@ -235,6 +248,448 @@ class MainDemoFeature(Feature):
 
         self._build_main_scene_controls_dock(host)
         host.app.tile_windows()
+
+    def _build_main_scene_extra_systems(self, host, scroll_stack, content_w, row_lbl_h, row_val_h, item_gap) -> None:
+        """Add all public-API systems not yet demonstrated in the dock scroll area."""
+        fn = host.TASK_PANEL_CONTROL_FONT_ROLE
+        section_gap = item_gap * 2
+
+        # ── Observable collections ──────────────────────────────────────
+        host._main_obs_list = ObservableList(["Alpha", "Beta", "Gamma"])
+        _obs_list_val = LabelControl(
+            "main_obs_list_val", Rect(0, 0, content_w, row_val_h),
+            "Items [3]: Alpha, Beta, Gamma", align="left",
+        )
+        _obs_list_val.font_role = fn
+
+        def _on_obs_list_change(_ch):
+            items = list(host._main_obs_list)
+            _obs_list_val.text = f"Items [{len(items)}]: {', '.join(str(v) for v in items[:6])}"
+
+        host._main_obs_list.subscribe(_on_obs_list_change)
+        scroll_stack.add_labeled_value(
+            LabelControl("main_obs_list_lbl", Rect(0, 0, content_w, row_lbl_h), "ObservableList + ChangeKind + CollectionChange", align="left"),
+            _obs_list_val, x=0, label_gap=4, item_gap=4,
+        )
+        scroll_stack.add(
+            ButtonControl(
+                "main_obs_list_btn", Rect(0, 0, 110, 26), "Append Item",
+                lambda: host._main_obs_list.append(f"Item {len(host._main_obs_list) + 1}"),
+                font_role=fn,
+            ),
+            gap_after=item_gap, focusable=True,
+        )
+
+        host._main_obs_dict = ObservableDict({"color": "#4080ff", "opacity": "1.0"})
+        _obs_dict_val = LabelControl(
+            "main_obs_dict_val", Rect(0, 0, content_w, row_val_h),
+            "Keys: color, opacity", align="left",
+        )
+        _obs_dict_val.font_role = fn
+        _dict_counter = [2]
+
+        def _on_obs_dict_change(_ch):
+            _obs_dict_val.text = f"Keys: {', '.join(host._main_obs_dict.keys())}"
+
+        host._main_obs_dict.subscribe(_on_obs_dict_change)
+
+        def _toggle_dict_key():
+            key = f"entry_{_dict_counter[0]}"
+            if key in host._main_obs_dict:
+                del host._main_obs_dict[key]
+            else:
+                host._main_obs_dict[key] = f"val{_dict_counter[0]}"
+                _dict_counter[0] += 1
+
+        scroll_stack.add_labeled_value(
+            LabelControl("main_obs_dict_lbl", Rect(0, 0, content_w, row_lbl_h), "ObservableDict", align="left"),
+            _obs_dict_val, x=0, label_gap=4, item_gap=4,
+        )
+        scroll_stack.add(
+            ButtonControl("main_obs_dict_btn", Rect(0, 0, 110, 26), "Toggle Key", _toggle_dict_key, font_role=fn),
+            gap_after=item_gap, focusable=True,
+        )
+
+        # Binding + BindingGroup
+        host._main_bind_src = ObservableValue(False)
+        _bind_toggle = ToggleControl(
+            "main_bind_toggle", Rect(0, 0, 80, 26), "On", "Off",
+            pushed=False, font_role=fn,
+        )
+        _bind_label_val = LabelControl(
+            "main_bind_label_val", Rect(0, 0, content_w, row_val_h), "Bound: Off", align="left",
+        )
+        _bind_label_val.font_role = fn
+
+        def _on_bind_toggle(pushed: bool) -> None:
+            host._main_bind_src.value = bool(pushed)
+
+        _bind_toggle.on_toggle = _on_bind_toggle
+        host._main_binding = Binding(
+            host._main_bind_src, _bind_label_val, "text",
+            mode="one_way",
+            to_control=lambda v: "Bound: On" if v else "Bound: Off",
+        )
+        host._main_binding_group = BindingGroup()
+        host._main_binding_group.add(host._main_binding)
+        scroll_stack.add_labeled_value(
+            LabelControl("main_binding_lbl", Rect(0, 0, content_w, row_lbl_h), "Binding + BindingGroup  (toggle → label)", align="left"),
+            _bind_toggle, x=0, label_gap=4, item_gap=4, focusable_value=True,
+        )
+        scroll_stack.add(_bind_label_val, gap_after=section_gap)
+
+        # ── Command history ──────────────────────────────────────────────
+        _counter = [0]
+        _cmd_label_val = LabelControl(
+            "main_cmd_val", Rect(0, 0, content_w, row_val_h),
+            "Value: 0  undo: 0  redo: 0", align="left",
+        )
+        _cmd_label_val.font_role = fn
+        host._main_cmd_history = CommandHistory(max_size=20)
+
+        class _IncrCmd:
+            @property
+            def description(self) -> str:
+                return "Increment"
+
+            def execute(self) -> None:
+                _counter[0] += 1
+
+            def undo(self) -> None:
+                _counter[0] -= 1
+
+        def _update_cmd_label() -> None:
+            h = host._main_cmd_history
+            _cmd_label_val.text = f"Value: {_counter[0]}  undo: {h.undo_stack_size}  redo: {h.redo_stack_size}"
+
+        def _do_incr() -> None:
+            host._main_cmd_history.push(_IncrCmd())
+            _update_cmd_label()
+
+        def _do_undo() -> None:
+            host._main_cmd_history.undo()
+            _update_cmd_label()
+
+        def _do_redo() -> None:
+            host._main_cmd_history.redo()
+            _update_cmd_label()
+
+        scroll_stack.add_labeled_value(
+            LabelControl("main_cmd_lbl", Rect(0, 0, content_w, row_lbl_h), "CommandHistory + Command + CommandTransaction", align="left"),
+            _cmd_label_val, x=0, label_gap=4, item_gap=4,
+        )
+        _cmd_btn_y = scroll_stack.y
+        scroll_stack.add(
+            ButtonControl("main_cmd_incr_btn", Rect(0, 0, 52, 26), "+1", _do_incr, font_role=fn),
+            x=0, y=_cmd_btn_y, focusable=True,
+        )
+        scroll_stack.add(
+            ButtonControl("main_cmd_undo_btn", Rect(0, 0, 58, 26), "Undo", _do_undo, font_role=fn),
+            x=60, y=_cmd_btn_y, focusable=True,
+        )
+        scroll_stack.add(
+            ButtonControl("main_cmd_redo_btn", Rect(0, 0, 58, 26), "Redo", _do_redo, font_role=fn),
+            x=126, y=_cmd_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + item_gap)
+
+        # StateMachine
+        _sm_states = ["Idle", "Running", "Paused", "Done"]
+        host._main_state_machine = StateMachine("Idle")
+        for _st in _sm_states[1:]:
+            host._main_state_machine.add_state(_st)
+        for _i in range(len(_sm_states)):
+            host._main_state_machine.add_transition(
+                _sm_states[_i], _sm_states[(_i + 1) % len(_sm_states)], trigger="next"
+            )
+        _sm_val = LabelControl("main_sm_val", Rect(0, 0, content_w, row_val_h), "State: Idle", align="left")
+        _sm_val.font_role = fn
+        host._main_state_machine.current.subscribe(lambda s: setattr(_sm_val, "text", f"State: {s}"))
+        scroll_stack.add_labeled_value(
+            LabelControl("main_sm_lbl", Rect(0, 0, content_w, row_lbl_h), "StateMachine  (Idle → Running → Paused → Done → …)", align="left"),
+            _sm_val, x=0, label_gap=4, item_gap=4,
+        )
+        scroll_stack.add(
+            ButtonControl(
+                "main_sm_btn", Rect(0, 0, 110, 26), "Next State",
+                lambda: host._main_state_machine.trigger("next"), font_role=fn,
+            ),
+            gap_after=item_gap, focusable=True,
+        )
+
+        # Router + RouteEntry
+        host._main_router = Router()
+        host._main_router.register("/dashboard", "main")
+        host._main_router.register("/settings", "settings")
+        host._main_router.register("/editor", "editor")
+        host._main_router.push("/dashboard")
+        _router_val = LabelControl(
+            "main_router_val", Rect(0, 0, content_w, row_val_h),
+            "Route: /dashboard  depth: 1", align="left",
+        )
+        _router_val.font_role = fn
+        _router_routes = ["/dashboard", "/settings", "/editor"]
+
+        def _push_route() -> None:
+            current = host._main_router.current_route or "/dashboard"
+            idx = _router_routes.index(current) if current in _router_routes else 0
+            host._main_router.push(_router_routes[(idx + 1) % len(_router_routes)])
+            r = host._main_router
+            _router_val.text = f"Route: {r.current_route}  depth: {len(r._history)}"
+
+        def _pop_route() -> None:
+            host._main_router.pop()
+            r = host._main_router
+            _router_val.text = f"Route: {r.current_route}  depth: {len(r._history)}"
+
+        scroll_stack.add_labeled_value(
+            LabelControl("main_router_lbl", Rect(0, 0, content_w, row_lbl_h), "Router + RouteEntry", align="left"),
+            _router_val, x=0, label_gap=4, item_gap=4,
+        )
+        _router_btn_y = scroll_stack.y
+        scroll_stack.add(
+            ButtonControl("main_router_push_btn", Rect(0, 0, 90, 26), "Push Route", _push_route, font_role=fn),
+            x=0, y=_router_btn_y, focusable=True,
+        )
+        scroll_stack.add(
+            ButtonControl("main_router_pop_btn", Rect(0, 0, 80, 26), "Pop Route", _pop_route, font_role=fn),
+            x=98, y=_router_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + item_gap)
+
+        # FormModel + FormField + ValidationRule + FieldError
+        scroll_stack.add_labeled_value(
+            LabelControl("main_form_lbl", Rect(0, 0, content_w, row_lbl_h), "FormModel + FormField + ValidationRule + FieldError", align="left"),
+            LabelControl(
+                "main_form_val", Rect(0, 0, content_w, row_val_h),
+                "form.add_field('name', '')  form.validate_all() -> list[FieldError]",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+
+        # SettingsRegistry + SettingDescriptor
+        host._main_settings = SettingsRegistry()
+        _vol_obs = host._main_settings.declare("audio", "volume", 0.8, label="Master Volume")
+        _dark_obs = host._main_settings.declare("ui", "dark_mode", True, label="Dark Mode")
+        _fps_obs = host._main_settings.declare("render", "fps_cap", 120, label="FPS Cap")
+        scroll_stack.add_labeled_value(
+            LabelControl("main_settings_lbl", Rect(0, 0, content_w, row_lbl_h), "SettingsRegistry + SettingDescriptor", align="left"),
+            LabelControl(
+                "main_settings_val", Rect(0, 0, content_w, row_val_h),
+                f"audio.volume={_vol_obs.value}  ui.dark_mode={_dark_obs.value}  render.fps_cap={_fps_obs.value}",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── Scheduling ──────────────────────────────────────────────────
+        _tick_counter = [0]
+        _timer_val = LabelControl(
+            "main_timer_val", Rect(0, 0, content_w, row_val_h), "Ticks: 0", align="left",
+        )
+        _timer_val.font_role = fn
+
+        def _on_tick() -> None:
+            _tick_counter[0] += 1
+            _timer_val.text = f"Ticks: {_tick_counter[0]}"
+
+        host.app.timers.add_timer("main_dock_tick", 1.0, _on_tick)
+        scroll_stack.add_labeled_value(
+            LabelControl("main_timers_lbl", Rect(0, 0, content_w, row_lbl_h), "Timers  (fires every 1 s)", align="left"),
+            _timer_val, x=0, label_gap=4, item_gap=item_gap,
+        )
+
+        # ToastManager + ToastHandle
+        scroll_stack.add_labeled_value(
+            LabelControl("main_toast_lbl", Rect(0, 0, content_w, row_lbl_h), "ToastManager + ToastHandle", align="left"),
+            LabelControl(
+                "main_toast_desc", Rect(0, 0, content_w, row_val_h),
+                "app.toasts.show(message, title, severity, duration_seconds) -> ToastHandle",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=4,
+        )
+        _toast_btn_y = scroll_stack.y
+        scroll_stack.add(
+            ButtonControl(
+                "main_toast_info_btn", Rect(0, 0, 110, 26), "Info Toast",
+                lambda: host.app.toasts.show(
+                    "Demo task completed", title="Scheduler",
+                    severity=ToastSeverity.INFO, duration_seconds=3.0,
+                ),
+                font_role=fn,
+            ),
+            x=0, y=_toast_btn_y, focusable=True,
+        )
+        scroll_stack.add(
+            ButtonControl(
+                "main_toast_warn_btn", Rect(0, 0, 130, 26), "Warning Toast",
+                lambda: host.app.toasts.show(
+                    "Low memory detected", title="System",
+                    severity=ToastSeverity.WARNING, duration_seconds=4.0,
+                ),
+                font_role=fn,
+            ),
+            x=118, y=_toast_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + item_gap)
+
+        # DialogManager + DialogHandle
+        scroll_stack.add_labeled_value(
+            LabelControl("main_dialog_lbl", Rect(0, 0, content_w, row_lbl_h), "DialogManager + DialogHandle", align="left"),
+            LabelControl(
+                "main_dialog_desc", Rect(0, 0, content_w, row_val_h),
+                "app.dialogs.show_alert/confirm/prompt() returns DialogHandle; handle.close() dismisses",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=4,
+        )
+        _dlg_btn_y = scroll_stack.y
+        scroll_stack.add(
+            ButtonControl(
+                "main_dlg_alert_btn", Rect(0, 0, 76, 26), "Alert",
+                lambda: host.app.dialogs.show_alert("gui_do", "Alert from DialogManager"),
+                font_role=fn,
+            ),
+            x=0, y=_dlg_btn_y, focusable=True,
+        )
+        scroll_stack.add(
+            ButtonControl(
+                "main_dlg_confirm_btn", Rect(0, 0, 88, 26), "Confirm",
+                lambda: host.app.dialogs.show_confirm("gui_do", "Proceed?", on_confirm=lambda: None),
+                font_role=fn,
+            ),
+            x=84, y=_dlg_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + section_gap)
+
+        # ── Animation ───────────────────────────────────────────────────
+        scroll_stack.add_labeled_value(
+            LabelControl("main_tween_lbl", Rect(0, 0, content_w, row_lbl_h), "TweenHandle + Easing", align="left"),
+            LabelControl(
+                "main_tween_val", Rect(0, 0, content_w, row_val_h),
+                "handle = tweens.tween(target, attr, end, secs, easing=Easing.EASE_IN_OUT)  handle.cancel()",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_lanim_lbl", Rect(0, 0, content_w, row_lbl_h), "LayoutAnimator", align="left"),
+            LabelControl(
+                "main_lanim_val", Rect(0, 0, content_w, row_val_h),
+                "LayoutAnimator(tweens, duration, easing)  intercepts layout reflows and tweens children",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── Input ───────────────────────────────────────────────────────
+        scroll_stack.add_labeled_value(
+            LabelControl("main_gesture_lbl", Rect(0, 0, content_w, row_lbl_h), "GestureRecognizer", align="left"),
+            LabelControl(
+                "main_gesture_val", Rect(0, 0, content_w, row_val_h),
+                "GestureRecognizer(on_double_click, on_long_press, on_swipe)  .process_event(event)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_rate_lbl", Rect(0, 0, content_w, row_lbl_h), "Debouncer + Throttler", align="left"),
+            LabelControl(
+                "main_rate_val", Rect(0, 0, content_w, row_val_h),
+                "Debouncer(delay_ms, callback, timers)  Throttler(interval_ms, callback)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_chord_lbl", Rect(0, 0, content_w, row_lbl_h), "KeyChordManager + KeyChord + ChordStep", align="left"),
+            LabelControl(
+                "main_chord_val", Rect(0, 0, content_w, row_val_h),
+                "KeyChordManager(actions, timers)  .bind(KeyChord([ChordStep(K_k, CTRL), ChordStep(K_c, CTRL)]), action)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── Services ────────────────────────────────────────────────────
+        _ = ErrorBoundary  # imported; see tests/test_error_handling_runtime.py for full usage
+        scroll_stack.add_labeled_value(
+            LabelControl("main_eb_lbl", Rect(0, 0, content_w, row_lbl_h), "ErrorBoundary  (wraps child UiNode)", align="left"),
+            LabelControl(
+                "main_eb_val", Rect(0, 0, content_w, row_val_h),
+                "ErrorBoundary(child=ctrl, on_error=cb, error_text='...')  .has_error  .recover()",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_resize_lbl", Rect(0, 0, content_w, row_lbl_h), "ResizeManager", align="left"),
+            LabelControl(
+                "main_resize_val", Rect(0, 0, content_w, row_val_h),
+                "ResizeManager(initial_size, event_bus)  .on_resize(callback)  .notify_resize(w, h)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_drag_lbl", Rect(0, 0, content_w, row_lbl_h), "DragDropManager + DragPayload", align="left"),
+            LabelControl(
+                "main_drag_val", Rect(0, 0, content_w, row_val_h),
+                "app.drag_drop.begin_drag(DragPayload(kind='file', data={...}))  resolved via on_drop callback",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=item_gap,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_constraint_lbl", Rect(0, 0, content_w, row_lbl_h), "ConstraintLayout + AnchorConstraint", align="left"),
+            LabelControl(
+                "main_constraint_val", Rect(0, 0, content_w, row_val_h),
+                "ConstraintLayout()  .add(AnchorConstraint(node, left=12, bottom=12, width=100, height=28))  .apply(rect)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── Theme ────────────────────────────────────────────────────────
+        host._main_theme_manager = ThemeManager()
+        host._main_theme_manager.register_theme("contrast", {"primary": (255, 220, 0), "surface": (10, 10, 10)})
+        _primary_tok = host._main_theme_manager.token("primary")
+        scroll_stack.add_labeled_value(
+            LabelControl("main_theme_mgr_lbl", Rect(0, 0, content_w, row_lbl_h), "ThemeManager + DesignTokens", align="left"),
+            LabelControl(
+                "main_theme_mgr_val", Rect(0, 0, content_w, row_val_h),
+                f"Active: '{host._main_theme_manager.active_theme.value}'  primary={_primary_tok}  .switch('contrast') hot-swaps tokens",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── Feature types ────────────────────────────────────────────────
+        scroll_stack.add_labeled_value(
+            LabelControl("main_dfeat_lbl", Rect(0, 0, content_w, row_lbl_h), "DirectFeature + LogicFeature + FeatureMessage", align="left"),
+            LabelControl(
+                "main_dfeat_val", Rect(0, 0, content_w, row_val_h),
+                "DirectFeature: owns draw/update hooks; LogicFeature: pure logic provider; RoutedFeature: message-routed",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── FixedPatternFormatter ─────────────────────────────────────────
+        _fpp_fmt = FixedPatternFormatter("#####-####")
+        _fpp_input = _fpp_fmt.create_text_input(
+            "main_fixed_pattern_input",
+            Rect(0, 0, 200, 30),
+            raw_value="941010001",
+            placeholder="#####-####",
+            font_role=fn,
+        )
+        scroll_stack.add_labeled_value(
+            LabelControl("main_fpp_lbl", Rect(0, 0, content_w, row_lbl_h), "FixedPatternFormatter  (ZIP+4 postal code)", align="left"),
+            _fpp_input, x=0, label_gap=4, item_gap=item_gap, focusable_value=True,
+        )
 
     def _register_screen_font_roles(self, host) -> None:
         for scene_name in ("main", "control_showcase"):
@@ -619,6 +1074,9 @@ class MainDemoFeature(Feature):
             label_gap=4,
             item_gap=item_gap,
         )
+
+        self._build_main_scene_extra_systems(host, scroll_stack, content_w, row_lbl_h, row_val_h, item_gap)
+
         y = scroll_stack.y
 
         host.main_controls_scroll.set_content_size(content_w, y + 12)
