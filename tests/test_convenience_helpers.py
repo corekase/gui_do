@@ -19,6 +19,7 @@ from gui_do.app.gui_application import GuiApplication
 from gui_do.controls.button_control import ButtonControl
 from gui_do.controls.label_control import LabelControl
 from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.scroll_view_control import ScrollViewControl
 from gui_do.controls.scrollbar_control import ScrollbarControl
 from gui_do.controls.slider_control import SliderControl
 from gui_do.controls.window_control import WindowControl
@@ -360,6 +361,89 @@ class GuiApplicationConvenienceTests(unittest.TestCase):
         result = self.app.focus_on("btn2", scene_name="other2")
         self.assertTrue(result)
         self.assertIs(self.app.focus.focused_node, other_btn)
+
+
+class GuiApplicationScrollStackComposerTests(unittest.TestCase):
+
+    def setUp(self) -> None:
+        pygame.init()
+        self.app = GuiApplication(Surface((640, 480)))
+        root = self.app.add(PanelControl("root", Rect(0, 0, 640, 480)))
+        self.scroll = root.add(
+            ScrollViewControl(
+                "scroll",
+                Rect(0, 0, 320, 220),
+                content_width=300,
+                content_height=600,
+                scroll_y=True,
+            )
+        )
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def test_add_advances_y_by_control_height_and_gap(self) -> None:
+        stack = self.app.compose_scroll_stack(self.scroll)
+        label = LabelControl("lbl", Rect(0, 0, 120, 20), "One")
+        stack.add(label, gap_after=4)
+        self.assertEqual(stack.y, 24)
+
+    def test_add_with_explicit_y_does_not_advance_cursor(self) -> None:
+        stack = self.app.compose_scroll_stack(self.scroll)
+        a = LabelControl("a", Rect(0, 0, 120, 20), "A")
+        b = LabelControl("b", Rect(0, 0, 120, 20), "B")
+        stack.add(a, gap_after=3)
+        before = stack.y
+        stack.add(b, y=100)
+        self.assertEqual(stack.y, before)
+
+    def test_add_non_focusable_sets_tab_index_minus_one(self) -> None:
+        stack = self.app.compose_scroll_stack(self.scroll)
+        btn = ButtonControl("btn", Rect(0, 0, 90, 26), "Push")
+        btn.set_tab_index(7)
+        stack.add(btn, focusable=False)
+        self.assertEqual(btn.tab_index, -1)
+
+    def test_add_labeled_value_composes_standard_spacing(self) -> None:
+        stack = self.app.compose_scroll_stack(self.scroll)
+        label = LabelControl("lbl", Rect(0, 0, 120, 20), "Label")
+        value = LabelControl("val", Rect(0, 0, 120, 22), "Value")
+        stack.add_labeled_value(label, value, label_gap=4, item_gap=8)
+        self.assertEqual(stack.y, 54)
+
+    def test_add_labeled_value_focusable_value_preserves_tab_index(self) -> None:
+        stack = self.app.compose_scroll_stack(self.scroll)
+        label = LabelControl("lbl", Rect(0, 0, 120, 20), "Label")
+        value = ButtonControl("value_button", Rect(0, 0, 90, 26), "Go")
+        value.set_tab_index(3)
+        stack.add_labeled_value(label, value, focusable_value=True)
+        self.assertEqual(value.tab_index, 3)
+
+
+class GuiApplicationVerticalCursorTests(unittest.TestCase):
+
+    def setUp(self) -> None:
+        pygame.init()
+        self.app = GuiApplication(Surface((320, 240)))
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def test_next_slot_returns_current_y_and_advances(self) -> None:
+        cursor = self.app.vertical_cursor(start_y=10)
+        top = cursor.next_slot(20, gap_after=4)
+        self.assertEqual(top, 10)
+        self.assertEqual(cursor.y, 34)
+
+    def test_advance_updates_cursor(self) -> None:
+        cursor = self.app.vertical_cursor(start_y=5)
+        cursor.advance(12)
+        self.assertEqual(cursor.y, 17)
+
+    def test_set_y_overwrites_cursor(self) -> None:
+        cursor = self.app.vertical_cursor(start_y=0)
+        cursor.set_y(41)
+        self.assertEqual(cursor.y, 41)
 
 
 # ---------------------------------------------------------------------------

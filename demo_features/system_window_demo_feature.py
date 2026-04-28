@@ -443,56 +443,56 @@ class SystemWindowDemoFeature(RoutedFeature):
 
         # --- Column A: App State + Clipboard ---
         ax = p.left + lpad
-        ay = p.top + lpad
+        col_a = host.app.vertical_cursor(start_y=p.top + lpad)
 
         wa(host.app.style_label(
-            LabelControl("sys_st_appstate_hdr", Rect(ax, ay, col_w, lbl_h), "App State", align="left"),
+            LabelControl("sys_st_appstate_hdr", Rect(ax, col_a.y, col_w, lbl_h), "App State", align="left"),
             size=14, role=self.font_role("control"),
         ))
-        ay += lbl_h + row_gap
+        col_a.advance(lbl_h + row_gap)
 
-        wa(ButtonControl("sys_st_save_all", Rect(ax, ay, 110, ctrl_h), "Save All State", self._save_app_state, font_role=self.font_role("control")))
-        wa(ButtonControl("sys_st_load_all", Rect(ax + 116, ay, 110, ctrl_h), "Load All State", self._load_app_state, font_role=self.font_role("control")))
-        ay += ctrl_h + row_gap
+        wa(ButtonControl("sys_st_save_all", Rect(ax, col_a.y, 110, ctrl_h), "Save All State", self._save_app_state, font_role=self.font_role("control")))
+        wa(ButtonControl("sys_st_load_all", Rect(ax + 116, col_a.y, 110, ctrl_h), "Load All State", self._load_app_state, font_role=self.font_role("control")))
+        col_a.advance(ctrl_h + row_gap)
 
-        wa(ButtonControl("sys_st_export", Rect(ax, ay, 110, ctrl_h), "Export JSON", self._export_state_json, font_role=self.font_role("control")))
-        ay += ctrl_h + row_gap
+        wa(ButtonControl("sys_st_export", Rect(ax, col_a.y, 110, ctrl_h), "Export JSON", self._export_state_json, font_role=self.font_role("control")))
+        col_a.advance(ctrl_h + row_gap)
 
         self._state_status_label = wa(host.app.style_label(
-            LabelControl("sys_st_status", Rect(ax, ay, col_w, lbl_h), "No state saved.", align="left"),
+            LabelControl("sys_st_status", Rect(ax, col_a.y, col_w, lbl_h), "No state saved.", align="left"),
             size=12, role=self.font_role("status"),
         ))
-        ay += lbl_h + section_gap
+        col_a.advance(lbl_h + section_gap)
 
         wa(host.app.style_label(
-            LabelControl("sys_clip_hdr", Rect(ax, ay, col_w, lbl_h), "Clipboard", align="left"),
+            LabelControl("sys_clip_hdr", Rect(ax, col_a.y, col_w, lbl_h), "Clipboard", align="left"),
             size=14, role=self.font_role("control"),
         ))
-        ay += lbl_h + row_gap
+        col_a.advance(lbl_h + row_gap)
 
         self._clip_input = wa(
-            TextInputControl("sys_clip_input", Rect(ax, ay, col_w, ctrl_h), placeholder="Type to copy…", font_role=self.font_role("control"))
+            TextInputControl("sys_clip_input", Rect(ax, col_a.y, col_w, ctrl_h), placeholder="Type to copy…", font_role=self.font_role("control"))
         )
-        ay += ctrl_h + row_gap
+        col_a.advance(ctrl_h + row_gap)
 
-        wa(ButtonControl("sys_clip_copy", Rect(ax, ay, 90, ctrl_h), "Copy", self._clipboard_copy, font_role=self.font_role("control")))
-        wa(ButtonControl("sys_clip_paste", Rect(ax + 96, ay, 90, ctrl_h), "Paste", self._clipboard_paste, font_role=self.font_role("control")))
-        ay += ctrl_h + row_gap
+        wa(ButtonControl("sys_clip_copy", Rect(ax, col_a.y, 90, ctrl_h), "Copy", self._clipboard_copy, font_role=self.font_role("control")))
+        wa(ButtonControl("sys_clip_paste", Rect(ax + 96, col_a.y, 90, ctrl_h), "Paste", self._clipboard_paste, font_role=self.font_role("control")))
+        col_a.advance(ctrl_h + row_gap)
 
         self._clip_status_label = wa(host.app.style_label(
-            LabelControl("sys_clip_status", Rect(ax, ay, col_w, lbl_h), "Clipboard ready.", align="left"),
+            LabelControl("sys_clip_status", Rect(ax, col_a.y, col_w, lbl_h), "Clipboard ready.", align="left"),
             size=12, role=self.font_role("status"),
         ))
 
         # --- Column B: Reactive ComputedValue Demo ---
         bx = ax + col_w + section_gap
-        by = p.top + lpad
+        col_b = host.app.vertical_cursor(start_y=p.top + lpad)
 
         wa(host.app.style_label(
-            LabelControl("sys_rx_hdr", Rect(bx, by, col_w, lbl_h), "Reactive (ComputedValue)", align="left"),
+            LabelControl("sys_rx_hdr", Rect(bx, col_b.y, col_w, lbl_h), "Reactive (ComputedValue)", align="left"),
             size=14, role=self.font_role("control"),
         ))
-        by += lbl_h + row_gap
+        col_b.advance(lbl_h + row_gap)
 
         self._dep_a = ObservableValue(40.0)
         self._dep_b = ObservableValue(60.0)
@@ -506,33 +506,33 @@ class SystemWindowDemoFeature(RoutedFeature):
         )
 
         wa(host.app.style_label(
-            LabelControl("sys_rx_a_lbl", Rect(bx, by, 28, lbl_h), "A:", align="left"),
+            LabelControl("sys_rx_a_lbl", Rect(bx, col_b.y, 28, lbl_h), "A:", align="left"),
             size=13, role=self.font_role("label"),
         ))
         self._slider_a = wa(
-            SliderControl("sys_rx_sla", Rect(bx + 32, by, col_w - 32, 20), LayoutAxis.HORIZONTAL, 0.0, 100.0, 40.0,
+            SliderControl("sys_rx_sla", Rect(bx + 32, col_b.y, col_w - 32, 20), LayoutAxis.HORIZONTAL, 0.0, 100.0, 40.0,
                           on_change=lambda v, _r: self._on_dep_a_change(v))
         )
-        by += 26
+        col_b.advance(26)
 
         wa(host.app.style_label(
-            LabelControl("sys_rx_b_lbl", Rect(bx, by, 28, lbl_h), "B:", align="left"),
+            LabelControl("sys_rx_b_lbl", Rect(bx, col_b.y, 28, lbl_h), "B:", align="left"),
             size=13, role=self.font_role("label"),
         ))
         self._slider_b = wa(
-            SliderControl("sys_rx_slb", Rect(bx + 32, by, col_w - 32, 20), LayoutAxis.HORIZONTAL, 0.0, 100.0, 60.0,
+            SliderControl("sys_rx_slb", Rect(bx + 32, col_b.y, col_w - 32, 20), LayoutAxis.HORIZONTAL, 0.0, 100.0, 60.0,
                           on_change=lambda v, _r: self._on_dep_b_change(v))
         )
-        by += 30
+        col_b.advance(30)
 
         self._reactive_sum_label = wa(host.app.style_label(
-            LabelControl("sys_rx_sum", Rect(bx, by, col_w, lbl_h + 2), f"Sum: {self._comp_sum.value:.1f}", align="left"),
+            LabelControl("sys_rx_sum", Rect(bx, col_b.y, col_w, lbl_h + 2), f"Sum: {self._comp_sum.value:.1f}", align="left"),
             size=13, role=self.font_role("label"),
         ))
-        by += lbl_h + 4
+        col_b.advance(lbl_h + 4)
 
         self._reactive_product_label = wa(host.app.style_label(
-            LabelControl("sys_rx_prod", Rect(bx, by, col_w, lbl_h + 2), f"Product / 100: {self._comp_product.value:.2f}", align="left"),
+            LabelControl("sys_rx_prod", Rect(bx, col_b.y, col_w, lbl_h + 2), f"Product / 100: {self._comp_product.value:.2f}", align="left"),
             size=13, role=self.font_role("label"),
         ))
 

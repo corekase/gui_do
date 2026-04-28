@@ -63,6 +63,96 @@ class _ScreenLifecycleEntry:
     entry_id: int = 0
 
 
+class _ScrollStackComposer:
+    """Compose controls in a ScrollViewControl with a vertical cursor."""
+
+    def __init__(self, scroll_view, *, start_y: int = 0, default_x: int = 0, non_focus_tab_index: int = -1) -> None:
+        self._scroll_view = scroll_view
+        self._y = int(start_y)
+        self._default_x = int(default_x)
+        self._non_focus_tab_index = int(non_focus_tab_index)
+
+    @property
+    def y(self) -> int:
+        """Current vertical cursor position inside the scroll content."""
+        return self._y
+
+    def set_y(self, y: int) -> int:
+        """Set vertical cursor and return updated value."""
+        self._y = int(y)
+        return self._y
+
+    def advance(self, delta: int) -> int:
+        """Move vertical cursor by *delta* and return updated value."""
+        self._y += int(delta)
+        return self._y
+
+    def add(
+        self,
+        control,
+        *,
+        x: Optional[int] = None,
+        y: Optional[int] = None,
+        focusable: bool = False,
+        height: Optional[int] = None,
+        gap_after: int = 0,
+    ):
+        """Add one control at cursor (or explicit y), optionally advancing cursor."""
+        place_x = self._default_x if x is None else int(x)
+        place_y = self._y if y is None else int(y)
+        if not focusable and hasattr(control, "set_tab_index"):
+            control.set_tab_index(self._non_focus_tab_index)
+        self._scroll_view.add(control, content_x=place_x, content_y=place_y)
+
+        if y is None:
+            if height is None:
+                rect = getattr(control, "rect", None)
+                used_height = int(getattr(rect, "height", 0))
+            else:
+                used_height = int(height)
+            self._y = place_y + max(0, used_height) + int(gap_after)
+        return control
+
+    def add_labeled_value(
+        self,
+        label_control,
+        value_control,
+        *,
+        x: Optional[int] = None,
+        label_gap: int = 4,
+        item_gap: int = 8,
+        focusable_value: bool = False,
+    ):
+        """Add a label row and value/control row using common demo spacing."""
+        self.add(label_control, x=x, gap_after=label_gap)
+        return self.add(value_control, x=x, gap_after=item_gap, focusable=focusable_value)
+
+
+class _VerticalCursor:
+    """Track vertical layout offsets in feature/scene builders."""
+
+    def __init__(self, *, start_y: int = 0) -> None:
+        self._y = int(start_y)
+
+    @property
+    def y(self) -> int:
+        return self._y
+
+    def set_y(self, y: int) -> int:
+        self._y = int(y)
+        return self._y
+
+    def advance(self, delta: int) -> int:
+        self._y += int(delta)
+        return self._y
+
+    def next_slot(self, height: int, *, gap_after: int = 0) -> int:
+        """Return current y and advance by height+gap."""
+        slot_top = self._y
+        self._y += int(height) + int(gap_after)
+        return slot_top
+
+
 class GuiApplication:
     """Application runtime coordinator for scene, input, capture, and rendering."""
 
@@ -942,6 +1032,30 @@ class GuiApplication:
         """
         scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         return self.focus.set_focus_by_id(scene, control_id)
+
+    def compose_scroll_stack(
+        self,
+        scroll_view,
+        *,
+        start_y: int = 0,
+        default_x: int = 0,
+        non_focus_tab_index: int = -1,
+    ):
+        """Return a vertical composition helper bound to one scroll view.
+
+        Use this helper to build repeated label/value/control rows without
+        manually tracking ``y += ...`` math for every insertion.
+        """
+        return _ScrollStackComposer(
+            scroll_view,
+            start_y=start_y,
+            default_x=default_x,
+            non_focus_tab_index=non_focus_tab_index,
+        )
+
+    def vertical_cursor(self, *, start_y: int = 0):
+        """Return a reusable y-cursor helper for manual Rect composition."""
+        return _VerticalCursor(start_y=start_y)
 
     # --- Feature helpers ---
 
