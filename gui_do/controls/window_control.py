@@ -45,9 +45,8 @@ class WindowControl(UiNode):
         self._preamble = preamble
         self._event_handler = event_handler
         self._postamble = postamble
-        self._use_frame_backdrop = bool(use_frame_backdrop)
         self._pristine = None
-        if not self._use_frame_backdrop:
+        if not use_frame_backdrop:
             self._pristine = pygame.Surface((self.rect.width, self.rect.height))
             self._pristine.fill((0, 0, 0))
         self._pristine_scaled = None

@@ -32,7 +32,13 @@ class EventBus:
         subs = self._subscribers.get(subscription.topic)
         if not subs:
             return
-        self._subscribers[subscription.topic] = [candidate for candidate in subs if candidate != subscription]
+        # Identity-based remove: only the exact returned subscription object is
+        # removed, so duplicate (equal) subscriptions are not accidentally purged.
+        # Avoids allocating a new list in the common case.
+        for i, s in enumerate(subs):
+            if s is subscription:
+                del subs[i]
+                return
 
     def unsubscribe_scope(self, scope: str) -> int:
         """Remove all subscriptions whose scope matches *scope*. Returns the number removed."""

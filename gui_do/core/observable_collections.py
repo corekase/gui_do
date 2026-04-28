@@ -129,7 +129,10 @@ class ObservableList(Generic[T]):
     # ------------------------------------------------------------------
 
     def _notify(self, change: CollectionChange) -> None:
-        for listener in tuple(self._listeners):
+        listeners = self._listeners
+        if not listeners:
+            return
+        for listener in tuple(listeners):
             listener(change)
 
     # ------------------------------------------------------------------
@@ -293,7 +296,10 @@ class ObservableDict(Generic[K, V]):
     # ------------------------------------------------------------------
 
     def _notify(self, change: CollectionChange) -> None:
-        for listener in tuple(self._listeners):
+        listeners = self._listeners
+        if not listeners:
+            return
+        for listener in tuple(listeners):
             listener(change)
 
     # ------------------------------------------------------------------

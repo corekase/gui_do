@@ -213,7 +213,6 @@ class CommandHistory:
         def __init__(self, history: "CommandHistory", description: str) -> None:
             self._history = history
             self._tx = history.begin_transaction(description)
-            self._committed = False
 
         @property
         def transaction(self) -> CommandTransaction:

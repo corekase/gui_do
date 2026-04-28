@@ -1,4 +1,3 @@
-from collections import deque
 from typing import Callable, Generator, List, Optional
 from typing import TYPE_CHECKING
 
@@ -86,11 +85,16 @@ class Scene:
     # --- Internal traversal ---
 
     def _walk_nodes(self) -> "Generator[UiNode, None, None]":
-        queue: deque[UiNode] = deque(self.nodes)
-        while queue:
-            node = queue.popleft()
+        # List-with-index BFS avoids deque object overhead and popleft cost.
+        # The list grows as children are appended; index advances without shifting.
+        queue: list = list(self.nodes)
+        i = 0
+        while i < len(queue):
+            node = queue[i]
+            i += 1
             yield node
-            queue.extend(node.children)
+            if node.children:
+                queue.extend(node.children)
 
     def _window_nodes(self) -> List[UiNode]:
         return [node for node in self._walk_nodes() if self._is_window_like(node)]

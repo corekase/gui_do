@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 
 _DIVIDER_THICKNESS = 6
 _MIN_PANE_DEFAULT = 48
-_CURSOR_HORIZONTAL = pygame.SYSTEM_CURSOR_SIZEWE
-_CURSOR_VERTICAL = pygame.SYSTEM_CURSOR_SIZENS
 
 
 RatioChangedCallback = Optional[Callable[[float], None]]

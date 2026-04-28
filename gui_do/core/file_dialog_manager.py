@@ -77,7 +77,6 @@ _BTN_W = 90
 _PAD = 8
 _FONT_SIZE = 17
 _INPUT_H = 28
-_FILTER_H = 24
 _BREADCRUMB_H = 22
 
 
@@ -106,7 +105,6 @@ class _FileDialogPanel(OverlayPanelControl):
         self._filter_index: int = 0
         self._entries: List[Path] = []
         self._list_items: List[ListItem] = []
-        self._font_size = _FONT_SIZE
 
         # Sub-controls (laid out in _layout)
         inner_w = rect.width - _PAD * 2

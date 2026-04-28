@@ -19,9 +19,11 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - GuiApplication
   - UiEngine
   - Scene Management
+  - SceneSpatialIndex
 - [Controls](#controls)
   - Display and Container Controls
   - Text Controls
+  - TextFlow and TextSpan
   - Selection, Range, and Data Controls
   - Canvas, Scroll, and Advanced Inputs
 - [Layout](#layout)
@@ -33,15 +35,18 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - WindowTilingManager
   - LayoutAnimator
   - LayoutPass
+  - ResponsiveLayout and Breakpoint
 - [Events and Input](#events-and-input)
   - GuiEvent and EventManager
   - EventBus
   - ActionManager
   - KeyChordManager
+  - InputMap and InputBinding
   - FocusManager
   - FocusScopeManager
   - GestureRecognizer
   - ValueChangeReason and ValueChangeCallback
+  - EventRecorder and EventPlayback
 - [Data and State](#data-and-state)
   - ObservableValue, ComputedValue, and PresentationModel
   - ObservableList and ObservableDict
@@ -54,7 +59,9 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - SettingsRegistry
   - TextFormatter
   - VirtualItemSource and FixedItemSource
+  - SortFilterProxySource
   - AsyncDataProvider
+  - SceneSnapshot and NodeSnapshot
 - [Scheduling and Animation](#scheduling-and-animation)
   - TaskScheduler
   - Timers
@@ -74,6 +81,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ClipboardManager
   - CommandPaletteManager, CommandEntry, and CommandPaletteHandle
   - CanvasViewport
+  - CursorManager
   - ErrorBoundary
 - [Menu System](#menu-system)
   - MenuBarControl and MenuEntry
@@ -93,6 +101,11 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - BuiltInGraphicsFactory
   - FontManager
     - FontRoleRegistry
+- [Localization](#localization)
+  - StringTable and LocaleRegistry
+- [Introspection](#introspection)
+  - ui_property and PropertyDescriptor
+  - PropertyRegistry
 - [Telemetry](#telemetry)
 - [Public API Index](#public-api-index)
 
@@ -296,6 +309,30 @@ print(app.scene_names())
 
 Standalone helpers such as `ContextMenuManager`, `FileDialogManager`, `SceneTransitionManager`, `ResizeManager`, `ThemeManager`, and `CommandPaletteManager` are instantiated explicitly and composed with the current application or scene services as needed.
 
+### SceneSpatialIndex
+
+`SceneSpatialIndex` is a uniform-grid spatial index for fast point and rect queries against a scene graph. It builds an internal cell map over all node bounding rects so hit-testing, rubber-band selection, and drag-drop zone detection run in O(1) average case rather than O(n) full-scene walks.
+
+```python
+from gui_do import SceneSpatialIndex
+
+index = SceneSpatialIndex(cell_size=64)
+
+# Build from the active scene:
+index.build(app.scene)
+
+# Point hit-test — returns nodes in BFS order:
+nodes = index.query_point(mx, my)
+
+# Rect range query (rubber-band selection):
+selected = index.query_rect(selection_rect)
+
+# Incremental update when one node moves:
+index.update_node(my_node)
+```
+
+Rebuild via `index.build(scene)` on scene change or full layout reflow. Use `index.update_node(node)` for incremental single-node moves during drag operations.
+
 ---
 
 ## Controls [Back to Top](#table-of-contents)
@@ -355,6 +392,29 @@ hint = RichLabelControl(
     text="**Bold**, _italic_, and `code` spans are supported.",
 )
 ```
+
+### TextFlow and TextSpan
+
+`TextFlow` is a paragraph layout engine for mixed-style text with word-wrap. It renders a sequence of `TextSpan` objects as multi-line text onto a surface, resolving font metrics through the active `ColorTheme`. Use it when `RichLabelControl` is not enough — for example, inline help panels, tooltips with mixed formatting, or canvas-embedded annotations.
+
+```python
+from gui_do import TextFlow, TextSpan
+
+spans = [
+    TextSpan("Status: ", role="body"),
+    TextSpan("OK", bold=True, color=(80, 200, 80), role="body"),
+    TextSpan("\nDetails are shown below.", role="body"),
+]
+
+flow = TextFlow(width=320, line_spacing=4)
+flow.set_content(spans)
+flow.layout(app.theme)      # re-call after width or content changes
+
+# In draw():
+used_height = flow.render(surface, x=20, y=40)
+```
+
+`TextSpan` fields: `text`, `bold`, `italic`, `color` (RGB/RGBA or `None` for theme default), `role` (font role name).
 
 ### Selection, Range, and Data Controls
 
@@ -530,6 +590,29 @@ root.mark_dirty()        # call when content changes
 root.update(container_rect)   # runs measure + arrange only when dirty
 ```
 
+### ResponsiveLayout and Breakpoint
+
+`ResponsiveLayout` wraps any set of layout managers and hot-swaps the active one based on the current container width. When the container is resized, call `update(width)` to let the manager evaluate its `Breakpoint` list and switch layouts automatically. `active_breakpoint` is a reactive `ObservableValue` subscribers can watch.
+
+```python
+from gui_do import ResponsiveLayout, Breakpoint, FlexLayout, GridLayout, FlexDirection
+
+narrow = FlexLayout(FlexDirection.COLUMN, gap=4)
+wide   = GridLayout(col_tracks=[...], row_tracks=[...], gap=8)
+
+responsive = ResponsiveLayout(default_layout=narrow)
+responsive.add_breakpoint(Breakpoint("medium", min_width=480, layout=wide))
+responsive.add_breakpoint(Breakpoint("narrow", min_width=0,   layout=narrow))
+
+responsive.active_breakpoint.subscribe(lambda name: print("Layout ->", name))
+
+# Per resize event:
+if responsive.update(panel.rect.width):
+    do_layout_pass(responsive.active_layout)
+```
+
+`Breakpoint` fields are `name`, `min_width`, and `layout`. Breakpoints are evaluated in descending `min_width` order; the first matching one wins.
+
 ---
 
 ## Events and Input [Back to Top](#table-of-contents)
@@ -579,6 +662,37 @@ actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 ```
 
 For a one-call setup, use `register_and_bind(...)`.
+
+### InputMap and InputBinding
+
+`InputMap` is a persistence-aware action-to-key binding table that bridges physical inputs to logical action names. Features declare default bindings with `declare(...)`, application code or user settings override them with `bind(...)`, and `apply(actions)` pushes all current bindings into an `ActionManager`. `InputBinding` is the exported binding record.
+
+```python
+import pygame
+from gui_do import InputMap, InputBinding
+
+imap = InputMap()
+
+# Declare defaults (typically in feature.build):
+imap.declare("edit.copy",  key=pygame.K_c, mod=pygame.KMOD_CTRL, label="Copy")
+imap.declare("file.save",  key=pygame.K_s, mod=pygame.KMOD_CTRL, label="Save")
+
+# Apply to ActionManager:
+app.actions.register_action("edit.copy",  lambda _e: do_copy())
+app.actions.register_action("file.save",  lambda _e: do_save())
+imap.apply(app.actions)
+
+# Override at runtime:
+imap.bind("edit.copy", key=pygame.K_c, mod=pygame.KMOD_CTRL | pygame.KMOD_SHIFT)
+
+# Persist user remaps:
+from gui_do import SettingsRegistry
+registry = SettingsRegistry("settings.json")
+imap.save(registry)
+imap.load(registry)   # on next launch
+```
+
+Call `imap.bindings()` to get the full list of `InputBinding` records for displaying a keybinding settings panel.
 
 ### KeyChordManager
 
@@ -672,6 +786,37 @@ slider = SliderControl("zoom", Rect(20, 20, 240, 24), LayoutAxis.HORIZONTAL, 0.0
 ```
 
 Members are `KEYBOARD`, `PROGRAMMATIC`, `MOUSE_DRAG`, and `WHEEL`.
+
+### EventRecorder and EventPlayback
+
+`EventRecorder` captures a time-stamped log of `GuiEvent` objects. Recordings can be saved to a JSON file and replayed. `EventPlayback` re-injects recorded events through a handler at the original relative timing, driven by a frame-elapsed accumulator with no OS timer APIs. `RecordedEvent` is the exported per-event record type.
+
+```python
+from gui_do import EventRecorder, EventPlayback
+
+# Recording:
+recorder = EventRecorder()
+recorder.start()
+
+# After normalizing each event in your loop:
+# recorder.record(gui_event)
+
+events = recorder.stop()
+recorder.save("my_macro.json")
+
+# Playback:
+log = EventRecorder.load_file("my_macro.json")
+player = EventPlayback(log, handler=app.process_event)
+player.start()
+
+# Per frame:
+player.update(dt_seconds)
+
+if not player.is_playing:
+    print("Playback complete")
+```
+
+Typical uses include integration tests (record known-good interactions and replay in CI), user macros, and tutorial walkthroughs.
 
 ---
 
@@ -913,6 +1058,57 @@ elif state.is_loaded:
 ```
 
 `LoadStateKind` values are `IDLE`, `LOADING`, `LOADED`, and `FAILED`. Use `provider.cancel()` to abort an in-flight load and `provider.load(fn)` to reload.
+
+### SortFilterProxySource
+
+`SortFilterProxySource` wraps any `VirtualItemSource` (including `FixedItemSource` and `ObservableList`) and applies composable filter, sort-key, and optional group-by transforms. The proxy recomputes its visible index list on demand and notifies subscribers so data controls refresh automatically.
+
+```python
+from gui_do import SortFilterProxySource, FixedItemSource, ListItem, ListViewControl
+
+base = FixedItemSource([ListItem("Banana"), ListItem("Apple"), ListItem("Cherry")])
+proxy = SortFilterProxySource(base)
+
+# Filter to items starting with 'A':
+proxy.set_filter(lambda item: item.label.startswith("A"))
+
+# Sort alphabetically:
+proxy.set_sort_key(lambda item: item.label)
+
+# Wire to a list view:
+list_view = ListViewControl("list", rect, source=proxy)
+proxy.subscribe(lambda: list_view.invalidate())
+
+# Change filter at runtime — subscribers are notified:
+proxy.set_filter(None)   # clear filter; shows all items
+```
+
+Attach to an `ObservableList` for live mutation tracking by subscribing `proxy.invalidate` to the list's change events.
+
+### SceneSnapshot and NodeSnapshot
+
+`SceneSnapshot` serializes and restores the rect, visibility, and enabled-state of nodes identified by `control_id`. It integrates with `CommandHistory` for structural undo/redo and with `SettingsRegistry` for workspace persistence. Only data state is serialized; callbacks and subscriptions are not touched. `NodeSnapshot` is the exported per-node record type.
+
+```python
+from gui_do import SceneSnapshot
+
+# Capture current layout:
+before = SceneSnapshot.capture(app.scene)
+
+# ... user moves or resizes controls ...
+
+# Restore:
+before.restore(app.scene)
+
+# Persist to disk:
+before.save("workspace.json")
+
+# Load and restore on next launch:
+snap = SceneSnapshot.load("workspace.json")
+snap.restore(app.scene)
+```
+
+Each `NodeSnapshot` carries `control_id`, `rect`, `visible`, `enabled`, and an `extra` dict for app-specific string payload.
 
 ---
 
@@ -1229,6 +1425,30 @@ if boundary.has_error:
     boundary.recover()
 ```
 
+### CursorManager
+
+`CursorManager` is a priority-stack cursor management service for pygame applications. Controls push cursor requests with a priority level; each frame the manager resolves the highest-priority active request and calls `pygame.mouse.set_cursor()` only when the resolved shape changes, avoiding redundant system calls. `CursorShape` is an enum of portable system cursor shapes backed by `pygame.SYSTEM_CURSOR_*` constants. `CursorHandle` releases a cursor request when no longer needed.
+
+```python
+from gui_do import CursorManager, CursorShape
+
+cursor_mgr = CursorManager()
+
+# Push a resize cursor during a splitter drag:
+handle = cursor_mgr.push(CursorShape.RESIZE_H, priority=10)
+
+# Per frame:
+cursor_mgr.update()
+
+# Release when the drag ends; the previous cursor is restored:
+handle.release()
+
+# Reset to the default arrow (e.g. on scene change):
+cursor_mgr.reset()
+```
+
+Available shapes: `ARROW`, `TEXT`, `WAIT`, `CROSSHAIR`, `RESIZE_NW_SE`, `RESIZE_NE_SW`, `RESIZE_H`, `RESIZE_V`, `RESIZE_ALL`, `FORBIDDEN`, `HAND`.
+
 ---
 
 ## Menu System [Back to Top](#table-of-contents)
@@ -1448,6 +1668,90 @@ body_font = app.theme.fonts.resolve("body", 16)
 
 ---
 
+## Localization [Back to Top](#table-of-contents)
+
+### StringTable and LocaleRegistry
+
+`StringTable` is a flat key-to-text mapping for one locale. `LocaleRegistry` holds multiple tables, exposes a reactive `current_locale` observable, and provides `t(key)` for locale-aware string look-up. When the active locale changes, subscribers are notified automatically so UI strings can be refreshed without manual tracking.
+
+```python
+from gui_do import StringTable, LocaleRegistry
+
+registry = LocaleRegistry(default_locale="en")
+registry.register(StringTable("en", {
+    "app.title":     "My Application",
+    "button.ok":     "OK",
+    "button.cancel": "Cancel",
+}))
+registry.register(StringTable("es", {
+    "app.title":     "Mi Aplicación",
+    "button.ok":     "Aceptar",
+    "button.cancel": "Cancelar",
+}))
+
+# Look up a string with the active locale:
+label.text = registry.t("app.title")          # "My Application"
+
+# Switch locale — subscribers are notified:
+registry.set_locale("es")
+label.text = registry.t("app.title")          # "Mi Aplicación"
+
+# React to locale changes:
+registry.current_locale.subscribe(lambda _: refresh_ui())
+
+# Fall back to a literal when a key is missing:
+label.text = registry.t("missing.key", fallback="Unknown")
+```
+
+Call `registry.available_locales()` to list registered locale IDs and `registry.current_locale.value` to read the active locale ID.
+
+---
+
+## Introspection [Back to Top](#table-of-contents)
+
+### ui_property and PropertyDescriptor
+
+`ui_property` is a decorator that annotates Python `property` descriptors on `UiNode` subclasses with display metadata: `label`, `type`, `min`, `max`, `group`, and `read_only`. `PropertyDescriptor` is the exported metadata record holding those fields. This lets tooling such as debug inspectors, settings panels, and theme editors discover and render a control's properties without hard-coding its internals.
+
+```python
+from gui_do import ui_property
+
+class MyControl(PanelControl):
+    def __init__(self, ...):
+        super().__init__(...)
+        self._alpha: float = 1.0
+
+    @property
+    @ui_property(label="Opacity", type="float", min=0.0, max=1.0, group="Appearance")
+    def alpha(self) -> float:
+        return self._alpha
+
+    @alpha.setter
+    def alpha(self, v: float) -> None:
+        self._alpha = float(v)
+        self.invalidate()
+```
+
+### PropertyRegistry
+
+`PropertyRegistry` scans class hierarchies and collects `ui_property`-annotated descriptors. `property_registry` is the module-level singleton instance used by controls and tooling alike.
+
+```python
+from gui_do import property_registry, PropertyDescriptor
+
+# Retrieve all annotated descriptors for a class:
+descs = property_registry.descriptors_for(MyControl)
+for d in descs:
+    print(d.name, d.label, d.type, d.group)
+
+# All classes that have registered properties:
+classes = property_registry.all_classes()
+```
+
+Descriptors are automatically collected the first time `descriptors_for` is called for a class and cached for subsequent look-ups.
+
+---
+
 ## Telemetry [Back to Top](#table-of-contents)
 
 gui_do includes opt-in runtime telemetry plus offline analysis helpers.
@@ -1522,6 +1826,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `SpinnerControl`
 - `RangeSliderControl`
 - `ColorPickerControl`
+- `TextFlow`
+- `TextSpan`
 
 ### Layout
 
@@ -1543,6 +1849,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `MeasureContext`
 - `ArrangeContext`
 - `LayoutRoot`
+- `ResponsiveLayout`
+- `Breakpoint`
 
 ### Events, Input, and Core Runtime
 
@@ -1564,6 +1872,11 @@ The following list is the complete public package export surface from `gui_do.__
 - `KeyChordManager`
 - `KeyChord`
 - `ChordStep`
+- `InputMap`
+- `InputBinding`
+- `EventRecorder`
+- `EventPlayback`
+- `RecordedEvent`
 
 ### Data and State
 
@@ -1596,9 +1909,12 @@ The following list is the complete public package export surface from `gui_do.__
 - `FixedPatternFormatter`
 - `VirtualItemSource`
 - `FixedItemSource`
+- `SortFilterProxySource`
 - `AsyncDataProvider`
 - `LoadState`
 - `LoadStateKind`
+- `SceneSnapshot`
+- `NodeSnapshot`
 
 ### Scheduling and Animation
 
@@ -1641,6 +1957,9 @@ The following list is the complete public package export surface from `gui_do.__
 - `CommandEntry`
 - `CommandPaletteHandle`
 - `CanvasViewport`
+- `CursorManager`
+- `CursorHandle`
+- `CursorShape`
 - `ErrorBoundary`
 
 ### Menu and Notifications
@@ -1668,6 +1987,22 @@ The following list is the complete public package export surface from `gui_do.__
 - `DesignTokens`
 - `ScopedTheme`
 - `ScopedThemeManager`
+
+### Localization
+
+- `StringTable`
+- `LocaleRegistry`
+
+### Introspection
+
+- `ui_property`
+- `PropertyDescriptor`
+- `PropertyRegistry`
+- `property_registry`
+
+### Spatial
+
+- `SceneSpatialIndex`
 
 ### Telemetry
 

@@ -42,7 +42,6 @@ class TextInputControl(UiNode):
         self._on_change = on_change
         self._on_submit = on_submit
         self._input_filter = input_filter
-        self._font_role = str(font_role)
         self.tab_index = 0  # focusable by default
         # Cursor / selection
         self._cursor_pos: int = len(self._value)

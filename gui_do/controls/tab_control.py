@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 _TAB_H = 32       # height of the tab bar strip
 _TAB_PAD_H = 12   # horizontal padding per tab label
-_TAB_PAD_V = 4    # vertical padding per tab label
 
 
 @dataclass
