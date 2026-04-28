@@ -210,10 +210,6 @@ class TaskScheduler:
         with self._lock:
             return self._suspended.copy()
 
-    def read_suspended_len(self) -> int:
-        with self._lock:
-            return len(self._suspended)
-
     def tasks_active(self) -> bool:
         with self._lock:
             return bool(self._pending_set or self._running)

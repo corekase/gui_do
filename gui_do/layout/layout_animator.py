@@ -1,20 +1,15 @@
 """LayoutAnimator — tween-driven animated transitions between layout states.
 
-When a :class:`~gui_do.ConstraintLayout` or :class:`~gui_do.FlexLayout` is
-re-applied after a constraint change (resize, child insertion, visibility
-toggle), child nodes jump to their new positions instantly.
-:class:`LayoutAnimator` intercepts that jump: it snapshots current rects,
-asks the layout to compute target rects, then uses the scene's
-:class:`~gui_do.TweenManager` to interpolate each child smoothly from current
-to target.
+When a :class:`~gui_do.ConstraintLayout` is re-applied after a constraint
+change (resize, child insertion, visibility toggle), child nodes jump to their
+new positions instantly.  :class:`LayoutAnimator` intercepts that jump: it
+snapshots current rects, asks the layout to compute target rects, then uses the
+scene's :class:`~gui_do.TweenManager` to interpolate each child smoothly from
+current to target.
 
 Usage::
 
     animator = LayoutAnimator(app.tweens, duration=0.25, easing=Easing.EASE_OUT)
-
-    # Animate a FlexLayout reflow after adding a child:
-    panel.children.append(new_button)
-    animator.apply_flex(flex_layout, items, container_rect)
 
     # Animate a ConstraintLayout reflow after a resize:
     animator.apply_constraint(constraint_layout, parent_rect)
@@ -36,7 +31,6 @@ from ..core.tween_manager import Easing, TweenHandle, TweenManager
 
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout
-    from ..layout.flex_layout import FlexItem, FlexLayout
     from ..core.ui_node import UiNode
 
 
@@ -73,31 +67,6 @@ class LayoutAnimator:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-
-    def apply_flex(
-        self,
-        layout: "FlexLayout",
-        items: "Sequence[FlexItem]",
-        container_rect: Rect,
-    ) -> None:
-        """Animate children to the positions computed by *layout*.
-
-        Calls :meth:`~gui_do.FlexLayout.apply` to obtain target rects, then
-        tweens each child from its current rect to the computed target.
-        """
-        # Snapshot current rects
-        nodes = [item.node for item in items]
-        snapshots = {id(node): Rect(node.rect) for node in nodes}
-
-        # Apply layout to compute targets (mutates node rects in-place)
-        layout.apply(items, container_rect)
-        targets = {id(node): Rect(node.rect) for node in nodes}
-
-        # Restore old rects and animate to targets
-        for node in nodes:
-            node.rect = Rect(snapshots[id(node)])
-
-        self._animate_to_targets(nodes, targets)
 
     def apply_constraint(
         self,

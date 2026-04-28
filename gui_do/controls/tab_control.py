@@ -87,7 +87,6 @@ class TabControl(UiNode):
         self._tab_rects: List[Rect] = []
 
         # Mount tracking
-        self._app: "Optional[GuiApplication]" = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -149,16 +148,6 @@ class TabControl(UiNode):
         return True
 
     # ------------------------------------------------------------------
-    # Lifecycle
-    # ------------------------------------------------------------------
-
-    def on_mount(self, parent: "Optional[UiNode]") -> None:  # type: ignore[override]
-        super().on_mount(parent)
-
-    def on_unmount(self, parent: "Optional[UiNode]") -> None:  # type: ignore[override]
-        super().on_unmount(parent)
-
-    # ------------------------------------------------------------------
     # Layout helpers
     # ------------------------------------------------------------------
 
@@ -171,7 +160,7 @@ class TabControl(UiNode):
         y = self.rect.top
         for item in self._items:
             try:
-                w, _ = theme.fonts.resolve(self._font_role, self._font_size).text_size(item.label)
+                w, _ = theme.fonts.font_instance(self._font_role, size=self._font_size).text_size(item.label)
             except Exception:
                 w = len(item.label) * (self._font_size // 2)
             tab_w = w + _TAB_PAD_H * 2

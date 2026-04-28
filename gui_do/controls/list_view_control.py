@@ -115,16 +115,6 @@ class ListViewControl(UiNode):
         self._ensure_selection_invariant()
         self.invalidate()
 
-    def insert_item(self, index: int, item: ListItem) -> None:
-        index = max(0, min(index, len(self._items)))
-        self._items.insert(index, item)
-        # Shift selected indices
-        self._selected_indices = [
-            (i + 1 if i >= index else i) for i in self._selected_indices
-        ]
-        self._ensure_selection_invariant()
-        self.invalidate()
-
     def remove_item(self, index: int) -> bool:
         if not (0 <= index < len(self._items)):
             return False
@@ -155,11 +145,6 @@ class ListViewControl(UiNode):
                 pass
         self.invalidate()
 
-    def deselect_all(self) -> None:
-        self._selected_indices = []
-        self._ensure_selection_invariant()
-        self.invalidate()
-
     def _ensure_selection_invariant(self) -> None:
         """Keep at least one item selected whenever the list has items."""
         if not self._items:
@@ -185,14 +170,6 @@ class ListViewControl(UiNode):
         self._clamp_scroll()
         self.invalidate()
 
-    def scroll_to_top(self) -> None:
-        self._scroll_offset = 0
-        self.invalidate()
-
-    def scroll_to_bottom(self) -> None:
-        self._scroll_offset = self._max_scroll()
-        self.invalidate()
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -213,25 +190,12 @@ class ListViewControl(UiNode):
         """Return item index at pixel y (relative to control top)."""
         return (y + self._scroll_offset) // self._row_height
 
-    def _get_font(self, app: "Optional[GuiApplication]" = None) -> pygame.font.Font:
-        try:
-            if app is not None:
-                attr = getattr(app.theme, self._font_role, None)
-                if attr is not None and hasattr(attr, "render"):
-                    return attr
-        except Exception:
-            pass
-        return pygame.font.SysFont(None, 18)
-
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
 
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled and self.tab_index >= 0
-
-    def update(self, dt_seconds: float) -> None:
-        pass
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:

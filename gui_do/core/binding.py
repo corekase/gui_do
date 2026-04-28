@@ -199,18 +199,6 @@ class Binding:
         if not self._disposed and self._mode in ("one_way", "two_way"):
             self._apply_to_widget(self._source.value)
 
-    def sync_to_source(self) -> None:
-        """Force an immediate widget → model synchronisation."""
-        if self._disposed or self._mode not in ("two_way", "one_way_to_source"):
-            return
-        value = getattr(self._target, self._attr, None)
-        converted = self._to_source(value) if self._to_source is not None else value
-        self._updating = True
-        try:
-            self._source.value = converted
-        finally:
-            self._updating = False
-
 
 # ---------------------------------------------------------------------------
 # BindingGroup — composite lifecycle for multiple bindings

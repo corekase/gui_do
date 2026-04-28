@@ -300,13 +300,3 @@ class RichLabelControl(UiNode):
         if self._align == "right":
             return self.rect.right - line_width
         return self.rect.left + _H_PAD
-
-    # ------------------------------------------------------------------
-    # Metrics
-    # ------------------------------------------------------------------
-
-    def preferred_height(self, theme: "ColorTheme") -> int:
-        """Return the pixel height needed to display all text without clipping."""
-        color = self._color or theme.text
-        lines = self._wrap_text(theme, color)
-        return sum(s.get_height() for s in lines) + _V_PAD * 2

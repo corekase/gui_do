@@ -207,11 +207,6 @@ class TooltipManager:
         """The ``control_id`` of the node whose tooltip is currently shown."""
         return self._visible_id
 
-    def get_text(self, node_id: str) -> Optional[str]:
-        """Return the registered tooltip text for *node_id*, or ``None``."""
-        record = self._records.get(str(node_id))
-        return record.text if record is not None else None
-
     # ------------------------------------------------------------------
     # Draw
     # ------------------------------------------------------------------

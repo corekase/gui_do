@@ -182,13 +182,6 @@ class GridLayout:
         """Return the ordered list of registered nodes."""
         return [n for n, _ in self._placements]
 
-    def placement_for(self, node: "UiNode") -> Optional[GridPlacement]:
-        """Return the :class:`GridPlacement` for *node*, or ``None``."""
-        for n, p in self._placements:
-            if n is node:
-                return p
-        return None
-
     # ------------------------------------------------------------------
     # Layout computation
     # ------------------------------------------------------------------

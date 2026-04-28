@@ -204,25 +204,3 @@ class CanvasViewport:
         self._scale = max(self._min_scale, min(self._max_scale, min(sx, sy)))
         self._offset_x = (viewport_size[0] - self._content_w * self._scale) / 2.0
         self._offset_y = (viewport_size[1] - self._content_h * self._scale) / 2.0
-
-    def clamp_to_content(self, viewport_size: Tuple[int, int]) -> None:
-        """Prevent panning beyond content boundaries.
-
-        When the scaled content is smaller than the viewport the content is
-        centred; when larger the offset is clamped so content edges cannot
-        scroll past the viewport edge.
-        """
-        vw = int(viewport_size[0])
-        vh = int(viewport_size[1])
-        content_w_px = self._content_w * self._scale
-        content_h_px = self._content_h * self._scale
-
-        if content_w_px <= vw:
-            self._offset_x = (vw - content_w_px) / 2.0
-        else:
-            self._offset_x = max(vw - content_w_px, min(0.0, self._offset_x))
-
-        if content_h_px <= vh:
-            self._offset_y = (vh - content_h_px) / 2.0
-        else:
-            self._offset_y = max(vh - content_h_px, min(0.0, self._offset_y))

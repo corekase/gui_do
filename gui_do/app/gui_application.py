@@ -271,9 +271,6 @@ class GuiApplication:
     def get_scene_scheduler(self, name: str) -> TaskScheduler:
         return self._scene_runtime(name).scheduler
 
-    def get_scene_graphics_factory(self, name: str) -> BuiltInGraphicsFactory:
-        return self._scene_runtime(name).graphics_factory
-
     def _create_scene_runtime(self) -> "_SceneRuntime":
         scene = Scene()
         theme = ColorTheme()

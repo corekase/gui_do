@@ -223,7 +223,3 @@ class LayoutRoot:
         self._dirty = False
         self._last_rect = rect
         return True
-
-    def invalidate(self) -> None:
-        """Alias for :meth:`mark_dirty` (follows the package naming convention)."""
-        self.mark_dirty()

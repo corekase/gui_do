@@ -98,9 +98,6 @@ class ColorPickerControl(UiNode):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled
 
-    def update(self, dt_seconds: float) -> None:
-        pass
-
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             return False
