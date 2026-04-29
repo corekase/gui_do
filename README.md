@@ -18,6 +18,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - Display Creation
   - GuiApplication
   - UiEngine
+  - run_entrypoint
   - Scene Management
   - SceneSpatialIndex
 - [Controls](#controls)
@@ -131,16 +132,13 @@ pip install -e .
 gui_do is not published to PyPI. Install it from a local clone with the command above, or see the [Package Management](#package-management) section for project bootstrap and update workflows.
 
 ```python
-import pygame
 from pygame import Rect
-from gui_do import create_display, GuiApplication, LabelControl, UiEngine
+from gui_do import create_display, GuiApplication, LabelControl
 
-pygame.init()
 surface = create_display((800, 600))
 app = GuiApplication(surface)
 app.scene.add(LabelControl("hello", Rect(24, 24, 280, 32), "Hello, gui_do"))
-UiEngine(app, target_fps=60).run()
-pygame.quit()
+app.run_entrypoint(target_fps=60)
 ```
 
 ---
@@ -176,14 +174,12 @@ pygame.quit()
 [Back to Top](#table-of-contents)
 
 ```python
-import pygame
 from pygame import Rect
-from gui_do import ButtonControl, create_display, GuiApplication, LabelControl, UiEngine
+from gui_do import ButtonControl, create_display, GuiApplication, LabelControl
 
 
 def main() -> None:
-    pygame.init()
-    surface = create_display((640, 480))
+    surface = create_display((640, 480), fullscreen=False, vsync=False)
     app = GuiApplication(surface)
 
     status = app.scene.add(LabelControl("status", Rect(20, 20, 220, 30), "Ready"))
@@ -192,8 +188,7 @@ def main() -> None:
         status.text = "Clicked"
 
     app.scene.add(ButtonControl("go", Rect(20, 64, 120, 32), "Click", on_click=on_click))
-    UiEngine(app, target_fps=60).run()
-    pygame.quit()
+    app.run_entrypoint(target_fps=60)
 
 
 if __name__ == "__main__":
@@ -252,13 +247,10 @@ The update flow copies `gui_do/`, `scripts/`, `tests/`, `docs/`, `README.md`, an
 
 ### Display Creation
 
-`create_display(size, *, fullscreen=True, scaled=True, vsync=True)` creates and returns a pygame display surface, optionally requesting vertical synchronization with graceful fallback when the display driver cannot provide it.
+`create_display(size, *, fullscreen=True, scaled=True, vsync=True)` creates and returns a pygame display surface. It calls `pygame.init()` internally, so callers do not need a separate `pygame.init()` call. It also requests vertical synchronization with graceful fallback when the display driver cannot provide it.
 
 ```python
-import pygame
 from gui_do import create_display
-
-pygame.init()
 
 # Fullscreen with vsync (scaled to fit physical display)
 surface = create_display((1920, 1080))
@@ -277,10 +269,8 @@ The helper suppresses the pygame-ce `"no fast renderer available"` warning and s
 `GuiApplication(surface)` is the runtime root. It owns the active scene, scene-local services, event normalization, rendering orchestration, and feature coordination.
 
 ```python
-import pygame
 from gui_do import create_display, GuiApplication
 
-pygame.init()
 surface = create_display((1024, 720))
 app = GuiApplication(surface)
 ```
@@ -321,13 +311,48 @@ Common application methods:
 `UiEngine` is the packaged event loop. It forwards pygame events through `GuiApplication.process_event(...)`, advances scene-local services, and draws each frame.
 
 ```python
+import pygame
 from gui_do import UiEngine
 
 engine = UiEngine(app, target_fps=60)
 engine.run()
+pygame.quit()
 ```
 
 Use `max_frames=` when you want a bounded run for tests or deterministic demos.
+
+### run_entrypoint
+
+`GuiApplication.run_entrypoint(target_fps, *, WORKSPACE_SAVE, workspace_manager, workspace_path)` is the preferred top-level entrypoint for production scripts. It wraps `UiEngine.run()` with full exception handling, optional workspace save/restore, `pygame.quit()`, and a final `raise SystemExit(exit_code)` so callers never need to manage teardown.
+
+```python
+from gui_do import create_display, GuiApplication
+
+surface = create_display((1024, 720))
+app = GuiApplication(surface)
+# ... build scene ...
+app.run_entrypoint(target_fps=120)
+```
+
+With automatic workspace persistence:
+
+```python
+from gui_do import create_display, GuiApplication, DEFAULT_WORKSPACE_STATE_PATH
+
+surface = create_display((1024, 720))
+app = GuiApplication(surface)
+# ... build scene ...
+app.run_entrypoint(target_fps=120, WORKSPACE_SAVE=True, workspace_path=DEFAULT_WORKSPACE_STATE_PATH)
+```
+
+Parameters:
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `target_fps` | `120` | Frame rate cap passed to `UiEngine` |
+| `WORKSPACE_SAVE` | `False` | Load workspace on startup; save on exit |
+| `workspace_manager` | `None` | `WorkspacePersistenceManager` instance; created automatically when `None` |
+| `workspace_path` | `DEFAULT_WORKSPACE_STATE_PATH` | JSON path for workspace state |
 
 ### Scene Management
 
@@ -1307,6 +1332,14 @@ manager.restore(state, app, feature_manager=app.features)
 
 `WorkspaceState` fields: `version`, `active_scene_name`, `scene_snapshot`, `feature_states`, `settings_blocks`, `metadata`, `dock_state`. `WorkspaceState.save` / `WorkspaceState.load` write and read JSON.
 
+`DEFAULT_WORKSPACE_STATE_PATH` is the package-level default path constant (`~/.gui_do/workspace_state.json`) used by `run_entrypoint` and available for direct use when wiring `WorkspacePersistenceManager` manually.
+
+```python
+from gui_do import DEFAULT_WORKSPACE_STATE_PATH
+
+print(DEFAULT_WORKSPACE_STATE_PATH)  # Path('/home/user/.gui_do/workspace_state.json')
+```
+
 ---
 
 ## Scheduling and Animation
@@ -2202,6 +2235,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `NodeSnapshot`
 - `WorkspaceState`
 - `WorkspacePersistenceManager`
+- `DEFAULT_WORKSPACE_STATE_PATH`
 
 ### Scheduling and Animation
 
