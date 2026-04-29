@@ -22,9 +22,3 @@ Follow that with a "Package Management" section with "Start a New Project" and "
 And then following that cover the rest of the public API.  Sections should be ordered in the same order you will be typically using them in your own code.  Subsections should cover their topics from the beginner aspects towards the more advanced aspects.
 
 When documentation is done updating place a github unittest badge for this package at the beginning of the readme.
-
-Place the text from the following lines substituting "URLPART" with the contents of gui_do/_version.py __demo__ variable just below the github unittest badge:
-
-Latest Demo:
-
-<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
