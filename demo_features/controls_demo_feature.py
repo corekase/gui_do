@@ -162,7 +162,7 @@ class ControlsShowcaseFeature(Feature):
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
 
-    LAYOUT_OVERALL_ROWS_CONSTANT = 6
+    LAYOUT_OVERALL_ROWS_CONSTANT = 7
     LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
 
     def __init__(self, rect: Rect | None = None) -> None:
