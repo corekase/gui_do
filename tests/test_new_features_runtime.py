@@ -1221,6 +1221,46 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         consumed = captured["handler"](evt)
         self.assertFalse(consumed)
 
+    # ------------------------------------------------------------------
+    # Pointer event absorption — events over the palette must not leak
+    # ------------------------------------------------------------------
+
+    def test_pointer_events_over_palette_panel_are_consumed(self) -> None:
+        """Mouse events over the palette panel are consumed even when no child handles them."""
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=[], row_height=28)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+        app = MagicMock()
+        app.logical_pointer_pos = (100, 100)
+
+        for kind, extra in [
+            (EventType.MOUSE_BUTTON_DOWN, {"button": 1}),
+            (EventType.MOUSE_BUTTON_UP,   {"button": 1}),
+            (EventType.MOUSE_MOTION,      {}),
+            (EventType.MOUSE_WHEEL,       {"wheel_y": -1}),
+        ]:
+            evt = GuiEvent(kind=kind, type=0, pos=(100, 100), **extra)
+            consumed = panel.handle_event(evt, app)
+            self.assertTrue(consumed, f"Expected {kind} over panel to be consumed")
+
+    def test_pointer_events_outside_palette_panel_are_not_consumed(self) -> None:
+        """Mouse events outside the palette panel are not consumed."""
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=[], row_height=28)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+        app = MagicMock()
+        app.logical_pointer_pos = (600, 500)
+
+        for kind, extra in [
+            (EventType.MOUSE_BUTTON_DOWN, {"button": 1}),
+            (EventType.MOUSE_BUTTON_UP,   {"button": 1}),
+            (EventType.MOUSE_MOTION,      {}),
+            (EventType.MOUSE_WHEEL,       {"wheel_y": -1}),
+        ]:
+            evt = GuiEvent(kind=kind, type=0, pos=(600, 500), **extra)
+            consumed = panel.handle_event(evt, app)
+            self.assertFalse(consumed, f"Expected {kind} outside panel to not be consumed")
+
 
 # ---------------------------------------------------------------------------
 # Export completeness

@@ -54,6 +54,13 @@ class _CommandPalettePanel(OverlayPanelControl):
         super().__init__(control_id, rect)
         self._listview = listview
 
+    _POINTER_EVENT_KINDS = frozenset((
+        EventType.MOUSE_WHEEL,
+        EventType.MOUSE_BUTTON_DOWN,
+        EventType.MOUSE_BUTTON_UP,
+        EventType.MOUSE_MOTION,
+    ))
+
     def handle_event(self, event, app) -> bool:
         # Wheel: move selected item first; scroll_to_item() in _move_selection_by_wheel
         # ensures the new selection scrolls into view automatically.
@@ -86,7 +93,20 @@ class _CommandPalettePanel(OverlayPanelControl):
                     self._listview.select(idx, scroll_to=False)
                 return True
 
-        return super().handle_event(event, app)
+        result = super().handle_event(event, app)
+
+        # Consume all remaining pointer events over the palette panel so they
+        # never reach controls rendered beneath the overlay.
+        if not result and event.kind in self._POINTER_EVENT_KINDS:
+            pointer = (
+                event.pos
+                if isinstance(event.pos, tuple) and len(event.pos) == 2
+                else getattr(app, "logical_pointer_pos", None)
+            )
+            if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
+                return True
+
+        return result
 
     def draw_screen_phase(self, surface: "pygame.Surface", theme) -> None:
         pygame.draw.rect(surface, theme.medium, self.rect)
