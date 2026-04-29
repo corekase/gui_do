@@ -189,20 +189,14 @@ class GuiDoDemo:
         r.declare("win_system",          "Show System Window",            lambda _ctx, _ev: (self.set_system_window_visible(True) or True), category="Windows")
         r.declare("tools_notifications", "Notifications",                 lambda _ctx, _ev: (self._open_notifications_panel_from_main() or True),  category="Tools")
         r.declare("tools_publish_event", "Publish Test Event",            lambda _ctx, _ev: (self._publish_system_test_event_from_main() or True), category="Tools")
-        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._open_command_palette() or True),                category="Tools")
+        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._palette_manager.show(self.app) or True),       category="Tools")
 
-        # Bind F5 globally to open the command palette.
-        self.app.actions.register_action(
-            "open_palette",
-            lambda _event: (self._open_command_palette() or True),
+        # Bind F5 to toggle the command palette in all relevant scenes.
+        self._palette_manager.bind_toggle_key(
+            self.app,
+            pygame.K_F5,
+            scene=["main", "control_showcase"],
         )
-        self.app.actions.bind_key(pygame.K_F5, "open_palette", scene="main")
-        self.app.actions.bind_key(pygame.K_F5, "open_palette", scene="control_showcase")
-
-    def _open_command_palette(self) -> None:
-        """Open the command palette (or close it if already open)."""
-        if self._palette_manager is not None:
-            self._palette_manager.show(self.app)
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")

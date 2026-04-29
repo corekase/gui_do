@@ -289,6 +289,38 @@ class CommandPaletteManager:
         self._overlays.hide(self._OWNER_ID)
         self._handle = None
 
+    def bind_toggle_key(
+        self,
+        app: "GuiApplication",
+        key: int,
+        *,
+        scene: "Optional[str]" = None,
+        action_id: str = "command_palette_toggle",
+    ) -> None:
+        """Bind *key* so it toggles this palette in the given scene(s).
+
+        *scene* may be a single scene name, a list of scene names, or ``None``
+        to bind globally (all scenes).  *action_id* is the internal action name
+        registered with :attr:`~GuiApplication.actions`; override it only when
+        multiple palettes share the same application.
+
+        Example::
+
+            palette.bind_toggle_key(app, pygame.K_F5, scene=["main", "editor"])
+        """
+        def _toggle(_event):
+            self.show(app)
+            return True
+
+        app.actions.register_action(action_id, _toggle)
+
+        scenes = [scene] if isinstance(scene, str) else (scene or [None])
+        for s in scenes:
+            if s is None:
+                app.actions.bind_key(key, action_id)
+            else:
+                app.actions.bind_key(key, action_id, scene=s)
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
