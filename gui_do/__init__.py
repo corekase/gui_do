@@ -189,6 +189,26 @@ from .graphics.vector_path import VectorPath
 from .layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
 from .forms.wizard_flow import WizardFlow, WizardStep, WizardHandle
 from .scheduling.scene_timeline import SceneTimeline
+from .graphics.particle_system import ParticleSystem, Emitter, ParticleLayer
+from .graphics.sprite_sheet import SpriteSheet, FrameAnimation
+from .controls.display.animated_image_control import AnimatedImageControl
+from .scheduling.cooperative_scheduler import (
+    CooperativeScheduler,
+    CoroutineHandle,
+    Pause,
+    Sleep,
+    WaitForEvent,
+    WaitForSignal,
+    WaitUntil,
+    WaitForAll,
+)
+from .graphics.tile_map import TileSet, TileMap
+from .controls.display.progress_bar_control import ProgressBarControl
+from .layout.flow_layout import FlowLayout, FlowItem
+from .text.text_searcher import TextSearcher, TextMatch
+from .data.list_diff import ListDiffCalculator, ListDiff, DiffInsert, DiffRemove, DiffMove
+from .data.data_cache import DataCache, CacheStats
+from .overlays.shortcut_help_overlay import ShortcutHelpOverlay, ShortcutSection, ShortcutEntry
 
 __all__ = [
     "GuiApplication",
@@ -449,4 +469,35 @@ __all__ = [
     "PopupPlacement",
     "Side",
     "compute_popup_rect",
+    "ParticleSystem",
+    "Emitter",
+    "ParticleLayer",
+    "SpriteSheet",
+    "FrameAnimation",
+    "AnimatedImageControl",
+    "CooperativeScheduler",
+    "CoroutineHandle",
+    "Pause",
+    "Sleep",
+    "WaitForEvent",
+    "WaitForSignal",
+    "WaitUntil",
+    "WaitForAll",
+    "TileSet",
+    "TileMap",
+    "ProgressBarControl",
+    "FlowLayout",
+    "FlowItem",
+    "TextSearcher",
+    "TextMatch",
+    "ListDiffCalculator",
+    "ListDiff",
+    "DiffInsert",
+    "DiffRemove",
+    "DiffMove",
+    "DataCache",
+    "CacheStats",
+    "ShortcutHelpOverlay",
+    "ShortcutSection",
+    "ShortcutEntry",
 ]
