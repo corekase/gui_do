@@ -82,6 +82,14 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
             y += h
         return rects
 
+    def _hover_index_from_pointer(self, pointer_pos, rects: List[Rect]) -> int:
+        if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return -1
+        for i, r in enumerate(rects):
+            if r.collidepoint(pointer_pos) and not bool(getattr(self._items[i], "separator", False)):
+                return i
+        return -1
+
     def _selectable_indices(self) -> List[int]:
         return [
             i
@@ -172,12 +180,18 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         pygame.draw.rect(surface, border_col, self.rect, 1)
 
         rects = self._item_rects()
+        try:
+            pointer_pos = pygame.mouse.get_pos()
+        except pygame.error:
+            pointer_pos = None
+        pointer_hovered = self._hover_index_from_pointer(pointer_pos, rects)
+        draw_hovered_index = pointer_hovered if pointer_hovered >= 0 else self._hovered_index
         for i, (item, r) in enumerate(zip(self._items, rects)):
             if bool(getattr(item, "separator", False)):
                 sy = r.y + r.height // 2
                 pygame.draw.line(surface, border_col, (r.x + 8, sy), (r.right - 8, sy))
                 continue
-            if i == self._hovered_index:
+            if i == draw_hovered_index:
                 pygame.draw.rect(surface, hover_col, r)
             col = text_col if bool(getattr(item, "enabled", True)) else disabled_col
             label = str(getattr(item, "label", ""))

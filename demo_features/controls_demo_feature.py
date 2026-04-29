@@ -50,6 +50,7 @@ from gui_do import (
     ToggleControl,
     TreeControl,
     TreeNode,
+    SceneMenuStripControl,
     NumericFormatter,
     PatternFormatter,
     FixedPatternFormatter,
@@ -184,6 +185,32 @@ class ControlsShowcaseFeature(Feature):
     def build(self, host) -> None:
         self._label_font_role = self.LABEL_FONT_ROLE
         self._control_font_role = self.CONTROL_FONT_ROLE
+
+        def _extra_entries() -> list[MenuEntry]:
+            action_registry = getattr(host, "action_registry", None)
+            if action_registry is None:
+                return []
+            tools_items = action_registry.context_menu_items(category="Tools")
+            if not tools_items:
+                return []
+            return [MenuEntry("Tools", tools_items)]
+
+        scene_select = getattr(
+            getattr(host, "scene_transitions", None),
+            "go",
+            getattr(host.app, "switch_scene", lambda _scene: None),
+        )
+
+        host.control_showcase_menu_bar = host.control_showcase_root.add(
+            SceneMenuStripControl(
+                "control_showcase_menu_bar",
+                Rect(0, 0, host.control_showcase_root.rect.width, 28),
+                host.app,
+                scene_name="control_showcase",
+                extra_entries_provider=_extra_entries,
+                on_scene_selected=scene_select,
+            )
+        )
 
         if self.rect.width <= 0 or self.rect.height <= 0:
             self.rect = self._default_rect(host)

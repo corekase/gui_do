@@ -107,6 +107,8 @@ class MenuBarControl(UiNode):
         self._entries: List[MenuEntry] = list(entries) if entries else []
         self._open_index: int = -1  # index of currently open top-level entry
         self._hovered_index: int = -1
+        self._open_flyout_rect: Optional[Rect] = None
+        self._last_app: Optional["GuiApplication"] = None
         self.tab_index = 0
         self._draw_font: object = None  # cached from pygame.font.SysFont(None, _FONT_SIZE)
 
@@ -150,6 +152,35 @@ class MenuBarControl(UiNode):
             x += w
         return rects
 
+    def _hover_index_from_pointer(self, pointer_pos, er: List[Rect]) -> int:
+        if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return -1
+        for i, r in enumerate(er):
+            if r.collidepoint(pointer_pos):
+                return i
+        return -1
+
+    def _sync_open_menu_with_highlight(self, app: "GuiApplication", er: List[Rect]) -> None:
+        if self._open_index < 0 or self._hovered_index < 0:
+            return
+        if self._hovered_index == self._open_index:
+            return
+        if self._hovered_index >= len(self._entries):
+            return
+        if not self._entries[self._hovered_index].enabled:
+            return
+        self._dismiss_flyout(app)
+        self._open_flyout(self._hovered_index, app, er)
+
+    def _pointer_in_open_menu_elements(self, pointer_pos) -> bool:
+        if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
+            return False
+        if self.rect.collidepoint(pointer_pos):
+            return True
+        if self._open_flyout_rect is not None and self._open_flyout_rect.collidepoint(pointer_pos):
+            return True
+        return False
+
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
@@ -157,6 +188,8 @@ class MenuBarControl(UiNode):
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             return False
+
+        self._last_app = app
 
         er = self._entry_rects()
 
@@ -166,10 +199,18 @@ class MenuBarControl(UiNode):
                 if r.collidepoint(event.pos):
                     self._hovered_index = i
                     break
-            # If a menu is already open and mouse hovers a different entry, switch
-            if self._open_index >= 0 and self._hovered_index >= 0 and self._hovered_index != self._open_index:
-                self._dismiss_flyout(app)
-                self._open_flyout(self._hovered_index, app, er)
+            # Entering/hovering strip should open the submenu under pointer.
+            if self._hovered_index >= 0 and self._open_index < 0:
+                if self._entries[self._hovered_index].enabled and self._entries[self._hovered_index].items:
+                    self._open_flyout(self._hovered_index, app, er)
+            # If a menu is already open and highlight moved to a new entry,
+            # keep the flyout in sync with the highlighted top-level item.
+            self._sync_open_menu_with_highlight(app, er)
+            # Leaving both strip and flyout closes any open menu and clears highlight.
+            if self._hovered_index < 0 and not self._pointer_in_open_menu_elements(event.pos):
+                if self._open_index >= 0:
+                    self._dismiss_flyout(app)
+                self._hovered_index = -1
             self.invalidate()
             return self.rect.collidepoint(event.pos)
 
@@ -195,6 +236,7 @@ class MenuBarControl(UiNode):
             owner = f"_menubar_{self.control_id}_{self._open_index}"
             app.overlay.hide(owner)
             self._open_index = -1
+            self._open_flyout_rect = None
             self.invalidate()
 
     def _open_flyout(self, index: int, app: "GuiApplication", er: List[Rect]) -> None:
@@ -230,11 +272,13 @@ class MenuBarControl(UiNode):
             on_dismiss=lambda: self._on_flyout_dismissed(index),
         )
         self._open_index = index
+        self._open_flyout_rect = Rect(fx, fy, w, h)
         self.invalidate()
 
     def _on_flyout_dismissed(self, index: int) -> None:
         if self._open_index == index:
             self._open_index = -1
+            self._open_flyout_rect = None
             self.invalidate()
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
@@ -245,7 +289,6 @@ class MenuBarControl(UiNode):
         text_col = theme.text
         disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
         hover_col = theme.highlight
-        open_col = getattr(theme, "accent", (0, 80, 160))
         border_col = getattr(theme, "border", (60, 60, 70))
 
         if self._draw_font is None:
@@ -264,10 +307,18 @@ class MenuBarControl(UiNode):
         )
 
         er = self._entry_rects()
+        try:
+            pointer_pos = pygame.mouse.get_pos()
+        except pygame.error:
+            pointer_pos = None
+        pointer_hovered = self._hover_index_from_pointer(pointer_pos, er)
+        if pointer_hovered != self._hovered_index:
+            self._hovered_index = pointer_hovered
+            if self._last_app is not None:
+                self._sync_open_menu_with_highlight(self._last_app, er)
+        draw_hovered_index = pointer_hovered if pointer_hovered >= 0 else self._hovered_index
         for i, (entry, r) in enumerate(zip(self._entries, er)):
-            if i == self._open_index:
-                pygame.draw.rect(surface, open_col, r)
-            elif i == self._hovered_index and entry.enabled:
+            if (i == self._open_index or i == draw_hovered_index) and entry.enabled:
                 pygame.draw.rect(surface, hover_col, r)
             col = disabled_col if not entry.enabled else text_col
             if font:

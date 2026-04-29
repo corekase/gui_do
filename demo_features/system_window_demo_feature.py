@@ -27,7 +27,6 @@ from gui_do import (
     LayoutAxis,
     ListItem,
     ListViewControl,
-    MenuBarControl,
     MenuEntry,
     NotificationCenter,
     NotificationPanelControl,
@@ -35,6 +34,7 @@ from gui_do import (
     ObservableValue,
     RangeSliderControl,
     RoutedFeature,
+    SceneMenuStripControl,
     SliderControl,
     SpinnerControl,
     TabControl,
@@ -184,10 +184,18 @@ class SystemWindowDemoFeature(RoutedFeature):
         # Menu bar
         menu_h = 28
         self.menu_bar = self.window.add(
-            MenuBarControl(
+            SceneMenuStripControl(
                 "system_window_menu",
                 Rect(content.left + pad, content.top + pad, content.width - (pad * 2), menu_h),
-                self._menu_entries(),
+                host.app,
+                scene_name="main",
+                file_items_provider=self._file_menu_items,
+                extra_entries_provider=self._extra_menu_entries,
+                on_scene_selected=getattr(
+                    getattr(host, "scene_transitions", None),
+                    "go",
+                    getattr(host.app, "switch_scene", lambda _scene: None),
+                ),
             )
         )
 
@@ -890,16 +898,18 @@ class SystemWindowDemoFeature(RoutedFeature):
             return False
         return self.menu_bar.handle_event(event, host.app)
 
-    def _menu_entries(self) -> list[MenuEntry]:
+    def _file_menu_items(self) -> list[ContextMenuItem]:
         return [
-            MenuEntry("File", [
-                ContextMenuItem("Open...", action=self.open_file_dialog),
-                ContextMenuItem("Save As...", action=self.save_file_dialog),
-                ContextMenuItem("", separator=True),
-                ContextMenuItem("Export State JSON", action=self._export_state_json),
-                ContextMenuItem("", separator=True),
-                ContextMenuItem("Minimize", action=self.minimize_window),
-            ]),
+            ContextMenuItem("Open...", action=self.open_file_dialog),
+            ContextMenuItem("Save As...", action=self.save_file_dialog),
+            ContextMenuItem("", separator=True),
+            ContextMenuItem("Export State JSON", action=self._export_state_json),
+            ContextMenuItem("", separator=True),
+            ContextMenuItem("Minimize", action=self.minimize_window),
+        ]
+
+    def _extra_menu_entries(self) -> list[MenuEntry]:
+        return [
             MenuEntry("View", [
                 ContextMenuItem("Notifications", action=self.show_notifications_panel),
                 ContextMenuItem("Publish Test", action=self.publish_test_notification),
@@ -910,10 +920,6 @@ class SystemWindowDemoFeature(RoutedFeature):
             ]),
             MenuEntry("Palette", [
                 ContextMenuItem("Open Command Palette", action=self._open_palette),
-            ]),
-            MenuEntry("Scenes", [
-                ContextMenuItem("Main", action=self.go_main_scene),
-                ContextMenuItem("Controls Showcase", action=self.go_showcase_scene),
             ]),
         ]
 

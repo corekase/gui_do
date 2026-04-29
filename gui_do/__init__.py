@@ -98,6 +98,7 @@ from .controls.display.rich_label_control import RichLabelControl
 from .controls.data.tab_control import TabControl, TabItem
 from .overlays.resize_manager import ResizeManager
 from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from .controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from .overlays.menu_bar_manager import MenuBarManager
 from .controls.data.tree_control import TreeControl, TreeNode
 from .overlays.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
@@ -266,6 +267,7 @@ __all__ = [
     "ResizeManager",
     "MenuBarControl",
     "MenuEntry",
+    "SceneMenuStripControl",
     "MenuBarManager",
     "TreeControl",
     "TreeNode",

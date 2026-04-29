@@ -30,7 +30,8 @@ from gui_do import (
     LayoutAxis,
     LayoutRoot,
     MeasureContext,
-    MenuBarManager,
+    MenuEntry,
+    SceneMenuStripControl,
     NotificationCenter,
     NotificationPanelControl,
     NotificationRecord,
@@ -113,16 +114,27 @@ class MainDemoFeature(Feature):
             scene_name="main",
         )
 
-        menu_manager = MenuBarManager()
-        # Populate menus from the shared ActionRegistry; each category becomes
-        # a named top-level menu, preserving the single source of truth for
-        # all app commands declared in GuiDoDemo._register_app_actions().
-        menu_manager.register_actions("File",    host.action_registry, category="File")
-        menu_manager.register_actions("Scenes",  host.action_registry, category="Scenes")
-        menu_manager.register_actions("Windows", host.action_registry, category="Windows")
-        menu_manager.register_actions("Tools",   host.action_registry, category="Tools")
+        def _extra_entries() -> list[MenuEntry]:
+            tools_items = host.action_registry.context_menu_items(category="Tools")
+            if not tools_items:
+                return []
+            return [MenuEntry("Tools", tools_items)]
+
+        scene_select = getattr(
+            getattr(host, "scene_transitions", None),
+            "go",
+            getattr(host.app, "switch_scene", lambda _scene: None),
+        )
+
         host.desktop_menu_bar = host.root.add(
-            menu_manager.build("desktop_menu_bar", Rect(0, 0, host.screen_rect.width, 28), host.app)
+            SceneMenuStripControl(
+                "desktop_menu_bar",
+                Rect(0, 0, host.screen_rect.width, 28),
+                host.app,
+                scene_name="main",
+                extra_entries_provider=_extra_entries,
+                on_scene_selected=scene_select,
+            )
         )
         host.screen_title = host.root.add(
             self._make_sized_title_label(host, "screen_title", "gui_do", 24, 36, fallback_size=(640, 96))

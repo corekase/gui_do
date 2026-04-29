@@ -122,6 +122,7 @@ from gui_do import (
     ResizeManager,
     MenuBarControl,
     MenuEntry,
+    SceneMenuStripControl,
     MenuBarManager,
     TreeControl,
     TreeNode,

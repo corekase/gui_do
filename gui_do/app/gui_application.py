@@ -181,6 +181,7 @@ class GuiApplication:
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
         self._scenes = {"default": self._create_scene_runtime()}
+        self._scene_pretty_names = {"default": "default"}
         self._active_scene_name = "default"
         active_runtime = self._scenes[self._active_scene_name]
         self.scene = active_runtime.scene
@@ -248,8 +249,13 @@ class GuiApplication:
         label.font_size = int(size)
         return label
 
-    def create_scene(self, name: str) -> Scene:
+    def create_scene(self, name: str, *, pretty_name: Optional[str] = None) -> Scene:
         runtime = self._scene_runtime(name)
+        if pretty_name is not None:
+            normalized = str(pretty_name).strip()
+            self._scene_pretty_names[name] = normalized if normalized else name
+        elif name not in self._scene_pretty_names:
+            self._scene_pretty_names[name] = name
         return runtime.scene
 
     def switch_scene(self, name: str) -> None:
@@ -290,6 +296,10 @@ class GuiApplication:
     def scene_names(self) -> list:
         """Return a list of all registered scene names (including the active one)."""
         return list(self._scenes.keys())
+
+    def scene_pretty_name(self, name: str) -> str:
+        """Return display-friendly scene label for *name*."""
+        return str(self._scene_pretty_names.get(name, name))
 
     def has_scene(self, name: str) -> bool:
         """Return True when a scene with *name* has been registered or accessed."""
@@ -354,6 +364,7 @@ class GuiApplication:
         if runtime is None:
             runtime = self._create_scene_runtime()
             self._scenes[name] = runtime
+            self._scene_pretty_names.setdefault(name, name)
         return runtime
 
     def _sync_scene_scheduler_activity(self, active_scene_name: str) -> None:

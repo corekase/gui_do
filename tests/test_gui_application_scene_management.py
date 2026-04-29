@@ -53,6 +53,14 @@ class SceneNamesTests(GuiApplicationSceneManagementSetup):
         # Original snapshot unchanged
         self.assertNotIn("new_scene", names)
 
+    def test_scene_pretty_name_defaults_to_scene_name(self) -> None:
+        self.app.create_scene("extra")
+        self.assertEqual("extra", self.app.scene_pretty_name("extra"))
+
+    def test_scene_pretty_name_uses_create_scene_value(self) -> None:
+        self.app.create_scene("extra", pretty_name="Extra Scene")
+        self.assertEqual("Extra Scene", self.app.scene_pretty_name("extra"))
+
 
 class HasSceneTests(GuiApplicationSceneManagementSetup):
 

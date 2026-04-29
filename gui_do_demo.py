@@ -73,8 +73,8 @@ class GuiDoDemo:
         )
 
         self.app.layout.set_anchor_bounds(self.screen_rect)
-        self.app.create_scene("main")
-        self.app.create_scene("control_showcase")
+        self.app.create_scene("main", pretty_name="Desktop Demo")
+        self.app.create_scene("control_showcase", pretty_name="Control Showcase")
         self.scene_transitions = SceneTransitionManager(self.app, default_style=SceneTransitionStyle.FADE, default_duration=0.5)
         self.scene_transitions.set_style("control_showcase", SceneTransitionStyle.SLIDE_LEFT, duration=0.5)
         self.scene_transitions.set_style("main", SceneTransitionStyle.SLIDE_RIGHT, duration=0.5)
@@ -209,28 +209,28 @@ class GuiDoDemo:
         self.life_window.visible = show
         if not from_toggle and self.life_toggle_window is not None:
             self.life_toggle_window.pushed = show
-        self.app.tile_windows(newly_visible=[self.life_window] if show else None)
+        self.app.tile_windows()
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         show = bool(visible)
         self.mandel_window.visible = show
         if not from_toggle and self.mandel_toggle_window is not None:
             self.mandel_toggle_window.pushed = show
-        self.app.tile_windows(newly_visible=[self.mandel_window] if show else None)
+        self.app.tile_windows()
 
     def set_system_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         show = bool(visible)
         self.system_window.visible = show
         if not from_toggle and self.system_toggle_window is not None:
             self.system_toggle_window.pushed = show
-        self.app.tile_windows(newly_visible=[self.system_window] if show else None)
+        self.app.tile_windows()
 
     def set_new_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         show = bool(visible)
         self.new_systems_window.visible = show
         if not from_toggle and self.new_systems_toggle_window is not None:
             self.new_systems_toggle_window.pushed = show
-        self.app.tile_windows(newly_visible=[self.new_systems_window] if show else None)
+        self.app.tile_windows()
 
     def _open_file_dialog_from_main(self) -> None:
         if self._system_feature is not None:

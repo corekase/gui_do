@@ -129,6 +129,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `ResizeManager`
 - `MenuBarControl`
 - `MenuEntry`
+- `SceneMenuStripControl`
 - `MenuBarManager`
 - `TreeControl`
 - `TreeNode`

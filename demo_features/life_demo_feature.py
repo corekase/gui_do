@@ -12,10 +12,10 @@ from gui_do import (
     ContextMenuItem,
     FeatureMessage,
     LayoutAxis,
-    LogicFeature,
-    MenuBarControl,
     MenuEntry,
+    LogicFeature,
     RoutedFeature,
+    SceneMenuStripControl,
     SliderControl,
     ToggleControl,
     WindowControl,
@@ -259,10 +259,17 @@ class LifeSimulationFeature(RoutedFeature):
         control_spacing = 12
 
         self.menu_bar = self.window.add(
-            MenuBarControl(
+            SceneMenuStripControl(
                 "life_window_menu",
                 Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
-                self._menu_entries(),
+                host.app,
+                scene_name="main",
+                file_items_provider=lambda: [ContextMenuItem("Minimize", action=self._minimize_window)],
+                on_scene_selected=getattr(
+                    getattr(host, "scene_transitions", None),
+                    "go",
+                    getattr(host.app, "switch_scene", lambda _scene: None),
+                ),
             )
         )
         top = self.menu_bar.rect.bottom + padding
@@ -427,16 +434,6 @@ class LifeSimulationFeature(RoutedFeature):
         """Window postamble hook that drains queued events and renders the board."""
         self.update_life()
 
-    def _menu_entries(self) -> list[MenuEntry]:
-        return [
-            MenuEntry(
-                "File",
-                [
-                    ContextMenuItem("Minimize", action=self._minimize_window),
-                ],
-            )
-        ]
-
     def _minimize_window(self) -> None:
         if self.window is not None:
             self.window.visible = False
@@ -446,6 +443,17 @@ class LifeSimulationFeature(RoutedFeature):
                 demo.set_life_window_visible(False)
             elif hasattr(demo, "life_toggle_window") and demo.life_toggle_window is not None:
                 demo.life_toggle_window.pushed = False
+
+    def _menu_entries(self) -> list[MenuEntry]:
+        """Compatibility helper retained for menu runtime tests."""
+        return [
+            MenuEntry(
+                "File",
+                [
+                    ContextMenuItem("Minimize", action=self._minimize_window),
+                ],
+            )
+        ]
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""

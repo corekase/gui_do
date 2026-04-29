@@ -97,6 +97,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ErrorBoundary
 - [Menu System](#menu-system)
   - MenuBarControl and MenuEntry
+    - SceneMenuStripControl
   - MenuBarManager
 - [Notification System](#notification-system)
   - NotificationCenter and NotificationRecord
@@ -1757,6 +1758,28 @@ bar = MenuBarControl(
 app.scene.add(bar)
 ```
 
+### SceneMenuStripControl
+
+`SceneMenuStripControl` is a reusable dynamic menu strip that provides default `File`, `Scenes`, and `Windows` sections for a target scene. It rebuilds entries before pointer interactions so scene names and window visibility toggles stay current. Use `extra_entries_provider` to inject additional top-level menus when needed.
+
+```python
+from gui_do import MenuEntry, SceneMenuStripControl
+
+def extra_entries() -> list[MenuEntry]:
+    return [MenuEntry("Tools", [...])]
+
+menu = SceneMenuStripControl(
+    "main_menu",
+    Rect(0, 0, 1280, 28),
+    app,
+    scene_name="main",
+    extra_entries_provider=extra_entries,
+    on_scene_selected=lambda scene: transitions.go(scene),
+    on_window_toggled=lambda window, visible: sync_window_toggle(window, visible),
+)
+app.add(menu, scene_name="main")
+```
+
 ### MenuBarManager
 
 `MenuBarManager` is the feature-friendly registration layer for top-level menus. It accumulates menu contributions and builds one `MenuBarControl` in registration order.
@@ -2152,6 +2175,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `TabItem`
 - `MenuBarControl`
 - `MenuEntry`
+- `SceneMenuStripControl`
 - `TreeControl`
 - `TreeNode`
 - `NotificationPanelControl`

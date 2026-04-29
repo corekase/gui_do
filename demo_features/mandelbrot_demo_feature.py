@@ -13,8 +13,8 @@ from gui_do import (
     ContextMenuItem,
     LabelControl,
     LogicFeature,
-    MenuBarControl,
     MenuEntry,
+    SceneMenuStripControl,
     RoutedFeature,
     WindowControl,
 )
@@ -484,10 +484,17 @@ class MandelbrotRenderFeature(RoutedFeature):
         menu_h = 28
 
         self.menu_bar = self.window.add(
-            MenuBarControl(
+            SceneMenuStripControl(
                 "mandel_window_menu",
                 Rect(content_rect.left + padding, content_rect.top + padding, content_rect.width - (padding * 2), menu_h),
-                self._menu_entries(),
+                host.app,
+                scene_name="main",
+                file_items_provider=lambda: [ContextMenuItem("Minimize", action=self._minimize_window)],
+                on_scene_selected=getattr(
+                    getattr(host, "scene_transitions", None),
+                    "go",
+                    getattr(host.app, "switch_scene", lambda _scene: None),
+                ),
             )
         )
 
@@ -635,16 +642,6 @@ class MandelbrotRenderFeature(RoutedFeature):
             return False
         return self.menu_bar.handle_event(event, demo.app)
 
-    def _menu_entries(self) -> list[MenuEntry]:
-        return [
-            MenuEntry(
-                "File",
-                [
-                    ContextMenuItem("Minimize", action=self._minimize_window),
-                ],
-            )
-        ]
-
     def _minimize_window(self) -> None:
         if self.window is not None:
             self.window.visible = False
@@ -654,6 +651,17 @@ class MandelbrotRenderFeature(RoutedFeature):
                 demo.set_mandel_window_visible(False)
             elif hasattr(demo, "mandel_toggle_window") and demo.mandel_toggle_window is not None:
                 demo.mandel_toggle_window.pushed = False
+
+    def _menu_entries(self) -> list[MenuEntry]:
+        """Compatibility helper retained for menu runtime tests."""
+        return [
+            MenuEntry(
+                "File",
+                [
+                    ContextMenuItem("Minimize", action=self._minimize_window),
+                ],
+            )
+        ]
 
     def on_status_event(self, host, payload) -> None:
         """Handle status-bus events and render normalized status text."""
