@@ -15,11 +15,39 @@ class KeyboardManager:
         return event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING)
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
+        overlay = getattr(app, "overlay", None)
+        has_overlay = getattr(overlay, "has_overlay", None)
+        has_command_palette = callable(has_overlay) and has_overlay("__command_palette__")
+        task_panel_focus = getattr(app, "task_panel_focus", None)
+
+        if event.is_key_down(pygame.K_F1):
+            if has_command_palette:
+                event.prevent_default()
+                event.stop_propagation()
+                return True
+            if task_panel_focus is not None and task_panel_focus.toggle(scene, app):
+                event.prevent_default()
+                event.stop_propagation()
+                return True
+
+        if task_panel_focus is not None and task_panel_focus.is_active:
+            if event.is_key_down(pygame.K_TAB):
+                shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
+                if task_panel_focus.cycle(scene, app, forward=not shift_pressed):
+                    event.prevent_default()
+                    event.stop_propagation()
+                    return True
+            if app.focus.route_key_event(event, app):
+                event.prevent_default()
+                event.stop_propagation()
+                return True
+            event.prevent_default()
+            event.stop_propagation()
+            return True
+
         # Ctrl+Tab / Ctrl+Shift+Tab — window focus cycling.
         if event.is_key_down(pygame.K_TAB) and bool(event.mod & pygame.KMOD_CTRL):
-            overlay = getattr(app, "overlay", None)
-            has_overlay = getattr(overlay, "has_overlay", None)
-            if callable(has_overlay) and has_overlay("__command_palette__"):
+            if has_command_palette:
                 event.prevent_default()
                 event.stop_propagation()
                 return True
@@ -32,9 +60,7 @@ class KeyboardManager:
             return True
 
         if event.is_key_down(pygame.K_TAB):
-            overlay = getattr(app, "overlay", None)
-            has_overlay = getattr(overlay, "has_overlay", None)
-            if callable(has_overlay) and has_overlay("__command_palette__"):
+            if has_command_palette:
                 event.prevent_default()
                 event.stop_propagation()
                 return True

@@ -9,6 +9,7 @@ from gui_do.app.gui_application import GuiApplication
 from gui_do.controls.input.button_control import ButtonControl
 from gui_do.controls.display.label_control import LabelControl
 from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.task_panel_control import TaskPanelControl
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.focus.focus_manager import FocusManager
 from gui_do.focus.focus_visualizer import FocusVisualizer
@@ -603,6 +604,129 @@ class CtrlTabWindowCycleTests(unittest.TestCase):
         app.update(0.0)
 
         self.assertIs(app.focus.focused_node, btn_a)
+
+
+class TaskPanelFocusModeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        pygame.init()
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def _app(self):
+        app = GuiApplication(Surface((500, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 500, 300), draw_background=False))
+        win = root.add(WindowControl("win", Rect(40, 30, 220, 180), "Main"))
+        win_button = win.add(ButtonControl("win_btn", Rect(60, 70, 90, 30), "Window"))
+        win_button.set_tab_index(0)
+        panel = app.add(TaskPanelControl("task_panel", Rect(0, 250, 500, 50), auto_hide=True, dock_bottom=True))
+        tp_a = panel.add(ButtonControl("task_a", Rect(16, 260, 90, 30), "A"))
+        tp_b = panel.add(ButtonControl("task_b", Rect(120, 260, 90, 30), "B"))
+        tp_a.set_tab_index(0)
+        tp_b.set_tab_index(1)
+        win.active = True
+        app.focus.set_focus(win_button)
+        return app, win, win_button, panel, tp_a, tp_b
+
+    def test_f1_enters_task_panel_mode_and_raises_panel(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+
+        self.assertFalse(app.task_panel_focus.is_active)
+        self.assertFalse(panel._hovered)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+
+        self.assertTrue(app.task_panel_focus.is_active)
+        self.assertIs(app.focus.focused_node, tp_a)
+        self.assertTrue(panel._hovered)
+        self.assertTrue(win.active)
+
+    def test_f1_exit_restores_previous_control_focus_and_lowers_panel(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+
+        self.assertFalse(app.task_panel_focus.is_active)
+        self.assertIs(app.focus.focused_node, win_button)
+        self.assertFalse(panel._hovered)
+        self.assertTrue(win.active)
+
+    def test_task_panel_selection_is_remembered_across_mode_reentry(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, tp_b)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, win_button)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, tp_b)
+
+    def test_pointer_events_over_panel_are_consumed_while_focus_mode_active(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+
+        consumed = app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (240, 270), "rel": (0, 0), "buttons": (0, 0, 0)}))
+
+        self.assertTrue(consumed)
+
+    def test_task_panel_mode_blocks_regular_tab_focus_leak_into_window(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}))
+
+        self.assertIs(app.focus.focused_node, tp_b)
+        self.assertIsNot(app.focus.focused_node, win_button)
+        self.assertTrue(app.task_panel_focus.is_active)
+
+    def test_mouse_event_outside_task_panel_exits_focus_mode(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        self.assertTrue(app.task_panel_focus.is_active)
+
+        app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (50, 50), "rel": (0, 0), "buttons": (0, 0, 0)}))
+
+        self.assertFalse(app.task_panel_focus.is_active)
+        self.assertIs(app.focus.focused_node, win_button)
+        self.assertFalse(panel._hovered)
+
+    def test_f1_does_not_activate_task_panel_mode_when_no_focus_items(self) -> None:
+        app = GuiApplication(Surface((500, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 500, 300), draw_background=False))
+        win = root.add(WindowControl("win", Rect(40, 30, 220, 180), "Main"))
+        win_button = win.add(ButtonControl("win_btn", Rect(60, 70, 90, 30), "Window"))
+        win_button.set_tab_index(0)
+        panel = app.add(TaskPanelControl("task_panel", Rect(0, 250, 500, 50), auto_hide=True, dock_bottom=True))
+        panel.add(LabelControl("non_focus", Rect(16, 260, 90, 30), "X"))
+        win.active = True
+        app.focus.set_focus(win_button)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+
+        self.assertFalse(app.task_panel_focus.is_active)
+        self.assertIs(app.focus.focused_node, win_button)
+        self.assertFalse(panel._hovered)
+
+    def test_f1_activates_for_actionable_task_panel_control_outside_tab_order(self) -> None:
+        app = GuiApplication(Surface((500, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 500, 300), draw_background=False))
+        win = root.add(WindowControl("win", Rect(40, 30, 220, 180), "Main"))
+        win_button = win.add(ButtonControl("win_btn", Rect(60, 70, 90, 30), "Window"))
+        win_button.set_tab_index(0)
+        panel = app.add(TaskPanelControl("task_panel", Rect(0, 250, 500, 50), auto_hide=True, dock_bottom=True))
+        hidden_from_tab = panel.add(ButtonControl("return_like", Rect(16, 260, 90, 30), "Return"))
+        hidden_from_tab.set_tab_index(-1)
+        win.active = True
+        app.focus.set_focus(win_button)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+
+        self.assertTrue(app.task_panel_focus.is_active)
+        self.assertIs(app.focus.focused_node, hidden_from_tab)
+        self.assertTrue(panel._hovered)
 
 
 if __name__ == "__main__":

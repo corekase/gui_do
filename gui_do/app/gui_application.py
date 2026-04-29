@@ -24,6 +24,7 @@ from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
 from ..focus.focus_visualizer import FocusVisualizer
 from ..focus.window_focus_manager import WindowFocusManager
+from ..focus.task_panel_focus_manager import TaskPanelFocusManager
 from ..scheduling.task_scheduler import TaskScheduler
 from ..scheduling.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -179,6 +180,7 @@ class GuiApplication:
         self.focus_visualizer = FocusVisualizer(self)
         self.focus = FocusManager()
         self.window_focus = WindowFocusManager()
+        self.task_panel_focus = TaskPanelFocusManager()
         self._last_active_window = None
         self.actions = ActionManager()
         self.events = EventBus()
@@ -456,6 +458,7 @@ class GuiApplication:
             self.invalidation.invalidate_all()
             self.focus.revalidate_focus(runtime.scene)
             self.window_focus.revalidate(runtime.scene)
+            self.task_panel_focus.revalidate(runtime.scene, self)
             active_window = runtime.scene.active_window()
             if active_window is not self._last_active_window:
                 self._last_active_window = active_window
@@ -574,6 +577,9 @@ class GuiApplication:
             self.input_state.pointer_pos = self._logical_pointer_pos
 
         logical_event = self._logicalize_pointer_event(gui_event)
+
+        if self.task_panel_focus.should_exit_for_pointer_event(logical_event, self):
+            self.task_panel_focus.exit(self.scene, self)
 
         pointer_event_in_window = False
         pointer_focus_target = None

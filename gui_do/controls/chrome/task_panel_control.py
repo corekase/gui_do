@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pygame import Rect
 
-from ...events.gui_event import GuiEvent
+from ...events.gui_event import GuiEvent, EventType
 from ..composite.panel_control import PanelControl
 
 if TYPE_CHECKING:
@@ -12,6 +12,13 @@ if TYPE_CHECKING:
 
 class TaskPanelControl(PanelControl):
     """Task panel with optional auto-hide animation and child position parenting."""
+
+    _POINTER_EVENT_KINDS = frozenset((
+        EventType.MOUSE_WHEEL,
+        EventType.MOUSE_BUTTON_DOWN,
+        EventType.MOUSE_BUTTON_UP,
+        EventType.MOUSE_MOTION,
+    ))
 
     def __init__(
         self,
@@ -30,6 +37,7 @@ class TaskPanelControl(PanelControl):
         self._shown_y = int(rect.y)
         self._hidden_y = self._compute_hidden_y()
         self._hovered = False
+        self._focus_mode_active = False
         self._child_local_offsets: Dict[object, Tuple[int, int]] = {}
 
     def _compute_hidden_y(self) -> int:
@@ -74,6 +82,20 @@ class TaskPanelControl(PanelControl):
     def set_animation_step_px(self, animation_step_px: int) -> None:
         self.animation_step_px = max(1, int(animation_step_px))
 
+    def set_focus_mode(self, active: bool) -> None:
+        is_active = bool(active)
+        if self._focus_mode_active == is_active:
+            if is_active and not self._hovered:
+                self._hovered = True
+                self.invalidate()
+            elif not is_active and self._hovered:
+                self._hovered = False
+                self.invalidate()
+            return
+        self._focus_mode_active = is_active
+        self._hovered = is_active
+        self.invalidate()
+
     def update(self, _dt_seconds: float) -> None:
         if self.visible and self.auto_hide:
             target = self._shown_y if self._hovered else self._hidden_y
@@ -86,8 +108,15 @@ class TaskPanelControl(PanelControl):
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         self._sync_children_to_panel_position()
+        task_panel_focus = getattr(app, "task_panel_focus", None)
+        focus_mode_active = False
+        is_active_for = getattr(task_panel_focus, "is_active_for", None)
+        if callable(is_active_for):
+            focus_mode_active = (is_active_for(self) is True)
         raw = event.pos
-        if isinstance(raw, tuple) and len(raw) == 2:
+        if focus_mode_active:
+            self._hovered = True
+        elif isinstance(raw, tuple) and len(raw) == 2:
             overlay = getattr(app, "overlay", None)
             has_palette = (
                 callable(getattr(overlay, "has_overlay", None))
@@ -95,7 +124,15 @@ class TaskPanelControl(PanelControl):
             )
             if not has_palette:
                 self._hovered = self.rect.collidepoint(raw)
-        return super().handle_event(event, app)
+        result = super().handle_event(event, app)
+        if result:
+            return True
+        if not focus_mode_active or event.kind not in self._POINTER_EVENT_KINDS:
+            return False
+        pointer = raw if isinstance(raw, tuple) and len(raw) == 2 else getattr(app, "logical_pointer_pos", None)
+        if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
+            return True
+        return False
 
     def reconcile_hover(self, wants_hover: bool) -> None:
         if self._hovered != wants_hover:
