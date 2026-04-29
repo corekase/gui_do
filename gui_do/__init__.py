@@ -179,6 +179,16 @@ from .data.validator import (
 from .layout.viewport import Viewport
 from .state.hierarchical_state_machine import HierarchicalStateMachine
 from .focus.focus_ring import FocusRing
+from .data.observable_stream import ObservableStream
+from .graphics.surface_compositor import SurfaceCompositor, Layer
+from .graphics.shape_renderer import ShapeRenderer
+from .graphics.surface_effects import SurfaceEffects
+from .scheduling.animation_state_machine import AnimationStateMachine, AnimationTransitionMode
+from .data.object_pool import ObjectPool
+from .graphics.vector_path import VectorPath
+from .layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
+from .forms.wizard_flow import WizardFlow, WizardStep, WizardHandle
+from .scheduling.scene_timeline import SceneTimeline
 
 __all__ = [
     "GuiApplication",
@@ -417,6 +427,23 @@ __all__ = [
     "Viewport",
     "HierarchicalStateMachine",
     "FocusRing",
+    "ObservableStream",
+    "SurfaceCompositor",
+    "Layer",
+    "ShapeRenderer",
+    "SurfaceEffects",
+    "AnimationStateMachine",
+    "AnimationTransitionMode",
+    "ObjectPool",
+    "VectorPath",
+    "SnapGrid",
+    "AlignmentGuide",
+    "SnapComposer",
+    "SnapTarget",
+    "WizardFlow",
+    "WizardStep",
+    "WizardHandle",
+    "SceneTimeline",
     "Alignment",
     "PlacementResult",
     "PopupPlacement",
