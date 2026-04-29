@@ -314,6 +314,15 @@ class SliderControl(_AxisDragControlBase):
             )
         return False
 
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return current slider value and bounds as a serializable dict."""
+        return {"value": float(self.value), "minimum": float(self.minimum), "maximum": float(self.maximum)}
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore slider value from a previously captured state dict."""
+        if "value" in state:
+            self._set_value(float(state["value"]))
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         travel = self._travel_rect()
         handle = self.handle_rect()

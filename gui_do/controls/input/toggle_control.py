@@ -77,6 +77,15 @@ class ToggleControl(_TextButtonControlBase):
                 return True
         return False
 
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return current toggle pushed state."""
+        return {"pushed": bool(self.pushed)}
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore toggle pushed state."""
+        if "pushed" in state:
+            self.pushed = bool(state["pushed"])
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         factory = theme.graphics_factory
         font_revision = factory.font_revision()

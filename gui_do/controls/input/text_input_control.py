@@ -399,6 +399,36 @@ class TextInputControl(_TextEditFocusBase):
         self._reset_text_edit_blink()
 
     # ------------------------------------------------------------------
+    # Value-state serialization
+    # ------------------------------------------------------------------
+
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return current text value and cursor position."""
+        return {"value": str(self._value), "cursor_pos": int(self._cursor_pos)}
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore text value and cursor position."""
+        if "value" in state:
+            self.set_value_with_cursor(
+                str(state["value"]),
+                int(state.get("cursor_pos", len(str(state["value"])))),
+            )
+
+    # ------------------------------------------------------------------
+    # Intrinsic sizing
+    # ------------------------------------------------------------------
+
+    def preferred_size(self, available_width: int = -1, available_height: int = -1) -> "tuple[int, int]":  # type: ignore[override]
+        """Return the natural height of a single text-input row.
+
+        The control is not height-constrained by content so the preferred
+        height is the current ``rect`` height.  Width is unconstrained
+        (fill available) by default.
+        """
+        w = available_width if available_width > 0 else self.rect.width
+        return (w, self.rect.height)
+
+    # ------------------------------------------------------------------
     # Drawing
     # ------------------------------------------------------------------
 

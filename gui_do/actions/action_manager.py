@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional
 
 from ..events.gui_event import EventType
+from .action_middleware import ActionContext, ActionMiddleware, build_middleware_chain
 
 
 ActionHandler = Callable[[object], bool]
@@ -23,6 +24,7 @@ class ActionManager:
     def __init__(self) -> None:
         self._actions: dict[str, ActionHandler] = {}
         self._keymap: dict[KeyBinding, list[str]] = defaultdict(list)
+        self._middlewares: List[ActionMiddleware] = []
 
     def register_action(self, action_name: str, handler: ActionHandler) -> None:
         self._actions[str(action_name)] = handler
@@ -81,9 +83,52 @@ class ActionManager:
             seen_bindings.add(binding)
             for action_name in self._keymap.get(binding, ()):
                 handler = self._actions.get(action_name)
-                if handler is not None and bool(handler(event)):
+                if handler is not None and self._dispatch(action_name, handler, event):
                     return True
         return False
+
+    def _dispatch(self, action_name: str, handler: ActionHandler, event) -> bool:
+        """Run *handler* through the middleware pipeline and return consumed flag."""
+        if not self._middlewares:
+            return bool(handler(event))
+        ctx = ActionContext(action_name=action_name, event=event)
+
+        def _terminal(c: ActionContext) -> bool:
+            return bool(handler(c.event))
+
+        chain = build_middleware_chain(self._middlewares, _terminal)
+        return bool(chain(ctx))
+
+    # ------------------------------------------------------------------
+    # Middleware management
+    # ------------------------------------------------------------------
+
+    def add_middleware(self, middleware: ActionMiddleware) -> None:
+        """Append *middleware* to the pipeline.
+
+        Middlewares are called in LIFO order: the most recently added
+        middleware runs first on every dispatch.
+        """
+        self._middlewares.append(middleware)
+
+    def remove_middleware(self, middleware: ActionMiddleware) -> bool:
+        """Remove a previously registered *middleware*.
+
+        Returns ``True`` if found and removed, ``False`` if not registered.
+        """
+        try:
+            self._middlewares.remove(middleware)
+            return True
+        except ValueError:
+            return False
+
+    def clear_middlewares(self) -> None:
+        """Remove all registered middlewares."""
+        self._middlewares.clear()
+
+    def middleware_count(self) -> int:
+        """Return the number of registered middlewares."""
+        return len(self._middlewares)
 
     def binding_count(self) -> int:
         """Return the total number of key-to-action bindings registered."""

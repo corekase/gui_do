@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     import pygame
     from ...app.gui_application import GuiApplication
     from ...theme.color_theme import ColorTheme
+    from ...theme.scoped_theme import ScopedTheme
 
 
 class UiNode:
@@ -30,6 +31,12 @@ class UiNode:
         self._dirty = True
         # Set by the scene/app during mount to enable per-rect invalidation.
         self._invalidation_tracker = None
+        # Optional ScopedTheme attached to this node; resolved via resolve_theme().
+        self._scoped_theme: Optional["ScopedTheme"] = None
+        # Cumulative scroll/clip offset this node applies to its children.
+        # Set by scroll containers when laying out children so that coordinate
+        # transforms can reconstruct the full screen-to-local mapping.
+        self._local_offset: tuple = (0, 0)
 
     @property
     def visible(self) -> bool:
@@ -402,3 +409,275 @@ class UiNode:
 
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
         """Draw control onto target surface."""
+
+    # ------------------------------------------------------------------
+    # Intrinsic sizing — measure() protocol
+    # ------------------------------------------------------------------
+
+    def preferred_size(
+        self,
+        available_width: int = -1,
+        available_height: int = -1,
+    ) -> "tuple[int, int]":
+        """Return the node's natural ``(width, height)`` given constraints.
+
+        Parameters
+        ----------
+        available_width:
+            Maximum horizontal space offered by the parent, or ``-1`` for
+            unconstrained.
+        available_height:
+            Maximum vertical space offered by the parent, or ``-1`` for
+            unconstrained.
+
+        Returns
+        -------
+        (int, int)
+            Preferred width and height in pixels.  The default implementation
+            returns the current ``rect`` size so every control behaves
+            correctly without an override.  Controls with dynamic content
+            (labels, text inputs, list views …) should override this to
+            reflect their natural content size.
+        """
+        return (self.rect.width, self.rect.height)
+
+    def measure(
+        self,
+        available_width: int = -1,
+        available_height: int = -1,
+    ) -> "tuple[int, int]":
+        """Alias for :meth:`preferred_size` matching the :class:`~gui_do.LayoutPass` protocol."""
+        return self.preferred_size(available_width, available_height)
+
+    # ------------------------------------------------------------------
+    # Value-state serialization contract
+    # ------------------------------------------------------------------
+
+    def capture_state(self) -> dict:
+        """Return a JSON-safe snapshot of this node's interactive value state.
+
+        The default implementation returns an empty dict (stateless node).
+        Controls with user-mutable state (text inputs, sliders, scroll views,
+        toggles, list selections …) override this to include their current
+        values so that callers can persist, restore, or undo the state.
+
+        The returned dict should use only JSON-safe types (str, int, float,
+        bool, list, dict, None).  Keys are control-specific; callers must
+        treat the dict as opaque and round-trip it through
+        :meth:`restore_state` unchanged.
+
+        Returns
+        -------
+        dict
+            Snapshot of interactive state.  Empty dict for stateless nodes.
+        """
+        return {}
+
+    def restore_state(self, state: dict) -> None:
+        """Restore interactive value state from a previously captured snapshot.
+
+        The default implementation is a no-op.  Stateful controls override
+        this to apply all keys from *state* (as produced by
+        :meth:`capture_state`).  Unknown keys should be silently ignored so
+        that old snapshots remain forward-compatible when new state fields are
+        added.
+
+        Parameters
+        ----------
+        state:
+            Dict previously returned by :meth:`capture_state` on a compatible
+            node.  May be an empty dict (callers should handle this).
+        """
+
+    def capture_subtree_state(self) -> dict:
+        """Capture state for this node and all descendants into a nested dict.
+
+        Returns a dict keyed by ``control_id`` containing only nodes with
+        non-empty :meth:`capture_state` output, so stateless nodes contribute
+        no keys.
+
+        Returns
+        -------
+        dict
+            ``{control_id: state_dict}`` for this node and its descendants.
+        """
+        result: dict = {}
+        own = self.capture_state()
+        if own:
+            result[self.control_id] = own
+        for child in self.children:
+            result.update(child.capture_subtree_state())
+        return result
+
+    def restore_subtree_state(self, state: dict) -> None:
+        """Restore state for this node and all descendants from a nested dict.
+
+        *state* should be a dict as returned by :meth:`capture_subtree_state`.
+        Controls whose ``control_id`` is not present in *state* are left
+        unchanged (forward-compatible restoration).
+
+        Parameters
+        ----------
+        state:
+            ``{control_id: state_dict}`` mapping.
+        """
+        if not state:
+            return
+        own = state.get(self.control_id)
+        if own is not None:
+            self.restore_state(own)
+        for child in self.children:
+            child.restore_subtree_state(state)
+
+    # ------------------------------------------------------------------
+    # Cascading theme scope resolution
+    # ------------------------------------------------------------------
+
+    def attach_scoped_theme(self, scoped_theme: "ScopedTheme") -> None:
+        """Attach a :class:`~gui_do.ScopedTheme` to this node.
+
+        All descendants that call :meth:`resolve_theme` will receive this
+        scope as the innermost override context until a closer ancestor
+        overrides it again, or until :meth:`detach_scoped_theme` is called.
+
+        Parameters
+        ----------
+        scoped_theme:
+            The scope to attach.  Pass ``None`` to clear the attachment.
+        """
+        self._scoped_theme = scoped_theme
+        self.invalidate()
+
+    def detach_scoped_theme(self) -> None:
+        """Remove any :class:`~gui_do.ScopedTheme` attached to this node."""
+        self._scoped_theme = None
+        self.invalidate()
+
+    def resolve_theme(
+        self,
+        base_theme: "ColorTheme",
+    ) -> "ColorTheme":
+        """Return the most-specific :class:`~gui_do.ColorTheme`-compatible theme
+        for this node, climbing the parent chain for :class:`~gui_do.ScopedTheme`
+        overrides.
+
+        The resolution order is:
+
+        1. Nearest ancestor (including self) that has a ``_scoped_theme`` set.
+        2. The global *base_theme* when no scope is found.
+
+        Since :class:`~gui_do.ScopedTheme` is not a drop-in replacement for
+        :class:`~gui_do.ColorTheme`, this method returns the *base_theme*
+        object itself when no scope overrides are attached.  Individual draw
+        methods can use :meth:`nearest_scoped_theme` to obtain the raw scope
+        and resolve individual tokens from it.
+
+        Parameters
+        ----------
+        base_theme:
+            The application-level :class:`~gui_do.ColorTheme` used as the
+            final fallback.
+
+        Returns
+        -------
+        ColorTheme
+            The *base_theme* (callers use :meth:`nearest_scoped_theme` for
+            token-level overrides).
+        """
+        return base_theme
+
+    def nearest_scoped_theme(self) -> "Optional[ScopedTheme]":
+        """Return the nearest :class:`~gui_do.ScopedTheme` in the ancestor chain.
+
+        Walks from this node upward through ``parent`` links and returns the
+        first ``_scoped_theme`` that is not ``None``.  Returns ``None`` when
+        no ancestor (including self) has a scoped theme attached.
+
+        Draw methods call this to obtain token overrides::
+
+            scope = self.nearest_scoped_theme()
+            surface_color = scope.resolve("surface") if scope else theme.surface
+        """
+        current: Optional["UiNode"] = self
+        while current is not None:
+            if current._scoped_theme is not None:  # noqa: SLF001
+                return current._scoped_theme
+            current = current.parent
+        return None
+
+    # ------------------------------------------------------------------
+    # Local coordinate transform chain
+    # ------------------------------------------------------------------
+
+    def set_local_offset(self, dx: int, dy: int) -> None:
+        """Record the scroll/clip offset this node applies to its children.
+
+        Scroll containers call this during layout so that
+        :meth:`local_to_screen` and :meth:`screen_to_local` can reconstruct
+        the full transform chain from any descendant up to the screen.
+
+        Parameters
+        ----------
+        dx, dy:
+            The horizontal and vertical scroll offset (in pixels) that this
+            node applies when positioning its children.  Positive values mean
+            children are shifted right / down; negative mean they are clipped
+            to the left / top.
+        """
+        self._local_offset = (int(dx), int(dy))
+
+    def local_to_screen(self, local_pos: tuple) -> tuple:
+        """Convert a position in this node's local coordinate space to screen
+        coordinates.
+
+        Walks the parent chain accumulating each ancestor's
+        ``_local_offset`` so that the position is correctly mapped even
+        through nested scroll containers.
+
+        Parameters
+        ----------
+        local_pos:
+            ``(x, y)`` in this node's local coordinate system (i.e. relative
+            to ``self.rect.topleft`` before any scrolling is applied).
+
+        Returns
+        -------
+        tuple[int, int]
+            The corresponding ``(screen_x, screen_y)`` position.
+        """
+        x, y = int(local_pos[0]), int(local_pos[1])
+        # Start at this node's own rect origin.
+        x += self.rect.left
+        y += self.rect.top
+        # Walk ancestors, each parent's _local_offset represents how much
+        # this node was shifted inside the parent's content area.
+        current: Optional["UiNode"] = self.parent
+        while current is not None:
+            ox, oy = current._local_offset  # noqa: SLF001
+            x += ox
+            y += oy
+            x += current.rect.left
+            y += current.rect.top
+            current = current.parent
+        return (x, y)
+
+    def screen_to_local(self, screen_pos: tuple) -> tuple:
+        """Convert a screen-space position to this node's local coordinate space.
+
+        Inverse of :meth:`local_to_screen`.  Useful for hit testing against
+        content that has been scrolled within a viewport.
+
+        Parameters
+        ----------
+        screen_pos:
+            ``(screen_x, screen_y)`` in screen/window coordinates.
+
+        Returns
+        -------
+        tuple[int, int]
+            The corresponding ``(local_x, local_y)`` in this node's coordinate
+            system.
+        """
+        screen_x, screen_y = int(screen_pos[0]), int(screen_pos[1])
+        origin_x, origin_y = self.local_to_screen((0, 0))
+        return (screen_x - origin_x, screen_y - origin_y)

@@ -40,6 +40,7 @@ from .layout.window_tiling_manager import WindowTilingManager
 from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
 from .controls.composite.dock_workspace_panel import DockWorkspacePanel
 from .actions.action_manager import ActionManager
+from .actions.action_middleware import ActionContext, ActionMiddleware
 from .actions.action_registry import ActionDescriptor, ActionRegistry
 from .events.event_manager import EventManager
 from .events.event_bus import EventBus
@@ -75,6 +76,13 @@ from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
 from .layout.constraint_layout import ConstraintLayout, AnchorConstraint
 from .overlays.overlay_manager import OverlayManager, OverlayHandle
+from .overlays.popup_placement import (
+    Alignment,
+    PlacementResult,
+    PopupPlacement,
+    Side,
+    compute_popup_rect,
+)
 from .controls.composite.overlay_panel_control import OverlayPanelControl
 from .controls.data.list_view_control import ListViewControl, ListItem
 from .controls.input.dropdown_control import DropdownControl, DropdownOption
@@ -179,6 +187,8 @@ __all__ = [
     "DockWorkspace",
     "DockWorkspacePanel",
     "ActionManager",
+    "ActionContext",
+    "ActionMiddleware",
     "ActionDescriptor",
     "ActionRegistry",
     "EventManager",
@@ -367,4 +377,9 @@ __all__ = [
     "property_registry",
     "SceneSnapshot",
     "NodeSnapshot",
+    "Alignment",
+    "PlacementResult",
+    "PopupPlacement",
+    "Side",
+    "compute_popup_rect",
 ]

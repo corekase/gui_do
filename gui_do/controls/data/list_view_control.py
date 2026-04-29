@@ -269,6 +269,35 @@ class ListViewControl(_VirtualizedScrollListBase):
     def _content_height(self) -> int:
         return len(self._items) * self._row_height
 
+    def preferred_size(self, available_width: int = -1, available_height: int = -1) -> "tuple[int, int]":  # type: ignore[override]
+        """Return preferred size as (available_width, content_height clamped to available).
+
+        Useful for auto-sizing list views inside scroll containers or dialogs.
+        """
+        w = available_width if available_width > 0 else self.rect.width
+        content_h = self._content_height()
+        if available_height > 0:
+            content_h = min(content_h, available_height)
+        return (w, max(self._row_height, content_h))
+
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return current selection indices and scroll offset."""
+        return {
+            "selected_indices": list(self._selected_indices),
+            "scroll_offset": int(self._scroll_offset),
+        }
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore selection and scroll offset from a captured state dict."""
+        if "selected_indices" in state:
+            indices = [int(i) for i in state["selected_indices"] if 0 <= int(i) < len(self._items)]
+            self._selected_indices = indices
+            self._selected_set = set(indices)
+        if "scroll_offset" in state:
+            self._scroll_offset = int(state["scroll_offset"])
+            self._clamp_scroll()
+        self.invalidate()
+
     def _content_rect(self) -> Rect:
         width = self.rect.width
         if self._scrollbar_rect() is not None:

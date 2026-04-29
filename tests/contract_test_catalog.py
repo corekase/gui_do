@@ -1,4 +1,4 @@
-"""Canonical contract-test catalog shared by docs/parity regression tests."""
+﻿"""Canonical contract-test catalog shared by docs/parity regression tests."""
 
 DEMO_CONTRACTS_ENABLED = True
 
@@ -15,7 +15,7 @@ GUI_DO LIBRARY:
   - gui_do/ package: Core framework, all controls, event system, layout, theme, etc.
   - tests/: Unit tests verifying all library contracts and functionality
   - docs/: Architecture and API documentation
-  - scripts/manage.py: Developer bootstrap tool — strips demo to yield clean library base
+  - scripts/manage.py: Developer bootstrap tool â€” strips demo to yield clean library base
   - Wheel distribution contains only gui_do/ package
   - Sdist distribution contains gui_do/, tests/, docs/, scripts/ but NOT demo content
     - Does NOT import from demo_features (enforced by test_gui_package_does_not_depend_on_demo_features)
@@ -190,6 +190,8 @@ PUBLIC_API_EXPORT_ORDER = (
     "DockWorkspace",
     "DockWorkspacePanel",
     "ActionManager",
+    "ActionContext",
+    "ActionMiddleware",
     "ActionDescriptor",
     "ActionRegistry",
     "EventManager",
@@ -378,6 +380,11 @@ PUBLIC_API_EXPORT_ORDER = (
     "property_registry",
     "SceneSnapshot",
     "NodeSnapshot",
+    "Alignment",
+    "PlacementResult",
+    "PopupPlacement",
+    "Side",
+    "compute_popup_rect",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (
@@ -421,6 +428,8 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "DockWorkspace",
     "DockWorkspacePanel",
     "ActionManager",
+    "ActionContext",
+    "ActionMiddleware",
     "ActionDescriptor",
     "ActionRegistry",
     "EventManager",
@@ -609,6 +618,11 @@ PACKAGE_PUBLIC_API_GUI_IMPORT_ORDER = (
     "property_registry",
     "SceneSnapshot",
     "NodeSnapshot",
+    "Alignment",
+    "PlacementResult",
+    "PopupPlacement",
+    "Side",
+    "compute_popup_rect",
 )
 
 PACKAGE_PUBLIC_API_REQUIRED_DEMO_IMPORTS = (

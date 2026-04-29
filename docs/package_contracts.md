@@ -33,6 +33,8 @@ from gui_do import (
     DockWorkspace,
     DockWorkspacePanel,
     ActionManager,
+    ActionContext,
+    ActionMiddleware,
     ActionDescriptor,
     ActionRegistry,
     EventManager,
@@ -221,6 +223,11 @@ from gui_do import (
     property_registry,
     SceneSnapshot,
     NodeSnapshot,
+    Alignment,
+    PlacementResult,
+    PopupPlacement,
+    Side,
+    compute_popup_rect,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:

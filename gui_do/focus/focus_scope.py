@@ -181,3 +181,119 @@ class FocusScopeManager:
         fm_stack: list = self._fm._scope_stack
         fm_stack.clear()
         fm_stack.extend(roots)
+
+    # ------------------------------------------------------------------
+    # Spatial arrow-key navigation
+    # ------------------------------------------------------------------
+
+    def move_focus_in_direction(
+        self,
+        direction: str,
+        scene: "UiNode",
+    ) -> bool:
+        """Move focus to the nearest focusable node in *direction*.
+
+        Searches all focusable nodes in the active scope (or the full scene
+        when no scope is active) and sets focus to the closest one that lies
+        in the requested direction from the currently focused node.
+
+        Parameters
+        ----------
+        direction:
+            One of ``"left"``, ``"right"``, ``"up"``, or ``"down"``.
+        scene:
+            The root :class:`~gui_do.UiNode` to search when no scope is
+            active (typically ``app.scene.root``).
+
+        Returns
+        -------
+        bool
+            ``True`` if focus moved to a new node, ``False`` otherwise.
+        """
+        direction = str(direction).lower()
+        if direction not in ("left", "right", "up", "down"):
+            return False
+
+        focused = self._fm.focused_node
+        if focused is None:
+            return False
+
+        origin_rect = focused.rect
+
+        # Determine the candidate pool.
+        search_root: "UiNode" = scene
+        active = self.active_scope
+        if active is not None:
+            search_root = active.root
+
+        candidates = [
+            n for n in _iter_focusable(search_root)
+            if n is not focused
+        ]
+        if not candidates:
+            return False
+
+        best = _nearest_in_direction(origin_rect, direction, candidates)
+        if best is None:
+            return False
+
+        self._fm.set_focus(best, via_keyboard=True)
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Spatial helpers (module-private)
+# ---------------------------------------------------------------------------
+
+
+def _iter_focusable(root: "UiNode"):
+    """Yield all focusable, visible, enabled descendants of *root* (BFS)."""
+    from collections import deque
+    queue = deque([root])
+    while queue:
+        node = queue.popleft()
+        if not node._visible:  # noqa: SLF001
+            continue
+        if not node._enabled:  # noqa: SLF001
+            continue
+        if node.tab_index >= 0:
+            yield node
+        for child in node.children:
+            queue.append(child)
+
+
+def _nearest_in_direction(origin_rect, direction: str, candidates):
+    """Return the candidate whose centre is nearest in *direction*.
+
+    Only candidates whose centre strictly lies in the requested direction
+    from the origin centre are considered.  Among those, the one with the
+    smallest projected Euclidean distance is chosen.
+    """
+    ox = origin_rect.centerx
+    oy = origin_rect.centery
+
+    best_node = None
+    best_dist = float("inf")
+
+    for node in candidates:
+        cx = node.rect.centerx
+        cy = node.rect.centery
+        dx = cx - ox
+        dy = cy - oy
+
+        # Strict directional filter
+        if direction == "left" and dx >= 0:
+            continue
+        if direction == "right" and dx <= 0:
+            continue
+        if direction == "up" and dy >= 0:
+            continue
+        if direction == "down" and dy <= 0:
+            continue
+
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist < best_dist:
+            best_dist = dist
+            best_node = node
+
+    return best_node

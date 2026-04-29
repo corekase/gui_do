@@ -215,6 +215,16 @@ class TabControl(UiNode):
 
         return False
 
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return the currently active tab key."""
+        return {"selected_key": self.selected_key}
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore the active tab from a captured state dict."""
+        key = state.get("selected_key")
+        if key is not None:
+            self.select(str(key))
+
     # ------------------------------------------------------------------
     # Drawing
     # ------------------------------------------------------------------

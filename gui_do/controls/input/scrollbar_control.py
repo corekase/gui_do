@@ -322,6 +322,15 @@ class ScrollbarControl(_AxisDragControlBase):
             return self._set_offset(self.offset - (int(event.wheel_delta) * self.step), reason=ValueChangeReason.WHEEL)
         return False
 
+    def capture_state(self) -> dict:  # type: ignore[override]
+        """Return current scrollbar offset as a serializable dict."""
+        return {"offset": int(self.offset)}
+
+    def restore_state(self, state: dict) -> None:  # type: ignore[override]
+        """Restore scrollbar offset from a previously captured state dict."""
+        if "offset" in state:
+            self._set_offset(int(state["offset"]))
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         track = self._track_rect()
         handle = self.handle_rect()

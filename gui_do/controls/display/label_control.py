@@ -82,6 +82,18 @@ class LabelControl(UiNode):
         self._align = value
         self.invalidate()
 
+    def preferred_size(self, available_width: int = -1, available_height: int = -1) -> "tuple[int, int]":  # type: ignore[override]
+        """Return the rendered text size as the natural label size.
+
+        Uses the cached rendered surface when available; falls back to the
+        current ``rect`` size when no surface has been rendered yet (i.e.
+        before the first draw pass).
+        """
+        if self._rendered_surface is not None:
+            rw, rh = self._rendered_surface.get_size()
+            return (rw, rh)
+        return (self.rect.width, self.rect.height)
+
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
         font_revision = theme.fonts.revision
