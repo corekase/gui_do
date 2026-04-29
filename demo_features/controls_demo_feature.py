@@ -1337,7 +1337,17 @@ class ControlsShowcaseFeature(Feature):
                 "showcase_return",
                 return_rect,
                 "Return",
-                (host.go_to_main if hasattr(host, "go_to_main") else (lambda: host.app.switch_scene("main"))),
+                (
+                    host.go_to_main
+                    if hasattr(host, "go_to_main")
+                    else (
+                        lambda: (
+                            host.scene_transitions.go("main")
+                            if hasattr(host, "scene_transitions")
+                            else host.app.switch_scene("main")
+                        )
+                    )
+                ),
                 style="angle",
                 font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )

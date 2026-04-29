@@ -73,6 +73,10 @@ class SceneTransitionManager:
         # Active animation state
         self._snapshot: Optional[pygame.Surface] = None
         self._active: bool = False
+        self._progress: float = 0.0
+        self._active_style: Optional[SceneTransitionStyle] = None
+        # Register with app draw pipeline (GuiApplication checks this attribute).
+        setattr(self._app, "_scene_transition_manager", self)
 
     # ------------------------------------------------------------------
     # Configuration
@@ -121,6 +125,8 @@ class SceneTransitionManager:
             # If a transition is already running, cancel it and cut immediately
             self._snapshot = None
             self._active = False
+            self._progress = 0.0
+            self._active_style = None
 
         effective_style = style
         effective_dur = duration
@@ -172,44 +178,19 @@ class SceneTransitionManager:
                 pass  # fall back to non-alpha surface in headless/test contexts
         self._snapshot = snap
         self._active = True
+        self._progress = 0.0
+        self._active_style = effective_style
 
         app = self._app
-        snapshot_ref = [self._snapshot]
 
         def _animate(t: float) -> None:
-            if not snapshot_ref[0]:
-                return
-            snap_surf = snapshot_ref[0]
-            screen = app.surface
-            sr = screen.get_rect()
-            w, h = sr.width, sr.height
-
-            if effective_style is SceneTransitionStyle.FADE:
-                alpha = int(255 * (1.0 - t))
-                snap_surf.set_alpha(alpha)
-                screen.blit(snap_surf, (0, 0))
-
-            elif effective_style is SceneTransitionStyle.SLIDE_LEFT:
-                # Snapshot slides out to the left; new scene comes from right
-                offset_x = int(-w * t)
-                screen.blit(snap_surf, (offset_x, 0))
-
-            elif effective_style is SceneTransitionStyle.SLIDE_RIGHT:
-                offset_x = int(w * t)
-                screen.blit(snap_surf, (offset_x, 0))
-
-            elif effective_style is SceneTransitionStyle.SLIDE_UP:
-                offset_y = int(-h * t)
-                screen.blit(snap_surf, (0, offset_y))
-
-            elif effective_style is SceneTransitionStyle.SLIDE_DOWN:
-                offset_y = int(h * t)
-                screen.blit(snap_surf, (0, offset_y))
+            self._progress = max(0.0, min(float(t), 1.0))
 
         def _done() -> None:
             self._snapshot = None
-            snapshot_ref[0] = None
             self._active = False
+            self._progress = 0.0
+            self._active_style = None
             if on_complete:
                 try:
                     on_complete()
@@ -232,3 +213,34 @@ class SceneTransitionManager:
     def is_animating(self) -> bool:
         """True while a transition animation is in progress."""
         return self._active
+
+    def draw(self, surface: Optional[pygame.Surface] = None) -> None:
+        """Draw active transition overlay on top of the current frame."""
+        if not self._active or self._snapshot is None or self._active_style is None:
+            return
+
+        target = self._app.surface if surface is None else surface
+        sr = target.get_rect()
+        w, h = sr.width, sr.height
+        t = max(0.0, min(float(self._progress), 1.0))
+
+        if self._active_style is SceneTransitionStyle.FADE:
+            alpha = int(255 * (1.0 - t))
+            self._snapshot.set_alpha(alpha)
+            target.blit(self._snapshot, (0, 0))
+            return
+
+        if self._active_style is SceneTransitionStyle.SLIDE_LEFT:
+            target.blit(self._snapshot, (int(-w * t), 0))
+            return
+
+        if self._active_style is SceneTransitionStyle.SLIDE_RIGHT:
+            target.blit(self._snapshot, (int(w * t), 0))
+            return
+
+        if self._active_style is SceneTransitionStyle.SLIDE_UP:
+            target.blit(self._snapshot, (0, int(-h * t)))
+            return
+
+        if self._active_style is SceneTransitionStyle.SLIDE_DOWN:
+            target.blit(self._snapshot, (0, int(h * t)))

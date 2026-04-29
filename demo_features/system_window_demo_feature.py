@@ -1030,6 +1030,8 @@ class SystemWindowDemoFeature(RoutedFeature):
             return
         if hasattr(host, "go_to_main"):
             host.go_to_main()
+        elif hasattr(host, "scene_transitions"):
+            host.scene_transitions.go("main")
         else:
             host.app.switch_scene("main")
 
@@ -1039,6 +1041,8 @@ class SystemWindowDemoFeature(RoutedFeature):
             return
         if hasattr(host, "go_to_control_showcase"):
             host.go_to_control_showcase()
+        elif hasattr(host, "scene_transitions"):
+            host.scene_transitions.go("control_showcase")
         else:
             host.app.switch_scene("control_showcase")
 

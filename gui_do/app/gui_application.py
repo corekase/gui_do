@@ -886,6 +886,9 @@ class GuiApplication:
             runtime = self._scenes[self._active_scene_name]
             dirty = self.renderer.render(self.surface, runtime.scene, runtime.theme, app=self)
             self.features.draw(self.surface, runtime.theme)
+            transition_mgr = getattr(self, "_scene_transition_manager", None)
+            if transition_mgr is not None:
+                transition_mgr.draw(self.surface)
             return dirty
 
     def prewarm_scene(self, scene_name: Optional[str] = None, *, force: bool = False, host=None) -> int:
