@@ -64,6 +64,14 @@ class _ScreenLifecycleEntry:
     entry_id: int = 0
 
 
+@dataclass
+class _FallthroughEntry:
+    """Handler invoked only when the full event pipeline returns unconsumed."""
+    event_handler: "Callable[[object], bool]"
+    scene_name: "Optional[str]" = None
+    entry_id: int = 0
+
+
 class _ScrollStackComposer:
     """Compose controls in a ScrollViewControl with a vertical cursor."""
 
@@ -209,6 +217,8 @@ class GuiApplication:
         self._screen_lifecycle_layers: list[_ScreenLifecycleEntry] = []
         self._screen_lifecycle_next_layer_id = 1
         self._screen_lifecycle_active = False
+        self._fallthrough_handlers: list[_FallthroughEntry] = []
+        self._fallthrough_next_id = 1
         self._init_cursor_system()
         self.configure_first_frame_profiling(enabled=os.getenv("GUI_DO_PROFILE_FIRST_OPEN", "").strip().lower() in {"1", "true", "yes", "on"})
         self._sync_scene_scheduler_activity(self._active_scene_name)
@@ -591,6 +601,12 @@ class GuiApplication:
         if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
             return True
+        for ft_entry in self._fallthrough_handlers:
+            if ft_entry.scene_name is not None and str(ft_entry.scene_name) != str(self._active_scene_name):
+                continue
+            if bool(ft_entry.event_handler(logical_event)):
+                self.invalidation.invalidate_all()
+                return True
         return False
 
     def set_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None) -> None:
@@ -602,6 +618,32 @@ class GuiApplication:
         )
         self._screen_lifecycle_layers.clear()
         self._apply_screen_lifecycle_chain()
+
+    def chain_screen_fallthrough(self, event_handler, *, scene_name: Optional[str] = None):
+        """Register a handler that fires only when no earlier handler consumed an event.
+
+        The *event_handler* is called at the very end of :meth:`process_event`,
+        after the scene graph dispatch, only if the event is still unconsumed.
+        Returns a disposer callable that removes this handler when invoked.
+        """
+        layer_id = self._fallthrough_next_id
+        self._fallthrough_next_id += 1
+        entry = _FallthroughEntry(event_handler=event_handler, scene_name=scene_name, entry_id=layer_id)
+        self._fallthrough_handlers.append(entry)
+
+        def _dispose() -> bool:
+            removed = False
+            retained = []
+            for h in self._fallthrough_handlers:
+                if h.entry_id == layer_id:
+                    removed = True
+                    continue
+                retained.append(h)
+            if removed:
+                self._fallthrough_handlers = retained
+            return removed
+
+        return _dispose
 
     def chain_screen_lifecycle(self, preamble=None, event_handler=None, postamble=None, scene_name: Optional[str] = None):
         """Compose additional lifecycle callbacks without replacing existing ones.

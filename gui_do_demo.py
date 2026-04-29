@@ -117,7 +117,7 @@ class GuiDoDemo:
         self.action_registry = ActionRegistry()
 
         # Create a global palette manager accessible from all scenes
-        self._palette_manager = CommandPaletteManager(self.app.overlay)
+        self._palette_manager = CommandPaletteManager(self.app.overlay, self.app, action_registry=self.action_registry)
 
         self._register_app_actions()
 
@@ -202,9 +202,6 @@ class GuiDoDemo:
     def _open_command_palette(self) -> None:
         """Open the command palette pre-populated from the ActionRegistry."""
         if self._palette_manager is not None:
-            # Always use the current app's overlay manager to ensure consistency across scene changes
-            self._palette_manager._overlays = self.app.overlay
-            self._palette_manager.register_action_registry(self.action_registry)
             self._palette_manager.show(self.app)
 
     def go_to_control_showcase(self) -> None:

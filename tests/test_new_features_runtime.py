@@ -6,6 +6,7 @@ RangeSliderControl, ColorPickerControl, CommandPaletteManager.
 """
 import os
 import unittest
+from unittest.mock import MagicMock
 
 # Headless pygame environment for control draw tests
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -695,6 +696,7 @@ from gui_do.overlays.command_palette_manager import (
     CommandPaletteHandle,
 )
 from gui_do.overlays.overlay_manager import OverlayManager
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do import ListItem, ListViewControl
 
 
@@ -808,6 +810,118 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
 
         p._move_selection_by_wheel(lv, -10)
         self.assertEqual(lv.selected_index, 3)
+
+    def test_background_trigger_auto_registers_on_construction_with_app(self) -> None:
+        """Passing app to __init__ immediately registers the fallthrough handler."""
+        captured = {}
+
+        app = MagicMock()
+        app.overlay.point_in_any_overlay.return_value = False
+        app.scene.pointer_context_at.return_value = (False, None)
+
+        def _fallthrough(*, event_handler=None, **_kwargs):
+            captured["handler"] = event_handler
+            return lambda: True
+
+        app.chain_screen_fallthrough.side_effect = _fallthrough
+        p = CommandPaletteManager(MagicMock(), app)
+
+        self.assertIn("handler", captured)
+        self.assertIsNotNone(p._background_trigger_dispose)
+
+    def test_background_trigger_auto_registers_on_first_show(self) -> None:
+        """If app not passed to __init__, fallthrough registers on first show()."""
+        captured = {}
+
+        app = MagicMock()
+        app.overlay.point_in_any_overlay.return_value = False
+        app.scene.pointer_context_at.return_value = (False, None)
+        app.overlay = MagicMock()
+
+        def _fallthrough(*, event_handler=None, **_kwargs):
+            captured["handler"] = event_handler
+            return lambda: True
+
+        app.chain_screen_fallthrough.side_effect = _fallthrough
+
+        p = CommandPaletteManager(MagicMock())
+        self.assertIsNone(p._background_trigger_dispose)
+
+        p.show(app)
+        self.assertIn("handler", captured)
+        self.assertIsNotNone(p._background_trigger_dispose)
+
+    def test_background_trigger_opens_palette_on_empty_space(self) -> None:
+        """Fallthrough handler opens palette when right-clicking empty background."""
+        captured = {}
+
+        app = MagicMock()
+        app.overlay.point_in_any_overlay.return_value = False
+        app.scene.pointer_context_at.return_value = (False, None)
+
+        def _fallthrough(*, event_handler=None, **_kwargs):
+            captured["handler"] = event_handler
+            return lambda: True
+
+        app.chain_screen_fallthrough.side_effect = _fallthrough
+        p = CommandPaletteManager(MagicMock(), app)
+
+        evt = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(25, 25),
+            button=3,
+        )
+        consumed = captured["handler"](evt)
+        self.assertTrue(consumed)
+
+    def test_background_trigger_ignores_right_click_on_controls(self) -> None:
+        """Fallthrough handler does nothing when the click lands on a control."""
+        captured = {}
+
+        app = MagicMock()
+        app.overlay.point_in_any_overlay.return_value = False
+        app.scene.pointer_context_at.return_value = (False, object())
+
+        def _fallthrough(*, event_handler=None, **_kwargs):
+            captured["handler"] = event_handler
+            return lambda: True
+
+        app.chain_screen_fallthrough.side_effect = _fallthrough
+        p = CommandPaletteManager(MagicMock(), app)
+
+        evt = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(25, 25),
+            button=3,
+        )
+        consumed = captured["handler"](evt)
+        self.assertFalse(consumed)
+
+    def test_background_trigger_ignores_non_right_button(self) -> None:
+        """Fallthrough handler ignores any button that is not button 3."""
+        captured = {}
+
+        app = MagicMock()
+        app.overlay.point_in_any_overlay.return_value = False
+        app.scene.pointer_context_at.return_value = (False, None)
+
+        def _fallthrough(*, event_handler=None, **_kwargs):
+            captured["handler"] = event_handler
+            return lambda: True
+
+        app.chain_screen_fallthrough.side_effect = _fallthrough
+        p = CommandPaletteManager(MagicMock(), app)
+
+        evt = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=0,
+            pos=(25, 25),
+            button=1,
+        )
+        consumed = captured["handler"](evt)
+        self.assertFalse(consumed)
 
 
 # ---------------------------------------------------------------------------

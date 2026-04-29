@@ -449,6 +449,54 @@ class ScreenLifecycleChainingTests(GuiApplicationSceneManagementSetup):
         self.assertEqual(order, ["default", "alt"])
 
 
+class FallthroughHandlerTests(GuiApplicationSceneManagementSetup):
+    """chain_screen_fallthrough — fires only when process_event would return False."""
+
+    def test_fallthrough_fires_when_event_unconsumed(self) -> None:
+        fired = []
+        self.app.chain_screen_fallthrough(event_handler=lambda _e: fired.append(True) or True)
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.assertEqual(fired, [True])
+
+    def test_fallthrough_does_not_fire_when_event_consumed_by_screen_handler(self) -> None:
+        fired = []
+        self.app.set_screen_lifecycle(event_handler=lambda _e: True)
+        self.app.chain_screen_fallthrough(event_handler=lambda _e: fired.append(True) or True)
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.assertEqual(fired, [])
+
+    def test_fallthrough_dispose_removes_handler(self) -> None:
+        fired = []
+        dispose = self.app.chain_screen_fallthrough(event_handler=lambda _e: fired.append(True) or True)
+        removed = dispose()
+        self.assertTrue(removed)
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.assertEqual(fired, [])
+
+    def test_fallthrough_scene_scoped_runs_only_for_matching_scene(self) -> None:
+        fired = []
+        self.app.create_scene("alt")
+        self.app.chain_screen_fallthrough(
+            event_handler=lambda _e: fired.append("default") or True,
+            scene_name="default",
+        )
+        self.app.chain_screen_fallthrough(
+            event_handler=lambda _e: fired.append("alt") or True,
+            scene_name="alt",
+        )
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.app.switch_scene("alt")
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.assertEqual(fired, ["default", "alt"])
+
+    def test_fallthrough_short_circuits_on_first_consumed(self) -> None:
+        order = []
+        self.app.chain_screen_fallthrough(event_handler=lambda _e: order.append("first") or True)
+        self.app.chain_screen_fallthrough(event_handler=lambda _e: order.append("second") or True)
+        self.app.process_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, {"button": 3, "pos": (5, 5)}))
+        self.assertEqual(order, ["first"])
+
+
 class SceneSuspensionTests(GuiApplicationSceneManagementSetup):
 
     def test_scene_scoped_part_updates_suspend_when_scene_inactive(self) -> None:

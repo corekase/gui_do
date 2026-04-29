@@ -110,10 +110,14 @@ class CommandPaletteManager:
 
     _OWNER_ID = "__command_palette__"
 
-    def __init__(self, overlay_manager: OverlayManager) -> None:
+    def __init__(self, overlay_manager: OverlayManager, app: "Optional[GuiApplication]" = None, *, action_registry=None) -> None:
         self._overlays = overlay_manager
         self._entries: Dict[str, CommandEntry] = {}
         self._handle: Optional[OverlayHandle] = None
+        self._background_trigger_dispose: Optional[Callable[[], bool]] = None
+        self._action_registry = action_registry
+        if app is not None:
+            self._register_background_trigger(app)
 
     # ------------------------------------------------------------------
     # Registry API
@@ -164,12 +168,26 @@ class CommandPaletteManager:
         app: "GuiApplication",
         *,
         rect: Optional[Rect] = None,
-    ) -> CommandPaletteHandle:
+    ) -> "CommandPaletteHandle":
         """Open the command palette overlay and return a handle.
 
         If *rect* is not given, the palette is centered horizontally in the
         current window at the top third of the screen.
         """
+        # Always sync to the current scene's overlay manager so scene switches
+        # don't leave the palette on a stale overlay.
+        self._overlays = app.overlay
+
+        # Auto-register the background right-click trigger the first time show
+        # is called with an app, if it was not already set up at construction.
+        if self._background_trigger_dispose is None:
+            self._register_background_trigger(app)
+
+        # Refresh entries from a bound ActionRegistry so both the F5 path and
+        # the background right-click path always display the current command set.
+        if self._action_registry is not None:
+            self.register_action_registry(self._action_registry)
+
         self.hide()
 
         if rect is None:
@@ -253,6 +271,37 @@ class CommandPaletteManager:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _register_background_trigger(self, app: "GuiApplication") -> None:
+        """Register a fallthrough handler that opens the palette on background right-click.
+
+        Empty space means: not over an overlay, not over a window, and not over
+        a focusable control hit target.  Uses :meth:`~GuiApplication.chain_screen_fallthrough`
+        so the handler only fires when the full event pipeline found nothing else
+        to consume the click.
+        """
+        stored_app = app
+
+        def _on_background_right_click(event) -> bool:
+            if getattr(event, "kind", None) != EventType.MOUSE_BUTTON_DOWN:
+                return False
+            if int(getattr(event, "button", 0) or 0) != 3:
+                return False
+            pos = getattr(event, "pos", None)
+            if not (isinstance(pos, tuple) and len(pos) == 2):
+                return False
+            if stored_app.overlay.point_in_any_overlay(pos):
+                return False
+            window_hit, focus_target = stored_app.scene.pointer_context_at(pos)
+            if window_hit or focus_target is not None:
+                return False
+            self._overlays = stored_app.overlay
+            self.show(stored_app)
+            return True
+
+        self._background_trigger_dispose = app.chain_screen_fallthrough(
+            event_handler=_on_background_right_click,
+        )
 
     def _on_dismissed(self) -> None:
         self._handle = None
