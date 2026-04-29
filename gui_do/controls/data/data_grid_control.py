@@ -552,8 +552,8 @@ class DataGridControl(_VirtualizedScrollListBase):
             travel = max(1, sb_rect.height - thumb_h)
             thumb_y = int(sb_rect.y + (self._scroll_offset / max(1, content_height - viewport_height)) * travel)
             handle_rect = Rect(sb_rect.x + 2, thumb_y, sb_rect.width - 4, thumb_h)
-            pygame.draw.rect(surface, border_col, sb_rect)
-            pygame.draw.rect(surface, sel_col, handle_rect)
+            pygame.draw.rect(surface, theme.dark, sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
 
         # --- Focus ring ---
         if self._focused:

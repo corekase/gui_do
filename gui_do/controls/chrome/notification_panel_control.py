@@ -316,8 +316,8 @@ class NotificationPanelControl(OverlayPanelControl):
         sb_rect = self._scrollbar_rect()
         handle_rect = self._scrollbar_handle_rect()
         if sb_rect is not None and handle_rect is not None:
-            pygame.draw.rect(surface, _c(theme, "surface", (50, 50, 65)), sb_rect)
-            pygame.draw.rect(surface, muted_col, handle_rect)
+            pygame.draw.rect(surface, theme.dark, sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
 
         # Empty state
         if not self._center.all_records:

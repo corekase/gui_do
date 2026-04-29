@@ -490,5 +490,5 @@ class TreeControl(_VirtualizedScrollListBase):
         sb_rect = self._scrollbar_rect()
         handle_rect = self._scrollbar_handle_rect()
         if sb_rect is not None and handle_rect is not None:
-            pygame.draw.rect(surface, getattr(theme, "surface", (50, 50, 60)), sb_rect)
-            pygame.draw.rect(surface, theme.medium, handle_rect)
+            pygame.draw.rect(surface, theme.dark, sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)

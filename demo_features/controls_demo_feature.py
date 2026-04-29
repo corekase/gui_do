@@ -161,7 +161,7 @@ class ControlsShowcaseFeature(Feature):
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
 
-    LAYOUT_OVERALL_ROWS_CONSTANT = 5
+    LAYOUT_OVERALL_ROWS_CONSTANT = 6
     LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
 
     def __init__(self, rect: Rect | None = None) -> None:
@@ -649,12 +649,21 @@ class ControlsShowcaseFeature(Feature):
         new_row_x0 = col0_anchor.left
         new_row_x1 = col1_anchor.left
         new_row_x2 = col2_anchor.left
+        new_row_x3 = col3_anchor.left
         col0_y = col0_anchor.top
         col1_y = col1_anchor.top
         col2_y = col2_anchor.top
+        col3_y = col3_anchor.top
 
-        # Column 0: ListView, Dropdown, then Splitter stacked with requested spacing.
-        list_slot_h = slot_h(92)
+        # Column 0: ListView with selected-item label.
+        list_selection_label = LabelControl(
+            "lv_selected_label",
+            Rect(0, 0, new_row_col_w, 22),
+            "Selected: Item 1",
+            align="left",
+        )
+        list_selection_label.font_role = self._control_font_role
+        list_slot_h = slot_h(120)
         self._place_control(
             host,
             "list_view",
@@ -662,9 +671,11 @@ class ControlsShowcaseFeature(Feature):
             ListViewControl(
                 "control_list_view",
                 Rect(0, 0, 1, 1),
-                [ListItem(label=f"Item {index + 1}", value=index) for index in range(6)],
+                [ListItem(label=f"Item {index + 1}", value=index) for index in range(10)],
                 row_height=24,
+                selected_index=0,
                 font_role=self._control_font_role,
+                on_select=lambda _idx, item: setattr(list_selection_label, "text", f"Selected: {item.label}"),
             ),
             Rect(new_row_x0, col0_y, new_row_col_w, list_slot_h),
             focusable=True,
@@ -674,7 +685,72 @@ class ControlsShowcaseFeature(Feature):
             row_index=60,
         )
         list_view_bottom = col0_y + list_slot_h
+        list_selection_label.set_rect(Rect(new_row_x0, list_view_bottom + row_gap, new_row_col_w, 22))
+        host.control_showcase_root.add(list_selection_label)
+        self.control_labels.append(list_selection_label)
 
+        # Column 1: ScrollView with nested ListView and selected-item label.
+        scroll_viewport_h = 120
+        scroll_items = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet"]
+        scroll_content_h = 24 * len(scroll_items)
+        scroll_control = ScrollViewControl(
+            "control_scroll_view",
+            Rect(0, 0, new_row_col_w, scroll_viewport_h),
+            content_width=new_row_col_w - 20,
+            content_height=scroll_content_h,
+            scroll_y=True,
+        )
+        scroll_selection_label = LabelControl("sv_selected_label", Rect(0, 0, new_row_col_w, 22), "Selected: Alpha", align="left")
+        scroll_selection_label.font_role = self._control_font_role
+        scroll_select_list = ListViewControl(
+            "sv_select_list",
+            Rect(0, 0, new_row_col_w - 20, scroll_content_h),
+            [ListItem(label=item, value=item) for item in scroll_items],
+            row_height=24,
+            show_scrollbar=False,
+            font_role=self._control_font_role,
+            on_select=lambda _idx, item: setattr(scroll_selection_label, "text", f"Selected: {item.label}"),
+        )
+        # Managed by configure_accessibility ordering; keep out of default tab order.
+        scroll_select_list.set_tab_index(-1)
+        scroll_select_list.set_accessibility(role="listbox", label="Scroll view list")
+        self._focus_controls.append(scroll_select_list)
+        scroll_control.add(scroll_select_list, content_x=4, content_y=0)
+        scroll_control.set_content_size(new_row_col_w - 20, scroll_content_h)
+        scroll_slot_h = slot_h(120)
+        self._place_control(
+            host,
+            "scroll_view",
+            "Scroll View",
+            scroll_control,
+            Rect(new_row_x1, col1_y, new_row_col_w, scroll_slot_h),
+            focusable=False,
+            column_index=3,
+            row_index=70,
+        )
+        scroll_selection_label.set_rect(Rect(new_row_x1, col1_y + scroll_slot_h + row_gap, new_row_col_w, 22))
+        host.control_showcase_root.add(scroll_selection_label)
+        self.control_labels.append(scroll_selection_label)
+
+        # Column 2: rich label, then dropdown and splitter.
+        rich_slot_h = slot_h(90)
+        self._place_control(
+            host,
+            "rich_label",
+            "Rich Label",
+            RichLabelControl(
+                "control_rich_label",
+                Rect(0, 0, 1, 1),
+                text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
+                font_role=self._control_font_role,
+            ),
+            Rect(new_row_x2, col2_y, new_row_col_w, rich_slot_h),
+            focusable=False,
+            column_index=4,
+            row_index=80,
+        )
+
+        rich_col_y = col2_y + rich_slot_h + row_gap
         dropdown_slot_h = slot_h(30)
         self._place_control(
             host,
@@ -687,14 +763,14 @@ class ControlsShowcaseFeature(Feature):
                 placeholder="Choose",
                 font_role=self._control_font_role,
             ),
-            Rect(new_row_x0, list_view_bottom + 5, new_row_col_w, dropdown_slot_h),
+            Rect(new_row_x2, rich_col_y, new_row_col_w, dropdown_slot_h),
             focusable=True,
             accessibility_role="combobox",
             accessibility_label="Dropdown",
-            column_index=2,
-            row_index=61,
+            column_index=4,
+            row_index=81,
         )
-        dropdown_bottom = (list_view_bottom + 5) + dropdown_slot_h
+        rich_col_y += dropdown_slot_h + row_gap
 
         splitter_slot_h = slot_h(52)
         self._place_control(
@@ -708,39 +784,21 @@ class ControlsShowcaseFeature(Feature):
                 ratio=0.5,
                 min_pane_size=16,
             ),
-            Rect(new_row_x0, dropdown_bottom + 5, new_row_col_w, splitter_slot_h),
+            Rect(new_row_x2, rich_col_y, new_row_col_w, splitter_slot_h),
             focusable=True,
             accessibility_role="separator",
             accessibility_label="Splitter",
-            column_index=2,
-            row_index=62,
+            column_index=4,
+            row_index=82,
         )
 
-        # Column 1: rich text spanning full width (200px).
-        rich_slot_h = slot_h(90)
-        self._place_control(
-            host,
-            "rich_label",
-            "Rich Label",
-            RichLabelControl(
-                "control_rich_label",
-                Rect(0, 0, 1, 1),
-                text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
-                font_role=self._control_font_role,
-            ),
-            Rect(new_row_x1, col1_y, new_row_col_w, rich_slot_h),
-            focusable=False,
-            column_index=3,
-            row_index=70,
-        )
-
-        # Column 2: canvas and frame on top row, panel on the next row spanning full width.
+        # Column 3: canvas and frame on top row, panel on the next row spanning full width.
         grid_gap = self.INNER_GAP
         cell_w = max(1, (new_row_col_w - grid_gap) // 2)
         cell_h = cell_w
-        g0x = new_row_x2
-        g1x = new_row_x2 + cell_w + grid_gap
-        g0y = col2_y
+        g0x = new_row_x3
+        g1x = new_row_x3 + cell_w + grid_gap
+        g0y = col3_y
         top_slot_h = cell_h + self.LABEL_HEIGHT + self.LABEL_GAP
         g1y = g0y + top_slot_h + row_gap
         self._place_control(
@@ -750,8 +808,8 @@ class ControlsShowcaseFeature(Feature):
             CanvasControl("control_canvas", Rect(0, 0, 1, 1), max_events=64),
             Rect(g0x, g0y, cell_w, top_slot_h),
             focusable=False,
-            column_index=4,
-            row_index=80,
+            column_index=5,
+            row_index=83,
         )
         self._place_control(
             host,
@@ -760,8 +818,8 @@ class ControlsShowcaseFeature(Feature):
             FrameControl("control_frame", Rect(0, 0, 1, 1), border_width=2),
             Rect(g1x, g0y, cell_w, top_slot_h),
             focusable=False,
-            column_index=4,
-            row_index=81,
+            column_index=5,
+            row_index=84,
         )
         self._place_control(
             host,
@@ -770,14 +828,14 @@ class ControlsShowcaseFeature(Feature):
             PanelControl("control_panel", Rect(0, 0, 1, 1), draw_background=True),
             Rect(g0x, g1y, new_row_col_w, slot_h(68)),
             focusable=False,
-            column_index=4,
-            row_index=82,
+            column_index=5,
+            row_index=85,
         )
 
         # New right-side columns for recently added controls.
-        new_col_x = col3_anchor.left
-        new_col_w = min(220, col3_anchor.width)
-        col3_y = col3_anchor.top
+        new_col_x = col4_anchor.left
+        new_col_w = min(220, col4_anchor.width)
+        col4_y = col4_anchor.top
 
         menu_slot_h = slot_h(28)
         self._place_control(
@@ -792,7 +850,7 @@ class ControlsShowcaseFeature(Feature):
                     MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")]),
                 ],
             ),
-            Rect(new_col_x, col3_y, new_col_w, menu_slot_h),
+            Rect(new_col_x, col4_y, new_col_w, menu_slot_h),
             focusable=True,
             accessibility_role="menubar",
             accessibility_label="Menu bar",
@@ -813,7 +871,7 @@ class ControlsShowcaseFeature(Feature):
                     TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")]),
                 ],
             ),
-            Rect(new_col_x, col3_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
+            Rect(new_col_x, col4_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
             focusable=True,
             accessibility_role="tree",
             accessibility_label="Tree control",
@@ -828,9 +886,9 @@ class ControlsShowcaseFeature(Feature):
         self._showcase_notification_center.add(
             NotificationRecord("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING)
         )
-        notif_col_x = col4_anchor.left
-        notif_col_w = min(240, col4_anchor.width)
-        col4_y = col4_anchor.top
+        notif_col_x = col5_anchor.left
+        notif_col_w = min(240, col5_anchor.width)
+        col5_y = col5_anchor.top
         notif_slot_h = slot_h(220)
         self._place_control(
             host,
@@ -841,7 +899,7 @@ class ControlsShowcaseFeature(Feature):
                 Rect(0, 0, 1, 1),
                 self._showcase_notification_center,
             ),
-            Rect(notif_col_x, col4_y, notif_col_w, notif_slot_h),
+            Rect(notif_col_x, col5_y, notif_col_w, notif_slot_h),
             focusable=False,
             column_index=6,
             row_index=92,
@@ -849,9 +907,9 @@ class ControlsShowcaseFeature(Feature):
 
         # -- Column 7: New controls (SpinnerControl, RangeSliderControl,
         #    ColorPickerControl, ScrollViewControl) --
-        col7_x = col5_anchor.left
-        col7_w = min(220, col5_anchor.width)
-        col7_y = col5_anchor.top
+        col7_x = col6_anchor.left
+        col7_w = min(220, col6_anchor.width)
+        col7_y = col6_anchor.top
 
         spinner_slot_h = slot_h(30)
         self._place_control(
@@ -911,55 +969,9 @@ class ControlsShowcaseFeature(Feature):
         # Demonstrates OverlayPanelControl as a container panel designed for
         # overlay usage.  Shown standalone with three child labels to illustrate
         # its role as a floating overlay surface.
-        col8_x = col6_anchor.left
-        col8_w = min(200, col6_anchor.width)
-        col8_y = col6_anchor.top
-        scroll_viewport_h = 120
-        scroll_content_h = 24 * 8
-        scroll_control = ScrollViewControl(
-            "control_scroll_view",
-            Rect(0, 0, col8_w, scroll_viewport_h),
-            content_width=col8_w - 20,
-            content_height=scroll_content_h,
-            scroll_y=True,
-        )
-        scroll_items = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"]
-        scroll_selection_label = LabelControl("sv_selected_label", Rect(0, 0, col8_w, 22), "Selected: Alpha", align="left")
-        scroll_selection_label.font_role = self._control_font_role
-
-        scroll_select_list = ListViewControl(
-            "sv_select_list",
-            Rect(0, 0, col8_w - 20, scroll_content_h),
-            [ListItem(label=item, value=item) for item in scroll_items],
-            row_height=24,
-            show_scrollbar=False,
-            font_role=self._control_font_role,
-            on_select=lambda _idx, item: setattr(scroll_selection_label, "text", f"Selected: {item.label}"),
-        )
-        # Managed by configure_accessibility ordering; keep out of default tab order.
-        scroll_select_list.set_tab_index(-1)
-        scroll_select_list.set_accessibility(role="listbox", label="Scroll view list")
-        self._focus_controls.append(scroll_select_list)
-        scroll_control.add(scroll_select_list, content_x=4, content_y=0)
-        scroll_control.set_content_size(col8_w - 20, scroll_content_h)
-        scroll_slot_h = slot_h(120)
-        self._place_control(
-            host,
-            "scroll_view",
-            "Scroll View",
-            scroll_control,
-            Rect(col8_x, col8_y, col8_w, scroll_slot_h),
-            focusable=False,
-            column_index=8,
-            row_index=109,
-        )
-        col8_y += scroll_slot_h + row_gap
-
-        scroll_selection_label.set_rect(Rect(col8_x, col8_y, col8_w, 22))
-        host.control_showcase_root.add(scroll_selection_label)
-        self.control_labels.append(scroll_selection_label)
-        col8_y += 22 + row_gap
-
+        col8_x = col7_anchor.left
+        col8_w = min(200, col7_anchor.width)
+        col8_y = col7_anchor.top
         overlay_inner_h = 90
         overlay_slot_h = slot_h(overlay_inner_h)
         overlay_control_top = col8_y + self.LABEL_HEIGHT + self.LABEL_GAP
@@ -989,9 +1001,10 @@ class ControlsShowcaseFeature(Feature):
         )
 
         # Column 9: format-aware text inputs.
-        col9_x = col7_anchor.left
-        col9_w = min(220, col7_anchor.width)
-        col9_y = col7_anchor.top
+        col8_anchor = flow.column_flow_anchor()
+        col9_x = col8_anchor.left
+        col9_w = min(220, col8_anchor.width)
+        col9_y = col8_anchor.top
 
         _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
 

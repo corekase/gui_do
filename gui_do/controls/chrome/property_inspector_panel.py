@@ -325,9 +325,7 @@ class PropertyInspectorPanel(UiNode):
 
         # Scrollbar
         if sb_rect is not None:
-            track_color = _color("panel", (40, 40, 44))
-            pygame.draw.rect(surface, track_color, sb_rect)
+            pygame.draw.rect(surface, theme.dark, sb_rect)
             handle = self._scrollbar_handle_rect()
             if handle is not None:
-                hc = _color("scrollbar_handle", (90, 95, 105))
-                pygame.draw.rect(surface, hc, handle, border_radius=2)
+                pygame.draw.rect(surface, theme.medium, handle, border_radius=2)

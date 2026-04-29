@@ -316,28 +316,16 @@ class ScrollViewControl(UiNode):
         handle_rect = self._scrollbar_y_handle_rect()
         if track_rect is None or handle_rect is None:
             return
-        track_color = getattr(theme, "panel", (40, 40, 40))
-        if hasattr(track_color, "value"):
-            track_color = track_color.value
-        pygame.draw.rect(surface, track_color, track_rect)
-        handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
-        if hasattr(handle_color, "value"):
-            handle_color = handle_color.value
-        pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)
+        pygame.draw.rect(surface, theme.dark, track_rect)
+        pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
 
     def _draw_scrollbar_x(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         track_rect = self._scrollbar_x_track_rect()
         handle_rect = self._scrollbar_x_handle_rect()
         if track_rect is None or handle_rect is None:
             return
-        track_color = getattr(theme, "panel", (40, 40, 40))
-        if hasattr(track_color, "value"):
-            track_color = track_color.value
-        pygame.draw.rect(surface, track_color, track_rect)
-        handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
-        if hasattr(handle_color, "value"):
-            handle_color = handle_color.value
-        pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)
+        pygame.draw.rect(surface, theme.dark, track_rect)
+        pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
 
     def _scrollbar_y_track_rect(self) -> Optional[Rect]:
         if not self._scroll_y_enabled:
