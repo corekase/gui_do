@@ -285,6 +285,7 @@ class CommandPaletteManager:
     """
 
     _OWNER_ID = "__command_palette__"
+    _BUILTIN_TOGGLE_ACTION_ID = "command_palette_toggle_builtin"
 
     def __init__(self, overlay_manager: OverlayManager, app: "Optional[GuiApplication]" = None, *, action_registry=None) -> None:
         self._overlays = overlay_manager
@@ -300,6 +301,7 @@ class CommandPaletteManager:
         self._window_order_next_by_scene: Dict[str, int] = {}
         if app is not None:
             self._register_background_trigger(app)
+            self._bind_builtin_toggle_key(app)
 
     # ------------------------------------------------------------------
     # Registry API
@@ -527,6 +529,15 @@ class CommandPaletteManager:
                 app.actions.bind_key(key, action_id)
             else:
                 app.actions.bind_key(key, action_id, scene=s)
+
+    def _bind_builtin_toggle_key(self, app: "GuiApplication") -> None:
+        """Install default global F5 toggle binding for the command palette."""
+        self.bind_toggle_key(
+            app,
+            pygame.K_F5,
+            scene=None,
+            action_id=self._BUILTIN_TOGGLE_ACTION_ID,
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers

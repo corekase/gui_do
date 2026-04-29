@@ -184,26 +184,54 @@ class GuiDoDemo:
         """Declare all top-level demo actions on the shared ActionRegistry."""
         r = self.action_registry
         r.declare("exit",                "Exit",                          lambda _ctx, _ev: (setattr(self.app, "running", False) or True), category="File")
-        r.declare("file_open",           "Open File…",                    lambda _ctx, _ev: (self._open_file_dialog_from_main() or True),  category="File")
-        r.declare("file_save",           "Save File…",                    lambda _ctx, _ev: (self._save_file_dialog_from_main() or True),  category="File")
-        r.declare("nav_main",            "Go to Main Scene",              lambda _ctx, _ev: (self.go_to_main() or True),                   category="Scenes")
-        r.declare("nav_showcase",        "Go to Controls Showcase",       lambda _ctx, _ev: (self.go_to_control_showcase() or True),       category="Scenes")
+        r.declare(
+            "file_open",
+            "Open File…",
+            lambda _ctx, _ev: (
+                (self._system_feature.open_file_dialog() if self._system_feature is not None else None) or True
+            ),
+            category="File",
+        )
+        r.declare(
+            "file_save",
+            "Save File…",
+            lambda _ctx, _ev: (
+                (self._system_feature.save_file_dialog() if self._system_feature is not None else None) or True
+            ),
+            category="File",
+        )
+        r.declare(
+            "nav_main",
+            "Go to Main Scene",
+            lambda _ctx, _ev: (self.scene_transitions.go("main") or True),
+            category="Scenes",
+        )
+        r.declare(
+            "nav_showcase",
+            "Go to Controls Showcase",
+            lambda _ctx, _ev: (self.scene_transitions.go("control_showcase") or True),
+            category="Scenes",
+        )
         r.declare("win_life",            "Show Life Window",              lambda _ctx, _ev: (self.set_life_window_visible(True) or True),  category="Windows")
         r.declare("win_mandel",          "Show Mandelbrot Window",        lambda _ctx, _ev: (self.set_mandel_window_visible(True) or True), category="Windows")
         r.declare("win_system",          "Show System Window",            lambda _ctx, _ev: (self.set_system_window_visible(True) or True), category="Windows")
-        r.declare("tools_notifications", "Notifications",                 lambda _ctx, _ev: (self._open_notifications_panel_from_main() or True),  category="Tools")
-        r.declare("tools_publish_event", "Publish Test Event",            lambda _ctx, _ev: (self._publish_system_test_event_from_main() or True), category="Tools")
-        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._open_command_palette() or True),       category="Tools")
-
-        # Bind F5 to toggle the command palette in all relevant scenes.
-        self._palette_manager.bind_toggle_key(
-            self.app,
-            pygame.K_F5,
-            scene=["main", "control_showcase"],
+        r.declare(
+            "tools_notifications",
+            "Notifications",
+            lambda _ctx, _ev: (
+                (self._system_feature.show_notifications_panel() if self._system_feature is not None else None) or True
+            ),
+            category="Tools",
         )
-
-    def _open_command_palette(self) -> None:
-        self._palette_manager.show(self.app)
+        r.declare(
+            "tools_publish_event",
+            "Publish Test Event",
+            lambda _ctx, _ev: (
+                (self._system_feature.publish_test_notification() if self._system_feature is not None else None) or True
+            ),
+            category="Tools",
+        )
+        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._palette_manager.show(self.app) or True),       category="Tools")
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")
