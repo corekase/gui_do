@@ -69,13 +69,6 @@ class TextAreaControl(_TextEditFocusBase):
         # Scroll state (in pixel rows from top of content)
         self._scroll_top: int = 0
 
-        # Blink
-        self._blink_elapsed: float = 0.0
-        self._cursor_visible: bool = True
-
-        # Mouse drag
-        self._drag_selecting: bool = False
-
         # Render cache
         self._line_cache_key: Optional[tuple] = None
         self._wrapped_lines: List[str] = []  # wrapped text segments

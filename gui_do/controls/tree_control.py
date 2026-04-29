@@ -8,7 +8,7 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ._virtualized_scroll_list_base import _VirtualizedScrollListBase
 from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
@@ -68,7 +68,7 @@ def _flatten(nodes: List[TreeNode], depth: int = 0) -> List[_FlatRow]:
     return rows
 
 
-class TreeControl(UiNode):
+class TreeControl(_VirtualizedScrollListBase):
     """Hierarchical tree view control with virtualised rendering.
 
     Usage::
@@ -111,10 +111,7 @@ class TreeControl(UiNode):
         self._show_scrollbar: bool = bool(show_scrollbar)
         self._font_role: str = font_role
         self._selected_node: Optional[TreeNode] = None
-        self._scroll_offset: int = 0  # pixels
         self._rows: List[_FlatRow] = []
-        self._scrollbar_dragging: bool = False
-        self._scrollbar_drag_anchor: int = 0
         self._rebuild_rows()
         self.tab_index = 0
 
@@ -250,19 +247,16 @@ class TreeControl(UiNode):
         for i, row in enumerate(self._rows):
             row.index = i
 
-    def _total_height(self) -> int:
+    def _content_height(self) -> int:
         return len(self._rows) * self._row_height
+
+    def _total_height(self) -> int:
+        return self._content_height()
 
     def _visible_rect(self) -> Rect:
         """Return the content area (excluding scrollbar if shown)."""
         sb_w = _SCROLLBAR_WIDTH if self._show_scrollbar and self._total_height() > self.rect.height else 0
         return Rect(self.rect.x, self.rect.y, self.rect.width - sb_w, self.rect.height)
-
-    def _max_scroll(self) -> int:
-        return max(0, self._total_height() - self.rect.height)
-
-    def _clamp_scroll(self) -> None:
-        self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
 
     def _row_at(self, pos: tuple) -> int:
         """Return the flat row index at pixel position, or -1."""
@@ -297,17 +291,6 @@ class TreeControl(UiNode):
         max_scroll = max(1, total - self.rect.height)
         handle_y = self.rect.y + int((self._scroll_offset / max_scroll) * (self.rect.height - handle_h))
         return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h)
-
-    def _set_scroll_from_handle_top(self, handle_top: int) -> None:
-        sb_rect = self._scrollbar_rect()
-        handle_rect = self._scrollbar_handle_rect()
-        if sb_rect is None or handle_rect is None:
-            return
-        travel = max(1, sb_rect.height - handle_rect.height)
-        ratio = (int(handle_top) - sb_rect.y) / float(travel)
-        ratio = min(max(ratio, 0.0), 1.0)
-        self._scroll_offset = int(round(ratio * self._max_scroll()))
-        self._clamp_scroll()
 
     # ------------------------------------------------------------------
     # UiNode overrides

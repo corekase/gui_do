@@ -10,6 +10,12 @@ class _TextEditFocusBase(UiNode):
 
     _BLINK_INTERVAL_SECONDS = 0.5
 
+    def __init__(self, control_id: str, rect) -> None:
+        super().__init__(control_id, rect)
+        self._blink_elapsed: float = 0.0
+        self._cursor_visible: bool = True
+        self._drag_selecting: bool = False
+
     def _on_text_edit_focus_changed(self, is_focused: bool, *, invalidate: bool = False) -> None:
         if is_focused:
             try:

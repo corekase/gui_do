@@ -7,7 +7,7 @@ from pygame import Rect
 
 from ..core.gui_event import GuiEvent
 from ..core.first_frame_profiler import first_frame_profiler
-from ..core.ui_node import UiNode
+from ..controls._text_button_control_base import _TextButtonControlBase
 from ..core.error_handling import logical_error
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..theme.color_theme import ColorTheme
 
 
-class ButtonControl(UiNode):
+class ButtonControl(_TextButtonControlBase):
     """Clickable push button control."""
 
     def __init__(
@@ -27,28 +27,10 @@ class ButtonControl(UiNode):
         style: str = "box",
         font_role: str = "body",
     ) -> None:
-        super().__init__(control_id, rect)
+        super().__init__(control_id, rect, font_role=font_role)
         self.text = text
         self.on_click = on_click
         self.style = style
-        self._font_role = "body"
-        self.font_role = font_role
-        self.hovered = False
-        self.pressed = False
-        self._focus_activation_armed = False
-        self._visuals = None
-        self._visual_key = None
-
-    @property
-    def font_role(self) -> str:
-        return self._font_role
-
-    @font_role.setter
-    def font_role(self, value: str) -> None:
-        next_role = str(value).strip()
-        if not next_role:
-            raise logical_error("font_role must be a non-empty string", subsystem="gui.controls", operation="ButtonControl.font_role", source_skip_frames=1)
-        self._font_role = next_role
 
     def _invoke_click(self) -> None:
         if self.on_click is not None:
@@ -59,37 +41,6 @@ class ButtonControl(UiNode):
         if callback is not None and not callable(callback):
             raise logical_error("on_click callback must be callable or None", subsystem="gui.controls", operation="ButtonControl.set_on_click", source_skip_frames=1)
         self.on_click = callback
-
-    def _on_enabled_changed(self, _old_enabled: bool, _new_enabled: bool) -> None:
-        self.hovered = False
-        self.pressed = False
-        self._focus_activation_armed = False
-        super()._on_enabled_changed(_old_enabled, _new_enabled)
-
-    def _on_visibility_changed(self, _old_visible: bool, _new_visible: bool) -> None:
-        self.hovered = False
-        self.pressed = False
-        self._focus_activation_armed = False
-        super()._on_visibility_changed(_old_visible, _new_visible)
-
-    def reconcile_hover(self, wants_hover: bool) -> None:
-        if self.hovered != wants_hover:
-            self.hovered = wants_hover
-            self.invalidate()
-
-    def begin_focus_activation_visual(self) -> None:
-        """Show a temporary armed visual after focus-driven activation."""
-        if self._focus_activation_armed:
-            return
-        self._focus_activation_armed = True
-        self.invalidate()
-
-    def end_focus_activation_visual(self) -> None:
-        """Clear temporary armed visual after focus activation hint timeout."""
-        if not self._focus_activation_armed:
-            return
-        self._focus_activation_armed = False
-        self.invalidate()
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:

@@ -7,7 +7,7 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ..controls._text_edit_focus_base import _TextEditFocusBase
 from ..core.value_change_reason import ValueChangeReason
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ _BTN_W = 20
 _H_PAD = 4
 
 
-class SpinnerControl(UiNode):
+class SpinnerControl(_TextEditFocusBase):
     """Numeric spinner with up/down buttons, keyboard, and scroll-wheel input.
 
     Supports both integer and float values.  Set ``decimals=0`` (the default)
@@ -58,8 +58,6 @@ class SpinnerControl(UiNode):
         # Text editing state
         self._editing: bool = False
         self._edit_text: str = ""
-        self._cursor_blink: float = 0.0
-        self._cursor_visible: bool = True
 
     # ------------------------------------------------------------------
     # Public API
@@ -93,12 +91,7 @@ class SpinnerControl(UiNode):
         return self.visible and self.enabled
 
     def update(self, dt_seconds: float) -> None:
-        if self._focused:
-            self._cursor_blink += dt_seconds
-            if self._cursor_blink >= 0.5:
-                self._cursor_blink = 0.0
-                self._cursor_visible = not self._cursor_visible
-                self.invalidate()
+        self._update_text_edit_blink(dt_seconds)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:

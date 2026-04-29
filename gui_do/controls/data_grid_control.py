@@ -8,7 +8,7 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ._virtualized_scroll_list_base import _VirtualizedScrollListBase
 from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
@@ -47,7 +47,7 @@ SelectRowCallback = Optional[Callable[[int, "GridRow"], None]]
 SortCallback = Optional[Callable[[str, bool], None]]  # (column_key, ascending)
 
 
-class DataGridControl(UiNode):
+class DataGridControl(_VirtualizedScrollListBase):
     """Virtualized multi-column table control.
 
     Features
@@ -83,7 +83,6 @@ class DataGridControl(UiNode):
         self._on_sort: SortCallback = on_sort
 
         self._selected_row: int = -1
-        self._scroll_offset: int = 0  # pixels from top of content area
 
         self._sort_col: Optional[str] = None
         self._sort_asc: bool = True
@@ -92,8 +91,6 @@ class DataGridControl(UiNode):
         self._resize_col: Optional[int] = None  # index being resized
         self._resize_start_x: int = 0
         self._resize_start_w: int = 0
-        self._scrollbar_dragging: bool = False
-        self._scrollbar_drag_anchor: int = 0
 
         # Hot-path caches
         self._col_offsets_cache: List[int] = [0]
@@ -231,12 +228,6 @@ class DataGridControl(UiNode):
     def _content_height(self) -> int:
         return len(self._rows) * self._row_height
 
-    def _max_scroll(self) -> int:
-        return max(0, self._content_height() - self._viewport_height())
-
-    def _clamp_scroll(self) -> None:
-        self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
-
     def _scrollbar_rect(self) -> Optional[Rect]:
         if not (self._show_scrollbar and self._content_height() > self._viewport_height()):
             return None
@@ -253,18 +244,6 @@ class DataGridControl(UiNode):
         thumb_h = max(16, int(vh * ratio))
         thumb_y = int(sb_rect.y + (self._scroll_offset / max(1, ch - vh)) * (sb_rect.height - thumb_h))
         return Rect(sb_rect.x + 2, thumb_y, sb_rect.width - 4, thumb_h)
-
-    def _set_scroll_from_handle_top(self, top: int) -> None:
-        sb_rect = self._scrollbar_rect()
-        handle_rect = self._scrollbar_handle_rect()
-        if sb_rect is None or handle_rect is None:
-            return
-        travel = max(1, sb_rect.height - handle_rect.height)
-        ratio = (int(top) - sb_rect.y) / float(travel)
-        ratio = min(max(ratio, 0.0), 1.0)
-        self._scroll_offset = int(round(ratio * self._max_scroll()))
-        self._clamp_scroll()
-        self.invalidate()
 
     def _col_x_offsets(self) -> List[int]:
         """Return list of x pixel offsets (from content_rect.x) for each column."""

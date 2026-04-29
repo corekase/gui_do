@@ -8,7 +8,7 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ._virtualized_scroll_list_base import _VirtualizedScrollListBase
 from ..core.collection_view import CollectionView
 from ._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
@@ -34,7 +34,7 @@ SelectCallback = Optional[Callable[[int, "ListItem"], None]]
 _SCROLLBAR_WIDTH = 12
 
 
-class ListViewControl(UiNode):
+class ListViewControl(_VirtualizedScrollListBase):
     """Virtualized list control with single or multi-select."""
 
     def __init__(
@@ -58,9 +58,6 @@ class ListViewControl(UiNode):
         self._show_scrollbar: bool = bool(show_scrollbar)
         self._font_role: str = font_role
         self._selected_indices: List[int] = []
-        self._scroll_offset: int = 0  # in pixels
-        self._scrollbar_dragging: bool = False
-        self._scrollbar_drag_anchor: int = 0
         self.tab_index = 0
 
         if 0 <= selected_index < len(self._items):
@@ -265,12 +262,6 @@ class ListViewControl(UiNode):
     def _content_height(self) -> int:
         return len(self._items) * self._row_height
 
-    def _max_scroll(self) -> int:
-        return max(0, self._content_height() - self._viewport_height())
-
-    def _clamp_scroll(self) -> None:
-        self._scroll_offset = max(0, min(self._scroll_offset, self._max_scroll()))
-
     def _content_rect(self) -> Rect:
         width = self.rect.width
         if self._scrollbar_rect() is not None:
@@ -294,19 +285,6 @@ class ListViewControl(UiNode):
         max_scroll = max(1, content_h - viewport_h)
         handle_y = sb_rect.y + int((sb_rect.height - handle_h) * self._scroll_offset / max_scroll)
         return Rect(sb_rect.x + 2, handle_y, _SCROLLBAR_WIDTH - 4, handle_h)
-
-    def _set_scroll_from_handle_top(self, top: int) -> None:
-        sb_rect = self._scrollbar_rect()
-        handle_rect = self._scrollbar_handle_rect()
-        if sb_rect is None or handle_rect is None:
-            return
-        max_scroll = max(0, self._content_height() - self._viewport_height())
-        travel = max(1, sb_rect.height - handle_rect.height)
-        ratio = (int(top) - sb_rect.y) / float(travel)
-        ratio = min(max(ratio, 0.0), 1.0)
-        self._scroll_offset = int(round(ratio * max_scroll))
-        self._clamp_scroll()
-        self.invalidate()
 
     def _row_at_y(self, y: int) -> int:
         """Return item index at pixel y (relative to control top)."""

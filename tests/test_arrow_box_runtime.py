@@ -43,8 +43,7 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
 
         self.assertTrue(consumed)
         self.assertEqual(fired, [True])
-        self.assertTrue(control._focus_activation_armed)
-        self.assertFalse(control._pressed)
+        self.assertFalse(control.pressed)
 
         self.app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.01)
         self.assertTrue(control._focus_activation_armed)
@@ -87,14 +86,14 @@ class ArrowBoxRuntimeTests(unittest.TestCase):
         control = self.root.add(ArrowBoxControl("arr", Rect(20, 20, 40, 30), 0, on_activate=lambda: None, repeat_interval_seconds=0.05))
 
         self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (30, 30), "rel": (0, 0), "buttons": (0, 0, 0)}))
-        self.assertTrue(control._hovered)
+        self.assertTrue(control.hovered)
 
         control.enabled = False
         self.app.process_event(pygame.event.Event(pygame.MOUSEMOTION, {"pos": (200, 120), "rel": (0, 0), "buttons": (0, 0, 0)}))
         control.enabled = True
 
-        self.assertFalse(control._hovered)
-        self.assertFalse(control._pressed)
+        self.assertFalse(control.hovered)
+        self.assertFalse(control.pressed)
 
     def test_disabled_visual_includes_arrow_glyph(self) -> None:
         rect = Rect(0, 0, 40, 30)

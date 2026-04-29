@@ -7,7 +7,7 @@ import pygame
 from pygame import Rect
 
 from ..core.gui_event import EventType, GuiEvent
-from ..core.ui_node import UiNode
+from ..controls._focus_activatable_control_base import _FocusActivatableControlBase
 from ..core.value_change_reason import ValueChangeReason
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ _HANDLE_R = 8   # handle radius in pixels
 _TRACK_H = 4    # track bar height in pixels
 
 
-class RangeSliderControl(UiNode):
+class RangeSliderControl(_FocusActivatableControlBase):
     """Horizontal two-handle range slider.
 
     Provides a ``low_value`` and a ``high_value`` handle that can be dragged

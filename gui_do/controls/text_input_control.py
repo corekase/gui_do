@@ -47,11 +47,6 @@ class TextInputControl(_TextEditFocusBase):
         self._sel_anchor: Optional[int] = None
         self._sel_active: Optional[int] = None
         self._scroll_offset_px: int = 0
-        # Blink timer
-        self._blink_elapsed: float = 0.0
-        self._cursor_visible: bool = True
-        # Mouse drag selection
-        self._drag_selecting: bool = False
         # Visual cache
         self._bg_idle: Optional["pygame.Surface"] = None
         self._bg_focused: Optional["pygame.Surface"] = None
