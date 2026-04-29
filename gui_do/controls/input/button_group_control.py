@@ -10,7 +10,7 @@ from ...events.gui_event import GuiEvent
 from .toggle_control import ToggleControl
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
+    from ...app.gui_application import GuiApplication
 
 
 class ButtonGroupControl(ToggleControl):

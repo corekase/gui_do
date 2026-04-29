@@ -11,8 +11,8 @@ from ..base._text_edit_focus_base import _TextEditFocusBase
 from ...events.value_change_reason import ValueChangeReason
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 _BTN_W = 20
 _H_PAD = 4

@@ -12,8 +12,8 @@ from ..base._axis_drag_control_base import _AxisDragControlBase
 from ...layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class ScrollbarControl(_AxisDragControlBase):
@@ -197,6 +197,16 @@ class ScrollbarControl(_AxisDragControlBase):
                 lock_rect = axis_lock
         app.pointer_capture.lock_rect = Rect(lock_rect)
 
+    def _update_drag_handle_pixel(self, pointer_axis: int) -> int:
+        """Compute axis pixel from *pointer_axis*, clamp and store in ``_drag_handle_axis_pixel``, return the raw axis pixel."""
+        is_h = self.axis == LayoutAxis.HORIZONTAL
+        track_origin = self.rect.left if is_h else self.rect.top
+        axis_pixel = pointer_axis - track_origin - self._drag_anchor_offset
+        handle_len = self._handle_length()
+        travel_span = max(1, (self.rect.width if is_h else self.rect.height) - handle_len)
+        self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
+        return axis_pixel
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             if self.dragging:
@@ -240,9 +250,9 @@ class ScrollbarControl(_AxisDragControlBase):
 
         event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         pointer = app.logical_pointer_pos
-        if event.is_mouse_down(1):
-            if isinstance(pointer, tuple) and len(pointer) == 2 and self.handle_rect().collidepoint(pointer):
-                handle = self.handle_rect()
+        if event.is_mouse_down(1) and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle = self.handle_rect()
+            if handle.collidepoint(pointer):
                 if self.axis == LayoutAxis.HORIZONTAL:
                     self._drag_anchor_offset = pointer[0] - handle.x
                 else:
@@ -278,14 +288,7 @@ class ScrollbarControl(_AxisDragControlBase):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            track = self._track_rect()
-            if self.axis == LayoutAxis.HORIZONTAL:
-                axis_pixel = pointer_axis - track.left - self._drag_anchor_offset
-            else:
-                axis_pixel = pointer_axis - track.top - self._drag_anchor_offset
-            handle_len = self._handle_length()
-            travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
-            self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             return self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
@@ -302,11 +305,7 @@ class ScrollbarControl(_AxisDragControlBase):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            track = self._track_rect()
-            axis_pixel = pointer_axis - track.left - self._drag_anchor_offset if self.axis == LayoutAxis.HORIZONTAL else pointer_axis - track.top - self._drag_anchor_offset
-            handle_len = self._handle_length()
-            travel_span = max(1, (track.width - handle_len) if self.axis == LayoutAxis.HORIZONTAL else (track.height - handle_len))
-            self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
             return True

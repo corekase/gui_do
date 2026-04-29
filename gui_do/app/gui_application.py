@@ -261,7 +261,7 @@ class GuiApplication:
             self.scheduler = runtime.scheduler
             self.timers = runtime.timers
             self.tweens = runtime.tweens
-            if hasattr(self, "overlay") and self.overlay is not runtime.overlay:
+            if self.overlay is not runtime.overlay:
                 self.overlay.hide_all()
             self.overlay = runtime.overlay
             self.drag_drop = runtime.drag_drop
@@ -933,9 +933,6 @@ class GuiApplication:
 
     def tile_windows(self, newly_visible=None) -> None:
         self.window_tiling.arrange_windows(newly_visible=newly_visible)
-
-    def read_window_tiling_settings(self):
-        return self.window_tiling.read_settings()
 
     def register_font_role(
         self,

@@ -10,8 +10,8 @@ from ...app.first_frame_profiler import first_frame_profiler
 from ..base._text_button_control_base import _TextButtonControlBase
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class ToggleControl(_TextButtonControlBase):

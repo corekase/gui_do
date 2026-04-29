@@ -70,14 +70,30 @@ class Timers:
     def update(self, dt_seconds: float) -> None:
         if dt_seconds <= 0 or not self._timers:
             return
-        for timer_id, timer in list(self._timers.items()):
+        # Collect expired one-shot ids and all callbacks separately so we can
+        # remove expired timers and call all callbacks after the iteration loop,
+        # avoiding a list() snapshot of the full dict on every tick.
+        expired: list | None = None
+        callbacks: list | None = None
+        for timer_id, timer in self._timers.items():
+            timer.elapsed_seconds += dt_seconds
             if timer.once:
-                timer.elapsed_seconds += dt_seconds
                 if timer.elapsed_seconds >= timer.interval_seconds:
-                    self._timers.pop(timer_id, None)
-                    timer.callback()
+                    if expired is None:
+                        expired = []
+                    expired.append(timer_id)
+                    if callbacks is None:
+                        callbacks = []
+                    callbacks.append(timer.callback)
             else:
-                timer.elapsed_seconds += dt_seconds
                 while timer.elapsed_seconds >= timer.interval_seconds:
                     timer.elapsed_seconds -= timer.interval_seconds
-                    timer.callback()
+                    if callbacks is None:
+                        callbacks = []
+                    callbacks.append(timer.callback)
+        if expired:
+            for timer_id in expired:
+                self._timers.pop(timer_id, None)
+        if callbacks:
+            for cb in callbacks:
+                cb()

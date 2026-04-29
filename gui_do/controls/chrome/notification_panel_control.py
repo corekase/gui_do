@@ -13,8 +13,8 @@ from ...overlays.toast_manager import ToastSeverity
 from ..base._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 _ROW_H = 60

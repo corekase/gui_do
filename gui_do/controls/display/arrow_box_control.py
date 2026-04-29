@@ -10,8 +10,8 @@ from ...events.gui_event import GuiEvent
 from ..base._hover_press_control_base import _HoverPressControlBase
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class ArrowBoxControl(_HoverPressControlBase):

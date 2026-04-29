@@ -11,8 +11,8 @@ from ...events.gui_event import EventType, GuiEvent
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 _TAB_H = 32       # height of the tab bar strip
 _TAB_PAD_H = 12   # horizontal padding per tab label

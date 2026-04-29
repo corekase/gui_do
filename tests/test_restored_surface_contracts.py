@@ -86,7 +86,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             app.configure_window_tiling(gap=12, padding=12, avoid_task_panel=False, center_on_failure=True, relayout=False)
             app.tile_windows()
 
-            settings = app.read_window_tiling_settings()
+            settings = app.window_tiling.read_settings()
             self.assertTrue(settings["enabled"])
             self.assertEqual(settings["gap"], 12)
 
@@ -112,7 +112,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             mandel_tiler = app.window_tiling
             self.assertIsNot(life_tiler, mandel_tiler)
 
-            settings = app.read_window_tiling_settings()
+            settings = app.window_tiling.read_settings()
             self.assertFalse(settings["enabled"])
             self.assertEqual(settings["gap"], 16)
             self.assertEqual(settings["padding"], 16)
@@ -123,7 +123,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             app.configure_window_tiling(gap=7, padding=9, avoid_task_panel=True, center_on_failure=True, relayout=False)
 
             app.switch_scene("life")
-            settings = app.read_window_tiling_settings()
+            settings = app.window_tiling.read_settings()
             self.assertTrue(settings["enabled"])
             self.assertEqual(settings["gap"], 11)
             self.assertEqual(settings["padding"], 22)
@@ -131,7 +131,7 @@ class RestoredSurfaceContractsTests(unittest.TestCase):
             self.assertFalse(settings["center_on_failure"])
 
             app.switch_scene("mandel")
-            settings = app.read_window_tiling_settings()
+            settings = app.window_tiling.read_settings()
             self.assertTrue(settings["enabled"])
             self.assertEqual(settings["gap"], 7)
             self.assertEqual(settings["padding"], 9)

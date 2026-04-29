@@ -12,8 +12,8 @@ from ..base.ui_node import UiNode
 from ..data.list_view_control import ListItem
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 @dataclass

@@ -12,8 +12,8 @@ from ..base._axis_drag_control_base import _AxisDragControlBase
 from ...layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class SliderControl(_AxisDragControlBase):
@@ -194,6 +194,17 @@ class SliderControl(_AxisDragControlBase):
                 lock_rect = axis_lock
         app.pointer_capture.lock_rect = Rect(lock_rect)
 
+    def _update_drag_handle_pixel(self, pointer_axis: int) -> int:
+        """Clamp *pointer_axis* to travel bounds, update ``_drag_handle_axis_pixel``, and return the raw axis pixel."""
+        handle_len = max(1, int(self.handle_size))
+        is_h = self.axis == LayoutAxis.HORIZONTAL
+        origin = self.rect.left if is_h else self.rect.top
+        span = max(0, (self.rect.width if is_h else self.rect.height) - handle_len)
+        half = handle_len / 2.0
+        axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
+        self._drag_handle_axis_pixel = min(max(axis_pixel, int(round(origin + half))), int(round(origin + half + span)))
+        return axis_pixel
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
         if not self.visible or not self.enabled:
             if self.dragging:
@@ -232,9 +243,9 @@ class SliderControl(_AxisDragControlBase):
 
         event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         pointer = app.logical_pointer_pos
-        if event.is_mouse_down(1):
-            if isinstance(pointer, tuple) and len(pointer) == 2 and self.handle_rect().collidepoint(pointer):
-                handle = self.handle_rect()
+        if event.is_mouse_down(1) and isinstance(pointer, tuple) and len(pointer) == 2:
+            handle = self.handle_rect()
+            if handle.collidepoint(pointer):
                 if self.axis == LayoutAxis.HORIZONTAL:
                     self._drag_anchor_offset = pointer[0] - handle.x
                 else:
@@ -242,14 +253,8 @@ class SliderControl(_AxisDragControlBase):
                 self._refresh_drag_lock_rect(app, pointer)
                 app.pointer_capture.begin(self.control_id, app.pointer_capture.lock_rect, use_relative_motion=True)
                 pointer_pos = app.logical_pointer_pos
-                travel = self._travel_rect()
-                handle_len = self._handle_length()
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-                origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
-                axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
-                min_pixel = int(round(origin + (handle_len / 2.0)))
-                max_pixel = int(round(origin + (handle_len / 2.0) + self._travel_span()))
-                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
+                self._update_drag_handle_pixel(pointer_axis)
                 self._drag_start_programmatic_epoch = self._programmatic_change_epoch
                 self.dragging = True
                 return True
@@ -272,16 +277,7 @@ class SliderControl(_AxisDragControlBase):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            travel = self._travel_rect()
-            handle_len = self._handle_length()
-            origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
-            axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
-            min_pixel = int(round(origin + (handle_len / 2.0)))
-            max_pixel = int(round(origin + (handle_len / 2.0) + self._travel_span()))
-            if self.axis == LayoutAxis.HORIZONTAL:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
-            else:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             return self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
@@ -298,16 +294,7 @@ class SliderControl(_AxisDragControlBase):
                 app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
             else:
                 pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
-            travel = self._travel_rect()
-            handle_len = self._handle_length()
-            origin = travel.left if self.axis == LayoutAxis.HORIZONTAL else travel.top
-            axis_pixel = pointer_axis - self._drag_anchor_offset + (handle_len // 2)
-            min_pixel = int(round(origin + (handle_len / 2.0)))
-            max_pixel = int(round(origin + (handle_len / 2.0) + self._travel_span()))
-            if self.axis == LayoutAxis.HORIZONTAL:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
-            else:
-                self._drag_handle_axis_pixel = min(max(axis_pixel, min_pixel), max_pixel)
+            axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             self._set_value(self._to_value(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
             return True

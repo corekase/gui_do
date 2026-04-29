@@ -12,8 +12,8 @@ from ...introspection.property_inspector import InspectedProperty, PropertyInspe
 from ..base._thumb_drag_lock import begin_thumb_drag, captured_pointer_pos, end_thumb_drag
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 _HEADER_HEIGHT = 22

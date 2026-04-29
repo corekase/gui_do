@@ -36,8 +36,8 @@ from ...app.error_handling import report_nonfatal_error
 
 if TYPE_CHECKING:
     import pygame
-    from ..theme.color_theme import ColorTheme
-    from .gui_event import GuiEvent
+    from ...theme.color_theme import ColorTheme
+    from ...events.gui_event import GuiEvent
 
 
 # ---------------------------------------------------------------------------

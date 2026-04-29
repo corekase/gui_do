@@ -11,8 +11,8 @@ from ...events.gui_event import EventType, GuiEvent
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 # Layout constants
 _HUE_W = 16         # width of the hue strip

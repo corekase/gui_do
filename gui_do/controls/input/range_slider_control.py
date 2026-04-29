@@ -11,8 +11,8 @@ from ..base._focus_activatable_control_base import _FocusActivatableControlBase
 from ...events.value_change_reason import ValueChangeReason
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 _HANDLE_R = 8   # handle radius in pixels
 _TRACK_H = 4    # track bar height in pixels

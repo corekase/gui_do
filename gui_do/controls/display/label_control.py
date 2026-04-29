@@ -8,7 +8,7 @@ from ...app.error_handling import logical_error
 
 if TYPE_CHECKING:
     import pygame
-    from ..theme.color_theme import ColorTheme
+    from ...theme.color_theme import ColorTheme
 
 
 class LabelControl(UiNode):

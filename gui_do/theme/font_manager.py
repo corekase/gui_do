@@ -178,13 +178,14 @@ class FontManager:
         return _FontInstance(role=role, font=font, size=resolved_size)
 
     def render_text(self, text: str, color, *, role_name: str, size: Optional[int] = None) -> pygame.Surface:
+        str_text = str(text)
         timer = first_frame_profiler().time_once(
             "text.render",
             f"{role_name}:{size if size is not None else 'default'}",
-            detail=f"shadow=False chars={len(str(text))}",
+            detail=f"shadow=False chars={len(str_text)}",
         )
         font = self.get_font(role_name, size=size)
-        rendered = font.render(str(text), True, color)
+        rendered = font.render(str_text, True, color)
         timer()
         return rendered
 
@@ -198,14 +199,15 @@ class FontManager:
         size: Optional[int] = None,
         shadow_offset: tuple[int, int] = (1, 1),
     ) -> pygame.Surface:
+        str_text = str(text)
         timer = first_frame_profiler().time_once(
             "text.render",
             f"{role_name}:{size if size is not None else 'default'}:shadow",
-            detail=f"shadow=True chars={len(str(text))}",
+            detail=f"shadow=True chars={len(str_text)}",
         )
         font = self.get_font(role_name, size=size)
-        text_bitmap = font.render(str(text), True, color)
-        shadow_bitmap = font.render(str(text), True, shadow_color)
+        text_bitmap = font.render(str_text, True, color)
+        shadow_bitmap = font.render(str_text, True, shadow_color)
         offset_x = int(shadow_offset[0])
         offset_y = int(shadow_offset[1])
         out = pygame.Surface(

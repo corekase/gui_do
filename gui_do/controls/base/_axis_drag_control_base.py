@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from ._focus_activatable_control_base import _FocusActivatableControlBase
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
+    from ...app.gui_application import GuiApplication
 
 
 class _AxisDragControlBase(_FocusActivatableControlBase):

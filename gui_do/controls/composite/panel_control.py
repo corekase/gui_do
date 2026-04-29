@@ -8,8 +8,8 @@ from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
     import pygame
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
     from ..layout.constraint_layout import ConstraintLayout
 
 

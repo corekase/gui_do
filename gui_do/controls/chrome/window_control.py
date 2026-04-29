@@ -12,8 +12,8 @@ from ...graphics import load_pristine_surface
 from ...app.error_handling import logical_error
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class WindowControl(UiNode):

@@ -19,8 +19,8 @@ from ..base.ui_node import UiNode
 from ...layout.dock_workspace import DockPane, DockSplit, DockTabs, DockWorkspace
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 _TAB_H = 32

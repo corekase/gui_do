@@ -33,8 +33,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ConstraintLayout
   - FlexLayout
   - GridLayout
-  - DockWorkspace
-  - DockWorkspacePanel
+  - DockWorkspace and DockWorkspacePanel
   - WindowTilingManager
   - LayoutAnimator
   - LayoutPass
@@ -109,7 +108,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ScopedTheme and ScopedThemeManager
   - BuiltInGraphicsFactory
   - FontManager
-    - FontRoleRegistry
+  - FontRoleRegistry
 - [Localization](#localization)
   - StringTable and LocaleRegistry
 - [Introspection](#introspection)

@@ -11,8 +11,8 @@ from ..base.ui_node import UiNode
 from ...layout.layout_axis import LayoutAxis
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 _DIVIDER_THICKNESS = 6

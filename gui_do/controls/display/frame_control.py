@@ -6,7 +6,7 @@ from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
     import pygame
-    from ..theme.color_theme import ColorTheme
+    from ...theme.color_theme import ColorTheme
 
 
 class FrameControl(UiNode):

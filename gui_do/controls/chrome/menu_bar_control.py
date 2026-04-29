@@ -13,8 +13,8 @@ from ...overlays.context_menu_manager import ContextMenuItem
 from ...overlays.menu_overlay_panel_base import _MenuOverlayPanelBase
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 _ENTRY_PADDING_X = 12

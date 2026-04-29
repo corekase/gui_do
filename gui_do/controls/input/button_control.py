@@ -11,8 +11,8 @@ from ..base._text_button_control_base import _TextButtonControlBase
 from ...app.error_handling import logical_error
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class ButtonControl(_TextButtonControlBase):

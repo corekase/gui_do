@@ -64,10 +64,11 @@ class TaskScheduler:
         self._execution_paused = False
 
         self._tasks: Dict[Hashable, _Task] = {}
-        self._pending: Deque[Hashable] = deque()
-        self._pending_set: Set[Hashable] = set()
-        self._suspended: List[Hashable] = []
-        self._suspended_set: Set[Hashable] = set()
+        # _pending and _suspended use insertion-ordered dicts (Python 3.7+) so that
+        # membership testing, ordered iteration, and by-key removal are all O(1).
+        # The value is always None; only the key matters.
+        self._pending: Dict[Hashable, None] = {}
+        self._suspended: Dict[Hashable, None] = {}
         self._running: Set[Hashable] = set()
 
         self._results: Dict[Hashable, Any] = {}
@@ -132,7 +133,7 @@ class TaskScheduler:
         with self._lock:
             self._failed_events = [event for event in self._failed_events if event.task_id != task_id]
             self._finished_events = [event for event in self._finished_events if event.task_id != task_id]
-            if task_id in self._tasks or task_id in self._running or task_id in self._pending_set or task_id in self._suspended_set:
+            if task_id in self._tasks or task_id in self._running or task_id in self._pending or task_id in self._suspended:
                 self._remove_task_internal(task_id)
 
             generation = self._task_generation.get(task_id, 0) + 1
@@ -140,8 +141,7 @@ class TaskScheduler:
             run_callable = self._build_task_callable(task_id, logic, parameters)
             task = _Task(task_id=task_id, run_callable=run_callable, message_method=message_method, generation=generation)
             self._tasks[task_id] = task
-            self._pending.append(task_id)
-            self._pending_set.add(task_id)
+            self._pending[task_id] = None
 
     def remove_tasks(self, *task_ids: Hashable) -> None:
         with self._lock:
@@ -159,9 +159,7 @@ class TaskScheduler:
             for task_id in ids:
                 self._remove_task_internal(task_id)
             self._pending.clear()
-            self._pending_set.clear()
             self._suspended.clear()
-            self._suspended_set.clear()
             self._running.clear()
             self._results.clear()
             self._task_messages.clear()
@@ -170,55 +168,49 @@ class TaskScheduler:
 
     def suspend_all(self) -> None:
         with self._lock:
-            for task_id in list(self._pending):
-                if task_id not in self._suspended_set:
-                    self._suspended.append(task_id)
-                    self._suspended_set.add(task_id)
+            for task_id in self._pending:
+                if task_id not in self._suspended:
+                    self._suspended[task_id] = None
             self._pending.clear()
-            self._pending_set.clear()
 
     def suspend_tasks(self, *task_ids: Hashable) -> None:
         with self._lock:
             for task_id in task_ids:
                 self._validate_task_id(task_id)
-                if task_id in self._pending_set:
+                if task_id in self._pending:
                     self._remove_from_pending(task_id)
-                    if task_id not in self._suspended_set:
-                        self._suspended.append(task_id)
-                        self._suspended_set.add(task_id)
+                    if task_id not in self._suspended:
+                        self._suspended[task_id] = None
 
     def resume_all(self) -> None:
         with self._lock:
-            for task_id in list(self._suspended):
-                if task_id in self._tasks and task_id not in self._pending_set:
-                    self._pending.append(task_id)
-                    self._pending_set.add(task_id)
+            for task_id in self._suspended:
+                if task_id in self._tasks and task_id not in self._pending:
+                    self._pending[task_id] = None
             self._suspended.clear()
-            self._suspended_set.clear()
 
     def resume_tasks(self, *task_ids: Hashable) -> None:
         with self._lock:
             for task_id in task_ids:
                 self._validate_task_id(task_id)
-                if task_id in self._suspended_set:
+                if task_id in self._suspended:
                     self._remove_from_suspended(task_id)
-                    if task_id in self._tasks and task_id not in self._pending_set:
-                        self._pending.append(task_id)
-                        self._pending_set.add(task_id)
+                    if task_id in self._tasks and task_id not in self._pending:
+                        self._pending[task_id] = None
 
     def read_suspended(self) -> List[Hashable]:
         with self._lock:
-            return self._suspended.copy()
+            return list(self._suspended)
 
     def tasks_active(self) -> bool:
         with self._lock:
-            return bool(self._pending_set or self._running)
+            return bool(self._pending or self._running)
 
     def tasks_active_match_all(self, *task_ids: Hashable) -> bool:
         with self._lock:
             for task_id in task_ids:
                 self._validate_task_id(task_id)
-                if task_id not in self._pending_set and task_id not in self._running:
+                if task_id not in self._pending and task_id not in self._running:
                     return False
             return True
 
@@ -226,19 +218,19 @@ class TaskScheduler:
         with self._lock:
             for task_id in task_ids:
                 self._validate_task_id(task_id)
-                if task_id in self._pending_set or task_id in self._running:
+                if task_id in self._pending or task_id in self._running:
                     return True
             return False
 
     def tasks_busy(self) -> bool:
         with self._lock:
-            return bool(self._pending_set or self._running or self._task_message_counts)
+            return bool(self._pending or self._running or self._task_message_counts)
 
     def tasks_busy_match_any(self, *task_ids: Hashable) -> bool:
         with self._lock:
             for task_id in task_ids:
                 self._validate_task_id(task_id)
-                if task_id in self._pending_set or task_id in self._running:
+                if task_id in self._pending or task_id in self._running:
                     return True
                 if self._task_message_counts.get(task_id, 0) > 0:
                     return True
@@ -249,7 +241,7 @@ class TaskScheduler:
     def pending_count(self) -> int:
         """Return the number of tasks currently queued and waiting to be submitted."""
         with self._lock:
-            return len(self._pending_set)
+            return len(self._pending)
 
     def running_count(self) -> int:
         """Return the number of tasks currently executing in the thread pool."""
@@ -259,12 +251,12 @@ class TaskScheduler:
     def suspended_count(self) -> int:
         """Return the number of tasks currently suspended."""
         with self._lock:
-            return len(self._suspended_set)
+            return len(self._suspended)
 
     def task_count(self) -> int:
         """Return the total number of known tasks (pending + running + suspended)."""
         with self._lock:
-            return len(self._pending_set) + len(self._running) + len(self._suspended_set)
+            return len(self._pending) + len(self._running) + len(self._suspended)
 
     def set_max_queued_messages_per_task(self, max_queued_messages: Optional[int]) -> None:
         if max_queued_messages is not None:
@@ -428,8 +420,8 @@ class TaskScheduler:
         collector = telemetry_collector()
         submitted = 0
         while self._pending and len(self._running) < self._max_workers:
-            task_id = self._pending.popleft()
-            self._pending_set.discard(task_id)
+            task_id = next(iter(self._pending))
+            del self._pending[task_id]
             task = self._tasks.get(task_id)
             if task is None:
                 continue
@@ -581,16 +573,10 @@ class TaskScheduler:
         self._message_slots_changed.notify_all()
 
     def _remove_from_pending(self, task_id: Hashable) -> None:
-        if task_id in self._pending_set:
-            if task_id in self._pending:
-                self._pending.remove(task_id)
-            self._pending_set.discard(task_id)
+        self._pending.pop(task_id, None)
 
     def _remove_from_suspended(self, task_id: Hashable) -> None:
-        if task_id in self._suspended_set:
-            if task_id in self._suspended:
-                self._suspended.remove(task_id)
-            self._suspended_set.discard(task_id)
+        self._suspended.pop(task_id, None)
 
     def _remove_task_internal(self, task_id: Hashable) -> None:
         self._remove_from_pending(task_id)

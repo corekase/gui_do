@@ -9,7 +9,7 @@ from ...events.gui_event import EventType, GuiEvent
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ..theme.color_theme import ColorTheme
+    from ...theme.color_theme import ColorTheme
 
 
 @dataclass

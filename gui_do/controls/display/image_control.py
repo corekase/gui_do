@@ -7,7 +7,7 @@ from ...app.error_handling import io_error
 from ..base.ui_node import UiNode
 
 if TYPE_CHECKING:
-    from ..theme.color_theme import ColorTheme
+    from ...theme.color_theme import ColorTheme
 
 
 class ImageControl(UiNode):

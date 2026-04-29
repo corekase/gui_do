@@ -8,8 +8,8 @@ from ...events.gui_event import EventPhase, GuiEvent
 
 if TYPE_CHECKING:
     import pygame
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 
 class UiNode:

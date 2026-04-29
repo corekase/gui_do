@@ -11,8 +11,8 @@ from ..base._text_edit_focus_base import _TextEditFocusBase
 from ...overlays.clipboard import ClipboardManager
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
+    from ...app.gui_application import GuiApplication
+    from ...theme.color_theme import ColorTheme
 
 _H_PAD = 6
 _V_PAD = 4

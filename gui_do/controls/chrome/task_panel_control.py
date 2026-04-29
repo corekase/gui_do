@@ -7,7 +7,7 @@ from ...events.gui_event import GuiEvent
 from ..composite.panel_control import PanelControl
 
 if TYPE_CHECKING:
-    from ..app.gui_application import GuiApplication
+    from ...app.gui_application import GuiApplication
 
 
 class TaskPanelControl(PanelControl):
