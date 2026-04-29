@@ -987,15 +987,12 @@ class GuiApplication:
 
         This helper is intended for top-level script entrypoints. It ensures
         that any unhandled runtime error is routed through gui_do's built-in
-        nonfatal error reporting before returning a non-zero OS exit code.
-
-        Returns
-        -------
-        int
-            ``0`` on a clean shutdown, ``1`` when an exception occurred.
+        nonfatal error reporting before terminating the process with an OS
+        exit code.
         """
         save_workspace = bool(WORKSPACE_SAVE)
         manager = workspace_manager if workspace_manager is not None else WorkspacePersistenceManager()
+        exit_code = 0
         try:
             if save_workspace:
                 try:
@@ -1004,7 +1001,6 @@ class GuiApplication:
                     # Missing/invalid workspace state should not block app startup.
                     pass
             self.run(target_fps=target_fps)
-            return 0
         except Exception as exc:
             report_nonfatal_error(
                 "top-level application run failed",
@@ -1014,7 +1010,7 @@ class GuiApplication:
                 cause=exc,
                 details={"target_fps": int(target_fps)},
             )
-            return 1
+            exit_code = 1
         finally:
             if save_workspace:
                 try:
@@ -1022,6 +1018,7 @@ class GuiApplication:
                 except Exception:
                     pass
             pygame.quit()
+        raise SystemExit(exit_code)
 
     def quit(self) -> None:
         """Signal the engine to exit the run loop at the end of the current frame."""

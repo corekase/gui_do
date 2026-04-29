@@ -168,7 +168,7 @@ class GuiDoDemo:
         )
 
     def run(self) -> int:
-        """Run demo with final-layer app error handling and return OS exit code."""
+        """Run demo via app entrypoint boilerplate."""
         return self.app.run_entrypoint(target_fps=120)
 
     def _register_app_actions(self) -> None:
@@ -253,7 +253,7 @@ class GuiDoDemo:
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""
-    raise SystemExit(GuiDoDemo().run())
+    GuiDoDemo().run()
 
 
 if __name__ == "__main__":
