@@ -1,7 +1,8 @@
 """CommandHistory — undo/redo stack with optional transaction grouping."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Protocol, runtime_checkable
+from collections import deque
+from typing import Callable, Deque, List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -79,7 +80,7 @@ class CommandHistory:
 
     def __init__(self, max_size: int = 100) -> None:
         self._max_size: int = max(1, int(max_size))
-        self._undo_stack: List[Command] = []
+        self._undo_stack: Deque[Command] = deque(maxlen=self._max_size)
         self._redo_stack: List[Command] = []
         self._open_transaction: Optional[CommandTransaction] = None
         self._change_listeners: List[Callable[[str], None]] = []
@@ -146,8 +147,6 @@ class CommandHistory:
 
         self._redo_stack.clear()
         self._undo_stack.append(command)
-        if len(self._undo_stack) > self._max_size:
-            self._undo_stack.pop(0)
         self._notify("push")
     # ------------------------------------------------------------------
 
@@ -201,8 +200,6 @@ class CommandHistory:
         if len(tx) > 0:
             self._redo_stack.clear()
             self._undo_stack.append(tx)
-            if len(self._undo_stack) > self._max_size:
-                self._undo_stack.pop(0)
             self._notify("push")
 
     def abort_transaction(self) -> None:

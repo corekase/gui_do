@@ -32,12 +32,12 @@ class FormSchema:
 
     def build_form(self) -> FormModel:
         form = FormModel()
-        for field in self._fields:
+        for schema_field in self._fields:
             form.add_field(
-                field.name,
-                field.default,
-                validators=field.validators,
-                required=field.required,
+                schema_field.name,
+                schema_field.default,
+                validators=schema_field.validators,
+                required=schema_field.required,
             )
         return form
 
@@ -46,8 +46,8 @@ class FormSchema:
         for field_name, value in dict(values).items():
             if field_name in form.fields:
                 form.field(field_name).value.value = value
-        for field in form.fields.values():
-            field.validate()
+        for frm_field in form.fields.values():
+            frm_field.validate()
         return form.get_errors()
 
     def defaults(self) -> dict[str, Any]:

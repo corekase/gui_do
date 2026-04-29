@@ -1,9 +1,10 @@
 """ToastManager — app-level toast notifications."""
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Deque, Dict, Optional, Tuple, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -75,7 +76,7 @@ class ToastManager:
         self._row_height = int(row_height)
         self._margin = int(margin)
         self._gap = int(gap)
-        self._toasts: List[_ToastEntry] = []
+        self._toasts: Deque[_ToastEntry] = deque(maxlen=self._max_visible)
         self._next_id: int = 1
         self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
 
@@ -102,9 +103,6 @@ class ToastManager:
             duration_seconds=duration,
         )
         self._toasts.append(entry)
-        # Trim to max visible (oldest removed first)
-        while len(self._toasts) > self._max_visible:
-            self._toasts.pop(0)
         return ToastHandle(toast_id, self)
 
     def show_persistent(
@@ -124,12 +122,13 @@ class ToastManager:
             duration_seconds=None,  # persistent
         )
         self._toasts.append(entry)
-        while len(self._toasts) > self._max_visible:
-            self._toasts.pop(0)
         return ToastHandle(toast_id, self)
 
     def dismiss(self, handle: ToastHandle) -> None:
-        self._toasts = [t for t in self._toasts if t.toast_id != handle.toast_id]
+        self._toasts = deque(
+            (t for t in self._toasts if t.toast_id != handle.toast_id),
+            maxlen=self._max_visible,
+        )
 
     def dismiss_all(self) -> int:
         count = len(self._toasts)
@@ -156,7 +155,11 @@ class ToastManager:
                 if entry.elapsed >= entry.duration_seconds:
                     expired.append(entry.toast_id)
         if expired:
-            self._toasts = [t for t in self._toasts if t.toast_id not in expired]
+            expired_ids = set(expired)
+            self._toasts = deque(
+                (t for t in self._toasts if t.toast_id not in expired_ids),
+                maxlen=self._max_visible,
+            )
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         if not self._toasts:

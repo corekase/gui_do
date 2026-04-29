@@ -36,7 +36,6 @@ from gui_do import (
     PropertyDescriptor,
     PropertyInspectorModel,
     PropertyInspectorPanel,
-    PropertyRegistry,
     property_registry,
     RecordedEvent,
     ResponsiveLayout,
@@ -1190,7 +1189,6 @@ class NewSystemsDemoFeature(RoutedFeature):
         if self._prop_selected_label is None:
             return
         try:
-            val = self._demo_inspectable.__class__.__dict__.get(prop.descriptor.name)
             current = getattr(self._demo_inspectable, prop.descriptor.name, "?")
             self._prop_selected_label.text = (
                 f"Selected: [{prop.descriptor.group}] {prop.descriptor.label} = {current!r}"

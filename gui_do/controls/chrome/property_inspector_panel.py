@@ -1,7 +1,7 @@
 """PropertyInspectorPanel — scrollable UI control that renders a PropertyInspectorModel."""
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect

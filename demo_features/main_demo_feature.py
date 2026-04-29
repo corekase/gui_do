@@ -15,7 +15,6 @@ from gui_do import (
     ColorPickerControl,
     CommandHistory,
     DataGridControl,
-    DesignTokens,
     DropdownControl,
     DropdownOption,
     ErrorBoundary,
@@ -60,17 +59,11 @@ from gui_do import (
     TooltipManager,
     CollectionView,
     CollectionViewQuery,
-    ContextMenuHandle,
     ContextMenuManager,
     ContextMenuItem,
     DocumentModel,
     FormSchema,
-    GridLayout,
-    GridPlacement,
-    GridTrack,
     InvalidationTracker,
-    OverlayHandle,
-    OverlayManager,
     PresentationModel,
     SchemaField,
     TransferData,
@@ -702,15 +695,6 @@ class MainDemoFeature(Feature):
         )
 
         # ── GridLayout ──────────────────────────────────────────────────
-        _grid_layout = GridLayout(
-            row_tracks=[GridTrack("auto"), GridTrack("auto")],
-            col_tracks=[GridTrack("1fr"), GridTrack("2fr"), GridTrack("1fr")],
-            gap=8,
-        )
-        _grid_placement_header = GridPlacement(row=0, col=0, colspan=3)
-        _grid_placement_left   = GridPlacement(row=1, col=0)
-        _grid_placement_center = GridPlacement(row=1, col=1)
-        _grid_placement_right  = GridPlacement(row=1, col=2)
         scroll_stack.add_labeled_value(
             LabelControl("main_grid_lbl", Rect(0, 0, content_w, row_lbl_h), "GridLayout + GridTrack + GridPlacement", align="left"),
             LabelControl(
