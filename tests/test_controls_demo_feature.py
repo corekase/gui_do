@@ -178,12 +178,13 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertEqual(img.rect.width, tab_placed.control.rect.width, "Image and tab columns must be the same square size")
         self.assertGreater(img.rect.left, tab_placed.control.rect.right - 1, "Image column must be to the right of tab column")
 
-    def test_new_row_starts_below_data_grid_with_list_view_then_dropdown(self) -> None:
+    def test_new_row_starts_below_data_grid_with_list_view_then_rich_dropdown_splitter(self) -> None:
         _app, _host, feature = self._build_feature()
 
         by_name = {placed.name: placed for placed in feature.placed_controls}
         dg = by_name["data_grid"]
         lv = by_name["list_view"]
+        rich = by_name["rich_label"]
         dd = by_name["dropdown"]
         splitter = by_name["splitter"]
 
@@ -198,20 +199,22 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             "ListView column must restart from left content edge",
         )
 
-        # ListView and Dropdown share the same left edge (col 0 of new row)
-        self.assertEqual(lv.control.rect.left, dd.control.rect.left,
-                         "ListView and Dropdown must share column left edge")
-        self.assertEqual(lv.control.rect.left, splitter.control.rect.left,
-                         "Splitter must share the first-column left edge")
+        # Rich label, dropdown, and splitter share the same (second-column) left edge.
+        self.assertEqual(rich.control.rect.left, dd.control.rect.left,
+                 "Rich Label and Dropdown must share column left edge")
+        self.assertEqual(rich.control.rect.left, splitter.control.rect.left,
+                 "Splitter must share the rich-label column left edge")
+        self.assertGreater(dd.control.rect.left, lv.control.rect.left,
+                   "Dropdown column must be to the right of ListView column")
 
-        # ListView and Dropdown are both 200px wide
-        self.assertEqual(lv.control.rect.width, 200)
-        self.assertEqual(dd.control.rect.width, 200)
-        self.assertEqual(splitter.control.rect.width, 200)
+        # New-row controls use a uniform column width.
+        self.assertEqual(lv.control.rect.width, rich.control.rect.width)
+        self.assertEqual(dd.control.rect.width, rich.control.rect.width)
+        self.assertEqual(splitter.control.rect.width, rich.control.rect.width)
 
-        # Dropdown top must be below ListView bottom
-        self.assertGreater(dd.control.rect.top, lv.control.rect.bottom,
-                           "Dropdown must be below ListView")
+        # Dropdown and splitter are stacked below rich label in that column.
+        self.assertGreater(dd.control.rect.top, rich.control.rect.bottom,
+                   "Dropdown must be below Rich Label")
         self.assertGreater(splitter.control.rect.top, dd.control.rect.bottom,
                            "Splitter must be below Dropdown")
 
