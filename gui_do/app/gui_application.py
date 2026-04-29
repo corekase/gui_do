@@ -23,6 +23,7 @@ from ..telemetry.telemetry import telemetry_collector
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
 from ..focus.focus_visualizer import FocusVisualizer
+from ..focus.window_focus_manager import WindowFocusManager
 from ..scheduling.task_scheduler import TaskScheduler
 from ..scheduling.timers import Timers
 from ..layout.layout_manager import LayoutManager
@@ -177,6 +178,8 @@ class GuiApplication:
         self.keyboard = KeyboardManager()
         self.focus_visualizer = FocusVisualizer(self)
         self.focus = FocusManager()
+        self.window_focus = WindowFocusManager()
+        self._last_active_window = None
         self.actions = ActionManager()
         self.events = EventBus()
         self.invalidation = InvalidationTracker()
@@ -441,6 +444,7 @@ class GuiApplication:
             if self._screen_lifecycle_active and self._screen_preamble is not None:
                 self._screen_preamble()
             self.focus.update(dt_seconds)
+            self.window_focus.update(dt_seconds)
             runtime = self._scenes[self._active_scene_name]
             runtime.timers.update(dt_seconds)
             runtime.tweens.update(dt_seconds)
@@ -451,6 +455,12 @@ class GuiApplication:
             runtime.scene.update(dt_seconds)
             self.invalidation.invalidate_all()
             self.focus.revalidate_focus(runtime.scene)
+            self.window_focus.revalidate(runtime.scene)
+            active_window = runtime.scene.active_window()
+            if active_window is not self._last_active_window:
+                self._last_active_window = active_window
+                if active_window is not None:
+                    self.focus.restore_remembered_focus_for_window(runtime.scene, active_window)
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()
             self.features.update_features()

@@ -181,6 +181,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `TooltipHandle`
 - `FocusScope`
 - `FocusScopeManager`
+- `WindowFocusManager`
 - `SelectionModel`
 - `SelectionMode`
 - `TextFormatter`

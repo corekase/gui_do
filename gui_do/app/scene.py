@@ -233,3 +233,8 @@ class Scene:
             if app is not None:
                 app.focus_visualizer.draw_hint_for_scene_root(surface, theme, node)
             node.draw_window_phase(surface, theme, app=app)
+
+        # Window focus hint (Ctrl+Tab cycling) is drawn after all windows so
+        # it sits on top of window content and chrome.
+        if app is not None:
+            app.focus_visualizer.draw_window_focus_hint(surface, theme)

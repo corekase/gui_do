@@ -78,6 +78,23 @@ class FocusVisualizer:
             return
         self._draw_dashed_rect(surface, node, theme=theme)
 
+    def draw_window_focus_hint(self, surface: "pygame.Surface", theme) -> None:
+        """Draw the window-focus hint (Ctrl+Tab cycling) around the focused window.
+
+        Suppressed while the command palette overlay is open.
+        """
+        window_focus = getattr(self.app, "window_focus", None)
+        if window_focus is None or not window_focus.should_draw_window_focus_hint():
+            return
+        window = window_focus.focused_window
+        if window is None or not window.visible:
+            return
+        # Suppress while command palette is open.
+        overlay = getattr(self.app, "overlay", None)
+        if callable(getattr(overlay, "has_overlay", None)) and overlay.has_overlay("__command_palette__"):
+            return
+        self._draw_dashed_rect(surface, window, theme=theme)
+
     @staticmethod
     def _find_ancestor_window(node):
         current = node.parent

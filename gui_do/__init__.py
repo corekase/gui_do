@@ -130,6 +130,7 @@ from .actions.key_chord_manager import KeyChordManager, KeyChord, ChordStep
 from .controls.composite.error_boundary import ErrorBoundary
 from .overlays.tooltip_manager import TooltipManager, TooltipHandle
 from .focus.focus_scope import FocusScope, FocusScopeManager
+from .focus.window_focus_manager import WindowFocusManager
 from .data.selection_model import SelectionModel, SelectionMode
 from .text.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
 from .data.virtual_item_source import VirtualItemSource, FixedItemSource
@@ -319,6 +320,7 @@ __all__ = [
     "TooltipHandle",
     "FocusScope",
     "FocusScopeManager",
+    "WindowFocusManager",
     "SelectionModel",
     "SelectionMode",
     "TextFormatter",

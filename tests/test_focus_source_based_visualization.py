@@ -364,5 +364,246 @@ class MouseClickFocusIntegrationTests(unittest.TestCase):
                 self.assertGreaterEqual(mock_window_hint.call_count, 1)
 
 
+# ---------------------------------------------------------------------------
+# WindowFocusManager — Ctrl+Tab window cycling
+# ---------------------------------------------------------------------------
+
+class WindowFocusManagerTests(unittest.TestCase):
+    """WindowFocusManager: cycle list, hint timing, visibility revalidation."""
+
+    def _scene_with_windows(self, *titles):
+        from gui_do.focus.window_focus_manager import WindowFocusManager
+        scene = Scene()
+        root = PanelControl("root", Rect(0, 0, 800, 600), draw_background=False)
+        scene.add(root)
+        windows = []
+        for i, title in enumerate(titles):
+            w = WindowControl(f"win_{i}", Rect(i * 10, 0, 200, 150), title)
+            w.visible = True
+            w.enabled = True
+            root.add(w)
+            windows.append(w)
+        return scene, WindowFocusManager(), windows
+
+    # --- candidate list ----------------------------------------------------
+
+    def test_no_windows_cycle_returns_false(self) -> None:
+        from gui_do.focus.window_focus_manager import WindowFocusManager
+        scene = Scene()
+        wfm = WindowFocusManager()
+        self.assertFalse(wfm.cycle(scene, forward=True))
+        self.assertIsNone(wfm.focused_window)
+        self.assertFalse(wfm.should_draw_window_focus_hint())
+
+    def test_single_window_cycle_shows_hint(self) -> None:
+        scene, wfm, (win,) = self._scene_with_windows("Solo")
+        result = wfm.cycle(scene, forward=True)
+        self.assertTrue(result)
+        self.assertIs(wfm.focused_window, win)
+        self.assertTrue(wfm.should_draw_window_focus_hint())
+
+    def test_single_window_second_cycle_stays_on_same_window(self) -> None:
+        scene, wfm, (win,) = self._scene_with_windows("Solo")
+        wfm.cycle(scene, forward=True)
+        wfm.cycle(scene, forward=True)
+        self.assertIs(wfm.focused_window, win)
+
+    def test_two_windows_cycle_forward(self) -> None:
+        scene, wfm, (wa, wb) = self._scene_with_windows("A", "B")
+        wfm.cycle(scene, forward=True)
+        # First cycle: focus first candidate (sorted by control_id)
+        first = wfm.focused_window
+        wfm.cycle(scene, forward=True)
+        second = wfm.focused_window
+        self.assertIsNot(first, second)
+        wfm.cycle(scene, forward=True)
+        self.assertIs(wfm.focused_window, first)  # wrapped
+
+    def test_two_windows_cycle_backward(self) -> None:
+        scene, wfm, (wa, wb) = self._scene_with_windows("A", "B")
+        wfm.cycle(scene, forward=True)
+        first = wfm.focused_window
+        wfm.cycle(scene, forward=False)
+        # backward wraps to last
+        self.assertIsNot(wfm.focused_window, first)
+
+    # --- hint timer --------------------------------------------------------
+
+    def test_hint_visible_immediately_after_cycle(self) -> None:
+        scene, wfm, _ = self._scene_with_windows("A")
+        wfm.cycle(scene, forward=True)
+        self.assertTrue(wfm.should_draw_window_focus_hint())
+
+    def test_hint_expires_after_timeout(self) -> None:
+        from gui_do.focus.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+        scene, wfm, _ = self._scene_with_windows("A")
+        wfm.cycle(scene, forward=True)
+        wfm.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(wfm.should_draw_window_focus_hint())
+
+    def test_hint_not_expired_before_timeout(self) -> None:
+        from gui_do.focus.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+        scene, wfm, _ = self._scene_with_windows("A")
+        wfm.cycle(scene, forward=True)
+        wfm.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS - 0.1)
+        self.assertTrue(wfm.should_draw_window_focus_hint())
+
+    # --- first-cycle hint reveal (no cycle) --------------------------------
+
+    def test_first_ctrl_tab_with_existing_focus_shows_hint_without_cycling(self) -> None:
+        scene, wfm, (wa, wb) = self._scene_with_windows("A", "B")
+        # Manually place focus on first window, hint off
+        wfm.cycle(scene, forward=True)
+        wfm.update(10.0)  # expire hint
+        self.assertFalse(wfm.should_draw_window_focus_hint())
+        focused_before = wfm.focused_window
+        # Next Ctrl+Tab should just re-show hint, not move focus
+        wfm.cycle(scene, forward=True)
+        self.assertTrue(wfm.should_draw_window_focus_hint())
+        self.assertIs(wfm.focused_window, focused_before)
+
+    # --- revalidation on visibility change ---------------------------------
+
+    def test_revalidate_clears_focus_when_no_windows_remain(self) -> None:
+        scene, wfm, (win,) = self._scene_with_windows("A")
+        wfm.cycle(scene, forward=True)
+        win.visible = False
+        wfm.revalidate(scene)
+        self.assertIsNone(wfm.focused_window)
+        self.assertFalse(wfm.should_draw_window_focus_hint())
+
+    def test_revalidate_advances_focus_to_next_window(self) -> None:
+        scene, wfm, (wa, wb) = self._scene_with_windows("A", "B")
+        wfm.cycle(scene, forward=True)
+        wfm.cycle(scene, forward=True)  # ensure hint visible; advance to second
+        # Hide the currently focused window
+        focused = wfm.focused_window
+        focused.visible = False
+        wfm.revalidate(scene)
+        self.assertIsNotNone(wfm.focused_window)
+        self.assertIsNot(wfm.focused_window, focused)
+
+    def test_revalidate_noop_when_focus_still_valid(self) -> None:
+        scene, wfm, (win,) = self._scene_with_windows("A")
+        wfm.cycle(scene, forward=True)
+        focused = wfm.focused_window
+        wfm.revalidate(scene)
+        self.assertIs(wfm.focused_window, focused)
+
+    def test_invisible_windows_excluded_from_candidates(self) -> None:
+        scene, wfm, (wa, wb) = self._scene_with_windows("A", "B")
+        wa.visible = False
+        wfm.cycle(scene, forward=True)
+        self.assertIs(wfm.focused_window, wb)
+
+
+# ---------------------------------------------------------------------------
+# KeyboardManager Ctrl+Tab routing
+# ---------------------------------------------------------------------------
+
+class CtrlTabWindowCycleTests(unittest.TestCase):
+    """Ctrl+Tab cycles window focus; Ctrl+Shift+Tab cycles backward."""
+
+    def setUp(self) -> None:
+        pygame.init()
+
+    def tearDown(self) -> None:
+        pygame.quit()
+
+    def _app(self):
+        app = GuiApplication(Surface((400, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 400, 300), draw_background=False))
+        wa = root.add(WindowControl("win_a", Rect(0, 0, 200, 150), "A"))
+        wb = root.add(WindowControl("win_b", Rect(10, 10, 200, 150), "B"))
+        wa.visible = True; wb.visible = True
+        wa.enabled = True; wb.enabled = True
+        return app, root, wa, wb
+
+    def test_ctrl_tab_cycles_window_focus(self) -> None:
+        app, root, wa, wb = self._app()
+        app.process_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_LCTRL, "unicode": ""}
+        ))
+        self.assertIsNotNone(app.window_focus.focused_window)
+        self.assertTrue(app.window_focus.should_draw_window_focus_hint())
+        self.assertIs(root.children[-1], wa)
+        self.assertTrue(wa.active)
+
+    def test_ctrl_tab_does_nothing_when_no_windows(self) -> None:
+        from gui_do.focus.window_focus_manager import WindowFocusManager
+        app = GuiApplication(Surface((400, 300)))
+        app.process_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_LCTRL, "unicode": ""}
+        ))
+        self.assertIsNone(app.window_focus.focused_window)
+
+    def test_ctrl_tab_blocked_while_command_palette_open(self) -> None:
+        from unittest.mock import MagicMock
+        app, root, wa, wb = self._app()
+        # Fake the command palette overlay being open
+        overlay_mock = MagicMock()
+        overlay_mock.has_overlay.return_value = True
+        overlay_mock.route_event.return_value = False
+        overlay_mock.overlay_count.return_value = 1
+        overlay_mock.draw.return_value = None
+        app.overlay = overlay_mock
+
+        app.process_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_LCTRL, "unicode": ""}
+        ))
+        self.assertIsNone(app.window_focus.focused_window)
+
+    def test_ctrl_tab_is_not_regular_tab(self) -> None:
+        """Regular Tab (no Ctrl) must NOT change window focus."""
+        app, root, wa, wb = self._app()
+        # Add a focusable control so Tab has something to do
+        btn = wa.add(ButtonControl("b", Rect(10, 40, 80, 30), "X"))
+        btn.set_tab_index(0)
+        wa.active = True
+        app.process_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}
+        ))
+        self.assertIsNone(app.window_focus.focused_window)
+
+    def test_ctrl_tab_restores_remembered_focus_for_cycled_window(self) -> None:
+        app, root, wa, wb = self._app()
+        btn_a = wa.add(ButtonControl("a_btn", Rect(10, 40, 80, 30), "A"))
+        btn_b = wb.add(ButtonControl("b_btn", Rect(10, 40, 80, 30), "B"))
+        btn_a.set_tab_index(0)
+        btn_b.set_tab_index(0)
+
+        wa.active = True
+        app.focus.set_focus(btn_a)
+        wb.active = True
+        app.focus.set_focus(btn_b)
+
+        app.process_event(pygame.event.Event(
+            pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": pygame.KMOD_LCTRL, "unicode": ""}
+        ))
+
+        self.assertIs(app.window_focus.focused_window, wa)
+        self.assertIs(app.focus.focused_node, btn_a)
+        self.assertIs(root.children[-1], wa)
+
+    def test_active_window_change_restores_remembered_focus_on_update(self) -> None:
+        app, root, wa, wb = self._app()
+        btn_a = wa.add(ButtonControl("a_btn", Rect(10, 40, 80, 30), "A"))
+        btn_b = wb.add(ButtonControl("b_btn", Rect(10, 40, 80, 30), "B"))
+        btn_a.set_tab_index(0)
+        btn_b.set_tab_index(0)
+
+        wa.active = True
+        app.focus.set_focus(btn_a)
+        wb.active = True
+        app.focus.set_focus(btn_b)
+
+        wa.active = True
+        self.assertIs(app.focus.focused_node, btn_b)
+
+        app.update(0.0)
+
+        self.assertIs(app.focus.focused_node, btn_a)
+
+
 if __name__ == "__main__":
     unittest.main()

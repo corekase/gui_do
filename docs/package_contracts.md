@@ -174,6 +174,7 @@ from gui_do import (
     TooltipHandle,
     FocusScope,
     FocusScopeManager,
+    WindowFocusManager,
     SelectionModel,
     SelectionMode,
     TextFormatter,

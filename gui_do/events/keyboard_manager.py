@@ -15,6 +15,22 @@ class KeyboardManager:
         return event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING)
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
+        # Ctrl+Tab / Ctrl+Shift+Tab — window focus cycling.
+        if event.is_key_down(pygame.K_TAB) and bool(event.mod & pygame.KMOD_CTRL):
+            overlay = getattr(app, "overlay", None)
+            has_overlay = getattr(overlay, "has_overlay", None)
+            if callable(has_overlay) and has_overlay("__command_palette__"):
+                event.prevent_default()
+                event.stop_propagation()
+                return True
+            shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
+            window_focus = getattr(app, "window_focus", None)
+            if window_focus is not None:
+                window_focus.cycle(scene, forward=not shift_pressed, app=app)
+            event.prevent_default()
+            event.stop_propagation()
+            return True
+
         if event.is_key_down(pygame.K_TAB):
             overlay = getattr(app, "overlay", None)
             has_overlay = getattr(overlay, "has_overlay", None)

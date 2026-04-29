@@ -113,6 +113,30 @@ class FocusManager:
             return True
         return False
 
+    def restore_remembered_focus_for_window(self, scene, window) -> bool:
+        """Restore the remembered focused control for *window* if one is still valid.
+
+        Returns ``True`` when a remembered focus target was restored or the
+        current focus is already valid inside *window*. When no remembered
+        target exists, focus is cleared so keyboard focus does not remain on a
+        control from a different inactive window.
+        """
+        if window is None:
+            return False
+
+        candidates = self._focusable_nodes(scene, window=window)
+        focused = self._focused_node
+        if focused in candidates:
+            return True
+
+        remembered = self._remembered_focus_for_scope(window=window, candidates=candidates)
+        if remembered is None:
+            self.clear_focus()
+            return False
+
+        self.set_focus(remembered)
+        return True
+
     def route_key_event(self, event, app) -> bool:
         target = self._focused_node
         if target is None:
