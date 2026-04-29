@@ -59,8 +59,8 @@ class SceneMenuStripControlWindowOrderRuntimeTests(unittest.TestCase):
             "menu",
             Rect(0, 0, 400, 28),
             app,
-            include_file_menu=False,
-            include_scenes_menu=False,
+            scenes_shown=False,
+            windows_shown=True,
             on_window_toggled=lambda _window, _visible: None,
         )
 
@@ -83,8 +83,8 @@ class SceneMenuStripControlWindowOrderRuntimeTests(unittest.TestCase):
             "menu",
             Rect(0, 0, 400, 28),
             app,
-            include_file_menu=False,
-            include_windows_menu=False,
+            scenes_shown=True,
+            windows_shown=False,
         )
 
         labels = []

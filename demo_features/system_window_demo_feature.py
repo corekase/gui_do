@@ -189,6 +189,8 @@ class SystemWindowDemoFeature(RoutedFeature):
                 Rect(content.left + pad, content.top + pad, content.width - (pad * 2), menu_h),
                 host.app,
                 scene_name="main",
+                scenes_shown=True,
+                windows_shown=True,
                 file_items_provider=self._file_menu_items,
                 extra_entries_provider=self._extra_menu_entries,
                 on_scene_selected=getattr(

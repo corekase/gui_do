@@ -264,7 +264,11 @@ class LifeSimulationFeature(RoutedFeature):
                 Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
                 host.app,
                 scene_name="main",
-                file_items_provider=lambda: [ContextMenuItem("Minimize", action=self._minimize_window)],
+                scenes_shown=False,
+                windows_shown=False,
+                extra_entries_provider=lambda: [
+                    MenuEntry("WIndow", [ContextMenuItem("Minimize", action=self._toggle_window_visible)])
+                ],
                 on_scene_selected=getattr(
                     getattr(host, "scene_transitions", None),
                     "go",
@@ -434,23 +438,27 @@ class LifeSimulationFeature(RoutedFeature):
         """Window postamble hook that drains queued events and renders the board."""
         self.update_life()
 
-    def _minimize_window(self) -> None:
+    def _toggle_window_visible(self) -> None:
+        next_visible = not bool(self.window is not None and self.window.visible)
         if self.window is not None:
-            self.window.visible = False
+            self.window.visible = next_visible
         demo = self.demo
         if demo is not None:
             if hasattr(demo, "set_life_window_visible"):
-                demo.set_life_window_visible(False)
+                demo.set_life_window_visible(next_visible)
             elif hasattr(demo, "life_toggle_window") and demo.life_toggle_window is not None:
-                demo.life_toggle_window.pushed = False
+                demo.life_toggle_window.pushed = next_visible
+
+    def _minimize_window(self) -> None:
+        self._toggle_window_visible()
 
     def _menu_entries(self) -> list[MenuEntry]:
         """Compatibility helper retained for menu runtime tests."""
         return [
             MenuEntry(
-                "File",
+                "WIndow",
                 [
-                    ContextMenuItem("Minimize", action=self._minimize_window),
+                    ContextMenuItem("Minimize", action=self._toggle_window_visible),
                 ],
             )
         ]

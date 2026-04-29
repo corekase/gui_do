@@ -297,8 +297,6 @@ class CommandPaletteManager:
         self._selection_provider: Optional[Callable[[], Optional[str]]] = None
         self._entry_selected_callback: Optional[Callable[[CommandEntry], None]] = None
         self._selected_entry_id_by_scene: Dict[str, str] = {}
-        self._window_order_rank_by_scene: Dict[str, Dict[str, int]] = {}
-        self._window_order_next_by_scene: Dict[str, int] = {}
         if app is not None:
             self._register_background_trigger(app)
             self._bind_builtin_toggle_key(app)
@@ -608,8 +606,7 @@ class CommandPaletteManager:
                 if callable(is_window) and is_window():
                     windows.append(node)
 
-        scene_order_key = self._window_scene_order_key(app)
-        windows.sort(key=lambda window: self._window_order_rank(scene_order_key, window))
+        windows.sort(key=self._window_sort_key)
         for window in windows:
             control_id = str(getattr(window, "control_id", ""))
             window_title = str(getattr(window, "title", "") or control_id or "Window")
@@ -714,32 +711,15 @@ class CommandPaletteManager:
             return
         self._selected_entry_id_by_scene[scene_key] = str(entry.entry_id)
 
-    def _window_scene_order_key(self, app: "GuiApplication") -> str:
-        scene_key = self._selection_scene_key(app)
-        if scene_key:
-            return scene_key
-        return f"scene:{id(getattr(app, 'scene', None))}"
-
     @staticmethod
-    def _window_order_key(window) -> str:
+    def _window_sort_key(window) -> tuple[str, str]:
         control_id = str(getattr(window, "control_id", "")).strip()
-        if control_id:
-            return control_id
         title = str(getattr(window, "title", "")).strip()
+        if control_id:
+            return ("0", control_id.casefold())
         if title:
-            return f"title:{title}"
-        return f"window:{id(window)}"
-
-    def _window_order_rank(self, scene_order_key: str, window) -> int:
-        ranks = self._window_order_rank_by_scene.setdefault(scene_order_key, {})
-        key = self._window_order_key(window)
-        existing = ranks.get(key)
-        if existing is not None:
-            return existing
-        next_rank = self._window_order_next_by_scene.get(scene_order_key, 0)
-        ranks[key] = next_rank
-        self._window_order_next_by_scene[scene_order_key] = next_rank + 1
-        return next_rank
+            return ("1", title.casefold())
+        return ("2", str(id(window)))
 
     @staticmethod
     def _build_items(entries: List[CommandEntry]) -> List[ListItem]:

@@ -231,7 +231,7 @@ class GuiDoDemo:
             ),
             category="Tools",
         )
-        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._palette_manager.show(self.app) or True),       category="Tools")
+        r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._palette_manager.show(self.app) or True))
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")

@@ -16,13 +16,12 @@ if TYPE_CHECKING:
 
 
 class SceneMenuStripControl(_BaseMenuBarControl):
-    """Dynamic menu strip with default File/Scenes/Windows sections.
+    """Dynamic menu strip with optional Scenes/Windows sections.
 
     The control rebuilds its entries before pointer interactions so scene lists
     and window visibility toggles always reflect current runtime state.
 
-    Default sections:
-    - File: Exit
+    Optional built-in sections:
     - Scenes: all registered scene names
     - Windows: visibility toggles for window controls in the target scene
 
@@ -36,9 +35,8 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         app: "GuiApplication",
         *,
         scene_name: Optional[str] = None,
-        include_file_menu: bool = True,
-        include_scenes_menu: bool = True,
-        include_windows_menu: bool = True,
+        scenes_shown: bool = False,
+        windows_shown: bool = False,
         file_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
         extra_entries_provider: Optional[Callable[[], List[MenuEntry]]] = None,
         on_exit: Optional[Callable[[], None]] = None,
@@ -48,9 +46,8 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         super().__init__(control_id, rect, entries=[])
         self._app = app
         self._scene_name = scene_name
-        self._include_file_menu = bool(include_file_menu)
-        self._include_scenes_menu = bool(include_scenes_menu)
-        self._include_windows_menu = bool(include_windows_menu)
+        self._scenes_shown = bool(scenes_shown)
+        self._windows_shown = bool(windows_shown)
         self._file_items_provider = file_items_provider
         self._extra_entries_provider = extra_entries_provider
         self._on_exit = on_exit
@@ -63,18 +60,17 @@ class SceneMenuStripControl(_BaseMenuBarControl):
 
     def refresh_entries(self) -> None:
         entries: List[MenuEntry] = []
-        if self._include_file_menu:
-            file_items = self._build_file_items()
-            if file_items:
-                entries.append(MenuEntry("File", file_items))
-        if self._include_scenes_menu:
+        if self._scenes_shown:
             scene_items = self._build_scene_items()
             if scene_items:
                 entries.append(MenuEntry("Scenes", scene_items))
-        if self._include_windows_menu:
+        if self._windows_shown:
             window_items = self._build_window_items()
             if window_items:
                 entries.append(MenuEntry("Windows", window_items))
+        file_items = self._build_file_items()
+        if file_items:
+            entries.append(MenuEntry("File", file_items))
         if self._extra_entries_provider is not None:
             try:
                 extras = self._extra_entries_provider() or []
@@ -117,19 +113,12 @@ class SceneMenuStripControl(_BaseMenuBarControl):
     # ------------------------------------------------------------------
 
     def _build_file_items(self) -> List[ContextMenuItem]:
-        items: List[ContextMenuItem] = [
-            ContextMenuItem("Exit", action=self._exit),
-        ]
         if self._file_items_provider is None:
-            return items
+            return []
         try:
-            extra = self._file_items_provider() or []
+            return self._file_items_provider() or []
         except Exception:
-            extra = []
-        if extra:
-            items.append(ContextMenuItem("", separator=True))
-            items.extend(extra)
-        return items
+            return []
 
     def _build_scene_items(self) -> List[ContextMenuItem]:
         active = str(getattr(self._app, "active_scene_name", ""))

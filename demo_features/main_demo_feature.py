@@ -128,6 +128,8 @@ class MainDemoFeature(Feature):
                 Rect(0, 0, host.screen_rect.width, 28),
                 host.app,
                 scene_name="main",
+                scenes_shown=True,
+                windows_shown=True,
                 extra_entries_provider=_extra_entries,
                 on_scene_selected=scene_select,
             )

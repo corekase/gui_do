@@ -12,7 +12,7 @@ class LifeWindowMenuRuntimeTests(unittest.TestCase):
         entries = feature._menu_entries()
 
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].label, "File")
+        self.assertEqual(entries[0].label, "WIndow")
         self.assertEqual(entries[0].items[0].label, "Minimize")
 
     def test_life_minimize_updates_host_visibility(self) -> None:
@@ -37,7 +37,7 @@ class MandelWindowMenuRuntimeTests(unittest.TestCase):
         entries = feature._menu_entries()
 
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].label, "File")
+        self.assertEqual(entries[0].label, "WIndow")
         self.assertEqual(entries[0].items[0].label, "Minimize")
 
     def test_mandel_minimize_updates_host_visibility(self) -> None:

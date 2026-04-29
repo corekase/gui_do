@@ -1760,7 +1760,7 @@ app.scene.add(bar)
 
 ### SceneMenuStripControl
 
-`SceneMenuStripControl` is a reusable dynamic menu strip that provides default `File`, `Scenes`, and `Windows` sections for a target scene. It rebuilds entries before pointer interactions so scene names and window visibility toggles stay current. Use `extra_entries_provider` to inject additional top-level menus when needed.
+`SceneMenuStripControl` is a reusable dynamic menu strip for a target scene. The `Scenes` and `Windows` built-in sections are opt-in via `scenes_shown=True` and `windows_shown=True` (both default to `False`). A `File` section appears only when `file_items_provider` is set and returns items. It rebuilds entries before pointer interactions so scene names and window visibility toggles stay current. Use `extra_entries_provider` to inject additional top-level menus when needed.
 
 ```python
 from gui_do import MenuEntry, SceneMenuStripControl
@@ -1773,6 +1773,8 @@ menu = SceneMenuStripControl(
     Rect(0, 0, 1280, 28),
     app,
     scene_name="main",
+    scenes_shown=True,
+    windows_shown=True,
     extra_entries_provider=extra_entries,
     on_scene_selected=lambda scene: transitions.go(scene),
     on_window_toggled=lambda window, visible: sync_window_toggle(window, visible),

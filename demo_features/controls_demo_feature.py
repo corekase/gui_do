@@ -190,7 +190,10 @@ class ControlsShowcaseFeature(Feature):
             action_registry = getattr(host, "action_registry", None)
             if action_registry is None:
                 return []
-            tools_items = action_registry.context_menu_items(category="Tools")
+            tools_items = [
+                item for item in action_registry.context_menu_items(category="Tools")
+                if item.label != "Open Command Palette (F5)"
+            ]
             if not tools_items:
                 return []
             return [MenuEntry("Tools", tools_items)]
@@ -207,6 +210,8 @@ class ControlsShowcaseFeature(Feature):
                 Rect(0, 0, host.control_showcase_root.rect.width, 28),
                 host.app,
                 scene_name="control_showcase",
+                scenes_shown=True,
+                windows_shown=True,
                 extra_entries_provider=_extra_entries,
                 on_scene_selected=scene_select,
             )

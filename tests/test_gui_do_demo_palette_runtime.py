@@ -41,13 +41,13 @@ class GuiDoDemoPaletteRuntimeTests(unittest.TestCase):
 
         self.assertEqual(allowed, ["control_showcase"])
 
-    def test_builtin_window_entries_keep_stable_order_when_scene_walk_order_changes(self) -> None:
+    def test_builtin_window_entries_use_deterministic_order_even_if_initial_walk_order_is_scrambled(self) -> None:
         palette = CommandPaletteManager(OverlayManager())
 
         w1 = _WindowStub("life_window", "Life")
         w2 = _WindowStub("mandel_window", "Mandelbrot")
         w3 = _WindowStub("system_window", "System")
-        scene = _SceneStub([w1, w2, w3])
+        scene = _SceneStub([w2, w3, w1])
 
         app = SimpleNamespace(
             scene_names=lambda: ["main"],
@@ -62,7 +62,7 @@ class GuiDoDemoPaletteRuntimeTests(unittest.TestCase):
         initial_titles = [entry.title for entry in palette.entries() if entry.category == "Windows"]
         self.assertEqual(initial_titles, ["Life", "Mandelbrot", "System"])
 
-        scene._nodes = [w1, w3, w2]
+        scene._nodes = [w3, w1, w2]
         palette._register_builtin_scene_and_window_entries(app)
         second_titles = [entry.title for entry in palette.entries() if entry.category == "Windows"]
         self.assertEqual(second_titles, ["Life", "Mandelbrot", "System"])
