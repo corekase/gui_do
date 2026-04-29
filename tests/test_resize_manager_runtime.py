@@ -8,7 +8,7 @@ from pygame import Rect
 
 from gui_do import ResizeManager
 from gui_do.layout.constraint_layout import ConstraintLayout, AnchorConstraint
-from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.composite.panel_control import PanelControl
 
 
 class ResizeManagerRuntimeTests(unittest.TestCase):
@@ -144,7 +144,7 @@ class ResizeManagerRuntimeTests(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_event_bus_receives_window_resized(self) -> None:
-        from gui_do.core.event_bus import EventBus
+        from gui_do.events.event_bus import EventBus
         bus = EventBus()
         received = []
         bus.subscribe("window_resized", lambda payload: received.append(payload))

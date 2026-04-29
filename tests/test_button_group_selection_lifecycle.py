@@ -2,8 +2,8 @@
 
 from pygame import Rect
 
-from gui_do.controls.button_group_control import ButtonGroupControl
-from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.input.button_group_control import ButtonGroupControl
+from gui_do.controls.composite.panel_control import PanelControl
 
 
 class ButtonGroupSelectionLifecycleTests(unittest.TestCase):

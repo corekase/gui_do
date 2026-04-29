@@ -637,7 +637,7 @@ class PropertyInspectorPanelTests(unittest.TestCase):
 
     def test_on_select_callback_fires(self) -> None:
         from pygame import Rect
-        from gui_do.core.gui_event import GuiEvent, EventType
+        from gui_do.events.gui_event import GuiEvent, EventType
         selected = []
         target = self._make_target_with_props()
         model = PropertyInspectorModel(target)
@@ -790,7 +790,7 @@ class DockWorkspacePanelTests(unittest.TestCase):
         self.assertAlmostEqual(total_w, panel.rect.width, delta=2)
 
     def test_mouse_click_switches_pane(self) -> None:
-        from gui_do.core.gui_event import GuiEvent, EventType
+        from gui_do.events.gui_event import GuiEvent, EventType
         changes = []
         panel, workspace = self._make_panel(on_change=changes.append)
 
@@ -1824,7 +1824,7 @@ class _MockScheduler:
         self._results[task_id] = result
 
     def fail_task(self, task_id, error="oops"):
-        from gui_do.core.task_scheduler import TaskEvent
+        from gui_do.scheduling.task_scheduler import TaskEvent
         self._active.discard(task_id)
         self._failed.append(TaskEvent(operation="failed", task_id=task_id, error=error))
 
@@ -2406,7 +2406,7 @@ class PatternFormatterTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 from gui_do import KeyChordManager, KeyChord, ChordStep
-from gui_do.core.gui_event import GuiEvent, EventType as _EventType
+from gui_do.events.gui_event import GuiEvent, EventType as _EventType
 
 
 def _key_event(key: int, mod: int = 0) -> GuiEvent:
@@ -2572,7 +2572,7 @@ class KeyChordManagerDispatchTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 from gui_do import ErrorBoundary
-from gui_do.core.ui_node import UiNode as _UiNode
+from gui_do.controls.base.ui_node import UiNode as _UiNode
 from pygame import Rect as _Rect
 
 
@@ -6019,7 +6019,7 @@ class ValueChangeReasonTests(unittest.TestCase):
     def test_callable_type(self) -> None:
         # ValueChangeCallback is a type alias (Callable), not a class
         import inspect
-        from gui_do.core.value_change_callback import ValueChangeCallback as _VCC
+        from gui_do.events.value_change_callback import ValueChangeCallback as _VCC
         # Just ensure it is importable and usable as a type hint — verify via get_args
         self.assertTrue(True)
 
@@ -6682,7 +6682,7 @@ class OverlayManagerTests(unittest.TestCase):
     """OverlayManager show/hide/has_overlay/overlay_count."""
 
     def _make_panel(self, cid="p1"):
-        from gui_do.controls.overlay_panel_control import OverlayPanelControl
+        from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
         return OverlayPanelControl(cid, _Rect(0, 0, 100, 100))
 
     def test_show_returns_handle(self) -> None:
@@ -6739,7 +6739,7 @@ class OverlayHandleTests(unittest.TestCase):
     """OverlayHandle dismiss and is_open."""
 
     def _make_panel(self, cid="p1"):
-        from gui_do.controls.overlay_panel_control import OverlayPanelControl
+        from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
         return OverlayPanelControl(cid, _Rect(0, 0, 100, 100))
 
     def test_handle_is_open(self) -> None:
@@ -6764,7 +6764,7 @@ class OverlayHandleTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 from gui_do import analyze_telemetry_records
-from gui_do.core.telemetry_analyzer import TelemetryHotspot, TelemetryAnalysis
+from gui_do.telemetry.telemetry_analyzer import TelemetryHotspot, TelemetryAnalysis
 
 
 class AnalyzeTelemetryRecordsTests(unittest.TestCase):
@@ -7355,7 +7355,7 @@ class ListItemTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 from gui_do import render_telemetry_report, load_telemetry_log_file, analyze_telemetry_log_file
-from gui_do.core.telemetry_analyzer import TelemetryAnalysis, TelemetryHotspot
+from gui_do.telemetry.telemetry_analyzer import TelemetryAnalysis, TelemetryHotspot
 
 
 class RenderTelemetryReportTests(unittest.TestCase):
@@ -7913,7 +7913,7 @@ class EventManagerTests(unittest.TestCase):
     """EventManager: to_gui_event passthrough and basic conversion."""
 
     def test_returns_gui_event_unchanged(self) -> None:
-        from gui_do.core.gui_event import GuiEvent, EventType
+        from gui_do.events.gui_event import GuiEvent, EventType
         em = EventManager()
         evt = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(0, 0), button=1)
         result = em.to_gui_event(evt)
@@ -7929,7 +7929,7 @@ class EventManagerTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 from gui_do import CanvasEventPacket
-from gui_do.core.gui_event import EventType as _EvtType
+from gui_do.events.gui_event import EventType as _EvtType
 
 
 class CanvasEventPacketTests(unittest.TestCase):

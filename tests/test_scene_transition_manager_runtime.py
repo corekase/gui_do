@@ -7,7 +7,7 @@ import pygame
 pygame.init()
 pygame.display.set_mode((1, 1), pygame.NOFRAME)
 
-from gui_do.core.scene_transition_manager import (
+from gui_do.persistence.scene_transition_manager import (
     SceneTransitionManager,
     SceneTransitionStyle,
 )

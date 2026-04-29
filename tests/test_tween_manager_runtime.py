@@ -2,7 +2,7 @@
 import unittest
 from types import SimpleNamespace
 
-from gui_do.core.tween_manager import TweenManager, TweenHandle, Easing
+from gui_do.scheduling.tween_manager import TweenManager, TweenHandle, Easing
 
 
 class TestTweenFnCallsPerFrame(unittest.TestCase):

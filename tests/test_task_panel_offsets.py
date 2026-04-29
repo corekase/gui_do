@@ -2,8 +2,8 @@
 
 from pygame import Rect
 
-from gui_do.controls.task_panel_control import TaskPanelControl
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.chrome.task_panel_control import TaskPanelControl
+from gui_do.controls.base.ui_node import UiNode
 
 
 class TaskPanelOffsetTests(unittest.TestCase):

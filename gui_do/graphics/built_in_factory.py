@@ -12,7 +12,7 @@ from pygame.draw import circle, line, polygon, rect as draw_rect
 from pygame.surfarray import blit_array
 from pygame.transform import rotate, smoothscale
 
-from ..core.first_frame_profiler import first_frame_profiler
+from ..app.first_frame_profiler import first_frame_profiler
 from .built_in_definitions import BUILT_IN_COLOURS, draw_box_bitmap, draw_frame_bitmap
 
 

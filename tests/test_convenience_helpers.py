@@ -16,16 +16,16 @@ import pygame
 from pygame import Rect, Surface
 
 from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.button_control import ButtonControl
-from gui_do.controls.label_control import LabelControl
-from gui_do.controls.panel_control import PanelControl
-from gui_do.controls.scroll_view_control import ScrollViewControl
-from gui_do.controls.scrollbar_control import ScrollbarControl
-from gui_do.controls.slider_control import SliderControl
-from gui_do.controls.window_control import WindowControl
-from gui_do.core.action_manager import ActionManager
-from gui_do.core.event_bus import EventBus
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.input.button_control import ButtonControl
+from gui_do.controls.display.label_control import LabelControl
+from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.composite.scroll_view_control import ScrollViewControl
+from gui_do.controls.input.scrollbar_control import ScrollbarControl
+from gui_do.controls.input.slider_control import SliderControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.actions.action_manager import ActionManager
+from gui_do.events.event_bus import EventBus
+from gui_do.controls.base.ui_node import UiNode
 from gui_do.layout.layout_axis import LayoutAxis
 
 

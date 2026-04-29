@@ -1,6 +1,6 @@
 from pathlib import Path
 import pygame
-from ..core.error_handling import io_error, logical_error
+from ..app.error_handling import io_error, logical_error
 
 
 def _convert_if_available(surface: pygame.Surface) -> pygame.Surface:

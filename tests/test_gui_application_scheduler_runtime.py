@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from unittest.mock import patch
 
 import pygame
@@ -11,7 +11,7 @@ class GuiApplicationSchedulerRuntimeTests(unittest.TestCase):
     def test_scene_scheduler_uses_conservative_worker_count_and_dispatch_budget(self) -> None:
         pygame.init()
         try:
-            with patch("gui_do.core.task_scheduler.os.cpu_count", return_value=4):
+            with patch("gui_do.scheduling.task_scheduler.os.cpu_count", return_value=4):
                 app = GuiApplication(Surface((240, 180)))
             try:
                 self.assertEqual(app.scheduler._max_workers, 3)

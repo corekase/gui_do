@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from pygame import Rect
 
-from gui_do.core.toast_manager import ToastManager, ToastHandle, ToastSeverity
+from gui_do.overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
 
 
 def _mgr(**kwargs) -> ToastManager:

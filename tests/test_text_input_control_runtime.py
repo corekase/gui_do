@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pygame
 from pygame import Rect
 
-from gui_do.core.gui_event import EventType, GuiEvent
-from gui_do.controls.text_input_control import TextInputControl
+from gui_do.events.gui_event import EventType, GuiEvent
+from gui_do.controls.input.text_input_control import TextInputControl
 
 
 def _make_app():

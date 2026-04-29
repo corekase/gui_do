@@ -2,11 +2,11 @@
 import unittest
 from unittest.mock import MagicMock, call
 
-from gui_do.core.notification_center import (
+from gui_do.overlays.notification_center import (
     NotificationCenter,
     NotificationRecord,
 )
-from gui_do.core.toast_manager import ToastSeverity
+from gui_do.overlays.toast_manager import ToastSeverity
 
 
 def _make_event_bus() -> MagicMock:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..graphics.built_in_definitions import BUILT_IN_COLOURS
-from ..core.font_manager import FontManager
+from .font_manager import FontManager
 
 
 class ColorTheme:

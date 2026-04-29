@@ -7,9 +7,9 @@ import pygame
 pygame.init()
 pygame.display.set_mode((1, 1), pygame.NOFRAME)
 
-from gui_do.controls.tree_control import TreeControl, TreeNode, _flatten
-from gui_do.core.gui_event import EventType
-from gui_do.core.pointer_capture import PointerCapture
+from gui_do.controls.data.tree_control import TreeControl, TreeNode, _flatten
+from gui_do.events.gui_event import EventType
+from gui_do.events.pointer_capture import PointerCapture
 
 
 class TestTreeNode(unittest.TestCase):
@@ -86,7 +86,7 @@ class TestTreeControlBasics(unittest.TestCase):
         tree._on_select = lambda node, idx: selected.append(node)
         tree.expand(tree._nodes[0])
         # Simulate click on first child row (row index 1 after expand)
-        from gui_do.core.gui_event import GuiEvent, EventType
+        from gui_do.events.gui_event import GuiEvent, EventType
         evt = MagicMock()
         evt.kind = EventType.MOUSE_BUTTON_DOWN
         evt.button = 1
@@ -116,7 +116,7 @@ class TestTreeControlBasics(unittest.TestCase):
     def test_disabled_ignores_events(self):
         tree = self._make_tree()
         tree.enabled = False
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         evt = MagicMock()
         evt.kind = EventType.MOUSE_BUTTON_DOWN
         evt.button = 1

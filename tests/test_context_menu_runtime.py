@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pygame
 from pygame import Rect
 
-from gui_do.core.context_menu_manager import (
+from gui_do.overlays.context_menu_manager import (
     ContextMenuManager,
     ContextMenuItem,
     ContextMenuHandle,
@@ -127,7 +127,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
     """Tests for _ContextMenuPanel event handling (unit-level)."""
 
     def _panel(self, items=None):
-        from gui_do.core.context_menu_manager import _ContextMenuPanel
+        from gui_do.overlays.context_menu_manager import _ContextMenuPanel
         if items is None:
             items = _items()
         closed = []
@@ -147,7 +147,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         return evt
 
     def test_mouse_motion_sets_hovered_index(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         panel, _ = self._panel()
         rects = panel._item_rects()
         center = rects[0].center
@@ -156,7 +156,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         self.assertEqual(panel._hovered_index, 0)
 
     def test_mouse_click_triggers_action(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         action = MagicMock()
         items = [ContextMenuItem(label="Do", action=action)]
         panel, closed = self._panel(items)
@@ -167,7 +167,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         action.assert_called_once()
 
     def test_mouse_click_disabled_item_not_activated(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         action = MagicMock()
         items = [ContextMenuItem(label="No", action=action, enabled=False)]
         panel, _ = self._panel(items)
@@ -178,7 +178,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         action.assert_not_called()
 
     def test_keyboard_down_advances_selection(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         items = [
             ContextMenuItem(label="A", action=MagicMock()),
             ContextMenuItem(label="B", action=MagicMock()),
@@ -190,7 +190,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         self.assertEqual(panel._keyboard_index, 1)
 
     def test_keyboard_up_decrements_selection(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         items = [
             ContextMenuItem(label="A", action=MagicMock()),
             ContextMenuItem(label="B", action=MagicMock()),
@@ -202,7 +202,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         self.assertEqual(panel._keyboard_index, 0)
 
     def test_keyboard_enter_activates_item(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         action = MagicMock()
         items = [ContextMenuItem(label="Go", action=action)]
         panel, _ = self._panel(items)
@@ -212,7 +212,7 @@ class TestContextMenuPanelHandleEvent(unittest.TestCase):
         action.assert_called_once()
 
     def test_separator_skipped_in_keyboard_nav(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         items = [
             ContextMenuItem(label="A", action=MagicMock()),
             ContextMenuItem(label="", separator=True),

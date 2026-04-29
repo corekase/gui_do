@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 from pygame import Rect
 
-from gui_do.core.dialog_manager import DialogManager, DialogHandle
+from gui_do.overlays.dialog_manager import DialogManager, DialogHandle
 
 
 def _app():

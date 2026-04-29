@@ -1,7 +1,7 @@
 """Tests for CommandHistory — undo/redo with transactions."""
 import unittest
 
-from gui_do.core.command_history import CommandHistory, Command, CommandTransaction
+from gui_do.state.command_history import CommandHistory, Command, CommandTransaction
 
 
 class _AddCmd:

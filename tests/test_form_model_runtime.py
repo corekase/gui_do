@@ -1,8 +1,8 @@
 """Tests for FormModel + Validation Engine."""
 import unittest
 
-from gui_do.core.form_model import FormModel, FormField, ValidationRule, FieldError
-from gui_do.core.presentation_model import ObservableValue
+from gui_do.forms.form_model import FormModel, FormField, ValidationRule, FieldError
+from gui_do.data.presentation_model import ObservableValue
 
 
 class TestFormFieldDefaults(unittest.TestCase):

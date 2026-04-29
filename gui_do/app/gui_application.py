@@ -6,36 +6,36 @@ from time import perf_counter
 from typing import Callable, Optional
 from pygame import Rect
 
-from ..core.event_manager import EventManager
-from ..core.gui_event import EventType
-from ..core.input_state import InputState
-from ..core.pointer_capture import PointerCapture
-from ..core.keyboard_manager import KeyboardManager
-from ..core.focus_manager import FocusManager
-from ..core.action_manager import ActionManager
-from ..core.event_bus import EventBus
-from ..core.invalidation import InvalidationTracker
-from ..core.scene import Scene
-from ..core.renderer import Renderer
-from ..core.first_frame_profiler import first_frame_profiler
-from ..core.telemetry import configure_telemetry
-from ..core.telemetry import telemetry_collector
+from ..events.event_manager import EventManager
+from ..events.gui_event import EventType
+from ..events.input_state import InputState
+from ..events.pointer_capture import PointerCapture
+from ..events.keyboard_manager import KeyboardManager
+from ..focus.focus_manager import FocusManager
+from ..actions.action_manager import ActionManager
+from ..events.event_bus import EventBus
+from ..data.invalidation import InvalidationTracker
+from .scene import Scene
+from .renderer import Renderer
+from .first_frame_profiler import first_frame_profiler
+from ..telemetry.telemetry import configure_telemetry
+from ..telemetry.telemetry import telemetry_collector
 from ..graphics.built_in_factory import BuiltInGraphicsFactory
 from ..graphics import load_pristine_surface
-from ..core.focus_visualizer import FocusVisualizer
-from ..core.task_scheduler import TaskScheduler
-from ..core.timers import Timers
+from ..focus.focus_visualizer import FocusVisualizer
+from ..scheduling.task_scheduler import TaskScheduler
+from ..scheduling.timers import Timers
 from ..layout.layout_manager import LayoutManager
 from ..layout.window_tiling_manager import WindowTilingManager
 from ..theme.color_theme import ColorTheme
-from ..core.feature_lifecycle import FeatureManager
-from ..core.error_handling import logical_error, report_nonfatal_error
-from ..core.tween_manager import TweenManager
-from ..core.overlay_manager import OverlayManager
-from ..core.toast_manager import ToastManager
-from ..core.dialog_manager import DialogManager
-from ..core.drag_drop_manager import DragDropManager
-from ..core.workspace_persistence import WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
+from ..features.feature_lifecycle import FeatureManager
+from .error_handling import logical_error, report_nonfatal_error
+from ..scheduling.tween_manager import TweenManager
+from ..overlays.overlay_manager import OverlayManager
+from ..overlays.toast_manager import ToastManager
+from ..overlays.dialog_manager import DialogManager
+from ..overlays.drag_drop_manager import DragDropManager
+from ..persistence.workspace_persistence import WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
 
 
 @dataclass
@@ -971,7 +971,7 @@ class GuiApplication:
         This keeps lifecycle ownership at the application layer while still
         reusing the engine implementation for frame processing.
         """
-        from ..loop.ui_engine import UiEngine
+        from .ui_engine import UiEngine
 
         return UiEngine(self, target_fps=target_fps).run(max_frames=max_frames)
 
@@ -1040,7 +1040,7 @@ class GuiApplication:
 
     def load_workspace(self, workspace_manager, path: str | Path):
         """Load and restore a workspace state from disk."""
-        from ..core.workspace_persistence import WorkspaceState
+        from ..persistence.workspace_persistence import WorkspaceState
 
         state = WorkspaceState.load(path)
         self.restore_workspace(workspace_manager, state)

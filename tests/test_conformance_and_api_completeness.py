@@ -9,17 +9,17 @@ from unittest.mock import MagicMock
 import pygame
 from pygame import Rect
 
-from gui_do.core.gui_event import EventType, GuiEvent
-from gui_do.controls.canvas_control import CanvasControl, CanvasEventPacket
-from gui_do.controls.button_control import ButtonControl
-from gui_do.controls.toggle_control import ToggleControl
-from gui_do.controls.arrow_box_control import ArrowBoxControl
-from gui_do.controls.label_control import LabelControl
-from gui_do.controls.window_control import WindowControl
-from gui_do.controls.panel_control import PanelControl
-from gui_do.controls.button_group_control import ButtonGroupControl
-from gui_do.core.ui_node import UiNode
-from gui_do.loop.ui_engine import UiEngine
+from gui_do.events.gui_event import EventType, GuiEvent
+from gui_do.controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
+from gui_do.controls.input.button_control import ButtonControl
+from gui_do.controls.input.toggle_control import ToggleControl
+from gui_do.controls.display.arrow_box_control import ArrowBoxControl
+from gui_do.controls.display.label_control import LabelControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.input.button_group_control import ButtonGroupControl
+from gui_do.controls.base.ui_node import UiNode
+from gui_do.app.ui_engine import UiEngine
 
 
 def _rect() -> Rect:

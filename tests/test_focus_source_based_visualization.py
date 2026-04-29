@@ -6,15 +6,15 @@ import pygame
 from pygame import Rect, Surface
 
 from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.button_control import ButtonControl
-from gui_do.controls.label_control import LabelControl
-from gui_do.controls.panel_control import PanelControl
-from gui_do.controls.window_control import WindowControl
-from gui_do.core.focus_manager import FocusManager
-from gui_do.core.focus_visualizer import FocusVisualizer
-from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
-from gui_do.core.scene import Scene
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.input.button_control import ButtonControl
+from gui_do.controls.display.label_control import LabelControl
+from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.focus.focus_manager import FocusManager
+from gui_do.focus.focus_visualizer import FocusVisualizer
+from gui_do.focus.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.app.scene import Scene
+from gui_do.controls.base.ui_node import UiNode
 
 
 class FocusVisualizerKeyboardHintTests(unittest.TestCase):

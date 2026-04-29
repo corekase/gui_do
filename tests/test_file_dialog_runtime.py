@@ -10,7 +10,7 @@ import pygame
 pygame.init()
 pygame.display.set_mode((1, 1), pygame.NOFRAME)
 
-from gui_do.core.file_dialog_manager import (
+from gui_do.overlays.file_dialog_manager import (
     FileDialogManager,
     FileDialogOptions,
     FileDialogHandle,

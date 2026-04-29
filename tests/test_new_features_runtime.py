@@ -19,7 +19,7 @@ from pygame import Rect
 # ComputedValue tests
 # ---------------------------------------------------------------------------
 
-from gui_do.core.presentation_model import ObservableValue, ComputedValue
+from gui_do.data.presentation_model import ObservableValue, ComputedValue
 
 
 class TestComputedValueBasics(unittest.TestCase):
@@ -113,8 +113,8 @@ class TestClipboardManagerExport(unittest.TestCase):
 # AnimationSequence tests
 # ---------------------------------------------------------------------------
 
-from gui_do.core.animation_sequence import AnimationSequence, AnimationHandle
-from gui_do.core.tween_manager import TweenManager
+from gui_do.scheduling.animation_sequence import AnimationSequence, AnimationHandle
+from gui_do.scheduling.tween_manager import TweenManager
 
 
 class _Obj:
@@ -215,7 +215,7 @@ class TestAnimationSequenceBasics(unittest.TestCase):
 # Feature state persistence tests
 # ---------------------------------------------------------------------------
 
-from gui_do.core.feature_lifecycle import Feature, FeatureManager
+from gui_do.features.feature_lifecycle import Feature, FeatureManager
 
 
 class _StatefulFeature(Feature):
@@ -340,8 +340,8 @@ class TestFeatureStatePersistence(unittest.TestCase):
 # ScrollViewControl tests
 # ---------------------------------------------------------------------------
 
-from gui_do.controls.scroll_view_control import ScrollViewControl
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.composite.scroll_view_control import ScrollViewControl
+from gui_do.controls.base.ui_node import UiNode
 
 
 class _MockNode(UiNode):
@@ -430,8 +430,8 @@ class TestScrollViewControl(unittest.TestCase):
         self.assertIn("ScrollViewControl", gui_do.__all__)
 
     def test_drag_vertical_scrollbar_thumb_updates_scroll(self) -> None:
-        from gui_do.core.gui_event import EventType
-        from gui_do.core.pointer_capture import PointerCapture
+        from gui_do.events.gui_event import EventType
+        from gui_do.events.pointer_capture import PointerCapture
         from types import SimpleNamespace
         from unittest.mock import MagicMock
 
@@ -490,8 +490,8 @@ class TestScrollViewControl(unittest.TestCase):
 # SpinnerControl tests
 # ---------------------------------------------------------------------------
 
-from gui_do.controls.spinner_control import SpinnerControl
-from gui_do.core.value_change_reason import ValueChangeReason
+from gui_do.controls.input.spinner_control import SpinnerControl
+from gui_do.events.value_change_reason import ValueChangeReason
 
 
 class TestSpinnerControl(unittest.TestCase):
@@ -562,7 +562,7 @@ class TestSpinnerControl(unittest.TestCase):
 # RangeSliderControl tests
 # ---------------------------------------------------------------------------
 
-from gui_do.controls.range_slider_control import RangeSliderControl
+from gui_do.controls.input.range_slider_control import RangeSliderControl
 
 
 class TestRangeSliderControl(unittest.TestCase):
@@ -612,8 +612,8 @@ class TestRangeSliderControl(unittest.TestCase):
     def test_high_handle_drag_begins_pointer_capture(self) -> None:
         from types import SimpleNamespace
 
-        from gui_do.core.gui_event import EventType, GuiEvent
-        from gui_do.core.pointer_capture import PointerCapture
+        from gui_do.events.gui_event import EventType, GuiEvent
+        from gui_do.events.pointer_capture import PointerCapture
 
         rs = RangeSliderControl(
             "rs", Rect(0, 0, 300, 28),
@@ -643,7 +643,7 @@ class TestRangeSliderControl(unittest.TestCase):
 # ColorPickerControl tests
 # ---------------------------------------------------------------------------
 
-from gui_do.controls.color_picker_control import ColorPickerControl
+from gui_do.controls.input.color_picker_control import ColorPickerControl
 
 
 class TestColorPickerControl(unittest.TestCase):
@@ -689,12 +689,12 @@ class TestColorPickerControl(unittest.TestCase):
 # CommandPaletteManager tests
 # ---------------------------------------------------------------------------
 
-from gui_do.core.command_palette_manager import (
+from gui_do.overlays.command_palette_manager import (
     CommandPaletteManager,
     CommandEntry,
     CommandPaletteHandle,
 )
-from gui_do.core.overlay_manager import OverlayManager
+from gui_do.overlays.overlay_manager import OverlayManager
 
 
 class TestCommandEntry(unittest.TestCase):

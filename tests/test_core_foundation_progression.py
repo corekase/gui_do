@@ -4,13 +4,13 @@ import pygame
 from pygame import Rect, Surface
 
 from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.panel_control import PanelControl
-from gui_do.controls.window_control import WindowControl
-from gui_do.core.event_bus import EventBus
-from gui_do.core.gui_event import EventPhase, EventType, GuiEvent
-from gui_do.core.presentation_model import ObservableValue, PresentationModel
-from gui_do.core.scene import Scene
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.events.event_bus import EventBus
+from gui_do.events.gui_event import EventPhase, EventType, GuiEvent
+from gui_do.data.presentation_model import ObservableValue, PresentationModel
+from gui_do.app.scene import Scene
+from gui_do.controls.base.ui_node import UiNode
 
 
 class _ProbeNode(UiNode):

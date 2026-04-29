@@ -2,8 +2,8 @@
 from types import SimpleNamespace
 
 from gui_do import EventBus
-from gui_do.core.task_scheduler import TaskScheduler
-from gui_do.core.telemetry import telemetry_collector
+from gui_do.scheduling.task_scheduler import TaskScheduler
+from gui_do.telemetry.telemetry import telemetry_collector
 from gui_do import Feature
 from gui_do import FeatureManager
 

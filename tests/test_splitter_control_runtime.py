@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pygame
 from pygame import Rect
 
-from gui_do.controls.splitter_control import SplitterControl
+from gui_do.controls.composite.splitter_control import SplitterControl
 from gui_do.layout.layout_axis import LayoutAxis
 
 
@@ -119,7 +119,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         return app
 
     def test_mouse_down_on_divider_starts_drag(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         dr = s.divider_rect
         pos = dr.center
@@ -128,7 +128,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertTrue(s._dragging)
 
     def test_mouse_down_outside_divider_no_drag(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         # Click far left of divider
         pos = (5, s.rect.centery)
@@ -138,7 +138,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertFalse(consumed)
 
     def test_drag_motion_changes_ratio(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         dr = s.divider_rect
         app = self._app()
@@ -152,7 +152,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertGreater(s.ratio, 0.5)
 
     def test_drag_end_on_mouse_up(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         dr = s.divider_rect
         app = self._app()
@@ -163,7 +163,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertFalse(s._dragging)
 
     def test_on_ratio_changed_callback_fired(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         ratios = []
         s = _splitter(ratio=0.5, on_ratio_changed=ratios.append)
         dr = s.divider_rect
@@ -176,7 +176,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertTrue(len(ratios) > 0)
 
     def test_keyboard_left_decreases_ratio(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         s._focused = True
         initial = s.ratio
@@ -185,7 +185,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertLess(s.ratio, initial)
 
     def test_keyboard_right_increases_ratio(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         s._focused = True
         initial = s.ratio
@@ -194,7 +194,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertGreater(s.ratio, initial)
 
     def test_vertical_keyboard_up_decreases_ratio(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(axis=LayoutAxis.VERTICAL, ratio=0.5)
         s._focused = True
         initial = s.ratio
@@ -203,7 +203,7 @@ class TestSplitterEventHandling(unittest.TestCase):
         self.assertLess(s.ratio, initial)
 
     def test_disabled_splitter_ignores_events(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         s = _splitter(ratio=0.5)
         s.enabled = False
         dr = s.divider_rect

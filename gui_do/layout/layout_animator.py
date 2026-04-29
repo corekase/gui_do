@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Sequence, TYPE_CHECKING
 
 from pygame import Rect
 
-from ..core.tween_manager import Easing, TweenHandle, TweenManager
+from ..scheduling.tween_manager import Easing, TweenHandle, TweenManager
 
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout

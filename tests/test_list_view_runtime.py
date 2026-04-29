@@ -6,10 +6,10 @@ from unittest.mock import patch
 import pygame
 from pygame import Rect
 
-from gui_do.controls.list_view_control import ListItem, ListViewControl
-from gui_do.controls.scroll_view_control import ScrollViewControl
-from gui_do.core.gui_event import EventType, GuiEvent
-from gui_do.core.pointer_capture import PointerCapture
+from gui_do.controls.data.list_view_control import ListItem, ListViewControl
+from gui_do.controls.composite.scroll_view_control import ScrollViewControl
+from gui_do.events.gui_event import EventType, GuiEvent
+from gui_do.events.pointer_capture import PointerCapture
 
 
 def _items(n: int = 5) -> list:
@@ -251,7 +251,7 @@ class TestEmbeddedInScrollViewRendering(unittest.TestCase):
         theme.text = (220, 220, 220)
         theme.highlight = (0, 100, 200)
 
-        with patch("gui_do.controls.list_view_control.pygame.font.SysFont", return_value=_StubFont()):
+        with patch("gui_do.controls.data.list_view_control.pygame.font.SysFont", return_value=_StubFont()):
             lst.draw(surface, theme)
 
         self.assertIn("Item 7", rendered_labels)

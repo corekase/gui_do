@@ -6,10 +6,10 @@ from types import SimpleNamespace
 import pygame
 from pygame import Rect
 
-from gui_do.core.focus_visualizer import FocusVisualizer
-from gui_do.core.focus_manager import FocusManager
-from gui_do.core.ui_node import UiNode
-from gui_do.core.scene import Scene
+from gui_do.focus.focus_visualizer import FocusVisualizer
+from gui_do.focus.focus_manager import FocusManager
+from gui_do.controls.base.ui_node import UiNode
+from gui_do.app.scene import Scene
 from gui_do.theme.color_theme import ColorTheme
 
 

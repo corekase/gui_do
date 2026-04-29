@@ -10,9 +10,9 @@ import pygame
 pygame.init()
 pygame.display.set_mode((1, 1), pygame.NOFRAME)
 
-from gui_do.controls.menu_bar_control import MenuBarControl, MenuEntry
-from gui_do.core.menu_bar_manager import MenuBarManager
-from gui_do.core.context_menu_manager import ContextMenuItem
+from gui_do.controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from gui_do.overlays.menu_bar_manager import MenuBarManager
+from gui_do.overlays.context_menu_manager import ContextMenuItem
 
 
 def _make_app() -> MagicMock:
@@ -96,7 +96,7 @@ class TestMenuBarControlBasics(unittest.TestCase):
         bar = self._make_bar()
         bar.enabled = False
         app = _make_app()
-        from gui_do.core.gui_event import GuiEvent, EventType
+        from gui_do.events.gui_event import GuiEvent, EventType
         evt = MagicMock()
         evt.kind = EventType.MOUSE_BUTTON_DOWN
         evt.button = 1

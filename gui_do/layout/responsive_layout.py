@@ -33,7 +33,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from ..core.presentation_model import ObservableValue
+from ..data.presentation_model import ObservableValue
 
 
 # ---------------------------------------------------------------------------

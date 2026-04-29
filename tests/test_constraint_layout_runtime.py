@@ -4,8 +4,8 @@ import unittest
 from pygame import Rect
 
 from gui_do.layout.constraint_layout import AnchorConstraint, ConstraintLayout, ConstraintBuilder
-from gui_do.core.ui_node import UiNode
-from gui_do.controls.panel_control import PanelControl
+from gui_do.controls.base.ui_node import UiNode
+from gui_do.controls.composite.panel_control import PanelControl
 
 
 def _node(x=0, y=0, w=50, h=30) -> UiNode:

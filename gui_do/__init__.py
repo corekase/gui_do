@@ -20,50 +20,50 @@ _enable_windows_dpi_awareness()
 
 from .app.gui_application import GuiApplication
 from .app.display import create_display
-from .loop.ui_engine import UiEngine
-from .controls.panel_control import PanelControl
-from .controls.label_control import LabelControl
-from .controls.button_control import ButtonControl
-from .controls.arrow_box_control import ArrowBoxControl
-from .controls.button_group_control import ButtonGroupControl
-from .controls.canvas_control import CanvasControl, CanvasEventPacket
-from .controls.frame_control import FrameControl
-from .controls.image_control import ImageControl
-from .controls.slider_control import SliderControl
-from .controls.scrollbar_control import ScrollbarControl
-from .controls.task_panel_control import TaskPanelControl
-from .controls.toggle_control import ToggleControl
-from .controls.window_control import WindowControl
+from .app.ui_engine import UiEngine
+from .controls.composite.panel_control import PanelControl
+from .controls.display.label_control import LabelControl
+from .controls.input.button_control import ButtonControl
+from .controls.display.arrow_box_control import ArrowBoxControl
+from .controls.input.button_group_control import ButtonGroupControl
+from .controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
+from .controls.display.frame_control import FrameControl
+from .controls.display.image_control import ImageControl
+from .controls.input.slider_control import SliderControl
+from .controls.input.scrollbar_control import ScrollbarControl
+from .controls.chrome.task_panel_control import TaskPanelControl
+from .controls.input.toggle_control import ToggleControl
+from .controls.chrome.window_control import WindowControl
 from .layout.layout_axis import LayoutAxis
 from .layout.layout_manager import LayoutManager
 from .layout.window_tiling_manager import WindowTilingManager
 from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
-from .controls.dock_workspace_panel import DockWorkspacePanel
-from .core.action_manager import ActionManager
-from .core.action_registry import ActionDescriptor, ActionRegistry
-from .core.event_manager import EventManager
-from .core.event_bus import EventBus
-from .core.focus_manager import FocusManager
-from .core.font_manager import FontManager
-from .core.font_role_registry import FontRoleRegistry
-from .core.gui_event import EventPhase, EventType, GuiEvent
-from .core.value_change_callback import ValueChangeCallback
-from .core.value_change_reason import ValueChangeReason
-from .core.invalidation import InvalidationTracker
-from .core.presentation_model import ObservableValue, PresentationModel, ComputedValue
-from .core.task_scheduler import TaskEvent, TaskScheduler
-from .core.timers import Timers
-from .core.telemetry import TelemetryCollector
-from .core.telemetry import TelemetrySample
-from .core.telemetry import configure_telemetry
-from .core.telemetry import telemetry_collector
-from .core.telemetry_analyzer import analyze_telemetry_log_file
-from .core.telemetry_analyzer import analyze_telemetry_records
-from .core.telemetry_analyzer import load_telemetry_log_file
-from .core.telemetry_analyzer import render_telemetry_report
+from .controls.composite.dock_workspace_panel import DockWorkspacePanel
+from .actions.action_manager import ActionManager
+from .actions.action_registry import ActionDescriptor, ActionRegistry
+from .events.event_manager import EventManager
+from .events.event_bus import EventBus
+from .focus.focus_manager import FocusManager
+from .theme.font_manager import FontManager
+from .theme.font_role_registry import FontRoleRegistry
+from .events.gui_event import EventPhase, EventType, GuiEvent
+from .events.value_change_callback import ValueChangeCallback
+from .events.value_change_reason import ValueChangeReason
+from .data.invalidation import InvalidationTracker
+from .data.presentation_model import ObservableValue, PresentationModel, ComputedValue
+from .scheduling.task_scheduler import TaskEvent, TaskScheduler
+from .scheduling.timers import Timers
+from .telemetry.telemetry import TelemetryCollector
+from .telemetry.telemetry import TelemetrySample
+from .telemetry.telemetry import configure_telemetry
+from .telemetry.telemetry import telemetry_collector
+from .telemetry.telemetry_analyzer import analyze_telemetry_log_file
+from .telemetry.telemetry_analyzer import analyze_telemetry_records
+from .telemetry.telemetry_analyzer import load_telemetry_log_file
+from .telemetry.telemetry_analyzer import render_telemetry_report
 from .graphics.built_in_factory import BuiltInGraphicsFactory
 from .theme.color_theme import ColorTheme
-from .core.feature_lifecycle import (
+from .features.feature_lifecycle import (
     Feature,
     DirectFeature,
     LogicFeature,
@@ -71,84 +71,84 @@ from .core.feature_lifecycle import (
     FeatureMessage,
     FeatureManager,
 )
-from .core.tween_manager import TweenManager, TweenHandle, Easing
-from .controls.text_input_control import TextInputControl
+from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
+from .controls.input.text_input_control import TextInputControl
 from .layout.constraint_layout import ConstraintLayout, AnchorConstraint
-from .core.overlay_manager import OverlayManager, OverlayHandle
-from .controls.overlay_panel_control import OverlayPanelControl
-from .controls.list_view_control import ListViewControl, ListItem
-from .controls.dropdown_control import DropdownControl, DropdownOption
-from .core.toast_manager import ToastManager, ToastHandle, ToastSeverity
-from .core.dialog_manager import DialogManager, DialogHandle
-from .core.drag_drop_manager import DragDropManager, DragPayload
-from .core.form_model import FormModel, FormField, ValidationRule, FieldError
-from .core.form_schema import FormSchema, SchemaField
-from .core.command_history import CommandHistory, Command, CommandTransaction
-from .core.document_model import DocumentModel
-from .controls.data_grid_control import DataGridControl, GridColumn, GridRow
-from .core.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
-from .controls.splitter_control import SplitterControl
-from .core.state_machine import StateMachine
-from .core.settings_registry import SettingsRegistry, SettingDescriptor
-from .core.workspace_persistence import WorkspaceState, WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
-from .core.router import Router, RouteEntry
+from .overlays.overlay_manager import OverlayManager, OverlayHandle
+from .controls.composite.overlay_panel_control import OverlayPanelControl
+from .controls.data.list_view_control import ListViewControl, ListItem
+from .controls.input.dropdown_control import DropdownControl, DropdownOption
+from .overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
+from .overlays.dialog_manager import DialogManager, DialogHandle
+from .overlays.drag_drop_manager import DragDropManager, DragPayload
+from .forms.form_model import FormModel, FormField, ValidationRule, FieldError
+from .forms.form_schema import FormSchema, SchemaField
+from .state.command_history import CommandHistory, Command, CommandTransaction
+from .forms.document_model import DocumentModel
+from .controls.data.data_grid_control import DataGridControl, GridColumn, GridRow
+from .overlays.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
+from .controls.composite.splitter_control import SplitterControl
+from .state.state_machine import StateMachine
+from .persistence.settings_registry import SettingsRegistry, SettingDescriptor
+from .persistence.workspace_persistence import WorkspaceState, WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
+from .state.router import Router, RouteEntry
 from .theme.theme_manager import ThemeManager, DesignTokens
-from .controls.text_area_control import TextAreaControl
-from .controls.rich_label_control import RichLabelControl
-from .controls.tab_control import TabControl, TabItem
-from .core.resize_manager import ResizeManager
-from .controls.menu_bar_control import MenuBarControl, MenuEntry
-from .core.menu_bar_manager import MenuBarManager
-from .controls.tree_control import TreeControl, TreeNode
-from .core.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
+from .controls.input.text_area_control import TextAreaControl
+from .controls.display.rich_label_control import RichLabelControl
+from .controls.data.tab_control import TabControl, TabItem
+from .overlays.resize_manager import ResizeManager
+from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from .overlays.menu_bar_manager import MenuBarManager
+from .controls.data.tree_control import TreeControl, TreeNode
+from .overlays.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
 from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
-from .core.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
-from .core.notification_center import NotificationCenter, NotificationRecord
-from .controls.notification_panel_control import NotificationPanelControl
-from .core.clipboard import ClipboardManager
-from .core.transfer_data import TransferData, TransferManager
-from .core.animation_sequence import AnimationSequence, AnimationHandle
-from .controls.scroll_view_control import ScrollViewControl
-from .controls.spinner_control import SpinnerControl
-from .controls.range_slider_control import RangeSliderControl
-from .controls.color_picker_control import ColorPickerControl
-from .core.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
-from .core.observable_collections import (
+from .persistence.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
+from .overlays.notification_center import NotificationCenter, NotificationRecord
+from .controls.chrome.notification_panel_control import NotificationPanelControl
+from .overlays.clipboard import ClipboardManager
+from .overlays.transfer_data import TransferData, TransferManager
+from .scheduling.animation_sequence import AnimationSequence, AnimationHandle
+from .controls.composite.scroll_view_control import ScrollViewControl
+from .controls.input.spinner_control import SpinnerControl
+from .controls.input.range_slider_control import RangeSliderControl
+from .controls.input.color_picker_control import ColorPickerControl
+from .overlays.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
+from .data.observable_collections import (
     ChangeKind,
     CollectionChange,
     ObservableList,
     ObservableDict,
 )
-from .core.collection_view import CollectionViewQuery, CollectionView
-from .core.binding import Binding, BindingGroup
-from .core.gesture_recognizer import GestureRecognizer
+from .data.collection_view import CollectionViewQuery, CollectionView
+from .data.binding import Binding, BindingGroup
+from .events.gesture_recognizer import GestureRecognizer
 from .layout.layout_animator import LayoutAnimator
-from .core.rate_limiter import Debouncer, Throttler
+from .scheduling.rate_limiter import Debouncer, Throttler
 from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
-from .core.key_chord_manager import KeyChordManager, KeyChord, ChordStep
-from .core.error_boundary import ErrorBoundary
-from .core.tooltip_manager import TooltipManager, TooltipHandle
-from .core.focus_scope import FocusScope, FocusScopeManager
-from .core.selection_model import SelectionModel, SelectionMode
-from .core.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
-from .core.virtual_item_source import VirtualItemSource, FixedItemSource
-from .core.canvas_viewport import CanvasViewport
-from .core.transition_manager import TransitionManager, TransitionSpec, TransitionEvent
+from .actions.key_chord_manager import KeyChordManager, KeyChord, ChordStep
+from .controls.composite.error_boundary import ErrorBoundary
+from .overlays.tooltip_manager import TooltipManager, TooltipHandle
+from .focus.focus_scope import FocusScope, FocusScopeManager
+from .data.selection_model import SelectionModel, SelectionMode
+from .text.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
+from .data.virtual_item_source import VirtualItemSource, FixedItemSource
+from .controls.canvas.canvas_viewport import CanvasViewport
+from .scheduling.transition_manager import TransitionManager, TransitionSpec, TransitionEvent
 from .theme.scoped_theme import ScopedTheme, ScopedThemeManager
-from .core.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
+from .data.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
 from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
-from .core.cursor_manager import CursorManager, CursorHandle, CursorShape
-from .core.sort_filter_proxy import SortFilterProxySource
-from .core.localization import StringTable, LocaleRegistry
-from .core.input_map import InputMap, InputBinding
-from .core.spatial_index import SceneSpatialIndex
-from .core.text_flow import TextFlow, TextSpan
+from .overlays.cursor_manager import CursorManager, CursorHandle, CursorShape
+from .data.sort_filter_proxy import SortFilterProxySource
+from .text.localization import StringTable, LocaleRegistry
+from .actions.input_map import InputMap, InputBinding
+from .introspection.spatial_index import SceneSpatialIndex
+from .text.text_flow import TextFlow, TextSpan
 from .layout.responsive_layout import ResponsiveLayout, Breakpoint
-from .core.event_recorder import EventRecorder, EventPlayback, RecordedEvent
-from .core.property_registry import ui_property, PropertyDescriptor, PropertyRegistry, property_registry
-from .core.property_inspector import PropertyInspectorModel, InspectedProperty
-from .controls.property_inspector_panel import PropertyInspectorPanel
-from .core.scene_snapshot import SceneSnapshot, NodeSnapshot
+from .events.event_recorder import EventRecorder, EventPlayback, RecordedEvent
+from .introspection.property_registry import ui_property, PropertyDescriptor, PropertyRegistry, property_registry
+from .introspection.property_inspector import PropertyInspectorModel, InspectedProperty
+from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
+from .persistence.scene_snapshot import SceneSnapshot, NodeSnapshot
 
 __all__ = [
     "GuiApplication",

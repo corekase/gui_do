@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..core.presentation_model import ObservableValue
+from ..data.presentation_model import ObservableValue
 
 # Design token map: semantic name -> sRGB tuple (r, g, b) each 0-255.
 TokenMap = Dict[str, Tuple[int, int, int]]

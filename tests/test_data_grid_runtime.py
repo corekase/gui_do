@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 import pygame
 from pygame import Rect
 
-from gui_do.controls.data_grid_control import DataGridControl, GridColumn, GridRow
-from gui_do.core.pointer_capture import PointerCapture
+from gui_do.controls.data.data_grid_control import DataGridControl, GridColumn, GridRow
+from gui_do.events.pointer_capture import PointerCapture
 
 
 def _make_grid(**kwargs) -> DataGridControl:
@@ -157,7 +157,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         return _AppStub()
 
     def test_mouse_click_in_content_selects_row(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         g = _make_grid()
         cr = g._content_rect()
         # Click first visible row
@@ -167,7 +167,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g.selected_row_index, 0)
 
     def test_on_select_callback_fired(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         selected = []
         g = DataGridControl(
             "g", Rect(0, 0, 300, 200),
@@ -182,7 +182,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(selected[0][0], 0)
 
     def test_keyboard_down_moves_selection(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         g = _make_grid()
         g._selected_row = 0
         g._focused = True
@@ -192,7 +192,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g.selected_row_index, 1)
 
     def test_keyboard_up_moves_selection(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         g = _make_grid()
         g._selected_row = 2
         g._focused = True
@@ -201,7 +201,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g.selected_row_index, 1)
 
     def test_keyboard_home_goes_to_first(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         g = _make_grid()
         g._selected_row = 2
         g._focused = True
@@ -210,7 +210,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g.selected_row_index, 0)
 
     def test_keyboard_end_goes_to_last(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         g = _make_grid()
         g._selected_row = 0
         g._focused = True
@@ -219,7 +219,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g.selected_row_index, 2)
 
     def test_on_sort_callback_fired_on_header_click(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         sorts = []
         g = DataGridControl(
             "g", Rect(0, 0, 300, 200),
@@ -235,7 +235,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertTrue(sorts[0][1])  # ascending first click
 
     def test_sort_toggle_on_second_header_click(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         from unittest.mock import MagicMock
         sorts = []
         g = DataGridControl(
@@ -252,7 +252,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertFalse(sorts[-1])  # second click → descending
 
     def test_wheel_outside_bounds_does_not_scroll_or_consume(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
 
         g = _make_grid()
         g._scroll_offset = 10
@@ -264,7 +264,7 @@ class TestDataGridEventHandling(unittest.TestCase):
         self.assertEqual(g._scroll_offset, 10)
 
     def test_dragging_scrollbar_thumb_updates_scroll(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
 
         rows = [GridRow(data={"name": f"Row {i}", "age": i}) for i in range(40)]
         g = DataGridControl(
@@ -303,7 +303,7 @@ class TestDataGridEventHandling(unittest.TestCase):
 
 class TestDataGridDisabled(unittest.TestCase):
     def test_disabled_grid_ignores_events(self) -> None:
-        from gui_do.core.gui_event import EventType
+        from gui_do.events.gui_event import EventType
         from unittest.mock import MagicMock
         g = _make_grid()
         g.enabled = False

@@ -192,7 +192,7 @@ class TextAreaControlRuntimeTests(unittest.TestCase):
         ctrl = TextAreaControl("ta", Rect(10, 10, 300, 200), value="abcdef")
         app = SimpleNamespace()  # No theme/fonts -> fallback SysFont path.
 
-        with patch("gui_do.controls.text_area_control.pygame.font.SysFont") as sys_font:
+        with patch("gui_do.controls.input.text_area_control.pygame.font.SysFont") as sys_font:
             fake_font = unittest.mock.Mock()
             fake_font.size.side_effect = lambda text: (len(text) * 8, 12)
             sys_font.return_value = fake_font

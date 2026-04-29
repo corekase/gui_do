@@ -8,7 +8,7 @@ import pygame
 from pygame import Rect
 
 from gui_do import GuiApplication, PanelControl, WindowControl
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.base.ui_node import UiNode
 
 
 class _FocusableProbe(UiNode):

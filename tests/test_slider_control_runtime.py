@@ -8,7 +8,7 @@ import pygame
 from pygame import Rect
 
 from gui_do import GuiApplication, LayoutAxis, PanelControl, SliderControl, WindowControl
-from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.focus.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class SliderControlRuntimeTests(unittest.TestCase):

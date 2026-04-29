@@ -2,8 +2,8 @@
 
 from pygame import Rect
 
-from gui_do.controls.scrollbar_control import ScrollbarControl
-from gui_do.controls.slider_control import SliderControl
+from gui_do.controls.input.scrollbar_control import ScrollbarControl
+from gui_do.controls.input.slider_control import SliderControl
 from gui_do.layout.layout_axis import LayoutAxis
 
 

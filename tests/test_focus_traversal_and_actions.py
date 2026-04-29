@@ -4,10 +4,10 @@ import pygame
 from pygame import Rect, Surface
 
 from gui_do.app.gui_application import GuiApplication
-from gui_do.controls.button_group_control import ButtonGroupControl
-from gui_do.controls.panel_control import PanelControl
-from gui_do.controls.window_control import WindowControl
-from gui_do.core.ui_node import UiNode
+from gui_do.controls.input.button_group_control import ButtonGroupControl
+from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.window_control import WindowControl
+from gui_do.controls.base.ui_node import UiNode
 
 
 class _FocusableProbe(UiNode):

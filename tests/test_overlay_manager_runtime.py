@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, call
 import pygame
 from pygame import Rect
 
-from gui_do.core.overlay_manager import OverlayManager, OverlayHandle
-from gui_do.controls.overlay_panel_control import OverlayPanelControl
-from gui_do.core.gui_event import EventType, GuiEvent
+from gui_do.overlays.overlay_manager import OverlayManager, OverlayHandle
+from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
+from gui_do.events.gui_event import EventType, GuiEvent
 
 
 def _panel(x=50, y=50, w=100, h=80) -> OverlayPanelControl:
@@ -159,7 +159,7 @@ class TestIsOverlayOnOverlayPanelControl(unittest.TestCase):
         self.assertTrue(panel.is_overlay())
 
     def test_is_overlay_returns_false_for_base_node(self) -> None:
-        from gui_do.core.ui_node import UiNode
+        from gui_do.controls.base.ui_node import UiNode
         node = UiNode("n", Rect(0, 0, 10, 10))
         self.assertFalse(node.is_overlay())
 

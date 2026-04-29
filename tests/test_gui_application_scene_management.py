@@ -1,4 +1,4 @@
-﻿"""Tests for GuiApplication scene management APIs: scene_names, has_scene, remove_scene."""
+"""Tests for GuiApplication scene management APIs: scene_names, has_scene, remove_scene."""
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -78,7 +78,7 @@ class RemoveSceneTests(GuiApplicationSceneManagementSetup):
         self.assertFalse(self.app.remove_scene("does_not_exist"))
 
     def test_remove_scene_returns_false_for_active_scene(self) -> None:
-        # "default" is the active scene — must not be removable
+        # "default" is the active scene - � must not be removable
         self.assertFalse(self.app.remove_scene(self.app.active_scene_name))
 
     def test_remove_scene_returns_true_for_inactive(self) -> None:
@@ -327,7 +327,7 @@ class PartApiTests(GuiApplicationSceneManagementSetup):
         self.assertTrue(self.app.theme.fonts.has_role("feature.alpha.window_title"))
 
     def test_app_run_delegates_to_ui_engine(self) -> None:
-        with patch("gui_do.loop.ui_engine.UiEngine.run", return_value=12) as run_mock:
+        with patch("gui_do.app.ui_engine.UiEngine.run", return_value=12) as run_mock:
             frames = self.app.run(target_fps=75, max_frames=3)
 
         self.assertEqual(12, frames)

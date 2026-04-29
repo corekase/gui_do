@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from gui_do.core.gui_event import EventType
+from gui_do.events.gui_event import EventType
 from gui_do_demo import GuiDoDemo
 from demo_features.life_demo_feature import LifeSimulationFeature, LifeSimulationLogicFeature
 from gui_do import Feature, FeatureManager, FeatureMessage

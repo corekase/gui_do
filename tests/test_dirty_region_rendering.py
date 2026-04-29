@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch, call
 import pygame
 from pygame import Rect
 
-from gui_do.core.invalidation import InvalidationTracker
+from gui_do.data.invalidation import InvalidationTracker
 
 
 class TestInvalidateAllSetsFullRedraw(unittest.TestCase):
@@ -91,7 +91,7 @@ class TestMergeDirtyRectsOverlapping(unittest.TestCase):
 class TestEngineUsesDisplayUpdate(unittest.TestCase):
     def test_engine_uses_display_update_when_dirty_rects_returned(self) -> None:
         """When app.draw() returns a non-empty list, engine uses display.update."""
-        from gui_do.loop.ui_engine import UiEngine
+        from gui_do.app.ui_engine import UiEngine
         dirty = [Rect(0, 0, 10, 10)]
         mock_app = MagicMock()
         mock_app.running = True
@@ -119,7 +119,7 @@ class TestEngineUsesDisplayUpdate(unittest.TestCase):
 class TestEngineUsesDisplayFlip(unittest.TestCase):
     def test_engine_uses_display_flip_when_full_redraw(self) -> None:
         """When app.draw() returns None, engine uses display.flip."""
-        from gui_do.loop.ui_engine import UiEngine
+        from gui_do.app.ui_engine import UiEngine
         mock_app = MagicMock()
         mock_app.running = True
         mock_app.draw.return_value = None

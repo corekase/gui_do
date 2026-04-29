@@ -7,7 +7,7 @@ import pygame
 from pygame import Rect
 
 from gui_do import ButtonControl, GuiApplication, PanelControl, WindowControl
-from gui_do.core.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from gui_do.focus.focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
 
 
 class ButtonControlRuntimeTests(unittest.TestCase):

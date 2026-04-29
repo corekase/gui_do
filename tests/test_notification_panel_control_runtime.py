@@ -7,10 +7,10 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 from pygame import Rect
 
-from gui_do.controls.notification_panel_control import NotificationPanelControl
-from gui_do.core.gui_event import EventType
-from gui_do.core.notification_center import NotificationCenter, NotificationRecord
-from gui_do.core.pointer_capture import PointerCapture
+from gui_do.controls.chrome.notification_panel_control import NotificationPanelControl
+from gui_do.events.gui_event import EventType
+from gui_do.overlays.notification_center import NotificationCenter, NotificationRecord
+from gui_do.events.pointer_capture import PointerCapture
 
 
 class NotificationPanelControlRuntimeTests(unittest.TestCase):

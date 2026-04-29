@@ -2,12 +2,12 @@
 
 from pygame import Rect
 
-from gui_do.controls.arrow_box_control import ArrowBoxControl
-from gui_do.controls.button_control import ButtonControl
-from gui_do.controls.scrollbar_control import ScrollbarControl
-from gui_do.controls.slider_control import SliderControl
-from gui_do.controls.toggle_control import ToggleControl
-from gui_do.core.gui_event import EventType, GuiEvent
+from gui_do.controls.display.arrow_box_control import ArrowBoxControl
+from gui_do.controls.input.button_control import ButtonControl
+from gui_do.controls.input.scrollbar_control import ScrollbarControl
+from gui_do.controls.input.slider_control import SliderControl
+from gui_do.controls.input.toggle_control import ToggleControl
+from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.layout.layout_axis import LayoutAxis
 
 

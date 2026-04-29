@@ -3,8 +3,8 @@
 import pygame
 from pygame import Rect
 
-from gui_do.controls.canvas_control import CanvasControl
-from gui_do.core.gui_event import EventType, GuiEvent
+from gui_do.controls.canvas.canvas_control import CanvasControl
+from gui_do.events.gui_event import EventType, GuiEvent
 
 
 def _motion(pos):
