@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Callable, Generator, List, Optional
+from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
 from pygame import Rect
@@ -254,7 +254,7 @@ class UiNode:
         return bool(child.handle_routed_event(event, app))
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
-        ordered = list(reversed(self.children)) if reverse else list(self.children)
+        ordered = self.children[::-1] if reverse else self.children[:]
         for child in ordered:
             if not (child.visible and child.enabled):
                 continue

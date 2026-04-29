@@ -44,6 +44,14 @@ class _ToastEntry:
     alpha: float = 1.0
 
 
+_SEVERITY_COLORS: "Dict[ToastSeverity, Tuple[int, int, int]]" = {
+    ToastSeverity.INFO: (50, 120, 200),
+    ToastSeverity.SUCCESS: (50, 180, 80),
+    ToastSeverity.WARNING: (200, 160, 40),
+    ToastSeverity.ERROR: (200, 60, 60),
+}
+
+
 class ToastManager:
     """App-level service for showing transient toast notifications."""
 
@@ -69,6 +77,7 @@ class ToastManager:
         self._gap = int(gap)
         self._toasts: List[_ToastEntry] = []
         self._next_id: int = 1
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
 
     # ------------------------------------------------------------------
     # Public API
@@ -152,22 +161,17 @@ class ToastManager:
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         if not self._toasts:
             return
-        font = pygame.font.SysFont(None, 18)
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 18)
+        font = self._draw_font
         w = self._toast_width
         h = self._row_height
         gap = self._gap
         margin = self._margin
         sr = self._screen_rect
 
-        severity_colors: Dict[ToastSeverity, Tuple[int, int, int]] = {
-            ToastSeverity.INFO: (50, 120, 200),
-            ToastSeverity.SUCCESS: (50, 180, 80),
-            ToastSeverity.WARNING: (200, 160, 40),
-            ToastSeverity.ERROR: (200, 60, 60),
-        }
-
         for i, entry in enumerate(reversed(self._toasts)):
-            color = severity_colors.get(entry.severity, (80, 80, 80))
+            color = _SEVERITY_COLORS.get(entry.severity, (80, 80, 80))
             if "right" in self._position:
                 x = sr.right - w - margin
             elif "left" in self._position:

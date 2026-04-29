@@ -70,6 +70,7 @@ class ColorPickerControl(UiNode):
         self._sv_surface: Optional[pygame.Surface] = None
         self._sv_surface_hue: float = -1.0
         self._sv_surface_size: Optional[Tuple[int, int]] = None
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 16)
 
     # ------------------------------------------------------------------
     # Public API
@@ -197,34 +198,25 @@ class ColorPickerControl(UiNode):
         # Color preview
         pygame.draw.rect(surface, self._hsv_to_rgb(), preview_rect)
         border = getattr(theme, "border", (80, 80, 80))
-        if hasattr(border, "value"):
-            border = border.value
         pygame.draw.rect(surface, border, preview_rect, width=1)
 
         # Hex input
         hex_bg = getattr(theme, "input_bg", (40, 40, 40))
-        if hasattr(hex_bg, "value"):
-            hex_bg = hex_bg.value
         if self._hex_editing:
             hex_bg = getattr(theme, "input_focused", (45, 45, 60))
-            if hasattr(hex_bg, "value"):
-                hex_bg = hex_bg.value
         pygame.draw.rect(surface, hex_bg, hex_rect, border_radius=2)
         hex_border = (200, 50, 50) if self._hex_error else border
         pygame.draw.rect(surface, hex_border, hex_rect, width=1, border_radius=2)
-        font = pygame.font.SysFont(None, 16)
-        text_color = getattr(theme, "text", (220, 220, 220))
-        if hasattr(text_color, "value"):
-            text_color = text_color.value
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 16)
+        text_color = theme.text
         display_hex = self._hex_text + ("|" if self._hex_editing else "")
-        hex_surf = font.render(display_hex, True, text_color)
+        hex_surf = self._draw_font.render(display_hex, True, text_color)
         surface.blit(hex_surf, (hex_rect.x + 3, hex_rect.centery - hex_surf.get_height() // 2))
 
         # Focus ring
         if self._focused:
             focus_color = getattr(theme, "focus_ring", (0, 150, 255))
-            if hasattr(focus_color, "value"):
-                focus_color = focus_color.value
             pygame.draw.rect(surface, focus_color, self.rect, width=1, border_radius=2)
 
     # ------------------------------------------------------------------

@@ -68,8 +68,6 @@ class SplitterControl(UiNode):
         self._on_ratio_changed: RatioChangedCallback = on_ratio_changed
         self._divider_thickness: int = max(2, int(divider_thickness))
         self._dragging: bool = False
-        self._drag_start_pos: Tuple[int, int] = (0, 0)
-        self._drag_start_ratio: float = self._ratio
         self._hovered: bool = False
         self.tab_index = 0
 
@@ -181,8 +179,6 @@ class SplitterControl(UiNode):
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             if self._in_divider(event.pos):
                 self._dragging = True
-                self._drag_start_pos = event.pos
-                self._drag_start_ratio = self._ratio
                 # Request pointer capture so we get motion events outside the rect
                 try:
                     app.capture_pointer(self.control_id)
@@ -257,15 +253,9 @@ class SplitterControl(UiNode):
         if not self.visible:
             return
 
-        def _color(name: str, fallback: tuple) -> tuple:
-            val = getattr(theme, name, fallback)
-            if hasattr(val, "value"):
-                val = val.value
-            return val
-
-        divider_col = _color("border", (80, 80, 90))
-        hover_col = _color("highlight", (0, 100, 200))
-        focus_col = _color("focus", (100, 160, 255))
+        divider_col = getattr(theme, "border", (80, 80, 90))
+        hover_col = theme.highlight
+        focus_col = getattr(theme, "focus", (100, 160, 255))
 
         dr = self.divider_rect
 
@@ -274,17 +264,16 @@ class SplitterControl(UiNode):
         pygame.draw.rect(surface, color, dr)
 
         # Subtle center grip line
+        grip_col = (min(255, divider_col[0] + 40), min(255, divider_col[1] + 40), min(255, divider_col[2] + 40))
         if self.is_horizontal:
             cx = dr.centerx
             grip_y1 = dr.centery - 12
             grip_y2 = dr.centery + 12
-            grip_col = tuple(min(255, c + 40) for c in divider_col)
             pygame.draw.line(surface, grip_col, (cx, grip_y1), (cx, grip_y2), 1)
         else:
             cy = dr.centery
             grip_x1 = dr.centerx - 12
             grip_x2 = dr.centerx + 12
-            grip_col = tuple(min(255, c + 40) for c in divider_col)
             pygame.draw.line(surface, grip_col, (grip_x1, cy), (grip_x2, cy), 1)
 
         # Focus ring

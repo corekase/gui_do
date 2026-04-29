@@ -81,7 +81,6 @@ class _Word:
     width: int
     height: int
     ascent: int
-    span_color: Optional[Tuple]
 
 
 @dataclass
@@ -250,7 +249,7 @@ class TextFlow:
                             ascent = font.get_ascent() if font is not None else h
                         except Exception:
                             ascent = h
-                        result.append(_Word(surface=surf, width=w, height=h, ascent=ascent, span_color=span.color))
+                        result.append(_Word(surface=surf, width=w, height=h, ascent=ascent))
         return result
 
     def _render_word(self, text: str, span: TextSpan, color, theme: "ColorTheme"):

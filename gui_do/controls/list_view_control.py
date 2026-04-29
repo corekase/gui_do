@@ -59,6 +59,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         self._font_role: str = font_role
         self._selected_indices: List[int] = []
         self.tab_index = 0
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
 
         if 0 <= selected_index < len(self._items):
             self._selected_indices = [selected_index]
@@ -427,12 +428,12 @@ class ListViewControl(_VirtualizedScrollListBase):
             return
         r = self.rect
         # Background
-        bg_color = getattr(theme, "background", (30, 30, 30))
-        if hasattr(bg_color, "value"):
-            bg_color = bg_color.value
+        bg_color = theme.background
         pygame.draw.rect(surface, bg_color, r)
 
-        font = pygame.font.SysFont(None, 18)
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 18)
+        font = self._draw_font
         vh = self._viewport_height()
         if self._parent_scroll_view() is not None and not self._show_scrollbar:
             # Parent ScrollView movement determines visibility; render full list
@@ -459,16 +460,11 @@ class ListViewControl(_VirtualizedScrollListBase):
             row_rect = Rect(content_rect.x, row_y, content_rect.width, self._row_height)
 
             if i in self._selected_indices:
-                sel_color = getattr(theme, "highlight", (0, 100, 200))
-                if hasattr(sel_color, "value"):
-                    sel_color = sel_color.value
-                pygame.draw.rect(surface, sel_color, row_rect)
+                pygame.draw.rect(surface, theme.highlight, row_rect)
 
-            text_color = getattr(theme, "text", (220, 220, 220))
-            if hasattr(text_color, "value"):
-                text_color = text_color.value
+            text_color = theme.text
             if not item.enabled:
-                text_color = tuple(max(0, min(255, c // 2)) for c in text_color)
+                text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
             text_surf = font.render(item.label, True, text_color)
             surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
@@ -477,12 +473,5 @@ class ListViewControl(_VirtualizedScrollListBase):
         sb_rect = self._scrollbar_rect()
         handle_rect = self._scrollbar_handle_rect()
         if sb_rect is not None and handle_rect is not None:
-            track_color = getattr(theme, "panel", (40, 40, 40))
-            if hasattr(track_color, "value"):
-                track_color = track_color.value
-            pygame.draw.rect(surface, track_color, sb_rect)
-
-            handle_color = getattr(theme, "scrollbar_handle", (100, 100, 100))
-            if hasattr(handle_color, "value"):
-                handle_color = handle_color.value
-            pygame.draw.rect(surface, handle_color, handle_rect, border_radius=2)
+            pygame.draw.rect(surface, theme.dark, sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)

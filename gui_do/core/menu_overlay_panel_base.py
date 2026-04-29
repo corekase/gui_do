@@ -38,10 +38,12 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         self._separator_height = int(separator_height)
         self._padding = int(padding)
         self._text_padding = int(text_padding)
-        self._min_width = int(min_width)
         self._font_size = int(font_size)
         self._hovered_index = -1
         self._keyboard_index = -1
+        self._draw_font: object = None     # cached SysFont(None, font_size)
+        self._shadow_surface: object = None  # cached shadow Surface
+        self._shadow_size: tuple = (0, 0)
 
     @classmethod
     def measure(
@@ -149,21 +151,22 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         if not self.visible:
             return
 
-        def _c(name: str, fallback: Tuple) -> Tuple:
-            v = getattr(theme, name, fallback)
-            return v.value if hasattr(v, "value") else v
+        bg = getattr(theme, "panel", (45, 45, 55))
+        text_col = theme.text
+        disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
+        hover_col = theme.highlight
+        border_col = getattr(theme, "border", (80, 80, 90))
 
-        bg = _c("panel", (45, 45, 55))
-        text_col = _c("text", (220, 220, 220))
-        disabled_col = tuple(max(0, min(255, c // 2)) for c in text_col)
-        hover_col = _c("highlight", (0, 100, 200))
-        border_col = _c("border", (80, 80, 90))
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, self._font_size)
+        font = self._draw_font
 
-        font = pygame.font.SysFont(None, self._font_size)
-
-        shadow = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
-        shadow.fill((0, 0, 0, 75))
-        surface.blit(shadow, (self.rect.x + 3, self.rect.y + 3))
+        shadow_size = (self.rect.width, self.rect.height)
+        if self._shadow_surface is None or self._shadow_size != shadow_size:
+            self._shadow_surface = pygame.Surface(shadow_size, pygame.SRCALPHA)
+            self._shadow_surface.fill((0, 0, 0, 75))
+            self._shadow_size = shadow_size
+        surface.blit(self._shadow_surface, (self.rect.x + 3, self.rect.y + 3))
 
         pygame.draw.rect(surface, bg, self.rect)
         pygame.draw.rect(surface, border_col, self.rect, 1)

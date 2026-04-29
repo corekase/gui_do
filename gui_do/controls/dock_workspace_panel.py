@@ -61,6 +61,7 @@ class DockWorkspacePanel(UiNode):
         self._on_change: Optional[Callable[[str], None]] = on_change
         self.font_role: str = str(font_role)
         self.tab_index = 0
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 14)
 
     # ------------------------------------------------------------------
     # Public API
@@ -132,8 +133,9 @@ class DockWorkspacePanel(UiNode):
         else:
             text = "(unsupported root)"
         try:
-            font = pygame.font.SysFont(None, 14)
-            surf = font.render(text, True, fg)
+            if self._draw_font is None:
+                self._draw_font = pygame.font.SysFont(None, 14)
+            surf = self._draw_font.render(text, True, fg)
             cx = self.rect.x + (self.rect.width - surf.get_width()) // 2
             cy = self.rect.y + (self.rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))
@@ -158,8 +160,9 @@ class DockWorkspacePanel(UiNode):
         border_col = getattr(theme, "tab_border", (60, 60, 70))
         pygame.draw.rect(surface, border_col, tab_rect, 1)
         try:
-            font = pygame.font.SysFont(None, 14)
-            surf = font.render(label, True, fg)
+            if self._draw_font is None:
+                self._draw_font = pygame.font.SysFont(None, 14)
+            surf = self._draw_font.render(label, True, fg)
             cx = tab_rect.x + (tab_rect.width - surf.get_width()) // 2
             cy = tab_rect.y + (tab_rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))

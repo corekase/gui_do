@@ -107,11 +107,11 @@ class TreeControl(_VirtualizedScrollListBase):
         self._indent_width: int = max(4, int(indent_width))
         self._on_select: SelectCallback = on_select
         self._on_expand: ExpandCallback = on_expand
-        self._show_root: bool = bool(show_root)
         self._show_scrollbar: bool = bool(show_scrollbar)
         self._font_role: str = font_role
         self._selected_node: Optional[TreeNode] = None
         self._rows: List[_FlatRow] = []
+        self._draw_font: object = None  # cached SysFont(None, _FONT_SIZE)
         self._rebuild_rows()
         self.tab_index = 0
 
@@ -427,20 +427,18 @@ class TreeControl(_VirtualizedScrollListBase):
         if not self.visible:
             return
 
-        def _c(name: str, fallback: tuple) -> tuple:
-            v = getattr(theme, name, fallback)
-            return v.value if hasattr(v, "value") else v
+        bg = theme.background
+        text_col = theme.text
+        disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
+        sel_col = theme.highlight
+        arrow_col = theme.medium
 
-        bg = _c("background", (30, 30, 38))
-        text_col = _c("text", (220, 220, 220))
-        disabled_col = tuple(max(0, min(255, c // 2)) for c in text_col)
-        sel_col = _c("highlight", (0, 100, 200))
-        arrow_col = _c("medium", (150, 150, 160))
-
-        try:
-            font = pygame.font.SysFont(None, _FONT_SIZE)
-        except Exception:
-            font = None
+        if self._draw_font is None:
+            try:
+                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
+            except Exception:
+                pass
+        font = self._draw_font
 
         vr = self._visible_rect()
         pygame.draw.rect(surface, bg, self.rect)
@@ -492,5 +490,5 @@ class TreeControl(_VirtualizedScrollListBase):
         sb_rect = self._scrollbar_rect()
         handle_rect = self._scrollbar_handle_rect()
         if sb_rect is not None and handle_rect is not None:
-            pygame.draw.rect(surface, _c("surface", (50, 50, 60)), sb_rect)
-            pygame.draw.rect(surface, _c("medium", (110, 110, 120)), handle_rect)
+            pygame.draw.rect(surface, getattr(theme, "surface", (50, 50, 60)), sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect)

@@ -58,6 +58,8 @@ class SpinnerControl(_TextEditFocusBase):
         # Text editing state
         self._editing: bool = False
         self._edit_text: str = ""
+        self._btn_font: object = None   # cached from pygame.font.SysFont(None, 14)
+        self._val_font: object = None   # cached from pygame.font.SysFont(None, 18)
 
     # ------------------------------------------------------------------
     # Public API
@@ -175,29 +177,23 @@ class SpinnerControl(_TextEditFocusBase):
             bg = getattr(theme, "input_focused", getattr(theme, "input_bg", (45, 45, 60)))
         else:
             bg = getattr(theme, "input_bg", (40, 40, 40))
-        if hasattr(bg, "value"):
-            bg = bg.value
         pygame.draw.rect(surface, bg, r, border_radius=3)
 
         border_color = getattr(theme, "border", (80, 80, 80))
-        if hasattr(border_color, "value"):
-            border_color = border_color.value
         pygame.draw.rect(surface, border_color, r, width=1, border_radius=3)
 
         up_rect, down_rect = self._button_rects()
 
         # Button backgrounds
         btn_bg = getattr(theme, "button_bg", (60, 60, 70))
-        if hasattr(btn_bg, "value"):
-            btn_bg = btn_bg.value
         pygame.draw.rect(surface, btn_bg, up_rect, border_radius=2)
         pygame.draw.rect(surface, btn_bg, down_rect, border_radius=2)
 
         # Arrow symbols
-        text_color = getattr(theme, "text", (220, 220, 220))
-        if hasattr(text_color, "value"):
-            text_color = text_color.value
-        font = pygame.font.SysFont(None, 14)
+        text_color = theme.text
+        if self._btn_font is None:
+            self._btn_font = pygame.font.SysFont(None, 14)
+        font = self._btn_font
         up_surf = font.render("▲", True, text_color)
         dn_surf = font.render("▼", True, text_color)
         surface.blit(
@@ -219,8 +215,9 @@ class SpinnerControl(_TextEditFocusBase):
         display = self._edit_text if self._editing else self._format_value(self._value)
         if self._editing and self._cursor_visible:
             display = display + "|"
-        val_font = pygame.font.SysFont(None, 18)
-        val_surf = val_font.render(display, True, text_color)
+        if self._val_font is None:
+            self._val_font = pygame.font.SysFont(None, 18)
+        val_surf = self._val_font.render(display, True, text_color)
         text_x = r.x + _H_PAD
         text_y = r.centery - val_surf.get_height() // 2
         # Clip text area

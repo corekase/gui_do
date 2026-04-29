@@ -58,6 +58,7 @@ class DropdownControl(UiNode):
         self._max_visible_items: int = max(1, int(max_visible_items))
         self._is_open: bool = False
         self.tab_index = 0
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
 
         if 0 <= selected_index < len(self._options):
             self._selected_index = selected_index
@@ -247,21 +248,15 @@ class DropdownControl(UiNode):
         if not self.visible:
             return
         r = self.rect
-        bg = getattr(theme, "medium", (50, 50, 60))
-        if hasattr(bg, "value"):
-            bg = bg.value
-        border = getattr(theme, "text", (180, 180, 200))
-        if hasattr(border, "value"):
-            border = border.value
-        pygame.draw.rect(surface, bg, r, border_radius=3)
-        pygame.draw.rect(surface, border, r, 1, border_radius=3)
+        pygame.draw.rect(surface, theme.medium, r, border_radius=3)
+        pygame.draw.rect(surface, theme.text, r, 1, border_radius=3)
 
-        font = pygame.font.SysFont(None, 18)
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 18)
+        font = self._draw_font
         opt = self.selected_option
         label = opt.label if opt is not None else self._placeholder
-        text_color = getattr(theme, "text", (220, 220, 220))
-        if hasattr(text_color, "value"):
-            text_color = text_color.value
+        text_color = theme.text
         text_surf = font.render(label, True, text_color)
         surface.blit(text_surf, (r.x + 6, r.y + (r.height - text_surf.get_height()) // 2))
 

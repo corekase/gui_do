@@ -34,8 +34,7 @@ _SEVERITY_COLORS = {
 
 
 def _c(theme: "ColorTheme", name: str, fallback: tuple) -> tuple:
-    v = getattr(theme, name, fallback)
-    return v.value if hasattr(v, "value") else v
+    return getattr(theme, name, fallback)
 
 
 class NotificationPanelControl(OverlayPanelControl):
@@ -67,6 +66,10 @@ class NotificationPanelControl(OverlayPanelControl):
         self._mark_all_rect: Optional[Rect] = None
         self._scrollbar_dragging: bool = False
         self._scrollbar_drag_anchor: int = 0
+        self._header_font: object = None   # cached SysFont(None, _FONT_SIZE + 2)
+        self._title_font: object = None    # cached SysFont(None, _TITLE_FONT_SIZE)
+        self._body_font: object = None     # cached SysFont(None, _FONT_SIZE)
+        self._ts_font: object = None       # cached SysFont(None, _TS_FONT_SIZE)
 
     # ------------------------------------------------------------------
     # UiNode overrides
@@ -225,13 +228,17 @@ class NotificationPanelControl(OverlayPanelControl):
         header_rect = Rect(self.rect.x, self.rect.y, self.rect.width, _HEADER_H)
         pygame.draw.rect(surface, header_bg, header_rect)
         try:
-            hf = pygame.font.SysFont(None, _FONT_SIZE + 2)
+            if self._header_font is None:
+                self._header_font = pygame.font.SysFont(None, _FONT_SIZE + 2)
+            hf = self._header_font
             ht = hf.render("Notifications", True, text_col)
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
-                mf = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
+                if self._title_font is None:
+                    self._title_font = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
+                mf = self._title_font
                 mt = mf.render("Mark all read", True, (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
                 my = header_rect.y + (header_rect.height - mt.get_height()) // 2
@@ -253,9 +260,15 @@ class NotificationPanelControl(OverlayPanelControl):
         try:
             records = self._center.all_records
             try:
-                body_font = pygame.font.SysFont(None, _FONT_SIZE)
-                title_font = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
-                ts_font = pygame.font.SysFont(None, _TS_FONT_SIZE)
+                if self._body_font is None:
+                    self._body_font = pygame.font.SysFont(None, _FONT_SIZE)
+                if self._title_font is None:
+                    self._title_font = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
+                if self._ts_font is None:
+                    self._ts_font = pygame.font.SysFont(None, _TS_FONT_SIZE)
+                body_font = self._body_font
+                title_font = self._title_font
+                ts_font = self._ts_font
             except Exception:
                 body_font = title_font = ts_font = None
 
@@ -309,8 +322,9 @@ class NotificationPanelControl(OverlayPanelControl):
         # Empty state
         if not self._center.all_records:
             try:
-                ef = pygame.font.SysFont(None, _FONT_SIZE)
-                et = ef.render("No notifications", True, muted_col)
+                if self._body_font is None:
+                    self._body_font = pygame.font.SysFont(None, _FONT_SIZE)
+                et = self._body_font.render("No notifications", True, muted_col)
                 surface.blit(et, (
                     lr.x + (lr.width - et.get_width()) // 2,
                     lr.y + (lr.height - et.get_height()) // 2,

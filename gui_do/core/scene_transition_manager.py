@@ -73,7 +73,6 @@ class SceneTransitionManager:
         # Active animation state
         self._snapshot: Optional[pygame.Surface] = None
         self._active: bool = False
-        self._style: SceneTransitionStyle = SceneTransitionStyle.NONE
 
     # ------------------------------------------------------------------
     # Configuration
@@ -172,7 +171,6 @@ class SceneTransitionManager:
             except Exception:
                 pass  # fall back to non-alpha surface in headless/test contexts
         self._snapshot = snap
-        self._style = effective_style
         self._active = True
 
         app = self._app

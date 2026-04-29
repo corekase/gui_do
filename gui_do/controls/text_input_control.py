@@ -48,9 +48,6 @@ class TextInputControl(_TextEditFocusBase):
         self._sel_active: Optional[int] = None
         self._scroll_offset_px: int = 0
         # Visual cache
-        self._bg_idle: Optional["pygame.Surface"] = None
-        self._bg_focused: Optional["pygame.Surface"] = None
-        self._bg_disabled: Optional["pygame.Surface"] = None
         self._visual_key: Optional[tuple] = None
 
     # ------------------------------------------------------------------

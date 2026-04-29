@@ -81,8 +81,7 @@ _BREADCRUMB_H = 22
 
 
 def _c(theme: "ColorTheme", name: str, fallback: tuple) -> tuple:
-    v = getattr(theme, name, fallback)
-    return v.value if hasattr(v, "value") else v
+    return getattr(theme, name, fallback)
 
 
 class _FileDialogPanel(OverlayPanelControl):
@@ -104,7 +103,8 @@ class _FileDialogPanel(OverlayPanelControl):
         self._selected_paths: List[Path] = []
         self._filter_index: int = 0
         self._entries: List[Path] = []
-        self._list_items: List[ListItem] = []
+        self._title_font: object = None   # cached SysFont(None, _FONT_SIZE)
+        self._path_font: object = None    # cached SysFont(None, 14)
 
         # Sub-controls (laid out in _layout)
         inner_w = rect.width - _PAD * 2
@@ -186,7 +186,6 @@ class _FileDialogPanel(OverlayPanelControl):
                     if not any(p.suffix.lower() == ext for ext in active_exts):
                         continue
                 items.append(ListItem(p.name, value=str(p), data=p))
-        self._list_items = items
         self._list_view.set_items(items)
         self._filename_input.set_value("")
         self._selected_paths = []
@@ -258,17 +257,19 @@ class _FileDialogPanel(OverlayPanelControl):
         title_rect = Rect(self.rect.x, self.rect.y, self.rect.width, 24)
         pygame.draw.rect(surface, title_bg, title_rect)
         try:
-            font = pygame.font.SysFont(None, _FONT_SIZE)
-            txt = font.render(self._opts.title, True, text_col)
+            if self._title_font is None:
+                self._title_font = pygame.font.SysFont(None, _FONT_SIZE)
+            txt = self._title_font.render(self._opts.title, True, text_col)
             surface.blit(txt, (title_rect.x + _PAD, title_rect.y + (title_rect.height - txt.get_height()) // 2))
         except Exception:
             pass
 
         # Breadcrumb
         try:
-            font_sm = pygame.font.SysFont(None, 14)
+            if self._path_font is None:
+                self._path_font = pygame.font.SysFont(None, 14)
             crumb = str(self._current_dir)
-            ct = font_sm.render(crumb, True, text_col)
+            ct = self._path_font.render(crumb, True, text_col)
             surface.blit(ct, (self._breadcrumb_rect.x, self._breadcrumb_rect.y + (self._breadcrumb_rect.height - ct.get_height()) // 2))
         except Exception:
             pass

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -461,18 +461,12 @@ class DataGridControl(_VirtualizedScrollListBase):
         if not self.visible:
             return
 
-        def _color(name: str, fallback: Tuple) -> Tuple:
-            val = getattr(theme, name, fallback)
-            if hasattr(val, "value"):
-                val = val.value
-            return val
-
-        bg = _color("background", (30, 30, 30))
-        header_bg = _color("panel", (50, 50, 60))
-        text_col = _color("text", (220, 220, 220))
-        sel_col = _color("highlight", (0, 100, 200))
-        border_col = _color("border", (80, 80, 90))
-        focus_col = _color("focus", (100, 160, 255))
+        bg = getattr(theme, "background", (30, 30, 30))
+        header_bg = getattr(theme, "panel", (50, 50, 60))
+        text_col = theme.text
+        sel_col = theme.highlight
+        border_col = getattr(theme, "border", (80, 80, 90))
+        focus_col = getattr(theme, "focus", (100, 160, 255))
 
         if self._draw_font is None:
             try:

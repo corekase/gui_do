@@ -84,10 +84,6 @@ class CommandPaletteManager:
         self._overlays = overlay_manager
         self._entries: Dict[str, CommandEntry] = {}
         self._handle: Optional[OverlayHandle] = None
-        # Live references for event forwarding
-        self._search_input: Optional[TextInputControl] = None
-        self._list_view: Optional[ListViewControl] = None
-        self._overlay_panel: Optional[OverlayPanelControl] = None
 
     # ------------------------------------------------------------------
     # Registry API
@@ -155,7 +151,6 @@ class CommandPaletteManager:
             rect = Rect((sw - pw) // 2, sh // 6, pw, ph)
 
         panel = OverlayPanelControl(self._OWNER_ID + "_panel", rect)
-        self._overlay_panel = panel
 
         # Search input
         search_rect = Rect(
@@ -181,9 +176,6 @@ class CommandPaletteManager:
             items=self._build_items(list(self._entries.values())),
             row_height=_ROW_H,
         )
-
-        self._search_input = search
-        self._list_view = listview
 
         # Wire search → filter
         current_entries = list(self._entries.values())
@@ -222,9 +214,6 @@ class CommandPaletteManager:
     def hide(self) -> None:
         """Close the palette if open."""
         self._overlays.hide(self._OWNER_ID)
-        self._search_input = None
-        self._list_view = None
-        self._overlay_panel = None
         self._handle = None
 
     # ------------------------------------------------------------------
@@ -232,9 +221,6 @@ class CommandPaletteManager:
     # ------------------------------------------------------------------
 
     def _on_dismissed(self) -> None:
-        self._search_input = None
-        self._list_view = None
-        self._overlay_panel = None
         self._handle = None
 
     @staticmethod

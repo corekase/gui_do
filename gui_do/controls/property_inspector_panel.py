@@ -90,6 +90,7 @@ class PropertyInspectorPanel(UiNode):
 
         self._rebuild()
         self.tab_index = 0
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 16)
 
     # ------------------------------------------------------------------
     # Public API
@@ -261,26 +262,22 @@ class PropertyInspectorPanel(UiNode):
 
         # Background
         bg = getattr(theme, "background", (28, 28, 30))
-        if hasattr(bg, "value"):
-            bg = bg.value
         pygame.draw.rect(surface, bg, r)
 
         if not self._rows:
             return
 
-        font = pygame.font.SysFont(None, 16)
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 16)
+        font = self._draw_font
 
         # Resolve colors
-        def _color(attr: str, fallback: tuple) -> tuple:
-            c = getattr(theme, attr, fallback)
-            return c.value if hasattr(c, "value") else c
-
-        text_color = _color("text", (210, 210, 215))
-        header_bg = _color("panel", (50, 52, 60))
-        header_text = _color("accent", (160, 200, 255))
-        row_alt = _color("row_alt", (35, 35, 38))
-        sel_color = _color("highlight", (0, 90, 180))
-        val_color = _color("text_secondary", (160, 165, 175))
+        text_color = theme.text
+        header_bg = getattr(theme, "panel", (50, 52, 60))
+        header_text = getattr(theme, "accent", (160, 200, 255))
+        row_alt = getattr(theme, "row_alt", (35, 35, 38))
+        sel_color = theme.highlight
+        val_color = getattr(theme, "text_secondary", (160, 165, 175))
 
         sb_rect = self._scrollbar_rect()
         content_w = r.width - ((_SCROLLBAR_WIDTH) if sb_rect is not None else 0)

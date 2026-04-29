@@ -108,6 +108,7 @@ class MenuBarControl(UiNode):
         self._open_index: int = -1  # index of currently open top-level entry
         self._hovered_index: int = -1
         self.tab_index = 0
+        self._draw_font: object = None  # cached from pygame.font.SysFont(None, _FONT_SIZE)
 
     # ------------------------------------------------------------------
     # API
@@ -134,7 +135,9 @@ class MenuBarControl(UiNode):
         y = self.rect.y
         h = self.rect.height
         try:
-            font = pygame.font.SysFont(None, _FONT_SIZE)
+            if self._draw_font is None:
+                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
+            font = self._draw_font
         except Exception:
             font = None
         for entry in self._entries:
@@ -238,21 +241,19 @@ class MenuBarControl(UiNode):
         if not self.visible:
             return
 
-        def _c(name: str, fallback: tuple) -> tuple:
-            v = getattr(theme, name, fallback)
-            return v.value if hasattr(v, "value") else v
+        bar_bg = getattr(theme, "panel", (40, 40, 50))
+        text_col = theme.text
+        disabled_col = (text_col[0] >> 1, text_col[1] >> 1, text_col[2] >> 1)
+        hover_col = theme.highlight
+        open_col = getattr(theme, "accent", (0, 80, 160))
+        border_col = getattr(theme, "border", (60, 60, 70))
 
-        bar_bg = _c("panel", (40, 40, 50))
-        text_col = _c("text", (220, 220, 220))
-        disabled_col = tuple(max(0, min(255, c // 2)) for c in text_col)
-        hover_col = _c("highlight", (0, 100, 200))
-        open_col = _c("accent", (0, 80, 160))
-        border_col = _c("border", (60, 60, 70))
-
-        try:
-            font = pygame.font.SysFont(None, _FONT_SIZE)
-        except Exception:
-            font = None
+        if self._draw_font is None:
+            try:
+                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
+            except Exception:
+                pass
+        font = self._draw_font
 
         pygame.draw.rect(surface, bar_bg, self.rect)
         # Bottom border line

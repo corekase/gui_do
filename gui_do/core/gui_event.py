@@ -19,9 +19,6 @@ class EventType(Enum):
     MOUSE_WHEEL = "mouse_wheel"
     TEXT_INPUT = "text_input"
     TEXT_EDITING = "text_editing"
-    CONTROL = "control"
-    GROUP = "group"
-    TASK = "task"
 
 
 class EventPhase(Enum):

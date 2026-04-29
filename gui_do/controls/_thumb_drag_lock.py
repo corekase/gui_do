@@ -53,19 +53,6 @@ def begin_thumb_drag(app, owner_id: str, axis: str, track_rect: Rect, pointer_po
     return anchor
 
 
-def refresh_thumb_drag_lock(app, owner_id: str, axis: str, track_rect: Rect, handle_rect: Rect, anchor: int, pointer_pos: tuple) -> None:
-    """Recompute and update the capture lock rect for the current geometry.
-
-    Call on every MOUSE_MOTION event (matching ScrollbarControl._refresh_drag_lock_rect)
-    so that controls inside moving parents stay correctly bounded.
-    """
-    if not app.pointer_capture.is_owned_by(str(owner_id)):
-        return
-    axis_name = str(axis).lower()
-    lock_rect = _anchor_adjusted_lock_rect(axis_name, track_rect, handle_rect, anchor, pointer_pos)
-    app.pointer_capture.lock_rect = Rect(lock_rect)
-
-
 def captured_pointer_pos(app, owner_id: str, axis: str) -> Optional[Tuple[int, int]]:
     """Return the logical pointer clamped to the current capture lock rect.
 

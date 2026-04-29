@@ -1,4 +1,4 @@
-from typing import Callable, Generator, List, Optional
+from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
 from .gui_event import EventPhase, GuiEvent

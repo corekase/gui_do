@@ -84,6 +84,7 @@ class ErrorBoundary(UiNode):
         self._error_text: str = str(error_text)
         self._recover_on_mount: bool = bool(recover_on_scene_change)
         self._error: Optional[BaseException] = None
+        self._draw_font: object = None  # cached SysFont("monospace", 12)
 
         # Adopt the child
         self.children.append(child)
@@ -229,7 +230,9 @@ class ErrorBoundary(UiNode):
         pygame.draw.rect(surface, self._FALLBACK_BG, r)
         pygame.draw.rect(surface, self._FALLBACK_BORDER, r, 2)
 
-        font = pygame.font.SysFont("monospace", 12)
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont("monospace", 12)
+        font = self._draw_font
         lines = [self._error_text]
         if self._error is not None:
             lines.append(type(self._error).__name__)

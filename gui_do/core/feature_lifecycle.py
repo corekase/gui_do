@@ -396,8 +396,6 @@ class LogicFeature(Feature):
 class RoutedFeature(Feature):
     """Feature subtype that routes queued messages by a canonical topic key."""
 
-    MESSAGE_TOPIC_KEY = "topic"
-
     def message_handlers(self) -> Dict[str, Callable[[Any, FeatureMessage], None]]:
         """Return mapping of topic names to message handlers."""
         return {}
