@@ -95,10 +95,6 @@ class MainDemoFeature(Feature):
             "set_life_window_visible",
             "set_mandel_window_visible",
             "set_system_window_visible",
-            "_open_file_dialog_from_main",
-            "_save_file_dialog_from_main",
-            "_open_notifications_panel_from_main",
-            "_publish_system_test_event_from_main",
             "action_registry",
         )
     }
@@ -168,6 +164,11 @@ class MainDemoFeature(Feature):
         def _on_system_toggle(pushed: bool) -> None:
             host.set_system_window_visible(bool(pushed), from_toggle=True)
 
+        def _open_notifications_panel() -> None:
+            system_feature = getattr(host, "_system_feature", None)
+            if system_feature is not None:
+                system_feature.show_notifications_panel()
+
         host.exit_button = host.task_panel.add(
             ButtonControl(
                 "exit",
@@ -229,7 +230,7 @@ class MainDemoFeature(Feature):
                 "show_notifications",
                 host.app.layout.linear(5),
                 "Inbox",
-                host._open_notifications_panel_from_main,
+                _open_notifications_panel,
                 style="angle",
                 font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )

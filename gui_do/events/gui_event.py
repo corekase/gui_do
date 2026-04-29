@@ -40,7 +40,7 @@ _PYGAME_KIND_MAP = {
 }
 
 
-@dataclass
+@dataclass(slots=True)
 class GuiEvent:
     """Normalized GUI event shared across the package event pipeline."""
 
@@ -180,8 +180,9 @@ class GuiEvent:
         if button is not None:
             button = int(button)
 
-        wheel_x = int(payload.get("x", 0)) if event_type == pygame.MOUSEWHEEL else 0
-        wheel_y = int(payload.get("y", 0)) if event_type == pygame.MOUSEWHEEL else 0
+        is_mousewheel = event_type == pygame.MOUSEWHEEL
+        wheel_x = int(payload.get("x", 0)) if is_mousewheel else 0
+        wheel_y = int(payload.get("y", 0)) if is_mousewheel else 0
         text = payload.get("text")
 
         return cls(

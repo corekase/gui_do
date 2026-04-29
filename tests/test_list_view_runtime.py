@@ -50,7 +50,6 @@ def _key(k: int) -> GuiEvent:
 
 def _wheel(delta: int, *, pos=(10, 10)) -> GuiEvent:
     e = GuiEvent(kind=EventType.MOUSE_WHEEL, type=0)
-    e.y = delta
     e.wheel_y = delta
     e.pos = pos
     return e

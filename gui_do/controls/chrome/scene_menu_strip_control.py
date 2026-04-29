@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..base.ui_node import UiNode
 
 
-class MenuBarControl(_BaseMenuBarControl):
+class SceneMenuStripControl(_BaseMenuBarControl):
     """Dynamic menu strip with default File/Scenes/Windows sections.
 
     The control rebuilds its entries before pointer interactions so scene lists
@@ -294,6 +294,3 @@ class MenuBarControl(_BaseMenuBarControl):
         if callable(has_scene) and callable(create_scene) and has_scene(self._scene_name):
             return create_scene(self._scene_name)
         return None
-
-
-SceneMenuStripControl = MenuBarControl

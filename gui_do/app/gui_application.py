@@ -39,6 +39,20 @@ from ..overlays.dialog_manager import DialogManager
 from ..overlays.drag_drop_manager import DragDropManager
 from ..persistence.workspace_persistence import WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
 
+# Frozenset for O(1) pointer-event kind membership tests in the hot event path.
+_POINTER_EVENT_KINDS: frozenset = frozenset((
+    EventType.MOUSE_BUTTON_DOWN,
+    EventType.MOUSE_BUTTON_UP,
+    EventType.MOUSE_MOTION,
+    EventType.MOUSE_WHEEL,
+))
+# Frozenset for the three event kinds that require pointer logicalization.
+_LOGICALIZE_KINDS: frozenset = frozenset((
+    EventType.MOUSE_MOTION,
+    EventType.MOUSE_BUTTON_DOWN,
+    EventType.MOUSE_BUTTON_UP,
+))
+
 
 @dataclass
 class _SceneRuntime:
@@ -583,7 +597,7 @@ class GuiApplication:
 
         pointer_event_in_window = False
         pointer_focus_target = None
-        if logical_event.kind in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP, EventType.MOUSE_MOTION, EventType.MOUSE_WHEEL):
+        if logical_event.kind in _POINTER_EVENT_KINDS:
             pointer_event_in_window, pointer_focus_target = self.scene.pointer_context_at(logical_event.pos)
 
         if logical_event.is_mouse_down(1):
@@ -595,7 +609,7 @@ class GuiApplication:
 
         # Route pointer + mouse events to overlays first.
         # MOUSEBUTTONDOWN outside overlays returns False (pass-through); inside returns True.
-        if logical_event.kind in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP, EventType.MOUSE_MOTION, EventType.MOUSE_WHEEL):
+        if logical_event.kind in _POINTER_EVENT_KINDS:
             overlay_consumed = self.overlay.route_event(logical_event, self)
             if overlay_consumed:
                 self.invalidation.invalidate_all()
@@ -888,21 +902,24 @@ class GuiApplication:
             )
 
     def _logicalize_pointer_event(self, event):
-        if not event.is_kind(EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):
+        if event.kind not in _LOGICALIZE_KINDS:
             return event
         raw_pos = event.pos
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return event
 
         logical_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
-        logical_event = replace(event, raw_pos=raw_pos, pos=logical_pos)
-        if event.is_mouse_motion():
+        if event.kind is EventType.MOUSE_MOTION:
             prev = self._last_dispatched_pointer_pos
             logical_event = replace(
-                logical_event,
+                event,
+                raw_pos=raw_pos,
+                pos=logical_pos,
                 raw_rel=event.rel,
                 rel=(logical_pos[0] - prev[0], logical_pos[1] - prev[1]),
             )
+        else:
+            logical_event = replace(event, raw_pos=raw_pos, pos=logical_pos)
         self._last_dispatched_pointer_pos = logical_pos
         return logical_event
 

@@ -1486,8 +1486,8 @@ from gui_do import TooltipManager, TooltipHandle
 tooltip_mgr = TooltipManager(default_delay_ms=500)
 handle = tooltip_mgr.register(my_button, "Click to submit")
 
-# In the scene update:
-tooltip_mgr.update(dt_seconds, hovered_node_id=app.hovered_node_id)
+# In the scene update — supply the control_id of the currently hovered node, or None:
+tooltip_mgr.update(dt_seconds, hovered_node_id=hovered_control_id)
 
 # At the end of the draw pass:
 if tooltip_mgr.is_visible:
@@ -1962,7 +1962,7 @@ scope_mgr.pop()
 ```python
 fonts = app.theme.fonts
 fonts.register_role("caption", size=12, bold=False)
-font = fonts.resolve("caption", 12)
+font = fonts.font_instance("caption", size=12)
 print(font.text_size("gui_do"))
 ```
 
@@ -1977,10 +1977,10 @@ registry = FontRoleRegistry()
 registry.define("body", size=16)
 registry.define("caption", size=12)
 
-# Apply role definitions to the runtime font manager.
-registry.apply(app.theme.fonts)
+# Apply role definitions to any scene that needs them.
+registry.apply(app, scene_name="main")
 
-body_font = app.theme.fonts.resolve("body", 16)
+body_font = app.theme.fonts.font_instance("body", size=16)
 ```
 
 ---

@@ -1,4 +1,3 @@
-from collections import deque
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
 
@@ -146,23 +145,29 @@ class UiNode:
 
     def find_descendant(self, control_id: str) -> "Optional[UiNode]":
         """Return the first descendant (BFS) whose ``control_id`` matches, or ``None``."""
-        queue: deque[UiNode] = deque(self.children)
-        while queue:
-            candidate = queue.popleft()
+        queue = list(self.children)
+        i = 0
+        while i < len(queue):
+            candidate = queue[i]
+            i += 1
             if candidate.control_id == control_id:
                 return candidate
-            queue.extend(candidate.children)
+            if candidate.children:
+                queue.extend(candidate.children)
         return None
 
     def find_descendants(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
         """Return all descendants (BFS) that satisfy *predicate*."""
         result: List[UiNode] = []
-        queue: deque[UiNode] = deque(self.children)
-        while queue:
-            candidate = queue.popleft()
+        queue = list(self.children)
+        i = 0
+        while i < len(queue):
+            candidate = queue[i]
+            i += 1
             if predicate(candidate):
                 result.append(candidate)
-            queue.extend(candidate.children)
+            if candidate.children:
+                queue.extend(candidate.children)
         return result
 
     def find_descendants_of_type(self, node_type: type) -> "List[UiNode]":
@@ -254,8 +259,8 @@ class UiNode:
         return bool(child.handle_routed_event(event, app))
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
-        ordered = self.children[::-1] if reverse else self.children[:]
-        for child in ordered:
+        snapshot = self.children[:]
+        for child in (reversed(snapshot) if reverse else snapshot):
             if not (child.visible and child.enabled):
                 continue
             if self._dispatch_child_event(child, event, app):

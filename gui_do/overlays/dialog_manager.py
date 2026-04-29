@@ -45,7 +45,6 @@ class DialogManager:
         title: str,
         message: str,
         *,
-        button_label: str = "OK",
         on_close: Optional[Callable[[], None]] = None,
         width: int = _DEFAULT_WIDTH,
     ) -> DialogHandle:
@@ -68,12 +67,9 @@ class DialogManager:
         title: str,
         message: str,
         *,
-        confirm_label: str = "Confirm",
-        cancel_label: str = "Cancel",
         on_confirm: Optional[Callable[[], None]] = None,
         on_cancel: Optional[Callable[[], None]] = None,
         width: int = _DEFAULT_WIDTH,
-        dangerous: bool = False,
     ) -> DialogHandle:
         dialog_id = self._alloc_id()
         self._open_ids.append(dialog_id)

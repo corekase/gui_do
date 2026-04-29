@@ -267,23 +267,6 @@ class GuiDoDemo:
             self.new_systems_toggle_window.pushed = show
         self.app.tile_windows()
 
-    def _open_file_dialog_from_main(self) -> None:
-        if self._system_feature is not None:
-            self._system_feature.open_file_dialog()
-
-    def _save_file_dialog_from_main(self) -> None:
-        if self._system_feature is not None:
-            self._system_feature.save_file_dialog()
-
-    def _open_notifications_panel_from_main(self) -> None:
-        if self._system_feature is not None:
-            self._system_feature.show_notifications_panel()
-
-    def _publish_system_test_event_from_main(self) -> None:
-        if self._system_feature is not None:
-            self._system_feature.publish_test_notification()
-
-
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""
     GuiDoDemo().run()

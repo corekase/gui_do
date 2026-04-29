@@ -37,7 +37,7 @@ class GuiDoDemoMainSceneControlsTests(unittest.TestCase):
             "ImageControl",
             "LabelControl",
             "ListViewControl",
-            "MenuBarControl",
+            "SceneMenuStripControl",
             "NotificationPanelControl",
             "OverlayPanelControl",
             "PanelControl",

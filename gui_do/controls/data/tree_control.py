@@ -97,7 +97,6 @@ class TreeControl(_VirtualizedScrollListBase):
         indent_width: int = _INDENT_WIDTH,
         on_select: SelectCallback = None,
         on_expand: ExpandCallback = None,
-        show_root: bool = True,
         show_scrollbar: bool = True,
         font_role: str = "body",
     ) -> None:

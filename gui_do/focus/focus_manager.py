@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from operator import attrgetter
 from typing import List, Optional
 
 import pygame
@@ -12,6 +13,8 @@ _MODIFIER_KEYS: frozenset = frozenset((
     pygame.K_LALT, pygame.K_RALT,
     pygame.K_LGUI, pygame.K_RGUI,
 ))
+
+_FOCUS_SORT_KEY = attrgetter('tab_index', 'control_id')
 
 
 
@@ -287,7 +290,7 @@ class FocusManager:
             if scope_root is not None and not self._is_descendant(node, scope_root):
                 continue
             ordered.append(node)
-        ordered.sort(key=lambda node: (node.tab_index, node.control_id))
+        ordered.sort(key=_FOCUS_SORT_KEY)
         return ordered
 
     def cycle_focus(self, scene, *, forward: bool = True, window=None, pointer_pos=None) -> bool:
