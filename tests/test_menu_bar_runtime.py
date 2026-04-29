@@ -115,6 +115,10 @@ class TestMenuBarControlBasics(unittest.TestCase):
         theme.border = (60, 60, 70)
         bar.draw(surface, theme)  # should not raise
 
+    def test_menu_bar_is_not_focusable(self):
+        bar = self._make_bar()
+        self.assertFalse(bar.accepts_focus())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,8 +6,10 @@ from pygame import Rect, Surface
 from gui_do.app.gui_application import GuiApplication
 from gui_do.controls.input.button_group_control import ButtonGroupControl
 from gui_do.controls.composite.panel_control import PanelControl
+from gui_do.controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
 from gui_do.controls.chrome.window_control import WindowControl
 from gui_do.controls.base.ui_node import UiNode
+from gui_do.overlays.context_menu_manager import ContextMenuItem
 
 
 class _FocusableProbe(UiNode):
@@ -24,6 +26,27 @@ class _FocusableProbe(UiNode):
 
 
 class FocusTraversalAndActionsTests(unittest.TestCase):
+    def test_tab_skips_menu_bar_focus_cycle(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            root.add(
+                MenuBarControl(
+                    "menu",
+                    Rect(0, 0, 320, 28),
+                    [MenuEntry("File", [ContextMenuItem("Open")])],
+                )
+            )
+            first = root.add(_FocusableProbe("first", Rect(20, 40, 80, 20), tab_index=1))
+
+            consumed = app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+
+            self.assertTrue(consumed)
+            self.assertIs(app.focus.focused_node, first)
+        finally:
+            pygame.quit()
+
     def test_tab_cycles_focus_within_active_window(self) -> None:
         pygame.init()
         try:

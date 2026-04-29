@@ -6,7 +6,7 @@ RangeSliderControl, ColorPickerControl, CommandPaletteManager.
 """
 import os
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Headless pygame environment for control draw tests
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -751,34 +751,21 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         p = self._palette()
         self.assertFalse(p.unregister("ghost"))
 
-    def test_filter_by_title(self) -> None:
+    def test_clear_removes_all_entries(self) -> None:
         p = self._palette()
-        entries = [
-            CommandEntry("a", "Save File", action=lambda: None, category="File"),
-            CommandEntry("b", "New Window", action=lambda: None, category="Window"),
-            CommandEntry("c", "Save As", action=lambda: None, category="File"),
-        ]
-        filtered = p._filter_entries(entries, "save")
-        self.assertEqual(len(filtered), 2)
-        self.assertIn(entries[0], filtered)
-        self.assertIn(entries[2], filtered)
+        p.register(CommandEntry("a", "Alpha", action=lambda: None))
+        p.register(CommandEntry("b", "Beta", action=lambda: None))
+        p.clear()
+        self.assertEqual(p.entry_count(), 0)
 
-    def test_filter_by_category(self) -> None:
-        p = self._palette()
-        entries = [
-            CommandEntry("a", "Save", action=lambda: None, category="File"),
-            CommandEntry("b", "New Win", action=lambda: None, category="Window"),
-        ]
-        filtered = p._filter_entries(entries, "window")
-        self.assertEqual(filtered, [entries[1]])
+    def test_action_registry_is_not_auto_projected(self) -> None:
+        from gui_do.actions.action_registry import ActionRegistry
 
-    def test_empty_filter_returns_all(self) -> None:
-        p = self._palette()
-        entries = [
-            CommandEntry("a", "A", action=lambda: None),
-            CommandEntry("b", "B", action=lambda: None),
-        ]
-        self.assertEqual(p._filter_entries(entries, ""), entries)
+        registry = ActionRegistry()
+        registry.declare("alpha", "Alpha", lambda _ctx, _ev: True, category="Tools")
+        p = CommandPaletteManager(OverlayManager(), action_registry=registry)
+
+        self.assertEqual(p.entry_count(), 0)
 
     def test_not_open_by_default(self) -> None:
         p = self._palette()
@@ -788,6 +775,95 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         p = self._palette()
         p.hide()  # Should not raise
         self.assertFalse(p.is_open)
+
+    def test_selected_index_for_entry_id_defaults_to_first(self) -> None:
+        p = self._palette()
+        entries = [
+            CommandEntry("a", "Alpha", action=lambda: None),
+            CommandEntry("b", "Beta", action=lambda: None),
+        ]
+        self.assertEqual(p._selected_index_for_entry_id(entries, None), 0)
+
+    def test_selected_index_for_entry_id_matches_entry(self) -> None:
+        p = self._palette()
+        entries = [
+            CommandEntry("a", "Alpha", action=lambda: None),
+            CommandEntry("b", "Beta", action=lambda: None),
+        ]
+        self.assertEqual(p._selected_index_for_entry_id(entries, "b"), 1)
+
+    def test_show_does_not_open_when_no_entries_registered(self) -> None:
+        overlay = MagicMock()
+        overlay.has_overlay.return_value = False
+        app = MagicMock()
+        app.overlay = overlay
+        app.chain_screen_fallthrough.return_value = lambda: True
+        p = CommandPaletteManager(overlay)
+
+        handle = p.show(app)
+
+        self.assertFalse(handle.is_open)
+        overlay.show.assert_not_called()
+
+    def test_show_centers_and_sizes_to_entry_count(self) -> None:
+        overlay = MagicMock()
+        overlay.has_overlay.return_value = False
+        app = MagicMock()
+        app.overlay = overlay
+        app.chain_screen_fallthrough.return_value = lambda: True
+        captured = {}
+
+        def _capture_show(owner, panel, **kwargs):
+            del owner, kwargs
+            captured["panel"] = panel
+            return MagicMock()
+
+        overlay.show.side_effect = _capture_show
+        p = CommandPaletteManager(overlay)
+        for i in range(3):
+            p.register(CommandEntry(str(i), f"Item {i}", action=lambda: None))
+
+        with patch("pygame.display.get_surface") as get_surface:
+            surface = MagicMock()
+            surface.get_width.return_value = 800
+            surface.get_height.return_value = 600
+            get_surface.return_value = surface
+            p.show(app)
+
+        panel = captured["panel"]
+        self.assertEqual(panel.rect.height, 96)
+        self.assertEqual(panel.rect.y, (600 - 96) // 2)
+        self.assertEqual(panel.rect.x, (800 - panel.rect.width) // 2)
+        self.assertEqual(len(panel.children), 1)
+
+    def test_show_restores_selected_entry_from_provider(self) -> None:
+        overlay = MagicMock()
+        overlay.has_overlay.return_value = False
+        app = MagicMock()
+        app.overlay = overlay
+        app.chain_screen_fallthrough.return_value = lambda: True
+        captured = {}
+
+        def _capture_show(owner, panel, **kwargs):
+            del owner, kwargs
+            captured["panel"] = panel
+            return MagicMock()
+
+        overlay.show.side_effect = _capture_show
+        p = CommandPaletteManager(overlay)
+        p.register(CommandEntry("a", "Alpha", action=lambda: None))
+        p.register(CommandEntry("b", "Beta", action=lambda: None))
+        p.set_selection_provider(lambda: "b")
+
+        with patch("pygame.display.get_surface") as get_surface:
+            surface = MagicMock()
+            surface.get_width.return_value = 800
+            surface.get_height.return_value = 600
+            get_surface.return_value = surface
+            p.show(app)
+
+        listview = captured["panel"].children[0]
+        self.assertEqual(listview.selected_index, 1)
 
     def test_move_selection_by_wheel_moves_up_and_down(self) -> None:
         p = self._palette()

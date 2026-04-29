@@ -123,6 +123,9 @@ class MenuBarControl(UiNode):
         self._hovered_index = -1
         self.invalidate()
 
+    def accepts_focus(self) -> bool:
+        return False
+
     @property
     def entries(self) -> List[MenuEntry]:
         return list(self._entries)

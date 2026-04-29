@@ -31,7 +31,24 @@ class FocusVisualizer:
         """Return the currently focused UI node when hint drawing is enabled."""
         if not self.app.focus.should_draw_focus_hint():
             return None
-        return self.app.focus.focused_node
+        node = self.app.focus.focused_node
+        if self._should_suppress_node_hint(node):
+            return None
+        return node
+
+    def _should_suppress_node_hint(self, node) -> bool:
+        if node is None:
+            return False
+        overlay = getattr(self.app, "overlay", None)
+        has_overlay = getattr(overlay, "has_overlay", None)
+        if not callable(has_overlay) or not has_overlay("__command_palette__"):
+            return False
+        module_name = str(getattr(node.__class__, "__module__", ""))
+        class_name = str(getattr(node.__class__, "__name__", ""))
+        return class_name == "MenuBarControl" and module_name in {
+            "gui_do.controls.chrome.menu_bar_control",
+            "gui_do.controls.chrome.scene_menu_strip_control",
+        }
 
     def draw_hints(self, surface: "pygame.Surface", theme) -> None:
         """Draw focus hint for the currently focused node."""

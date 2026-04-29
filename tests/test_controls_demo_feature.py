@@ -241,26 +241,19 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
         self.assertIsNotNone(panel_placed.label)
         self.assertGreaterEqual(panel_placed.label.rect.top, canvas_placed.control.rect.bottom)
 
-    def test_splitter_next_tab_wraps_to_arrow_box_without_hidden_task_panel_hops(self) -> None:
+    def test_splitter_next_tab_moves_to_tree_without_menu_bar_hops(self) -> None:
         app, host, feature = self._build_feature()
         app.switch_scene("control_showcase")
         feature.configure_accessibility(host, tab_index_start=0)
 
         by_name = {placed.name: placed for placed in feature.placed_controls}
         splitter = by_name["splitter"].control
-        arrow_ids = {
-            by_name["arrow_up"].control.control_id,
-            by_name["arrow_down"].control.control_id,
-            by_name["arrow_left"].control.control_id,
-            by_name["arrow_right"].control.control_id,
-        }
+        tree = by_name["tree"].control
 
         app.focus.set_focus(splitter, via_keyboard=True)
-        # First Tab only arms traversal hint; second Tab advances.
-        app.focus.cycle_focus(app.scene, forward=True)
         app.focus.cycle_focus(app.scene, forward=True)
         self.assertIsNotNone(app.focus.focused_node)
-        self.assertIn(app.focus.focused_node.control_id, arrow_ids | {"control_tree"})
+        self.assertIs(app.focus.focused_node, tree)
 
     def test_columns_wrap_to_new_row_of_columns_from_left(self) -> None:
         _app, _host, feature = self._build_feature(width=900, height=720)

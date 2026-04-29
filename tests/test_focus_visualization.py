@@ -9,6 +9,7 @@ from pygame import Rect
 from gui_do.focus.focus_visualizer import FocusVisualizer
 from gui_do.focus.focus_manager import FocusManager
 from gui_do.controls.base.ui_node import UiNode
+from gui_do.controls.chrome.menu_bar_control import MenuBarControl
 from gui_do.app.scene import Scene
 from gui_do.theme.color_theme import ColorTheme
 
@@ -83,6 +84,14 @@ class FocusVisualizerDrawingTests(unittest.TestCase):
             mock_line.assert_not_called()
 
     def test_draw_hints_does_not_draw_when_nothing_focused(self) -> None:
+        with patch("pygame.draw.line") as mock_line:
+            self.visualizer.draw_hints(self.surface, self.theme)
+            mock_line.assert_not_called()
+
+    def test_draw_hints_suppresses_menu_bar_focus_hint_while_command_palette_open(self) -> None:
+        self.app.overlay = SimpleNamespace(has_overlay=lambda overlay_id: overlay_id == "__command_palette__")
+        node = MenuBarControl("bar", Rect(10, 10, 200, 28), [])
+        self.manager.set_focus(node, via_keyboard=True)
         with patch("pygame.draw.line") as mock_line:
             self.visualizer.draw_hints(self.surface, self.theme)
             mock_line.assert_not_called()

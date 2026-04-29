@@ -1,7 +1,8 @@
-"""CommandPaletteManager — searchable command launcher using an overlay."""
+"""CommandPaletteManager — list-based command launcher using an overlay."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import Counter
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
 import pygame
@@ -11,14 +12,13 @@ from .overlay_manager import OverlayHandle, OverlayManager
 from ..events.gui_event import EventType
 from ..controls.composite.overlay_panel_control import OverlayPanelControl
 from ..controls.data.list_view_control import ListItem, ListViewControl
-from ..controls.input.text_input_control import TextInputControl
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
 
-_SEARCH_H = 32
 _PAD = 6
 _ROW_H = 28
+_MAX_VISIBLE_ROWS = 10
 
 
 class _CommandPalettePanel(OverlayPanelControl):
@@ -101,11 +101,10 @@ class CommandPaletteHandle:
 
 
 class CommandPaletteManager:
-    """Searchable command palette backed by :class:`OverlayManager`.
+    """List-based command palette backed by :class:`OverlayManager`.
 
     Register named commands via :meth:`register`, then call :meth:`show` to
-    display the palette.  The palette provides a text search box and a filtered
-    list of matching commands.  Selecting a command invokes its
+    display the palette. Selecting a command invokes its
     :attr:`~CommandEntry.action` and closes the palette.
 
     Usage::
@@ -129,6 +128,12 @@ class CommandPaletteManager:
         self._handle: Optional[OverlayHandle] = None
         self._background_trigger_dispose: Optional[Callable[[], bool]] = None
         self._action_registry = action_registry
+        self._before_show_callback: Optional[Callable[[], None]] = None
+        self._selection_provider: Optional[Callable[[], Optional[str]]] = None
+        self._entry_selected_callback: Optional[Callable[[CommandEntry], None]] = None
+        self._selected_entry_id_by_scene: Dict[str, str] = {}
+        self._window_order_rank_by_scene: Dict[str, Dict[str, int]] = {}
+        self._window_order_next_by_scene: Dict[str, int] = {}
         if app is not None:
             self._register_background_trigger(app)
 
@@ -139,6 +144,10 @@ class CommandPaletteManager:
     def register(self, entry: CommandEntry) -> None:
         """Register a command entry.  Replaces any existing entry with the same id."""
         self._entries[str(entry.entry_id)] = entry
+
+    def clear(self) -> None:
+        """Remove all registered entries."""
+        self._entries.clear()
 
     def register_action_registry(
         self,
@@ -168,6 +177,46 @@ class CommandPaletteManager:
         """Return a snapshot list of currently registered entries."""
         return list(self._entries.values())
 
+    def set_before_show(self, callback: Optional[Callable[[], None]]) -> None:
+        """Set a callback invoked immediately before the palette opens."""
+        self._before_show_callback = callback
+
+    def set_selection_provider(self, provider: Optional[Callable[[], Optional[str]]]) -> None:
+        """Set a provider returning the entry id to preselect when the palette opens."""
+        self._selection_provider = provider
+
+    def set_on_entry_selected(self, callback: Optional[Callable[[CommandEntry], None]]) -> None:
+        """Set a callback invoked when a palette entry is selected."""
+        self._entry_selected_callback = callback
+
+    def enable_builtin_scene_and_window_entries(
+        self,
+        app: "GuiApplication",
+        *,
+        on_scene_selected: Optional[Callable[[str], None]] = None,
+    ) -> None:
+        """Populate built-in scene/window entries and remember selection per scene.
+
+        This opt-in helper rebuilds palette entries immediately before open using:
+        - scene entries for all non-active, non-``default`` scenes
+        - window entries for the active scene using window titles
+
+        Selection is remembered per active scene and restored on reopen.
+        """
+
+        def _before_show() -> None:
+            self._register_builtin_scene_and_window_entries(app, on_scene_selected=on_scene_selected)
+
+        def _selected_entry_id() -> Optional[str]:
+            return self._selected_entry_id_for_scene(app)
+
+        def _remember_selection(entry: CommandEntry) -> None:
+            self._remember_selection_for_scene(app, entry)
+
+        self.set_before_show(_before_show)
+        self.set_selection_provider(_selected_entry_id)
+        self.set_on_entry_selected(_remember_selection)
+
     # ------------------------------------------------------------------
     # Palette lifecycle
     # ------------------------------------------------------------------
@@ -181,6 +230,7 @@ class CommandPaletteManager:
         app: "GuiApplication",
         *,
         rect: Optional[Rect] = None,
+        selected_entry_id: Optional[str] = None,
     ) -> "CommandPaletteHandle":
         """Open the command palette overlay and return a handle.
 
@@ -203,57 +253,51 @@ class CommandPaletteManager:
         if self._background_trigger_dispose is None:
             self._register_background_trigger(app)
 
-        # Refresh entries from a bound ActionRegistry so both the F5 path and
-        # the background right-click path always display the current command set.
-        if self._action_registry is not None:
-            self.register_action_registry(self._action_registry)
+        if callable(self._before_show_callback):
+            self._before_show_callback()
+
+        current_entries = list(self._entries.values())
+        if not current_entries:
+            return CommandPaletteHandle(self)
+        if selected_entry_id is None and callable(self._selection_provider):
+            selected_entry_id = self._selection_provider()
 
         if rect is None:
             screen = pygame.display.get_surface()
             sw = screen.get_width() if screen else 800
             sh = screen.get_height() if screen else 600
             pw = min(600, sw - 40)
-            ph = _SEARCH_H + _PAD * 3 + _ROW_H * 8
-            rect = Rect((sw - pw) // 2, sh // 6, pw, ph)
-
-        # Search input
-        search_rect = Rect(
-            rect.x + _PAD, rect.y + _PAD, rect.width - _PAD * 2, _SEARCH_H
-        )
-        search = TextInputControl(
-            self._OWNER_ID + "_search",
-            search_rect,
-            placeholder="Type to search commands…",
-        )
-        search.tab_index = 0
+            visible_rows = max(1, min(len(current_entries), _MAX_VISIBLE_ROWS))
+            ph = _PAD * 2 + _ROW_H * visible_rows
+            rect = Rect((sw - pw) // 2, (sh - ph) // 2, pw, ph)
 
         # Results list
         list_rect = Rect(
             rect.x + _PAD,
-            rect.y + _PAD + _SEARCH_H + _PAD,
+            rect.y + _PAD,
             rect.width - _PAD * 2,
-            rect.height - _SEARCH_H - _PAD * 3,
+            rect.height - _PAD * 2,
         )
+        selected_index = self._selected_index_for_entry_id(current_entries, selected_entry_id)
         listview = ListViewControl(
             self._OWNER_ID + "_list",
             list_rect,
-            items=self._build_items(list(self._entries.values())),
+            items=self._build_items(current_entries),
             row_height=_ROW_H,
+            selected_index=selected_index,
         )
-
-        # Wire search → filter
-        current_entries = list(self._entries.values())
-
-        def _on_search_change(text: str) -> None:
-            filtered = self._filter_entries(current_entries, text)
-            if listview is not None:
-                listview.set_items(self._build_items(filtered))
-
-        search._on_change = _on_search_change
+        if 0 <= selected_index < listview.item_count():
+            listview.scroll_to_item(selected_index)
 
         # Wire list selection → action + close
         def _on_select(idx: int, item: ListItem) -> None:
+            del idx
             entry = item.data
+            if entry is not None and callable(self._entry_selected_callback):
+                try:
+                    self._entry_selected_callback(entry)
+                except Exception:
+                    pass
             self.hide()
             if entry is not None and callable(entry.action):
                 try:
@@ -269,7 +313,6 @@ class CommandPaletteManager:
             listview=listview,
         )
 
-        panel.add(search)
         panel.add(listview)
 
         self._handle = self._overlays.show(
@@ -293,6 +336,7 @@ class CommandPaletteManager:
         *,
         scene: "Optional[str]" = None,
         action_id: str = "command_palette_toggle",
+        on_before_show: Optional[Callable[[], None]] = None,
     ) -> None:
         """Bind *key* so it toggles this palette in the given scene(s).
 
@@ -306,6 +350,8 @@ class CommandPaletteManager:
             palette.bind_toggle_key(app, pygame.K_F5, scene=["main", "editor"])
         """
         def _toggle(_event):
+            if callable(on_before_show):
+                on_before_show()
             self.show(app)
             return True
 
@@ -356,20 +402,167 @@ class CommandPaletteManager:
     def _on_dismissed(self) -> None:
         self._handle = None
 
+    def _register_builtin_scene_and_window_entries(
+        self,
+        app: "GuiApplication",
+        *,
+        on_scene_selected: Optional[Callable[[str], None]] = None,
+    ) -> None:
+        self.clear()
+
+        scene_pretty_name_fn = getattr(app, "scene_pretty_name", None)
+        for scene_name in self._allowed_builtin_scene_names(app):
+            pretty_name = str(scene_name)
+            if callable(scene_pretty_name_fn):
+                pretty_name = str(scene_pretty_name_fn(scene_name))
+            self.register(
+                CommandEntry(
+                    entry_id=f"scene:{scene_name}",
+                    title=pretty_name,
+                    action=lambda target=scene_name: self._select_builtin_scene(app, target, on_scene_selected),
+                    category="Scenes",
+                )
+            )
+
+        windows = []
+        scene = getattr(app, "scene", None)
+        walk_nodes = getattr(scene, "_walk_nodes", None)
+        if callable(walk_nodes):
+            for node in walk_nodes():
+                is_window = getattr(node, "is_window", None)
+                if callable(is_window) and is_window():
+                    windows.append(node)
+
+        scene_order_key = self._window_scene_order_key(app)
+        windows.sort(key=lambda window: self._window_order_rank(scene_order_key, window))
+        for window in windows:
+            control_id = str(getattr(window, "control_id", ""))
+            window_title = str(getattr(window, "title", "") or control_id or "Window")
+            self.register(
+                CommandEntry(
+                    entry_id=f"window:{self._selection_scene_key(app)}:{control_id}",
+                    title=window_title,
+                    action=lambda target=window: self._toggle_builtin_window(app, target),
+                    category="Windows",
+                )
+            )
+
     @staticmethod
-    def _filter_entries(
-        entries: List[CommandEntry], query: str
-    ) -> List[CommandEntry]:
-        if not query:
-            return entries
-        q = query.lower()
-        return [
-            e
-            for e in entries
-            if q in e.title.lower()
-            or q in e.description.lower()
-            or q in e.category.lower()
-        ]
+    def _allowed_builtin_scene_names(app: "GuiApplication") -> List[str]:
+        scene_names_fn = getattr(app, "scene_names", None)
+        if not callable(scene_names_fn):
+            return []
+        active = str(getattr(app, "active_scene_name", ""))
+        names = [str(name) for name in scene_names_fn()]
+        features = getattr(app, "features", None)
+        feature_map = getattr(features, "_features", None)
+        if not hasattr(feature_map, "values"):
+            return [name for name in names if name != active]
+
+        scene_counts: Counter[str] = Counter()
+        for feature in feature_map.values():
+            scene_name = getattr(feature, "scene_name", None)
+            if isinstance(scene_name, str) and scene_name:
+                scene_counts[scene_name] += 1
+
+        allowed: List[str] = []
+        for name in names:
+            if name == active:
+                continue
+            if scene_counts and scene_counts.get(name, 0) <= 0:
+                continue
+            allowed.append(name)
+        return allowed
+
+    @staticmethod
+    def _select_builtin_scene(
+        app: "GuiApplication",
+        scene_name: str,
+        on_scene_selected: Optional[Callable[[str], None]],
+    ) -> None:
+        if on_scene_selected is not None:
+            on_scene_selected(scene_name)
+            return
+        switch_scene = getattr(app, "switch_scene", None)
+        if callable(switch_scene):
+            switch_scene(scene_name)
+
+    def _toggle_builtin_window(self, app: "GuiApplication", window) -> None:
+        next_visible = not bool(getattr(window, "visible", False))
+        setter = self._resolve_builtin_visibility_setter(app, window)
+        if setter is not None:
+            setter(next_visible)
+            return
+        window.visible = next_visible
+        tile_windows = getattr(app, "tile_windows", None)
+        if callable(tile_windows):
+            tile_windows()
+
+    @staticmethod
+    def _resolve_builtin_visibility_setter(app: "GuiApplication", window):
+        control_id = str(getattr(window, "control_id", "")).strip()
+        if not control_id.endswith("_window"):
+            return None
+        window_key = control_id[: -len("_window")]
+        if not window_key:
+            return None
+        method_name = f"set_{window_key}_window_visible"
+
+        app_method = getattr(app, method_name, None)
+        if callable(app_method):
+            return app_method
+
+        features = getattr(app, "features", None)
+        feature_hosts = getattr(features, "_feature_hosts", None)
+        if isinstance(feature_hosts, dict):
+            for host in feature_hosts.values():
+                host_method = getattr(host, method_name, None)
+                if callable(host_method):
+                    return host_method
+        return None
+
+    @staticmethod
+    def _selection_scene_key(app: "GuiApplication") -> str:
+        return str(getattr(app, "active_scene_name", "")).strip()
+
+    def _selected_entry_id_for_scene(self, app: "GuiApplication") -> Optional[str]:
+        scene_key = self._selection_scene_key(app)
+        if not scene_key:
+            return None
+        return self._selected_entry_id_by_scene.get(scene_key)
+
+    def _remember_selection_for_scene(self, app: "GuiApplication", entry: CommandEntry) -> None:
+        scene_key = self._selection_scene_key(app)
+        if not scene_key:
+            return
+        self._selected_entry_id_by_scene[scene_key] = str(entry.entry_id)
+
+    def _window_scene_order_key(self, app: "GuiApplication") -> str:
+        scene_key = self._selection_scene_key(app)
+        if scene_key:
+            return scene_key
+        return f"scene:{id(getattr(app, 'scene', None))}"
+
+    @staticmethod
+    def _window_order_key(window) -> str:
+        control_id = str(getattr(window, "control_id", "")).strip()
+        if control_id:
+            return control_id
+        title = str(getattr(window, "title", "")).strip()
+        if title:
+            return f"title:{title}"
+        return f"window:{id(window)}"
+
+    def _window_order_rank(self, scene_order_key: str, window) -> int:
+        ranks = self._window_order_rank_by_scene.setdefault(scene_order_key, {})
+        key = self._window_order_key(window)
+        existing = ranks.get(key)
+        if existing is not None:
+            return existing
+        next_rank = self._window_order_next_by_scene.get(scene_order_key, 0)
+        ranks[key] = next_rank
+        self._window_order_next_by_scene[scene_order_key] = next_rank + 1
+        return next_rank
 
     @staticmethod
     def _build_items(entries: List[CommandEntry]) -> List[ListItem]:
@@ -381,6 +574,15 @@ class CommandPaletteManager:
             )
             for e in entries
         ]
+
+    @staticmethod
+    def _selected_index_for_entry_id(entries: List[CommandEntry], entry_id: Optional[str]) -> int:
+        if not entry_id:
+            return 0 if entries else -1
+        for index, entry in enumerate(entries):
+            if str(entry.entry_id) == str(entry_id):
+                return index
+        return 0 if entries else -1
 
     @staticmethod
     def _move_selection_by_wheel(listview: ListViewControl, delta: int) -> None:
