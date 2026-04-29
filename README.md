@@ -120,7 +120,9 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 
 ---
 
-## Quick Start [Back to Top](#table-of-contents)
+## Quick Start
+
+[Back to Top](#table-of-contents)
 
 ```bash
 pip install -e .
@@ -143,7 +145,9 @@ pygame.quit()
 
 ---
 
-## Overview [Back to Top](#table-of-contents)
+## Overview
+
+[Back to Top](#table-of-contents)
 
 **Application structure.** Every gui_do application starts with a `GuiApplication` bound to a pygame display surface. The application owns the active scene graph and a set of scene-local services: `TaskScheduler`, `Timers`, `TweenManager`, `OverlayManager`, `DragDropManager`, `WindowTilingManager`, `LayoutManager`, `FocusManager`, and `ActionManager`. When you call `app.switch_scene(name)`, those services are swapped out for the new scene's equivalents automatically, so multi-screen applications stay isolated without custom bookkeeping. The `UiEngine` class drives the main loop — it calls `GuiApplication.process_event`, `app.update`, and `app.draw` each frame, advancing every scene-local service at the correct point in the frame pipeline.
 
@@ -167,7 +171,9 @@ pygame.quit()
 
 ---
 
-## Minimal Runnable Example [Back to Top](#table-of-contents)
+## Minimal Runnable Example
+
+[Back to Top](#table-of-contents)
 
 ```python
 import pygame
@@ -196,7 +202,9 @@ if __name__ == "__main__":
 
 ---
 
-## Package Management [Back to Top](#table-of-contents)
+## Package Management
+
+[Back to Top](#table-of-contents)
 
 The repository includes `scripts/manage.py` for consumer-project bootstrap and upgrade flows. The tool supports `init`, `apply`, `verify`, `check`, and `update` so a developer can start from a clean library-first checkout or sync a newer gui_do version into an existing project.
 
@@ -238,7 +246,9 @@ The update flow copies `gui_do/`, `scripts/`, `tests/`, `docs/`, `README.md`, an
 
 ---
 
-## Application Bootstrap [Back to Top](#table-of-contents)
+## Application Bootstrap
+
+[Back to Top](#table-of-contents)
 
 ### Display Creation
 
@@ -360,7 +370,9 @@ Rebuild via `index.build(scene)` on scene change or full layout reflow. Use `ind
 
 ---
 
-## Controls [Back to Top](#table-of-contents)
+## Controls
+
+[Back to Top](#table-of-contents)
 
 All built-in controls are added to a scene or container with `parent.add(child)` and expose geometry, visibility, enable/disable, focus, and draw/update behavior through the public control classes exported at the package root.
 
@@ -501,7 +513,9 @@ picker = ColorPickerControl("picker", Rect(20, 220, 220, 200), color=(255, 128, 
 
 ---
 
-## Layout [Back to Top](#table-of-contents)
+## Layout
+
+[Back to Top](#table-of-contents)
 
 ### LayoutAxis
 
@@ -669,7 +683,9 @@ if responsive.update(panel.rect.width):
 
 ---
 
-## Events and Input [Back to Top](#table-of-contents)
+## Events and Input
+
+[Back to Top](#table-of-contents)
 
 ### GuiEvent and EventManager
 
@@ -906,7 +922,9 @@ Typical uses include integration tests (record known-good interactions and repla
 
 ---
 
-## Data and State [Back to Top](#table-of-contents)
+## Data and State
+
+[Back to Top](#table-of-contents)
 
 ### ObservableValue, ComputedValue, and PresentationModel
 
@@ -1291,7 +1309,9 @@ manager.restore(state, app, feature_manager=app.features)
 
 ---
 
-## Scheduling and Animation [Back to Top](#table-of-contents)
+## Scheduling and Animation
+
+[Back to Top](#table-of-contents)
 
 ### TaskScheduler
 
@@ -1401,7 +1421,9 @@ scrollbar.on_change = lambda offset: throttle.call(offset)
 
 ---
 
-## Overlay and Runtime Services [Back to Top](#table-of-contents)
+## Overlay and Runtime Services
+
+[Back to Top](#table-of-contents)
 
 ### OverlayManager and OverlayHandle
 
@@ -1653,7 +1675,9 @@ Available shapes: `ARROW`, `TEXT`, `WAIT`, `CROSSHAIR`, `RESIZE_NW_SE`, `RESIZE_
 
 ---
 
-## Menu System [Back to Top](#table-of-contents)
+## Menu System
+
+[Back to Top](#table-of-contents)
 
 ### MenuBarControl and MenuEntry
 
@@ -1691,7 +1715,9 @@ app.scene.add(bar)
 
 ---
 
-## Notification System [Back to Top](#table-of-contents)
+## Notification System
+
+[Back to Top](#table-of-contents)
 
 ### NotificationCenter and NotificationRecord
 
@@ -1719,7 +1745,9 @@ app.overlay.show("notifications", panel, dismiss_on_outside_click=True)
 
 ---
 
-## Scene Transitions [Back to Top](#table-of-contents)
+## Scene Transitions
+
+[Back to Top](#table-of-contents)
 
 ### SceneTransitionManager and SceneTransitionStyle
 
@@ -1737,7 +1765,9 @@ Available styles are `NONE`, `FADE`, `SLIDE_LEFT`, `SLIDE_RIGHT`, `SLIDE_UP`, an
 
 ---
 
-## Feature System [Back to Top](#table-of-contents)
+## Feature System
+
+[Back to Top](#table-of-contents)
 
 ### Feature Types and FeatureMessage
 
@@ -1784,7 +1814,9 @@ It also exposes direct-feature update/draw helpers, feature prewarm support, sta
 
 ---
 
-## Theme and Graphics [Back to Top](#table-of-contents)
+## Theme and Graphics
+
+[Back to Top](#table-of-contents)
 
 ### ColorTheme
 
@@ -1870,7 +1902,9 @@ body_font = app.theme.fonts.resolve("body", 16)
 
 ---
 
-## Localization [Back to Top](#table-of-contents)
+## Localization
+
+[Back to Top](#table-of-contents)
 
 ### StringTable and LocaleRegistry
 
@@ -1909,7 +1943,9 @@ Call `registry.available_locales()` to list registered locale IDs and `registry.
 
 ---
 
-## Introspection [Back to Top](#table-of-contents)
+## Introspection
+
+[Back to Top](#table-of-contents)
 
 ### ui_property and PropertyDescriptor
 
@@ -1985,7 +2021,9 @@ panel.refresh()   # call after mutating the target object
 
 ---
 
-## Telemetry [Back to Top](#table-of-contents)
+## Telemetry
+
+[Back to Top](#table-of-contents)
 
 gui_do includes opt-in runtime telemetry plus offline analysis helpers.
 
@@ -2010,7 +2048,9 @@ The telemetry exports are `TelemetryCollector`, `TelemetrySample`, `configure_te
 
 ---
 
-## Public API Index [Back to Top](#table-of-contents)
+## Public API Index
+
+[Back to Top](#table-of-contents)
 
 The following list is the complete public package export surface from `gui_do.__all__`, grouped by concept.
 
