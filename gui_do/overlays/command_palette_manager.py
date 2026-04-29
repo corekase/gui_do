@@ -38,16 +38,13 @@ class _CommandPalettePanel(OverlayPanelControl):
                 else app.logical_pointer_pos
             )
             if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
-                delta = getattr(event, "wheel_delta", 0)
-                if int(delta) == 0:
-                    delta = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
-                CommandPaletteManager._move_selection_by_wheel(self._listview, int(delta))
+                CommandPaletteManager._move_selection_by_wheel(self._listview, event.wheel_y)
                 return True
 
         # Keyboard navigation: intercept before children so the search TextInput
         # does not consume arrow/confirm keys.
         if event.kind == EventType.KEY_DOWN:
-            key = getattr(event, "key", 0)
+            key = event.key or 0
             # Standard accessibility navigation (ARIA listbox pattern).
             if key == pygame.K_UP:
                 CommandPaletteManager._move_selection_by_wheel(self._listview, 1)
@@ -336,11 +333,11 @@ class CommandPaletteManager:
         stored_app = app
 
         def _on_background_right_click(event) -> bool:
-            if getattr(event, "kind", None) != EventType.MOUSE_BUTTON_DOWN:
+            if event.kind != EventType.MOUSE_BUTTON_DOWN:
                 return False
-            if int(getattr(event, "button", 0) or 0) != 3:
+            if (event.button or 0) != 3:
                 return False
-            pos = getattr(event, "pos", None)
+            pos = event.pos
             if not (isinstance(pos, tuple) and len(pos) == 2):
                 return False
             if stored_app.overlay.point_in_any_overlay(pos):

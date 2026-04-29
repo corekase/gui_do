@@ -199,9 +199,9 @@ class TextAreaControl(_TextEditFocusBase):
                 return True
 
         if event.kind == EventType.MOUSE_WHEEL:
-            if not self.rect.collidepoint(getattr(event, "pos", (-1, -1))):
+            if event.pos is None or not self.rect.collidepoint(event.pos):
                 return False
-            delta = getattr(event, "y", 0)
+            delta = event.wheel_y
             line_h = self._line_height(app)
             self._scroll_top = max(
                 0, self._scroll_top - int(delta) * _SCROLL_SPEED * line_h

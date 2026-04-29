@@ -122,8 +122,7 @@ class SpinnerControl(_TextEditFocusBase):
         if event.kind == EventType.MOUSE_WHEEL:
             pos = event.pos
             if pos is not None and self.rect.collidepoint(pos):
-                wheel_y = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
-                if wheel_y > 0:
+                if event.wheel_y > 0:
                     self.increment()
                 else:
                     self.decrement()

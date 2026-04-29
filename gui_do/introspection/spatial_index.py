@@ -63,11 +63,12 @@ class SceneSpatialIndex:
         self._nodes: Dict[str, object] = {}
         # control_id -> set of cells it occupies
         self._node_cells: Dict[str, Set[Tuple[int, int]]] = {}
-        # BFS order of all nodes (for stable result ordering)
-        self._order: List[str] = []
+        # Monotonically increasing counter — assigned to each new node as a
+        # stable sort key.  Stale values after removal still give correct
+        # relative ordering since removed nodes no longer appear in _nodes.
+        self._insert_counter: int = 0
         # control_id -> insertion-order index; used as sort key in queries so
         # we can iterate only the candidate set instead of all nodes.
-        # Stale values after removal still give correct relative ordering.
         self._order_index: Dict[str, int] = {}
 
     # ------------------------------------------------------------------
@@ -91,7 +92,7 @@ class SceneSpatialIndex:
         self._cells.clear()
         self._nodes.clear()
         self._node_cells.clear()
-        self._order.clear()
+        self._insert_counter = 0
         self._order_index.clear()
 
     # ------------------------------------------------------------------
@@ -128,10 +129,6 @@ class SceneSpatialIndex:
             except (KeyError, ValueError):
                 pass
         self._nodes.pop(cid, None)
-        try:
-            self._order.remove(cid)
-        except ValueError:
-            pass
         self._order_index.pop(cid, None)
 
     # ------------------------------------------------------------------
@@ -198,8 +195,8 @@ class SceneSpatialIndex:
         for cell in cells:
             self._cells[cell].append(cid)
         if cid not in self._order_index:
-            self._order_index[cid] = len(self._order)
-            self._order.append(cid)
+            self._order_index[cid] = self._insert_counter
+            self._insert_counter += 1
 
     def _rect(self, node: object) -> Rect:
         r = getattr(node, "rect", None)

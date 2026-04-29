@@ -124,7 +124,10 @@ class ConstraintLayout:
         if nid not in self._constraints:
             return False
         del self._constraints[nid]
-        self._nodes = [n for n in self._nodes if n is not node]
+        try:
+            self._nodes.remove(node)
+        except ValueError:
+            pass
         return True
 
     def has(self, node: "UiNode") -> bool:

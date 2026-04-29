@@ -58,6 +58,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         self._show_scrollbar: bool = bool(show_scrollbar)
         self._font_role: str = font_role
         self._selected_indices: List[int] = []
+        self._selected_set: set = set()
         self.tab_index = 0
         self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
 
@@ -174,8 +175,10 @@ class ListViewControl(_VirtualizedScrollListBase):
             return
         if not self._multi_select:
             self._selected_indices = [index]
+            self._selected_set = {index}
         elif index not in self._selected_indices:
             self._selected_indices.append(index)
+            self._selected_set.add(index)
         if scroll_to:
             self.scroll_to_item(index)
         if self._on_select is not None:
@@ -189,12 +192,15 @@ class ListViewControl(_VirtualizedScrollListBase):
         """Keep at least one item selected whenever the list has items."""
         if not self._items:
             self._selected_indices = []
+            self._selected_set = set()
             return
         valid = [i for i in self._selected_indices if 0 <= i < len(self._items)]
         if valid:
             self._selected_indices = valid
+            self._selected_set = set(valid)
             return
         self._selected_indices = [0]
+        self._selected_set = {0}
 
     def scroll_to_item(self, index: int) -> None:
         if not self._items:
@@ -365,9 +371,7 @@ class ListViewControl(_VirtualizedScrollListBase):
                 return False
             if self._max_scroll() <= 0:
                 return False
-            delta = getattr(event, "wheel_delta", 0)
-            if int(delta) == 0:
-                delta = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
+            delta = event.wheel_y
             self._scroll_offset -= int(delta) * self._row_height
             self._clamp_scroll()
             self.invalidate()
@@ -383,11 +387,14 @@ class ListViewControl(_VirtualizedScrollListBase):
             # Preserve at least one selected item when list has content.
             if len(self._selected_indices) > 1:
                 self._selected_indices.remove(idx)
+                self._selected_set.discard(idx)
         else:
             if not self._multi_select:
                 self._selected_indices = [idx]
+                self._selected_set = {idx}
             elif idx not in self._selected_indices:
                 self._selected_indices.append(idx)
+                self._selected_set.add(idx)
         self._ensure_selection_invariant()
         if self._on_select is not None:
             try:
@@ -459,7 +466,7 @@ class ListViewControl(_VirtualizedScrollListBase):
             row_y = r.y + i * self._row_height - self._scroll_offset
             row_rect = Rect(content_rect.x, row_y, content_rect.width, self._row_height)
 
-            if i in self._selected_indices:
+            if i in self._selected_set:
                 pygame.draw.rect(surface, theme.highlight, row_rect)
 
             text_color = theme.text

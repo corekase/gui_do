@@ -234,8 +234,7 @@ class ScrollViewControl(UiNode):
 
         if event.kind == EventType.MOUSE_WHEEL:
             if isinstance(pointer, tuple) and self.rect.collidepoint(pointer):
-                wheel_y = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
-                self.scroll_by(dy=int(-wheel_y) * 24)
+                self.scroll_by(dy=int(-event.wheel_y) * 24)
                 return True
 
         # Forward to children — their rects are already in screen-space
@@ -304,7 +303,7 @@ class ScrollViewControl(UiNode):
         ox = self.rect.x - self._scroll_x_pos
         oy = self.rect.y - self._scroll_y_pos
         for child, content_rect in zip(self.children, self._child_content_rects):
-            child.rect = Rect(
+            child.rect.update(
                 ox + content_rect.x,
                 oy + content_rect.y,
                 content_rect.width,

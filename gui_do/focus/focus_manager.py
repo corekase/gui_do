@@ -198,8 +198,7 @@ class FocusManager:
     @staticmethod
     def _is_modifier_key_event(event) -> bool:
         """Return True when the event's key is a bare modifier (Shift, Ctrl, Alt, Meta)."""
-        key = getattr(event, "key", None)
-        return key in _MODIFIER_KEYS
+        return event.key in _MODIFIER_KEYS
 
     @staticmethod
     def _is_node_in_scene(node, scene) -> bool:

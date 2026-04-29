@@ -1621,17 +1621,41 @@ print(ClipboardManager.paste())
 
 ### CommandPaletteManager, CommandEntry, and CommandPaletteHandle
 
-`CommandPaletteManager` shows a searchable command launcher using the overlay system. `CommandEntry` is the exported command record, and `CommandPaletteHandle` closes an open palette.
+`CommandPaletteManager` shows a searchable command launcher using the overlay system. `CommandEntry` is the exported command record. `CommandPaletteHandle` closes an open palette or inspects its open state.
+
+Construct with an `OverlayManager` and optionally an `app` for automatic background right-click registration. Passing `action_registry` auto-refreshes entries from an `ActionRegistry` on every `show()` call.
+
+Calling `show(app)` when the palette is already visible closes it (toggle behavior). The keyboard arrow keys move the selection, and Enter or Space activate the selected command. The search input filters results in real time.
 
 ```python
+import pygame
 from gui_do import CommandEntry, CommandPaletteManager
 
 palette = CommandPaletteManager(app.overlay)
 palette.register(CommandEntry("save", "Save File", action=lambda: print("save"), category="File"))
 palette.register(CommandEntry("open", "Open File", action=lambda: print("open"), category="File"))
+
+# Open / toggle via F5 in specific scenes — single call handles registration and binding:
+palette.bind_toggle_key(app, pygame.K_F5, scene=["main", "editor"])
+
+# Or open programmatically:
 handle = palette.show(app)
 print(handle.is_open)
+handle.close()
 ```
+
+`CommandPaletteManager` methods:
+
+- `register(entry)` — add or replace a `CommandEntry`.
+- `register_action_registry(registry, *, context=None, category=None, clear_existing=False)` — bulk-register entries projected from an `ActionRegistry`; `category` filters to one category string.
+- `unregister(entry_id)` — remove an entry by id; returns `True` if it existed.
+- `entry_count()` / `entries()` — inspect registered entries.
+- `show(app, *, rect=None)` — open the palette (or close it if already open); returns a `CommandPaletteHandle`.
+- `hide()` — close the palette without executing a command.
+- `bind_toggle_key(app, key, *, scene=None, action_id="command_palette_toggle")` — register an action and bind `key` so it calls `show()` as a toggle. `scene` may be a single scene name, a list of scene names, or `None` for global binding.
+- `is_open` — property; `True` while the palette overlay is visible.
+
+`CommandPaletteHandle` exposes `is_open` (property) and `close()`.
 
 ### CanvasViewport
 
