@@ -8,6 +8,7 @@ import pygame
 from pygame import Rect
 
 from .overlay_manager import OverlayHandle, OverlayManager
+from ..events.gui_event import EventType
 from ..controls.composite.overlay_panel_control import OverlayPanelControl
 from ..controls.data.list_view_control import ListItem, ListViewControl
 from ..controls.input.text_input_control import TextInputControl
@@ -18,6 +19,35 @@ if TYPE_CHECKING:
 _SEARCH_H = 32
 _PAD = 6
 _ROW_H = 28
+
+
+class _CommandPalettePanel(OverlayPanelControl):
+    """Overlay panel that keeps wheel input within palette interaction semantics."""
+
+    def __init__(self, control_id: str, rect: Rect, *, listview: ListViewControl) -> None:
+        super().__init__(control_id, rect)
+        self._listview = listview
+
+    def handle_event(self, event, app) -> bool:
+        if event.kind == EventType.MOUSE_WHEEL:
+            pointer = (
+                event.pos
+                if isinstance(event.pos, tuple) and len(event.pos) == 2
+                else app.logical_pointer_pos
+            )
+            if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
+                # First, let listview perform its native wheel behavior.
+                if self._listview.handle_event(event, app):
+                    return True
+
+                # If native wheel scrolling is unavailable (e.g. short list),
+                # keep the wheel event inside the palette and move selection.
+                delta = getattr(event, "wheel_delta", 0)
+                if int(delta) == 0:
+                    delta = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
+                CommandPaletteManager._move_selection_by_wheel(self._listview, int(delta))
+                return True
+        return super().handle_event(event, app)
 
 
 @dataclass
@@ -150,8 +180,6 @@ class CommandPaletteManager:
             ph = _SEARCH_H + _PAD * 3 + _ROW_H * 8
             rect = Rect((sw - pw) // 2, sh // 6, pw, ph)
 
-        panel = OverlayPanelControl(self._OWNER_ID + "_panel", rect)
-
         # Search input
         search_rect = Rect(
             rect.x + _PAD, rect.y + _PAD, rect.width - _PAD * 2, _SEARCH_H
@@ -198,6 +226,12 @@ class CommandPaletteManager:
                     pass
 
         listview._on_select = _on_select
+
+        panel = _CommandPalettePanel(
+            self._OWNER_ID + "_panel",
+            rect,
+            listview=listview,
+        )
 
         panel.add(search)
         panel.add(listview)
@@ -248,3 +282,18 @@ class CommandPaletteManager:
             )
             for e in entries
         ]
+
+    @staticmethod
+    def _move_selection_by_wheel(listview: ListViewControl, delta: int) -> None:
+        """Step selection via wheel and clamp to list bounds."""
+        if int(delta) == 0:
+            return
+        count = listview.item_count()
+        if count <= 0:
+            return
+        current = listview.selected_index
+        if current < 0:
+            current = 0
+        target = max(0, min(count - 1, current - int(delta)))
+        listview.selected_index = target
+        listview.scroll_to_item(target)

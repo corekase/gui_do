@@ -695,6 +695,7 @@ from gui_do.overlays.command_palette_manager import (
     CommandPaletteHandle,
 )
 from gui_do.overlays.overlay_manager import OverlayManager
+from gui_do import ListItem, ListViewControl
 
 
 class TestCommandEntry(unittest.TestCase):
@@ -785,6 +786,28 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         p = self._palette()
         p.hide()  # Should not raise
         self.assertFalse(p.is_open)
+
+    def test_move_selection_by_wheel_moves_up_and_down(self) -> None:
+        p = self._palette()
+        items = [ListItem(label=f"Item {i}") for i in range(6)]
+        lv = ListViewControl("lv", Rect(0, 0, 200, 100), items=items, selected_index=3)
+
+        p._move_selection_by_wheel(lv, 1)
+        self.assertEqual(lv.selected_index, 2)
+
+        p._move_selection_by_wheel(lv, -2)
+        self.assertEqual(lv.selected_index, 4)
+
+    def test_move_selection_by_wheel_clamps_to_bounds(self) -> None:
+        p = self._palette()
+        items = [ListItem(label=f"Item {i}") for i in range(4)]
+        lv = ListViewControl("lv", Rect(0, 0, 200, 100), items=items, selected_index=1)
+
+        p._move_selection_by_wheel(lv, 10)
+        self.assertEqual(lv.selected_index, 0)
+
+        p._move_selection_by_wheel(lv, -10)
+        self.assertEqual(lv.selected_index, 3)
 
 
 # ---------------------------------------------------------------------------

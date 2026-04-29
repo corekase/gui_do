@@ -118,9 +118,9 @@ class OverlayManager:
                     return True
             return False
 
-        # MOUSEBUTTONDOWN outside overlays: dismiss dismiss_on_outside_click overlays
+        # Left-button MOUSEBUTTONDOWN outside overlays: dismiss dismiss_on_outside_click overlays
         # Important: does NOT consume the event (returns False) so scene can still handle it
-        if event.kind == EventType.MOUSE_BUTTON_DOWN:
+        if event.kind == EventType.MOUSE_BUTTON_DOWN and int(getattr(event, "button", 0) or 0) == 1:
             pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
                 if not self.point_in_any_overlay(pos):

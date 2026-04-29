@@ -27,8 +27,8 @@ def _key_esc() -> GuiEvent:
     return GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_ESCAPE, mod=0)
 
 
-def _mouse_down(x, y) -> GuiEvent:
-    return GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(x, y), button=1)
+def _mouse_down(x, y, button=1) -> GuiEvent:
+    return GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, pos=(x, y), button=button)
 
 
 class TestShowRegistersOverlay(unittest.TestCase):
@@ -108,6 +108,22 @@ class TestOutsideClickDismissesButDoesNotConsume(unittest.TestCase):
         consumed = mgr.route_event(_mouse_down(5, 5), _make_app())
         self.assertFalse(consumed)
         self.assertFalse(mgr.has_overlay("a"))
+
+
+class TestOutsideNonLeftClickDoesNotDismiss(unittest.TestCase):
+    def test_outside_right_click_does_not_dismiss_overlay(self) -> None:
+        mgr = OverlayManager()
+        mgr.show("a", _panel(50, 50, 100, 80), dismiss_on_outside_click=True)
+        consumed = mgr.route_event(_mouse_down(5, 5, button=3), _make_app())
+        self.assertFalse(consumed)
+        self.assertTrue(mgr.has_overlay("a"))
+
+    def test_outside_wheel_button_click_does_not_dismiss_overlay(self) -> None:
+        mgr = OverlayManager()
+        mgr.show("a", _panel(50, 50, 100, 80), dismiss_on_outside_click=True)
+        consumed = mgr.route_event(_mouse_down(5, 5, button=4), _make_app())
+        self.assertFalse(consumed)
+        self.assertTrue(mgr.has_overlay("a"))
 
 
 class TestInsideClickConsumed(unittest.TestCase):
