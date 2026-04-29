@@ -16,6 +16,7 @@ from gui_do import (
     FontRoleRegistry,
     SceneTransitionManager,
     SceneTransitionStyle,
+    CommandPaletteManager,
 )
 
 
@@ -114,6 +115,10 @@ class GuiDoDemo:
         # ActionRegistry must be created before build_features so MainDemoFeature
         # can access it during its build hook.
         self.action_registry = ActionRegistry()
+
+        # Create a global palette manager accessible from all scenes
+        self._palette_manager = CommandPaletteManager(self.app.overlay)
+
         self._register_app_actions()
 
         self.app.build_features(self)
@@ -196,9 +201,11 @@ class GuiDoDemo:
 
     def _open_command_palette(self) -> None:
         """Open the command palette pre-populated from the ActionRegistry."""
-        if self._system_feature is not None and self._system_feature._palette_mgr is not None:
-            self._system_feature._palette_mgr.register_action_registry(self.action_registry)
-            self._system_feature._open_palette()
+        if self._palette_manager is not None:
+            # Always use the current app's overlay manager to ensure consistency across scene changes
+            self._palette_manager._overlays = self.app.overlay
+            self._palette_manager.register_action_registry(self.action_registry)
+            self._palette_manager.show(self.app)
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")
