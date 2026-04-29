@@ -30,20 +30,6 @@ class PanelControl(UiNode):
     def _is_window_like(self, child: UiNode) -> bool:
         return child.is_window()
 
-    def _window_children(self) -> List[UiNode]:
-        windows: List[UiNode] = []
-        for child in self.children:
-            if child.visible and child.enabled and self._is_window_like(child):
-                windows.append(child)
-        return windows
-
-    def _all_window_children(self) -> List[UiNode]:
-        windows: List[UiNode] = []
-        for child in self.children:
-            if self._is_window_like(child):
-                windows.append(child)
-        return windows
-
     def _set_window_active_state(self, window: UiNode, is_active: bool) -> None:
         window.set_active(bool(is_active))
 
@@ -61,12 +47,14 @@ class PanelControl(UiNode):
         if target is None:
             self._clear_active_windows()
             return
-        for candidate in self._all_window_children():
-            self._set_window_active_state(candidate, candidate is target)
+        for candidate in self.children:
+            if self._is_window_like(candidate):
+                self._set_window_active_state(candidate, candidate is target)
 
     def _clear_active_windows(self) -> None:
-        for candidate in self._all_window_children():
-            self._set_window_active_state(candidate, False)
+        for candidate in self.children:
+            if self._is_window_like(candidate):
+                self._set_window_active_state(candidate, False)
 
     def _next_top_visible_window(self, excluding: Optional[UiNode] = None) -> Optional[UiNode]:
         for child in reversed(self.children):
@@ -158,11 +146,15 @@ class PanelControl(UiNode):
         if window not in self.children:
             return
         self.children.remove(window)
-        window_indices = [idx for idx, child in enumerate(self.children) if self._is_window_like(child)]
-        if not window_indices:
+        first_window_idx = None
+        for idx, child in enumerate(self.children):
+            if self._is_window_like(child):
+                first_window_idx = idx
+                break
+        if first_window_idx is None:
             self.children.append(window)
         else:
-            self.children.insert(window_indices[0], window)
+            self.children.insert(first_window_idx, window)
 
         active_window = self._top_visible_window()
         if active_window is None:

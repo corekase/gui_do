@@ -283,8 +283,10 @@ class ObservableDict(Generic[K, V]):
         self._listeners.append(listener)
 
         def _unsub() -> None:
-            if listener in self._listeners:
+            try:
                 self._listeners.remove(listener)
+            except ValueError:
+                pass
 
         return _unsub
 

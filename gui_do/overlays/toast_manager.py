@@ -11,7 +11,7 @@ from pygame import Rect
 
 if TYPE_CHECKING:
     from ..theme.color_theme import ColorTheme
-    from ..core.tween_manager import TweenManager
+    from ..scheduling.tween_manager import TweenManager
 
 
 class ToastSeverity(Enum):

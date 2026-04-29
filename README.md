@@ -51,6 +51,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - InputMap and InputBinding
   - FocusManager
   - FocusScopeManager
+  - WindowFocusManager
   - GestureRecognizer
   - ValueChangeReason and ValueChangeCallback
   - EventRecorder and EventPlayback
@@ -286,6 +287,7 @@ Common application properties:
 | `app.window_tiling` | `WindowTilingManager` | Floating-window tiling |
 | `app.theme` | `ColorTheme` | Active theme object |
 | `app.graphics_factory` | `BuiltInGraphicsFactory` | Cached built-in visuals |
+| `app.window_focus` | `WindowFocusManager` | Ctrl+Tab window-cycling focus |
 | `app.features` | `FeatureManager` | Feature registration and lifecycle |
 | `app.toasts` | `ToastManager` | App-level toast banners |
 | `app.dialogs` | `DialogManager` | Lazy modal dialog service |
@@ -601,7 +603,7 @@ workspace = DockWorkspace(
 
 panel = DockWorkspacePanel("dock_panel", Rect(0, 0, 800, 36), workspace,
                            on_change=lambda pid: print("active pane", pid))
-app.scene.add_node(panel)
+app.scene.add(panel)
 
 state = workspace.to_dict()          # persist
 workspace2 = DockWorkspace.from_dict(state)  # restore
@@ -862,6 +864,27 @@ scope_mgr.pop_top()
 ```
 
 Multiple scopes may be stacked. The innermost scope is always active.
+
+### WindowFocusManager
+
+`WindowFocusManager` tracks which `WindowControl` node holds "window focus" — distinct from the per-control keyboard focus managed by `FocusManager` — and drives the dashed-rectangle visual hint drawn around the focused window. It is available as `app.window_focus` and cycles windows on Ctrl+Tab / Ctrl+Shift+Tab.
+
+```python
+# Cycle window focus forward (Ctrl+Tab):
+app.window_focus.cycle(app.scene, forward=True, app=app)
+
+# Cycle backward (Ctrl+Shift+Tab):
+app.window_focus.cycle(app.scene, forward=False, app=app)
+
+# Read the currently window-focused node:
+print(app.window_focus.focused_window)
+
+# Query whether the hint overlay should be drawn (used by the renderer):
+if app.window_focus.should_draw_window_focus_hint():
+    draw_hint()
+```
+
+`revalidate(scene)` is called automatically each frame by `GuiApplication.update()`. It advances focus to the next available window if the current one becomes hidden or disabled, and clears focus when no candidates remain. `update(dt_seconds)` advances the hint timeout timer.
 
 ### GestureRecognizer
 
@@ -2062,7 +2085,7 @@ model.set_value("width", 200)
 
 # Render as a scrollable panel:
 panel = PropertyInspectorPanel("inspector", Rect(0, 0, 300, 400), model)
-app.scene.add_node(panel)
+app.scene.add(panel)
 panel.refresh()   # call after mutating the target object
 ```
 
@@ -2186,6 +2209,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `FocusManager`
 - `FocusScope`
 - `FocusScopeManager`
+- `WindowFocusManager`
 - `FontManager`
 - `FontRoleRegistry`
 - `EventPhase`

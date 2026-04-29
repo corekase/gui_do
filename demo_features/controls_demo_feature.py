@@ -827,6 +827,7 @@ class ControlsShowcaseFeature(Feature):
         # Column 3: canvas and frame on top row, panel on the next row spanning full width.
         grid_gap = self.INNER_GAP
         cell_w = max(1, (new_row_col_w - grid_gap) // 2)
+        cell_w2 = max(1, new_row_col_w - grid_gap - cell_w)
         cell_h = cell_w
         g0x = new_row_x3
         g1x = new_row_x3 + cell_w + grid_gap
@@ -848,7 +849,7 @@ class ControlsShowcaseFeature(Feature):
             "frame",
             "Frame",
             FrameControl("control_frame", Rect(0, 0, 1, 1), border_width=2),
-            Rect(g1x, g0y, cell_w, top_slot_h),
+            Rect(g1x, g0y, cell_w2, top_slot_h),
             focusable=False,
             column_index=5,
             row_index=84,

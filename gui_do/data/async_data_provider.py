@@ -47,7 +47,7 @@ from enum import Enum
 from typing import Any, Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..core.task_scheduler import TaskScheduler
+    from ..scheduling.task_scheduler import TaskScheduler
 
 
 T = TypeVar("T")

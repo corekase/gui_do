@@ -8,7 +8,7 @@ from pygame import Rect
 
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout
-    from ..core.event_bus import EventBus
+    from ..events.event_bus import EventBus
 
 # Topic published to the EventBus when the window resizes.
 WINDOW_RESIZED_TOPIC = "window_resized"

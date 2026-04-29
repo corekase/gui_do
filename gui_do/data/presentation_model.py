@@ -23,7 +23,14 @@ class ObservableValue(Generic[T]):
         if self._value == new_value:
             return
         self._value = new_value
-        for observer in list(self._observers):
+        observers = self._observers
+        n = len(observers)
+        if n == 0:
+            return
+        if n == 1:
+            observers[0](self._value)
+            return
+        for observer in tuple(observers):
             observer(self._value)
 
     def set_silently(self, new_value: T) -> None:
@@ -32,7 +39,14 @@ class ObservableValue(Generic[T]):
 
     def force_notify(self) -> None:
         """Notify all observers with the current value, even if it has not changed."""
-        for observer in list(self._observers):
+        observers = self._observers
+        n = len(observers)
+        if n == 0:
+            return
+        if n == 1:
+            observers[0](self._value)
+            return
+        for observer in tuple(observers):
             observer(self._value)
 
     @property
@@ -44,8 +58,10 @@ class ObservableValue(Generic[T]):
         self._observers.append(observer)
 
         def _unsubscribe() -> None:
-            if observer in self._observers:
+            try:
                 self._observers.remove(observer)
+            except ValueError:
+                pass
 
         return _unsubscribe
 
@@ -92,7 +108,14 @@ class ComputedValue(Generic[T]):
     def _on_dep_changed(self, _ignored: Any) -> None:
         self._dirty = True
         new_value = self.value
-        for observer in list(self._observers):
+        observers = self._observers
+        n = len(observers)
+        if n == 0:
+            return
+        if n == 1:
+            observers[0](new_value)
+            return
+        for observer in tuple(observers):
             observer(new_value)
 
     @property
@@ -108,8 +131,10 @@ class ComputedValue(Generic[T]):
         self._observers.append(observer)
 
         def _unsub() -> None:
-            if observer in self._observers:
+            try:
                 self._observers.remove(observer)
+            except ValueError:
+                pass
 
         return _unsub
 

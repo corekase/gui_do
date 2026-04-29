@@ -47,7 +47,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..core.tween_manager import TweenManager
+    from .tween_manager import TweenManager
 
 
 # ---------------------------------------------------------------------------

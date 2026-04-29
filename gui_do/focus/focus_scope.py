@@ -30,8 +30,8 @@ from __future__ import annotations
 from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..core.focus_manager import FocusManager
-    from ..core.ui_node import UiNode
+    from .focus_manager import FocusManager
+    from ..controls.base.ui_node import UiNode
 
 
 # ---------------------------------------------------------------------------

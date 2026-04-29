@@ -53,7 +53,7 @@ from typing import Optional, Protocol, Tuple, runtime_checkable, TYPE_CHECKING
 from pygame import Rect
 
 if TYPE_CHECKING:
-    from ..core.invalidation import InvalidationTracker
+    from ..data.invalidation import InvalidationTracker
 
 
 # ---------------------------------------------------------------------------

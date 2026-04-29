@@ -42,6 +42,7 @@ class OverlayManager:
 
     def __init__(self) -> None:
         self._records: List[OverlayRecord] = []
+        self._record_by_owner: dict[str, OverlayRecord] = {}
 
     def show(
         self,
@@ -62,10 +63,14 @@ class OverlayManager:
             on_dismiss=on_dismiss,
         )
         self._records.append(record)
+        self._record_by_owner[owner_id] = record
         return OverlayHandle(owner_id, self)
 
     def hide(self, owner_id: str) -> bool:
         """Dismiss an overlay by id. Returns True if it was open."""
+        if owner_id not in self._record_by_owner:
+            return False
+        self._record_by_owner.pop(owner_id)
         for i, rec in enumerate(self._records):
             if rec.owner_id == owner_id:
                 self._records.pop(i)
@@ -82,6 +87,7 @@ class OverlayManager:
         count = len(self._records)
         records = list(self._records)
         self._records.clear()
+        self._record_by_owner.clear()
         for rec in records:
             if rec.on_dismiss is not None:
                 try:
@@ -91,7 +97,7 @@ class OverlayManager:
         return count
 
     def has_overlay(self, owner_id: str) -> bool:
-        return any(r.owner_id == owner_id for r in self._records)
+        return owner_id in self._record_by_owner
 
     def overlay_count(self) -> int:
         return len(self._records)

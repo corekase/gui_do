@@ -31,7 +31,7 @@ from ..scheduling.tween_manager import Easing, TweenHandle, TweenManager
 
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout
-    from ..core.ui_node import UiNode
+    from ..controls.base.ui_node import UiNode
 
 
 _DEFAULT_DURATION = 0.22

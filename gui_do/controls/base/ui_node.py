@@ -237,9 +237,11 @@ class UiNode:
 
         Returns ``False`` when *child* is not a direct child.
         """
-        if child not in self.children:
+        try:
+            idx = self.children.index(child)
+        except ValueError:
             return False
-        self.children.remove(child)
+        self.children.pop(idx)
         child.parent = None
         child.on_unmount(self)
         if dispose:
@@ -260,8 +262,12 @@ class UiNode:
         return bool(child.handle_routed_event(event, app))
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
-        snapshot = self.children[:]
-        for child in (reversed(snapshot) if reverse else snapshot):
+        children = self.children
+        # Reverse dispatch always iterates a snapshot to be safe under mutation;
+        # forward dispatch iterates the live list because capture-phase handlers
+        # rarely mutate children, avoiding an allocation on every event.
+        iterable = reversed(children[:]) if reverse else children
+        for child in iterable:
             if not (child.visible and child.enabled):
                 continue
             if self._dispatch_child_event(child, event, app):

@@ -8,7 +8,7 @@ from typing import List, Optional, TYPE_CHECKING
 from pygame import Rect
 
 if TYPE_CHECKING:
-    from ..core.ui_node import UiNode
+    from ..controls.base.ui_node import UiNode
 
 
 class FlexDirection(Enum):

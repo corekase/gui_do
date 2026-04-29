@@ -184,15 +184,10 @@ class GuiDoDemo:
             scene_name=scene_name,
         )
         self._task_panels_by_scene[scene_name] = panel
-        if scene_name == "main":
-            # Back-compat alias used by existing main-scene feature wiring.
-            self.task_panel = panel
         return panel
 
     def register_scene_task_panel(self, scene_name: str, panel: TaskPanelControl) -> None:
         self._task_panels_by_scene[scene_name] = panel
-        if scene_name == "main":
-            self.task_panel = panel
 
     def get_scene_task_panel(self, scene_name: str) -> TaskPanelControl | None:
         return self._task_panels_by_scene.get(scene_name)

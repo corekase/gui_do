@@ -11,9 +11,9 @@ from ..events.gui_event import EventType, GuiEvent
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
-    from ..core.scene import Scene
+    from ..app.scene import Scene
     from ..theme.color_theme import ColorTheme
-    from ..core.ui_node import UiNode
+    from ..controls.base.ui_node import UiNode
 
 
 @dataclass
