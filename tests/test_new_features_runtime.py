@@ -811,6 +811,144 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         p._move_selection_by_wheel(lv, -10)
         self.assertEqual(lv.selected_index, 3)
 
+    # ------------------------------------------------------------------
+    # Wheel selects then scrolls to keep selection in view
+    # ------------------------------------------------------------------
+
+    def test_wheel_changes_selection_not_offset(self) -> None:
+        """Wheel over the panel changes the selected item, not the raw scroll offset."""
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(20)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=5)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        app.logical_pointer_pos = (100, 100)
+
+        evt = GuiEvent(kind=EventType.MOUSE_WHEEL, type=0, pos=(100, 100), wheel_y=1)
+        consumed = panel.handle_event(evt, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual(lv.selected_index, 4)  # moved up by 1 (delta=+1 → lower index)
+
+    def test_wheel_scrolls_view_to_keep_selection_visible(self) -> None:
+        """After wheel moves selection, scroll_to_item brings the new row into view."""
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(20)]
+        row_h = 28
+        viewport_h = row_h * 5  # shows 5 rows
+        lv = ListViewControl("lv", Rect(10, 60, 300, viewport_h), items=items, selected_index=0)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, viewport_h + 50), listview=lv)
+
+        app = MagicMock()
+        app.logical_pointer_pos = (100, 100)
+
+        # Wheel down 10 times to drive selection beyond initial viewport
+        for _ in range(10):
+            evt = GuiEvent(kind=EventType.MOUSE_WHEEL, type=0, pos=(100, 100), wheel_y=-1)
+            panel.handle_event(evt, app)
+
+        self.assertEqual(lv.selected_index, 10)
+        item_bottom = (10 + 1) * row_h  # bottom of row 10
+        self.assertGreaterEqual(lv.scroll_offset + viewport_h, item_bottom)
+
+    # ------------------------------------------------------------------
+    # Keyboard navigation
+    # ------------------------------------------------------------------
+
+    def test_key_down_arrow_moves_selection_down(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(6)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=2)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_DOWN, mod=0)
+        consumed = panel.handle_event(evt, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual(lv.selected_index, 3)
+
+    def test_key_up_arrow_moves_selection_up(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(6)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=4)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_UP, mod=0)
+        consumed = panel.handle_event(evt, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual(lv.selected_index, 3)
+
+    def test_key_up_clamps_at_first_item(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(4)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=0)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_UP, mod=0)
+        panel.handle_event(evt, app)
+
+        self.assertEqual(lv.selected_index, 0)
+
+    def test_key_down_clamps_at_last_item(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label=f"Item {i}") for i in range(4)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=3)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_DOWN, mod=0)
+        panel.handle_event(evt, app)
+
+        self.assertEqual(lv.selected_index, 3)
+
+    def test_key_return_activates_selected_item(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        activated = []
+        items = [ListItem(label=f"Item {i}") for i in range(4)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=2)
+        lv._on_select = lambda idx, item: activated.append(idx)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_RETURN, mod=0)
+        consumed = panel.handle_event(evt, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual(activated, [2])
+
+    def test_key_space_activates_selected_item(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        activated = []
+        items = [ListItem(label=f"Item {i}") for i in range(4)]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items, selected_index=1)
+        lv._on_select = lambda idx, item: activated.append(idx)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_SPACE, mod=0)
+        consumed = panel.handle_event(evt, app)
+
+        self.assertTrue(consumed)
+        self.assertEqual(activated, [1])
+
+    def test_other_keys_pass_through_to_children(self) -> None:
+        """Letter keys are not intercepted so the search TextInput still gets them."""
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel
+        items = [ListItem(label="X")]
+        lv = ListViewControl("lv", Rect(10, 60, 300, 200), items=items)
+        panel = _CommandPalettePanel("panel", Rect(10, 10, 300, 260), listview=lv)
+
+        app = MagicMock()
+        # No children → dispatches but finds nothing → returns False
+        evt = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=pygame.K_a, mod=0)
+        consumed = panel.handle_event(evt, app)
+        self.assertFalse(consumed)
+
     def test_background_trigger_auto_registers_on_construction_with_app(self) -> None:
         """Passing app to __init__ immediately registers the fallthrough handler."""
         captured = {}
@@ -837,6 +975,7 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         app.overlay.point_in_any_overlay.return_value = False
         app.scene.pointer_context_at.return_value = (False, None)
         app.overlay = MagicMock()
+        app.overlay.has_overlay.return_value = False
 
         def _fallthrough(*, event_handler=None, **_kwargs):
             captured["handler"] = event_handler

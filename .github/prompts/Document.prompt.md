@@ -23,7 +23,7 @@ And then following that cover the rest of the public API.  Sections should be or
 
 When documentation is done updating place a github unittest badge for this package at the beginning of the readme.
 
-Place the exact text from the following lines just below the github unittest badge:
+Place the text from the following lines substituting "URLPART" with the contents of gui_do/_version.py __demo__ variable just below the github unittest badge:
 
 Latest Demo:
 

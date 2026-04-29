@@ -200,7 +200,7 @@ class GuiDoDemo:
         self.app.actions.bind_key(pygame.K_F5, "open_palette", scene="control_showcase")
 
     def _open_command_palette(self) -> None:
-        """Open the command palette pre-populated from the ActionRegistry."""
+        """Open the command palette (or close it if already open)."""
         if self._palette_manager is not None:
             self._palette_manager.show(self.app)
 

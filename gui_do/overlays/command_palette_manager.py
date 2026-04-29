@@ -22,13 +22,15 @@ _ROW_H = 28
 
 
 class _CommandPalettePanel(OverlayPanelControl):
-    """Overlay panel that keeps wheel input within palette interaction semantics."""
+    """Overlay panel that manages wheel-scroll and keyboard navigation within palette semantics."""
 
     def __init__(self, control_id: str, rect: Rect, *, listview: ListViewControl) -> None:
         super().__init__(control_id, rect)
         self._listview = listview
 
     def handle_event(self, event, app) -> bool:
+        # Wheel: move selected item first; scroll_to_item() in _move_selection_by_wheel
+        # ensures the new selection scrolls into view automatically.
         if event.kind == EventType.MOUSE_WHEEL:
             pointer = (
                 event.pos
@@ -36,17 +38,31 @@ class _CommandPalettePanel(OverlayPanelControl):
                 else app.logical_pointer_pos
             )
             if isinstance(pointer, tuple) and len(pointer) == 2 and self.rect.collidepoint(pointer):
-                # First, let listview perform its native wheel behavior.
-                if self._listview.handle_event(event, app):
-                    return True
-
-                # If native wheel scrolling is unavailable (e.g. short list),
-                # keep the wheel event inside the palette and move selection.
                 delta = getattr(event, "wheel_delta", 0)
                 if int(delta) == 0:
                     delta = getattr(event, "wheel_y", 0) or getattr(event, "y", 0)
                 CommandPaletteManager._move_selection_by_wheel(self._listview, int(delta))
                 return True
+
+        # Keyboard navigation: intercept before children so the search TextInput
+        # does not consume arrow/confirm keys.
+        if event.kind == EventType.KEY_DOWN:
+            key = getattr(event, "key", 0)
+            # Standard accessibility navigation (ARIA listbox pattern).
+            if key == pygame.K_UP:
+                CommandPaletteManager._move_selection_by_wheel(self._listview, 1)
+                return True
+            if key == pygame.K_DOWN:
+                CommandPaletteManager._move_selection_by_wheel(self._listview, -1)
+                return True
+            if key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                idx = self._listview.selected_index
+                if 0 <= idx < self._listview.item_count():
+                    # Calling select() fires the registered _on_select callback,
+                    # which executes the command and closes the palette.
+                    self._listview.select(idx, scroll_to=False)
+                return True
+
         return super().handle_event(event, app)
 
 
@@ -171,12 +187,19 @@ class CommandPaletteManager:
     ) -> "CommandPaletteHandle":
         """Open the command palette overlay and return a handle.
 
-        If *rect* is not given, the palette is centered horizontally in the
-        current window at the top third of the screen.
+        If the palette is already open, calling this method closes it and
+        returns the handle (toggle behaviour).  If *rect* is not given, the
+        palette is centered horizontally in the current window at the top third
+        of the screen.
         """
         # Always sync to the current scene's overlay manager so scene switches
         # don't leave the palette on a stale overlay.
         self._overlays = app.overlay
+
+        # Toggle: close if already visible (uses freshly synced overlay).
+        if self.is_open:
+            self.hide()
+            return CommandPaletteHandle(self)
 
         # Auto-register the background right-click trigger the first time show
         # is called with an app, if it was not already set up at construction.
@@ -187,8 +210,6 @@ class CommandPaletteManager:
         # the background right-click path always display the current command set.
         if self._action_registry is not None:
             self.register_action_registry(self._action_registry)
-
-        self.hide()
 
         if rect is None:
             screen = pygame.display.get_surface()
