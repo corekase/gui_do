@@ -1,5 +1,9 @@
 [![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
 
+Latest Demo:
+
+<a href="https://www.youtube.com/watch?v=B4v15raRcGE"><img src="https://img.youtube.com/vi/B4v15raRcGE/0.jpg" alt="Demo Video"></img></a>
+
 # gui_do
 
 gui_do is a pygame GUI toolkit for building scene-driven desktop applications with one package-level public API for controls, layout, input routing, background work, overlays, theming, state, and feature composition. It is designed for tools, editors, dashboards, simulation frontends, and other application UIs that benefit from explicit runtime services and reusable controls. The exported surface in `gui_do.__all__` is the authoritative public boundary.
