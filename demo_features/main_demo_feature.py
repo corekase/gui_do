@@ -57,6 +57,25 @@ from gui_do import (
     ToastSeverity,
     ToggleControl,
     TooltipManager,
+    CollectionView,
+    CollectionViewQuery,
+    ContextMenuHandle,
+    ContextMenuManager,
+    ContextMenuItem,
+    DocumentModel,
+    FormSchema,
+    GridLayout,
+    GridPlacement,
+    GridTrack,
+    InvalidationTracker,
+    OverlayHandle,
+    OverlayManager,
+    PresentationModel,
+    SchemaField,
+    TransferData,
+    TransferManager,
+
+
 )
 
 
@@ -665,6 +684,241 @@ class MainDemoFeature(Feature):
         scroll_stack.add_labeled_value(
             LabelControl("main_fpp_lbl", Rect(0, 0, content_w, row_lbl_h), "FixedPatternFormatter  (ZIP+4 postal code)", align="left"),
             _fpp_input, x=0, label_gap=4, item_gap=item_gap, focusable_value=True,
+        )
+
+        # ── GridLayout ──────────────────────────────────────────────────
+        _grid_layout = GridLayout(
+            row_tracks=[GridTrack("auto"), GridTrack("auto")],
+            col_tracks=[GridTrack("1fr"), GridTrack("2fr"), GridTrack("1fr")],
+            gap=8,
+        )
+        _grid_placement_header = GridPlacement(row=0, col=0, colspan=3)
+        _grid_placement_left   = GridPlacement(row=1, col=0)
+        _grid_placement_center = GridPlacement(row=1, col=1)
+        _grid_placement_right  = GridPlacement(row=1, col=2)
+        scroll_stack.add_labeled_value(
+            LabelControl("main_grid_lbl", Rect(0, 0, content_w, row_lbl_h), "GridLayout + GridTrack + GridPlacement", align="left"),
+            LabelControl(
+                "main_grid_val", Rect(0, 0, content_w, row_val_h),
+                "2×3 grid (auto/auto rows, 1fr/2fr/1fr cols, gap=8)  placements: header(0,0 span=3)  left(1,0)  center(1,1)  right(1,2)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── FormSchema ──────────────────────────────────────────────────
+        _form_schema = FormSchema([
+            SchemaField("name",    default="",  label="Name",    required=True),
+            SchemaField("email",   default="",  label="Email",   required=True),
+            SchemaField("company", default="",  label="Company"),
+        ])
+        _required_count = sum(1 for f in _form_schema.fields if f.required)
+        scroll_stack.add_labeled_value(
+            LabelControl("main_fschema_lbl", Rect(0, 0, content_w, row_lbl_h), "FormSchema + SchemaField", align="left"),
+            LabelControl(
+                "main_fschema_val", Rect(0, 0, content_w, row_val_h),
+                f"Profile schema: {len(_form_schema.fields)} fields  required={_required_count}  (name, email, company)",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── DocumentModel ───────────────────────────────────────────────
+        host._main_document = DocumentModel(
+            "draft-001",
+            content="# Meeting Notes\n- Agenda item 1\n- Follow-up tasks",
+        )
+        host._main_document.set_content("# Meeting Notes\n- Agenda item 1\n- Agenda item 2\n- Follow-up tasks")
+        _doc_val_lbl = LabelControl(
+            "main_doc_val", Rect(0, 0, content_w, row_val_h),
+            f"id=draft-001  rev={host._main_document.revision}  dirty={host._main_document.is_dirty}",
+            align="left",
+        )
+        _doc_val_lbl.font_role = fn
+        scroll_stack.add_labeled_value(
+            LabelControl("main_doc_lbl", Rect(0, 0, content_w, row_lbl_h), "DocumentModel", align="left"),
+            _doc_val_lbl, x=0, label_gap=4, item_gap=4,
+        )
+        _doc_btn_y = scroll_stack.y
+        scroll_stack.add(
+            ButtonControl(
+                "main_doc_save_btn", Rect(0, 0, 110, 26), "Mark Saved",
+                lambda: (host._main_document.mark_saved() or setattr(
+                    _doc_val_lbl, "text",
+                    f"id=draft-001  rev={host._main_document.revision}  dirty={host._main_document.is_dirty}",
+                )),
+                font_role=fn,
+            ),
+            x=0, y=_doc_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + section_gap)
+
+        # ── TransferData + TransferManager ──────────────────────────────
+        host._main_xfer_mgr = TransferManager()
+        _xfer_init = TransferData(
+            formats={"text/plain": "Scene layout snapshot", "application/json": '{"scene":"main","widgets":12}'},
+            preferred_format="text/plain",
+        )
+        host._main_xfer_mgr.set_clipboard(_xfer_init)
+        _xfer_val_lbl = LabelControl(
+            "main_xfer_val", Rect(0, 0, content_w, row_val_h),
+            f"formats: {_xfer_init.format_names()}  preferred: {_xfer_init.preferred_format}",
+            align="left",
+        )
+        _xfer_val_lbl.font_role = fn
+        scroll_stack.add_labeled_value(
+            LabelControl("main_xfer_lbl", Rect(0, 0, content_w, row_lbl_h), "TransferData + TransferManager", align="left"),
+            _xfer_val_lbl, x=0, label_gap=4, item_gap=4,
+        )
+        _xfer_btn_y = scroll_stack.y
+        _xfer_counter = [0]
+
+        def _do_copy_xfer() -> None:
+            _xfer_counter[0] += 1
+            td = TransferData(
+                {"text/plain": f"Layout snapshot #{_xfer_counter[0]}"},
+                preferred_format="text/plain",
+            )
+            host._main_xfer_mgr.set_clipboard(td)
+            cb = host._main_xfer_mgr.get_clipboard()
+            _xfer_val_lbl.text = f"Clipboard: {cb.get('text/plain') if cb else '(empty)'}"
+
+        scroll_stack.add(
+            ButtonControl("main_xfer_copy_btn", Rect(0, 0, 110, 26), "Copy Snapshot", _do_copy_xfer, font_role=fn),
+            x=0, y=_xfer_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + section_gap)
+
+        # ── CollectionViewQuery + CollectionView ─────────────────────────
+        _asset_names = ["backdrop.jpg", "cursor.png", "hand.png", "realize.png", "fonts.ttf", "config.json"]
+        _cv_query = CollectionViewQuery(filters=[lambda x: not x.endswith(".json")])
+        host._main_coll_view = CollectionView(_asset_names, query=_cv_query)
+        _cv_items = host._main_coll_view.items
+        scroll_stack.add_labeled_value(
+            LabelControl("main_cv_lbl", Rect(0, 0, content_w, row_lbl_h), "CollectionViewQuery + CollectionView", align="left"),
+            LabelControl(
+                "main_cv_val", Rect(0, 0, content_w, row_val_h),
+                f"Filtered (exclude .json): {len(_cv_items)} of {len(_asset_names)}  [{', '.join(_cv_items)}]",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── InvalidationTracker ──────────────────────────────────────────
+        host._main_invalidation = InvalidationTracker()
+        host._main_invalidation.set_screen_size((host.screen_rect.width, host.screen_rect.height))
+        host._main_invalidation.end_frame()
+        host._main_invalidation.invalidate_rect(Rect(0, 0, 120, 80))
+        host._main_invalidation.invalidate_rect(Rect(60, 40, 120, 80))
+        _inv_merged = host._main_invalidation.merge_dirty_rects()
+        scroll_stack.add_labeled_value(
+            LabelControl("main_inv_lbl", Rect(0, 0, content_w, row_lbl_h), "InvalidationTracker", align="left"),
+            LabelControl(
+                "main_inv_val", Rect(0, 0, content_w, row_val_h),
+                f"2 overlapping dirty rects merged → {len(_inv_merged)} region(s)  bounds={[f'{r.width}×{r.height}' for r in _inv_merged]}",
+                align="left",
+            ),
+            x=0, label_gap=4, item_gap=section_gap,
+        )
+
+        # ── PresentationModel ────────────────────────────────────────────
+        host._main_pres_obs = ObservableValue("Idle")
+        host._main_pres_model = PresentationModel()
+        _pres_val_lbl = LabelControl(
+            "main_pres_val", Rect(0, 0, content_w, row_val_h),
+            "State: Idle", align="left",
+        )
+        _pres_val_lbl.font_role = fn
+        host._main_pres_model.bind(host._main_pres_obs, lambda v: setattr(_pres_val_lbl, "text", f"State: {v}"))
+        scroll_stack.add_labeled_value(
+            LabelControl("main_pres_lbl", Rect(0, 0, content_w, row_lbl_h), "PresentationModel  (bind observable → label)", align="left"),
+            _pres_val_lbl, x=0, label_gap=4, item_gap=4,
+        )
+        _pres_btn_y = scroll_stack.y
+        _pres_states = ["Idle", "Loading", "Ready", "Error"]
+        _pres_idx = [0]
+
+        def _cycle_pres_state() -> None:
+            _pres_idx[0] = (_pres_idx[0] + 1) % len(_pres_states)
+            host._main_pres_obs.value = _pres_states[_pres_idx[0]]
+
+        scroll_stack.add(
+            ButtonControl("main_pres_cycle_btn", Rect(0, 0, 110, 26), "Cycle State", _cycle_pres_state, font_role=fn),
+            x=0, y=_pres_btn_y, focusable=True,
+        )
+        scroll_stack.advance(30 + section_gap)
+
+        # ── OverlayManager + OverlayHandle ───────────────────────────────
+        # app.overlay is the app's OverlayManager; show() renders above the scene.
+        _overlay_status_lbl = LabelControl(
+            "main_overlay_status", Rect(0, 0, content_w, row_val_h),
+            "No overlay active", align="left",
+        )
+        _overlay_status_lbl.font_role = fn
+        _overlay_handle_ref: list = [None]
+        _overlay_panel_inner = OverlayPanelControl(
+            "main_overlay_mgr_panel",
+            Rect(0, 0, 180, 64),
+            draw_background=True,
+        )
+        for _oi, _ot in enumerate(("Overlay item A", "Overlay item B")):
+            _ol = LabelControl(f"main_overlay_inner_{_oi}", Rect(0, 0, 164, 20), _ot, align="left")
+            _ol.font_role = fn
+            _overlay_panel_inner.add_at(_ol, rel_x=8, rel_y=6 + _oi * 24)
+
+        def _toggle_overlay() -> None:
+            h = _overlay_handle_ref[0]
+            if h is not None and h.is_open:
+                h.dismiss()
+                _overlay_handle_ref[0] = None
+                _overlay_status_lbl.text = "Overlay dismissed"
+            else:
+                _overlay_handle_ref[0] = host.app.overlay.show(
+                    "main_dock_status_overlay",
+                    _overlay_panel_inner,
+                    dismiss_on_outside_click=True,
+                    on_dismiss=lambda: setattr(_overlay_status_lbl, "text", "Overlay dismissed (auto)"),
+                )
+                _overlay_status_lbl.text = f"Overlay open  count={host.app.overlay.overlay_count}"
+
+        scroll_stack.add_labeled_value(
+            LabelControl("main_overlay_mgr_lbl", Rect(0, 0, content_w, row_lbl_h), "OverlayManager + OverlayHandle  (app.overlay)", align="left"),
+            _overlay_status_lbl, x=0, label_gap=4, item_gap=4,
+        )
+        scroll_stack.add(
+            ButtonControl("main_overlay_toggle_btn", Rect(0, 0, 130, 26), "Toggle Overlay", _toggle_overlay, font_role=fn),
+            gap_after=section_gap, focusable=True,
+        )
+
+        # ── ContextMenuManager + ContextMenuHandle ───────────────────────
+        host._main_ctx_menu_mgr = ContextMenuManager(host.app)
+        _ctx_status_lbl = LabelControl(
+            "main_ctx_status", Rect(0, 0, content_w, row_val_h),
+            "No context menu shown", align="left",
+        )
+        _ctx_status_lbl.font_role = fn
+        _ctx_items = [
+            ContextMenuItem("Cut"),
+            ContextMenuItem("Copy"),
+            ContextMenuItem("Paste"),
+            ContextMenuItem("Delete"),
+        ]
+
+        def _show_ctx_menu() -> None:
+            host._main_ctx_menu_mgr.show(
+                (host.screen_rect.centerx, host.screen_rect.centery),
+                _ctx_items,
+                on_dismiss=lambda: setattr(_ctx_status_lbl, "text", "Context menu dismissed"),
+            )
+            _ctx_status_lbl.text = f"Context menu open  has_menu={host._main_ctx_menu_mgr.has_menu}"
+
+        scroll_stack.add_labeled_value(
+            LabelControl("main_ctx_menu_lbl", Rect(0, 0, content_w, row_lbl_h), "ContextMenuManager + ContextMenuHandle", align="left"),
+            _ctx_status_lbl, x=0, label_gap=4, item_gap=4,
+        )
+        scroll_stack.add(
+            ButtonControl("main_ctx_menu_btn", Rect(0, 0, 140, 26), "Show Context Menu", _show_ctx_menu, font_role=fn),
+            gap_after=section_gap, focusable=True,
         )
 
     def _register_screen_font_roles(self, host) -> None:

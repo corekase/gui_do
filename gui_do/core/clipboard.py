@@ -6,12 +6,21 @@ class ClipboardManager:
     """Wraps pygame.scrap with empty-string fallbacks for unavailable clipboard."""
 
     @staticmethod
+    def _ensure_scrap_ready() -> None:
+        """Initialize pygame.scrap if available.
+
+        pygame.scrap.init() is effectively idempotent for our use and avoids
+        deprecated initialization checks.
+        """
+        import pygame
+        pygame.scrap.init()
+
+    @staticmethod
     def copy(text: str) -> bool:
         """Copy text to clipboard. Returns False if unavailable."""
         try:
             import pygame
-            if not pygame.scrap.get_init():
-                pygame.scrap.init()
+            ClipboardManager._ensure_scrap_ready()
             pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8") + b"\x00")
             return True
         except Exception:
@@ -22,8 +31,7 @@ class ClipboardManager:
         """Paste text from clipboard. Returns "" if unavailable or empty."""
         try:
             import pygame
-            if not pygame.scrap.get_init():
-                pygame.scrap.init()
+            ClipboardManager._ensure_scrap_ready()
             data = pygame.scrap.get(pygame.SCRAP_TEXT)
             if data is None:
                 return ""

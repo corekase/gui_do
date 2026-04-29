@@ -37,6 +37,7 @@ from gui_do import (
     ToggleControl,
 )
 from gui_do import OverlayPanelControl
+from gui_do import DockWorkspacePanel, PropertyInspectorPanel
 
 
 class ControlsShowcaseFeatureTests(unittest.TestCase):
@@ -95,6 +96,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             TextInputControl,
             TreeControl,
             ToggleControl,
+            DockWorkspacePanel,
+            PropertyInspectorPanel,
         }
         self.assertEqual({type(control) for control in feature.controls}, expected_types)
 

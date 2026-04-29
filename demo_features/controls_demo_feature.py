@@ -23,6 +23,7 @@ from gui_do import (
     GridRow,
     ImageControl,
     LabelControl,
+    LayoutManager,
     LayoutAxis,
     ListItem,
     ListViewControl,
@@ -52,7 +53,60 @@ from gui_do import (
     NumericFormatter,
     PatternFormatter,
     FixedPatternFormatter,
+    DockPane,
+    DockTabs,
+    DockWorkspace,
+    DockWorkspacePanel,
+    PropertyInspectorModel,
+    PropertyInspectorPanel,
+    ui_property,
 )
+
+
+class _ShowcaseInspectable:
+    """Simple object with @ui_property decorators for the PropertyInspectorPanel showcase."""
+
+    def __init__(self) -> None:
+        self._label: str = "Showcase"
+        self._value: float = 0.5
+        self._active: bool = True
+        self._priority: int = 1
+
+    @property
+    @ui_property(label="Label", type="str", group="Display")
+    def label(self) -> str:
+        return self._label
+
+    @label.setter
+    def label(self, v: str) -> None:
+        self._label = str(v)
+
+    @property
+    @ui_property(label="Value", type="float", min=0.0, max=1.0, group="Display")
+    def value(self) -> float:
+        return self._value
+
+    @value.setter
+    def value(self, v: float) -> None:
+        self._value = float(v)
+
+    @property
+    @ui_property(label="Active", type="bool", group="State")
+    def active(self) -> bool:
+        return self._active
+
+    @active.setter
+    def active(self, v: bool) -> None:
+        self._active = bool(v)
+
+    @property
+    @ui_property(label="Priority", type="int", min=1, max=10, group="State")
+    def priority(self) -> int:
+        return self._priority
+
+    @priority.setter
+    def priority(self, v: int) -> None:
+        self._priority = int(v)
 
 
 @dataclass(slots=True)
@@ -106,6 +160,9 @@ class ControlsShowcaseFeature(Feature):
     CONTROL_FONT_ROLE = "controls.control"
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
+
+    LAYOUT_OVERALL_ROWS_CONSTANT = 5
+    LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
 
     def __init__(self, rect: Rect | None = None) -> None:
         super().__init__("controls_showcase", scene_name="control_showcase")
@@ -564,11 +621,37 @@ class ControlsShowcaseFeature(Feature):
         )
 
         # New row of columns starts from the left edge at data_grid bottom + 10.
-        new_row_col_w = 200
         new_row_y = data_grid_bottom + 10
-        new_row_x0 = content_rect.left
-        new_row_x1 = new_row_x0 + new_row_col_w + col_gap
-        new_row_x2 = new_row_x1 + new_row_col_w + col_gap
+        flow_bounds = Rect(
+            content_rect.left,
+            new_row_y,
+            content_rect.width,
+            max(1, content_rect.bottom - new_row_y),
+        )
+        flow = LayoutManager()
+        flow.set_column_flow_properties(
+            bounds=flow_bounds,
+            overall_rows=self.LAYOUT_OVERALL_ROWS_CONSTANT,
+            overall_columns=self.LAYOUT_OVERALL_COLUMNS_CONSTANT,
+            column_spacing=col_gap,
+            row_spacing=row_gap,
+        )
+        col0_anchor = flow.column_flow_anchor()
+        col1_anchor = flow.column_flow_anchor()
+        col2_anchor = flow.column_flow_anchor()
+        col3_anchor = flow.column_flow_anchor()
+        col4_anchor = flow.column_flow_anchor()
+        col5_anchor = flow.column_flow_anchor()
+        col6_anchor = flow.column_flow_anchor()
+        col7_anchor = flow.column_flow_anchor()
+
+        new_row_col_w = min(200, col0_anchor.width)
+        new_row_x0 = col0_anchor.left
+        new_row_x1 = col1_anchor.left
+        new_row_x2 = col2_anchor.left
+        col0_y = col0_anchor.top
+        col1_y = col1_anchor.top
+        col2_y = col2_anchor.top
 
         # Column 0: ListView, Dropdown, then Splitter stacked with requested spacing.
         list_slot_h = slot_h(92)
@@ -583,14 +666,14 @@ class ControlsShowcaseFeature(Feature):
                 row_height=24,
                 font_role=self._control_font_role,
             ),
-            Rect(new_row_x0, new_row_y, new_row_col_w, list_slot_h),
+            Rect(new_row_x0, col0_y, new_row_col_w, list_slot_h),
             focusable=True,
             accessibility_role="listbox",
             accessibility_label="List view",
             column_index=2,
             row_index=60,
         )
-        list_view_bottom = new_row_y + list_slot_h
+        list_view_bottom = col0_y + list_slot_h
 
         dropdown_slot_h = slot_h(30)
         self._place_control(
@@ -645,7 +728,7 @@ class ControlsShowcaseFeature(Feature):
                 text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
                 font_role=self._control_font_role,
             ),
-            Rect(new_row_x1, new_row_y, new_row_col_w, rich_slot_h),
+            Rect(new_row_x1, col1_y, new_row_col_w, rich_slot_h),
             focusable=False,
             column_index=3,
             row_index=70,
@@ -657,7 +740,7 @@ class ControlsShowcaseFeature(Feature):
         cell_h = cell_w
         g0x = new_row_x2
         g1x = new_row_x2 + cell_w + grid_gap
-        g0y = new_row_y
+        g0y = col2_y
         top_slot_h = cell_h + self.LABEL_HEIGHT + self.LABEL_GAP
         g1y = g0y + top_slot_h + row_gap
         self._place_control(
@@ -691,9 +774,10 @@ class ControlsShowcaseFeature(Feature):
             row_index=82,
         )
 
-        # New rightmost columns for recently added controls.
-        new_col_x = new_row_x2 + new_row_col_w + col_gap
-        new_col_w = 220
+        # New right-side columns for recently added controls.
+        new_col_x = col3_anchor.left
+        new_col_w = min(220, col3_anchor.width)
+        col3_y = col3_anchor.top
 
         menu_slot_h = slot_h(28)
         self._place_control(
@@ -708,7 +792,7 @@ class ControlsShowcaseFeature(Feature):
                     MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")]),
                 ],
             ),
-            Rect(new_col_x, new_row_y, new_col_w, menu_slot_h),
+            Rect(new_col_x, col3_y, new_col_w, menu_slot_h),
             focusable=True,
             accessibility_role="menubar",
             accessibility_label="Menu bar",
@@ -729,7 +813,7 @@ class ControlsShowcaseFeature(Feature):
                     TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")]),
                 ],
             ),
-            Rect(new_col_x, new_row_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
+            Rect(new_col_x, col3_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
             focusable=True,
             accessibility_role="tree",
             accessibility_label="Tree control",
@@ -744,8 +828,9 @@ class ControlsShowcaseFeature(Feature):
         self._showcase_notification_center.add(
             NotificationRecord("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING)
         )
-        notif_col_x = new_col_x + new_col_w + col_gap
-        notif_col_w = 240
+        notif_col_x = col4_anchor.left
+        notif_col_w = min(240, col4_anchor.width)
+        col4_y = col4_anchor.top
         notif_slot_h = slot_h(220)
         self._place_control(
             host,
@@ -756,7 +841,7 @@ class ControlsShowcaseFeature(Feature):
                 Rect(0, 0, 1, 1),
                 self._showcase_notification_center,
             ),
-            Rect(notif_col_x, new_row_y, notif_col_w, notif_slot_h),
+            Rect(notif_col_x, col4_y, notif_col_w, notif_slot_h),
             focusable=False,
             column_index=6,
             row_index=92,
@@ -764,9 +849,9 @@ class ControlsShowcaseFeature(Feature):
 
         # -- Column 7: New controls (SpinnerControl, RangeSliderControl,
         #    ColorPickerControl, ScrollViewControl) --
-        col7_x = notif_col_x + notif_col_w + col_gap
-        col7_w = 220
-        col7_y = new_row_y
+        col7_x = col5_anchor.left
+        col7_w = min(220, col5_anchor.width)
+        col7_y = col5_anchor.top
 
         spinner_slot_h = slot_h(30)
         self._place_control(
@@ -826,9 +911,9 @@ class ControlsShowcaseFeature(Feature):
         # Demonstrates OverlayPanelControl as a container panel designed for
         # overlay usage.  Shown standalone with three child labels to illustrate
         # its role as a floating overlay surface.
-        col8_x = col7_x + col7_w + col_gap
-        col8_w = 200
-        col8_y = new_row_y
+        col8_x = col6_anchor.left
+        col8_w = min(200, col6_anchor.width)
+        col8_y = col6_anchor.top
         scroll_viewport_h = 120
         scroll_content_h = 24 * 8
         scroll_control = ScrollViewControl(
@@ -904,9 +989,9 @@ class ControlsShowcaseFeature(Feature):
         )
 
         # Column 9: format-aware text inputs.
-        col9_x = col8_x + col8_w + col_gap
-        col9_w = 220
-        col9_y = new_row_y
+        col9_x = col7_anchor.left
+        col9_w = min(220, col7_anchor.width)
+        col9_y = col7_anchor.top
 
         _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
 
@@ -976,6 +1061,61 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Fixed pattern formatted text input",
             column_index=9,
             row_index=122,
+        )
+
+        # Place the next control group using natural column-flow wrapping.
+        col10_anchor = flow.column_flow_anchor()
+        col10_x = col10_anchor.left
+        col10_w = min(260, col10_anchor.width)
+
+        _showcase_dock = DockWorkspace(
+            DockTabs(
+                "sc_dock_tabs",
+                panes=[
+                    DockPane("editor", "Editor"),
+                    DockPane("preview", "Preview"),
+                    DockPane("console", "Console"),
+                ],
+            )
+        )
+        prop_inner_h = 160
+        prop_slot_h = slot_h(prop_inner_h)
+        dock_slot_h = slot_h(36)
+        col10_y = col10_anchor.top
+        self._place_control(
+            host,
+            "dock_workspace_panel",
+            "Dock Workspace",
+            DockWorkspacePanel(
+                "control_dock_workspace_panel",
+                Rect(0, 0, col10_w, 36),
+                _showcase_dock,
+            ),
+            Rect(col10_x, col10_y, col10_w, dock_slot_h),
+            focusable=True,
+            accessibility_role="tablist",
+            accessibility_label="Dock workspace panel",
+            column_index=10,
+            row_index=130,
+        )
+        col10_y += dock_slot_h + row_gap
+
+        _showcase_inspectable = _ShowcaseInspectable()
+        prop_control_top = col10_y + self.LABEL_HEIGHT + self.LABEL_GAP
+        prop_inspector = PropertyInspectorPanel(
+            "control_property_inspector",
+            Rect(col10_x, prop_control_top, col10_w, prop_inner_h),
+            PropertyInspectorModel(_showcase_inspectable),
+        )
+        self._place_control(
+            host,
+            "property_inspector",
+            "Property Inspector",
+            prop_inspector,
+            Rect(col10_x, col10_y, col10_w, prop_slot_h),
+            focusable=False,
+            column_index=10,
+            row_index=131,
         )
 
         self._build_scene_task_panel(host)

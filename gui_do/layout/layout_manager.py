@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Tuple, Union, TYPE_CHECKING
 
 from pygame import Rect
@@ -34,6 +34,15 @@ class _GridConfig:
     use_rect: bool = True
 
 
+@dataclass
+class _ColumnFlowConfig:
+    bounds: Rect = field(default_factory=lambda: Rect(0, 0, 1, 1))
+    overall_rows: int = 5
+    overall_columns: int = 2
+    column_spacing: int = 8
+    row_spacing: int = 8
+
+
 class LayoutManager:
     """Grid, linear, and anchor layout helpers for controls."""
 
@@ -43,6 +52,13 @@ class LayoutManager:
         self._grid = _GridConfig()
         self._grid_cursor = 0
         self._anchor_bounds = Rect(0, 0, 1, 1)
+        self._column_flow = _ColumnFlowConfig()
+        self._column_flow_x_counter = 0
+        self._column_flow_y_counter = 0
+        self._column_flow_rows_per_band = 5
+        self._column_flow_cols_per_band = 2
+        self._column_flow_cell_w = 1
+        self._column_flow_cell_h = 1
 
     def set_linear_properties(
         self,
@@ -182,3 +198,77 @@ class LayoutManager:
         """Start a fluent constraint builder for node within layout."""
         from .constraint_layout import ConstraintBuilder
         return ConstraintBuilder(node, layout)
+
+    def set_column_flow_properties(
+        self,
+        *,
+        bounds: Rect,
+        overall_rows: int,
+        overall_columns: int,
+        column_spacing: int = 8,
+        row_spacing: int = 8,
+    ) -> None:
+        """Configure boundary-aware column flow layout.
+
+        The layout area is split into a conceptual grid where
+        ``x_columns = width / overall_rows`` and
+        ``y_columns = height / overall_columns``.
+        """
+        rows = max(1, int(overall_rows))
+        cols = max(1, int(overall_columns))
+        gap_x = max(0, int(column_spacing))
+        gap_y = max(0, int(row_spacing))
+        box = Rect(bounds)
+        self._column_flow = _ColumnFlowConfig(
+            bounds=box,
+            overall_rows=rows,
+            overall_columns=cols,
+            column_spacing=gap_x,
+            row_spacing=gap_y,
+        )
+        self._column_flow_x_counter = 0
+        self._column_flow_y_counter = 0
+        self._column_flow_rows_per_band = rows
+        self._column_flow_cols_per_band = cols
+
+        total_gap_x = gap_x * max(0, rows - 1)
+        total_gap_y = gap_y * max(0, cols - 1)
+        self._column_flow_cell_w = max(1, (box.width - total_gap_x) // rows)
+        self._column_flow_cell_h = max(1, (box.height - total_gap_y) // cols)
+
+    def column_flow_anchor(self, column_span: int = 1) -> Rect:
+        """Return the current anchor rect and advance the x counter.
+
+        Wrapping behavior:
+        - If the next column would exceed the configured row count, move to the
+          next row band and reset x counter.
+        - The returned rect height equals one flow cell height.
+        """
+        span = max(1, int(column_span))
+        if self._column_flow_x_counter + span > self._column_flow_rows_per_band:
+            self._column_flow_x_counter = 0
+            self._column_flow_y_counter += 1
+
+        box = self._column_flow.bounds
+        x = box.left + (self._column_flow_x_counter * (self._column_flow_cell_w + self._column_flow.column_spacing))
+        y = box.top + (self._column_flow_y_counter * (self._column_flow_cell_h + self._column_flow.row_spacing))
+        w = (self._column_flow_cell_w * span) + (self._column_flow.column_spacing * (span - 1))
+        h = self._column_flow_cell_h
+
+        self._column_flow_x_counter += span
+        return Rect(x, y, w, h)
+
+    def column_flow_next_row(self) -> None:
+        """Advance to a new row band and reset horizontal column cursor."""
+        self._column_flow_x_counter = 0
+        self._column_flow_y_counter += 1
+
+    @property
+    def x_columns_counter(self) -> int:
+        """Current horizontal column counter for column-flow layout."""
+        return self._column_flow_x_counter
+
+    @property
+    def y_columns_counter(self) -> int:
+        """Current vertical band counter for column-flow layout."""
+        return self._column_flow_y_counter
