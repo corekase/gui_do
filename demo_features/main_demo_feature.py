@@ -52,7 +52,6 @@ from gui_do import (
     SettingsRegistry,
     SplitterControl,
     StateMachine,
-    TaskPanelControl,
     ThemeManager,
     ToastSeverity,
     ToggleControl,
@@ -81,13 +80,14 @@ class MainDemoFeature(Feature):
             "app",
             "screen_rect",
             "font_roles",
+            "ensure_scene_task_panel",
             "TASK_PANEL_CONTROL_FONT_ROLE",
             "SCREEN_TITLE_FONT_ROLE",
             "go_to_main",
             "go_to_control_showcase",
             "set_life_window_visible",
             "set_mandel_window_visible",
-            "set_system_window_visible",
+            "set_systems_window_visible",
             "action_registry",
         )
     }
@@ -130,16 +130,14 @@ class MainDemoFeature(Feature):
         host.screen_title = host.root.add(
             self._make_sized_title_label(host, "screen_title", "gui_do", 24, 36, fallback_size=(640, 96))
         )
-        host.task_panel = host.app.add(
-            TaskPanelControl(
-                "task_panel",
-                Rect(0, host.screen_rect.height - 50, host.screen_rect.width, 50),
-                auto_hide=True,
-                hidden_peek_pixels=6,
-                animation_step_px=8,
-                dock_bottom=True,
-            ),
-            scene_name="main",
+        host.task_panel = host.ensure_scene_task_panel(
+            "main",
+            control_id="task_panel",
+            height=50,
+            hidden_peek_pixels=6,
+            animation_step_px=8,
+            dock_bottom=True,
+            auto_hide=True,
         )
 
         host.app.layout.set_linear_properties(
@@ -150,19 +148,14 @@ class MainDemoFeature(Feature):
             horizontal=True,
         )
 
+        def _on_systems_toggle(pushed: bool) -> None:
+            host.set_systems_window_visible(bool(pushed), from_toggle=True)
+
         def _on_life_toggle(pushed: bool) -> None:
             host.set_life_window_visible(bool(pushed), from_toggle=True)
 
         def _on_mandel_toggle(pushed: bool) -> None:
             host.set_mandel_window_visible(bool(pushed), from_toggle=True)
-
-        def _on_system_toggle(pushed: bool) -> None:
-            host.set_system_window_visible(bool(pushed), from_toggle=True)
-
-        def _open_notifications_panel() -> None:
-            system_feature = getattr(host, "_system_feature", None)
-            if system_feature is not None:
-                system_feature.show_notifications_panel()
 
         host.exit_button = host.task_panel.add(
             ButtonControl(
@@ -174,10 +167,22 @@ class MainDemoFeature(Feature):
                 font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
+        host.systems_toggle_window = host.task_panel.add(
+            ToggleControl(
+                "show_systems",
+                host.app.layout.linear(1),
+                "System",
+                "System",
+                pushed=False,
+                on_toggle=_on_systems_toggle,
+                style="angle",
+                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
         host.showcase_button = host.task_panel.add(
             ButtonControl(
                 "showcase",
-                host.app.layout.linear(1),
+                host.app.layout.linear(2),
                 "Showcase",
                 host.go_to_control_showcase,
                 style="angle",
@@ -187,7 +192,7 @@ class MainDemoFeature(Feature):
         host.life_toggle_window = host.task_panel.add(
             ToggleControl(
                 "show_life",
-                host.app.layout.linear(2),
+                host.app.layout.linear(3),
                 "Life",
                 "Life",
                 pushed=False,
@@ -199,7 +204,7 @@ class MainDemoFeature(Feature):
         host.mandel_toggle_window = host.task_panel.add(
             ToggleControl(
                 "show_mandel",
-                host.app.layout.linear(3),
+                host.app.layout.linear(4),
                 "Mandelbrot",
                 "Mandelbrot",
                 pushed=False,
@@ -208,46 +213,12 @@ class MainDemoFeature(Feature):
                 font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
-        host.system_toggle_window = host.task_panel.add(
-            ToggleControl(
-                "show_system",
-                host.app.layout.linear(4),
-                "System",
-                "System",
-                pushed=False,
-                on_toggle=_on_system_toggle,
-                style="round",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
-            )
-        )
-        host.inbox_button = host.task_panel.add(
-            ButtonControl(
-                "show_notifications",
-                host.app.layout.linear(5),
-                "Inbox",
-                _open_notifications_panel,
-                style="angle",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
-            )
-        )
-
-        right_margin = 16
-        right_gap = 10
-        system_w = host.system_toggle_window.rect.width
-        inbox_w = host.inbox_button.rect.width
-        y = host.task_panel.rect.top + 10
-        inbox_x = host.task_panel.rect.right - right_margin - inbox_w
-        system_x = inbox_x - right_gap - system_w
-        host.system_toggle_window.rect.topleft = (system_x, y)
-        host.inbox_button.rect.topleft = (inbox_x, y)
-
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
         host._main_tooltip_manager.register(host.exit_button, "Exit the application")
+        host._main_tooltip_manager.register(host.systems_toggle_window, "Toggle the Systems demo window")
         host._main_tooltip_manager.register(host.showcase_button, "Open the control showcase scene")
         host._main_tooltip_manager.register(host.life_toggle_window, "Toggle the Life simulation window")
         host._main_tooltip_manager.register(host.mandel_toggle_window, "Toggle the Mandelbrot fractal window")
-        host._main_tooltip_manager.register(host.system_toggle_window, "Toggle the system utilities window")
-        host._main_tooltip_manager.register(host.inbox_button, "Open the notification inbox panel")
 
         host.app.tile_windows()
 

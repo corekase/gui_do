@@ -107,21 +107,20 @@ class _DemoInspectable:
         self._active = bool(v)
 
 
-class NewSystemsDemoFeature(RoutedFeature):
+class SystemsDemoFeature(RoutedFeature):
     """Demonstrates all 10 new gui_do systems in a tabbed window."""
 
     HOST_REQUIREMENTS = {
         "build": (
             "app",
             "root",
-            "task_panel",
+            "ensure_scene_task_panel",
             "TASK_PANEL_CONTROL_FONT_ROLE",
-            "set_new_systems_window_visible",
         ),
     }
 
     def __init__(self) -> None:
-        super().__init__("new_systems_demo", scene_name="main")
+        super().__init__("systems_demo", scene_name="main")
         self.window: Optional[WindowControl] = None
         self._active_tab: str = "cursor"
         self._tab_panels: dict = {}
@@ -192,9 +191,9 @@ class NewSystemsDemoFeature(RoutedFeature):
         )
         self.window = host.root.add(
             WindowControl(
-                "new_systems_window",
+                "systems_window",
                 rect,
-                "New Systems Demo",
+                "Systems",
                 title_font_role=self.font_role("window_title"),
                 event_handler=self._window_event_handler,
                 use_frame_backdrop=True,
@@ -243,23 +242,6 @@ class NewSystemsDemoFeature(RoutedFeature):
         self._tab_panels["dock"] = self._build_dock_tab(host, Rect(body_content_rect))
 
         self._on_tab_change("cursor")
-
-        # Add toggle button to the task panel
-        def _on_new_systems_toggle(pushed: bool) -> None:
-            host.set_new_systems_window_visible(bool(pushed), from_toggle=True)
-
-        host.new_systems_toggle_window = host.task_panel.add(
-            ToggleControl(
-                "show_new_systems",
-                host.app.layout.linear(5),
-                "New Sys",
-                "New Sys",
-                pushed=False,
-                on_toggle=_on_new_systems_toggle,
-                style="round",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
-            )
-        )
 
     def bind_runtime(self, host) -> None:
         self._main_scene = host.app.create_scene("main")

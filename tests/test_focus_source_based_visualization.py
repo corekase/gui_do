@@ -682,6 +682,25 @@ class TaskPanelFocusModeTests(unittest.TestCase):
         self.assertIsNot(app.focus.focused_node, win_button)
         self.assertTrue(app.task_panel_focus.is_active)
 
+    def test_task_panel_tab_reapplies_hint_gate_after_timeout(self) -> None:
+        app, win, win_button, panel, tp_a, tp_b = self._app()
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, tp_b)
+
+        app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(app.focus_visualizer.has_active_hint())
+
+        # First Tab after timeout should only re-show the hint on current focus.
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, tp_b)
+        self.assertTrue(app.focus_visualizer.has_active_hint())
+
+        # Next Tab while hint is active cycles.
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, tp_a)
+
     def test_mouse_event_outside_task_panel_exits_focus_mode(self) -> None:
         app, win, win_button, panel, tp_a, tp_b = self._app()
         app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
@@ -727,6 +746,25 @@ class TaskPanelFocusModeTests(unittest.TestCase):
         self.assertTrue(app.task_panel_focus.is_active)
         self.assertIs(app.focus.focused_node, hidden_from_tab)
         self.assertTrue(panel._hovered)
+
+    def test_single_non_tab_task_panel_item_hint_expires(self) -> None:
+        app = GuiApplication(Surface((500, 300)))
+        root = app.add(PanelControl("root", Rect(0, 0, 500, 300), draw_background=False))
+        win = root.add(WindowControl("win", Rect(40, 30, 220, 180), "Main"))
+        win_button = win.add(ButtonControl("win_btn", Rect(60, 70, 90, 30), "Window"))
+        win_button.set_tab_index(0)
+        panel = app.add(TaskPanelControl("task_panel", Rect(0, 250, 500, 50), auto_hide=True, dock_bottom=True))
+        hidden_from_tab = panel.add(ButtonControl("return_like", Rect(16, 260, 90, 30), "Return"))
+        hidden_from_tab.set_tab_index(-1)
+        win.active = True
+        app.focus.set_focus(win_button)
+
+        app.process_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_F1, "mod": 0, "unicode": ""}))
+        self.assertIs(app.focus.focused_node, hidden_from_tab)
+        self.assertTrue(app.focus_visualizer.has_active_hint())
+
+        app.update(FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS + 0.01)
+        self.assertFalse(app.focus_visualizer.has_active_hint())
 
 
 if __name__ == "__main__":

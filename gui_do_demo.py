@@ -5,13 +5,13 @@ from demo_features.life_demo_feature import LifeSimulationFeature
 from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
 from demo_features.main_demo_feature import MainDemoFeature
 from demo_features.controls_demo_feature import ControlsShowcaseFeature
-from demo_features.system_window_demo_feature import SystemWindowDemoFeature
-from demo_features.new_systems_demo_feature import NewSystemsDemoFeature
+from demo_features.systems_demo_feature import SystemsDemoFeature
 
 from gui_do import (
     GuiApplication,
     create_display,
     PanelControl,
+    TaskPanelControl,
     ActionRegistry,
     FontRoleRegistry,
     SceneTransitionManager,
@@ -78,6 +78,7 @@ class GuiDoDemo:
         self.scene_transitions = SceneTransitionManager(self.app, default_style=SceneTransitionStyle.FADE, default_duration=0.5)
         self.scene_transitions.set_style("control_showcase", SceneTransitionStyle.SLIDE_LEFT, duration=0.5)
         self.scene_transitions.set_style("main", SceneTransitionStyle.SLIDE_RIGHT, duration=0.5)
+        self._task_panels_by_scene: dict[str, TaskPanelControl] = {}
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False, scene_name="main")
         self.app.set_window_tiling_enabled(True, relayout=False, scene_name="main")
         self.app.configure_window_tiling(gap=16, padding=16, avoid_task_panel=True, center_on_failure=True, relayout=False, scene_name="control_showcase")
@@ -97,16 +98,14 @@ class GuiDoDemo:
         self._life_feature = LifeSimulationFeature()
         self._controls_feature = ControlsShowcaseFeature()
         self._mandel_feature = MandelbrotRenderFeature()
-        self._system_feature = SystemWindowDemoFeature()
-        self._new_systems_feature = NewSystemsDemoFeature()
+        self._systems_feature = SystemsDemoFeature()
         for feature in [
             self._main_feature,
             self._shapes_feature,
             self._life_feature,
             self._controls_feature,
             self._mandel_feature,
-            self._system_feature,
-            self._new_systems_feature,
+            self._systems_feature,
         ]:
             self.app.register_feature(feature, host=self)
 
@@ -128,12 +127,10 @@ class GuiDoDemo:
         self.app.build_features(self)
         self.life_window = self._life_feature.window
         self.mandel_window = self._mandel_feature.window
-        self.system_window = self._system_feature.window
-        self.new_systems_window = self._new_systems_feature.window
+        self.systems_window = self._systems_feature.window
         self.life_window.visible = False
         self.mandel_window.visible = False
-        self.system_window.visible = False
-        self.new_systems_window.visible = False
+        self.systems_window.visible = False
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="main")
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="control_showcase")
         self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
@@ -145,25 +142,60 @@ class GuiDoDemo:
 
         base_controls = [
             self.exit_button,
+            self.systems_toggle_window,
             self.showcase_button,
             self.life_toggle_window,
             self.mandel_toggle_window,
-            self.system_toggle_window,
-            self.new_systems_toggle_window,
-            self.inbox_button,
         ]
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
 
         self.exit_button.set_accessibility(role="button", label="Exit")
+        self.systems_toggle_window.set_accessibility(role="toggle", label="Show Systems window")
         self.showcase_button.set_accessibility(role="button", label="Showcase")
         self.life_toggle_window.set_accessibility(role="toggle", label="Show Life window")
         self.mandel_toggle_window.set_accessibility(role="toggle", label="Show Mandelbrot window")
-        self.system_toggle_window.set_accessibility(role="toggle", label="Show System window")
-        self.new_systems_toggle_window.set_accessibility(role="toggle", label="Show New Systems window")
-        self.inbox_button.set_accessibility(role="button", label="Open notification panel")
         self.app.configure_features_accessibility(self, len(base_controls))
         self.app.switch_scene("main")
+
+    def ensure_scene_task_panel(
+        self,
+        scene_name: str,
+        *,
+        control_id: str,
+        height: int = 50,
+        hidden_peek_pixels: int = 6,
+        animation_step_px: int = 8,
+        dock_bottom: bool = True,
+        auto_hide: bool = True,
+    ) -> TaskPanelControl:
+        panel = self._task_panels_by_scene.get(scene_name)
+        if panel is not None:
+            return panel
+        panel = self.app.add(
+            TaskPanelControl(
+                control_id,
+                Rect(0, self.screen_rect.height - int(height), self.screen_rect.width, int(height)),
+                auto_hide=auto_hide,
+                hidden_peek_pixels=hidden_peek_pixels,
+                animation_step_px=animation_step_px,
+                dock_bottom=dock_bottom,
+            ),
+            scene_name=scene_name,
+        )
+        self._task_panels_by_scene[scene_name] = panel
+        if scene_name == "main":
+            # Back-compat alias used by existing main-scene feature wiring.
+            self.task_panel = panel
+        return panel
+
+    def register_scene_task_panel(self, scene_name: str, panel: TaskPanelControl) -> None:
+        self._task_panels_by_scene[scene_name] = panel
+        if scene_name == "main":
+            self.task_panel = panel
+
+    def get_scene_task_panel(self, scene_name: str) -> TaskPanelControl | None:
+        return self._task_panels_by_scene.get(scene_name)
 
     def _build_control_showcase_scene(self) -> None:
         """Build the control showcase scene and provide a way back to main."""
@@ -187,17 +219,13 @@ class GuiDoDemo:
         r.declare(
             "file_open",
             "Open File…",
-            lambda _ctx, _ev: (
-                (self._system_feature.open_file_dialog() if self._system_feature is not None else None) or True
-            ),
+            lambda _ctx, _ev: True,
             category="File",
         )
         r.declare(
             "file_save",
             "Save File…",
-            lambda _ctx, _ev: (
-                (self._system_feature.save_file_dialog() if self._system_feature is not None else None) or True
-            ),
+            lambda _ctx, _ev: True,
             category="File",
         )
         r.declare(
@@ -214,23 +242,6 @@ class GuiDoDemo:
         )
         r.declare("win_life",            "Show Life Window",              lambda _ctx, _ev: (self.set_life_window_visible(True) or True),  category="Windows")
         r.declare("win_mandel",          "Show Mandelbrot Window",        lambda _ctx, _ev: (self.set_mandel_window_visible(True) or True), category="Windows")
-        r.declare("win_system",          "Show System Window",            lambda _ctx, _ev: (self.set_system_window_visible(True) or True), category="Windows")
-        r.declare(
-            "tools_notifications",
-            "Notifications",
-            lambda _ctx, _ev: (
-                (self._system_feature.show_notifications_panel() if self._system_feature is not None else None) or True
-            ),
-            category="Tools",
-        )
-        r.declare(
-            "tools_publish_event",
-            "Publish Test Event",
-            lambda _ctx, _ev: (
-                (self._system_feature.publish_test_notification() if self._system_feature is not None else None) or True
-            ),
-            category="Tools",
-        )
         r.declare("palette_open",        "Open Command Palette (F5)",     lambda _ctx, _ev: (self._palette_manager.show(self.app) or True))
 
     def go_to_control_showcase(self) -> None:
@@ -253,18 +264,11 @@ class GuiDoDemo:
             self.mandel_toggle_window.pushed = show
         self.app.tile_windows()
 
-    def set_system_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
+    def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         show = bool(visible)
-        self.system_window.visible = show
-        if not from_toggle and self.system_toggle_window is not None:
-            self.system_toggle_window.pushed = show
-        self.app.tile_windows()
-
-    def set_new_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        show = bool(visible)
-        self.new_systems_window.visible = show
-        if not from_toggle and self.new_systems_toggle_window is not None:
-            self.new_systems_toggle_window.pushed = show
+        self.systems_window.visible = show
+        if not from_toggle and self.systems_toggle_window is not None:
+            self.systems_toggle_window.pushed = show
         self.app.tile_windows()
 
 def main() -> None:

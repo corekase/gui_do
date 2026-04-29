@@ -703,7 +703,7 @@ class DemoInspectableTests(unittest.TestCase):
     """_DemoInspectable class properties are correctly decorated."""
 
     def _make(self):
-        from demo_features.new_systems_demo_feature import _DemoInspectable
+        from demo_features.systems_demo_feature import _DemoInspectable
         return _DemoInspectable()
 
     def test_demo_inspectable_has_ui_properties(self) -> None:
@@ -725,7 +725,7 @@ class DemoInspectableTests(unittest.TestCase):
 
     def test_demo_inspectable_inspector_panel_initializes(self) -> None:
         from pygame import Rect
-        from demo_features.new_systems_demo_feature import _DemoInspectable
+        from demo_features.systems_demo_feature import _DemoInspectable
         target = _DemoInspectable()
         model = PropertyInspectorModel(target)
         panel = PropertyInspectorPanel("test_pi", Rect(0, 0, 400, 300), model)

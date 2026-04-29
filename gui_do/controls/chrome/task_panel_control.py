@@ -39,6 +39,7 @@ class TaskPanelControl(PanelControl):
         self._hovered = False
         self._focus_mode_active = False
         self._child_local_offsets: Dict[object, Tuple[int, int]] = {}
+        self._focus_cycle_controls: list[object] = []
 
     def _compute_hidden_y(self) -> int:
         if self.dock_bottom:
@@ -48,16 +49,86 @@ class TaskPanelControl(PanelControl):
     def is_task_panel(self) -> bool:
         return True
 
-    def add(self, child):
+    def _reindex_focus_cycle_slots(self) -> None:
+        for index, node in enumerate(self._focus_cycle_controls):
+            setattr(node, "task_panel_focus_slot", int(index))
+
+    def add_focus_control(self, child, *, before_control_id: str | None = None, after_control_id: str | None = None):
+        """Atomically add a child and register it in task-panel focus cycle order."""
+        if before_control_id is not None and after_control_id is not None:
+            raise ValueError("before_control_id and after_control_id are mutually exclusive")
+
+        existing = next(
+            (node for node in self.children if node.control_id == child.control_id and node is not child),
+            None,
+        )
+        if existing is not None:
+            self.remove(existing, dispose=True)
+
         added = super().add(child)
         self._child_local_offsets[added] = (added.rect.x - self.rect.x, added.rect.y - self.rect.y)
+        self._focus_cycle_controls = [node for node in self._focus_cycle_controls if node is not added]
+
+        insert_index = len(self._focus_cycle_controls)
+        if before_control_id is not None:
+            before_index = next(
+                (i for i, node in enumerate(self._focus_cycle_controls) if node.control_id == before_control_id),
+                None,
+            )
+            if before_index is not None:
+                insert_index = before_index
+        elif after_control_id is not None:
+            after_index = next(
+                (i for i, node in enumerate(self._focus_cycle_controls) if node.control_id == after_control_id),
+                None,
+            )
+            if after_index is not None:
+                insert_index = after_index + 1
+
+        self._focus_cycle_controls.insert(insert_index, added)
+        self._reindex_focus_cycle_slots()
         return added
+
+    def add(self, child):
+        return self.add_focus_control(child)
 
     def remove(self, child, *, dispose: bool = False) -> bool:
         removed = super().remove(child, dispose=dispose)
         if removed:
             self._child_local_offsets.pop(child, None)
+            self._focus_cycle_controls = [node for node in self._focus_cycle_controls if node is not child]
         return removed
+
+    def task_panel_focus_controls(self) -> list:
+        """Return direct task-panel controls in add order for focus cycling."""
+        live_children = set(self.children)
+        seen_object_ids = set()
+        seen_control_ids = set()
+        ordered_live = []
+        for node in self._focus_cycle_controls:
+            if node not in live_children:
+                continue
+            object_id = id(node)
+            if object_id in seen_object_ids:
+                continue
+            if node.control_id in seen_control_ids:
+                continue
+            seen_object_ids.add(object_id)
+            seen_control_ids.add(node.control_id)
+            ordered_live.append(node)
+        # Self-heal if children were attached through alternate paths.
+        for child in self.children:
+            object_id = id(child)
+            if object_id in seen_object_ids:
+                continue
+            if child.control_id in seen_control_ids:
+                continue
+            seen_object_ids.add(object_id)
+            seen_control_ids.add(child.control_id)
+            ordered_live.append(child)
+        self._focus_cycle_controls = list(ordered_live)
+        self._reindex_focus_cycle_slots()
+        return list(self._focus_cycle_controls)
 
     def _sync_children_to_panel_position(self) -> None:
         live_children = set(self.children)

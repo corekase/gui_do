@@ -99,6 +99,12 @@ class TaskPanelFocusManager:
             self._remember_selection(scene, panel, target)
             return True
 
+        # Match normal Tab traversal semantics: after the focus hint times out,
+        # first Tab only re-shows the hint and does not move focus.
+        if not app.focus.should_draw_focus_hint():
+            app.focus.show_keyboard_hint_for_current_focus()
+            return True
+
         current_index = next((i for i, node in enumerate(candidates) if node is current), 0)
         offset = 1 if forward else -1
         next_index = (current_index + offset) % len(candidates)
@@ -149,13 +155,25 @@ class TaskPanelFocusManager:
 
     def _candidate_controls(self, panel) -> list:
         candidates = []
-        for node in panel.find_descendants(lambda candidate: True):
+        seen_object_ids = set()
+        seen_control_ids = set()
+        ordered_nodes = panel.find_descendants(lambda candidate: True)
+        read_focus_controls = getattr(panel, "task_panel_focus_controls", None)
+        if callable(read_focus_controls):
+            ordered_nodes = list(read_focus_controls())
+        for node in ordered_nodes:
+            object_id = id(node)
+            if object_id in seen_object_ids:
+                continue
+            if node.control_id in seen_control_ids:
+                continue
             if not self._is_descendant_focusable(node, panel):
                 continue
             if not self._is_task_panel_focus_candidate(node):
                 continue
+            seen_object_ids.add(object_id)
+            seen_control_ids.add(node.control_id)
             candidates.append(node)
-        candidates.sort(key=lambda node: (node.tab_index, node.control_id))
         return candidates
 
     @staticmethod

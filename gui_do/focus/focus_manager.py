@@ -6,6 +6,7 @@ from typing import List, Optional
 import pygame
 
 from .focus_hint_constants import FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS
+from ..controls.base.ui_node import UiNode
 
 _MODIFIER_KEYS: frozenset = frozenset((
     pygame.K_LSHIFT, pygame.K_RSHIFT,
@@ -223,6 +224,18 @@ class FocusManager:
             self._begin_focus_activation_visual(target)
 
     @staticmethod
+    def _is_actionable_focus_target(node) -> bool:
+        """Return True for key-activatable controls even when excluded from Tab order."""
+        invokes_click = getattr(type(node), "_invoke_click", None) is not UiNode._invoke_click
+        arms_focus_visual = (
+            getattr(type(node), "should_arm_focus_activation_for_event", None)
+            is not UiNode.should_arm_focus_activation_for_event
+        )
+        if not (invokes_click or arms_focus_visual):
+            return False
+        return bool(getattr(node, "key_activatable", True))
+
+    @staticmethod
     def _is_modifier_key_event(event) -> bool:
         """Return True when the event's key is a bare modifier (Shift, Ctrl, Alt, Meta)."""
         return event.key in _MODIFIER_KEYS
@@ -353,7 +366,9 @@ class FocusManager:
         if not self._is_focus_window_context_valid(focused):
             self.clear_focus()
             return
-        if focused.visible and focused.enabled and focused.accepts_focus():
+        if focused.visible and focused.enabled and (
+            focused.accepts_focus() or self._is_actionable_focus_target(focused)
+        ):
             return  # still valid, nothing to do
 
         window = self._find_ancestor_window(focused)

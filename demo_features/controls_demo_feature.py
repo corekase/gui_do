@@ -1345,17 +1345,33 @@ class ControlsShowcaseFeature(Feature):
         if screen_rect is None:
             screen_rect = host.app.screen.get_rect()
 
-        self.task_panel = host.app.add(
-            TaskPanelControl(
-                "control_showcase_task_panel",
-                Rect(0, screen_rect.height - self.TASK_PANEL_HEIGHT, screen_rect.width, self.TASK_PANEL_HEIGHT),
-                auto_hide=True,
+        ensure_task_panel = getattr(host, "ensure_scene_task_panel", None)
+        if callable(ensure_task_panel):
+            self.task_panel = ensure_task_panel(
+                self.scene_name,
+                control_id="control_showcase_task_panel",
+                height=self.TASK_PANEL_HEIGHT,
                 hidden_peek_pixels=self.TASK_PANEL_HIDDEN_PEEK_PIXELS,
                 animation_step_px=self.TASK_PANEL_ANIMATION_STEP_PX,
                 dock_bottom=True,
-            ),
-            scene_name=self.scene_name,
-        )
+                auto_hide=True,
+            )
+        else:
+            self.task_panel = host.app.add(
+                TaskPanelControl(
+                    "control_showcase_task_panel",
+                    Rect(0, screen_rect.height - self.TASK_PANEL_HEIGHT, screen_rect.width, self.TASK_PANEL_HEIGHT),
+                    auto_hide=True,
+                    hidden_peek_pixels=self.TASK_PANEL_HIDDEN_PEEK_PIXELS,
+                    animation_step_px=self.TASK_PANEL_ANIMATION_STEP_PX,
+                    dock_bottom=True,
+                ),
+                scene_name=self.scene_name,
+            )
+
+        register_task_panel = getattr(host, "register_scene_task_panel", None)
+        if callable(register_task_panel):
+            register_task_panel(self.scene_name, self.task_panel)
 
         return_rect = Rect(
             self.TASK_PANEL_BUTTON_LEFT,
