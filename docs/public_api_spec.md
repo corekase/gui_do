@@ -117,6 +117,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `SettingDescriptor`
 - `WorkspaceState`
 - `WorkspacePersistenceManager`
+- `DEFAULT_WORKSPACE_STATE_PATH`
 - `Router`
 - `RouteEntry`
 - `ThemeManager`

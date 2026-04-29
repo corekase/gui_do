@@ -10,6 +10,10 @@ from .scene_snapshot import SceneSnapshot
 from ..layout.dock_workspace import DockWorkspace
 
 
+# Default on-disk location for persisted workspace/session state.
+DEFAULT_WORKSPACE_STATE_PATH = Path.home() / ".gui_do" / "workspace_state.json"
+
+
 @dataclass(slots=True)
 class WorkspaceState:
     """Serializable workspace/session payload."""
@@ -46,7 +50,9 @@ class WorkspaceState:
         )
 
     def save(self, path: str | Path) -> None:
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        location = Path(path)
+        location.parent.mkdir(parents=True, exist_ok=True)
+        location.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
 
     @classmethod
     def load(cls, path: str | Path) -> "WorkspaceState":

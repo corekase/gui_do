@@ -35,6 +35,7 @@ from ..core.overlay_manager import OverlayManager
 from ..core.toast_manager import ToastManager
 from ..core.dialog_manager import DialogManager
 from ..core.drag_drop_manager import DragDropManager
+from ..core.workspace_persistence import WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
 
 
 @dataclass
@@ -974,7 +975,14 @@ class GuiApplication:
 
         return UiEngine(self, target_fps=target_fps).run(max_frames=max_frames)
 
-    def run_entrypoint(self, target_fps: int = 60) -> int:
+    def run_entrypoint(
+        self,
+        target_fps: int = 120,
+        *,
+        WORKSPACE_SAVE: bool = False,
+        workspace_manager: Optional[WorkspacePersistenceManager] = None,
+        workspace_path: str | Path = DEFAULT_WORKSPACE_STATE_PATH,
+    ) -> int:
         """Run app loop with final-layer exception handling and pygame shutdown.
 
         This helper is intended for top-level script entrypoints. It ensures
@@ -986,7 +994,15 @@ class GuiApplication:
         int
             ``0`` on a clean shutdown, ``1`` when an exception occurred.
         """
+        save_workspace = bool(WORKSPACE_SAVE)
+        manager = workspace_manager if workspace_manager is not None else WorkspacePersistenceManager()
         try:
+            if save_workspace:
+                try:
+                    self.load_workspace(manager, workspace_path)
+                except Exception:
+                    # Missing/invalid workspace state should not block app startup.
+                    pass
             self.run(target_fps=target_fps)
             return 0
         except Exception as exc:
@@ -1000,6 +1016,11 @@ class GuiApplication:
             )
             return 1
         finally:
+            if save_workspace:
+                try:
+                    self.save_workspace(manager, workspace_path)
+                except Exception:
+                    pass
             pygame.quit()
 
     def quit(self) -> None:

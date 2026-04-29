@@ -110,6 +110,7 @@ from gui_do import (
     SettingDescriptor,
     WorkspaceState,
     WorkspacePersistenceManager,
+    DEFAULT_WORKSPACE_STATE_PATH,
     Router,
     RouteEntry,
     ThemeManager,

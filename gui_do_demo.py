@@ -14,12 +14,9 @@ from gui_do import (
     PanelControl,
     ActionRegistry,
     FontRoleRegistry,
-    WorkspacePersistenceManager,
     SceneTransitionManager,
     SceneTransitionStyle,
 )
-
-_WORKSPACE_SAVE_PATH = "demo_features/data/workspace_autosave.json"
 
 
 class GuiDoDemo:
@@ -30,7 +27,6 @@ class GuiDoDemo:
 
     def __init__(self) -> None:
         """Initialize pygame, app services, scene state, and demo UI."""
-        pygame.init()
         self.screen = create_display((1920, 1080))
         pygame.display.set_caption("gui_do demo")
 
@@ -135,9 +131,6 @@ class GuiDoDemo:
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
 
-        # WorkspacePersistenceManager — auto-save/restore between sessions.
-        self.workspace_manager = WorkspacePersistenceManager()
-
         self.app.bind_features_runtime(self)
         self.app.prewarm_scene("control_showcase")
 
@@ -161,11 +154,6 @@ class GuiDoDemo:
         self.new_systems_toggle_window.set_accessibility(role="toggle", label="Show New Systems window")
         self.inbox_button.set_accessibility(role="button", label="Open notification panel")
         self.app.configure_features_accessibility(self, len(base_controls))
-        # Attempt to restore a previously saved workspace (best-effort; silently skipped on first run).
-        try:
-            self.app.load_workspace(self.workspace_manager, _WORKSPACE_SAVE_PATH)
-        except Exception:
-            pass
         self.app.switch_scene("main")
 
     def _build_control_showcase_scene(self) -> None:
@@ -181,13 +169,7 @@ class GuiDoDemo:
 
     def run(self) -> int:
         """Run demo with final-layer app error handling and return OS exit code."""
-        result = self.app.run_entrypoint(target_fps=120)
-        # Auto-save workspace layout so it can be restored on next launch.
-        try:
-            self.app.save_workspace(self.workspace_manager, _WORKSPACE_SAVE_PATH)
-        except Exception:
-            pass
-        return result
+        return self.app.run_entrypoint(target_fps=120)
 
     def _register_app_actions(self) -> None:
         """Declare all top-level demo actions on the shared ActionRegistry."""

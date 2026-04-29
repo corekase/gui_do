@@ -32,6 +32,9 @@ def create_display(
         Request vertical synchronization.  Silently falls back to no-vsync
         when the driver cannot provide it.
     """
+    # Centralize pygame startup in display creation for top-level apps.
+    pygame.init()
+
     flags = 0
     if fullscreen:
         flags |= pygame.FULLSCREEN

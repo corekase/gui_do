@@ -90,7 +90,7 @@ from .core.context_menu_manager import ContextMenuManager, ContextMenuItem, Cont
 from .controls.splitter_control import SplitterControl
 from .core.state_machine import StateMachine
 from .core.settings_registry import SettingsRegistry, SettingDescriptor
-from .core.workspace_persistence import WorkspaceState, WorkspacePersistenceManager
+from .core.workspace_persistence import WorkspaceState, WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
 from .core.router import Router, RouteEntry
 from .theme.theme_manager import ThemeManager, DesignTokens
 from .controls.text_area_control import TextAreaControl
@@ -254,6 +254,7 @@ __all__ = [
     "SettingDescriptor",
     "WorkspaceState",
     "WorkspacePersistenceManager",
+    "DEFAULT_WORKSPACE_STATE_PATH",
     "Router",
     "RouteEntry",
     "ThemeManager",
