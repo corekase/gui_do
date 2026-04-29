@@ -159,6 +159,26 @@ from .introspection.property_registry import ui_property, PropertyDescriptor, Pr
 from .introspection.property_inspector import PropertyInspectorModel, InspectedProperty
 from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
 from .persistence.scene_snapshot import SceneSnapshot, NodeSnapshot
+from .graphics.dirty_region import DirtyRegionTracker
+from .graphics.draw_context import DrawContext, DrawPhase
+from .graphics.asset_registry import AssetRegistry
+from .graphics.debug_overlay import DebugOverlay
+from .events.input_snapshot import InputSnapshot
+from .events.signal import Signal, SignalConnection
+from .data.validator import (
+    ValidationResult,
+    Validator,
+    RequiredValidator,
+    RangeValidator,
+    LengthValidator,
+    PatternValidator,
+    CustomValidator,
+    DependentValidator,
+    ValidationPipeline,
+)
+from .layout.viewport import Viewport
+from .state.hierarchical_state_machine import HierarchicalStateMachine
+from .focus.focus_ring import FocusRing
 
 __all__ = [
     "GuiApplication",
@@ -377,6 +397,26 @@ __all__ = [
     "property_registry",
     "SceneSnapshot",
     "NodeSnapshot",
+    "DirtyRegionTracker",
+    "DrawContext",
+    "DrawPhase",
+    "AssetRegistry",
+    "DebugOverlay",
+    "InputSnapshot",
+    "Signal",
+    "SignalConnection",
+    "ValidationResult",
+    "Validator",
+    "RequiredValidator",
+    "RangeValidator",
+    "LengthValidator",
+    "PatternValidator",
+    "CustomValidator",
+    "DependentValidator",
+    "ValidationPipeline",
+    "Viewport",
+    "HierarchicalStateMachine",
+    "FocusRing",
     "Alignment",
     "PlacementResult",
     "PopupPlacement",
