@@ -86,6 +86,27 @@ class FocusTraversalAndActionsTests(unittest.TestCase):
         finally:
             pygame.quit()
 
+    def test_tab_does_not_cycle_focus_while_command_palette_open(self) -> None:
+        pygame.init()
+        try:
+            app = GuiApplication(Surface((320, 180)))
+            root = app.add(PanelControl("root", Rect(0, 0, 320, 180)))
+            first = root.add(_FocusableProbe("first", Rect(20, 40, 80, 20), tab_index=0))
+            root.add(_FocusableProbe("second", Rect(20, 70, 80, 20), tab_index=1))
+            app.focus.set_focus(first, via_keyboard=True)
+
+            app.overlay.has_overlay = lambda overlay_id: overlay_id == "__command_palette__"
+
+            event = app.event_manager.to_gui_event(pygame.event.Event(pygame.KEYDOWN, {"key": pygame.K_TAB, "mod": 0}))
+            consumed = app.keyboard.route_key_event(app.scene, event, app, None)
+
+            self.assertTrue(consumed)
+            self.assertTrue(event.default_prevented)
+            self.assertTrue(event.propagation_stopped)
+            self.assertIs(app.focus.focused_node, first)
+        finally:
+            pygame.quit()
+
     def test_shift_tab_with_no_prior_focus_sets_first_focus(self) -> None:
         pygame.init()
         try:

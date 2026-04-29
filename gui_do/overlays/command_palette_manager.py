@@ -12,6 +12,7 @@ from .overlay_manager import OverlayHandle, OverlayManager
 from ..events.gui_event import EventType
 from ..controls.composite.overlay_panel_control import OverlayPanelControl
 from ..controls.data.list_view_control import ListItem, ListViewControl
+from ..graphics.built_in_definitions import BUILT_IN_COLOURS
 
 if TYPE_CHECKING:
     from ..app.gui_application import GuiApplication
@@ -19,6 +20,31 @@ if TYPE_CHECKING:
 _PAD = 6
 _ROW_H = 28
 _MAX_VISIBLE_ROWS = 10
+
+
+def _resolved_none_color(theme) -> tuple[int, int, int] | tuple[int, int, int, int]:
+    def _valid_color(value) -> bool:
+        if not isinstance(value, (tuple, list)):
+            return False
+        if len(value) not in (3, 4):
+            return False
+        return all(isinstance(component, int) and 0 <= component <= 255 for component in value)
+
+    none_color = getattr(theme, "none", None)
+    if _valid_color(none_color):
+        return tuple(none_color)
+    shadow_color = getattr(theme, "shadow", None)
+    if _valid_color(shadow_color):
+        return tuple(shadow_color)
+    return (0, 0, 0)
+
+
+def _resolved_highlight_color(theme) -> tuple[int, int, int] | tuple[int, int, int, int]:
+    highlight_color = getattr(theme, "highlight", None)
+    if isinstance(highlight_color, (tuple, list)) and len(highlight_color) in (3, 4):
+        if all(isinstance(component, int) and 0 <= component <= 255 for component in highlight_color):
+            return tuple(highlight_color)
+    return tuple(BUILT_IN_COLOURS["highlight"])
 
 
 class _CommandPalettePanel(OverlayPanelControl):
@@ -62,6 +88,122 @@ class _CommandPalettePanel(OverlayPanelControl):
 
         return super().handle_event(event, app)
 
+    def draw_screen_phase(self, surface: "pygame.Surface", theme) -> None:
+        pygame.draw.rect(surface, theme.medium, self.rect)
+        for child in self.children:
+            if child.visible:
+                child.draw(surface, theme)
+        border_color = _resolved_none_color(theme)
+        pygame.draw.rect(surface, border_color, self.rect, width=1)
+
+
+class _CommandPaletteListView(ListViewControl):
+    def __init__(self, control_id: str, rect: Rect, items=None, *, row_height: int = _ROW_H, selected_index: int = -1) -> None:
+        super().__init__(control_id, rect, items=items, row_height=row_height, selected_index=selected_index)
+        self._toggle_visual_cache: Dict[tuple, object] = {}
+        self._scene_visual_cache: Dict[tuple, object] = {}
+
+    def draw(self, surface: "pygame.Surface", theme) -> None:
+        if not self.visible:
+            return
+        r = self.rect
+        pygame.draw.rect(surface, theme.medium, r)
+
+        vh = self._viewport_height()
+        if self._parent_scroll_view() is not None and not self._show_scrollbar:
+            first_row = 0
+            last_row = len(self._items)
+        else:
+            first_row = self._scroll_offset // self._row_height
+            last_row = min(len(self._items), first_row + vh // self._row_height + 2)
+
+        content_w = r.width
+        if self._scrollbar_rect() is not None:
+            content_w = max(1, content_w - 12)
+        content_rect = Rect(r.x, r.y, content_w, r.height)
+
+        clip = surface.get_clip()
+        surface.set_clip(content_rect.clip(clip) if clip else content_rect)
+        selected_border_color = _resolved_highlight_color(theme)
+        for i in range(first_row, last_row):
+            if i >= len(self._items):
+                break
+            item = self._items[i]
+            row_y = r.y + i * self._row_height - self._scroll_offset
+            row_rect = Rect(content_rect.x, row_y, content_rect.width, self._row_height)
+            entry = item.data
+            is_selected = i in self._selected_set
+
+            if is_selected:
+                pygame.draw.rect(surface, theme.medium, row_rect)
+
+            if isinstance(entry, CommandEntry) and entry.render_kind == "window_toggle":
+                self._draw_window_toggle_row(surface, theme, row_rect, entry)
+                if is_selected:
+                    pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
+                continue
+
+            self._draw_standard_row(surface, theme, row_rect, item, selected=is_selected)
+            if is_selected:
+                pygame.draw.rect(surface, selected_border_color, row_rect, width=1)
+
+        surface.set_clip(clip)
+
+        sb_rect = self._scrollbar_rect()
+        handle_rect = self._scrollbar_handle_rect()
+        if sb_rect is not None and handle_rect is not None:
+            pygame.draw.rect(surface, theme.medium, sb_rect)
+            pygame.draw.rect(surface, theme.medium, handle_rect, border_radius=2)
+
+    def _draw_standard_row(self, surface: "pygame.Surface", theme, row_rect: Rect, item: ListItem, *, selected: bool = False) -> None:
+        entry = item.data
+        if isinstance(entry, CommandEntry) and entry.category == "Scenes":
+            factory = theme.graphics_factory
+            font_revision = factory.font_revision()
+            scene_rect = Rect(row_rect.x + 2, row_rect.y + 2, max(1, row_rect.width - 4), max(1, row_rect.height - 4))
+            scene_text = str(entry.title)
+            visual_key = (scene_text, scene_rect.width, scene_rect.height, font_revision)
+            visuals = self._scene_visual_cache.get(visual_key)
+            if visuals is None:
+                visuals = factory.build_interactive_visuals("round", scene_text, scene_rect, font_role="body")
+                self._scene_visual_cache[visual_key] = visuals
+            selected_surface = factory.resolve_visual_state(
+                visuals,
+                visible=True,
+                enabled=bool(item.enabled),
+                armed=False,
+                hovered=False,
+            )
+            surface.blit(selected_surface, scene_rect)
+            return
+
+        if self._draw_font is None:
+            self._draw_font = pygame.font.SysFont(None, 18)
+        font = self._draw_font
+        text_color = theme.text
+        if not item.enabled:
+            text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
+        text_surf = font.render(item.label, True, text_color)
+        surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
+
+    def _draw_window_toggle_row(self, surface: "pygame.Surface", theme, row_rect: Rect, entry: "CommandEntry") -> None:
+        factory = theme.graphics_factory
+        font_revision = factory.font_revision()
+        button_rect = Rect(row_rect.x + 2, row_rect.y + 2, max(1, row_rect.width - 4), max(1, row_rect.height - 4))
+        visual_key = (entry.title, button_rect.width, button_rect.height, font_revision)
+        visuals = self._toggle_visual_cache.get(visual_key)
+        if visuals is None:
+            visuals = factory.build_interactive_visuals("box", entry.title, button_rect, font_role="body")
+            self._toggle_visual_cache[visual_key] = visuals
+        selected = factory.resolve_visual_state(
+            visuals,
+            visible=True,
+            enabled=True,
+            armed=bool(entry.window_visible),
+            hovered=False,
+        )
+        surface.blit(selected, button_rect)
+
 
 @dataclass
 class CommandEntry:
@@ -80,6 +222,8 @@ class CommandEntry:
     action: Callable[[], None]
     description: str = ""
     category: str = ""
+    render_kind: str = ""
+    window_visible: bool = False
 
 
 class CommandPaletteHandle:
@@ -279,7 +423,7 @@ class CommandPaletteManager:
             rect.height - _PAD * 2,
         )
         selected_index = self._selected_index_for_entry_id(current_entries, selected_entry_id)
-        listview = ListViewControl(
+        listview = _CommandPaletteListView(
             self._OWNER_ID + "_list",
             list_rect,
             items=self._build_items(current_entries),
@@ -444,6 +588,8 @@ class CommandPaletteManager:
                     title=window_title,
                     action=lambda target=window: self._toggle_builtin_window(app, target),
                     category="Windows",
+                    render_kind="window_toggle",
+                    window_visible=bool(getattr(window, "visible", False)),
                 )
             )
 

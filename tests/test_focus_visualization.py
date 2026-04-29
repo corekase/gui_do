@@ -96,6 +96,14 @@ class FocusVisualizerDrawingTests(unittest.TestCase):
             self.visualizer.draw_hints(self.surface, self.theme)
             mock_line.assert_not_called()
 
+    def test_draw_hints_suppresses_non_palette_focus_hint_while_command_palette_open(self) -> None:
+        self.app.overlay = SimpleNamespace(has_overlay=lambda overlay_id: overlay_id == "__command_palette__")
+        node = UiNode("n", Rect(10, 10, 100, 100))
+        self.manager.set_focus(node, via_keyboard=True)
+        with patch("pygame.draw.line") as mock_line:
+            self.visualizer.draw_hints(self.surface, self.theme)
+            mock_line.assert_not_called()
+
     def test_draw_dashed_rect_draws_lines(self) -> None:
         rect = Rect(10, 10, 100, 100)
         with patch("pygame.draw.line") as mock_line:

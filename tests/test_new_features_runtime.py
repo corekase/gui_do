@@ -865,6 +865,89 @@ class TestCommandPaletteManagerRegistry(unittest.TestCase):
         listview = captured["panel"].children[0]
         self.assertEqual(listview.selected_index, 1)
 
+    def test_window_entries_draw_with_toggle_visual_state(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPaletteListView
+
+        surface = pygame.Surface((320, 120))
+        theme = MagicMock()
+        theme.background = (0, 0, 0)
+        theme.highlight = (10, 20, 30)
+        theme.text = (220, 220, 220)
+        theme.dark = (20, 20, 20)
+        theme.medium = (40, 40, 40)
+        theme.graphics_factory.font_revision.return_value = 0
+        theme.graphics_factory.build_interactive_visuals.return_value = "visuals"
+        theme.graphics_factory.resolve_visual_state.side_effect = [surface, surface]
+
+        items = [
+            ListItem(label="Windows: Life", data=CommandEntry("w1", "Life", action=lambda: None, category="Windows", render_kind="window_toggle", window_visible=True)),
+            ListItem(label="Windows: System", data=CommandEntry("w2", "System", action=lambda: None, category="Windows", render_kind="window_toggle", window_visible=False)),
+        ]
+        listview = _CommandPaletteListView("palette", Rect(0, 0, 320, 56), items=items, row_height=28)
+
+        listview.draw(surface, theme)
+
+        resolve_calls = theme.graphics_factory.resolve_visual_state.call_args_list
+        self.assertEqual(resolve_calls[0].kwargs["armed"], True)
+        self.assertEqual(resolve_calls[1].kwargs["armed"], False)
+
+    def test_scene_entries_draw_with_rounded_box_style(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPaletteListView
+
+        surface = pygame.Surface((320, 60))
+        theme = MagicMock()
+        theme.background = (0, 0, 0)
+        theme.highlight = (10, 20, 30)
+        theme.text = (220, 220, 220)
+        theme.dark = (20, 20, 20)
+        theme.medium = (40, 40, 40)
+        theme.graphics_factory.font_revision.return_value = 0
+        theme.graphics_factory.build_interactive_visuals.return_value = "scene_visuals"
+        theme.graphics_factory.resolve_visual_state.return_value = surface
+
+        items = [
+            ListItem(label="Scenes: Desktop Demo", data=CommandEntry("scene:main", "Desktop Demo", action=lambda: None, category="Scenes")),
+        ]
+        listview = _CommandPaletteListView("palette", Rect(0, 0, 320, 28), items=items, row_height=28, selected_index=0)
+
+        listview.draw(surface, theme)
+
+        theme.graphics_factory.build_interactive_visuals.assert_called_once_with(
+            "round",
+            "Desktop Demo",
+            Rect(2, 2, 316, 24),
+            font_role="body",
+        )
+        theme.graphics_factory.resolve_visual_state.assert_called_once_with(
+            "scene_visuals",
+            visible=True,
+            enabled=True,
+            armed=False,
+            hovered=False,
+        )
+
+    def test_command_palette_panel_draws_medium_background(self) -> None:
+        from gui_do.overlays.command_palette_manager import _CommandPalettePanel, _CommandPaletteListView
+
+        surface = pygame.Surface((320, 120))
+        theme = MagicMock()
+        theme.medium = (12, 34, 56)
+        theme.none = (1, 2, 3)
+        theme.background = (0, 0, 0)
+        theme.highlight = (10, 20, 30)
+        theme.text = (220, 220, 220)
+        theme.dark = (20, 20, 20)
+
+        listview = _CommandPaletteListView("palette", Rect(10, 10, 300, 80), items=[])
+        panel = _CommandPalettePanel("panel", Rect(0, 0, 320, 120), listview=listview)
+        panel.add(listview)
+
+        with patch("pygame.draw.rect") as mock_rect:
+            panel.draw_screen_phase(surface, theme)
+
+        self.assertTrue(any(call.args[1] == theme.medium and call.args[2] == panel.rect for call in mock_rect.call_args_list))
+        self.assertTrue(any(call.args[1] == theme.none and call.args[2] == panel.rect and call.kwargs.get("width") == 1 for call in mock_rect.call_args_list))
+
     def test_move_selection_by_wheel_moves_up_and_down(self) -> None:
         p = self._palette()
         items = [ListItem(label=f"Item {i}") for i in range(6)]

@@ -44,11 +44,8 @@ class FocusVisualizer:
         if not callable(has_overlay) or not has_overlay("__command_palette__"):
             return False
         module_name = str(getattr(node.__class__, "__module__", ""))
-        class_name = str(getattr(node.__class__, "__name__", ""))
-        return class_name == "MenuBarControl" and module_name in {
-            "gui_do.controls.chrome.menu_bar_control",
-            "gui_do.controls.chrome.scene_menu_strip_control",
-        }
+        # While command palette is open, only draw focus hints for palette-owned controls.
+        return module_name != "gui_do.overlays.command_palette_manager"
 
     def draw_hints(self, surface: "pygame.Surface", theme) -> None:
         """Draw focus hint for the currently focused node."""

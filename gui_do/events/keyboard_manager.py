@@ -16,6 +16,12 @@ class KeyboardManager:
 
     def route_key_event(self, scene, event, app, screen_event_handler: Optional[Callable[[object], bool]] = None) -> bool:
         if event.is_key_down(pygame.K_TAB):
+            overlay = getattr(app, "overlay", None)
+            has_overlay = getattr(overlay, "has_overlay", None)
+            if callable(has_overlay) and has_overlay("__command_palette__"):
+                event.prevent_default()
+                event.stop_propagation()
+                return True
             shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
             focus_scope = scene.active_window()
             pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
