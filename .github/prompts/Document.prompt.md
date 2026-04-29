@@ -21,7 +21,7 @@ Follow that with a "Package Management" section with "Start a New Project" and "
 
 And then following that cover the rest of the public API.  Sections should be ordered in the same order you will be typically using them in your own code.  Subsections should cover their topics from the beginner aspects towards the more advanced aspects.
 
-When documentaion is done updating place a github unittest badge for this package at the beginning of the readme.
+When documentation is done updating place a github unittest badge for this package at the beginning of the readme.
 
 Place the exact text from the following lines just below the github unittest badge:
 
