@@ -88,7 +88,13 @@ class TaskPanelControl(PanelControl):
         self._sync_children_to_panel_position()
         raw = event.pos
         if isinstance(raw, tuple) and len(raw) == 2:
-            self._hovered = self.rect.collidepoint(raw)
+            overlay = getattr(app, "overlay", None)
+            has_palette = (
+                callable(getattr(overlay, "has_overlay", None))
+                and overlay.has_overlay("__command_palette__")
+            )
+            if not has_palette:
+                self._hovered = self.rect.collidepoint(raw)
         return super().handle_event(event, app)
 
     def reconcile_hover(self, wants_hover: bool) -> None:

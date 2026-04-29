@@ -8589,8 +8589,50 @@ class TaskPanelControlTests(unittest.TestCase):
         tp = TaskPanelControl("my_tp", _Rect(0, 0, 800, 50))
         self.assertEqual(tp.control_id, "my_tp")
 
+    def test_hover_not_updated_while_command_palette_open(self) -> None:
+        """Task panel _hovered must not change while __command_palette__ overlay is active."""
+        from unittest.mock import MagicMock
+        from gui_do.events.gui_event import GuiEvent, EventType
 
-class RichLabelControlTests(unittest.TestCase):
+        tp = TaskPanelControl("tp", _Rect(0, 400, 800, 50), auto_hide=True)
+        # Seed hover state as True (panel raised).
+        tp._hovered = True
+
+        overlay_mock = MagicMock()
+        overlay_mock.has_overlay.return_value = True  # palette active
+
+        app = MagicMock()
+        app.overlay = overlay_mock
+
+        # MOUSE_MOTION with pos outside the panel rect — normally would set _hovered=False.
+        evt = GuiEvent(kind=EventType.MOUSE_MOTION, type=0, pos=(100, 100))
+        tp.handle_event(evt, app)
+
+        # _hovered must remain True (frozen while palette is open).
+        self.assertTrue(tp._hovered)
+
+    def test_hover_updated_normally_when_command_palette_not_open(self) -> None:
+        """Task panel _hovered updates normally when no command palette overlay is active."""
+        from unittest.mock import MagicMock
+        from gui_do.events.gui_event import GuiEvent, EventType
+
+        tp = TaskPanelControl("tp", _Rect(0, 400, 800, 50), auto_hide=True)
+        tp._hovered = True
+
+        overlay_mock = MagicMock()
+        overlay_mock.has_overlay.return_value = False  # no palette
+
+        app = MagicMock()
+        app.overlay = overlay_mock
+
+        # MOUSE_MOTION with pos outside the panel rect — should set _hovered=False.
+        evt = GuiEvent(kind=EventType.MOUSE_MOTION, type=0, pos=(100, 100))
+        tp.handle_event(evt, app)
+
+        self.assertFalse(tp._hovered)
+
+
+
     """RichLabelControl: text, font_role, align, color."""
 
     def test_text(self) -> None:
