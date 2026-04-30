@@ -80,6 +80,9 @@ from .features.feature_lifecycle import (
     toggle_window_visibility,
     create_anchored_feature_window,
     add_window_scene_menu_strip,
+    inset_rect,
+    centered_horizontal_strip_layout,
+    split_slot_bounds,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
@@ -292,6 +295,9 @@ __all__ = [
     "toggle_window_visibility",
     "create_anchored_feature_window",
     "add_window_scene_menu_strip",
+    "inset_rect",
+    "centered_horizontal_strip_layout",
+    "split_slot_bounds",
     "TweenManager",
     "TweenHandle",
     "Easing",

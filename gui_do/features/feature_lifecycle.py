@@ -368,6 +368,52 @@ def add_window_scene_menu_strip(
         )
     )
 
+
+def inset_rect(rect, *, padding_x: int = 0, padding_y: int = 0):
+    """Return rect inset by symmetric horizontal/vertical padding."""
+    from pygame import Rect as _Rect
+
+    px = max(0, int(padding_x))
+    py = max(0, int(padding_y))
+    width = max(1, int(rect.width) - (px * 2))
+    height = max(1, int(rect.height) - (py * 2))
+    return _Rect(int(rect.left) + px, int(rect.top) + py, width, height)
+
+
+def centered_horizontal_strip_layout(
+    *,
+    left: int,
+    width: int,
+    y: int,
+    item_count: int,
+    item_height: int,
+    spacing: int,
+):
+    """Return equally-sized horizontal item rects centered inside a strip width."""
+    from pygame import Rect as _Rect
+
+    count = max(1, int(item_count))
+    strip_width = max(1, int(width))
+    gap = max(0, int(spacing))
+    slot_width = max(1, (strip_width - (gap * (count - 1))) // count)
+    used_width = (slot_width * count) + (gap * (count - 1))
+    strip_left = int(left) + max(0, (strip_width - used_width) // 2)
+
+    rects = []
+    for index in range(count):
+        x = strip_left + (index * (slot_width + gap))
+        rects.append(_Rect(x, int(y), slot_width, int(item_height)))
+    return rects
+
+
+def split_slot_bounds(slots) -> tuple[int, int]:
+    """Return the left edge of first slot and right edge of last slot."""
+    if not slots:
+        return 0, 0
+    first = slots[0]
+    last = slots[-1]
+    return int(first.left), int(last.right)
+
 @dataclass(slots=True)
 class FeatureMessage:
     """Structured message envelope used for inter-feature transport."""

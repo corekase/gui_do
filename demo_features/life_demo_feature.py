@@ -9,14 +9,17 @@ from pygame import Rect
 from gui_do import (
     ButtonControl,
     CanvasControl,
+    centered_horizontal_strip_layout,
     create_anchored_feature_window,
     FeatureMessage,
+    inset_rect,
     LayoutAxis,
     add_window_scene_menu_strip,
     LogicFeature,
     minimize_window_menu_entries,
     RoutedFeature,
     SliderControl,
+    split_slot_bounds,
     toggle_window_visibility,
     ToggleControl,
     WindowControl,
@@ -250,53 +253,46 @@ class LifeSimulationFeature(RoutedFeature):
             use_frame_backdrop=True,
         )
         content_rect = self.window.content_rect()
-        left = content_rect.left
-        top = content_rect.top
-        width = content_rect.width
-        height = content_rect.height
+        padded_content_rect = inset_rect(content_rect, padding_x=10, padding_y=10)
+        left = padded_content_rect.left
+        top = padded_content_rect.top
+        width = padded_content_rect.width
+        height = padded_content_rect.height
         menu_h = 28
         control_height = 28
-        padding = 10
-        controls_gap = padding
+        controls_gap = 10
         control_spacing = 12
 
         self.menu_bar = add_window_scene_menu_strip(
             self.window,
             host,
             control_id="life_window_menu",
-            rect=Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
+            rect=Rect(left, top, max(120, width), menu_h),
             scene_name="main",
             on_minimize=self._toggle_window_visible,
             scenes_shown=False,
             windows_shown=False,
             extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
         )
-        top = self.menu_bar.rect.bottom + padding
-        height = max(1, content_rect.bottom - top)
+        top = self.menu_bar.rect.bottom + 10
+        height = max(1, padded_content_rect.bottom - top)
 
-        controls_y = top + height - control_height - padding
-        canvas_height = max(1, controls_y - controls_gap - (top + padding))
+        controls_y = top + height - control_height - 10
+        canvas_height = max(1, controls_y - controls_gap - top)
 
         self.canvas = self.window.add(
-            canvas_control_cls("life_canvas", Rect(left + padding, top + padding, width - (padding * 2), canvas_height), max_events=256)
+            canvas_control_cls("life_canvas", Rect(left, top, width, canvas_height), max_events=256)
         )
 
-        row_width = max(1, width - (padding * 2))
-        slot_count = 4
-        slot_width = max(1, (row_width - (control_spacing * (slot_count - 1))) // slot_count)
-        strip_width = (slot_width * slot_count) + (control_spacing * (slot_count - 1))
-        strip_left = left + padding + max(0, (row_width - strip_width) // 2)
-        host.app.layout.set_linear_properties(
-            anchor=(strip_left, controls_y),
-            item_width=slot_width,
+        slots = centered_horizontal_strip_layout(
+            left=left,
+            width=width,
+            y=controls_y,
+            item_count=4,
             item_height=control_height,
             spacing=control_spacing,
-            horizontal=True,
         )
-        life_reset_rect = host.app.layout.next_linear()
-        life_toggle_rect = host.app.layout.next_linear()
-        zoom_slider_slot_1 = host.app.layout.next_linear()
-        zoom_slider_slot_2 = host.app.layout.next_linear()
+        life_reset_rect, life_toggle_rect, zoom_slider_slot_1, zoom_slider_slot_2 = slots
 
         self.reset_button = self.window.add(
             button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle", font_role=self.font_role("control"))
@@ -313,14 +309,13 @@ class LifeSimulationFeature(RoutedFeature):
             )
         )
 
-        slider_left = zoom_slider_slot_1.left
-        slider_right = zoom_slider_slot_2.right
+        slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
         slider_height = 20
         slider_y = controls_y + max(0, (control_height - slider_height) // 2)
         self.zoom_slider = self.window.add(
             slider_control_cls(
                 "life_zoom",
-            Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
+                Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
                 layout_axis_cls.HORIZONTAL,
                 0.0,
                 11.0,

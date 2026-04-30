@@ -11,7 +11,9 @@ from gui_do import (
     add_window_scene_menu_strip,
     ButtonControl,
     CanvasControl,
+    centered_horizontal_strip_layout,
     create_anchored_feature_window,
+    inset_rect,
     LabelControl,
     LogicFeature,
     minimize_window_menu_entries,
@@ -482,6 +484,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             use_frame_backdrop=True,
         )
         content_rect = self.window.content_rect()
+        padded_content_rect = inset_rect(content_rect, padding_x=8, padding_y=8)
         padding = 8
         menu_h = 28
 
@@ -489,7 +492,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             self.window,
             host,
             control_id="mandel_window_menu",
-            rect=Rect(content_rect.left + padding, content_rect.top + padding, content_rect.width - (padding * 2), menu_h),
+            rect=Rect(padded_content_rect.left, padded_content_rect.top, padded_content_rect.width, menu_h),
             scene_name="main",
             on_minimize=self._toggle_window_visible,
             scenes_shown=False,
@@ -498,7 +501,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         )
 
         # Help label at top
-        help_rect = Rect(content_rect.left + padding, self.menu_bar.rect.bottom + 6, content_rect.width - padding * 2, 20)
+        help_rect = Rect(padded_content_rect.left, self.menu_bar.rect.bottom + 6, padded_content_rect.width, 20)
         self.help_label = host.app.style_label(
             self.window.add(
                 label_control_cls(
@@ -519,9 +522,9 @@ class MandelbrotRenderFeature(RoutedFeature):
 
         # Available space for canvases
         canvas_area_top = help_rect.bottom
-        canvas_area_bottom = content_rect.bottom - bottom_visual_padding - controls_and_status_height
+        canvas_area_bottom = padded_content_rect.bottom - bottom_visual_padding - controls_and_status_height
         canvas_area_height = canvas_area_bottom - canvas_area_top
-        canvas_area_width = content_rect.width - padding * 2
+        canvas_area_width = padded_content_rect.width
 
         # Canvas layout
         grid_gap = 6
@@ -529,7 +532,7 @@ class MandelbrotRenderFeature(RoutedFeature):
 
         # Primary canvas (full width)
         primary_canvas_rect = Rect(
-            content_rect.left + padding,
+            padded_content_rect.left,
             canvas_area_top,
             canvas_area_width,
             canvas_area_height
@@ -540,7 +543,7 @@ class MandelbrotRenderFeature(RoutedFeature):
 
         # Split canvases in 2x2 grid
         canvas1_rect = Rect(
-            content_rect.left + padding,
+            padded_content_rect.left,
             canvas_area_top,
             split_size,
             (canvas_area_height - grid_gap) // 2
@@ -552,7 +555,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             (canvas_area_height - grid_gap) // 2
         )
         canvas3_rect = Rect(
-            content_rect.left + padding,
+            padded_content_rect.left,
             canvas1_rect.bottom + grid_gap,
             split_size,
             (canvas_area_height - grid_gap) // 2
@@ -573,26 +576,16 @@ class MandelbrotRenderFeature(RoutedFeature):
         # Controls at bottom: evenly divide a padded strip across all controls,
         # then center each control inside its slot with extra inner spacing.
         controls_y = canvas_area_bottom + 6
-        control_count = 5
         row_strip_padding = 12
-        slot_inner_padding = 8
-        strip_left = content_rect.left + padding + row_strip_padding
-        strip_width = max(1, canvas_area_width - (row_strip_padding * 2))
-        slot_width = strip_width / float(control_count)
-
-        def control_rect_at(index: int) -> Rect:
-            slot_left = strip_left + int(round(slot_width * index))
-            next_slot_left = strip_left + int(round(slot_width * (index + 1)))
-            slot_pixel_width = max(1, next_slot_left - slot_left)
-            control_width = max(1, slot_pixel_width - (slot_inner_padding * 2))
-            control_left = slot_left + ((slot_pixel_width - control_width) // 2)
-            return Rect(control_left, controls_y, control_width, control_height)
-
-        mandel_reset_rect = control_rect_at(0)
-        mandel_iter_rect = control_rect_at(1)
-        mandel_recur_rect = control_rect_at(2)
-        mandel_one_split_rect = control_rect_at(3)
-        mandel_four_split_rect = control_rect_at(4)
+        slots = centered_horizontal_strip_layout(
+            left=padded_content_rect.left + row_strip_padding,
+            width=max(1, canvas_area_width - (row_strip_padding * 2)),
+            y=controls_y,
+            item_count=5,
+            item_height=control_height,
+            spacing=8,
+        )
+        mandel_reset_rect, mandel_iter_rect, mandel_recur_rect, mandel_one_split_rect, mandel_four_split_rect = slots
 
         self.reset_button = self.window.add(
             button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(host), style="angle", font_role=self.font_role("control"))
@@ -621,7 +614,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         default_status = self.status_text
         self.status_label = host.app.style_label(
             self.window.add(
-                label_control_cls("mandel_status", Rect(content_rect.left + padding, status_y, canvas_area_width, status_height), default_status)
+                label_control_cls("mandel_status", Rect(padded_content_rect.left, status_y, canvas_area_width, status_height), default_status)
             ),
             role=self.font_role("status"),
         )
