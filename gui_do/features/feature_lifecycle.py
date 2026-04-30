@@ -1,5 +1,21 @@
-
+# from __future__ import annotations
 from __future__ import annotations
+# ---------------------------------------------------------------------------
+# Type checking imports for static analysis only
+# ---------------------------------------------------------------------------
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Corrected import paths for type checking
+    from gui_do.app.gui_application import GuiApplication
+    from gui_do.controls.base.ui_node import UiNode as Control
+    from gui_do.controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem, SceneMenuStripControl
+    from gui_do.controls.display.label_control import LabelControl
+    from gui_do.telemetry.telemetry import telemetry_collector
+    from gui_do.app.error_handling import logical_error
+    from collections.abc import Callable, Iterable, Mapping, Deque
+    from typing import Any, Optional, Dict, List
+
 # ---------------------------------------------------------------------------
 # Additional Demo/Feature Helpers (2026-04-30)
 # ---------------------------------------------------------------------------
@@ -82,7 +98,7 @@ def register_features_and_scenes(app, features, scenes):
     for scene_name, root in scenes:
         app.add_scene(scene_name, root)
 from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
-from ..app.error_handling import logical_error
+from ..app.error_handling import logical_error, report_nonfatal_error
 from time import perf_counter
 from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from typing import Mapping

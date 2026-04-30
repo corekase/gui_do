@@ -35,8 +35,12 @@ parameter is expected.
 """
 from __future__ import annotations
 
+
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any, Mapping
 
 
 @dataclass(frozen=True)

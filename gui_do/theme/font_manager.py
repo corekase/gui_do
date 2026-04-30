@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pygame
+    from typing import Any, Dict, List, Optional, Tuple
+    from gui_do.app.error_handling import logical_error, report_nonfatal_error
 
 import pygame
 
