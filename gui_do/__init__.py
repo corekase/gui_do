@@ -83,7 +83,7 @@ from .features.feature_lifecycle import (
     inset_rect,
     centered_horizontal_strip_layout,
     split_slot_bounds,
-    partition_canvas_area,
+    partition_rects,
     place_control,
     place_control_unlabeled,
     register_placed_control,

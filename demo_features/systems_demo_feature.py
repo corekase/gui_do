@@ -255,8 +255,14 @@ class SystemsDemoFeature(RoutedFeature):
             "gimbot": "demo_features/data/fonts/Gimbot.ttf",
             "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
         }
+        # Use the global font role registry from the app
+        font_roles = getattr(host, "font_roles", None)
+        if font_roles is None:
+            font_roles = self.font_roles if hasattr(self, "font_roles") else None
+        if font_roles is None:
+            raise RuntimeError("No global font role registry available for SystemsDemoFeature")
         setup_standard_font_roles(
-            host.font_roles,
+            font_roles,
             fonts,
             {
                 "system.window_title": {"font": "ubuntu_b", "size": 28},
@@ -264,6 +270,12 @@ class SystemsDemoFeature(RoutedFeature):
                 "system.label": {"font": "gimbot", "size": 16},
             },
         )
+        if "system.window_title" not in font_roles:
+            font_roles.define(
+                "system.window_title",
+                size=28,
+                file_path=fonts["ubuntu_b"],
+            )
         self.use_font_roles(
             {
                 "window_title": "system.window_title",

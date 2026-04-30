@@ -25,6 +25,7 @@ from gui_do import (
     WindowControl,
 )
 from gui_do import set_window_visible_state, setup_standard_font_roles
+from gui_do import partition_rects
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -292,15 +293,17 @@ class LifeSimulationFeature(RoutedFeature):
 
         controls_y = top + height - control_height - 10
 
-        # Use partition_canvas_area for single canvas
-        from gui_do import partition_canvas_area
+        grid_gap = 6
+        bottom_visual_padding = 0
+        controls_and_status_height = 0
         padded_rect = Rect(left, top, width, max(1, controls_y - controls_gap - top))
-        [canvas_rect] = partition_canvas_area(
+        [canvas_rect] = partition_rects(
             padded_rect,
-            mode="single",
-            grid_gap=6,
-            bottom_visual_padding=0,
-            controls_and_status_height=0,
+            rows=1,
+            cols=1,
+            gap=grid_gap,
+            bottom_padding=bottom_visual_padding,
+            controls_and_status_height=controls_and_status_height,
         )
         self.canvas = self.window.add(
             canvas_control_cls("life_canvas", canvas_rect, max_events=256)

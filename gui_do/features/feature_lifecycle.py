@@ -686,72 +686,69 @@ def split_slot_bounds(slots) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 # Canvas/grid partitioning helpers
 # ---------------------------------------------------------------------------
-def partition_canvas_area(
-    padded_content_rect,
+def partition_rects(
+    padded_rect,
     *,
-    mode: str = "single",
-    grid_gap: int = 6,
-    bottom_visual_padding: int = 5,
+    rows: int = 1,
+    cols: int = 1,
+    count: int = None,
+    gap: int = 0,
+    padding: int = 0,
+    bottom_padding: int = 0,
+    right_padding: int = 0,
     controls_and_status_height: int = 0,
-):
+) -> list:
     """
-    Partition a padded content rect into either a single canvas or a 2x2 grid.
+    Partition a padded_rect into an arbitrary grid of sub-rects.
+
+    Args:
+        padded_rect: The outer pygame.Rect or (x, y, w, h) tuple.
+        rows: Number of rows to split into (default 1).
+        cols: Number of columns to split into (default 1).
+        count: If set, splits into this many rects (row-major order, fills rows first).
+        gap: Gap (pixels) between rects.
+        padding: Padding inside the outer rect (applied to all sides).
+        bottom_padding: Extra padding at the bottom.
+        right_padding: Extra padding at the right.
+        controls_and_status_height: Height to subtract from bottom (for controls/status).
 
     Returns:
-        If mode == "single":
-            [primary_canvas_rect]
-        If mode == "2x2":
-            [canvas1_rect, canvas2_rect, canvas3_rect, canvas4_rect]
+        List of pygame.Rects subdividing the area.
     """
     from pygame import Rect as _Rect
 
-    canvas_area_top = getattr(padded_content_rect, "top", padded_content_rect[1])
-    canvas_area_bottom = getattr(padded_content_rect, "bottom", padded_content_rect[1] + padded_content_rect[3])
-    canvas_area_bottom = canvas_area_bottom - bottom_visual_padding - controls_and_status_height
-    canvas_area_height = canvas_area_bottom - canvas_area_top
-    canvas_area_width = getattr(padded_content_rect, "width", padded_content_rect[2])
-    canvas_area_left = getattr(padded_content_rect, "left", padded_content_rect[0])
+    x0 = getattr(padded_rect, "left", padded_rect[0]) + padding
+    y0 = getattr(padded_rect, "top", padded_rect[1]) + padding
+    width = getattr(padded_rect, "width", padded_rect[2]) - (padding * 2) - right_padding
+    height = getattr(padded_rect, "height", padded_rect[3]) - (padding * 2) - bottom_padding - controls_and_status_height
 
-    if mode == "single":
-        primary_canvas_rect = _Rect(
-            canvas_area_left,
-            canvas_area_top,
-            canvas_area_width,
-            canvas_area_height,
-        )
-        return [primary_canvas_rect]
+    if rows < 1:
+        rows = 1
+    if cols < 1:
+        cols = 1
 
-    elif mode == "2x2":
-        split_size = (canvas_area_width - grid_gap) // 2
-        half_height = (canvas_area_height - grid_gap) // 2
-        canvas1_rect = _Rect(
-            canvas_area_left,
-            canvas_area_top,
-            split_size,
-            half_height,
-        )
-        canvas2_rect = _Rect(
-            canvas1_rect.right + grid_gap,
-            canvas_area_top,
-            split_size,
-            half_height,
-        )
-        canvas3_rect = _Rect(
-            canvas_area_left,
-            canvas1_rect.bottom + grid_gap,
-            split_size,
-            half_height,
-        )
-        canvas4_rect = _Rect(
-            canvas1_rect.right + grid_gap,
-            canvas1_rect.bottom + grid_gap,
-            split_size,
-            half_height,
-        )
-        return [canvas1_rect, canvas2_rect, canvas3_rect, canvas4_rect]
+    total_gap_x = gap * (cols - 1)
+    total_gap_y = gap * (rows - 1)
+    cell_w = max(1, (width - total_gap_x) // cols)
+    cell_h = max(1, (height - total_gap_y) // rows)
 
-    else:
-        raise ValueError(f"Unknown partition mode: {mode}")
+    # Distribute rounding error evenly across cells
+    extra_ws = [1 if i < (width - total_gap_x) % cols else 0 for i in range(cols)]
+    extra_hs = [1 if i < (height - total_gap_y) % rows else 0 for i in range(rows)]
+
+    rects = []
+    for row in range(rows):
+        y = y0 + row * (cell_h + gap) + sum(extra_hs[:row])
+        h = cell_h + extra_hs[row]
+        for col in range(cols):
+            if count is not None and len(rects) >= count:
+                break
+            x = x0 + col * (cell_w + gap) + sum(extra_ws[:col])
+            w = cell_w + extra_ws[col]
+            rects.append(_Rect(x, y, w, h))
+        if count is not None and len(rects) >= count:
+            break
+    return rects
 
 @dataclass(slots=True)
 class FeatureMessage:
