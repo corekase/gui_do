@@ -35,7 +35,20 @@ class TextAreaControl(AbstractTextInputControl):
             return 0
         line_idx = max(0, rel_y // line_h)
         line_idx = min(line_idx, len(lines) - 1)
-        abs_offset = sum(len(lines[i]) + 1 for i in range(line_idx))
+        # Map wrapped lines to the correct character index in the underlying value
+        abs_offset = 0
+        value = self._value
+        wrapped_lines = lines
+        value_idx = 0
+        for i in range(line_idx):
+            line = wrapped_lines[i]
+            # Advance value_idx to the start of the next wrapped line
+            # Skip over the characters in this line
+            value_idx += len(line)
+            # If the next character in value is a newline, skip it
+            if value_idx < len(value) and value[value_idx:value_idx+1] == "\n":
+                value_idx += 1
+        abs_offset = value_idx
         line_text = lines[line_idx]
         rel_x = x - self.rect.left - _H_PAD
         if rel_x <= 0:
@@ -243,7 +256,7 @@ class TextAreaControl(AbstractTextInputControl):
             if not self.rect.collidepoint(event.pos):
                 return False
             # Use unified caret placement logic
-            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
+            idx = self.get_char_index_at_pixel(event.pos[0], event.pos[1], theme)
             self._cursor_pos = idx
             self._sel_anchor = idx
             self._sel_active = idx
@@ -253,7 +266,7 @@ class TextAreaControl(AbstractTextInputControl):
             return True
 
         if event.kind == EventType.MOUSE_MOTION and self._drag_selecting:
-            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
+            idx = self.get_char_index_at_pixel(event.pos[0], event.pos[1], theme)
             self._sel_active = idx
             self._cursor_pos = idx
             self.invalidate()
