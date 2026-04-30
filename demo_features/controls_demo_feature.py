@@ -65,6 +65,7 @@ from gui_do import (
     ToggleControl,
     TreeControl,
     TreeNode,
+    resolve_scene_selection_callback,
     ui_property,
 )
 
@@ -206,11 +207,7 @@ class ControlsShowcaseFeature(Feature):
                 return []
             return [MenuEntry("Tools", tools_items)]
 
-        scene_select = getattr(
-            getattr(host, "scene_transitions", None),
-            "go",
-            getattr(host.app, "switch_scene", lambda _scene: None),
-        )
+        scene_select = resolve_scene_selection_callback(host)
 
         host.control_showcase_menu_bar = host.control_showcase_root.add(
             SceneMenuStripControl(

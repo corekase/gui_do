@@ -9,14 +9,15 @@ from pygame import Rect
 from gui_do import (
     ButtonControl,
     CanvasControl,
-    ContextMenuItem,
     FeatureMessage,
     LayoutAxis,
-    MenuEntry,
     LogicFeature,
+    minimize_window_menu_entries,
+    resolve_scene_selection_callback,
     RoutedFeature,
     SceneMenuStripControl,
     SliderControl,
+    toggle_window_visibility,
     ToggleControl,
     WindowControl,
 )
@@ -266,14 +267,8 @@ class LifeSimulationFeature(RoutedFeature):
                 scene_name="main",
                 scenes_shown=False,
                 windows_shown=False,
-                extra_entries_provider=lambda: [
-                    MenuEntry("WIndow", [ContextMenuItem("Minimize", action=self._toggle_window_visible)])
-                ],
-                on_scene_selected=getattr(
-                    getattr(host, "scene_transitions", None),
-                    "go",
-                    getattr(host.app, "switch_scene", lambda _scene: None),
-                ),
+                extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
+                on_scene_selected=resolve_scene_selection_callback(host),
             )
         )
         top = self.menu_bar.rect.bottom + padding
@@ -439,29 +434,19 @@ class LifeSimulationFeature(RoutedFeature):
         self.update_life()
 
     def _toggle_window_visible(self) -> None:
-        next_visible = not bool(self.window is not None and self.window.visible)
-        if self.window is not None:
-            self.window.visible = next_visible
-        demo = self.demo
-        if demo is not None:
-            if hasattr(demo, "set_life_window_visible"):
-                demo.set_life_window_visible(next_visible)
-            elif hasattr(demo, "life_toggle_window") and demo.life_toggle_window is not None:
-                demo.life_toggle_window.pushed = next_visible
+        toggle_window_visibility(
+            self.window,
+            host=self.demo,
+            host_setter_name="set_life_window_visible",
+            host_toggle_attr_name="life_toggle_window",
+        )
 
     def _minimize_window(self) -> None:
         self._toggle_window_visible()
 
-    def _menu_entries(self) -> list[MenuEntry]:
+    def _menu_entries(self):
         """Compatibility helper retained for menu runtime tests."""
-        return [
-            MenuEntry(
-                "WIndow",
-                [
-                    ContextMenuItem("Minimize", action=self._toggle_window_visible),
-                ],
-            )
-        ]
+        return minimize_window_menu_entries(self._toggle_window_visible)
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""

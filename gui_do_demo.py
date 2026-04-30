@@ -17,6 +17,7 @@ from gui_do import (
     SceneTransitionManager,
     SceneTransitionStyle,
     CommandPaletteManager,
+    set_window_visible_state,
 )
 
 
@@ -246,25 +247,31 @@ class GuiDoDemo:
         self.scene_transitions.go("main")
 
     def set_life_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        show = bool(visible)
-        self.life_window.visible = show
-        if not from_toggle and self.life_toggle_window is not None:
-            self.life_toggle_window.pushed = show
-        self.app.tile_windows()
+        set_window_visible_state(
+            self.life_window,
+            visible,
+            toggle=self.life_toggle_window,
+            from_toggle=from_toggle,
+            tile_windows=self.app.tile_windows,
+        )
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        show = bool(visible)
-        self.mandel_window.visible = show
-        if not from_toggle and self.mandel_toggle_window is not None:
-            self.mandel_toggle_window.pushed = show
-        self.app.tile_windows()
+        set_window_visible_state(
+            self.mandel_window,
+            visible,
+            toggle=self.mandel_toggle_window,
+            from_toggle=from_toggle,
+            tile_windows=self.app.tile_windows,
+        )
 
     def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        show = bool(visible)
-        self.systems_window.visible = show
-        if not from_toggle and self.systems_toggle_window is not None:
-            self.systems_toggle_window.pushed = show
-        self.app.tile_windows()
+        set_window_visible_state(
+            self.systems_window,
+            visible,
+            toggle=self.systems_toggle_window,
+            from_toggle=from_toggle,
+            tile_windows=self.app.tile_windows,
+        )
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""

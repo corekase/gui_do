@@ -74,6 +74,10 @@ from .features.feature_lifecycle import (
     FrameTimer,
     TabPanelManager,
     WindowRelativeRect,
+    resolve_scene_selection_callback,
+    minimize_window_menu_entries,
+    set_window_visible_state,
+    toggle_window_visibility,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
@@ -280,6 +284,10 @@ __all__ = [
     "FrameTimer",
     "TabPanelManager",
     "WindowRelativeRect",
+    "resolve_scene_selection_callback",
+    "minimize_window_menu_entries",
+    "set_window_visible_state",
+    "toggle_window_visibility",
     "TweenManager",
     "TweenHandle",
     "Easing",

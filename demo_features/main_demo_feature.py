@@ -51,6 +51,7 @@ from gui_do import (
     SelectionModel,
     SettingsRegistry,
     ShortcutHelpOverlay,
+    resolve_scene_selection_callback,
     SplitterControl,
     StateMachine,
     ThemeManager,
@@ -112,11 +113,7 @@ class MainDemoFeature(Feature):
                 return []
             return [MenuEntry("Tools", tools_items)]
 
-        scene_select = getattr(
-            getattr(host, "scene_transitions", None),
-            "go",
-            getattr(host.app, "switch_scene", lambda _scene: None),
-        )
+        scene_select = resolve_scene_selection_callback(host)
 
         host.desktop_menu_bar = host.root.add(
             SceneMenuStripControl(

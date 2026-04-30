@@ -9,6 +9,8 @@ from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
 from ..app.error_handling import logical_error, report_nonfatal_error
 from ..telemetry.telemetry import telemetry_collector
+from ..controls.chrome.menu_bar_control import MenuEntry
+from ..overlays.context_menu_manager import ContextMenuItem
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +222,85 @@ class TabPanelManager:
     def keys(self):
         """Return the registered tab keys."""
         return list(self._panels.keys())
+
+
+# ---------------------------------------------------------------------------
+# Feature utility helpers
+# ---------------------------------------------------------------------------
+
+def resolve_scene_selection_callback(host) -> Callable[[str], None]:
+    """Resolve scene-selection callback from host transitions, with app fallback."""
+    scene_transitions = getattr(host, "scene_transitions", None)
+    if scene_transitions is not None and hasattr(scene_transitions, "go"):
+        return scene_transitions.go
+    app = getattr(host, "app", None)
+    if app is not None and hasattr(app, "switch_scene"):
+        return app.switch_scene
+    return lambda _scene_name: None
+
+
+def minimize_window_menu_entries(
+    on_minimize: Callable[[], None],
+    *,
+    menu_label: str = "WIndow",
+    item_label: str = "Minimize",
+) -> list[MenuEntry]:
+    """Return a standard minimize-only menu entry list for SceneMenuStripControl."""
+    return [
+        MenuEntry(
+            str(menu_label),
+            [
+                ContextMenuItem(str(item_label), action=on_minimize),
+            ],
+        )
+    ]
+
+
+def set_window_visible_state(
+    window,
+    visible: bool,
+    *,
+    toggle=None,
+    from_toggle: bool = False,
+    tile_windows: Optional[Callable[[], None]] = None,
+) -> None:
+    """Apply canonical window/toggle visibility synchronization used by demo hosts."""
+    is_visible = bool(visible)
+    if window is not None:
+        window.visible = is_visible
+    if not from_toggle and toggle is not None and hasattr(toggle, "pushed"):
+        toggle.pushed = is_visible
+    if tile_windows is not None:
+        tile_windows()
+
+
+def toggle_window_visibility(
+    window,
+    *,
+    host=None,
+    host_setter_name: Optional[str] = None,
+    host_toggle_attr_name: Optional[str] = None,
+) -> bool:
+    """Toggle a window and sync host toggles using either host setter or toggle attr."""
+    next_visible = not bool(window is not None and window.visible)
+    if window is not None:
+        window.visible = next_visible
+
+    if host is None:
+        return next_visible
+
+    if host_setter_name:
+        setter = getattr(host, host_setter_name, None)
+        if callable(setter):
+            setter(next_visible)
+            return next_visible
+
+    if host_toggle_attr_name:
+        toggle = getattr(host, host_toggle_attr_name, None)
+        if toggle is not None and hasattr(toggle, "pushed"):
+            toggle.pushed = next_visible
+
+    return next_visible
 
 @dataclass(slots=True)
 class FeatureMessage:
