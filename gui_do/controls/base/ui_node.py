@@ -378,6 +378,10 @@ class UiNode:
         return False
 
     def handle_routed_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # --- Ensure theme is always valid and has fonts ---
+        from ...theme.color_theme import ColorTheme
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            theme = ColorTheme()
         if event.phase is EventPhase.CAPTURE:
             return bool(self.on_event_capture(event, app, theme=theme))
         if event.phase is EventPhase.BUBBLE:
@@ -408,6 +412,12 @@ class UiNode:
         """Window-phase draw. No-op for most nodes; PanelControl renders window children here."""
 
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
+        # --- Ensure theme is always valid and has fonts ---
+        from ...theme.color_theme import ColorTheme
+        if _theme is None or not hasattr(_theme, "fonts") or _theme.fonts is None:
+            _theme = ColorTheme()
+        # Subclasses should override this method for custom drawing.
+        pass
         """Draw control onto target surface."""
 
     # ------------------------------------------------------------------

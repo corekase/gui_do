@@ -250,12 +250,14 @@ class PanelControl(UiNode):
                 child.update(dt_seconds)
 
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # Release pointer capture if needed
         if self._pending_capture_release_owner_id is not None:
             owner_id = self._pending_capture_release_owner_id
             if app.pointer_capture.is_owned_by(owner_id):
                 app.pointer_capture.end(owner_id)
             self._pending_capture_release_owner_id = None
 
+        # Cancel drag if window is no longer valid
         if self._drag_window is not None:
             invalid_drag_window = (
                 self._drag_window not in self.children
@@ -270,6 +272,8 @@ class PanelControl(UiNode):
 
         raw = event.pos
 
+        # --- Handle window chrome events before children ---
+        # Mouse motion: dragging window
         if event.is_mouse_motion() and self._drag_window is not None:
             rel = event.rel
             if isinstance(rel, tuple) and len(rel) == 2:
@@ -284,8 +288,8 @@ class PanelControl(UiNode):
             event.prevent_default()
             event.stop_propagation()
             return True
-        return self._dispatch_children(event, app, reverse=False, theme=theme)
 
+        # Mouse up: end drag
         if event.is_mouse_up(1) and self._drag_window is not None:
             app.pointer_capture.end(self._drag_window.control_id)
             self._drag_window = None
@@ -294,30 +298,42 @@ class PanelControl(UiNode):
             event.stop_propagation()
             return True
 
+        # Mouse down: check window chrome (titlebar/lower control)
         if event.is_mouse_down(1) and isinstance(raw, tuple) and len(raw) == 2:
-            window = self._top_window_at(raw)
-            if window is not None:
-                self._set_active_window(window)
-                if window.lower_control_rect().collidepoint(raw):
-                    self._lower_window(window)
-                    new_top = self._top_visible_window()
-                    if new_top is None:
-                        self._clear_active_windows()
-                    else:
-                        self._set_active_window(new_top)
-                    event.prevent_default()
-                    event.stop_propagation()
-                    return True
-                self._raise_window(window)
-                if window.title_bar_rect().collidepoint(raw):
-                    self._drag_window = window
-                    self._drag_last_pos = raw
-                    app.pointer_capture.begin(window.control_id, app.surface.get_rect())
-                    event.prevent_default()
-                    event.stop_propagation()
-                    return True
+            # Check all windows, topmost first
+            for window in reversed(self.children):
+                if not self._is_window_like(window) or not window.visible or not window.enabled:
+                    continue
+                if window.rect.collidepoint(raw):
+                    self._set_active_window(window)
+                    # Lower control
+                    if window.lower_control_rect().collidepoint(raw):
+                        self._lower_window(window)
+                        new_top = self._top_visible_window()
+                        if new_top is None:
+                            self._clear_active_windows()
+                        else:
+                            self._set_active_window(new_top)
+                        event.prevent_default()
+                        event.stop_propagation()
+                        return True
+                    # Titlebar drag
+                    if window.title_bar_rect().collidepoint(raw):
+                        self._raise_window(window)
+                        self._drag_window = window
+                        self._drag_last_pos = raw
+                        app.pointer_capture.begin(window.control_id, app.surface.get_rect())
+                        event.prevent_default()
+                        event.stop_propagation()
+                        return True
+                    # If click is in window but not chrome, raise window
+                    self._raise_window(window)
+                    break
 
-        return self._dispatch_children(event, app, reverse=False)
+        # --- End window chrome handling ---
+
+        # Fallback: dispatch to children
+        return self._dispatch_children(event, app, reverse=False, theme=theme)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         return self._dispatch_children(event, app, reverse=True, theme=theme)

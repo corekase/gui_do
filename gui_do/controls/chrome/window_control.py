@@ -123,8 +123,13 @@ class WindowControl(UiNode):
         self._active = is_active
 
     def title_bar_rect(self) -> Rect:
+        # Calculate the titlebar width as the window width minus the lower control width (if present and valid)
         lower_rect = self.lower_control_rect()
-        width = max(0, lower_rect.left - self.rect.left)
+        lower_left = lower_rect.left if lower_rect.left > self.rect.left else self.rect.right
+        width = max(0, lower_left - self.rect.left)
+        # Fallback: if lower control is missing or overlaps, use the full width
+        if width == 0 or width > self.rect.width or lower_left > self.rect.right or lower_left <= self.rect.left:
+            width = self.rect.width
         return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
 
     def content_rect(self) -> Rect:
@@ -259,6 +264,9 @@ class WindowControl(UiNode):
         surface.blit(title_bitmap, title_rect.topleft, source_rect)
         draw_rect(surface, theme.dark, self.rect, 2)
         surface.blit(self._chrome.lower_control, self.lower_control_rect().topleft)
+
+        # Debug overlay removed; normal rendering restored.
+
         if not self.enabled:
             overlay_size = (self.rect.width, self.rect.height)
             if self._disabled_overlay is None or self._disabled_overlay_size != overlay_size:

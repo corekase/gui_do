@@ -190,6 +190,10 @@ class Scene:
 
     @staticmethod
     def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # --- Ensure theme is always valid and has fonts ---
+        from ..theme.color_theme import ColorTheme
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            theme = ColorTheme()
         return bool(node.handle_routed_event(event, app, theme=theme))
 
     def top_focus_target_at(self, pos) -> UiNode | None:

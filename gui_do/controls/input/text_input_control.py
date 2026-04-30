@@ -389,9 +389,10 @@ class TextInputControl(_TextEditFocusBase):
         return max(0, min(best_idx, len(self._value)))
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
-        """Return font instance from theme using centralized font role."""
-        if theme is None or not hasattr(theme, "fonts"):
-            raise RuntimeError("TextInputControl requires a valid theme with fonts for font rendering. Test helpers must provide a mock theme with a fonts attribute.")
+        """Return font instance from theme using centralized font role. Always provides a valid theme with fonts."""
+        from ...theme.color_theme import ColorTheme
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            theme = ColorTheme()
         return theme.fonts.font_instance(getattr(self, "_font_role", "text_input.text"), size=20)
 
     def _reset_blink(self) -> None:
