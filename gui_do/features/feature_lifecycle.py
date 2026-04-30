@@ -1,19 +1,12 @@
-"""Shared Feature abstractions for managed lifecycle composition."""
-
 from __future__ import annotations
-
-from collections import OrderedDict, deque
-from dataclasses import dataclass
-import inspect
+from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
+from ..app.error_handling import logical_error
 from time import perf_counter
-from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
-from ..app.error_handling import logical_error, report_nonfatal_error
 from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
+from typing import Mapping
+import inspect
 from ..telemetry.telemetry import telemetry_collector
-from ..controls.chrome.menu_bar_control import MenuEntry
-from ..overlays.context_menu_manager import ContextMenuItem
-
-
+from collections import deque, OrderedDict
 # ---------------------------------------------------------------------------
 # FrameTimer
 # ---------------------------------------------------------------------------
@@ -27,10 +20,6 @@ class FrameTimer:
             def __init__(self) -> None:
                 self._timer = FrameTimer()
 
-            def on_update(self, host) -> None:
-                dt = self._timer.tick()
-                my_system.update(dt)
-
     The first call to :meth:`tick` always returns ``0.0`` so that the initial
     frame does not produce a spurious large delta.
     """
@@ -40,6 +29,7 @@ class FrameTimer:
 
     def tick(self) -> float:
         """Return seconds elapsed since the previous call, or ``0.0`` on first call."""
+        from time import perf_counter
         now = perf_counter()
         if self._last == 0.0:
             self._last = now
@@ -51,11 +41,176 @@ class FrameTimer:
     def reset(self) -> None:
         """Reset internal clock so the next :meth:`tick` returns ``0.0``."""
         self._last = 0.0
+from dataclasses import dataclass
+# Generic placed control record for tracking placements
+@dataclass(slots=True)
+class PlacedControl:
+    control: object
+    label: object | None
+    name: str
+    column_index: int
+    row_index: int
+from ..controls.display.label_control import LabelControl
+def place_control(
+    container,
+    name: str,
+    label_text: str,
+    control,
+    control_rect,
+    *,
+    label_font_role: str = "body",
+    control_font_role: str = "body",
+    focusable: bool,
+    accessibility_role: str | None = None,
+    accessibility_label: str | None = None,
+    column_index: int = 0,
+    row_index: int = 0,
+    placed_controls: list = None,
+    control_labels: list = None,
+    focus_controls: list = None,
+    controls: list = None,
+):
+    """
+    Place a labeled control in a container, creating and positioning the label and control.
+    Optionally tracks placed controls, labels, and focusable controls.
+    """
 
+    from pygame import Rect as _Rect
+    label_rect = _Rect(control_rect.left, control_rect.top, control_rect.width, 18)
+    control_top = control_rect.top + 18 + 4
+    control_height = max(1, control_rect.height - 18 - 4)
+    actual_control_rect = _Rect(control_rect.left, control_top, control_rect.width, control_height)
+    label = None
+    if label_text:
+        label = container.add(LabelControl(f"label_{name}", label_rect, label_text, align="left"))
+        label.font_role = label_font_role
+        if control_labels is not None:
+            control_labels.append(label)
+    register_placed_control(
+        container,
+        name,
+        control,
+        actual_control_rect,
+        label,
+        control_font_role=control_font_role,
+        focusable=focusable,
+        accessibility_role=accessibility_role,
+        accessibility_label=accessibility_label,
+        column_index=column_index,
+        row_index=row_index,
+        placed_controls=placed_controls,
+        control_labels=control_labels,
+        focus_controls=focus_controls,
+        controls=controls,
+    )
 
-# ---------------------------------------------------------------------------
-# WindowRelativeRect
-# ---------------------------------------------------------------------------
+def place_control_unlabeled(
+    container,
+    name: str,
+    control,
+    control_rect,
+    *,
+    control_font_role: str = "body",
+    focusable: bool,
+    accessibility_role: str | None = None,
+    accessibility_label: str | None = None,
+    column_index: int = 0,
+    row_index: int = 0,
+    placed_controls: list = None,
+    control_labels: list = None,
+    focus_controls: list = None,
+    controls: list = None,
+):
+    """
+    Place an unlabeled control in a container.
+    Optionally tracks placed controls and focusable controls.
+    """
+    from pygame import Rect as _Rect
+    register_placed_control(
+        container,
+        name,
+        control,
+        _Rect(control_rect),
+        None,
+        control_font_role=control_font_role,
+        focusable=focusable,
+        accessibility_role=accessibility_role,
+        accessibility_label=accessibility_label,
+        column_index=column_index,
+        row_index=row_index,
+        placed_controls=placed_controls,
+        control_labels=control_labels,
+        focus_controls=focus_controls,
+        controls=controls,
+    )
+
+def register_placed_control(
+    container,
+    name: str,
+    control,
+    actual_control_rect,
+    label,
+    *,
+    control_font_role: str = "body",
+    focusable: bool,
+    accessibility_role: str | None,
+    accessibility_label: str | None,
+    column_index: int = 0,
+    row_index: int = 0,
+    placed_controls: list = None,
+    control_labels: list = None,
+    focus_controls: list = None,
+    controls: list = None,
+):
+    """
+    Register a control (and optional label) in a container, set geometry, accessibility, and focus.
+    Optionally tracks placed controls, labels, and focusable controls.
+    """
+    if label is not None:
+        container.add(label)
+        if control_labels is not None:
+            control_labels.append(label)
+    control.set_rect(actual_control_rect)
+    control.enabled = True
+    if hasattr(control, "font_role"):
+        try:
+            control.font_role = control_font_role
+        except Exception:
+            pass
+    if accessibility_role is not None and accessibility_label is not None:
+        control.set_accessibility(role=accessibility_role, label=accessibility_label)
+    if focusable:
+        if focus_controls is not None:
+            focus_controls.append(control)
+    else:
+        control.set_tab_index(-1)
+    container.add(control)
+    if controls is not None:
+        controls.append(control)
+    if placed_controls is not None:
+        placed_controls.append(PlacedControl(
+            control=control,
+            label=label,
+            name=name,
+            column_index=column_index,
+            row_index=row_index,
+        ))
+
+def add_group_label(container, name: str, text: str, group_rect, *, label_font_role: str = "body", control_labels: list = None):
+    """
+    Add a group label to a container and optionally track it.
+    """
+    from pygame import Rect as _Rect
+    label = LabelControl(
+        f"group_label_{name}",
+        _Rect(group_rect.left, group_rect.top, group_rect.width, 18),
+        text,
+        align="left",
+    )
+    label.font_role = label_font_role
+    container.add(label)
+    if control_labels is not None:
+        control_labels.append(label)
 
 class WindowRelativeRect:
     """A rect that resolves to absolute screen coordinates relative to a live window.

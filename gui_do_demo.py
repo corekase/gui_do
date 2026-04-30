@@ -17,7 +17,6 @@ from gui_do import (
     SceneTransitionManager,
     SceneTransitionStyle,
     CommandPaletteManager,
-    set_window_visible_state,
 )
 
 
@@ -246,32 +245,29 @@ class GuiDoDemo:
     def go_to_main(self) -> None:
         self.scene_transitions.go("main")
 
+
     def set_life_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(
-            self.life_window,
-            visible,
-            toggle=self.life_toggle_window,
-            from_toggle=from_toggle,
-            tile_windows=self.app.tile_windows,
-        )
+        self.life_window.visible = visible
+        if hasattr(self, 'life_toggle_window') and callable(self.life_toggle_window):
+            self.life_toggle_window(visible)
+        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
+            self.app.tile_windows()
+
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(
-            self.mandel_window,
-            visible,
-            toggle=self.mandel_toggle_window,
-            from_toggle=from_toggle,
-            tile_windows=self.app.tile_windows,
-        )
+        self.mandel_window.visible = visible
+        if hasattr(self, 'mandel_toggle_window') and callable(self.mandel_toggle_window):
+            self.mandel_toggle_window(visible)
+        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
+            self.app.tile_windows()
+
 
     def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(
-            self.systems_window,
-            visible,
-            toggle=self.systems_toggle_window,
-            from_toggle=from_toggle,
-            tile_windows=self.app.tile_windows,
-        )
+        self.systems_window.visible = visible
+        if hasattr(self, 'systems_toggle_window') and callable(self.systems_toggle_window):
+            self.systems_toggle_window(visible)
+        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
+            self.app.tile_windows()
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""

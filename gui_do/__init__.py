@@ -84,6 +84,11 @@ from .features.feature_lifecycle import (
     centered_horizontal_strip_layout,
     split_slot_bounds,
     partition_canvas_area,
+    place_control,
+    place_control_unlabeled,
+    register_placed_control,
+    add_group_label,
+    PlacedControl,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl

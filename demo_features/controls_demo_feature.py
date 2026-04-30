@@ -84,7 +84,7 @@ class _ShowcaseInspectable:
     def label(self) -> str:
         return self._label
 
-    @label.setter
+    from gui_do import PlacedControl
     def label(self, v: str) -> None:
         self._label = str(v)
 
@@ -116,13 +116,7 @@ class _ShowcaseInspectable:
         self._priority = int(v)
 
 
-@dataclass(slots=True)
-class _PlacedControl:
-    control: object
-    label: LabelControl | None
-    name: str
-    column_index: int
-    row_index: int
+
 
 
 class ControlsShowcaseFeature(Feature):
@@ -179,7 +173,8 @@ class ControlsShowcaseFeature(Feature):
 
         self.controls: list = []
         self.control_labels: list[LabelControl] = []
-        self.placed_controls: list[_PlacedControl] = []
+        from gui_do import PlacedControl
+        self.placed_controls: list[PlacedControl] = []
         self._focus_controls: list = []
         self._initial_focus_control = None
         self._pending_initial_focus = False
@@ -255,12 +250,20 @@ class ControlsShowcaseFeature(Feature):
         arrow_cell_w = max(20, (arrow_left_half_w - self.INNER_GAP) // 2)
         arrow_cell_h = arrow_slot_h
         arrow_group_h = (arrow_cell_h * 2) + row_gap
-        self._add_group_label(host, "arrowboxes", "ArrowBoxes", Rect(col0_x, col0_y, arrow_left_half_w, arrow_group_h))
+        from gui_do import add_group_label, place_control, place_control_unlabeled
+        add_group_label(
+            host.control_showcase_root,
+            "arrowboxes",
+            "ArrowBoxes",
+            Rect(col0_x, col0_y, arrow_left_half_w, arrow_group_h),
+            label_font_role=self._label_font_role,
+            control_labels=self.control_labels,
+        )
         arrow_row0_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP
         arrow_second_row_y = arrow_row0_y + arrow_cell_h + row_gap
 
-        self._place_control_unlabeled(
-            host,
+        place_control_unlabeled(
+            host.control_showcase_root,
             "arrow_up",
             ArrowBoxControl("control_arrow_up", Rect(0, 0, 1, 1), 90),
             Rect(col0_x, arrow_row0_y, arrow_cell_w, arrow_cell_h),
@@ -269,9 +272,13 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Arrow up",
             column_index=0,
             row_index=0,
+            placed_controls=self.placed_controls,
+            control_labels=self.control_labels,
+            focus_controls=self._focus_controls,
+            controls=self.controls,
         )
-        self._place_control_unlabeled(
-            host,
+        place_control_unlabeled(
+            host.control_showcase_root,
             "arrow_down",
             ArrowBoxControl("control_arrow_down", Rect(0, 0, 1, 1), 270),
             Rect(col0_x + arrow_cell_w + self.INNER_GAP, arrow_row0_y, arrow_cell_w, arrow_cell_h),
@@ -280,9 +287,13 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Arrow down",
             column_index=0,
             row_index=1,
+            placed_controls=self.placed_controls,
+            control_labels=self.control_labels,
+            focus_controls=self._focus_controls,
+            controls=self.controls,
         )
-        self._place_control_unlabeled(
-            host,
+        place_control_unlabeled(
+            host.control_showcase_root,
             "arrow_left",
             ArrowBoxControl("control_arrow_left", Rect(0, 0, 1, 1), 180),
             Rect(col0_x, arrow_second_row_y, arrow_cell_w, arrow_cell_h),
@@ -291,9 +302,13 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Arrow left",
             column_index=0,
             row_index=2,
+            placed_controls=self.placed_controls,
+            control_labels=self.control_labels,
+            focus_controls=self._focus_controls,
+            controls=self.controls,
         )
-        self._place_control_unlabeled(
-            host,
+        place_control_unlabeled(
+            host.control_showcase_root,
             "arrow_right",
             ArrowBoxControl("control_arrow_right", Rect(0, 0, 1, 1), 0),
             Rect(col0_x + arrow_cell_w + self.INNER_GAP, arrow_second_row_y, arrow_cell_w, arrow_cell_h),
@@ -302,6 +317,10 @@ class ControlsShowcaseFeature(Feature):
             accessibility_label="Arrow right",
             column_index=0,
             row_index=3,
+            placed_controls=self.placed_controls,
+            control_labels=self.control_labels,
+            focus_controls=self._focus_controls,
+            controls=self.controls,
         )
 
         col0_row_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP + arrow_group_h + row_gap
@@ -1383,8 +1402,9 @@ class ControlsShowcaseFeature(Feature):
 
         host.control_showcase_root.add(control)
         self.controls.append(control)
+        from gui_do import PlacedControl
         self.placed_controls.append(
-            _PlacedControl(
+            PlacedControl(
                 control=control,
                 label=label,
                 name=name,
