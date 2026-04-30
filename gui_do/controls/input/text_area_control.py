@@ -150,7 +150,7 @@ class TextAreaControl(_TextEditFocusBase):
     # Event handling
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -516,14 +516,14 @@ class TextAreaControl(_TextEditFocusBase):
         except Exception:
             if self._measure_font is None:
                 try:
-                    self._measure_font = pygame.font.SysFont(None, self._font_size)
+                    self._measure_font = theme.fonts.font_instance(getattr(self, "_font_role", "text_area.text"), size=self._font_size)
                 except Exception:
                     self._measure_font = False
 
             if self._measure_font:
 
                 def _measure(n: int) -> int:
-                    w, _ = self._measure_font.size(line_text[:n])
+                    w, _ = self._measure_font.text_size(line_text[:n])
                     return int(w)
 
                 return _measure

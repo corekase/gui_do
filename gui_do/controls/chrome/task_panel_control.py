@@ -177,7 +177,7 @@ class TaskPanelControl(PanelControl):
         self._sync_children_to_panel_position()
         super().update(0.0)
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         self._sync_children_to_panel_position()
         task_panel_focus = getattr(app, "task_panel_focus", None)
         focus_mode_active = False
@@ -195,7 +195,7 @@ class TaskPanelControl(PanelControl):
             )
             if not has_palette:
                 self._hovered = self.rect.collidepoint(raw)
-        result = super().handle_event(event, app)
+        result = super().handle_event(event, app, theme=theme)
         if result:
             return True
         if not focus_mode_active or event.kind not in self._POINTER_EVENT_KINDS:

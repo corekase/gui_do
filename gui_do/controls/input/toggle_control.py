@@ -63,7 +63,7 @@ class ToggleControl(_TextButtonControlBase):
     def _invoke_click(self) -> None:
         self._commit_toggle()
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             return False

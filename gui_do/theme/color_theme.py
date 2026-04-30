@@ -25,6 +25,8 @@ class ColorTheme:
         self.fonts.register_role("body", size=16)
         self.fonts.register_role("title", size=14, bold=True)
         self.fonts.register_role("display", size=72, bold=True)
+        # Register missing toast.text font role (matches body)
+        self.fonts.register_role("toast.text", size=16)
         self._background_bitmap = None
 
     @property

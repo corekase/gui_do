@@ -42,7 +42,7 @@ class ButtonControl(_TextButtonControlBase):
             raise logical_error("on_click callback must be callable or None", subsystem="gui.controls", operation="ButtonControl.set_on_click", source_skip_frames=1)
         self.on_click = callback
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             self.pressed = False

@@ -248,10 +248,10 @@ class DebugOverlay:
     # Internal
     # ------------------------------------------------------------------
 
-    def _get_font(self) -> Optional[pygame.font.Font]:
+    def _get_font(self, theme=None) -> Optional["pygame.font.Font"]:
         if self._font is None:
-            try:
-                self._font = pygame.font.SysFont("monospace", 11)
-            except Exception:
-                pass
+            if theme is not None and hasattr(theme, "fonts"):
+                self._font = theme.fonts.font_instance("debug_overlay.text", size=11)
+            else:
+                raise RuntimeError("DebugOverlay requires theme with centralized font roles.")
         return self._font

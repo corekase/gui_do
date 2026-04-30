@@ -112,7 +112,7 @@ class CanvasControl(UiNode):
         self.canvas = resized
         self._canvas_size = target_size
 
-    def handle_event(self, event: GuiEvent, _app) -> bool:
+    def handle_event(self, event: GuiEvent, _app, theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 

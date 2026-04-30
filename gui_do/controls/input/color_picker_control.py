@@ -70,7 +70,7 @@ class ColorPickerControl(UiNode):
         self._sv_surface: Optional[pygame.Surface] = None
         self._sv_surface_hue: float = -1.0
         self._sv_surface_size: Optional[Tuple[int, int]] = None
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 16)
+        self._draw_font_role: str = "color_picker.hex"
 
     # ------------------------------------------------------------------
     # Public API
@@ -99,7 +99,7 @@ class ColorPickerControl(UiNode):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -207,11 +207,12 @@ class ColorPickerControl(UiNode):
         pygame.draw.rect(surface, hex_bg, hex_rect, border_radius=2)
         hex_border = (200, 50, 50) if self._hex_error else border
         pygame.draw.rect(surface, hex_border, hex_rect, width=1, border_radius=2)
-        if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 16)
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            raise RuntimeError("ColorPickerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
+        font = theme.fonts.font_instance(self._draw_font_role, size=16)
         text_color = theme.text
         display_hex = self._hex_text + ("|" if self._hex_editing else "")
-        hex_surf = self._draw_font.render(display_hex, True, text_color)
+        hex_surf = font._font.render(display_hex, True, text_color) if hasattr(font, "_font") else font.render(display_hex, True, text_color)
         surface.blit(hex_surf, (hex_rect.x + 3, hex_rect.centery - hex_surf.get_height() // 2))
 
         # Focus ring

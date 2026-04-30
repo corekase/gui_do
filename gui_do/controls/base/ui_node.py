@@ -265,10 +265,10 @@ class UiNode:
         return count
 
     @staticmethod
-    def _dispatch_child_event(child: "UiNode", event: GuiEvent, app: "GuiApplication") -> bool:
-        return bool(child.handle_routed_event(event, app))
+    def _dispatch_child_event(child: "UiNode", event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return bool(child.handle_routed_event(event, app, theme=theme))
 
-    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool) -> bool:
+    def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool, theme=None) -> bool:
         children = self.children
         # Reverse dispatch always iterates a snapshot to be safe under mutation;
         # forward dispatch iterates the live list because capture-phase handlers
@@ -277,7 +277,7 @@ class UiNode:
         for child in iterable:
             if not (child.visible and child.enabled):
                 continue
-            if self._dispatch_child_event(child, event, app):
+            if self._dispatch_child_event(child, event, app, theme=theme):
                 return True
             if event.propagation_stopped:
                 return True
@@ -365,24 +365,24 @@ class UiNode:
     def update(self, _dt_seconds: float) -> None:
         """Per-frame state update."""
 
-    def handle_event(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
+    def handle_event(self, _event: GuiEvent, _app: "GuiApplication", theme=None) -> bool:
         """Handle one normalized GuiEvent and return whether consumed."""
         return False
 
-    def on_event_capture(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
+    def on_event_capture(self, _event: GuiEvent, _app: "GuiApplication", theme=None) -> bool:
         """Capture-phase event hook."""
         return False
 
-    def on_event_bubble(self, _event: GuiEvent, _app: "GuiApplication") -> bool:
+    def on_event_bubble(self, _event: GuiEvent, _app: "GuiApplication", theme=None) -> bool:
         """Bubble-phase event hook."""
         return False
 
-    def handle_routed_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_routed_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if event.phase is EventPhase.CAPTURE:
-            return bool(self.on_event_capture(event, app))
+            return bool(self.on_event_capture(event, app, theme=theme))
         if event.phase is EventPhase.BUBBLE:
-            return bool(self.on_event_bubble(event, app))
-        return bool(self.handle_event(event, app))
+            return bool(self.on_event_bubble(event, app, theme=theme))
+        return bool(self.handle_event(event, app, theme=theme))
 
     def reconcile_hover(self, _wants_hover: bool) -> None:
         """Update hover state during focus traversal. No-op for nodes without hover visuals."""

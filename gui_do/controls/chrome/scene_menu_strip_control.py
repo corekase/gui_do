@@ -102,11 +102,12 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         self._hovered_index = _index_for_label(old_hover_label)
         self.invalidate()
 
-    def handle_event(self, event, app: "GuiApplication") -> bool:
+    def handle_event(self, event, app: "GuiApplication", theme=None) -> bool:
         # Keep dynamic menu content current before pointer-driven interactions.
         if getattr(event, "kind", None) in (EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN):
             self.refresh_entries()
-        return super().handle_event(event, app)
+        # Always propagate theme to parent
+        return super().handle_event(event, app, theme=theme)
 
     # ------------------------------------------------------------------
     # Default section builders

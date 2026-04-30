@@ -198,7 +198,9 @@ class _CommandPaletteListView(ListViewControl):
             return
 
         if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 18)
+            if not hasattr(theme, "fonts"):
+                raise RuntimeError("CommandPaletteManager requires theme with centralized font roles.")
+            self._draw_font = theme.fonts.font_instance("command_palette.text", size=18)
         font = self._draw_font
         text_color = theme.text
         if not item.enabled:

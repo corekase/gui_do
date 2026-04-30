@@ -58,7 +58,7 @@ class DropdownControl(UiNode):
         self._max_visible_items: int = max(1, int(max_visible_items))
         self._is_open: bool = False
         self.tab_index = 0
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
+        self._draw_font_role: str = "dropdown.option"
 
         if 0 <= selected_index < len(self._options):
             self._selected_index = selected_index
@@ -195,7 +195,7 @@ class DropdownControl(UiNode):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled and self.tab_index >= 0
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -251,14 +251,12 @@ class DropdownControl(UiNode):
         pygame.draw.rect(surface, theme.medium, r, border_radius=3)
         pygame.draw.rect(surface, theme.text, r, 1, border_radius=3)
 
-        if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 18)
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=18)
         opt = self.selected_option
         label = opt.label if opt is not None else self._placeholder
         text_color = theme.text
-        text_surf = font.render(label, True, text_color)
+        text_surf = font._font.render(label, True, text_color) if hasattr(font, "_font") else font.render(label, True, text_color)
         surface.blit(text_surf, (r.x + 6, r.y + (r.height - text_surf.get_height()) // 2))
 
-        arrow_surf = font.render(_ARROW, True, text_color)
+        arrow_surf = font._font.render(_ARROW, True, text_color) if hasattr(font, "_font") else font.render(_ARROW, True, text_color)
         surface.blit(arrow_surf, (r.right - arrow_surf.get_width() - 6, r.y + (r.height - arrow_surf.get_height()) // 2))

@@ -110,7 +110,7 @@ class TreeControl(_VirtualizedScrollListBase):
         self._font_role: str = font_role
         self._selected_node: Optional[TreeNode] = None
         self._rows: List[_FlatRow] = []
-        self._draw_font: object = None  # cached SysFont(None, _FONT_SIZE)
+        self._draw_font_role: str = "tree.row"
         self._rebuild_rows()
         self.tab_index = 0
 
@@ -295,7 +295,7 @@ class TreeControl(_VirtualizedScrollListBase):
     # UiNode overrides
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self._scrollbar_dragging:
                 end_thumb_drag(app, self.control_id)
@@ -432,12 +432,7 @@ class TreeControl(_VirtualizedScrollListBase):
         sel_col = theme.highlight
         arrow_col = theme.medium
 
-        if self._draw_font is None:
-            try:
-                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
-            except Exception:
-                pass
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
 
         vr = self._visible_rect()
         pygame.draw.rect(surface, bg, self.rect)
@@ -480,7 +475,7 @@ class TreeControl(_VirtualizedScrollListBase):
                 text_x = vr.x + depth * self._indent_width + self._indent_width + 2
                 col = disabled_col if not node.enabled else text_col
                 if font:
-                    txt = font.render(node.label, True, col)
+                    txt = font._font.render(node.label, True, col) if hasattr(font, "_font") else font.render(node.label, True, col)
                     surface.blit(txt, (text_x, row_y + (self._row_height - txt.get_height()) // 2))
         finally:
             surface.set_clip(old_clip)

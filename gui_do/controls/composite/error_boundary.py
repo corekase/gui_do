@@ -67,6 +67,7 @@ class ErrorBoundary(UiNode):
     _FALLBACK_BG = (60, 0, 0)       # dark red background
     _FALLBACK_FG = (255, 80, 80)    # pinkish text
     _FALLBACK_BORDER = (200, 40, 40)
+    _FALLBACK_FONT_ROLE = "error_boundary.placeholder"
 
     def __init__(
         self,
@@ -84,7 +85,7 @@ class ErrorBoundary(UiNode):
         self._error_text: str = str(error_text)
         self._recover_on_mount: bool = bool(recover_on_scene_change)
         self._error: Optional[BaseException] = None
-        self._draw_font: object = None  # cached SysFont("monospace", 12)
+        self._draw_font_role: str = self._FALLBACK_FONT_ROLE
 
         # Adopt the child
         self.children.append(child)
@@ -169,29 +170,29 @@ class ErrorBoundary(UiNode):
     # Event handling
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: "GuiEvent", app) -> bool:
+    def handle_event(self, event: "GuiEvent", app, theme=None) -> bool:
         if self._error is not None:
             return False
         try:
-            return bool(self._child.handle_event(event, app))
+            return bool(self._child.handle_event(event, app, theme=theme))
         except Exception as exc:
             self._handle_error(exc, operation="handle_event")
             return False
 
-    def on_event_capture(self, event: "GuiEvent", app) -> bool:
+    def on_event_capture(self, event: "GuiEvent", app, theme=None) -> bool:
         if self._error is not None:
             return False
         try:
-            return bool(self._child.on_event_capture(event, app))
+            return bool(self._child.on_event_capture(event, app, theme=theme))
         except Exception as exc:
             self._handle_error(exc, operation="on_event_capture")
             return False
 
-    def on_event_bubble(self, event: "GuiEvent", app) -> bool:
+    def on_event_bubble(self, event: "GuiEvent", app, theme=None) -> bool:
         if self._error is not None:
             return False
         try:
-            return bool(self._child.on_event_bubble(event, app))
+            return bool(self._child.on_event_bubble(event, app, theme=theme))
         except Exception as exc:
             self._handle_error(exc, operation="on_event_bubble")
             return False
@@ -219,8 +220,8 @@ class ErrorBoundary(UiNode):
                 pass
         self.invalidate()
 
-    def _draw_placeholder(self, surface: "pygame.Surface") -> None:
-        """Render an error placeholder in the child's rect area."""
+    def _draw_placeholder(self, surface: "pygame.Surface", theme=None) -> None:
+        """Render an error placeholder in the child's rect area using a standard font role."""
         import pygame  # deferred import — keep top-level importable without display init
 
         r = Rect(self._child.rect)
@@ -230,9 +231,12 @@ class ErrorBoundary(UiNode):
         pygame.draw.rect(surface, self._FALLBACK_BG, r)
         pygame.draw.rect(surface, self._FALLBACK_BORDER, r, 2)
 
-        if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont("monospace", 12)
-        font = self._draw_font
+        # Use theme-based font role resolution only (centralized)
+        if not (theme and hasattr(theme, "fonts")):
+            raise RuntimeError("ErrorBoundary requires theme with centralized font roles.")
+        font = theme.fonts.font_instance(self._draw_font_role, size=12)
+        render_text = lambda text, color: font._font.render(text, True, color) if hasattr(font, "_font") else font.render(text, True, color)
+
         lines = [self._error_text]
         if self._error is not None:
             lines.append(type(self._error).__name__)
@@ -241,6 +245,6 @@ class ErrorBoundary(UiNode):
         for line in lines:
             if y + 14 > r.bottom:
                 break
-            text_surf = font.render(line[:60], True, self._FALLBACK_FG)
+            text_surf = render_text(line[:60], self._FALLBACK_FG)
             surface.blit(text_surf, (r.x + 6, y))
             y += 16

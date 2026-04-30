@@ -151,7 +151,7 @@ class Scene:
         for node in self.nodes:
             node._clear_active_windows()
 
-    def dispatch(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def dispatch(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if event.is_mouse_down(1):
             pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
@@ -168,29 +168,29 @@ class Scene:
                     self._clear_active_windows()
         capture_event = event.with_phase(EventPhase.CAPTURE)
         for node in self.nodes:
-            if node.visible and node.enabled and self._dispatch_node_event(node, capture_event, app):
+            if node.visible and node.enabled and self._dispatch_node_event(node, capture_event, app, theme=theme):
                 return True
             if capture_event.propagation_stopped:
                 return True
 
         target_event = event.with_phase(EventPhase.TARGET)
         for node in reversed(self.nodes):
-            if node.visible and node.enabled and self._dispatch_node_event(node, target_event, app):
+            if node.visible and node.enabled and self._dispatch_node_event(node, target_event, app, theme=theme):
                 return True
             if target_event.propagation_stopped:
                 return True
 
         bubble_event = event.with_phase(EventPhase.BUBBLE)
         for node in self.nodes:
-            if node.visible and node.enabled and self._dispatch_node_event(node, bubble_event, app):
+            if node.visible and node.enabled and self._dispatch_node_event(node, bubble_event, app, theme=theme):
                 return True
             if bubble_event.propagation_stopped:
                 return True
         return False
 
     @staticmethod
-    def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication") -> bool:
-        return bool(node.handle_routed_event(event, app))
+    def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return bool(node.handle_routed_event(event, app, theme=theme))
 
     def top_focus_target_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):

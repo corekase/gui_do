@@ -175,7 +175,9 @@ class ToastManager:
         if not self._toasts:
             return
         if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 18)
+            if not hasattr(theme, "fonts"):
+                raise RuntimeError("ToastManager requires theme with centralized font roles.")
+            self._draw_font = theme.fonts.font_instance("toast.text", size=18)
         font = self._draw_font
         w = self._toast_width
         h = self._row_height
@@ -209,9 +211,9 @@ class ToastManager:
             pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
             text_color = (240, 240, 240)
             if entry.title:
-                title_surf = font.render(entry.title, True, text_color)
+                title_surf = theme.fonts.render_text(entry.title, text_color, role_name="toast.text", size=font.point_size)
                 surface.blit(title_surf, (rect.x + 8, rect.y + 6))
-            msg_surf = font.render(entry.message, True, text_color)
+            msg_surf = theme.fonts.render_text(entry.message, text_color, role_name="toast.text", size=font.point_size)
             surface.blit(msg_surf, (rect.x + 8, rect.y + h // 2))
 
     def on_event_bus_message(self, payload: Any) -> None:

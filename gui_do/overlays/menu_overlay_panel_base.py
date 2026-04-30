@@ -61,7 +61,9 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         for item in items:
             h += int(separator_height) if bool(getattr(item, "separator", False)) else int(item_height)
         try:
-            font = pygame.font.SysFont(None, int(font_size))
+            if not hasattr(theme, "fonts"):
+                raise RuntimeError("MenuOverlayPanelBase requires theme with centralized font roles.")
+            font = theme.fonts.font_instance("menu_overlay.text", size=int(font_size))
             widths = [
                 font.size(str(getattr(item, "label", "")))[0] + int(text_padding) * 2 + 16
                 for item in items
@@ -111,7 +113,7 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
                     return
         self._on_close()
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         rects = self._item_rects()
 
         if event.kind == EventType.MOUSE_MOTION:

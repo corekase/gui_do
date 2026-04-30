@@ -60,7 +60,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         self._selected_indices: List[int] = []
         self._selected_set: set = set()
         self.tab_index = 0
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 18)
+        self._draw_font_role: str = "list_view.row"
 
         if 0 <= selected_index < len(self._items):
             self._selected_indices = [selected_index]
@@ -333,7 +333,7 @@ class ListViewControl(_VirtualizedScrollListBase):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled and self.tab_index >= 0
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self._scrollbar_dragging:
                 end_thumb_drag(app, self.control_id)
@@ -467,9 +467,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         bg_color = theme.background
         pygame.draw.rect(surface, bg_color, r)
 
-        if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 18)
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=18)
         vh = self._viewport_height()
         if self._parent_scroll_view() is not None and not self._show_scrollbar:
             # Parent ScrollView movement determines visibility; render full list
@@ -501,7 +499,9 @@ class ListViewControl(_VirtualizedScrollListBase):
             text_color = theme.text
             if not item.enabled:
                 text_color = (text_color[0] >> 1, text_color[1] >> 1, text_color[2] >> 1)
-            text_surf = font.render(item.label, True, text_color)
+            if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+                raise RuntimeError("ListViewControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
+            text_surf = font._font.render(item.label, True, text_color) if hasattr(font, "_font") else font.render(item.label, True, text_color)
             surface.blit(text_surf, (row_rect.x + 4, row_rect.y + (self._row_height - text_surf.get_height()) // 2))
 
         surface.set_clip(clip)

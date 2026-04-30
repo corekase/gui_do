@@ -230,5 +230,6 @@ from .data.list_diff import ListDiffCalculator, ListDiff, DiffInsert, DiffRemove
 from .data.data_cache import DataCache, CacheStats
 from .overlays.shortcut_help_overlay import ShortcutHelpOverlay, ShortcutSection, ShortcutEntry
 
-from tests.contract_test_catalog import PUBLIC_API_EXPORT_ORDER
-__all__ = list(PUBLIC_API_EXPORT_ORDER)
+
+# Removed dependency on tests.contract_test_catalog (test suite reset)
+__all__ = []

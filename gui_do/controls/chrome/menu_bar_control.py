@@ -110,7 +110,7 @@ class MenuBarControl(UiNode):
         self._open_flyout_rect: Optional[Rect] = None
         self._last_app: Optional["GuiApplication"] = None
         self.tab_index = 0
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, _FONT_SIZE)
+        self._draw_font_role: str = "menu_bar.entry"
 
     # ------------------------------------------------------------------
     # API
@@ -134,20 +134,20 @@ class MenuBarControl(UiNode):
     # Geometry helpers
     # ------------------------------------------------------------------
 
-    def _entry_rects(self) -> List[Rect]:
+    def _entry_rects(self, theme) -> List[Rect]:
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            raise RuntimeError("MenuBarControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         rects: List[Rect] = []
         x = self.rect.x
         y = self.rect.y
         h = self.rect.height
-        try:
-            if self._draw_font is None:
-                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
-            font = self._draw_font
-        except Exception:
-            font = None
+        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
         for entry in self._entries:
             if font:
-                tw = font.size(entry.label)[0]
+                if hasattr(font, "text_size"):
+                    tw = font.text_size(entry.label)[0]
+                else:
+                    tw = font.size(entry.label)[0]
             else:
                 tw = len(entry.label) * 8
             w = tw + _ENTRY_PADDING_X * 2
@@ -188,13 +188,13 @@ class MenuBarControl(UiNode):
     # UiNode overrides
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
-
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            raise RuntimeError("MenuBarControl.handle_event requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         self._last_app = app
-
-        er = self._entry_rects()
+        er = self._entry_rects(theme)
 
         if event.kind == EventType.MOUSE_MOTION:
             self._hovered_index = -1
@@ -294,12 +294,7 @@ class MenuBarControl(UiNode):
         hover_col = theme.highlight
         border_col = getattr(theme, "border", (60, 60, 70))
 
-        if self._draw_font is None:
-            try:
-                self._draw_font = pygame.font.SysFont(None, _FONT_SIZE)
-            except Exception:
-                pass
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
 
         pygame.draw.rect(surface, bar_bg, self.rect)
         # Bottom border line
@@ -309,7 +304,7 @@ class MenuBarControl(UiNode):
             (self.rect.right, self.rect.bottom - 1),
         )
 
-        er = self._entry_rects()
+        er = self._entry_rects(theme)
         try:
             pointer_pos = pygame.mouse.get_pos()
         except pygame.error:
@@ -325,5 +320,5 @@ class MenuBarControl(UiNode):
                 pygame.draw.rect(surface, hover_col, r)
             col = disabled_col if not entry.enabled else text_col
             if font:
-                txt = font.render(entry.label, True, col)
+                txt = font._font.render(entry.label, True, col) if hasattr(font, "_font") else font.render(entry.label, True, col)
                 surface.blit(txt, (r.x + _ENTRY_PADDING_X, r.y + (r.height - txt.get_height()) // 2))

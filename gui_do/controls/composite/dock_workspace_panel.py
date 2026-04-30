@@ -61,7 +61,7 @@ class DockWorkspacePanel(UiNode):
         self._on_change: Optional[Callable[[str], None]] = on_change
         self.font_role: str = str(font_role)
         self.tab_index = 0
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 14)
+        self._draw_font_role: str = "dock_workspace.tab"
 
     # ------------------------------------------------------------------
     # Public API
@@ -133,9 +133,8 @@ class DockWorkspacePanel(UiNode):
         else:
             text = "(unsupported root)"
         try:
-            if self._draw_font is None:
-                self._draw_font = pygame.font.SysFont(None, 14)
-            surf = self._draw_font.render(text, True, fg)
+            font = theme.fonts.font_instance(self._draw_font_role, size=14)
+            surf = font._font.render(text, True, fg) if hasattr(font, "_font") else font.render(text, True, fg)
             cx = self.rect.x + (self.rect.width - surf.get_width()) // 2
             cy = self.rect.y + (self.rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))
@@ -160,9 +159,8 @@ class DockWorkspacePanel(UiNode):
         border_col = getattr(theme, "tab_border", (60, 60, 70))
         pygame.draw.rect(surface, border_col, tab_rect, 1)
         try:
-            if self._draw_font is None:
-                self._draw_font = pygame.font.SysFont(None, 14)
-            surf = self._draw_font.render(label, True, fg)
+            font = theme.fonts.font_instance(self._draw_font_role, size=14)
+            surf = font._font.render(label, True, fg) if hasattr(font, "_font") else font.render(label, True, fg)
             cx = tab_rect.x + (tab_rect.width - surf.get_width()) // 2
             cy = tab_rect.y + (tab_rect.height - surf.get_height()) // 2
             surface.blit(surf, (cx, cy))
@@ -173,7 +171,7 @@ class DockWorkspacePanel(UiNode):
     # Events
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 

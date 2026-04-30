@@ -51,7 +51,7 @@ class ArrowBoxControl(_HoverPressControlBase):
             raise ValueError("on_activate callback must be callable or None")
         self.on_activate = callback
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             if self.pressed:

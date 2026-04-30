@@ -258,7 +258,9 @@ class _FileDialogPanel(OverlayPanelControl):
         pygame.draw.rect(surface, title_bg, title_rect)
         try:
             if self._title_font is None:
-                self._title_font = pygame.font.SysFont(None, _FONT_SIZE)
+                if not hasattr(theme, "fonts"):
+                    raise RuntimeError("FileDialogManager requires theme with centralized font roles.")
+                self._title_font = theme.fonts.font_instance("file_dialog.title", size=_FONT_SIZE)
             txt = self._title_font.render(self._opts.title, True, text_col)
             surface.blit(txt, (title_rect.x + _PAD, title_rect.y + (title_rect.height - txt.get_height()) // 2))
         except Exception:
@@ -267,7 +269,9 @@ class _FileDialogPanel(OverlayPanelControl):
         # Breadcrumb
         try:
             if self._path_font is None:
-                self._path_font = pygame.font.SysFont(None, 14)
+                if not hasattr(theme, "fonts"):
+                    raise RuntimeError("FileDialogManager requires theme with centralized font roles.")
+                self._path_font = theme.fonts.font_instance("file_dialog.path", size=14)
             crumb = str(self._current_dir)
             ct = self._path_font.render(crumb, True, text_col)
             surface.blit(ct, (self._breadcrumb_rect.x, self._breadcrumb_rect.y + (self._breadcrumb_rect.height - ct.get_height()) // 2))

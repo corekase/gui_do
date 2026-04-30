@@ -638,7 +638,7 @@ class GuiApplication:
         if screen_consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
             return True
-        consumed = self.scene.dispatch(logical_event, self)
+        consumed = self.scene.dispatch(logical_event, self, theme=self.theme)
         if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
             return True

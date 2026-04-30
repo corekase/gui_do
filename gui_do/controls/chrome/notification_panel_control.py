@@ -66,16 +66,16 @@ class NotificationPanelControl(OverlayPanelControl):
         self._mark_all_rect: Optional[Rect] = None
         self._scrollbar_dragging: bool = False
         self._scrollbar_drag_anchor: int = 0
-        self._header_font: object = None   # cached SysFont(None, _FONT_SIZE + 2)
-        self._title_font: object = None    # cached SysFont(None, _TITLE_FONT_SIZE)
-        self._body_font: object = None     # cached SysFont(None, _FONT_SIZE)
-        self._ts_font: object = None       # cached SysFont(None, _TS_FONT_SIZE)
+        self._header_font_role: str = "notification_panel.header"
+        self._title_font_role: str = "notification_panel.title"
+        self._body_font_role: str = "notification_panel.body"
+        self._ts_font_role: str = "notification_panel.timestamp"
 
     # ------------------------------------------------------------------
     # UiNode overrides
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible:
             if self._scrollbar_dragging:
                 end_thumb_drag(app, self.control_id)
@@ -228,17 +228,13 @@ class NotificationPanelControl(OverlayPanelControl):
         header_rect = Rect(self.rect.x, self.rect.y, self.rect.width, _HEADER_H)
         pygame.draw.rect(surface, header_bg, header_rect)
         try:
-            if self._header_font is None:
-                self._header_font = pygame.font.SysFont(None, _FONT_SIZE + 2)
-            hf = self._header_font
+            hf = theme.fonts.font_instance(self._header_font_role, size=_FONT_SIZE + 2)
             ht = hf.render("Notifications", True, text_col)
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
-                if self._title_font is None:
-                    self._title_font = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
-                mf = self._title_font
+                mf = theme.fonts.font_instance(self._title_font_role, size=_TITLE_FONT_SIZE)
                 mt = mf.render("Mark all read", True, (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
                 my = header_rect.y + (header_rect.height - mt.get_height()) // 2
@@ -259,16 +255,12 @@ class NotificationPanelControl(OverlayPanelControl):
 
         try:
             records = self._center.all_records
+            if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+                raise RuntimeError("NotificationPanelControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
             try:
-                if self._body_font is None:
-                    self._body_font = pygame.font.SysFont(None, _FONT_SIZE)
-                if self._title_font is None:
-                    self._title_font = pygame.font.SysFont(None, _TITLE_FONT_SIZE)
-                if self._ts_font is None:
-                    self._ts_font = pygame.font.SysFont(None, _TS_FONT_SIZE)
-                body_font = self._body_font
-                title_font = self._title_font
-                ts_font = self._ts_font
+                body_font = theme.fonts.font_instance(self._body_font_role, size=_FONT_SIZE)
+                title_font = theme.fonts.font_instance(self._title_font_role, size=_TITLE_FONT_SIZE)
+                ts_font = theme.fonts.font_instance(self._ts_font_role, size=_TS_FONT_SIZE)
             except Exception:
                 body_font = title_font = ts_font = None
 
@@ -291,21 +283,21 @@ class NotificationPanelControl(OverlayPanelControl):
                 tx = rr.x + 4 + _PAD
                 if body_font:
                     if rec.title:
-                        ttxt = title_font.render(rec.title, True, text_col)
+                        ttxt = title_font._font.render(rec.title, True, text_col) if hasattr(title_font, "_font") else title_font.render(rec.title, True, text_col)
                         surface.blit(ttxt, (tx, rr.y + _PAD))
                         msg_y = rr.y + _PAD + ttxt.get_height() + 2
                     else:
                         msg_y = rr.y + _PAD
                     # Truncate message to fit
                     msg = rec.message
-                    while msg and body_font.size(msg)[0] > rr.width - tx - _PAD * 2:
+                    while msg and (body_font.text_size(msg)[0] if hasattr(body_font, "text_size") else body_font.size(msg)[0]) > rr.width - tx - _PAD * 2:
                         msg = msg[:-1]
                     if msg != rec.message:
                         msg = msg[:-3] + "..."
-                    mtxt = body_font.render(msg, True, muted_col if rec.read else text_col)
+                    mtxt = body_font._font.render(msg, True, muted_col if rec.read else text_col) if hasattr(body_font, "_font") else body_font.render(msg, True, muted_col if rec.read else text_col)
                     surface.blit(mtxt, (tx, msg_y))
                     # Timestamp
-                    ts_txt = ts_font.render(rec.timestamp, True, muted_col)
+                    ts_txt = ts_font._font.render(rec.timestamp, True, muted_col) if hasattr(ts_font, "_font") else ts_font.render(rec.timestamp, True, muted_col)
                     surface.blit(ts_txt, (rr.right - ts_txt.get_width() - _PAD, rr.y + _PAD))
                 # Separator
                 pygame.draw.line(surface, border_col, (rr.x, rr.bottom - 1), (rr.right, rr.bottom - 1))
@@ -322,9 +314,8 @@ class NotificationPanelControl(OverlayPanelControl):
         # Empty state
         if not self._center.all_records:
             try:
-                if self._body_font is None:
-                    self._body_font = pygame.font.SysFont(None, _FONT_SIZE)
-                et = self._body_font.render("No notifications", True, muted_col)
+                bf = theme.fonts.font_instance(self._body_font_role, size=_FONT_SIZE)
+                et = bf._font.render("No notifications", True, muted_col) if hasattr(bf, "_font") else bf.render("No notifications", True, muted_col)
                 surface.blit(et, (
                     lr.x + (lr.width - et.get_width()) // 2,
                     lr.y + (lr.height - et.get_height()) // 2,

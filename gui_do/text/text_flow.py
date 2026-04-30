@@ -266,12 +266,8 @@ class TextFlow:
             fm = theme.fonts
             role = span.role if span.role else "body"
             return fm.get_font(role_name=role)
-        except Exception:
-            try:
-                import pygame
-                return pygame.font.Font(None, 16)
-            except Exception:
-                return None
+        except Exception as e:
+            raise RuntimeError("TextFlow requires centralized font roles; font resolution failed.") from e
 
     def _measure_space(self, theme: "ColorTheme") -> int:
         try:

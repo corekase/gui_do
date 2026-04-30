@@ -132,7 +132,7 @@ class TextInputControl(_TextEditFocusBase):
     # Event handling
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -142,7 +142,7 @@ class TextInputControl(_TextEditFocusBase):
                 return False
             text = event.text or ""
             if text:
-                self._insert_text(text)
+                self._insert_text(text, theme=theme)
                 if self._on_change is not None:
                     self._on_change(self._value)
                 self._reset_blink()
@@ -160,7 +160,7 @@ class TextInputControl(_TextEditFocusBase):
             mod = event.mod
             ctrl = bool(mod & pygame.KMOD_CTRL)
             shift = bool(mod & pygame.KMOD_SHIFT)
-            return self._handle_key(key, ctrl, shift, app)
+            return self._handle_key(key, ctrl, shift, app, theme=theme)
 
         # Mouse events
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
@@ -194,7 +194,7 @@ class TextInputControl(_TextEditFocusBase):
 
         return False
 
-    def _handle_key(self, key: int, ctrl: bool, shift: bool, app: "GuiApplication") -> bool:
+    def _handle_key(self, key: int, ctrl: bool, shift: bool, app: "GuiApplication", theme=None) -> bool:
         if ctrl:
             if key == pygame.K_a:
                 self.select_all()
@@ -210,14 +210,14 @@ class TextInputControl(_TextEditFocusBase):
                 if sel[0] != sel[1]:
                     if not self._masked:
                         ClipboardManager.copy(self._value[sel[0]:sel[1]])
-                    self._delete_selection()
+                    self._delete_selection(theme=theme)
                     if self._on_change is not None:
                         self._on_change(self._value)
                 return True
             if key == pygame.K_v:
                 text = ClipboardManager.paste()
                 if text:
-                    self._insert_text(text)
+                    self._insert_text(text, theme=theme)
                     if self._on_change is not None:
                         self._on_change(self._value)
                 return True
@@ -225,13 +225,13 @@ class TextInputControl(_TextEditFocusBase):
         if key == pygame.K_BACKSPACE:
             sel = self.selection_range
             if sel[0] != sel[1]:
-                self._delete_selection()
+                self._delete_selection(theme=theme)
             elif self._cursor_pos > 0:
                 self._value = self._value[:self._cursor_pos - 1] + self._value[self._cursor_pos:]
                 self._cursor_pos -= 1
                 self._sel_anchor = None
                 self._sel_active = None
-                self._scroll_to_cursor()
+                self._scroll_to_cursor(theme=theme)
             if self._on_change is not None:
                 self._on_change(self._value)
             self.invalidate()
@@ -240,10 +240,10 @@ class TextInputControl(_TextEditFocusBase):
         if key == pygame.K_DELETE:
             sel = self.selection_range
             if sel[0] != sel[1]:
-                self._delete_selection()
+                self._delete_selection(theme=theme)
             elif self._cursor_pos < len(self._value):
                 self._value = self._value[:self._cursor_pos] + self._value[self._cursor_pos + 1:]
-                self._scroll_to_cursor()
+                self._scroll_to_cursor(theme=theme)
             if self._on_change is not None:
                 self._on_change(self._value)
             self.invalidate()
@@ -259,7 +259,7 @@ class TextInputControl(_TextEditFocusBase):
                 self._sel_anchor = None
                 self._sel_active = None
             self._cursor_pos = new_pos
-            self._scroll_to_cursor()
+            self._scroll_to_cursor(theme=theme)
             self.invalidate()
             return True
 
@@ -273,7 +273,7 @@ class TextInputControl(_TextEditFocusBase):
                 self._sel_anchor = None
                 self._sel_active = None
             self._cursor_pos = new_pos
-            self._scroll_to_cursor()
+            self._scroll_to_cursor(theme=theme)
             self.invalidate()
             return True
 
@@ -287,7 +287,7 @@ class TextInputControl(_TextEditFocusBase):
                 self._sel_anchor = None
                 self._sel_active = None
             self._cursor_pos = new_pos
-            self._scroll_to_cursor()
+            self._scroll_to_cursor(theme=theme)
             self.invalidate()
             return True
 
@@ -301,7 +301,7 @@ class TextInputControl(_TextEditFocusBase):
                 self._sel_anchor = None
                 self._sel_active = None
             self._cursor_pos = new_pos
-            self._scroll_to_cursor()
+            self._scroll_to_cursor(theme=theme)
             self.invalidate()
             return True
 
@@ -328,14 +328,14 @@ class TextInputControl(_TextEditFocusBase):
             return "*" * len(self._value)
         return self._value
 
-    def _insert_text(self, text: str) -> None:
+    def _insert_text(self, text: str, theme=None) -> None:
         if self._input_filter is not None:
             text = self._input_filter(str(text))
             if not text:
                 return
         sel = self.selection_range
         if sel[0] != sel[1]:
-            self._delete_selection()
+            self._delete_selection(theme=theme)
         available = len(text)
         if self._max_length is not None:
             available = max(0, self._max_length - len(self._value))
@@ -344,10 +344,10 @@ class TextInputControl(_TextEditFocusBase):
         self._cursor_pos += len(text)
         self._sel_anchor = None
         self._sel_active = None
-        self._scroll_to_cursor()
+        self._scroll_to_cursor(theme=theme)
         self.invalidate()
 
-    def _delete_selection(self) -> None:
+    def _delete_selection(self, theme=None) -> None:
         sel = self.selection_range
         if sel[0] == sel[1]:
             return
@@ -355,15 +355,15 @@ class TextInputControl(_TextEditFocusBase):
         self._cursor_pos = sel[0]
         self._sel_anchor = None
         self._sel_active = None
-        self._scroll_to_cursor()
+        self._scroll_to_cursor(theme=theme)
 
-    def _scroll_to_cursor(self) -> None:
+    def _scroll_to_cursor(self, theme=None) -> None:
         """Adjust scroll so cursor is visible."""
-        font = self._get_font()
+        font = self._get_font(theme)
         if font is None:
             return
         display = self._get_display_value()
-        cursor_px, _ = font.size(display[:self._cursor_pos])
+        cursor_px, _ = font.text_size(display[:self._cursor_pos]) if hasattr(font, "text_size") else font.size(display[:self._cursor_pos])
         visible_width = self.rect.width - 2 * _H_PADDING
         if cursor_px < self._scroll_offset_px:
             self._scroll_offset_px = cursor_px
@@ -371,9 +371,9 @@ class TextInputControl(_TextEditFocusBase):
             self._scroll_offset_px = cursor_px - visible_width + 4
         self._scroll_offset_px = max(0, self._scroll_offset_px)
 
-    def _pos_to_char_index(self, x_screen: int) -> int:
+    def _pos_to_char_index(self, x_screen: int, theme=None) -> int:
         """Convert screen x coordinate to character index."""
-        font = self._get_font()
+        font = self._get_font(theme)
         if font is None:
             return 0
         display = self._get_display_value()
@@ -381,19 +381,18 @@ class TextInputControl(_TextEditFocusBase):
         best_idx = 0
         best_dist = abs(x_local)
         for i in range(1, len(display) + 1):
-            px, _ = font.size(display[:i])
+            px, _ = font.text_size(display[:i]) if hasattr(font, "text_size") else font.size(display[:i])
             dist = abs(x_local - px)
             if dist < best_dist:
                 best_dist = dist
                 best_idx = i
         return max(0, min(best_idx, len(self._value)))
 
-    def _get_font(self) -> Optional["pygame.font.Font"]:
-        """Return pygame Font object or None if unavailable."""
-        try:
-            return pygame.font.SysFont(None, 20)
-        except Exception:
-            return None
+    def _get_font(self, theme) -> Optional["pygame.font.Font"]:
+        """Return font instance from theme using centralized font role."""
+        if theme is None or not hasattr(theme, "fonts"):
+            raise RuntimeError("TextInputControl requires a valid theme with fonts for font rendering. Test helpers must provide a mock theme with a fonts attribute.")
+        return theme.fonts.font_instance(getattr(self, "_font_role", "text_input.text"), size=20)
 
     def _reset_blink(self) -> None:
         self._reset_text_edit_blink()
@@ -451,18 +450,18 @@ class TextInputControl(_TextEditFocusBase):
         old_clip = surface.get_clip()
         surface.set_clip(clip_rect.clip(old_clip) if old_clip else clip_rect)
 
-        font = self._get_font()
+        font = self._get_font(theme)
         display = self._get_display_value()
 
         if font is not None:
-            font_h = font.get_height()
+            font_h = font.line_height if hasattr(font, "line_height") else font.get_height()
             text_y = self.rect.y + (self.rect.height - font_h) // 2
 
             # Selection highlight
             sel = self.selection_range
             if sel[0] != sel[1] and font is not None:
-                sel_x_start, _ = font.size(display[:sel[0]])
-                sel_x_end, _ = font.size(display[:sel[1]])
+                sel_x_start, _ = font.text_size(display[:sel[0]]) if hasattr(font, "text_size") else font.size(display[:sel[0]])
+                sel_x_end, _ = font.text_size(display[:sel[1]]) if hasattr(font, "text_size") else font.size(display[:sel[1]])
                 sel_rect = Rect(
                     self.rect.x + _H_PADDING + sel_x_start - self._scroll_offset_px,
                     text_y,
@@ -474,16 +473,16 @@ class TextInputControl(_TextEditFocusBase):
 
             # Text or placeholder
             if display:
-                text_surf = font.render(display, True, theme.text)
+                text_surf = font._font.render(display, True, theme.text) if hasattr(font, "_font") else font.render(display, True, theme.text)
                 surface.blit(text_surf, (self.rect.x + _H_PADDING - self._scroll_offset_px, text_y))
             elif self._placeholder and not self._focused:
                 ph_color = getattr(theme, "medium", (150, 150, 150))
-                ph_surf = font.render(self._placeholder, True, ph_color)
+                ph_surf = font._font.render(self._placeholder, True, ph_color) if hasattr(font, "_font") else font.render(self._placeholder, True, ph_color)
                 surface.blit(ph_surf, (self.rect.x + _H_PADDING, text_y))
 
             # Cursor
             if self._focused and self._cursor_visible:
-                cursor_x_px, _ = font.size(display[:self._cursor_pos])
+                cursor_x_px, _ = font.text_size(display[:self._cursor_pos]) if hasattr(font, "text_size") else font.size(display[:self._cursor_pos])
                 cx = self.rect.x + _H_PADDING + cursor_x_px - self._scroll_offset_px
                 pygame.draw.line(
                     surface,

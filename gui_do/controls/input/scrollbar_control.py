@@ -207,7 +207,7 @@ class ScrollbarControl(_AxisDragControlBase):
         self._drag_handle_axis_pixel = min(max(axis_pixel, 0), travel_span)
         return axis_pixel
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self.dragging:
                 self._end_drag(app)

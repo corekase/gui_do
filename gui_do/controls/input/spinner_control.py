@@ -58,8 +58,8 @@ class SpinnerControl(_TextEditFocusBase):
         # Text editing state
         self._editing: bool = False
         self._edit_text: str = ""
-        self._btn_font: object = None   # cached from pygame.font.SysFont(None, 14)
-        self._val_font: object = None   # cached from pygame.font.SysFont(None, 18)
+        self._btn_font_role: str = "spinner.button"
+        self._val_font_role: str = "spinner.value"
 
     # ------------------------------------------------------------------
     # Public API
@@ -95,7 +95,7 @@ class SpinnerControl(_TextEditFocusBase):
     def update(self, dt_seconds: float) -> None:
         self._update_text_edit_blink(dt_seconds)
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -189,12 +189,12 @@ class SpinnerControl(_TextEditFocusBase):
         pygame.draw.rect(surface, btn_bg, down_rect, border_radius=2)
 
         # Arrow symbols
+        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
+            raise RuntimeError("SpinnerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         text_color = theme.text
-        if self._btn_font is None:
-            self._btn_font = pygame.font.SysFont(None, 14)
-        font = self._btn_font
-        up_surf = font.render("▲", True, text_color)
-        dn_surf = font.render("▼", True, text_color)
+        font = theme.fonts.font_instance(self._btn_font_role, size=14)
+        up_surf = font._font.render("▲", True, text_color) if hasattr(font, "_font") else font.render("▲", True, text_color)
+        dn_surf = font._font.render("▼", True, text_color) if hasattr(font, "_font") else font.render("▼", True, text_color)
         surface.blit(
             up_surf,
             (
@@ -214,9 +214,8 @@ class SpinnerControl(_TextEditFocusBase):
         display = self._edit_text if self._editing else self._format_value(self._value)
         if self._editing and self._cursor_visible:
             display = display + "|"
-        if self._val_font is None:
-            self._val_font = pygame.font.SysFont(None, 18)
-        val_surf = self._val_font.render(display, True, text_color)
+        val_font = theme.fonts.font_instance(self._val_font_role, size=18)
+        val_surf = val_font._font.render(display, True, text_color) if hasattr(val_font, "_font") else val_font.render(display, True, text_color)
         text_x = r.x + _H_PAD
         text_y = r.centery - val_surf.get_height() // 2
         # Clip text area

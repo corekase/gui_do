@@ -249,7 +249,7 @@ class PanelControl(UiNode):
             if child.visible:
                 child.update(dt_seconds)
 
-    def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if self._pending_capture_release_owner_id is not None:
             owner_id = self._pending_capture_release_owner_id
             if app.pointer_capture.is_owned_by(owner_id):
@@ -278,13 +278,13 @@ class PanelControl(UiNode):
                 dx = int(raw[0] - self._drag_last_pos[0])
                 dy = int(raw[1] - self._drag_last_pos[1])
             else:
-                dx, dy = 0, 0
+                return False
             self._drag_window.move_by(dx, dy)
-            if isinstance(raw, tuple) and len(raw) == 2:
-                self._drag_last_pos = raw
+            self._drag_last_pos = raw
             event.prevent_default()
             event.stop_propagation()
             return True
+        return self._dispatch_children(event, app, reverse=False, theme=theme)
 
         if event.is_mouse_up(1) and self._drag_window is not None:
             app.pointer_capture.end(self._drag_window.control_id)
@@ -319,11 +319,11 @@ class PanelControl(UiNode):
 
         return self._dispatch_children(event, app, reverse=False)
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        return self._dispatch_children(event, app, reverse=True)
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
 
-    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication") -> bool:
-        return self._dispatch_children(event, app, reverse=True)
+    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         self.draw_screen_phase(surface, theme)

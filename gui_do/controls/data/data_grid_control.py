@@ -95,7 +95,7 @@ class DataGridControl(_VirtualizedScrollListBase):
         # Hot-path caches
         self._col_offsets_cache: List[int] = [0]
         self._col_offsets_dirty: bool = True
-        self._draw_font = None
+        self._draw_font_role: str = "data_grid.cell"
         # Cache rendered text surfaces: (str_value, color_rgb) -> Surface.
         # Avoids re-rendering identical cell text on every frame.
         self._text_cache: Dict[tuple, "pygame.Surface"] = {}
@@ -290,7 +290,7 @@ class DataGridControl(_VirtualizedScrollListBase):
     def accepts_focus(self) -> bool:
         return self.visible and self.enabled and self.tab_index >= 0
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self._scrollbar_dragging:
                 end_thumb_drag(app, self.control_id)
@@ -468,13 +468,7 @@ class DataGridControl(_VirtualizedScrollListBase):
         border_col = getattr(theme, "border", (80, 80, 90))
         focus_col = getattr(theme, "focus", (100, 160, 255))
 
-        if self._draw_font is None:
-            try:
-                self._draw_font = pygame.font.SysFont(None, 18)
-                self._text_cache.clear()  # new font object; discard stale surfaces
-            except Exception:
-                self._draw_font = False
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=18)
         r = self.rect
         pygame.draw.rect(surface, bg, r)
 
@@ -492,13 +486,12 @@ class DataGridControl(_VirtualizedScrollListBase):
             title = col.title
             if col.sortable and self._sort_col == col.key:
                 title += " ▲" if self._sort_asc else " ▼"
-            if font:
-                cache_key = (title, text_col)
-                ts = self._text_cache.get(cache_key)
-                if ts is None:
-                    ts = font.render(title, True, text_col)
-                    self._text_cache[cache_key] = ts
-                surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
+            cache_key = (title, text_col)
+            ts = self._text_cache.get(cache_key)
+            if ts is None:
+                ts = font._font.render(title, True, text_col) if hasattr(font, "_font") else font.render(title, True, text_col)
+                self._text_cache[cache_key] = ts
+            surface.blit(ts, (col_rect.x + 4, col_rect.y + (col_rect.height - ts.get_height()) // 2))
 
         # Header bottom border
         pygame.draw.line(surface, border_col, (header.x, header.bottom - 1), (header.right, header.bottom - 1))
@@ -528,14 +521,13 @@ class DataGridControl(_VirtualizedScrollListBase):
                 col_x = cr.x + offsets[j]
                 cell_rect = Rect(col_x, row_y, col.width, row_height)
                 val = row.data.get(col.key, "")
-                if font:
-                    val_str = str(val)
-                    cache_key = (val_str, text_col)
-                    ts = self._text_cache.get(cache_key)
-                    if ts is None:
-                        ts = font.render(val_str, True, text_col)
-                        self._text_cache[cache_key] = ts
-                    surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
+                val_str = str(val)
+                cache_key = (val_str, text_col)
+                ts = self._text_cache.get(cache_key)
+                if ts is None:
+                    ts = font._font.render(val_str, True, text_col) if hasattr(font, "_font") else font.render(val_str, True, text_col)
+                    self._text_cache[cache_key] = ts
+                surface.blit(ts, (cell_rect.x + 4, cell_rect.y + (cell_rect.height - ts.get_height()) // 2))
                 # column separator
                 pygame.draw.line(surface, border_col, (col_x + col.width - 1, row_y), (col_x + col.width - 1, row_y + row_height - 1))
 

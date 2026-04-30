@@ -211,24 +211,24 @@ class WindowControl(UiNode):
                 return False
         return True
 
-    def on_event_capture(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
             return False
-        return self._dispatch_children(event, app, reverse=False)
+        return self._dispatch_children(event, app, reverse=False, theme=theme)
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
             return False
         if self._event_handler is not None and self._event_handler(event):
             event.prevent_default()
             event.stop_propagation()
             return True
-        return self._dispatch_children(event, app, reverse=True)
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
 
-    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
             return False
-        return self._dispatch_children(event, app, reverse=True)
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         factory = theme.graphics_factory

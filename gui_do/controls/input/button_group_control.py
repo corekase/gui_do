@@ -130,7 +130,7 @@ class ButtonGroupControl(ToggleControl):
         self._invoke_activate()
         return True
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             self.hovered = False
             return False

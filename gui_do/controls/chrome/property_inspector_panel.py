@@ -90,7 +90,7 @@ class PropertyInspectorPanel(UiNode):
 
         self._rebuild()
         self.tab_index = 0
-        self._draw_font: object = None  # cached from pygame.font.SysFont(None, 16)
+        self._draw_font_role: str = "property_inspector.row"
 
     # ------------------------------------------------------------------
     # Public API
@@ -196,7 +196,7 @@ class PropertyInspectorPanel(UiNode):
     # Events
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             return False
 
@@ -267,9 +267,7 @@ class PropertyInspectorPanel(UiNode):
         if not self._rows:
             return
 
-        if self._draw_font is None:
-            self._draw_font = pygame.font.SysFont(None, 16)
-        font = self._draw_font
+        font = theme.fonts.font_instance(self._draw_font_role, size=16)
 
         # Resolve colors
         text_color = theme.text
@@ -298,7 +296,7 @@ class PropertyInspectorPanel(UiNode):
             if y + h >= r.y and y <= r.bottom:
                 if row.is_header:
                     pygame.draw.rect(surface, header_bg, row_rect)
-                    surf = font.render(row.group_name, True, header_text)
+                    surf = font._font.render(row.group_name, True, header_text) if hasattr(font, "_font") else font.render(row.group_name, True, header_text)
                     surface.blit(surf, (row_rect.x + 6, row_rect.y + (h - surf.get_height()) // 2))
                 else:
                     if row.prop is not None:
@@ -307,7 +305,7 @@ class PropertyInspectorPanel(UiNode):
                         pygame.draw.rect(surface, row_bg, row_rect)
                         # Label (left side)
                         lbl = row.prop.descriptor.label or row.prop.descriptor.name
-                        lbl_surf = font.render(lbl, True, text_color)
+                        lbl_surf = font._font.render(lbl, True, text_color) if hasattr(font, "_font") else font.render(lbl, True, text_color)
                         surface.blit(lbl_surf, (row_rect.x + 4, row_rect.y + (h - lbl_surf.get_height()) // 2))
                         # Value (right side)
                         try:
@@ -315,7 +313,7 @@ class PropertyInspectorPanel(UiNode):
                         except Exception:
                             val_str = "—"
                         vc = text_color if is_selected else val_color
-                        val_surf = font.render(val_str, True, vc)
+                        val_surf = font._font.render(val_str, True, vc) if hasattr(font, "_font") else font.render(val_str, True, vc)
                         surface.blit(val_surf, (val_x + 4, row_rect.y + (h - val_surf.get_height()) // 2))
                         alt = not alt
 

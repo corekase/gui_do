@@ -25,6 +25,8 @@ from gui_do import (
 
 
 class GuiDoDemo:
+        # Add font roles for all controls (full coverage)
+        # ---
     """Interactive demo app showcasing gui_do controls and scene workflows."""
 
     TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
@@ -71,6 +73,24 @@ class GuiDoDemo:
                 "system.window_title": {"font": "ubuntu_b", "size": 18},
                 "system.control": {"font": "gimbot", "size": 18},
                 "system.label": {"font": "gimbot", "size": 16},
+                # Centralized font roles for all controls (full coverage):
+                "error_boundary.placeholder": {"font": "ubuntu_b", "size": 12},
+                "dock_workspace.tab": {"font": "ubuntu_b", "size": 14},
+                "list_view.row": {"font": "gimbot", "size": 18},
+                "data_grid.cell": {"font": "gimbot", "size": 18},
+                "menu_bar.entry": {"font": "ubuntu_b", "size": 16},
+                "dropdown.option": {"font": "gimbot", "size": 18},
+                "notification_panel.header": {"font": "ubuntu_b", "size": 20},
+                "notification_panel.title": {"font": "ubuntu_b", "size": 16},
+                "notification_panel.body": {"font": "gimbot", "size": 14},
+                "notification_panel.timestamp": {"font": "gimbot", "size": 12},
+                "property_inspector.row": {"font": "gimbot", "size": 16},
+                "color_picker.hex": {"font": "gimbot", "size": 16},
+                "spinner.button": {"font": "gimbot", "size": 14},
+                "spinner.value": {"font": "gimbot", "size": 18},
+                "text_input.text": {"font": "gimbot", "size": 20},
+                "text_area.text": {"font": "gimbot", "size": 16},
+                "tree.row": {"font": "gimbot", "size": 16},
             },
         )
 
