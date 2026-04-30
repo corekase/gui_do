@@ -43,6 +43,7 @@ from gui_do import (
     ListDiffCalculator,
     ListItem,
     LocaleRegistry,
+    create_anchored_feature_window,
     Pause,
     ParticleLayer,
     ParticleSystem,
@@ -257,18 +258,17 @@ class SystemsDemoFeature(RoutedFeature):
             }
         )
 
-        rect = host.app.layout.anchored(
-            (820, 590), anchor="top_left", margin=(24, 92), use_rect=True
-        )
-        self.window = host.root.add(
-            WindowControl(
-                "systems_window",
-                rect,
-                "System",
-                title_font_role=self.font_role("window_title"),
-                event_handler=self._window_event_handler,
-                use_frame_backdrop=True,
-            )
+        self.window = create_anchored_feature_window(
+            host,
+            window_control_cls=WindowControl,
+            control_id="systems_window",
+            title="System",
+            size=(820, 590),
+            anchor="top_left",
+            margin=(24, 92),
+            title_font_role=self.font_role("window_title"),
+            event_handler=self._window_event_handler,
+            use_frame_backdrop=True,
         )
 
         content = self.window.content_rect()

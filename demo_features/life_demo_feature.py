@@ -9,13 +9,13 @@ from pygame import Rect
 from gui_do import (
     ButtonControl,
     CanvasControl,
+    create_anchored_feature_window,
     FeatureMessage,
     LayoutAxis,
+    add_window_scene_menu_strip,
     LogicFeature,
     minimize_window_menu_entries,
-    resolve_scene_selection_callback,
     RoutedFeature,
-    SceneMenuStripControl,
     SliderControl,
     toggle_window_visibility,
     ToggleControl,
@@ -235,18 +235,19 @@ class LifeSimulationFeature(RoutedFeature):
     ) -> None:
         """Create the Life window, canvas, and interaction controls."""
         self.demo = host  # Store host reference for use in callback methods
-        life_rect = host.app.layout.anchored((660, 688), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.window = host.root.add(
-            window_control_cls(
-                "life_window",
-                life_rect,
-                "Conway's Game of Life",
-                title_font_role=self.font_role("window_title"),
-                preamble=self.life_window_preamble,
-                event_handler=self.life_window_event_handler,
-                postamble=self.life_window_postamble,
-                use_frame_backdrop=True,
-            )
+        self.window = create_anchored_feature_window(
+            host,
+            window_control_cls=window_control_cls,
+            control_id="life_window",
+            title="Conway's Game of Life",
+            size=(660, 688),
+            anchor="top_right",
+            margin=(28, 92),
+            title_font_role=self.font_role("window_title"),
+            preamble=self.life_window_preamble,
+            event_handler=self.life_window_event_handler,
+            postamble=self.life_window_postamble,
+            use_frame_backdrop=True,
         )
         content_rect = self.window.content_rect()
         left = content_rect.left
@@ -259,17 +260,16 @@ class LifeSimulationFeature(RoutedFeature):
         controls_gap = padding
         control_spacing = 12
 
-        self.menu_bar = self.window.add(
-            SceneMenuStripControl(
-                "life_window_menu",
-                Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
-                host.app,
-                scene_name="main",
-                scenes_shown=False,
-                windows_shown=False,
-                extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
-                on_scene_selected=resolve_scene_selection_callback(host),
-            )
+        self.menu_bar = add_window_scene_menu_strip(
+            self.window,
+            host,
+            control_id="life_window_menu",
+            rect=Rect(left + padding, top + padding, max(120, width - (padding * 2)), menu_h),
+            scene_name="main",
+            on_minimize=self._toggle_window_visible,
+            scenes_shown=False,
+            windows_shown=False,
+            extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
         )
         top = self.menu_bar.rect.bottom + padding
         height = max(1, content_rect.bottom - top)

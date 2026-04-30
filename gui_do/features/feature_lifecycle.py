@@ -8,6 +8,7 @@ import inspect
 from time import perf_counter
 from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
 from ..app.error_handling import logical_error, report_nonfatal_error
+from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from ..telemetry.telemetry import telemetry_collector
 from ..controls.chrome.menu_bar_control import MenuEntry
 from ..overlays.context_menu_manager import ContextMenuItem
@@ -301,6 +302,71 @@ def toggle_window_visibility(
             toggle.pushed = next_visible
 
     return next_visible
+
+
+def create_anchored_feature_window(
+    host,
+    *,
+    window_control_cls,
+    control_id: str,
+    title: str,
+    size: tuple[int, int],
+    anchor: str,
+    margin: tuple[int, int],
+    title_font_role: Optional[str] = None,
+    event_handler=None,
+    preamble=None,
+    postamble=None,
+    use_frame_backdrop: bool = True,
+):
+    """Create and attach a window anchored by layout.anchored to the host root."""
+    window_rect = host.app.layout.anchored(size, anchor=anchor, margin=margin, use_rect=True)
+    kwargs: Dict[str, Any] = {
+        "title_font_role": title_font_role,
+        "event_handler": event_handler,
+        "use_frame_backdrop": bool(use_frame_backdrop),
+    }
+    if preamble is not None:
+        kwargs["preamble"] = preamble
+    if postamble is not None:
+        kwargs["postamble"] = postamble
+    window = window_control_cls(
+        str(control_id),
+        window_rect,
+        str(title),
+        **kwargs,
+    )
+    return host.root.add(window)
+
+
+def add_window_scene_menu_strip(
+    window,
+    host,
+    *,
+    control_id: str,
+    rect,
+    scene_name: str,
+    on_minimize: Callable[[], None],
+    scenes_shown: bool = False,
+    windows_shown: bool = False,
+    extra_entries_provider=None,
+):
+    """Attach a SceneMenuStripControl to a window using standard scene fallback wiring."""
+    entries_provider = extra_entries_provider
+    if entries_provider is None:
+        entries_provider = lambda: minimize_window_menu_entries(on_minimize)
+    return window.add(
+        SceneMenuStripControl(
+            str(control_id),
+            rect,
+            host.app,
+            scene_name=str(scene_name),
+            scenes_shown=bool(scenes_shown),
+            windows_shown=bool(windows_shown),
+            extra_entries_provider=entries_provider,
+            on_scene_selected=resolve_scene_selection_callback(host),
+        )
+    )
 
 @dataclass(slots=True)
 class FeatureMessage:

@@ -78,6 +78,8 @@ from .features.feature_lifecycle import (
     minimize_window_menu_entries,
     set_window_visible_state,
     toggle_window_visibility,
+    create_anchored_feature_window,
+    add_window_scene_menu_strip,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
@@ -288,6 +290,8 @@ __all__ = [
     "minimize_window_menu_entries",
     "set_window_visible_state",
     "toggle_window_visibility",
+    "create_anchored_feature_window",
+    "add_window_scene_menu_strip",
     "TweenManager",
     "TweenHandle",
     "Easing",

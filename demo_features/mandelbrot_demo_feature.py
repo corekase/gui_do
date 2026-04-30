@@ -8,13 +8,13 @@ from typing import Optional, Tuple
 
 from pygame import Rect
 from gui_do import (
+    add_window_scene_menu_strip,
     ButtonControl,
     CanvasControl,
+    create_anchored_feature_window,
     LabelControl,
     LogicFeature,
     minimize_window_menu_entries,
-    resolve_scene_selection_callback,
-    SceneMenuStripControl,
     RoutedFeature,
     toggle_window_visibility,
     WindowControl,
@@ -469,32 +469,32 @@ class MandelbrotRenderFeature(RoutedFeature):
     ) -> None:
         """Create the Mandelbrot window, canvases, controls, and status labels."""
         self.demo = host  # Store host reference for callbacks
-        mandel_rect = host.app.layout.anchored((660, 760), anchor="top_right", margin=(28, 92), use_rect=True)
-        self.window = host.root.add(
-            window_control_cls(
-                "mandel_window",
-                mandel_rect,
-                "Mandelbrot",
-                title_font_role=self.font_role("window_title"),
-                event_handler=self._window_event_handler,
-                use_frame_backdrop=True,
-            )
+        self.window = create_anchored_feature_window(
+            host,
+            window_control_cls=window_control_cls,
+            control_id="mandel_window",
+            title="Mandelbrot",
+            size=(660, 760),
+            anchor="top_right",
+            margin=(28, 92),
+            title_font_role=self.font_role("window_title"),
+            event_handler=self._window_event_handler,
+            use_frame_backdrop=True,
         )
         content_rect = self.window.content_rect()
         padding = 8
         menu_h = 28
 
-        self.menu_bar = self.window.add(
-            SceneMenuStripControl(
-                "mandel_window_menu",
-                Rect(content_rect.left + padding, content_rect.top + padding, content_rect.width - (padding * 2), menu_h),
-                host.app,
-                scene_name="main",
-                scenes_shown=False,
-                windows_shown=False,
-                extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
-                on_scene_selected=resolve_scene_selection_callback(host),
-            )
+        self.menu_bar = add_window_scene_menu_strip(
+            self.window,
+            host,
+            control_id="mandel_window_menu",
+            rect=Rect(content_rect.left + padding, content_rect.top + padding, content_rect.width - (padding * 2), menu_h),
+            scene_name="main",
+            on_minimize=self._toggle_window_visible,
+            scenes_shown=False,
+            windows_shown=False,
+            extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
         )
 
         # Help label at top
