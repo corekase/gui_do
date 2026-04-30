@@ -145,10 +145,17 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""
+        fonts = {
+            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
+            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
+        }
         setup_standard_font_roles(
             host.font_roles,
-            "demo_features/data/fonts/Gimbot.ttf",
-            "demo_features/data/fonts/Ubuntu-B.ttf"
+            fonts,
+            {
+                "life.window_title": {"font": "ubuntu_b", "size": 28},
+                "life.control": {"font": "gimbot", "size": 18},
+            },
         )
         self.use_font_roles(
             {

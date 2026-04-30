@@ -44,35 +44,43 @@ def register_standard_actions(action_registry, app=None, scene_transitions=None,
             else:
                 action_registry.register_action(action, lambda *_: toggle_window_visibility(window))
 
-def setup_standard_font_roles(font_roles, gimbot_path, ubuntu_b_path):
+
+def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
     """
-    Register a standard set of font roles for demo features.
-    gimbot_path: path to Gimbot.ttf (used for most roles)
-    ubuntu_b_path: path to Ubuntu-B.ttf (used for window titles)
+    Register a set of font roles for any feature or demo.
+    fonts: dict mapping font keys (e.g. 'body', 'title') to font file paths
+    *role_specs: one or more dicts mapping role names to config dicts:
+        {
+            "role_name": {"size": int, "font": str, "bold": bool, ...}
+        }
+    Example usage:
+        setup_standard_font_roles(font_roles, fonts,
+            {
+                "body": {"size": 14, "font": "body"},
+                "controls.label": {"size": 12, "font": "body", "bold": True},
+                ...
+            },
+            {
+                "life.window_title": {"size": 20, "font": "title", "bold": True},
+                ...
+            }
+        )
     """
-    if font_roles is None:
+    if font_roles is None or not fonts:
         return
-    # Common roles
-    font_roles.define("body", size=14, file_path=gimbot_path)
-    font_roles.define("controls.label", size=12, file_path=gimbot_path, bold=True)
-    font_roles.define("controls.control", size=14, file_path=gimbot_path)
-    font_roles.define("screen.main.task_panel.control", size=13, file_path=gimbot_path)
-    font_roles.define("screen.main.title", size=20, file_path=ubuntu_b_path, bold=True)
-
-    # Life demo roles
-    font_roles.define("life.window_title", size=20, file_path=ubuntu_b_path, bold=True)
-    font_roles.define("life.control", size=14, file_path=gimbot_path)
-
-    # Mandelbrot demo roles
-    font_roles.define("mandelbrot.window_title", size=20, file_path=ubuntu_b_path, bold=True)
-    font_roles.define("mandelbrot.control", size=14, file_path=gimbot_path)
-    font_roles.define("mandelbrot.caption", size=13, file_path=gimbot_path)
-    font_roles.define("mandelbrot.status", size=12, file_path=gimbot_path)
-
-    # Systems demo roles
-    font_roles.define("system.window_title", size=20, file_path=ubuntu_b_path, bold=True)
-    font_roles.define("system.control", size=14, file_path=gimbot_path)
-    font_roles.define("system.label", size=12, file_path=gimbot_path, bold=True)
+    for spec in role_specs:
+        for role, cfg in spec.items():
+            font_key = cfg.get("font", "body")
+            file_path = fonts.get(font_key)
+            if not file_path:
+                continue
+            font_roles.define(
+                role,
+                size=cfg["size"],
+                file_path=file_path,
+                bold=cfg.get("bold", False),
+                italic=cfg.get("italic", False),
+            )
 
 def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
     """

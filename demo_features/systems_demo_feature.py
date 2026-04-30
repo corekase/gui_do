@@ -251,10 +251,18 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
+        fonts = {
+            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
+            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
+        }
         setup_standard_font_roles(
             host.font_roles,
-            "demo_features/data/fonts/Gimbot.ttf",
-            "demo_features/data/fonts/Ubuntu-B.ttf"
+            fonts,
+            {
+                "system.window_title": {"font": "ubuntu_b", "size": 28},
+                "system.control": {"font": "gimbot", "size": 18},
+                "system.label": {"font": "gimbot", "size": 16},
+            },
         )
         self.use_font_roles(
             {

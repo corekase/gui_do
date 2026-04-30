@@ -203,8 +203,6 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.demo = None  # Will be set during build_window
         self.window = None
         self.menu_bar = None
-        self.help_label = None
-        self.status_label = None
         self.primary_canvas = None
         self.split_canvases = {}
         self.reset_button = None
@@ -237,10 +235,19 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
+        fonts = {
+            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
+            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
+        }
         setup_standard_font_roles(
             host.font_roles,
-            "demo_features/data/fonts/Gimbot.ttf",
-            "demo_features/data/fonts/Ubuntu-B.ttf"
+            fonts,
+            {
+                "mandelbrot.window_title": {"font": "ubuntu_b", "size": 28},
+                "mandelbrot.control": {"font": "gimbot", "size": 18},
+                "mandelbrot.caption": {"font": "gimbot", "size": 16},
+                "mandelbrot.status": {"font": "gimbot", "size": 14},
+            },
         )
         self.use_font_roles(
             {
@@ -435,13 +442,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         """Publish post-frame status updates for Mandelbrot state."""
         self.update_events()
 
-    def format_help_text(self) -> str:
-        """Return help text showing the available render modes."""
-        return "Modes: Iterative, Recursive, 1 Mandelbrot 4 Tasks, 4 Mandelbrots 4 Tasks"
 
-    def set_help_label(self, host) -> None:
-        """Refresh the Mandelbrot help label text."""
-        self.help_label.text = self.format_help_text()
 
     def _set_status_text(self, text: str) -> None:
         """Set canonical status text and keep status label in sync."""
@@ -453,7 +454,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         """Set failure summary preview limit and clamp to supported range."""
         clamped = max(self.FAILURE_PREVIEW_MIN, min(self.FAILURE_PREVIEW_MAX, int(limit)))
         self.failure_preview_limit = clamped
-        self.set_help_label(host)
+        # Help label is removed; do not call set_help_label
         return clamped
 
     def adjust_failure_preview_limit(self, host, delta: int) -> bool:
@@ -475,7 +476,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         canvas_control_cls,
         button_control_cls,
     ) -> None:
-        """Create the Mandelbrot window, canvases, controls, and status labels."""
+        """Create the Mandelbrot window, canvases, controls, and status label."""
         self.demo = host  # Store host reference for callbacks
         self.window = create_anchored_feature_window(
             host,
@@ -504,20 +505,6 @@ class MandelbrotRenderFeature(RoutedFeature):
             scenes_shown=False,
             windows_shown=False,
             extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
-        )
-
-        # Help label at top
-        help_rect = Rect(padded_content_rect.left, self.menu_bar.rect.bottom + 6, padded_content_rect.width, 20)
-        self.help_label = host.app.style_label(
-            self.window.add(
-                label_control_cls(
-                    "mandel_help",
-                    help_rect,
-                    self.format_help_text(),
-                )
-            ),
-            size=14,
-            role=self.font_role("caption"),
         )
 
         # Bottom control and status heights

@@ -50,10 +50,25 @@ class GuiDoDemo:
         # scene.  Features bind local role names to these pre-defined global
         # roles (via Feature.use_font_roles) instead of redefining sizes/files.
         self.font_roles = FontRoleRegistry()
+        fonts = {
+            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
+            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
+        }
         setup_standard_font_roles(
             self.font_roles,
-            "demo_features/data/fonts/Gimbot.ttf",
-            "demo_features/data/fonts/Ubuntu-B.ttf"
+            fonts,
+            {
+                "screen.main.task_panel.control": {"font": "gimbot", "size": 18},
+                "screen.main.title": {"font": "ubuntu_b", "size": 36},
+                "controls.label": {"font": "gimbot", "size": 14},
+                "controls.control": {"font": "gimbot", "size": 16},
+                "life.window_title": {"font": "ubuntu_b", "size": 18},
+                "life.control": {"font": "gimbot", "size": 18},
+                "mandelbrot.window_title": {"font": "ubuntu_b", "size": 18},
+                "mandelbrot.control": {"font": "gimbot", "size": 18},
+                "mandelbrot.caption": {"font": "gimbot", "size": 16},
+                "mandelbrot.status": {"font": "gimbot", "size": 14},
+            },
         )
 
         self.app.layout.set_anchor_bounds(self.screen_rect)
