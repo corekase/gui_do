@@ -41,6 +41,8 @@ class _ToastEntry:
     title: Optional[str]
     severity: ToastSeverity
     duration_seconds: Optional[float]  # None = persistent
+    background_color: Optional[tuple] = None
+    outline_color: Optional[tuple] = None
     elapsed: float = 0.0
     alpha: float = 1.0
 
@@ -91,6 +93,8 @@ class ToastManager:
         title: Optional[str] = None,
         severity: ToastSeverity = ToastSeverity.INFO,
         duration_seconds: Optional[float] = None,
+        background_color: Optional[tuple] = None,
+        outline_color: Optional[tuple] = None,
     ) -> ToastHandle:
         toast_id = self._next_id
         self._next_id += 1
@@ -101,6 +105,8 @@ class ToastManager:
             title=title,
             severity=severity,
             duration_seconds=duration,
+            background_color=background_color,
+            outline_color=outline_color,
         )
         self._toasts.append(entry)
         return ToastHandle(toast_id, self)
@@ -111,6 +117,8 @@ class ToastManager:
         *,
         title: Optional[str] = None,
         severity: ToastSeverity = ToastSeverity.INFO,
+        background_color: Optional[tuple] = None,
+        outline_color: Optional[tuple] = None,
     ) -> ToastHandle:
         toast_id = self._next_id
         self._next_id += 1
@@ -120,6 +128,8 @@ class ToastManager:
             title=title,
             severity=severity,
             duration_seconds=None,  # persistent
+            background_color=background_color,
+            outline_color=outline_color,
         )
         self._toasts.append(entry)
         return ToastHandle(toast_id, self)
@@ -173,8 +183,15 @@ class ToastManager:
         margin = self._margin
         sr = self._screen_rect
 
+        default_background_color = getattr(theme, "medium", (0, 150, 150))
+        default_outline_color = getattr(theme, "shadow", (0, 0, 0))
+        # gui_do 'none' color is (0, 0, 0) by default, but can be changed if needed
+        if hasattr(theme, "none"):
+            default_outline_color = getattr(theme, "none")
+
         for i, entry in enumerate(reversed(self._toasts)):
-            color = _SEVERITY_COLORS.get(entry.severity, (80, 80, 80))
+            color = entry.background_color if entry.background_color is not None else default_background_color
+            outline = entry.outline_color if entry.outline_color is not None else default_outline_color
             if "right" in self._position:
                 x = sr.right - w - margin
             elif "left" in self._position:
@@ -189,6 +206,7 @@ class ToastManager:
 
             rect = Rect(x, y, w, h)
             pygame.draw.rect(surface, color, rect, border_radius=4)
+            pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
             text_color = (240, 240, 240)
             if entry.title:
                 title_surf = font.render(entry.title, True, text_color)
@@ -197,7 +215,7 @@ class ToastManager:
             surface.blit(msg_surf, (rect.x + 8, rect.y + h // 2))
 
     def on_event_bus_message(self, payload: Any) -> None:
-        """Handle event bus messages with keys: message, title, severity, duration."""
+        """Handle event bus messages with keys: message, title, severity, duration, background_color, outline_color."""
         if not isinstance(payload, dict):
             return
         message = payload.get("message", "")
@@ -205,4 +223,6 @@ class ToastManager:
         severity_name = payload.get("severity", "INFO").upper()
         severity = getattr(ToastSeverity, severity_name, ToastSeverity.INFO)
         duration = payload.get("duration_seconds")
-        self.show(message, title=title, severity=severity, duration_seconds=duration)
+        background_color = payload.get("background_color")
+        outline_color = payload.get("outline_color")
+        self.show(message, title=title, severity=severity, duration_seconds=duration, background_color=background_color, outline_color=outline_color)

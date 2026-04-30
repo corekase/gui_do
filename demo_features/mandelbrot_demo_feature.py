@@ -932,8 +932,9 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.publish_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
         self.publish_running_status()
 
+
     def update_events(self) -> None:
-        """Drain scheduler event streams and synchronize UI/task status state."""
+        """Drain scheduler event streams and synchronize UI/task status state. Also sends a toast when a Mandelbrot task completes."""
         demo = self.demo
         if demo is None:
             return
@@ -942,8 +943,18 @@ class MandelbrotRenderFeature(RoutedFeature):
         failed = scheduler.get_failed_events()
         failed_details = []
 
+        # Send a toast for each completed task
         for event in finished:
             if event.task_id in self.task_ids:
+                # Send toast notification
+                demo.app.events.publish(
+                    "toast",
+                    {
+                        "message": f"Mandelbrot task '{event.task_id}' completed.",
+                        "title": "Mandelbrot",
+                        "severity": "SUCCESS",
+                    },
+                )
                 self.task_ids.remove(event.task_id)
                 scheduler.pop_result(event.task_id, None)
 
