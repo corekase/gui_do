@@ -172,9 +172,9 @@ class CoreOnlyBootstrapContractsTests(unittest.TestCase):
             "test_demo_features_gui_portability.py",
             "test_feature_lifecycle_host_parameter_contracts.py",
             "test_gui_do_demo_life_runtime.py",
-            "test_gui_do_demo_presentation_model.py",
             "test_mandel_event_schema_exports.py",
             "test_mandel_logic_feature_runtime.py",
+            "test_life_mandel_window_menu_runtime.py",
         }
 
         existing_expected = {name for name in expected_demo_tests if (tests_dir / name).exists()}

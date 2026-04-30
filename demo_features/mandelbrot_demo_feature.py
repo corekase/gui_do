@@ -8,7 +8,6 @@ from typing import Optional, Tuple
 
 from pygame import Rect
 from gui_do import (
-    add_window_scene_menu_strip,
     ButtonControl,
     CanvasControl,
     centered_horizontal_strip_layout,
@@ -16,7 +15,6 @@ from gui_do import (
     inset_rect,
     LabelControl,
     LogicFeature,
-    minimize_window_menu_entries,
     RoutedFeature,
     toggle_window_visibility,
     WindowControl,
@@ -168,8 +166,6 @@ class MandelbrotLogicFeature(LogicFeature):
 class MandelbrotRenderFeature(RoutedFeature):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
-    # Failure preview/summary helpers for test and UI compatibility
-    failure_preview_limit: int = 4
 
     HOST_REQUIREMENTS = {
         "build": ("app", "root"),
@@ -195,50 +191,8 @@ class MandelbrotRenderFeature(RoutedFeature):
     ITERATIVE_BUSY_MAX_QUEUED_MESSAGES_PER_TASK = 128
     ITERATIVE_BUSY_STARTUP_FRAMES = 10
 
-    def format_failure_summary(self, failed_details) -> str:
-        """Format a summary string for failed tasks, capping preview and reporting remainder."""
-        total = len(failed_details)
-        limit = getattr(self, "failure_preview_limit", 4)
-        if total == 0:
-            return ""
-        preview = failed_details[:limit]
-        if total == 1:
-            tid, err = preview[0]
-            return f"{tid}: {err}"
-        preview_str = "; ".join(f"{tid}: {err}" for tid, err in preview)
-        remainder = total - limit
-        if remainder > 0:
-            return f"{total} tasks failed - {preview_str}; +{remainder} more"
-        return f"{total} tasks failed - {preview_str}"
 
-    def set_failure_preview_limit(self, host, value: int) -> int:
-        """Clamp and set the failure preview limit, returning the clamped value."""
-        clamped = max(1, min(20, int(value)))
-        self.failure_preview_limit = clamped
-        # Optionally refresh help label if present
-        if hasattr(self, "status_label") and self.status_label is not None:
-            self.status_label.text = f"Mandelbrot failure preview limit: {clamped}"
-        return clamped
 
-    def adjust_failure_preview_limit(self, host, delta: int) -> bool:
-        """Adjust the failure preview limit by delta, publish status, and report if at bound."""
-        old = getattr(self, "failure_preview_limit", 4)
-        new = old + int(delta)
-        clamped = max(1, min(20, new))
-        consumed = clamped != old
-        self.failure_preview_limit = clamped
-        at_bound = clamped == 1 or clamped == 20
-        if hasattr(self, "status_label") and self.status_label is not None:
-            if at_bound:
-                self.status_label.text = f"Mandelbrot failure preview limit: {clamped} (at bound)"
-            else:
-                self.status_label.text = f"Mandelbrot failure preview limit: {clamped}"
-        # Also update status_text for test compatibility
-        if at_bound:
-            self.status_text = f"Mandelbrot failure preview limit: {clamped} (at bound)"
-        else:
-            self.status_text = f"Mandelbrot failure preview limit: {clamped}"
-        return True
 
     def __init__(self) -> None:
         super().__init__("mandelbrot", scene_name="main")
@@ -513,7 +467,6 @@ class MandelbrotRenderFeature(RoutedFeature):
             anchor="top_right",
             margin=(28, 92),
             title_font_role=self.font_role("window_title"),
-            event_handler=self._window_event_handler,
             use_frame_backdrop=True,
         )
         content_rect = self.window.content_rect()
@@ -521,17 +474,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         padding = 8
         menu_h = 28
 
-        self.menu_bar = add_window_scene_menu_strip(
-            self.window,
-            host,
-            control_id="mandel_window_menu",
-            rect=Rect(padded_content_rect.left, padded_content_rect.top, padded_content_rect.width, menu_h),
-            scene_name="main",
-            on_minimize=self._toggle_window_visible,
-            scenes_shown=False,
-            windows_shown=False,
-            extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
-        )
+        self.menu_bar = None
 
         # Bottom control and status heights
         control_height = 30
@@ -564,7 +507,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             padded_content_rect,
             rows=2,
             cols=2,
-            gap=0,  # Patch: eliminate gap to cover full area
+            gap=6,  # Patch: eliminate gap to cover full area
             bottom_padding=bottom_visual_padding,
             controls_and_status_height=controls_and_status_height,
         )
@@ -621,14 +564,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         )
         self.status_text = default_status
 
-        # Ensure no leftover help label or invisible controls are present
-        # Remove any old help label if it exists
-        if hasattr(self, "help_label"):
-            try:
-                self.window.remove(self.help_label)
-            except Exception:
-                pass
-            self.help_label = None
+
 
         canvas1.visible = False
         canvas2.visible = False
@@ -638,26 +574,9 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.clear(host)
         self.window.visible = False
 
-    def _window_event_handler(self, event) -> bool:
-        demo = self.demo
-        if self.menu_bar is None or demo is None:
-            return False
-        return self.menu_bar.handle_event(event, demo.app)
 
-    def _toggle_window_visible(self) -> None:
-        # Call host setter if available, else fallback to direct toggle
-        demo = getattr(self, 'demo', None)
-        if demo and hasattr(demo, 'set_mandel_window_visible'):
-            demo.set_mandel_window_visible(False)
-        if self.window:
-            self.window.visible = False
 
-    def _minimize_window(self) -> None:
-        self._toggle_window_visible()
 
-    def _menu_entries(self):
-        """Compatibility helper retained for menu runtime tests."""
-        return minimize_window_menu_entries(self._toggle_window_visible)
 
     def on_status_event(self, host, payload) -> None:
         """Handle status-bus events and render normalized status text."""
@@ -1027,6 +946,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             if event.task_id in self.task_ids:
                 self.task_ids.remove(event.task_id)
                 scheduler.pop_result(event.task_id, None)
+
         for event in failed:
             if event.task_id in self.task_ids:
                 self.task_ids.remove(event.task_id)
@@ -1034,7 +954,9 @@ class MandelbrotRenderFeature(RoutedFeature):
 
         if failed_details:
             failed_details.sort(key=lambda item: (item[0], item[1]))
-            self.publish_event(MANDEL_KIND_FAILED, self.format_failure_summary(failed_details))
+            # Simple summary: just join all failures for demo simplicity
+            summary = "; ".join(f"{tid}: {err}" for tid, err in failed_details)
+            self.publish_event(MANDEL_KIND_FAILED, summary)
 
         busy = scheduler.tasks_busy_match_any(*self.task_id_pool)
         self._set_busy_dispatch_mode(busy)

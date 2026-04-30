@@ -14,9 +14,7 @@ from gui_do import (
     FeatureMessage,
     inset_rect,
     LayoutAxis,
-    add_window_scene_menu_strip,
     LogicFeature,
-    minimize_window_menu_entries,
     RoutedFeature,
     SliderControl,
     split_slot_bounds,
@@ -272,23 +270,13 @@ class LifeSimulationFeature(RoutedFeature):
         top = padded_content_rect.top
         width = padded_content_rect.width
         height = padded_content_rect.height
-        menu_h = 28
+        # menu_h = 28 (removed, no menu)
         control_height = 28
         controls_gap = 10
         control_spacing = 12
 
-        self.menu_bar = add_window_scene_menu_strip(
-            self.window,
-            host,
-            control_id="life_window_menu",
-            rect=Rect(left, top, max(120, width), menu_h),
-            scene_name="main",
-            on_minimize=self._toggle_window_visible,
-            scenes_shown=False,
-            windows_shown=False,
-            extra_entries_provider=lambda: minimize_window_menu_entries(self._toggle_window_visible),
-        )
-        top = self.menu_bar.rect.bottom + 10
+        self.menu_bar = None
+        top = padded_content_rect.top
         height = max(1, padded_content_rect.bottom - top)
 
         controls_y = top + height - control_height - 10
@@ -403,8 +391,7 @@ class LifeSimulationFeature(RoutedFeature):
         demo = self.demo
         canvas = self.canvas
         window = self.window
-        if self.menu_bar is not None and self.menu_bar.handle_event(event, demo.app):
-            return True
+
         if event.is_mouse_down(3) and event.collides(canvas.rect):
             pos = event.pos
             if pos is not None:
@@ -453,20 +440,7 @@ class LifeSimulationFeature(RoutedFeature):
         """Window postamble hook that drains queued events and renders the board."""
         self.update_life()
 
-    def _toggle_window_visible(self) -> None:
-        # Call host setter if available, else fallback to direct toggle
-        demo = getattr(self, 'demo', None)
-        if demo and hasattr(demo, 'set_life_window_visible'):
-            demo.set_life_window_visible(False)
-        if self.window:
-            self.window.visible = False
 
-    def _minimize_window(self) -> None:
-        self._toggle_window_visible()
-
-    def _menu_entries(self):
-        """Compatibility helper retained for menu runtime tests."""
-        return minimize_window_menu_entries(self._toggle_window_visible)
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""
