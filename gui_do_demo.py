@@ -68,7 +68,7 @@ class GuiDoDemo:
                 "mandelbrot.control": {"font": "gimbot", "size": 18},
                 "mandelbrot.caption": {"font": "gimbot", "size": 16},
                 "mandelbrot.status": {"font": "gimbot", "size": 14},
-                "system.window_title": {"font": "ubuntu_b", "size": 28},
+                "system.window_title": {"font": "ubuntu_b", "size": 18},
                 "system.control": {"font": "gimbot", "size": 18},
                 "system.label": {"font": "gimbot", "size": 16},
             },
