@@ -206,18 +206,6 @@ class GuiDoDemo:
         r = self.action_registry
         r.declare("exit",                "Exit",                          lambda _ctx, _ev: (setattr(self.app, "running", False) or True), category="File")
         r.declare(
-            "file_open",
-            "Open File…",
-            lambda _ctx, _ev: True,
-            category="File",
-        )
-        r.declare(
-            "file_save",
-            "Save File…",
-            lambda _ctx, _ev: True,
-            category="File",
-        )
-        r.declare(
             "nav_main",
             "Go to Main Scene",
             lambda _ctx, _ev: (self.scene_transitions.go("main") or True),
