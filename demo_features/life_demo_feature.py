@@ -278,10 +278,19 @@ class LifeSimulationFeature(RoutedFeature):
         height = max(1, padded_content_rect.bottom - top)
 
         controls_y = top + height - control_height - 10
-        canvas_height = max(1, controls_y - controls_gap - top)
 
+        # Use partition_canvas_area for single canvas
+        from gui_do import partition_canvas_area
+        padded_rect = Rect(left, top, width, max(1, controls_y - controls_gap - top))
+        [canvas_rect] = partition_canvas_area(
+            padded_rect,
+            mode="single",
+            grid_gap=6,
+            bottom_visual_padding=0,
+            controls_and_status_height=0,
+        )
         self.canvas = self.window.add(
-            canvas_control_cls("life_canvas", Rect(left, top, width, canvas_height), max_events=256)
+            canvas_control_cls("life_canvas", canvas_rect, max_events=256)
         )
 
         slots = centered_horizontal_strip_layout(

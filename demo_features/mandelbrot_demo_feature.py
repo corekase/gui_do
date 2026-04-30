@@ -520,57 +520,37 @@ class MandelbrotRenderFeature(RoutedFeature):
         controls_and_status_height = control_height + status_height + 12
         bottom_visual_padding = 5
 
-        # Available space for canvases
-        canvas_area_top = help_rect.bottom
+        # Canvas layout using partition_canvas_area
+        from gui_do import partition_canvas_area
+        grid_gap = 6
+        # Compute canvas_area_bottom and canvas_area_width for control layout
         canvas_area_bottom = padded_content_rect.bottom - bottom_visual_padding - controls_and_status_height
-        canvas_area_height = canvas_area_bottom - canvas_area_top
         canvas_area_width = padded_content_rect.width
 
-        # Canvas layout
-        grid_gap = 6
-        split_size = (canvas_area_width - grid_gap) // 2
-
-        # Primary canvas (full width)
-        primary_canvas_rect = Rect(
-            padded_content_rect.left,
-            canvas_area_top,
-            canvas_area_width,
-            canvas_area_height
+        # Single canvas mode
+        [primary_canvas_rect] = partition_canvas_area(
+            padded_content_rect,
+            mode="single",
+            grid_gap=grid_gap,
+            bottom_visual_padding=bottom_visual_padding,
+            controls_and_status_height=controls_and_status_height,
         )
         self.primary_canvas = self.window.add(
             canvas_control_cls("mandel_canvas", primary_canvas_rect, max_events=128)
         )
 
-        # Split canvases in 2x2 grid
-        canvas1_rect = Rect(
-            padded_content_rect.left,
-            canvas_area_top,
-            split_size,
-            (canvas_area_height - grid_gap) // 2
+        # 2x2 grid mode
+        canvas_rects = partition_canvas_area(
+            padded_content_rect,
+            mode="2x2",
+            grid_gap=grid_gap,
+            bottom_visual_padding=bottom_visual_padding,
+            controls_and_status_height=controls_and_status_height,
         )
-        canvas2_rect = Rect(
-            canvas1_rect.right + grid_gap,
-            canvas_area_top,
-            split_size,
-            (canvas_area_height - grid_gap) // 2
-        )
-        canvas3_rect = Rect(
-            padded_content_rect.left,
-            canvas1_rect.bottom + grid_gap,
-            split_size,
-            (canvas_area_height - grid_gap) // 2
-        )
-        canvas4_rect = Rect(
-            canvas1_rect.right + grid_gap,
-            canvas1_rect.bottom + grid_gap,
-            split_size,
-            (canvas_area_height - grid_gap) // 2
-        )
-
-        canvas1 = self.window.add(canvas_control_cls("can1", canvas1_rect, max_events=32))
-        canvas2 = self.window.add(canvas_control_cls("can2", canvas2_rect, max_events=32))
-        canvas3 = self.window.add(canvas_control_cls("can3", canvas3_rect, max_events=32))
-        canvas4 = self.window.add(canvas_control_cls("can4", canvas4_rect, max_events=32))
+        canvas1 = self.window.add(canvas_control_cls("can1", canvas_rects[0], max_events=32))
+        canvas2 = self.window.add(canvas_control_cls("can2", canvas_rects[1], max_events=32))
+        canvas3 = self.window.add(canvas_control_cls("can3", canvas_rects[2], max_events=32))
+        canvas4 = self.window.add(canvas_control_cls("can4", canvas_rects[3], max_events=32))
         self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
 
         # Controls at bottom: evenly divide a padded strip across all controls,

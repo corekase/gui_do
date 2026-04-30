@@ -83,6 +83,7 @@ from .features.feature_lifecycle import (
     inset_rect,
     centered_horizontal_strip_layout,
     split_slot_bounds,
+    partition_canvas_area,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl

@@ -414,6 +414,77 @@ def split_slot_bounds(slots) -> tuple[int, int]:
     last = slots[-1]
     return int(first.left), int(last.right)
 
+
+# ---------------------------------------------------------------------------
+# Canvas/grid partitioning helpers
+# ---------------------------------------------------------------------------
+def partition_canvas_area(
+    padded_content_rect,
+    *,
+    mode: str = "single",
+    grid_gap: int = 6,
+    bottom_visual_padding: int = 5,
+    controls_and_status_height: int = 0,
+):
+    """
+    Partition a padded content rect into either a single canvas or a 2x2 grid.
+
+    Returns:
+        If mode == "single":
+            [primary_canvas_rect]
+        If mode == "2x2":
+            [canvas1_rect, canvas2_rect, canvas3_rect, canvas4_rect]
+    """
+    from pygame import Rect as _Rect
+
+    canvas_area_top = getattr(padded_content_rect, "top", padded_content_rect[1])
+    canvas_area_bottom = getattr(padded_content_rect, "bottom", padded_content_rect[1] + padded_content_rect[3])
+    canvas_area_bottom = canvas_area_bottom - bottom_visual_padding - controls_and_status_height
+    canvas_area_height = canvas_area_bottom - canvas_area_top
+    canvas_area_width = getattr(padded_content_rect, "width", padded_content_rect[2])
+    canvas_area_left = getattr(padded_content_rect, "left", padded_content_rect[0])
+
+    if mode == "single":
+        primary_canvas_rect = _Rect(
+            canvas_area_left,
+            canvas_area_top,
+            canvas_area_width,
+            canvas_area_height,
+        )
+        return [primary_canvas_rect]
+
+    elif mode == "2x2":
+        split_size = (canvas_area_width - grid_gap) // 2
+        half_height = (canvas_area_height - grid_gap) // 2
+        canvas1_rect = _Rect(
+            canvas_area_left,
+            canvas_area_top,
+            split_size,
+            half_height,
+        )
+        canvas2_rect = _Rect(
+            canvas1_rect.right + grid_gap,
+            canvas_area_top,
+            split_size,
+            half_height,
+        )
+        canvas3_rect = _Rect(
+            canvas_area_left,
+            canvas1_rect.bottom + grid_gap,
+            split_size,
+            half_height,
+        )
+        canvas4_rect = _Rect(
+            canvas1_rect.right + grid_gap,
+            canvas1_rect.bottom + grid_gap,
+            split_size,
+            half_height,
+        )
+        return [canvas1_rect, canvas2_rect, canvas3_rect, canvas4_rect]
+
+    else:
+        raise ValueError(f"Unknown partition mode: {mode}")
+
 @dataclass(slots=True)
 class FeatureMessage:
     """Structured message envelope used for inter-feature transport."""
