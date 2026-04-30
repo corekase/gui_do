@@ -272,7 +272,10 @@ class MainDemoFeature(Feature):
             size=64,
             role=host.SCREEN_TITLE_FONT_ROLE,
         )
-        if host.app.theme.fonts.has_role(label.font_role):
-            font = host.app.theme.fonts.font_instance(label.font_role, size=label.font_size)
+        # Use the per-scene FontManager, not the global FontRoleRegistry
+        scene_runtime = host.app._scenes[host.app.active_scene_name]
+        scene_font_manager = scene_runtime.theme.fonts
+        if scene_font_manager.has_role(label.font_role):
+            font = scene_font_manager.font_instance(label.font_role, size=label.font_size)
             label.rect.size = font.text_surface_size(label.text, shadow=True)
         return label

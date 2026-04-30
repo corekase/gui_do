@@ -38,7 +38,46 @@ class GuiDoDemo:
         pygame.display.set_caption("gui_do demo")
 
         self.screen_rect = self.screen.get_rect()
-        self.app = GuiApplication(self.screen)
+        # Create the font role registry ONCE and register all roles BEFORE creating the app
+        self.font_roles = FontRoleRegistry()
+        fonts = {
+            "default": "demo_features/data/fonts/Gimbot.ttf",  # Used for all controls unless overridden
+            "window": "demo_features/data/fonts/Ubuntu-B.ttf",  # All window titles
+            "main_label": "demo_features/data/fonts/Ubuntu-B.ttf",  # Main screen label (large)
+        }
+        setup_standard_font_roles(
+            self.font_roles,
+            fonts,
+            {
+                # Main screen label (large font)
+                "screen.main.title": {"font": "main_label", "size": 36},
+                # All window titles use the window font
+                "screen.main.task_panel.control": {"font": "window", "size": 18},
+                "life.window_title": {"font": "window", "size": 18},
+                "mandelbrot.window_title": {"font": "window", "size": 18},
+                "system.window_title": {"font": "window", "size": 18},
+                # Explicitly define controls.label and controls.control to avoid missing role errors
+                "controls.label": {"size": 14},
+                "controls.control": {"size": 16},
+                "data_grid.cell": {"size": 18},
+                "list_view.row": {"size": 18},
+                "dropdown.option": {"size": 18},
+                "menu_bar.entry": {"size": 16},
+                "tree.row": {"size": 16},
+                "spinner.button": {"size": 14},
+                "spinner.value": {"size": 18},
+                "color_picker.hex": {"size": 16},
+                "property_inspector.row": {"size": 16},
+                "text_input.text": {"size": 20},
+                "text_area.text": {"size": 16},
+                "notification_panel.header": {"size": 20},
+                "notification_panel.title": {"size": 16},
+                "notification_panel.body": {"size": 14},
+                "notification_panel.timestamp": {"size": 12},
+            },
+        )
+        # Pass the font role registry to the application so it is used globally
+        self.app = GuiApplication(self.screen, font_roles=self.font_roles)
         self.app.register_cursor("normal", "demo_features/data/cursors/cursor.png", (1, 1))
         self.app.register_cursor("hand", "demo_features/data/cursors/hand.png", (12, 12))
         self.app.set_cursor("normal")
@@ -48,51 +87,6 @@ class GuiDoDemo:
             file_logging_enabled=False,
         )
 
-        # Font roles are defined here during demo startup, independent of any
-        # scene.  Features bind local role names to these pre-defined global
-        # roles (via Feature.use_font_roles) instead of redefining sizes/files.
-        self.font_roles = FontRoleRegistry()
-        fonts = {
-            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
-            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
-        }
-        setup_standard_font_roles(
-            self.font_roles,
-            fonts,
-            {
-                "screen.main.task_panel.control": {"font": "gimbot", "size": 18},
-                "screen.main.title": {"font": "ubuntu_b", "size": 36},
-                "controls.label": {"font": "gimbot", "size": 14},
-                "controls.control": {"font": "gimbot", "size": 16},
-                "life.window_title": {"font": "ubuntu_b", "size": 18},
-                "life.control": {"font": "gimbot", "size": 18},
-                "mandelbrot.window_title": {"font": "ubuntu_b", "size": 18},
-                "mandelbrot.control": {"font": "gimbot", "size": 18},
-                "mandelbrot.caption": {"font": "gimbot", "size": 16},
-                "mandelbrot.status": {"font": "gimbot", "size": 14},
-                "system.window_title": {"font": "ubuntu_b", "size": 18},
-                "system.control": {"font": "gimbot", "size": 18},
-                "system.label": {"font": "gimbot", "size": 16},
-                # Centralized font roles for all controls (full coverage):
-                "error_boundary.placeholder": {"font": "ubuntu_b", "size": 12},
-                "dock_workspace.tab": {"font": "ubuntu_b", "size": 14},
-                "list_view.row": {"font": "gimbot", "size": 18},
-                "data_grid.cell": {"font": "gimbot", "size": 18},
-                "menu_bar.entry": {"font": "ubuntu_b", "size": 16},
-                "dropdown.option": {"font": "gimbot", "size": 18},
-                "notification_panel.header": {"font": "ubuntu_b", "size": 20},
-                "notification_panel.title": {"font": "ubuntu_b", "size": 16},
-                "notification_panel.body": {"font": "gimbot", "size": 14},
-                "notification_panel.timestamp": {"font": "gimbot", "size": 12},
-                "property_inspector.row": {"font": "gimbot", "size": 16},
-                "color_picker.hex": {"font": "gimbot", "size": 16},
-                "spinner.button": {"font": "gimbot", "size": 14},
-                "spinner.value": {"font": "gimbot", "size": 18},
-                "text_input.text": {"font": "gimbot", "size": 20},
-                "text_area.text": {"font": "gimbot", "size": 16},
-                "tree.row": {"font": "gimbot", "size": 16},
-            },
-        )
 
         self.app.layout.set_anchor_bounds(self.screen_rect)
         self.app.create_scene("main", pretty_name="Desktop Demo")

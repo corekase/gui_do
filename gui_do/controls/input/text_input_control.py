@@ -7,7 +7,7 @@ import pygame
 from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
-from ..base._text_edit_focus_base import _TextEditFocusBase
+from ..base.abstract_text_input_control import AbstractTextInputControl
 from ...overlays.clipboard import ClipboardManager
 
 if TYPE_CHECKING:
@@ -17,22 +17,63 @@ if TYPE_CHECKING:
 _H_PADDING = 4
 
 
-class TextInputControl(_TextEditFocusBase):
+class TextInputControl(AbstractTextInputControl):
+    def _build_display_raw_mapping(self):
+        """
+        Build mappings between display string indices and raw value indices.
+        Returns (display_to_raw, raw_to_display):
+        - display_to_raw[i]: raw index for display index i (None if literal)
+        - raw_to_display[j]: display index for raw index j
+        """
+        display = self._get_display_value()
+        raw = self._value
+        # If no formatter, 1:1 mapping
+        if not self._display_value_provider or display == raw:
+            display_to_raw = [i for i in range(len(display) + 1)]
+            raw_to_display = [i for i in range(len(raw) + 1)]
+            return display_to_raw, raw_to_display
+
+        # For formatters, try to align digits/characters
+        display_to_raw = [None] * (len(display) + 1)
+        raw_to_display = [None] * (len(raw) + 1)
+        di = 0
+        ri = 0
+        while di < len(display) and ri < len(raw):
+            if display[di] == raw[ri]:
+                display_to_raw[di] = ri
+                raw_to_display[ri] = di
+                di += 1
+                ri += 1
+            elif display[di] in raw:
+                # Try to sync up by advancing raw
+                ri += 1
+            else:
+                # Literal in display
+                display_to_raw[di] = None
+                di += 1
+        # Fill trailing indices
+        for i in range(di, len(display) + 1):
+            display_to_raw[i] = len(raw)
+        for j in range(ri, len(raw) + 1):
+            raw_to_display[j] = len(display)
+        # Fill None with nearest valid
+        last = 0
+        for i, v in enumerate(display_to_raw):
+            if v is not None:
+                last = v
+            else:
+                display_to_raw[i] = last
+        last = 0
+        for i, v in enumerate(raw_to_display):
+            if v is not None:
+                last = v
+            else:
+                raw_to_display[i] = last
+        return display_to_raw, raw_to_display
+
     """Single-line editable text field with cursor, selection, masking, and clipboard."""
 
-    def __init__(
-        self,
-        control_id: str,
-        rect: Rect,
-        value: str = "",
-        placeholder: str = "",
-        max_length: Optional[int] = None,
-        masked: bool = False,
-        on_change: Optional[Callable[[str], None]] = None,
-        on_submit: Optional[Callable[[str], None]] = None,
-        input_filter: Optional[Callable[[str], str]] = None,
-        font_role: str = "body",
-    ) -> None:
+    def __init__(self, control_id: str, rect: Rect, value: str = "", placeholder: str = "", max_length: Optional[int] = None, masked: bool = False, on_change: Optional[Callable[[str], None]] = None, on_submit: Optional[Callable[[str], None]] = None, input_filter: Optional[Callable[[str], str]] = None, font_role: str = "body", display_value_provider: Optional[Callable[[], str]] = None) -> None:
         super().__init__(control_id, rect)
         self._value = str(value)
         self._placeholder = str(placeholder)
@@ -41,14 +82,73 @@ class TextInputControl(_TextEditFocusBase):
         self._on_change = on_change
         self._on_submit = on_submit
         self._input_filter = input_filter
-        self.tab_index = 0  # focusable by default
-        # Cursor / selection
-        self._cursor_pos: int = len(self._value)
-        self._sel_anchor: Optional[int] = None
-        self._sel_active: Optional[int] = None
-        self._scroll_offset_px: int = 0
-        # Visual cache
-        self._visual_key: Optional[tuple] = None
+        self._font_role = font_role
+        self._font_size = 16
+        self._display_value_provider = display_value_provider
+        self.tab_index = 0
+        self._cursor_pos = len(self._value)
+        self._sel_anchor = None
+        self._sel_active = None
+        self._scroll_offset_px = 0
+    def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
+        """Map pixel x to logical (raw) caret index using formatter-aware mapping."""
+        font = self._get_font(theme)
+        display = self._get_display_value()
+        x_local = x - self.rect.left - _H_PADDING + self._scroll_offset_px
+        if x_local <= 0 or not display:
+            return 0
+        lo = 0
+        hi = len(display)
+        def measure(n):
+            px, _ = font.text_size(display[:n]) if hasattr(font, "text_size") else font.size(display[:n])
+            return px
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if measure(mid) < x_local:
+                lo = mid + 1
+            else:
+                hi = mid
+        disp_idx = lo
+        # Snap to closest display index
+        if disp_idx > 0 and disp_idx < len(display):
+            left_w = measure(disp_idx - 1)
+            right_w = measure(disp_idx)
+            if abs(x_local - left_w) <= abs(x_local - right_w):
+                disp_idx -= 1
+        # Map display index to nearest editable raw index
+        display_to_raw, _ = self._build_display_raw_mapping()
+        # Find nearest editable position (not None)
+        search_range = list(range(disp_idx, -1, -1)) + list(range(disp_idx + 1, len(display) + 1))
+        for idx in search_range:
+            raw_idx = display_to_raw[idx]
+            if raw_idx is not None:
+                return raw_idx
+        return 0
+
+    def get_pixel_for_char_index(self, index: int, theme=None) -> Tuple[int, int]:
+        font = self._get_font(theme)
+        display = self._get_display_value()
+        _, raw_to_display = self._build_display_raw_mapping()
+        disp_idx = raw_to_display[index] if index < len(raw_to_display) else len(display)
+        px, _ = font.text_size(display[:disp_idx]) if hasattr(font, "text_size") else font.size(display[:disp_idx])
+        return (self.rect.left + _H_PADDING - self._scroll_offset_px + px, self.rect.top)
+
+    def _get_font(self, theme) -> Optional["pygame.font.Font"]:
+        from ...theme.color_theme import get_global_font_manager
+        font_manager = get_global_font_manager()
+        if font_manager is not None:
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=16)
+        # Fallback: use theme if provided
+        if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=16)
+        return None
+
+    def _get_display_value(self) -> str:
+        if self._display_value_provider is not None:
+            return self._display_value_provider()
+        if self._masked:
+            return "*" * len(self._value)
+        return self._value
 
     # ------------------------------------------------------------------
     # Public API
@@ -166,17 +266,20 @@ class TextInputControl(_TextEditFocusBase):
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             if not self.rect.collidepoint(event.pos):
                 return False
-            idx = self._pos_to_char_index(event.pos[0])
+            # Reset scroll offset so mapping is always relative to visible text
+            self._scroll_offset_px = 0
+            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
             self._cursor_pos = idx
             self._sel_anchor = idx
             self._sel_active = idx
             self._drag_selecting = True
             self._reset_blink()
+            self._scroll_to_cursor(theme=theme)
             self.invalidate()
             return True
 
         if event.kind == EventType.MOUSE_MOTION and self._drag_selecting:
-            idx = self._pos_to_char_index(event.pos[0])
+            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
             self._sel_active = idx
             self._cursor_pos = idx
             self.invalidate()
@@ -324,6 +427,8 @@ class TextInputControl(_TextEditFocusBase):
     # ------------------------------------------------------------------
 
     def _get_display_value(self) -> str:
+        if self._display_value_provider is not None:
+            return self._display_value_provider()
         if self._masked:
             return "*" * len(self._value)
         return self._value
@@ -371,29 +476,22 @@ class TextInputControl(_TextEditFocusBase):
             self._scroll_offset_px = cursor_px - visible_width + 4
         self._scroll_offset_px = max(0, self._scroll_offset_px)
 
-    def _pos_to_char_index(self, x_screen: int, theme=None) -> int:
-        """Convert screen x coordinate to character index."""
-        font = self._get_font(theme)
-        if font is None:
-            return 0
-        display = self._get_display_value()
-        x_local = x_screen - self.rect.left - _H_PADDING + self._scroll_offset_px
-        best_idx = 0
-        best_dist = abs(x_local)
-        for i in range(1, len(display) + 1):
-            px, _ = font.text_size(display[:i]) if hasattr(font, "text_size") else font.size(display[:i])
-            dist = abs(x_local - px)
-            if dist < best_dist:
-                best_dist = dist
-                best_idx = i
-        return max(0, min(best_idx, len(self._value)))
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
-        """Return font instance from theme using centralized font role. Always provides a valid theme with fonts."""
-        from ...theme.color_theme import ColorTheme
-        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            theme = ColorTheme()
-        return theme.fonts.font_instance(getattr(self, "_font_role", "text_input.text"), size=20)
+        from ...theme.color_theme import get_global_font_manager
+        font_manager = get_global_font_manager()
+        if font_manager is not None:
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=20)
+        if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=20)
+        return None
+
+    def _get_display_value(self) -> str:
+        if self._display_value_provider is not None:
+            return self._display_value_provider()
+        if self._masked:
+            return "*" * len(self._value)
+        return self._value
 
     def _reset_blink(self) -> None:
         self._reset_text_edit_blink()

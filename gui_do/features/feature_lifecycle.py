@@ -68,9 +68,16 @@ def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
     """
     if font_roles is None or not fonts:
         return
+    default_font_key = fonts.get("default")
     for spec in role_specs:
         for role, cfg in spec.items():
-            font_key = cfg.get("font", "body")
+            # Use the font specified in the config, or fall back to 'default' if present, else 'body'
+            font_key = cfg.get("font")
+            if font_key is None:
+                if default_font_key is not None:
+                    font_key = "default"
+                else:
+                    font_key = "body"
             file_path = fonts.get(font_key)
             if not file_path:
                 continue

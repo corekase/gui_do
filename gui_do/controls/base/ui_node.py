@@ -379,9 +379,15 @@ class UiNode:
 
     def handle_routed_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         # --- Ensure theme is always valid and has fonts ---
-        from ...theme.color_theme import ColorTheme
+        from ...theme.color_theme import get_global_font_manager, ColorTheme
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            theme = ColorTheme()
+            font_manager = get_global_font_manager()
+            if font_manager is not None:
+                class _Theme:
+                    fonts = font_manager
+                theme = _Theme()
+            else:
+                theme = ColorTheme()
         if event.phase is EventPhase.CAPTURE:
             return bool(self.on_event_capture(event, app, theme=theme))
         if event.phase is EventPhase.BUBBLE:
@@ -413,9 +419,15 @@ class UiNode:
 
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
         # --- Ensure theme is always valid and has fonts ---
-        from ...theme.color_theme import ColorTheme
+        from ...theme.color_theme import get_global_font_manager, ColorTheme
         if _theme is None or not hasattr(_theme, "fonts") or _theme.fonts is None:
-            _theme = ColorTheme()
+            font_manager = get_global_font_manager()
+            if font_manager is not None:
+                class _Theme:
+                    fonts = font_manager
+                _theme = _Theme()
+            else:
+                _theme = ColorTheme()
         # Subclasses should override this method for custom drawing.
         pass
         """Draw control onto target surface."""

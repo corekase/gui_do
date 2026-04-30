@@ -55,17 +55,27 @@ class FontRoleDef:
     italic: bool = False
 
 
-class FontRoleRegistry:
-    """Cross-scene font role registry.
 
-    Define all font roles during application startup, then apply them to any
-    scene with a single :meth:`apply` call.  Role names can be retrieved via
-    :meth:`role` or ``__getitem__`` for use as ``font_role=`` arguments.
+class FontRoleRegistry:
+
+    """Cross-scene font role registry.
     """
 
     def __init__(self) -> None:
         self._defs: Dict[str, FontRoleDef] = {}
         self._order: List[str] = []
+
+    def font_instance(self, role_name: str, *, size: int = None):
+        """
+        FontRoleRegistry does not provide font_instance. Use the FontManager from the current scene/theme.
+        """
+        raise NotImplementedError(
+            "FontRoleRegistry does not provide font_instance(). Use the FontManager from the current scene/theme (e.g., app.theme.fonts or scene.theme.fonts) to get a font instance."
+        )
+
+    def has_role(self, role_name: str) -> bool:
+        """Return True if the role is defined."""
+        return str(role_name) in self._defs
 
     # ------------------------------------------------------------------
     # Configuration API

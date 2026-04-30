@@ -193,7 +193,14 @@ class Scene:
         # --- Ensure theme is always valid and has fonts ---
         from ..theme.color_theme import ColorTheme
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            theme = ColorTheme()
+            from ..theme.color_theme import get_global_font_manager, ColorTheme
+            font_manager = get_global_font_manager()
+            if font_manager is not None:
+                class _Theme:
+                    fonts = font_manager
+                theme = _Theme()
+            else:
+                theme = ColorTheme()
         return bool(node.handle_routed_event(event, app, theme=theme))
 
     def top_focus_target_at(self, pos) -> UiNode | None:

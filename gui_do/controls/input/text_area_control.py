@@ -7,7 +7,7 @@ import pygame
 from pygame import Rect
 
 from ...events.gui_event import EventType, GuiEvent
-from ..base._text_edit_focus_base import _TextEditFocusBase
+from ..base.abstract_text_input_control import AbstractTextInputControl
 from ...overlays.clipboard import ClipboardManager
 
 if TYPE_CHECKING:
@@ -19,7 +19,74 @@ _V_PAD = 4
 _SCROLL_SPEED = 3  # lines per mouse wheel tick
 
 
-class TextAreaControl(_TextEditFocusBase):
+class TextAreaControl(AbstractTextInputControl):
+    def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
+        font = self._get_font(theme)
+        if font is None:
+            return 0
+        try:
+            line_h = font.line_height if hasattr(font, "line_height") else font.get_height()
+        except Exception:
+            return self._cursor_pos
+        y_val = y if y is not None else self.rect.top
+        rel_y = y_val - self.rect.top - _V_PAD + self._scroll_top
+        lines = self._get_wrapped_lines_cached() if hasattr(self, '_get_wrapped_lines_cached') else [self._get_display_value()]
+        if not lines:
+            return 0
+        line_idx = max(0, rel_y // line_h)
+        line_idx = min(line_idx, len(lines) - 1)
+        abs_offset = sum(len(lines[i]) + 1 for i in range(line_idx))
+        line_text = lines[line_idx]
+        rel_x = x - self.rect.left - _H_PAD
+        if rel_x <= 0:
+            return abs_offset
+        if not line_text:
+            return abs_offset
+        def measure(n):
+            px, _ = font.text_size(line_text[:n]) if hasattr(font, "text_size") else font.size(line_text[:n])
+            return px
+        lo = 0
+        hi = len(line_text)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if measure(mid) < rel_x:
+                lo = mid + 1
+            else:
+                hi = mid
+        idx = lo
+        if idx > 0 and idx < len(line_text):
+            left_w = measure(idx - 1)
+            right_w = measure(idx)
+            if abs(rel_x - left_w) <= abs(rel_x - right_w):
+                idx -= 1
+        return abs_offset + idx
+
+    def get_pixel_for_char_index(self, index: int, theme=None) -> Tuple[int, int]:
+        font = self._get_font(theme)
+        lines = self._get_wrapped_lines_cached() if hasattr(self, '_get_wrapped_lines_cached') else [self._get_display_value()]
+        abs_offset = 0
+        for line_idx, line_text in enumerate(lines):
+            if index <= abs_offset + len(line_text):
+                px, _ = font.text_size(line_text[:index - abs_offset]) if hasattr(font, "text_size") else font.size(line_text[:index - abs_offset])
+                y = self.rect.top + _V_PAD + line_idx * (font.line_height if hasattr(font, "line_height") else font.get_height())
+                return (self.rect.left + _H_PAD + px, y)
+            abs_offset += len(line_text) + 1
+        # Fallback: end of last line
+        px, _ = font.text_size(lines[-1]) if hasattr(font, "text_size") else font.size(lines[-1])
+        y = self.rect.top + _V_PAD + (len(lines) - 1) * (font.line_height if hasattr(font, "line_height") else font.get_height())
+        return (self.rect.left + _H_PAD + px, y)
+
+    def _get_font(self, theme) -> Optional["pygame.font.Font"]:
+        from ...theme.color_theme import get_global_font_manager
+        font_manager = get_global_font_manager()
+        if font_manager is not None:
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=self._font_size)
+        if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=self._font_size)
+        return None
+
+    def _get_display_value(self) -> str:
+        return self._value
     """Multi-line editable text area with word wrap, clipboard, and scrolling.
 
     Keyboard shortcuts mirror :class:`TextInputControl`:
@@ -175,17 +242,20 @@ class TextAreaControl(_TextEditFocusBase):
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             if not self.rect.collidepoint(event.pos):
                 return False
-            self._cursor_pos = self._pos_to_char(event.pos, app)
-            self._sel_anchor = self._cursor_pos
-            self._sel_active = self._cursor_pos
+            # Use unified caret placement logic
+            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
+            self._cursor_pos = idx
+            self._sel_anchor = idx
+            self._sel_active = idx
             self._drag_selecting = True
             self._reset_blink()
             self.invalidate()
             return True
 
         if event.kind == EventType.MOUSE_MOTION and self._drag_selecting:
-            self._cursor_pos = self._pos_to_char(event.pos, app)
-            self._sel_active = self._cursor_pos
+            idx = self.get_char_index_at_pixel(event.pos[0], None, theme)
+            self._sel_active = idx
+            self._cursor_pos = idx
             self.invalidate()
             return True
 

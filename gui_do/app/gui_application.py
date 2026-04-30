@@ -185,8 +185,9 @@ class GuiApplication:
     _SCHEDULER_DISPATCH_BUDGET_MIN_MS = 0.5
     _SCHEDULER_DISPATCH_BUDGET_MAX_MS = 4.0
 
-    def __init__(self, surface: pygame.Surface) -> None:
+    def __init__(self, surface: pygame.Surface, font_roles=None) -> None:
         self.surface = surface
+        self.font_roles = font_roles
         self.input_state = InputState()
         self.event_manager = EventManager()
         self.pointer_capture = PointerCapture()
@@ -366,7 +367,8 @@ class GuiApplication:
 
     def _create_scene_runtime(self) -> "_SceneRuntime":
         scene = Scene()
-        theme = ColorTheme()
+        # Always use the global font_roles registry for every scene
+        theme = ColorTheme(font_roles=self.font_roles)
         factory = BuiltInGraphicsFactory(theme)
         theme.graphics_factory = factory
         pristine = pygame.Surface(self.surface.get_size())
@@ -1046,7 +1048,11 @@ class GuiApplication:
         italic: bool = False,
         scene_name: Optional[str] = None,
     ) -> None:
-        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
+        # Always update the FontManager for the correct scene
+        if scene_name is not None:
+            runtime = self._scene_runtime(scene_name)
+        else:
+            runtime = self._scenes[self._active_scene_name]
         runtime.theme.register_font_role(
             role_name,
             size=size,

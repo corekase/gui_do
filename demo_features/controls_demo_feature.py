@@ -132,10 +132,10 @@ class ControlsShowcaseFeature(Feature):
     ROOT_MARGIN_X = 24
     ROOT_MARGIN_TOP = 24
     ROOT_MARGIN_BOTTOM = 86
-    CONTENT_PADDING_X = 10
+    CONTENT_PADDING_X = 4
     CONTENT_PADDING_Y = 12
     REGION_GAP = 14
-    INNER_GAP = 10
+    INNER_GAP = 4
     LABEL_HEIGHT = 18
     LABEL_GAP = 4
 
@@ -189,12 +189,6 @@ class ControlsShowcaseFeature(Feature):
     def build(self, host) -> None:
         self._label_font_role = self.LABEL_FONT_ROLE
         self._control_font_role = self.CONTROL_FONT_ROLE
-        # Ensure all font roles are applied for this scene (fixes notification panel header/title)
-        if hasattr(host, "font_roles") and hasattr(host, "app") and host.font_roles is not None:
-            try:
-                host.font_roles.apply(host.app, scene_name="control_showcase")
-            except Exception:
-                pass
 
         def _extra_entries() -> list[MenuEntry]:
             action_registry = getattr(host, "action_registry", None)
@@ -238,9 +232,9 @@ class ControlsShowcaseFeature(Feature):
         def slot_h(control_height: int) -> int:
             return int(control_height) + self.LABEL_HEIGHT + self.LABEL_GAP
 
-        column_width = 200
+        column_width = 320
         row_gap = 8
-        col_gap = 16
+        col_gap = 4
         bar_control_h = 24
         text_input_control_h = 30
         text_area_rows = 4
@@ -682,6 +676,35 @@ class ControlsShowcaseFeature(Feature):
             row_index=40,
         )
 
+        # Place notification panel immediately to the right of the image control (upper-right)
+        notif_col_x = img_col_x + sq_size + col_gap
+        notif_col_w = min(240, sq_size)
+        notif_col_y = col0_y
+        notif_slot_h = slot_h(220)
+        self._showcase_notification_center = NotificationCenter(None, max_records=6)
+        self._showcase_notification_center.add(
+            NotificationRecord("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS)
+        )
+        self._showcase_notification_center.add(
+            NotificationRecord("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING)
+        )
+        self._place_control(
+            host,
+            "notification_panel",
+            "Notification Panel",
+            NotificationPanelControl(
+                "control_notification_panel",
+                Rect(0, 0, 1, 1),
+                self._showcase_notification_center,
+            ),
+            Rect(notif_col_x, notif_col_y, notif_col_w, notif_slot_h),
+            focusable=False,
+            column_index=5,
+            row_index=41,
+        )
+
+
+
         # New row of columns starts from the left edge at data_grid bottom + 10.
         new_row_y = data_grid_bottom + 10
         flow_bounds = Rect(
@@ -896,6 +919,8 @@ class ControlsShowcaseFeature(Feature):
         )
 
         # New right-side columns for recently added controls.
+
+        # Shift columns after tree control left by one
         new_col_x = col4_anchor.left
         new_col_w = min(220, col4_anchor.width)
         col4_y = col4_anchor.top
@@ -917,7 +942,7 @@ class ControlsShowcaseFeature(Feature):
             focusable=True,
             accessibility_role="menubar",
             accessibility_label="Menu bar",
-            column_index=5,
+            column_index=4,
             row_index=90,
         )
 
@@ -938,41 +963,14 @@ class ControlsShowcaseFeature(Feature):
             focusable=True,
             accessibility_role="tree",
             accessibility_label="Tree control",
-            column_index=5,
+            column_index=4,
             row_index=91,
         )
 
-        self._showcase_notification_center = NotificationCenter(None, max_records=6)
-        self._showcase_notification_center.add(
-            NotificationRecord("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS)
-        )
-        self._showcase_notification_center.add(
-            NotificationRecord("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING)
-        )
-        notif_col_x = col5_anchor.left
-        notif_col_w = min(240, col5_anchor.width)
-        col5_y = col5_anchor.top
-        notif_slot_h = slot_h(220)
-        self._place_control(
-            host,
-            "notification_panel",
-            "Notification Panel",
-            NotificationPanelControl(
-                "control_notification_panel",
-                Rect(0, 0, 1, 1),
-                self._showcase_notification_center,
-            ),
-            Rect(notif_col_x, col5_y, notif_col_w, notif_slot_h),
-            focusable=False,
-            column_index=6,
-            row_index=92,
-        )
-
-        # -- Column 7: New controls (SpinnerControl, RangeSliderControl,
-        #    ColorPickerControl, ScrollViewControl) --
-        col7_x = col6_anchor.left
-        col7_w = min(220, col6_anchor.width)
-        col7_y = col6_anchor.top
+        # Now shift all subsequent columns left by one (spinner, range_slider, color_picker, overlay_panel, etc.)
+        col6_x = col5_anchor.left
+        col6_w = min(220, col5_anchor.width)
+        col6_y = col5_anchor.top
 
         spinner_slot_h = slot_h(30)
         self._place_control(
@@ -981,16 +979,16 @@ class ControlsShowcaseFeature(Feature):
             "Spinner",
             SpinnerControl(
                 "control_spinner",
-                Rect(0, 0, col7_w, 30),
+                Rect(0, 0, col6_w, 30),
                 value=25, min_value=0, max_value=100, step=1, decimals=0,
                 on_change=lambda v, _r: None,
             ),
-            Rect(col7_x, col7_y, col7_w, spinner_slot_h),
+            Rect(col6_x, col6_y, col6_w, spinner_slot_h),
             focusable=True,
-            column_index=7,
+            column_index=5,
             row_index=100,
         )
-        col7_y += spinner_slot_h + row_gap
+        col6_y += spinner_slot_h + row_gap
 
         range_slot_h = slot_h(24)
         self._place_control(
@@ -999,16 +997,16 @@ class ControlsShowcaseFeature(Feature):
             "Range Slider",
             RangeSliderControl(
                 "control_range_slider",
-                Rect(0, 0, col7_w, 24),
+                Rect(0, 0, col6_w, 24),
                 min_value=0, max_value=100, low_value=20, high_value=80,
                 on_change=lambda lo, hi, _r: None,
             ),
-            Rect(col7_x, col7_y, col7_w, range_slot_h),
+            Rect(col6_x, col6_y, col6_w, range_slot_h),
             focusable=True,
-            column_index=7,
+            column_index=5,
             row_index=101,
         )
-        col7_y += range_slot_h + row_gap
+        col6_y += range_slot_h + row_gap
 
         color_slot_h = slot_h(180)
         self._place_control(
@@ -1017,36 +1015,33 @@ class ControlsShowcaseFeature(Feature):
             "Color Picker",
             ColorPickerControl(
                 "control_color_picker",
-                Rect(0, 0, col7_w, 180),
+                Rect(0, 0, col6_w, 180),
                 color=(64, 128, 255),
                 on_change=lambda c: None,
             ),
-            Rect(col7_x, col7_y, col7_w, color_slot_h),
+            Rect(col6_x, col6_y, col6_w, color_slot_h),
             focusable=True,
-            column_index=7,
+            column_index=5,
             row_index=102,
         )
-        col7_y += color_slot_h + row_gap
+        col6_y += color_slot_h + row_gap
 
-        # -- Column 8: OverlayPanelControl --
-        # Demonstrates OverlayPanelControl as a container panel designed for
-        # overlay usage.  Shown standalone with three child labels to illustrate
-        # its role as a floating overlay surface.
-        col8_x = col7_anchor.left
-        col8_w = min(200, col7_anchor.width)
-        col8_y = col7_anchor.top
+        # OverlayPanelControl
+        col7_x = col6_anchor.left
+        col7_w = min(200, col6_anchor.width)
+        col7_y = col6_anchor.top
         overlay_inner_h = 90
         overlay_slot_h = slot_h(overlay_inner_h)
-        overlay_control_top = col8_y + self.LABEL_HEIGHT + self.LABEL_GAP
+        overlay_control_top = col7_y + self.LABEL_HEIGHT + self.LABEL_GAP
         overlay_panel = OverlayPanelControl(
             "control_overlay_panel",
-            Rect(col8_x, overlay_control_top, col8_w, overlay_inner_h),
+            Rect(col7_x, overlay_control_top, col7_w, overlay_inner_h),
             draw_background=True,
         )
         for i, item_text in enumerate(("Overlay Item A", "Overlay Item B", "Overlay Item C")):
             child_label = LabelControl(
                 f"overlay_child_{i}",
-                Rect(0, 0, col8_w - 16, 22),
+                Rect(0, 0, col7_w - 16, 22),
                 item_text,
                 align="left",
             )
@@ -1057,48 +1052,59 @@ class ControlsShowcaseFeature(Feature):
             "overlay_panel",
             "Overlay Panel",
             overlay_panel,
-            Rect(col8_x, col8_y, col8_w, overlay_slot_h),
+            Rect(col7_x, col7_y, col7_w, overlay_slot_h),
             focusable=False,
-            column_index=8,
+            column_index=6,
             row_index=110,
         )
 
-        # Column 9: format-aware text inputs.
+
+
+
+
+        # Column 8: format-aware text inputs (shifted left to fill overlay panel gap)
         col8_anchor = flow.column_flow_anchor()
-        col9_x = col8_anchor.left
-        col9_w = min(220, col8_anchor.width)
-        col9_y = col8_anchor.top
+        col8_x = col8_anchor.left
+        col8_w = min(220, col8_anchor.width)
+        col8_y = col8_anchor.top
 
         _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
 
         numeric_input_slot_h = slot_h(30)
         numeric_input = _num_fmt.create_text_input(
             "control_numeric_fmt_input",
-            Rect(0, 0, col9_w, 30),
+            Rect(0, 0, col8_w, 30),
             raw_value="12500",
             placeholder="0.00",
             font_role=self._control_font_role,
         )
+        # Shift all columns from numeric format through animated image left by one column area
+        # Numeric Format
+        col7_anchor = flow.column_flow_anchor()
+        col7_x = col7_anchor.left
+        col7_w = min(220, col7_anchor.width)
+        col7_y = col7_anchor.top
         self._place_control(
             host,
             "numeric_fmt_input",
             "Numeric Format",
             numeric_input,
-            Rect(col9_x, col9_y, col9_w, numeric_input_slot_h),
+            Rect(col7_x, col7_y, col7_w, numeric_input_slot_h),
             focusable=True,
             accessibility_role="textbox",
             accessibility_label="Numeric formatted text input",
-            column_index=9,
+            column_index=7,
             row_index=120,
         )
-        col9_y += numeric_input_slot_h + row_gap
+        col7_y += numeric_input_slot_h + row_gap
 
+
+        # Pattern Format
         _pat_fmt = PatternFormatter("###-###-####")
-
         pattern_input_slot_h = slot_h(30)
         pattern_input = _pat_fmt.create_text_input(
             "control_pattern_fmt_input",
-            Rect(0, 0, col9_w, 30),
+            Rect(0, 0, col7_w, 30),
             raw_value="5551234567",
             placeholder="###-###-####",
             font_role=self._control_font_role,
@@ -1108,20 +1114,22 @@ class ControlsShowcaseFeature(Feature):
             "pattern_fmt_input",
             "Pattern Format",
             pattern_input,
-            Rect(col9_x, col9_y, col9_w, pattern_input_slot_h),
+            Rect(col7_x, col7_y, col7_w, pattern_input_slot_h),
             focusable=True,
             accessibility_role="textbox",
             accessibility_label="Pattern formatted text input",
-            column_index=9,
+            column_index=7,
             row_index=121,
         )
-        col9_y += pattern_input_slot_h + row_gap
+        col7_y += pattern_input_slot_h + row_gap
 
+
+        # Fixed Pattern Format
         _fixed_pat_fmt = FixedPatternFormatter("#####-####")
         fixed_pattern_input_slot_h = slot_h(30)
         fixed_pattern_input = _fixed_pat_fmt.create_text_input(
             "control_fixed_pattern_fmt_input",
-            Rect(0, 0, col9_w, 30),
+            Rect(0, 0, col7_w, 30),
             raw_value="941010001",
             placeholder="#####-####",
             font_role=self._control_font_role,
@@ -1129,21 +1137,18 @@ class ControlsShowcaseFeature(Feature):
         self._place_control(
             host,
             "fixed_pattern_fmt_input",
-            "Fixed Pattern",
+            "Fixed Pattern Format",
             fixed_pattern_input,
-            Rect(col9_x, col9_y, col9_w, fixed_pattern_input_slot_h),
+            Rect(col7_x, col7_y, col7_w, fixed_pattern_input_slot_h),
             focusable=True,
             accessibility_role="textbox",
             accessibility_label="Fixed pattern formatted text input",
-            column_index=9,
+            column_index=7,
             row_index=122,
         )
+        col7_y += fixed_pattern_input_slot_h + row_gap
 
-        # Place the next control group using natural column-flow wrapping.
-        col10_anchor = flow.column_flow_anchor()
-        col10_x = col10_anchor.left
-        col10_w = min(260, col10_anchor.width)
-
+        # Dock Workspace Panel
         _showcase_dock = DockWorkspace(
             DockTabs(
                 "sc_dock_tabs",
@@ -1154,33 +1159,39 @@ class ControlsShowcaseFeature(Feature):
                 ],
             )
         )
+        dock_slot_h = slot_h(36)
         prop_inner_h = 160
         prop_slot_h = slot_h(prop_inner_h)
-        dock_slot_h = slot_h(36)
-        col10_y = col10_anchor.top
+
+        # Dock Workspace Panel
+        col9_anchor = flow.column_flow_anchor()
+        col9_x = col9_anchor.left
+        col9_w = min(260, col9_anchor.width)
+        col9_y = col9_anchor.top
         self._place_control(
             host,
             "dock_workspace_panel",
             "Dock Workspace",
             DockWorkspacePanel(
                 "control_dock_workspace_panel",
-                Rect(0, 0, col10_w, 36),
+                Rect(0, 0, col9_w, 36),
                 _showcase_dock,
             ),
-            Rect(col10_x, col10_y, col10_w, dock_slot_h),
+            Rect(col9_x, col9_y, col9_w, dock_slot_h),
             focusable=True,
             accessibility_role="tablist",
             accessibility_label="Dock workspace panel",
-            column_index=10,
+            column_index=9,
             row_index=130,
         )
-        col10_y += dock_slot_h + row_gap
+        col9_y += dock_slot_h + row_gap
 
+        # Property Inspector
         _showcase_inspectable = _ShowcaseInspectable()
-        prop_control_top = col10_y + self.LABEL_HEIGHT + self.LABEL_GAP
+        prop_control_top = col9_y + self.LABEL_HEIGHT + self.LABEL_GAP
         prop_inspector = PropertyInspectorPanel(
             "control_property_inspector",
-            Rect(col10_x, prop_control_top, col10_w, prop_inner_h),
+            Rect(col9_x, prop_control_top, col9_w, prop_inner_h),
             PropertyInspectorModel(_showcase_inspectable),
         )
         self._place_control(
@@ -1188,17 +1199,17 @@ class ControlsShowcaseFeature(Feature):
             "property_inspector",
             "Property Inspector",
             prop_inspector,
-            Rect(col10_x, col10_y, col10_w, prop_slot_h),
+            Rect(col9_x, col9_y, col9_w, prop_slot_h),
             focusable=False,
-            column_index=10,
+            column_index=9,
             row_index=131,
         )
 
-        # Column 11: ProgressBarControl (determinate + indeterminate) and AnimatedImageControl.
-        col11_anchor = flow.column_flow_anchor()
-        col11_x = col11_anchor.left
-        col11_w = min(220, col11_anchor.width)
-        col11_y = col11_anchor.top
+        # ProgressBarControl (determinate + indeterminate) and AnimatedImageControl.
+        col10_anchor = flow.column_flow_anchor()
+        col10_x = col10_anchor.left
+        col10_w = min(220, col10_anchor.width)
+        col10_y = col10_anchor.top
 
         progress_h = 20
         progress_slot_h = slot_h(progress_h)
@@ -1208,21 +1219,21 @@ class ControlsShowcaseFeature(Feature):
             "Progress Bar",
             ProgressBarControl(
                 "control_progress_bar",
-                Rect(0, 0, col11_w, progress_h),
+                Rect(0, 0, col10_w, progress_h),
                 value=0.65,
             ),
-            Rect(col11_x, col11_y, col11_w, progress_slot_h),
+            Rect(col10_x, col10_y, col10_w, progress_slot_h),
             focusable=False,
-            column_index=11,
+            column_index=10,
             row_index=140,
         )
-        col11_y += progress_slot_h + row_gap
+        col10_y += progress_slot_h + row_gap
 
         indeterminate_h = 20
         indeterminate_slot_h = slot_h(indeterminate_h)
         indeterminate_bar = ProgressBarControl(
             "control_progress_bar_indeterminate",
-            Rect(0, 0, col11_w, indeterminate_h),
+            Rect(0, 0, col10_w, indeterminate_h),
             indeterminate=True,
         )
         self._indeterminate_bar = indeterminate_bar
@@ -1231,12 +1242,12 @@ class ControlsShowcaseFeature(Feature):
             "progress_bar_indeterminate",
             "Progress (Marquee)",
             indeterminate_bar,
-            Rect(col11_x, col11_y, col11_w, indeterminate_slot_h),
+            Rect(col10_x, col10_y, col10_w, indeterminate_slot_h),
             focusable=False,
-            column_index=11,
+            column_index=10,
             row_index=141,
         )
-        col11_y += indeterminate_slot_h + row_gap
+        col10_y += indeterminate_slot_h + row_gap
 
         # AnimatedImageControl — four-frame programmatic atlas.
         import pygame as _pygame
@@ -1248,7 +1259,7 @@ class ControlsShowcaseFeature(Feature):
         _anim = FrameAnimation(_sheet, frames=list(range(4)), fps=1, loop=True)
         anim_ctrl = AnimatedImageControl(
             "control_animated_image",
-            Rect(0, 0, col11_w, 48),
+            Rect(0, 0, col10_w, 48),
             animation=_anim,
             scale=True,
         )
@@ -1259,9 +1270,9 @@ class ControlsShowcaseFeature(Feature):
             "animated_image",
             "Animated Image",
             anim_ctrl,
-            Rect(col11_x, col11_y, col11_w, anim_slot_h),
+            Rect(col10_x, col10_y, col10_w, anim_slot_h),
             focusable=False,
-            column_index=11,
+            column_index=10,
             row_index=142,
         )
 
