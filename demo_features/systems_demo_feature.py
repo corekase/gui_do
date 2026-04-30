@@ -1,6 +1,6 @@
-"""New Systems demo feature — showcases the 10 new gui_do systems.
+"""New Systems demo feature — showcases the new gui_do systems.
 
-Demonstrates: CursorManager/CursorShape, SortFilterProxySource,
+Demonstrates: SortFilterProxySource,
 LocaleRegistry/StringTable, InputMap/InputBinding, ResponsiveLayout/Breakpoint,
 TextFlow/TextSpan, EventRecorder/EventPlayback/RecordedEvent,
 PropertyRegistry/PropertyDescriptor/ui_property, SceneSnapshot/NodeSnapshot,
@@ -9,30 +9,44 @@ and SceneSpatialIndex.
 
 from __future__ import annotations
 
-import time
 from typing import Optional
 
 import pygame
 from pygame import Rect
 
 from gui_do import (
+    AnimatedImageControl,
     Breakpoint,
     ButtonControl,
     CanvasControl,
-    CursorHandle,
-    CursorManager,
-    CursorShape,
+    CooperativeScheduler,
+    CoroutineHandle,
+    DataCache,
+    DiffInsert,
+    DiffMove,
+    DiffRemove,
     DockPane,
     DockTabs,
     DockWorkspace,
     DockWorkspacePanel,
+    Emitter,
     EventPlayback,
     EventRecorder,
     FixedItemSource,
+    FlowItem,
+    FlowLayout,
+    FrameAnimation,
+    FrameTimer,
     InputMap,
     LabelControl,
+    ListDiff,
+    ListDiffCalculator,
     ListItem,
     LocaleRegistry,
+    Pause,
+    ParticleLayer,
+    ParticleSystem,
+    ProgressBarControl,
     PropertyDescriptor,
     PropertyInspectorModel,
     PropertyInspectorPanel,
@@ -42,15 +56,24 @@ from gui_do import (
     RoutedFeature,
     SceneSpatialIndex,
     SceneSnapshot,
+    ShortcutHelpOverlay,
+    Sleep,
     SortFilterProxySource,
+    SpriteSheet,
     StringTable,
     TabControl,
     TabItem,
+    TabPanelManager,
     TextFlow,
     TextInputControl,
+    TextMatch,
+    TextSearcher,
     TextSpan,
+    TileMap,
+    TileSet,
     ToggleControl,
     ui_property,
+    WaitUntil,
     WindowControl,
 )
 
@@ -117,18 +140,17 @@ class SystemsDemoFeature(RoutedFeature):
             "ensure_scene_task_panel",
             "TASK_PANEL_CONTROL_FONT_ROLE",
         ),
+        "bind_runtime": (
+            "app",
+        ),
     }
 
     def __init__(self) -> None:
         super().__init__("systems_demo", scene_name="main")
         self.window: Optional[WindowControl] = None
-        self._active_tab: str = "cursor"
-        self._tab_panels: dict = {}
-
-        # Cursor tab
-        self._cursor_mgr = CursorManager()
-        self._cursor_handle: Optional[CursorHandle] = None
-        self._cursor_label: Optional[LabelControl] = None
+        self._active_tab: str = "filter"
+        self._tabs = TabPanelManager()
+        self._frame_timer = FrameTimer()
 
         # Filter tab
         self._proxy: Optional[SortFilterProxySource] = None
@@ -153,7 +175,6 @@ class SystemsDemoFeature(RoutedFeature):
         self._event_status_label: Optional[LabelControl] = None
         self._event_log_label: Optional[LabelControl] = None
         self._recorded_events: list = []
-        self._last_update_time: float = 0.0
 
         # Inspect tab
         self._snapshot: Optional[SceneSnapshot] = None
@@ -173,6 +194,56 @@ class SystemsDemoFeature(RoutedFeature):
         self._dock_active_label: Optional[LabelControl] = None
         self._dock_model_label: Optional[LabelControl] = None
 
+        # Particle tab
+        self._particle_system: Optional[ParticleSystem] = None
+        self._particle_layer: Optional[ParticleLayer] = None
+        self._particle_canvas: Optional[CanvasControl] = None
+        self._particle_count_label: Optional[LabelControl] = None
+
+        # Sprite tab
+        self._sprite_anim: Optional[FrameAnimation] = None
+        self._sprite_ctrl: Optional[AnimatedImageControl] = None
+
+        # Scheduler tab
+        self._scheduler: Optional[CooperativeScheduler] = None
+        self._sched_handle: Optional[CoroutineHandle] = None
+        self._sched_log_label: Optional[LabelControl] = None
+        self._sched_step_label: Optional[LabelControl] = None
+        self._sched_log: list = []
+
+        # TileMap tab
+        self._tile_map: Optional[TileMap] = None
+        self._tile_canvas: Optional[CanvasControl] = None
+        self._tile_dirty: bool = True
+
+        # Progress tab
+        self._progress_bar: Optional[ProgressBarControl] = None
+        self._progress_indeterminate: Optional[ProgressBarControl] = None
+        self._progress_label: Optional[LabelControl] = None
+
+        # Flow tab
+        self._flow_layout: Optional[FlowLayout] = None
+        self._flow_result_label: Optional[LabelControl] = None
+        self._flow_items: list = []
+
+        # Search tab
+        self._searcher: Optional[TextSearcher] = None
+        self._search_result_label: Optional[LabelControl] = None
+        self._search_input: Optional[TextInputControl] = None
+
+        # ListDiff tab
+        self._listdiff_old: list = ["Alpha", "Beta", "Gamma", "Delta"]
+        self._listdiff_new: list = ["Beta", "Gamma", "Epsilon", "Delta", "Zeta"]
+        self._listdiff_result_label: Optional[LabelControl] = None
+
+        # Cache tab
+        self._cache: Optional[DataCache] = None
+        self._cache_stats_label: Optional[LabelControl] = None
+
+        # Shortcuts tab
+        self._shortcut_overlay: Optional[ShortcutHelpOverlay] = None
+        self._shortcut_info_label: Optional[LabelControl] = None
+
     # ------------------------------------------------------------------
     # Feature lifecycle
     # ------------------------------------------------------------------
@@ -187,13 +258,13 @@ class SystemsDemoFeature(RoutedFeature):
         )
 
         rect = host.app.layout.anchored(
-            (820, 560), anchor="top_left", margin=(24, 92), use_rect=True
+            (820, 590), anchor="top_left", margin=(24, 92), use_rect=True
         )
         self.window = host.root.add(
             WindowControl(
                 "systems_window",
                 rect,
-                "Systems",
+                "System",
                 title_font_role=self.font_role("window_title"),
                 event_handler=self._window_event_handler,
                 use_frame_backdrop=True,
@@ -205,7 +276,8 @@ class SystemsDemoFeature(RoutedFeature):
         body_top = content.top + pad
         body_bottom = content.bottom - pad
         body_h = body_bottom - body_top
-        body_content_top = body_top + _TAB_H
+        # Reserve 2 rows of tab strip height so content doesn't overlap tab bar on wrap
+        body_content_top = body_top + _TAB_H * 2
         body_content_h = max(60, body_bottom - body_content_top)
         body_rect = Rect(content.left + pad, body_top, content.width - pad * 2, body_h)
         body_content_rect = Rect(
@@ -217,7 +289,6 @@ class SystemsDemoFeature(RoutedFeature):
                 "nsdf_tab",
                 body_rect,
                 items=[
-                    TabItem("cursor", "Cursor"),
                     TabItem("filter", "Filter"),
                     TabItem("locale", "Locale"),
                     TabItem("input", "Input"),
@@ -225,40 +296,50 @@ class SystemsDemoFeature(RoutedFeature):
                     TabItem("inspect", "Inspect"),
                     TabItem("props", "Props"),
                     TabItem("dock", "Dock"),
+                    TabItem("particle", "Particle"),
+                    TabItem("sprite", "Sprite"),
+                    TabItem("sched", "Sched"),
+                    TabItem("tilemap", "TileMap"),
+                    TabItem("progress", "Progress"),
+                    TabItem("flow", "Flow"),
+                    TabItem("search", "Search"),
+                    TabItem("listdiff", "ListDiff"),
+                    TabItem("cache", "Cache"),
+                    TabItem("shortcuts", "Shortcuts"),
                 ],
-                selected_key="cursor",
+                selected_key="filter",
                 on_change=self._on_tab_change,
                 font_role=self.font_role("control"),
             )
         )
 
-        self._tab_panels["cursor"] = self._build_cursor_tab(host, Rect(body_content_rect))
-        self._tab_panels["filter"] = self._build_filter_tab(host, Rect(body_content_rect))
-        self._tab_panels["locale"] = self._build_locale_tab(host, Rect(body_content_rect))
-        self._tab_panels["input"] = self._build_input_tab(host, Rect(body_content_rect))
-        self._tab_panels["event"] = self._build_event_tab(host, Rect(body_content_rect))
-        self._tab_panels["inspect"] = self._build_inspect_tab(host, Rect(body_content_rect))
-        self._tab_panels["props"] = self._build_props_tab(host, Rect(body_content_rect))
-        self._tab_panels["dock"] = self._build_dock_tab(host, Rect(body_content_rect))
+        self._tabs.register("filter", self._build_filter_tab(host, Rect(body_content_rect)))
+        self._tabs.register("locale", self._build_locale_tab(host, Rect(body_content_rect)))
+        self._tabs.register("input", self._build_input_tab(host, Rect(body_content_rect)))
+        self._tabs.register("event", self._build_event_tab(host, Rect(body_content_rect)))
+        self._tabs.register("inspect", self._build_inspect_tab(host, Rect(body_content_rect)))
+        self._tabs.register("props", self._build_props_tab(host, Rect(body_content_rect)))
+        self._tabs.register("dock", self._build_dock_tab(host, Rect(body_content_rect)))
+        self._tabs.register("particle", self._build_particle_tab(host, Rect(body_content_rect)))
+        self._tabs.register("sprite", self._build_sprite_tab(host, Rect(body_content_rect)))
+        self._tabs.register("sched", self._build_sched_tab(host, Rect(body_content_rect)))
+        self._tabs.register("tilemap", self._build_tilemap_tab(host, Rect(body_content_rect)))
+        self._tabs.register("progress", self._build_progress_tab(host, Rect(body_content_rect)))
+        self._tabs.register("flow", self._build_flow_tab(host, Rect(body_content_rect)))
+        self._tabs.register("search", self._build_search_tab(host, Rect(body_content_rect)))
+        self._tabs.register("listdiff", self._build_listdiff_tab(host, Rect(body_content_rect)))
+        self._tabs.register("cache", self._build_cache_tab(host, Rect(body_content_rect)))
+        self._tabs.register("shortcuts", self._build_shortcuts_tab(host, Rect(body_content_rect)))
+        self._tabs.on_activate("locale", lambda: setattr(self, "_text_flow_dirty", True))
 
-        self._on_tab_change("cursor")
-
-    def bind_runtime(self, host) -> None:
-        self._main_scene = host.app.create_scene("main")
-        self._last_update_time = time.perf_counter()
+        self._on_tab_change("filter")
 
     def on_update(self, host) -> None:
         super().on_update(host)
         if self.window is None or not self.window.visible:
             return
 
-        now = time.perf_counter()
-        dt = now - self._last_update_time
-        self._last_update_time = now
-
-        # Update cursor manager when cursor tab is active
-        if self._active_tab == "cursor":
-            self._cursor_mgr.update()
+        dt = self._frame_timer.tick()
 
         # Update event playback
         if self._playback is not None and self._playback.is_playing:
@@ -286,11 +367,46 @@ class SystemsDemoFeature(RoutedFeature):
             self._text_flow.render(canvas, 8, 8)
             self._text_canvas.invalidate()
 
-    def shutdown_runtime(self, host) -> None:
-        if self._cursor_handle is not None:
-            self._cursor_handle.release()
-            self._cursor_handle = None
-        self._cursor_mgr.reset()
+        # Particle tab — update system and redraw canvas
+        if self._active_tab == "particle" and self._particle_system is not None:
+            self._particle_system.update(dt)
+            if self._particle_canvas is not None:
+                surf = self._particle_canvas.canvas
+                surf.fill((20, 20, 30))
+                self._particle_system.draw(surf)
+                self._particle_canvas.invalidate()
+            if self._particle_count_label is not None:
+                self._particle_count_label.text = (
+                    f"Live particles: {self._particle_system.active_particle_count}  "
+                    f"Emitters: {self._particle_system.emitter_count}"
+                )
+
+        # Sprite tab — animate
+        if self._active_tab == "sprite" and self._sprite_anim is not None:
+            self._sprite_anim.update(dt)
+            if self._sprite_ctrl is not None:
+                self._sprite_ctrl.invalidate()
+
+        # Scheduler tab — tick
+        if self._active_tab == "sched" and self._scheduler is not None:
+            self._scheduler.update(dt)
+            if self._sched_step_label is not None:
+                self._sched_step_label.text = (
+                    f"Active coroutines: {self._scheduler.coroutine_count}"
+                )
+
+        # TileMap tab — draw once when dirty
+        if self._tile_dirty and self._active_tab == "tilemap" and self._tile_canvas is not None and self._tile_map is not None:
+            self._tile_dirty = False
+            surf = self._tile_canvas.canvas
+            surf.fill((20, 30, 20))
+            cam = Rect(0, 0, surf.get_width(), surf.get_height())
+            self._tile_map.draw(surf, cam, offset=(0, 0))
+            self._tile_canvas.invalidate()
+
+        # Progress tab — tick indeterminate bar
+        if self._active_tab == "progress" and self._progress_indeterminate is not None:
+            self._progress_indeterminate.tick(dt)
 
     # ------------------------------------------------------------------
     # Tab management
@@ -302,112 +418,19 @@ class SystemsDemoFeature(RoutedFeature):
 
     def _on_tab_change(self, key: str) -> None:
         self._active_tab = key
-        for tab_key, controls in self._tab_panels.items():
-            visible = tab_key == key
-            for ctrl in controls:
-                ctrl.visible = visible
-        # Release cursor when leaving cursor tab
-        if key != "cursor" and self._cursor_handle is not None:
-            self._cursor_handle.release()
-            self._cursor_handle = None
-        if key == "locale":
-            self._text_flow_dirty = True
-
-    # ------------------------------------------------------------------
-    # Tab: Cursor — CursorManager + CursorShape
-    # ------------------------------------------------------------------
-
-    def _build_cursor_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
-
-        self._cursor_label = self.window.add(
-            LabelControl(
-                "nsdf_cursor_shape_label",
-                Rect(x, y, rect.width - pad * 2, 24),
-                "Active cursor: (none — click a shape button)",
-                align="left",
-            )
-        )
-        self._cursor_label.font_role = self.font_role("label")
-        controls.append(self._cursor_label)
-        y += 34
-
-        info_lbl = self.window.add(
-            LabelControl(
-                "nsdf_cursor_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "CursorManager.push() stacks cursor requests by priority. release() restores the previous shape.",
-                align="left",
-            )
-        )
-        info_lbl.font_role = self.font_role("label")
-        controls.append(info_lbl)
-        y += 30
-
-        btn_w, btn_h, btn_gap = 120, 28, 8
-        shapes = [
-            (CursorShape.ARROW, "ARROW"),
-            (CursorShape.HAND, "HAND"),
-            (CursorShape.TEXT, "TEXT"),
-            (CursorShape.CROSSHAIR, "CROSSHAIR"),
-            (CursorShape.RESIZE_H, "RESIZE_H"),
-            (CursorShape.RESIZE_V, "RESIZE_V"),
-            (CursorShape.FORBIDDEN, "FORBIDDEN"),
-            (CursorShape.WAIT, "WAIT"),
-        ]
-        avail_w = rect.width - pad * 2
-        col_count = max(1, (avail_w + btn_gap) // (btn_w + btn_gap))
-        for i, (shape, label) in enumerate(shapes):
-            col = i % col_count
-            row = i // col_count
-            bx = x + col * (btn_w + btn_gap)
-            by = y + row * (btn_h + btn_gap)
-            btn = self.window.add(
-                ButtonControl(
-                    f"nsdf_cursor_btn_{label.lower()}",
-                    Rect(bx, by, btn_w, btn_h),
-                    label,
-                    self._make_cursor_pusher(shape, label),
-                    font_role=self.font_role("control"),
-                )
-            )
-            controls.append(btn)
-
-        row_count = (len(shapes) - 1) // col_count + 1
-        y += row_count * (btn_h + btn_gap) + 4
-
-        reset_btn = self.window.add(
-            ButtonControl(
-                "nsdf_cursor_reset_btn",
-                Rect(x, y, 120, btn_h),
-                "Reset Cursor",
-                self._reset_cursor,
-                font_role=self.font_role("control"),
-            )
-        )
-        controls.append(reset_btn)
-        return controls
-
-    def _make_cursor_pusher(self, shape: CursorShape, label: str):
-        def push():
-            if self._cursor_handle is not None:
-                self._cursor_handle.release()
-            self._cursor_handle = self._cursor_mgr.push(shape, priority=10)
-            if self._cursor_label is not None:
-                self._cursor_label.text = f"Active cursor: {label}"
-
-        return push
-
-    def _reset_cursor(self) -> None:
-        if self._cursor_handle is not None:
-            self._cursor_handle.release()
-            self._cursor_handle = None
-        self._cursor_mgr.reset()
-        if self._cursor_label is not None:
-            self._cursor_label.text = "Active cursor: (none)"
-
+        self._tabs.activate(key)
+        # Re-apply overflow clipping for flow items after the blanket show/hide above.
+        # Do NOT call _flow_apply_layout here — that would reposition items using a
+        # cached absolute rect and break them if the window has moved since build.
+        if key == "flow" and self._flow_items:
+            wo = getattr(self, "_flow_items_win_offset", None)
+            if wo is not None and self.window is not None:
+                ox, oy, fw, fh = wo
+                clip_bottom = self.window.rect.top + oy + fh
+            else:
+                clip_bottom = getattr(self, "_flow_items_rect", Rect(0, 0, 0, 9999)).bottom
+            for item in self._flow_items:
+                item.visible = item.rect.bottom <= clip_bottom
     # ------------------------------------------------------------------
     # Tab: Filter — SortFilterProxySource
     # ------------------------------------------------------------------
@@ -1385,3 +1408,971 @@ class SystemsDemoFeature(RoutedFeature):
         except Exception as exc:
             if self._spatial_label is not None:
                 self._spatial_label.text = f"Error: {exc}"
+
+    # ------------------------------------------------------------------
+    # Tab: Particle — ParticleSystem + Emitter + ParticleLayer
+    # ------------------------------------------------------------------
+
+    def _build_particle_tab(self, host, rect: Rect) -> list:
+        import pygame as _pygame
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_particle_info",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "ParticleSystem — live GPU-free particle simulation.  Add/burst emitters below.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 26
+
+        self._particle_count_label = self.window.add(
+            LabelControl(
+                "nsdf_particle_count",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "Live particles: 0  Emitters: 0",
+                align="left",
+            )
+        )
+        self._particle_count_label.font_role = self.font_role("label")
+        controls.append(self._particle_count_label)
+        y += 30
+
+        btn_gap = 8
+        add_btn = self.window.add(
+            ButtonControl(
+                "nsdf_particle_add",
+                Rect(x, y, 130, 28),
+                "Add Emitter",
+                self._particle_add_emitter,
+                font_role=self.font_role("control"),
+            )
+        )
+        burst_btn = self.window.add(
+            ButtonControl(
+                "nsdf_particle_burst",
+                Rect(x + 138, y, 130, 28),
+                "Burst (50)",
+                self._particle_burst,
+                font_role=self.font_role("control"),
+            )
+        )
+        clear_btn = self.window.add(
+            ButtonControl(
+                "nsdf_particle_clear",
+                Rect(x + 276, y, 130, 28),
+                "Clear Emitters",
+                self._particle_clear,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([add_btn, burst_btn, clear_btn])
+        y += 38
+
+        canvas_h = max(60, rect.bottom - y - pad)
+        self._particle_canvas = self.window.add(
+            CanvasControl("nsdf_particle_canvas", Rect(x, y, rect.width - pad * 2, canvas_h))
+        )
+        controls.append(self._particle_canvas)
+
+        # Build particle layer (owns its own ParticleSystem)
+        self._particle_layer = ParticleLayer(
+            "nsdf_particle_layer",
+            Rect(x, y, rect.width - pad * 2, canvas_h),
+        )
+        self._particle_system = self._particle_layer.particle_system
+        return controls
+
+    def _particle_add_emitter(self) -> None:
+        if self._particle_system is None or self._particle_canvas is None:
+            return
+        import random as _random
+        canvas_rect = self._particle_canvas.rect
+        cx = canvas_rect.left + _random.randint(20, max(21, canvas_rect.width - 20))
+        cy = canvas_rect.top + _random.randint(20, max(21, canvas_rect.height - 20))
+        emitter = Emitter(
+            x=cx - canvas_rect.left,
+            y=cy - canvas_rect.top,
+            rate=15.0,
+            lifetime=(0.8, 2.0),
+            speed=(20.0, 60.0),
+            colors=[(100 + _random.randint(0, 155), 60, 200)],
+        )
+        self._particle_system.add_emitter(emitter)
+
+    def _particle_burst(self) -> None:
+        if self._particle_system is None or self._particle_canvas is None:
+            return
+        canvas_rect = self._particle_canvas.rect
+        cx = (canvas_rect.width) // 2
+        cy = (canvas_rect.height) // 2
+        emitter = Emitter(
+            x=cx,
+            y=cy,
+            rate=0.0,
+            burst_count=50,
+            lifetime=(0.5, 1.5),
+            speed=(40.0, 120.0),
+            colors=[(220, 180, 40)],
+        )
+        self._particle_system.add_emitter(emitter)
+
+    def _particle_clear(self) -> None:
+        if self._particle_system is not None:
+            self._particle_system.clear()
+
+    # ------------------------------------------------------------------
+    # Tab: Sprite — SpriteSheet + FrameAnimation + AnimatedImageControl
+    # ------------------------------------------------------------------
+
+    def _build_sprite_tab(self, host, rect: Rect) -> list:
+        import pygame as _pygame
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_sprite_info",
+                Rect(x, y, rect.width - pad * 2, 40),
+                "SpriteSheet slices an atlas into frames.  FrameAnimation drives playback.\n"
+                "AnimatedImageControl renders the active frame as a scene-graph node.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 50
+
+        # Build a four-frame colored atlas
+        FW, FH = 64, 64
+        _atlas = _pygame.Surface((FW * 4, FH), flags=_pygame.SRCALPHA)
+        for fi, col in enumerate([(220, 60, 60, 255), (60, 220, 60, 255), (60, 60, 220, 255), (220, 200, 40, 255)]):
+            _atlas.fill(col, Rect(fi * FW, 0, FW, FH))
+        sheet = SpriteSheet(_atlas, frame_w=FW, frame_h=FH)
+        self._sprite_anim = FrameAnimation(sheet, frames=list(range(4)), fps=3, loop=True)
+        ctrl_w, ctrl_h = min(200, rect.width - pad * 2), 80
+        self._sprite_ctrl = self.window.add(
+            AnimatedImageControl(
+                "nsdf_sprite_ctrl",
+                Rect(x, y, ctrl_w, ctrl_h),
+                animation=self._sprite_anim,
+                scale=True,
+            )
+        )
+        controls.append(self._sprite_ctrl)
+        y += ctrl_h + 12
+
+        sheet_info = self.window.add(
+            LabelControl(
+                "nsdf_sprite_sheet_info",
+                Rect(x, y, rect.width - pad * 2, 22),
+                f"SpriteSheet: {sheet.frame_count} frames  ({FW}×{FH} px each)",
+                align="left",
+            )
+        )
+        sheet_info.font_role = self.font_role("label")
+        controls.append(sheet_info)
+        y += 28
+
+        play_btn = self.window.add(
+            ButtonControl(
+                "nsdf_sprite_play",
+                Rect(x, y, 90, 28),
+                "Play",
+                lambda: self._sprite_anim.play() if self._sprite_anim else None,
+                font_role=self.font_role("control"),
+            )
+        )
+        pause_btn = self.window.add(
+            ButtonControl(
+                "nsdf_sprite_pause",
+                Rect(x + 98, y, 90, 28),
+                "Pause",
+                lambda: self._sprite_anim.pause() if self._sprite_anim else None,
+                font_role=self.font_role("control"),
+            )
+        )
+        reset_btn = self.window.add(
+            ButtonControl(
+                "nsdf_sprite_reset",
+                Rect(x + 196, y, 90, 28),
+                "Reset",
+                lambda: self._sprite_anim.reset() if self._sprite_anim else None,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([play_btn, pause_btn, reset_btn])
+        return controls
+
+    # ------------------------------------------------------------------
+    # Tab: Sched — CooperativeScheduler + Pause + Sleep + WaitUntil
+    # ------------------------------------------------------------------
+
+    def _build_sched_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        self._scheduler = CooperativeScheduler()
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_sched_info",
+                Rect(x, y, rect.width - pad * 2, 40),
+                "CooperativeScheduler runs generator coroutines on the frame thread.\n"
+                "Yield Pause, Sleep(s), or WaitUntil(predicate) to suspend.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 50
+
+        self._sched_step_label = self.window.add(
+            LabelControl(
+                "nsdf_sched_step",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "Active coroutines: 0",
+                align="left",
+            )
+        )
+        self._sched_step_label.font_role = self.font_role("label")
+        controls.append(self._sched_step_label)
+        y += 30
+
+        self._sched_log_label = self.window.add(
+            LabelControl(
+                "nsdf_sched_log",
+                Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - 50)),
+                "Press a button to start a coroutine…",
+                align="left",
+            )
+        )
+        self._sched_log_label.font_role = self.font_role("label")
+        controls.append(self._sched_log_label)
+        log_bottom = y + max(40, rect.bottom - y - 50)
+
+        btn_y = log_bottom + 4
+        start_btn = self.window.add(
+            ButtonControl(
+                "nsdf_sched_start",
+                Rect(x, btn_y, 140, 28),
+                "Start Sequence",
+                self._sched_start_sequence,
+                font_role=self.font_role("control"),
+            )
+        )
+        cancel_btn = self.window.add(
+            ButtonControl(
+                "nsdf_sched_cancel",
+                Rect(x + 148, btn_y, 140, 28),
+                "Cancel All",
+                self._sched_cancel_all,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([start_btn, cancel_btn])
+        return controls
+
+    def _sched_log_append(self, msg: str) -> None:
+        self._sched_log.append(msg)
+        if len(self._sched_log) > 8:
+            self._sched_log = self._sched_log[-8:]
+        if self._sched_log_label is not None:
+            self._sched_log_label.text = "\n".join(self._sched_log)
+
+    def _sched_start_sequence(self) -> None:
+        if self._scheduler is None:
+            return
+        log = self._sched_log_append
+
+        def demo_sequence():
+            log("Step 1: starting…")
+            yield Pause()
+            log("Step 2: after one frame")
+            yield Sleep(0.5)
+            log("Step 3: after 0.5 s")
+            yield Sleep(1.0)
+            log("Step 4: after 1.5 s total — done!")
+
+        self._scheduler.start(demo_sequence())
+
+    def _sched_cancel_all(self) -> None:
+        if self._scheduler is not None:
+            self._scheduler.cancel_all()
+            self._sched_log_append("All coroutines cancelled.")
+
+    # ------------------------------------------------------------------
+    # Tab: TileMap — TileSet + TileMap
+    # ------------------------------------------------------------------
+
+    def _build_tilemap_tab(self, host, rect: Rect) -> list:
+        import pygame as _pygame
+        import random as _random
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_tilemap_info",
+                Rect(x, y, rect.width - pad * 2, 40),
+                "TileSet slices an atlas into tile surfaces.  TileMap renders only visible tiles.\n"
+                "Camera culling is automatic via visible_range().",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 50
+
+        TILE_W, TILE_H = 24, 24
+        COLS, ROWS = 16, 10
+        # Build a simple 4-tile atlas
+        _atlas = _pygame.Surface((TILE_W * 4, TILE_H), flags=_pygame.SRCALPHA)
+        for ti, col in enumerate([(40, 100, 40, 255), (80, 60, 30, 255), (120, 120, 120, 255), (30, 80, 160, 255)]):
+            _atlas.fill(col[:3], Rect(ti * TILE_W, 0, TILE_W, TILE_H))
+        tile_set = TileSet(_atlas, tile_w=TILE_W, tile_h=TILE_H)
+        self._tile_map = TileMap(tile_w=TILE_W, tile_h=TILE_H, cols=COLS, rows=ROWS, tile_set=tile_set)
+        self._tile_map.fill(0)
+        # Border of water, interior of grass with some rocks
+        for c in range(COLS):
+            self._tile_map.set_tile(c, 0, 3)
+            self._tile_map.set_tile(c, ROWS - 1, 3)
+        for r in range(ROWS):
+            self._tile_map.set_tile(0, r, 3)
+            self._tile_map.set_tile(COLS - 1, r, 3)
+        for _ in range(12):
+            rc = _random.randint(1, COLS - 2)
+            rr = _random.randint(1, ROWS - 2)
+            self._tile_map.set_tile(rc, rr, 2)
+
+        canvas_h = max(60, rect.bottom - y - 60)
+        self._tile_canvas = self.window.add(
+            CanvasControl("nsdf_tile_canvas", Rect(x, y, rect.width - pad * 2, canvas_h))
+        )
+        controls.append(self._tile_canvas)
+        self._tile_dirty = True
+        y += canvas_h + 8
+
+        tile_info = self.window.add(
+            LabelControl(
+                "nsdf_tilemap_detail",
+                Rect(x, y, rect.width - pad * 2, 22),
+                f"TileSet: {tile_set.tile_count} tiles  |  TileMap: {COLS}×{ROWS} ({COLS * ROWS} cells)",
+                align="left",
+            )
+        )
+        tile_info.font_role = self.font_role("label")
+        controls.append(tile_info)
+        return controls
+
+    # ------------------------------------------------------------------
+    # Tab: Progress — ProgressBarControl
+    # ------------------------------------------------------------------
+
+    def _build_progress_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_progress_info",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "ProgressBarControl — determinate (0–1) and indeterminate (marquee) modes.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 30
+
+        det_lbl = self.window.add(
+            LabelControl("nsdf_prog_det_lbl", Rect(x, y, rect.width - pad * 2, 18), "Determinate (value=0.72):", align="left")
+        )
+        det_lbl.font_role = self.font_role("label")
+        controls.append(det_lbl)
+        y += 22
+
+        self._progress_bar = self.window.add(
+            ProgressBarControl(
+                "nsdf_progress_bar",
+                Rect(x, y, rect.width - pad * 2, 18),
+                value=0.72,
+            )
+        )
+        controls.append(self._progress_bar)
+        y += 30
+
+        indet_lbl = self.window.add(
+            LabelControl("nsdf_prog_indet_lbl", Rect(x, y, rect.width - pad * 2, 18), "Indeterminate (marquee):", align="left")
+        )
+        indet_lbl.font_role = self.font_role("label")
+        controls.append(indet_lbl)
+        y += 22
+
+        self._progress_indeterminate = self.window.add(
+            ProgressBarControl(
+                "nsdf_progress_indet",
+                Rect(x, y, rect.width - pad * 2, 18),
+                indeterminate=True,
+            )
+        )
+        controls.append(self._progress_indeterminate)
+        y += 30
+
+        self._progress_label = self.window.add(
+            LabelControl(
+                "nsdf_progress_val_lbl",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "Adjust value:",
+                align="left",
+            )
+        )
+        self._progress_label.font_role = self.font_role("label")
+        controls.append(self._progress_label)
+        y += 28
+
+        btn_gap = 8
+        for step_pct, label in [(0, "0%"), (25, "25%"), (50, "50%"), (75, "75%"), (100, "100%")]:
+            btn = self.window.add(
+                ButtonControl(
+                    f"nsdf_prog_set_{step_pct}",
+                    Rect(x, y, 70, 26),
+                    label,
+                    self._make_progress_setter(step_pct / 100.0),
+                    font_role=self.font_role("control"),
+                )
+            )
+            controls.append(btn)
+            x += 78
+        x = rect.left + pad
+        return controls
+
+    def _make_progress_setter(self, value: float):
+        def _set():
+            if self._progress_bar is not None:
+                self._progress_bar.value = value
+                if self._progress_label is not None:
+                    self._progress_label.text = f"Value set to {value:.0%}"
+        return _set
+
+    # ------------------------------------------------------------------
+    # Tab: Flow — FlowLayout + FlowItem
+    # ------------------------------------------------------------------
+
+    def _build_flow_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_flow_info",
+                Rect(x, y, rect.width - pad * 2, 40),
+                "FlowLayout arranges FlowItem nodes left-to-right with automatic row wrapping.\n"
+                "Items here are LabelControls sized as tags.  Add/clear to see layout reflow.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 50
+
+        self._flow_result_label = self.window.add(
+            LabelControl(
+                "nsdf_flow_result",
+                Rect(x, y, rect.width - pad * 2, 22),
+                "Row info will appear here after layout runs.",
+                align="left",
+            )
+        )
+        self._flow_result_label.font_role = self.font_role("label")
+        controls.append(self._flow_result_label)
+        y += 30
+
+        add_btn = self.window.add(
+            ButtonControl(
+                "nsdf_flow_add",
+                Rect(x, y, 110, 28),
+                "Add Item",
+                self._flow_add_item,
+                font_role=self.font_role("control"),
+            )
+        )
+        clear_btn = self.window.add(
+            ButtonControl(
+                "nsdf_flow_clear",
+                Rect(x + 118, y, 110, 28),
+                "Clear Items",
+                self._flow_clear_items,
+                font_role=self.font_role("control"),
+            )
+        )
+        layout_btn = self.window.add(
+            ButtonControl(
+                "nsdf_flow_layout",
+                Rect(x + 236, y, 110, 28),
+                "Apply Layout",
+                self._flow_apply_layout,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([add_btn, clear_btn, layout_btn])
+        y += 36
+
+        self._flow_layout = FlowLayout(gap_x=8, gap_y=6)
+        self._flow_items_rect = Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad))
+        # Store offset relative to the window rect so layout stays correct if the window moves.
+        self._flow_items_win_offset = (
+            self._flow_items_rect.left - self.window.rect.left,
+            self._flow_items_rect.top - self.window.rect.top,
+            self._flow_items_rect.width,
+            self._flow_items_rect.height,
+        )
+
+        # Pre-populate with a few example tags and run layout immediately so
+        # items start at proper positions (not at 0,0).
+        for tag in ("gui_do", "FlowLayout", "FlowItem", "pygame", "demo"):
+            self._flow_add_item_named(tag)
+        self._flow_apply_layout()
+        # Add flow item labels to controls so _on_tab_change can manage visibility
+        controls.extend(self._flow_items)
+        return controls
+
+    def _flow_add_item_named(self, name: str) -> None:
+        if self._flow_layout is None:
+            return
+        lbl = self.window.add(
+            LabelControl(
+                f"nsdf_flow_tag_{len(self._flow_items)}",
+                Rect(0, 0, max(40, len(name) * 9 + 16), 24),
+                name,
+                align="center",
+            )
+        )
+        lbl.font_role = self.font_role("label")
+        self._flow_items.append(lbl)
+        self._flow_layout.add(FlowItem(node=lbl))
+
+    def _flow_add_item(self) -> None:
+        names = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota", "kappa"]
+        self._flow_add_item_named(names[len(self._flow_items) % len(names)])
+        self._flow_apply_layout()
+        # Register new item with tab panel so visibility is managed on tab switch
+        new_item = self._flow_items[-1]
+        self._tabs.append_to("flow", new_item)
+
+    def _flow_clear_items(self) -> None:
+        # Hide and untrack all flow items
+        for item in self._flow_items:
+            self._tabs.remove_from("flow", item)
+        self._flow_items.clear()
+        if self._flow_layout is not None:
+            self._flow_layout.clear()
+
+    def _flow_apply_layout(self) -> None:
+        if self._flow_layout is None:
+            return
+        # Recompute bounds from the current window position so a moved window
+        # doesn't cause items to render at stale absolute coordinates.
+        if self.window is not None and hasattr(self, "_flow_items_win_offset"):
+            ox, oy, fw, fh = self._flow_items_win_offset
+            bounds = Rect(self.window.rect.left + ox, self.window.rect.top + oy, fw, fh)
+        else:
+            bounds = getattr(self, "_flow_items_rect", None)
+        if bounds is None:
+            return
+        used_h = self._flow_layout.apply(bounds)
+        # Hide items whose placed rect falls below the container boundary so
+        # they don't render outside the window frame (no clipping in this layer).
+        clip_bottom = bounds.bottom
+        flow_tab_active = self._active_tab == "flow"
+        for item in self._flow_items:
+            fits = item.rect.bottom <= clip_bottom
+            item.visible = fits and flow_tab_active
+        rows = self._flow_layout.rows()
+        visible_count = sum(1 for item in self._flow_items if item.rect.bottom <= clip_bottom)
+        if self._flow_result_label is not None:
+            clipped = len(self._flow_items) - visible_count
+            clip_note = f"  ({clipped} clipped)" if clipped else ""
+            self._flow_result_label.text = (
+                f"{len(self._flow_items)} item(s) in {len(rows)} row(s) — used height: {used_h}px{clip_note}"
+            )
+
+    # ------------------------------------------------------------------
+    # Tab: Search — TextSearcher + TextMatch
+    # ------------------------------------------------------------------
+
+    def _build_search_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        DEMO_TEXT = (
+            "TextSearcher wraps Python regex to provide case-insensitive, whole-word, "
+            "and full-regex search over a string.  Type a query below to find matches."
+        )
+        self._searcher = TextSearcher(DEMO_TEXT, case_sensitive=False)
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_search_source",
+                Rect(x, y, rect.width - pad * 2, 50),
+                f'Search target:\n"{DEMO_TEXT[:80]}…"',
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 58
+
+        query_lbl = self.window.add(
+            LabelControl("nsdf_search_lbl", Rect(x, y, 60, 26), "Query:", align="left")
+        )
+        query_lbl.font_role = self.font_role("label")
+        controls.append(query_lbl)
+
+        self._search_input = self.window.add(
+            TextInputControl(
+                "nsdf_search_input",
+                Rect(x + 68, y, min(260, rect.width - pad * 2 - 68), 28),
+                placeholder="enter search term…",
+                on_change=self._on_search_changed,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.append(self._search_input)
+        y += 36
+
+        self._search_result_label = self.window.add(
+            LabelControl(
+                "nsdf_search_result",
+                Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
+                "Results appear here…",
+                align="left",
+            )
+        )
+        self._search_result_label.font_role = self.font_role("label")
+        controls.append(self._search_result_label)
+        return controls
+
+    def _on_search_changed(self, text: str) -> None:
+        if self._searcher is None or self._search_result_label is None:
+            return
+        q = text.strip()
+        if not q:
+            self._search_result_label.text = "Results appear here…"
+            return
+        matches = self._searcher.find_all(q)
+        if not matches:
+            self._search_result_label.text = f"No matches for {q!r}."
+        else:
+            lines = [f"  [{m.start}:{m.end}] {m.text!r}" for m in matches[:6]]
+            suffix = f"\n  … ({len(matches)} total)" if len(matches) > 6 else ""
+            self._search_result_label.text = f"{len(matches)} match(es):\n" + "\n".join(lines) + suffix
+
+    # ------------------------------------------------------------------
+    # Tab: ListDiff — ListDiffCalculator + ListDiff + DiffInsert/Remove/Move
+    # ------------------------------------------------------------------
+
+    def _build_listdiff_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_listdiff_info",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "ListDiffCalculator.diff(old, new) returns DiffInsert / DiffRemove / DiffMove ops.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 28
+
+        old_lbl = self.window.add(
+            LabelControl(
+                "nsdf_listdiff_old",
+                Rect(x, y, rect.width - pad * 2, 22),
+                f"Old: {self._listdiff_old}",
+                align="left",
+            )
+        )
+        old_lbl.font_role = self.font_role("label")
+        controls.append(old_lbl)
+        y += 26
+
+        new_lbl = self.window.add(
+            LabelControl(
+                "nsdf_listdiff_new",
+                Rect(x, y, rect.width - pad * 2, 22),
+                f"New: {self._listdiff_new}",
+                align="left",
+            )
+        )
+        new_lbl.font_role = self.font_role("label")
+        controls.append(new_lbl)
+        y += 30
+
+        run_btn = self.window.add(
+            ButtonControl(
+                "nsdf_listdiff_run",
+                Rect(x, y, 130, 28),
+                "Compute Diff",
+                self._run_listdiff,
+                font_role=self.font_role("control"),
+            )
+        )
+        apply_btn = self.window.add(
+            ButtonControl(
+                "nsdf_listdiff_apply",
+                Rect(x + 138, y, 130, 28),
+                "Apply & Show",
+                self._apply_listdiff,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([run_btn, apply_btn])
+        y += 38
+
+        self._listdiff_result_label = self.window.add(
+            LabelControl(
+                "nsdf_listdiff_result",
+                Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+                "Press 'Compute Diff' to see operations.",
+                align="left",
+            )
+        )
+        self._listdiff_result_label.font_role = self.font_role("label")
+        controls.append(self._listdiff_result_label)
+        return controls
+
+    def _run_listdiff(self) -> None:
+        if self._listdiff_result_label is None:
+            return
+        diff = ListDiffCalculator.diff(self._listdiff_old, self._listdiff_new)
+        lines = []
+        for op in diff.removes:
+            lines.append(f"  REMOVE [{op.index}] {op.item!r}")
+        for op in diff.inserts:
+            lines.append(f"  INSERT [{op.index}] {op.item!r}")
+        for op in diff.moves:
+            lines.append(f"  MOVE   [{op.from_index}→{op.to_index}] {op.item!r}")
+        if diff.is_empty:
+            self._listdiff_result_label.text = "Lists are identical — no operations."
+        else:
+            self._listdiff_result_label.text = (
+                f"{len(diff.removes)} remove(s), {len(diff.inserts)} insert(s), {len(diff.moves)} move(s):\n"
+                + "\n".join(lines)
+            )
+
+    def _apply_listdiff(self) -> None:
+        if self._listdiff_result_label is None:
+            return
+        target = list(self._listdiff_old)
+        diff = ListDiffCalculator.diff(self._listdiff_old, self._listdiff_new)
+        ListDiffCalculator.apply_to_list(target, diff)
+        self._listdiff_result_label.text = (
+            f"Applied diff — result matches new: {target == self._listdiff_new}\n"
+            f"Result: {target}"
+        )
+
+    # ------------------------------------------------------------------
+    # Tab: Cache — DataCache + CacheStats
+    # ------------------------------------------------------------------
+
+    def _build_cache_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        self._cache = DataCache(max_size=5)
+        # Pre-populate
+        for k, v in [("user:1", "Alice"), ("user:2", "Bob"), ("user:3", "Carol")]:
+            self._cache.put(k, v)
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_cache_info",
+                Rect(x, y, rect.width - pad * 2, 20),
+                "DataCache — LRU cache (max_size=5) with reactive on_evicted/on_invalidated signals.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 28
+
+        self._cache_stats_label = self.window.add(
+            LabelControl(
+                "nsdf_cache_stats",
+                Rect(x, y, rect.width - pad * 2, 60),
+                self._cache_stats_text(),
+                align="left",
+            )
+        )
+        self._cache_stats_label.font_role = self.font_role("label")
+        controls.append(self._cache_stats_label)
+        y += 68
+
+        btn_gap = 8
+        get_btn = self.window.add(
+            ButtonControl(
+                "nsdf_cache_get",
+                Rect(x, y, 110, 28),
+                "Get user:1",
+                self._cache_get_user1,
+                font_role=self.font_role("control"),
+            )
+        )
+        miss_btn = self.window.add(
+            ButtonControl(
+                "nsdf_cache_miss",
+                Rect(x + 118, y, 110, 28),
+                "Miss user:99",
+                self._cache_miss,
+                font_role=self.font_role("control"),
+            )
+        )
+        evict_btn = self.window.add(
+            ButtonControl(
+                "nsdf_cache_evict",
+                Rect(x + 236, y, 130, 28),
+                "Fill (cause evict)",
+                self._cache_fill,
+                font_role=self.font_role("control"),
+            )
+        )
+        inval_btn = self.window.add(
+            ButtonControl(
+                "nsdf_cache_inval",
+                Rect(x, y + 36, 130, 28),
+                "Invalidate user:2",
+                self._cache_invalidate,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.extend([get_btn, miss_btn, evict_btn, inval_btn])
+        return controls
+
+    def _cache_stats_text(self) -> str:
+        if self._cache is None:
+            return "(no cache)"
+        s = self._cache.stats()
+        return (
+            f"Size: {s.size}  Hits: {s.hits}  Misses: {s.misses}  "
+            f"Evictions: {s.evictions}  Invalidations: {s.invalidations}\n"
+            f"Hit rate: {s.hit_rate:.0%}  Total lookups: {s.total_lookups}"
+        )
+
+    def _refresh_cache_stats(self) -> None:
+        if self._cache_stats_label is not None:
+            self._cache_stats_label.text = self._cache_stats_text()
+
+    def _cache_get_user1(self) -> None:
+        if self._cache is not None:
+            self._cache.get("user:1")
+            self._refresh_cache_stats()
+
+    def _cache_miss(self) -> None:
+        if self._cache is not None:
+            self._cache.get("user:99")
+            self._refresh_cache_stats()
+
+    def _cache_fill(self) -> None:
+        if self._cache is not None:
+            for i in range(4, 9):
+                self._cache.put(f"user:{i}", f"User{i}")
+            self._refresh_cache_stats()
+
+    def _cache_invalidate(self) -> None:
+        if self._cache is not None:
+            self._cache.invalidate("user:2")
+            self._refresh_cache_stats()
+
+    # ------------------------------------------------------------------
+    # Tab: Shortcuts — ShortcutHelpOverlay + ShortcutSection + ShortcutEntry
+    # ------------------------------------------------------------------
+
+    def _build_shortcuts_tab(self, host, rect: Rect) -> list:
+        controls = []
+        pad = 8
+        x, y = rect.left + pad, rect.top + pad
+
+        info = self.window.add(
+            LabelControl(
+                "nsdf_shortcuts_info",
+                Rect(x, y, rect.width - pad * 2, 40),
+                "ShortcutHelpOverlay reads ActionRegistry + KeyChordManager and renders\n"
+                "a structured shortcut reference panel via the OverlayManager.",
+                align="left",
+            )
+        )
+        info.font_role = self.font_role("label")
+        controls.append(info)
+        y += 50
+
+        show_btn = self.window.add(
+            ButtonControl(
+                "nsdf_shortcuts_show",
+                Rect(x, y, 150, 28),
+                "Show Help Overlay",
+                self._shortcuts_show_overlay,
+                font_role=self.font_role("control"),
+            )
+        )
+        controls.append(show_btn)
+        y += 38
+
+        self._shortcut_info_label = self.window.add(
+            LabelControl(
+                "nsdf_shortcuts_detail",
+                Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+                "Overlay not yet opened — click 'Show Help Overlay' to display it.\n"
+                "ShortcutHelpOverlay.sections builds structured data from ActionRegistry.",
+                align="left",
+            )
+        )
+        self._shortcut_info_label.font_role = self.font_role("label")
+        controls.append(self._shortcut_info_label)
+        return controls
+
+    def _shortcuts_show_overlay(self) -> None:
+        if self._shortcut_overlay is None or self.window is None:
+            return
+        self._shortcut_overlay.toggle()
+        sections = self._shortcut_overlay.sections
+        total = sum(len(s.entries) for s in sections)
+        if self._shortcut_info_label is not None:
+            self._shortcut_info_label.text = (
+                f"Overlay {'open' if self._shortcut_overlay.is_open else 'closed'}.\n"
+                f"{len(sections)} section(s), {total} shortcut entry/entries built from ActionRegistry."
+            )
+
+    def bind_runtime(self, host) -> None:
+        super().bind_runtime(host)
+        self._main_scene = host.app.create_scene("main")
+        self._frame_timer.reset()
+        # Build ShortcutHelpOverlay once overlay manager is available
+        action_registry = getattr(host, "action_registry", None)
+        overlay_rect = Rect(
+            max(0, host.app.surface.get_width() // 2 - 280),
+            max(0, host.app.surface.get_height() // 2 - 200),
+            560,
+            400,
+        )
+        self._shortcut_overlay = ShortcutHelpOverlay(
+            host.app.overlay,
+            action_registry=action_registry,
+            overlay_rect=overlay_rect,
+        )

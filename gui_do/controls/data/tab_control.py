@@ -84,6 +84,8 @@ class TabControl(UiNode):
 
         # Track tab button rects for hit testing
         self._tab_rects: List[Rect] = []
+        # Number of tab bar rows (updated during draw/build_tab_rects)
+        self._tab_rows: int = 1
 
         # Mount tracking
 
@@ -150,21 +152,36 @@ class TabControl(UiNode):
     # Layout helpers
     # ------------------------------------------------------------------
 
+    def _tab_strip_h(self) -> int:
+        """Total pixel height of the tab strip, accounting for wrapping."""
+        return _TAB_H * self._tab_rows
+
     def _content_rect(self) -> Rect:
-        return Rect(self.rect.left, self.rect.top + _TAB_H, self.rect.width, self.rect.height - _TAB_H)
+        strip_h = self._tab_strip_h()
+        return Rect(self.rect.left, self.rect.top + strip_h, self.rect.width, max(0, self.rect.height - strip_h))
 
     def _build_tab_rects(self, theme: "ColorTheme") -> List[Rect]:
         rects: List[Rect] = []
         x = self.rect.left
         y = self.rect.top
+        max_x = self.rect.right
         for item in self._items:
             try:
                 w, _ = theme.fonts.font_instance(self._font_role, size=self._font_size).text_size(item.label)
             except Exception:
                 w = len(item.label) * (self._font_size // 2)
             tab_w = w + _TAB_PAD_H * 2
+            # Wrap to next row if this tab would overflow the right edge
+            if x + tab_w > max_x and x > self.rect.left:
+                x = self.rect.left
+                y += _TAB_H
             rects.append(Rect(x, y, tab_w, _TAB_H))
             x += tab_w
+        # Cache number of rows for _content_rect / hit-testing
+        if rects:
+            self._tab_rows = (rects[-1].top - self.rect.top) // _TAB_H + 1
+        else:
+            self._tab_rows = 1
         return rects
 
     # ------------------------------------------------------------------
@@ -177,7 +194,7 @@ class TabControl(UiNode):
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1:
             pos = event.pos
-            tab_strip_rect = Rect(self.rect.left, self.rect.top, self.rect.width, _TAB_H)
+            tab_strip_rect = Rect(self.rect.left, self.rect.top, self.rect.width, self._tab_strip_h())
             if tab_strip_rect.collidepoint(pos):
                 for i, tab_rect in enumerate(self._tab_rects):
                     if tab_rect.collidepoint(pos) and i < len(self._items):
@@ -234,8 +251,8 @@ class TabControl(UiNode):
         tab_rects = self._build_tab_rects(theme)
         self._tab_rects = tab_rects  # cache for hit testing
 
-        # Draw tab strip background
-        strip_rect = Rect(r.left, r.top, r.width, _TAB_H)
+        # Draw tab strip background (all rows)
+        strip_rect = Rect(r.left, r.top, r.width, self._tab_strip_h())
         bg_color = theme.dark
         pygame.draw.rect(surface, bg_color, strip_rect)
 

@@ -157,9 +157,9 @@ class ProgressBarControl(UiNode):
             return
 
         r = self.rect
-        bg_color = theme.surface_bg
-        fill_color = theme.accent
-        border_color = theme.border
+        bg_color = theme.medium
+        fill_color = theme.highlight
+        border_color = theme.dark
 
         # Background
         pygame.draw.rect(surface, bg_color, r)

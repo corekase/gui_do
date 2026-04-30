@@ -8,6 +8,7 @@ from pathlib import Path
 from pygame import Rect
 
 from gui_do import (
+    AnimatedImageControl,
     ArrowBoxControl,
     ButtonControl,
     ButtonGroupControl,
@@ -15,16 +16,23 @@ from gui_do import (
     ColorPickerControl,
     ContextMenuItem,
     DataGridControl,
+    DockPane,
+    DockTabs,
+    DockWorkspace,
+    DockWorkspacePanel,
     DropdownControl,
     DropdownOption,
     Feature,
+    FixedPatternFormatter,
+    FrameAnimation,
+    FrameTimer,
     FrameControl,
     GridColumn,
     GridRow,
     ImageControl,
     LabelControl,
-    LayoutManager,
     LayoutAxis,
+    LayoutManager,
     ListItem,
     ListViewControl,
     MenuBarControl,
@@ -32,15 +40,22 @@ from gui_do import (
     NotificationCenter,
     NotificationPanelControl,
     NotificationRecord,
+    NumericFormatter,
     OverlayPanelControl,
     PanelControl,
+    PatternFormatter,
+    ProgressBarControl,
+    PropertyInspectorModel,
+    PropertyInspectorPanel,
     RangeSliderControl,
     RichLabelControl,
+    SceneMenuStripControl,
     ScrollbarControl,
     ScrollViewControl,
     SliderControl,
     SpinnerControl,
     SplitterControl,
+    SpriteSheet,
     TabControl,
     TabItem,
     TaskPanelControl,
@@ -50,16 +65,6 @@ from gui_do import (
     ToggleControl,
     TreeControl,
     TreeNode,
-    SceneMenuStripControl,
-    NumericFormatter,
-    PatternFormatter,
-    FixedPatternFormatter,
-    DockPane,
-    DockTabs,
-    DockWorkspace,
-    DockWorkspacePanel,
-    PropertyInspectorModel,
-    PropertyInspectorPanel,
     ui_property,
 )
 
@@ -181,6 +186,9 @@ class ControlsShowcaseFeature(Feature):
         self.task_panel = None
         self.showcase_return_button = None
         self._showcase_notification_center: NotificationCenter | None = None
+        self._indeterminate_bar: ProgressBarControl | None = None
+        self._showcase_anim_ctrl: AnimatedImageControl | None = None
+        self._frame_timer = FrameTimer()
 
     def build(self, host) -> None:
         self._label_font_role = self.LABEL_FONT_ROLE
@@ -1164,6 +1172,77 @@ class ControlsShowcaseFeature(Feature):
             row_index=131,
         )
 
+        # Column 11: ProgressBarControl (determinate + indeterminate) and AnimatedImageControl.
+        col11_anchor = flow.column_flow_anchor()
+        col11_x = col11_anchor.left
+        col11_w = min(220, col11_anchor.width)
+        col11_y = col11_anchor.top
+
+        progress_h = 20
+        progress_slot_h = slot_h(progress_h)
+        self._place_control(
+            host,
+            "progress_bar",
+            "Progress Bar",
+            ProgressBarControl(
+                "control_progress_bar",
+                Rect(0, 0, col11_w, progress_h),
+                value=0.65,
+            ),
+            Rect(col11_x, col11_y, col11_w, progress_slot_h),
+            focusable=False,
+            column_index=11,
+            row_index=140,
+        )
+        col11_y += progress_slot_h + row_gap
+
+        indeterminate_h = 20
+        indeterminate_slot_h = slot_h(indeterminate_h)
+        indeterminate_bar = ProgressBarControl(
+            "control_progress_bar_indeterminate",
+            Rect(0, 0, col11_w, indeterminate_h),
+            indeterminate=True,
+        )
+        self._indeterminate_bar = indeterminate_bar
+        self._place_control(
+            host,
+            "progress_bar_indeterminate",
+            "Progress (Marquee)",
+            indeterminate_bar,
+            Rect(col11_x, col11_y, col11_w, indeterminate_slot_h),
+            focusable=False,
+            column_index=11,
+            row_index=141,
+        )
+        col11_y += indeterminate_slot_h + row_gap
+
+        # AnimatedImageControl — four-frame programmatic atlas.
+        import pygame as _pygame
+        _FRAME_W, _FRAME_H = 32, 32
+        _atlas = _pygame.Surface((_FRAME_W * 4, _FRAME_H), flags=_pygame.SRCALPHA)
+        for _fi, _color in enumerate([(220, 60, 60), (60, 220, 60), (60, 60, 220), (220, 220, 60)]):
+            _atlas.fill(_color, Rect(_fi * _FRAME_W, 0, _FRAME_W, _FRAME_H))
+        _sheet = SpriteSheet(_atlas, frame_w=_FRAME_W, frame_h=_FRAME_H)
+        _anim = FrameAnimation(_sheet, frames=list(range(4)), fps=1, loop=True)
+        anim_ctrl = AnimatedImageControl(
+            "control_animated_image",
+            Rect(0, 0, col11_w, 48),
+            animation=_anim,
+            scale=True,
+        )
+        self._showcase_anim_ctrl = anim_ctrl
+        anim_slot_h = slot_h(48)
+        self._place_control(
+            host,
+            "animated_image",
+            "Animated Image",
+            anim_ctrl,
+            Rect(col11_x, col11_y, col11_w, anim_slot_h),
+            focusable=False,
+            column_index=11,
+            row_index=142,
+        )
+
         self._build_scene_task_panel(host)
 
         if self._focus_controls:
@@ -1180,6 +1259,14 @@ class ControlsShowcaseFeature(Feature):
         return next_index
 
     def on_update(self, host) -> None:
+        dt = self._frame_timer.tick()
+
+        if self._indeterminate_bar is not None and self._indeterminate_bar.visible:
+            self._indeterminate_bar.tick(dt)
+        if self._showcase_anim_ctrl is not None and self._showcase_anim_ctrl.visible:
+            self._showcase_anim_ctrl.animation.update(dt)
+            self._showcase_anim_ctrl.invalidate()
+
         if not self._pending_initial_focus:
             return
         if host.app.active_scene_name != self.scene_name:

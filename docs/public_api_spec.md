@@ -77,6 +77,9 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `RoutedFeature`
 - `FeatureMessage`
 - `FeatureManager`
+- `FrameTimer`
+- `TabPanelManager`
+- `WindowRelativeRect`
 - `TweenManager`
 - `TweenHandle`
 - `Easing`

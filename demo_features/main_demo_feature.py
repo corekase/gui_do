@@ -50,6 +50,7 @@ from gui_do import (
     SelectionMode,
     SelectionModel,
     SettingsRegistry,
+    ShortcutHelpOverlay,
     SplitterControl,
     StateMachine,
     ThemeManager,
@@ -89,11 +90,13 @@ class MainDemoFeature(Feature):
             "set_mandel_window_visible",
             "set_systems_window_visible",
             "action_registry",
-        )
+        ),
+        "bind_runtime": ("app", "action_registry"),
     }
 
     def __init__(self) -> None:
         super().__init__("main_demo", scene_name="main")
+        self._help_overlay: ShortcutHelpOverlay | None = None
 
     def build(self, host) -> None:
         self._register_screen_font_roles(host)
@@ -213,14 +216,45 @@ class MainDemoFeature(Feature):
                 font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
+        host.help_button = host.task_panel.add(
+            ButtonControl(
+                "show_help",
+                host.app.layout.linear(5),
+                "Help (F9)",
+                lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
+                style="angle",
+                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
+            )
+        )
+
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
         host._main_tooltip_manager.register(host.exit_button, "Exit the application")
         host._main_tooltip_manager.register(host.systems_toggle_window, "Toggle the Systems demo window")
         host._main_tooltip_manager.register(host.showcase_button, "Open the control showcase scene")
         host._main_tooltip_manager.register(host.life_toggle_window, "Toggle the Life simulation window")
         host._main_tooltip_manager.register(host.mandel_toggle_window, "Toggle the Mandelbrot fractal window")
+        host._main_tooltip_manager.register(host.help_button, "Show keyboard shortcut reference (F1)")
 
         host.app.tile_windows()
+
+    def bind_runtime(self, host) -> None:
+        """Create the ShortcutHelpOverlay and bind F9 to toggle it."""
+        overlay_rect = Rect(
+            max(0, host.app.surface.get_width() // 2 - 300),
+            max(0, host.app.surface.get_height() // 2 - 220),
+            600,
+            440,
+        )
+        self._help_overlay = ShortcutHelpOverlay(
+            host.app.overlay,
+            action_registry=host.action_registry,
+            overlay_rect=overlay_rect,
+        )
+        host.app.actions.register_action(
+            "show_help",
+            lambda _event: (self._help_overlay.toggle() or True),
+        )
+        host.app.actions.bind_key(__import__("pygame").K_F9, "show_help", scene="main")
 
     def _register_screen_font_roles(self, host) -> None:
         for scene_name in ("main", "control_showcase"):

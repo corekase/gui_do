@@ -71,6 +71,9 @@ from .features.feature_lifecycle import (
     RoutedFeature,
     FeatureMessage,
     FeatureManager,
+    FrameTimer,
+    TabPanelManager,
+    WindowRelativeRect,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
@@ -274,6 +277,9 @@ __all__ = [
     "RoutedFeature",
     "FeatureMessage",
     "FeatureManager",
+    "FrameTimer",
+    "TabPanelManager",
+    "WindowRelativeRect",
     "TweenManager",
     "TweenHandle",
     "Easing",

@@ -38,6 +38,7 @@ from gui_do import (
 )
 from gui_do import OverlayPanelControl
 from gui_do import DockWorkspacePanel, PropertyInspectorPanel
+from gui_do import ProgressBarControl, AnimatedImageControl
 
 
 class ControlsShowcaseFeatureTests(unittest.TestCase):
@@ -98,6 +99,8 @@ class ControlsShowcaseFeatureTests(unittest.TestCase):
             ToggleControl,
             DockWorkspacePanel,
             PropertyInspectorPanel,
+            ProgressBarControl,
+            AnimatedImageControl,
         }
         self.assertEqual({type(control) for control in feature.controls}, expected_types)
 

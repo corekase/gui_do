@@ -6,9 +6,220 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass
 import inspect
 from time import perf_counter
-from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Callable, Deque, Dict, Iterable, List, Mapping, Optional, Tuple
 from ..app.error_handling import logical_error, report_nonfatal_error
 from ..telemetry.telemetry import telemetry_collector
+
+
+# ---------------------------------------------------------------------------
+# FrameTimer
+# ---------------------------------------------------------------------------
+
+class FrameTimer:
+    """Tracks per-frame delta time for use inside ``on_update``.
+
+    Usage::
+
+        class MyFeature(Feature):
+            def __init__(self) -> None:
+                self._timer = FrameTimer()
+
+            def on_update(self, host) -> None:
+                dt = self._timer.tick()
+                my_system.update(dt)
+
+    The first call to :meth:`tick` always returns ``0.0`` so that the initial
+    frame does not produce a spurious large delta.
+    """
+
+    def __init__(self) -> None:
+        self._last: float = 0.0
+
+    def tick(self) -> float:
+        """Return seconds elapsed since the previous call, or ``0.0`` on first call."""
+        now = perf_counter()
+        if self._last == 0.0:
+            self._last = now
+            return 0.0
+        dt = now - self._last
+        self._last = now
+        return dt
+
+    def reset(self) -> None:
+        """Reset internal clock so the next :meth:`tick` returns ``0.0``."""
+        self._last = 0.0
+
+
+# ---------------------------------------------------------------------------
+# WindowRelativeRect
+# ---------------------------------------------------------------------------
+
+class WindowRelativeRect:
+    """A rect that resolves to absolute screen coordinates relative to a live window.
+
+    Controls that are children of a ``WindowControl`` are positioned at
+    absolute screen coordinates at build time.  When the window is later moved
+    (e.g. by ``tile_windows``), any stored absolute rect becomes stale.
+
+    ``WindowRelativeRect`` records the *offset* from the window's origin at
+    registration time and recomputes the absolute rect on demand from the
+    window's *current* position.  This prevents child controls from appearing
+    at wrong positions after the window moves.
+
+    Usage::
+
+        # At build time (window position may change later):
+        area = WindowRelativeRect(window, Rect(x, y, w, h))
+
+        # Later (e.g. in _flow_apply_layout), always up-to-date:
+        current_abs = area.resolve()
+
+    The *window* argument must have a ``.rect`` attribute (``UiNode`` /
+    ``WindowControl``).
+    """
+
+    def __init__(self, window, rect) -> None:
+        """
+        Parameters
+        ----------
+        window:
+            The ``WindowControl`` (or any node with a ``.rect``) that *rect* is
+            a child of.
+        rect:
+            The absolute rect at the moment of registration.  The relative
+            offset is computed from ``window.rect`` immediately.
+        """
+        self._window = window
+        wr = window.rect
+        self._rel_x: int = rect.x - wr.x
+        self._rel_y: int = rect.y - wr.y
+        self._w: int = rect.width
+        self._h: int = rect.height
+
+    def resolve(self):
+        """Return a ``pygame.Rect`` in current absolute screen coordinates."""
+        from pygame import Rect as _Rect
+        wr = self._window.rect
+        return _Rect(wr.x + self._rel_x, wr.y + self._rel_y, self._w, self._h)
+
+    @property
+    def width(self) -> int:
+        return self._w
+
+    @property
+    def height(self) -> int:
+        return self._h
+
+    @property
+    def rel_x(self) -> int:
+        return self._rel_x
+
+    @property
+    def rel_y(self) -> int:
+        return self._rel_y
+
+
+# ---------------------------------------------------------------------------
+# TabPanelManager
+# ---------------------------------------------------------------------------
+
+class TabPanelManager:
+    """Manages the mapping of tab keys to lists of child controls for a
+    ``TabControl``.
+
+    Calling :meth:`activate` hides all controls except those belonging to the
+    specified tab, eliminating the hand-written ``_on_tab_change`` loop that
+    every tabbed feature duplicates.
+
+    Optional per-tab callbacks can be registered via :meth:`on_activate` to
+    run arbitrary feature logic when a tab becomes visible.
+
+    Usage::
+
+        class MyFeature(Feature):
+            def __init__(self):
+                self._tabs = TabPanelManager()
+
+            def build(self, host):
+                self._tabs.register("cursor", self._build_cursor_tab(host, rect))
+                self._tabs.register("filter", self._build_filter_tab(host, rect))
+                self._tabs.on_activate("locale", lambda: setattr(self, "_dirty", True))
+                self._tabs.activate("cursor")
+
+            # Wire to TabControl on_change:
+            tab_ctrl = TabControl(..., on_change=self._tabs.activate)
+    """
+
+    def __init__(self) -> None:
+        self._panels: Dict[str, List] = {}
+        self._callbacks: Dict[str, List[Callable[[], None]]] = {}
+        self._active: Optional[str] = None
+
+    # ------------------------------------------------------------------
+    # Registration
+    # ------------------------------------------------------------------
+
+    def register(self, key: str, controls) -> None:
+        """Register a list (or single control) of controls for *key*.
+
+        Controls are hidden immediately upon registration (they will be shown
+        when :meth:`activate` is called for their key).
+        """
+        lst = list(controls) if not isinstance(controls, list) else controls
+        self._panels[key] = lst
+        for ctrl in lst:
+            ctrl.visible = False
+
+    def on_activate(self, key: str, callback: Callable[[], None]) -> None:
+        """Register *callback* to be called when tab *key* is activated."""
+        self._callbacks.setdefault(key, []).append(callback)
+
+    # ------------------------------------------------------------------
+    # Activation
+    # ------------------------------------------------------------------
+
+    def activate(self, key: str) -> None:
+        """Show controls for *key*, hide controls for all other tabs, and fire
+        any registered callbacks for *key*."""
+        self._active = key
+        for tab_key, controls in self._panels.items():
+            visible = tab_key == key
+            for ctrl in controls:
+                ctrl.visible = visible
+        for cb in self._callbacks.get(key, []):
+            cb()
+
+    # ------------------------------------------------------------------
+    # Query
+    # ------------------------------------------------------------------
+
+    @property
+    def active_key(self) -> Optional[str]:
+        """The currently active tab key, or ``None`` if none activated yet."""
+        return self._active
+
+    def controls_for(self, key: str) -> List:
+        """Return the control list registered for *key* (empty list if unknown)."""
+        return list(self._panels.get(key, []))
+
+    def append_to(self, key: str, control) -> None:
+        """Append *control* to an existing panel and set its visibility to match
+        the current active tab."""
+        if key not in self._panels:
+            self._panels[key] = []
+        self._panels[key].append(control)
+        control.visible = self._active == key
+
+    def remove_from(self, key: str, control) -> None:
+        """Remove *control* from panel *key* and hide it."""
+        panel = self._panels.get(key)
+        if panel is not None and control in panel:
+            panel.remove(control)
+        control.visible = False
+
+    def keys(self):
+        """Return the registered tab keys."""
+        return list(self._panels.keys())
 
 @dataclass(slots=True)
 class FeatureMessage:
