@@ -227,15 +227,24 @@ class NotificationPanelControl(OverlayPanelControl):
         # Header bar
         header_rect = Rect(self.rect.x, self.rect.y, self.rect.width, _HEADER_H)
         pygame.draw.rect(surface, header_bg, header_rect)
+
+        # ...debug code removed...
+
         try:
             hf = theme.fonts.font_instance(self._header_font_role, size=_FONT_SIZE + 2)
-            ht = hf.render("Notifications", True, text_col)
+            if hasattr(hf, "_font"):
+                ht = hf._font.render("Notifications", True, text_col)
+            else:
+                ht = hf.render("Notifications", True, text_col)
             surface.blit(ht, (header_rect.x + _PAD, header_rect.y + (header_rect.height - ht.get_height()) // 2))
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
                 mf = theme.fonts.font_instance(self._title_font_role, size=_TITLE_FONT_SIZE)
-                mt = mf.render("Mark all read", True, (180, 210, 255))
+                if hasattr(mf, "_font"):
+                    mt = mf._font.render("Mark all read", True, (180, 210, 255))
+                else:
+                    mt = mf.render("Mark all read", True, (180, 210, 255))
                 mx = header_rect.right - mt.get_width() - _PAD
                 my = header_rect.y + (header_rect.height - mt.get_height()) // 2
                 self._mark_all_rect = Rect(mx, my, mt.get_width(), mt.get_height())

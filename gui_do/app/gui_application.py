@@ -275,6 +275,12 @@ class GuiApplication:
             self._scene_pretty_names[name] = normalized if normalized else name
         elif name not in self._scene_pretty_names:
             self._scene_pretty_names[name] = name
+        # --- Automatically apply all font roles for this scene if a registry exists ---
+        if hasattr(self, "font_roles") and self.font_roles is not None:
+            try:
+                self.font_roles.apply(self, scene_name=name)
+            except Exception:
+                pass  # Don't block scene creation if font role registration fails
         return runtime.scene
 
     def switch_scene(self, name: str) -> None:
@@ -306,6 +312,12 @@ class GuiApplication:
             # Re-wire the global invalidation tracker into the incoming scene so
             # that all nodes registered to it emit dirty rects on invalidate().
             self.scene.set_invalidation_tracker(self.invalidation)
+            # --- Automatically apply all font roles for this scene if a registry exists ---
+            if hasattr(self, "font_roles") and self.font_roles is not None:
+                try:
+                    self.font_roles.apply(self, scene_name=name)
+                except Exception:
+                    pass  # Don't block scene switch if font role registration fails
             self._apply_screen_lifecycle_chain()
 
     @property

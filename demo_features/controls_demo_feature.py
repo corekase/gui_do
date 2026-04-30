@@ -189,6 +189,12 @@ class ControlsShowcaseFeature(Feature):
     def build(self, host) -> None:
         self._label_font_role = self.LABEL_FONT_ROLE
         self._control_font_role = self.CONTROL_FONT_ROLE
+        # Ensure all font roles are applied for this scene (fixes notification panel header/title)
+        if hasattr(host, "font_roles") and hasattr(host, "app") and host.font_roles is not None:
+            try:
+                host.font_roles.apply(host.app, scene_name="control_showcase")
+            except Exception:
+                pass
 
         def _extra_entries() -> list[MenuEntry]:
             action_registry = getattr(host, "action_registry", None)
