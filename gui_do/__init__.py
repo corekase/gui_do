@@ -89,6 +89,8 @@ from .features.feature_lifecycle import (
     register_placed_control,
     add_group_label,
     PlacedControl,
+    setup_standard_font_roles,
+    register_standard_actions,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl

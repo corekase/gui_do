@@ -77,6 +77,7 @@ from gui_do import (
     WaitUntil,
     WindowControl,
 )
+from gui_do import set_window_visible_state, setup_standard_font_roles
 
 _TAB_H = 36
 
@@ -250,6 +251,11 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
+        setup_standard_font_roles(
+            host.font_roles,
+            "demo_features/data/fonts/Gimbot.ttf",
+            "demo_features/data/fonts/Ubuntu-B.ttf"
+        )
         self.use_font_roles(
             {
                 "window_title": "system.window_title",
@@ -414,7 +420,7 @@ class SystemsDemoFeature(RoutedFeature):
 
     def _window_event_handler(self, event_type: str, _data=None) -> None:
         if event_type == "close":
-            self.window.visible = False
+            set_window_visible_state(self.window, False)
 
     def _on_tab_change(self, key: str) -> None:
         self._active_tab = key

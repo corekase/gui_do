@@ -456,6 +456,10 @@ PUBLIC_API_EXPORT_ORDER = (
     "ShortcutHelpOverlay",
     "ShortcutSection",
     "ShortcutEntry",
+    "setup_standard_font_roles",
+    "register_standard_actions",
+    "set_window_visible_state",
+    "toggle_window_visibility",
 )
 
 PUBLIC_API_REQUIRED_REFERENCES = (

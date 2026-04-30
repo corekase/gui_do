@@ -17,6 +17,10 @@ from gui_do import (
     SceneTransitionManager,
     SceneTransitionStyle,
     CommandPaletteManager,
+    setup_standard_font_roles,
+    register_standard_actions,
+    set_window_visible_state,
+    toggle_window_visibility,
 )
 
 
@@ -46,30 +50,10 @@ class GuiDoDemo:
         # scene.  Features bind local role names to these pre-defined global
         # roles (via Feature.use_font_roles) instead of redefining sizes/files.
         self.font_roles = FontRoleRegistry()
-        self.font_roles.define("body",    size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("title",   size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf", bold=True)
-        self.font_roles.define("display", size=72, file_path="demo_features/data/fonts/Gimbot.ttf")
-        self.font_roles.define("controls.label", size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("controls.control", size=15, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("life.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
-        self.font_roles.define("life.control", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("mandelbrot.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
-        self.font_roles.define("mandelbrot.control", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("mandelbrot.caption", size=14, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("mandelbrot.status", size=16, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("system.window_title", size=14, file_path="demo_features/data/fonts/Gimbot.ttf", bold=True)
-        self.font_roles.define("system.control", size=15, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("system.label", size=13, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define("system.status", size=13, file_path="demo_features/data/fonts/Ubuntu-B.ttf")
-        self.font_roles.define(
-            self.TASK_PANEL_CONTROL_FONT_ROLE,
-            size=16,
-            file_path="demo_features/data/fonts/Ubuntu-B.ttf",
-        )
-        self.font_roles.define(
-            self.SCREEN_TITLE_FONT_ROLE,
-            size=72,
-            file_path="demo_features/data/fonts/Gimbot.ttf",
+        setup_standard_font_roles(
+            self.font_roles,
+            "demo_features/data/fonts/Gimbot.ttf",
+            "demo_features/data/fonts/Ubuntu-B.ttf"
         )
 
         self.app.layout.set_anchor_bounds(self.screen_rect)
@@ -133,7 +117,17 @@ class GuiDoDemo:
         self.systems_window.visible = False
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="main")
         self.app.set_pristine("demo_features/data/images/backdrop.jpg", scene_name="control_showcase")
-        self.app.actions.register_action("exit", lambda _event: (setattr(self.app, "running", False) or True))
+        register_standard_actions(
+            self.app.actions,
+            app=self.app,
+            scene_transitions=self.scene_transitions,
+            palette_manager=self._palette_manager,
+            window_toggles={
+                "win_life": (lambda: self.life_window, "set_life_window_visible"),
+                "win_mandel": (lambda: self.mandel_window, "set_mandel_window_visible"),
+                "win_systems": (lambda: self.systems_window, "set_systems_window_visible"),
+            },
+        )
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="main")
         self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene="control_showcase")
 
@@ -247,27 +241,13 @@ class GuiDoDemo:
 
 
     def set_life_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        self.life_window.visible = visible
-        if hasattr(self, 'life_toggle_window') and callable(self.life_toggle_window):
-            self.life_toggle_window(visible)
-        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
-            self.app.tile_windows()
-
+        set_window_visible_state(self.life_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        self.mandel_window.visible = visible
-        if hasattr(self, 'mandel_toggle_window') and callable(self.mandel_toggle_window):
-            self.mandel_toggle_window(visible)
-        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
-            self.app.tile_windows()
-
+        set_window_visible_state(self.mandel_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
 
     def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        self.systems_window.visible = visible
-        if hasattr(self, 'systems_toggle_window') and callable(self.systems_toggle_window):
-            self.systems_toggle_window(visible)
-        if from_toggle and hasattr(self.app, 'tile_windows') and callable(self.app.tile_windows):
-            self.app.tile_windows()
+        set_window_visible_state(self.systems_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""

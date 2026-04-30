@@ -1,4 +1,86 @@
+
 from __future__ import annotations
+# ---------------------------------------------------------------------------
+# Additional Demo/Feature Helpers (2026-04-30)
+# ---------------------------------------------------------------------------
+
+def register_standard_actions(action_registry, app=None, scene_transitions=None, palette_manager=None, window_toggles=None):
+    """
+    Register standard demo actions (exit, navigation, palette, window toggles) in the action registry.
+    window_toggles: dict mapping action name to (window, setter_name) or (window, None)
+    """
+    if action_registry is None:
+        return
+    # Exit
+    action_registry.register_action("exit", lambda *_: app.quit() if app else None)
+    # Navigation
+    if scene_transitions and hasattr(scene_transitions, "go"):
+        action_registry.register_action("go_to_main", lambda *_: scene_transitions.go("main"))
+        action_registry.register_action("go_to_control_showcase", lambda *_: scene_transitions.go("control_showcase"))
+    # Palette
+    if palette_manager is not None:
+        action_registry.register_action("show_palette", lambda *_: palette_manager.show())
+    # Window toggles
+    if window_toggles:
+        for action, (window, setter_name) in window_toggles.items():
+            if setter_name:
+                action_registry.register_action(action, lambda *_: toggle_window_visibility(window, host=app, host_setter_name=setter_name))
+            else:
+                action_registry.register_action(action, lambda *_: toggle_window_visibility(window))
+
+def setup_standard_font_roles(font_roles, gimbot_path, ubuntu_b_path):
+    """
+    Register a standard set of font roles for demo features.
+    gimbot_path: path to Gimbot.ttf (used for most roles)
+    ubuntu_b_path: path to Ubuntu-B.ttf (used for window titles)
+    """
+    if font_roles is None:
+        return
+    # Common roles
+    font_roles.define("body", size=14, file_path=gimbot_path)
+    font_roles.define("controls.label", size=12, file_path=gimbot_path, bold=True)
+    font_roles.define("controls.control", size=14, file_path=gimbot_path)
+    font_roles.define("screen.main.task_panel.control", size=13, file_path=gimbot_path)
+    font_roles.define("screen.main.title", size=20, file_path=ubuntu_b_path, bold=True)
+
+    # Life demo roles
+    font_roles.define("life.window_title", size=20, file_path=ubuntu_b_path, bold=True)
+    font_roles.define("life.control", size=14, file_path=gimbot_path)
+
+    # Mandelbrot demo roles
+    font_roles.define("mandelbrot.window_title", size=20, file_path=ubuntu_b_path, bold=True)
+    font_roles.define("mandelbrot.control", size=14, file_path=gimbot_path)
+    font_roles.define("mandelbrot.caption", size=13, file_path=gimbot_path)
+    font_roles.define("mandelbrot.status", size=12, file_path=gimbot_path)
+
+    # Systems demo roles
+    font_roles.define("system.window_title", size=20, file_path=ubuntu_b_path, bold=True)
+    font_roles.define("system.control", size=14, file_path=gimbot_path)
+    font_roles.define("system.label", size=12, file_path=gimbot_path, bold=True)
+
+def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
+    """
+    Return a list of (x, y, w, h) tuples for a grid layout anchored at (x, y).
+    """
+    x0, y0, cell_w, cell_h = anchor
+    layout = []
+    for row in range(rows):
+        for col in range(cols):
+            x = x0 + col * (cell_w + gap)
+            y = y0 + row * (cell_h + label_height + label_gap + gap)
+            layout.append((x, y, cell_w, cell_h))
+    return layout
+
+def register_features_and_scenes(app, features, scenes):
+    """
+    Register all features and create scenes in a single call.
+    features: list of Feature instances
+    scenes: list of (scene_name, root_node) tuples
+    """
+    for feature in features:
+        app.feature_manager.register(feature)
+    for scene_name, root in scenes:
+        app.add_scene(scene_name, root)
 from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
 from ..app.error_handling import logical_error
 from time import perf_counter
@@ -419,8 +501,10 @@ def set_window_visible_state(
     toggle=None,
     from_toggle: bool = False,
     tile_windows: Optional[Callable[[], None]] = None,
+    host=None,
+    host_setter_name: str = None,
 ) -> None:
-    """Apply canonical window/toggle visibility synchronization used by demo hosts."""
+    """Apply canonical window/toggle visibility synchronization used by demo hosts. Calls host setter if provided."""
     is_visible = bool(visible)
     if window is not None:
         window.visible = is_visible
@@ -428,6 +512,11 @@ def set_window_visible_state(
         toggle.pushed = is_visible
     if tile_windows is not None:
         tile_windows()
+    # Call host setter if provided
+    if host is not None and host_setter_name:
+        setter = getattr(host, host_setter_name, None)
+        if callable(setter):
+            setter(is_visible)
 
 
 def toggle_window_visibility(

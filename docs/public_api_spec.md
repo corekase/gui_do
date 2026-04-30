@@ -306,7 +306,10 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `ShortcutHelpOverlay`
 - `ShortcutSection`
 - `ShortcutEntry`
-
+- `setup_standard_font_roles`
+- `register_standard_actions`
+- `set_window_visible_state`
+- `toggle_window_visibility`
 This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
 
 ## Event Contract

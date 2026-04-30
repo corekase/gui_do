@@ -24,6 +24,7 @@ from gui_do import (
     ToggleControl,
     WindowControl,
 )
+from gui_do import set_window_visible_state, setup_standard_font_roles
 
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -144,6 +145,11 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the application's configured UI types."""
+        setup_standard_font_roles(
+            host.font_roles,
+            "demo_features/data/fonts/Gimbot.ttf",
+            "demo_features/data/fonts/Ubuntu-B.ttf"
+        )
         self.use_font_roles(
             {
                 "window_title": "life.window_title",
@@ -438,12 +444,12 @@ class LifeSimulationFeature(RoutedFeature):
         self.update_life()
 
     def _toggle_window_visible(self) -> None:
-        toggle_window_visibility(
-            self.window,
-            host=self.demo,
-            host_setter_name="set_life_window_visible",
-            host_toggle_attr_name="life_toggle_window",
-        )
+        # Call host setter if available, else fallback to direct toggle
+        demo = getattr(self, 'demo', None)
+        if demo and hasattr(demo, 'set_life_window_visible'):
+            demo.set_life_window_visible(False)
+        if self.window:
+            self.window.visible = False
 
     def _minimize_window(self) -> None:
         self._toggle_window_visible()

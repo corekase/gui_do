@@ -21,6 +21,7 @@ from gui_do import (
     toggle_window_visibility,
     WindowControl,
 )
+from gui_do import set_window_visible_state, setup_standard_font_roles
 
 
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
@@ -236,6 +237,11 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using configured application UI types."""
+        setup_standard_font_roles(
+            host.font_roles,
+            "demo_features/data/fonts/Gimbot.ttf",
+            "demo_features/data/fonts/Ubuntu-B.ttf"
+        )
         self.use_font_roles(
             {
                 "window_title": "mandelbrot.window_title",
@@ -615,12 +621,12 @@ class MandelbrotRenderFeature(RoutedFeature):
         return self.menu_bar.handle_event(event, demo.app)
 
     def _toggle_window_visible(self) -> None:
-        toggle_window_visibility(
-            self.window,
-            host=self.demo,
-            host_setter_name="set_mandel_window_visible",
-            host_toggle_attr_name="mandel_toggle_window",
-        )
+        # Call host setter if available, else fallback to direct toggle
+        demo = getattr(self, 'demo', None)
+        if demo and hasattr(demo, 'set_mandel_window_visible'):
+            demo.set_mandel_window_visible(False)
+        if self.window:
+            self.window.visible = False
 
     def _minimize_window(self) -> None:
         self._toggle_window_visible()
