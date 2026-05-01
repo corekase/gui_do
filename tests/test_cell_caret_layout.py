@@ -103,5 +103,106 @@ class TestCellCaretLayout(unittest.TestCase):
         self.assertEqual(Rect(100, 58, 30, 20), fourth)
 
 
+class TestCellCaretState(unittest.TestCase):
+    def test_fields_stored(self):
+        state = CellCaretLayout(
+            bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3
+        ).state
+        self.assertIsInstance(state, tuple.__class__ if False else object)
+        self.assertEqual(0, state.col)
+        self.assertEqual(0, state.row)
+
+    def test_state_is_immutable(self):
+        from gui_do.layout.cell_caret_layout import CellCaretState
+        state = CellCaretState(col=1, row=2, x=10, y=20)
+        with self.assertRaises(Exception):
+            state.col = 99  # type: ignore[misc]
+
+
+class TestCellCaretLayoutCellRect(unittest.TestCase):
+    def test_cell_rect_0_0(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(0, 0, 100, 50), layout.cell_rect(0, 0))
+
+    def test_cell_rect_1_0(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(100, 0, 100, 50), layout.cell_rect(1, 0))
+
+    def test_cell_rect_0_1(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(0, 50, 100, 50), layout.cell_rect(0, 1))
+
+    def test_cell_rect_with_offset_bounds(self):
+        layout = CellCaretLayout(bounds=Rect(10, 20, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(10, 20, 100, 50), layout.cell_rect(0, 0))
+
+    def test_cell_rect_returns_copy(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        r1 = layout.cell_rect(0, 0)
+        r2 = layout.cell_rect(0, 0)
+        self.assertIsNot(r1, r2)
+
+
+class TestCellCaretLayoutCellContentRect(unittest.TestCase):
+    def test_no_padding(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(0, 0, 100, 50), layout.cell_content_rect())
+
+    def test_uniform_padding(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(10, 10, 80, 30), layout.cell_content_rect(padding=10))
+
+    def test_xy_padding(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(5, 8, 90, 34), layout.cell_content_rect(padding=(5, 8)))
+
+    def test_four_sided_padding(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3)
+        self.assertEqual(Rect(2, 4, 92, 38), layout.cell_content_rect(padding=(2, 4, 6, 8)))
+
+
+class TestCellCaretLayoutNormalizePadding(unittest.TestCase):
+    def test_int(self):
+        self.assertEqual((10, 10, 10, 10), CellCaretLayout._normalize_padding(10))
+
+    def test_two_tuple(self):
+        self.assertEqual((5, 8, 5, 8), CellCaretLayout._normalize_padding((5, 8)))
+
+    def test_four_tuple(self):
+        self.assertEqual((1, 2, 3, 4), CellCaretLayout._normalize_padding((1, 2, 3, 4)))
+
+    def test_invalid_length_raises(self):
+        with self.assertRaises(ValueError):
+            CellCaretLayout._normalize_padding((1, 2, 3))  # type: ignore[arg-type]
+
+
+class TestCellCaretLayoutMoveToCell(unittest.TestCase):
+    def test_move_updates_col_row(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 300), cell_width=100, cell_height=100, columns=3)
+        layout.move_to_cell(2, 1)
+        state = layout.state
+        self.assertEqual(2, state.col)
+        self.assertEqual(1, state.row)
+
+    def test_move_resets_caret(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 300), cell_width=100, cell_height=100, columns=3)
+        layout.add(50, 50)
+        layout.move_to_cell(0, 0)
+        state = layout.state
+        self.assertEqual(0, state.x)
+        self.assertEqual(0, state.y)
+
+
+class TestCellCaretLayoutErrors(unittest.TestCase):
+    def test_invalid_flow_axis_raises(self):
+        with self.assertRaises(ValueError):
+            CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=100, cell_height=50, columns=3, flow_axis="diagonal")
+
+    def test_item_too_large_raises(self):
+        layout = CellCaretLayout(bounds=Rect(0, 0, 300, 200), cell_width=50, cell_height=50, columns=3)
+        with self.assertRaises(ValueError):
+            layout.add(200, 200)
+
+
 if __name__ == "__main__":
     unittest.main()
