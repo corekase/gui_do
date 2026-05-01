@@ -316,7 +316,7 @@ The package exports the following symbols via `gui_do/__init__.py`:
 - `register_standard_actions`
 - `set_window_visible_state`
 - `toggle_window_visibility`
-This `gui_do.__all__` export set is treated as an exact, locked public surface and is regression-tested.
+This root-import export set is treated as an exact, locked public surface and is regression-tested.
 
 ## Event Contract
 
@@ -394,7 +394,7 @@ Demo-only contracts are intentionally outside the `gui_do` package boundary.
 
 - Mandelbrot demo event schema is defined in `demo_features/mandelbrot_demo_feature.py`.
 - `demo_features.mandelbrot_demo_feature.__all__` export surface/order is treated as a locked contract for demo schema consumers.
-- No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from `gui_do.__all__`.
+- No Mandelbrot/demo symbols (`MandelStatusEvent`, `MANDEL_*`) are exported from the `gui_do` root import contract.
 
 Boundary rules and enforcement details are specified in `docs/architecture_boundary_spec.md`.
 

@@ -15,7 +15,7 @@ It complements the public API and event-system specs by keeping framework contra
 Boundary intent:
 
 - Keep `gui_do/` independently reusable in non-demo applications.
-- Allow demo schema evolution inside `demo_features/` without leaking symbols into `gui_do.__all__`.
+- Allow demo schema evolution inside `demo_features/` without leaking symbols into the `gui_do` root import contract.
 - Keep demo entrypoints readable and enforceable via one canonical gui-root import block.
 
 ## Current Demo Boundary Assets

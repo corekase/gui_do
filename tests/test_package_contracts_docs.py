@@ -19,3 +19,10 @@ class TestPackageContractsDocs(unittest.TestCase):
 
         self.assertIn("python -m unittest", content)
         self.assertIn("python -m pytest -q", content)
+
+    def test_package_contracts_declares_named_import_policy(self):
+        path = Path(__file__).resolve().parents[1] / "docs" / "package_contracts.md"
+        content = path.read_text(encoding="utf-8")
+
+        self.assertIn("Supported usage is explicit named imports from `gui_do`.", content)
+        self.assertIn("Star-import behavior is not part of the package contract.", content)

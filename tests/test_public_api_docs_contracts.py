@@ -26,3 +26,4 @@ class TestPublicAPIDocsContracts(unittest.TestCase):
         self.assertIn("## Import Contract", content)
         self.assertIn("Supported consumer imports use explicit named imports from `gui_do`.", content)
         self.assertIn("Star-import behavior is not part of the public contract.", content)
+        self.assertNotIn("gui_do.__all__", content)
