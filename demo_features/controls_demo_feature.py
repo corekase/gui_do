@@ -1017,31 +1017,37 @@ class ControlsShowcaseFeature(Feature):
             row_index=110,
         )
 
+        section_top = col6_anchor.top + col6_anchor.height + row_gap
+        section_bounds = Rect(
+            content_rect.left,
+            section_top,
+            content_rect.width,
+            max(1, content_rect.bottom - section_top),
+        )
+        section_flow = LayoutManager()
+        section_flow.set_column_flow_properties(
+            bounds=section_bounds,
+            overall_rows=self.LAYOUT_OVERALL_ROWS_CONSTANT,
+            overall_columns=self.LAYOUT_OVERALL_COLUMNS_CONSTANT,
+            column_spacing=col_gap,
+            row_spacing=row_gap,
+        )
 
-
-
-
-        # Column 8: format-aware text inputs (shifted left to fill overlay panel gap)
-        col8_anchor = flow.column_flow_anchor()
-        col8_x = col8_anchor.left
-        col8_w = min(220, col8_anchor.width)
-        col8_y = col8_anchor.top
+        # Column 0: format-aware text inputs.
+        col7_anchor = section_flow.column_flow_anchor()
+        col7_x = col7_anchor.left
+        col7_w = min(220, col7_anchor.width)
+        col7_y = col7_anchor.top
 
         _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
 
         numeric_input_slot_h = slot_h(30)
         numeric_input = _num_fmt.create_text_input(
             "control_numeric_fmt_input",
-            Rect(0, 0, col8_w, 30),
+            Rect(0, 0, col7_w, 30),
             raw_value="12500",
             placeholder="0.00",
         )
-        # Shift all columns from numeric format through animated image left by one column area
-        # Numeric Format
-        col7_anchor = flow.column_flow_anchor()
-        col7_x = col7_anchor.left
-        col7_w = min(220, col7_anchor.width)
-        col7_y = col7_anchor.top
         self._place_control(
             host,
             "numeric_fmt_input",
@@ -1055,7 +1061,6 @@ class ControlsShowcaseFeature(Feature):
             row_index=120,
         )
         col7_y += numeric_input_slot_h + row_gap
-
 
         # Pattern Format
         _pat_fmt = PatternFormatter("###-###-####")
@@ -1080,7 +1085,6 @@ class ControlsShowcaseFeature(Feature):
         )
         col7_y += pattern_input_slot_h + row_gap
 
-
         # Fixed Pattern Format
         _fixed_pat_fmt = FixedPatternFormatter("#####-####")
         fixed_pattern_input_slot_h = slot_h(30)
@@ -1104,7 +1108,7 @@ class ControlsShowcaseFeature(Feature):
         )
         col7_y += fixed_pattern_input_slot_h + row_gap
 
-        # Dock Workspace Panel
+        # Column 1 in this row: Dock workspace and property inspector.
         _showcase_dock = DockWorkspace(
             DockTabs(
                 "sc_dock_tabs",
@@ -1119,8 +1123,7 @@ class ControlsShowcaseFeature(Feature):
         prop_inner_h = 160
         prop_slot_h = slot_h(prop_inner_h)
 
-        # Dock Workspace Panel
-        col9_anchor = flow.column_flow_anchor()
+        col9_anchor = section_flow.column_flow_anchor()
         col9_x = col9_anchor.left
         col9_w = min(260, col9_anchor.width)
         col9_y = col9_anchor.top
@@ -1161,8 +1164,8 @@ class ControlsShowcaseFeature(Feature):
             row_index=131,
         )
 
-        # ProgressBarControl (determinate + indeterminate) and AnimatedImageControl.
-        col10_anchor = flow.column_flow_anchor()
+        # Column 2 in this row: progress controls and animated image.
+        col10_anchor = section_flow.column_flow_anchor()
         col10_x = col10_anchor.left
         col10_w = min(220, col10_anchor.width)
         col10_y = col10_anchor.top
