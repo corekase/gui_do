@@ -1,5 +1,8 @@
 import pygame
-from demo_features.feature_abstractions import sorted_window_bindings
+from demo_features.feature_abstractions import (
+    apply_window_toggle_accessibility,
+    collect_window_toggle_controls,
+)
 
 from demo_features.demo_config import (
     ACTION_SPECS,
@@ -202,14 +205,7 @@ class GuiDoDemo:
         return lambda _ctx, _ev: (self._palette_manager.show(self.app) or True)
 
     def _collect_window_toggle_controls(self) -> list[tuple[object, object]]:
-        controls: list[tuple[object, object]] = []
-        for binding in sorted_window_bindings(self.window_presentation.bindings()):
-            if binding.toggle_attr is None:
-                continue
-            control = getattr(self, binding.toggle_attr, None)
-            if control is not None:
-                controls.append((binding, control))
-        return controls
+        return collect_window_toggle_controls(self, self.window_presentation)
 
     def _build_main_tab_order_controls(self, window_toggle_controls: list[tuple[object, object]]) -> list[object]:
         before_showcase = [control for binding, control in window_toggle_controls if binding.tab_before_showcase]
@@ -229,16 +225,7 @@ class GuiDoDemo:
             if control is None:
                 continue
             control.set_accessibility(role=spec.role, label=spec.label)
-        for binding in self.window_presentation.bindings():
-            if binding.toggle_attr is None:
-                continue
-            control = getattr(self, binding.toggle_attr, None)
-            if control is None:
-                continue
-            control.set_accessibility(
-                role="toggle",
-                label=binding.accessibility_label or binding.action_label or binding.key,
-            )
+        apply_window_toggle_accessibility(self, self.window_presentation, role="toggle")
 
     def go_to_control_showcase(self) -> None:
         self.scene_transitions.go("control_showcase")

@@ -32,6 +32,7 @@ from demo_features.feature_abstractions import (
     apply_accessibility_sequence,
     create_presented_anchored_window,
     ensure_scene_scheduler,
+    resolve_canvas_local_point,
     register_companion_logic_features,
 )
 
@@ -297,23 +298,20 @@ class LifeSimulationFeature(RoutedFeature):
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""
-        demo = self.demo
-        canvas = self.canvas
-        toggle = self.toggle
+        self._update_life_frame_core(self.demo, self.canvas, self.toggle)
+
+    def _update_life_frame_core(self, demo, canvas, toggle) -> None:
+        """Shared life frame update used by both feature and presenter update paths."""
         while True:
             packet = canvas.read_event()
             if packet is None:
                 break
             if not packet.is_mouse_down(1):
                 continue
-            # Prefer canvas-local packet coordinates; fall back to global packet position.
-            if packet.local_pos is not None:
-                local_x, local_y = packet.local_pos
-            elif packet.pos is not None:
-                local_x = packet.pos[0] - canvas.rect.left
-                local_y = packet.pos[1] - canvas.rect.top
-            else:
+            local_point = resolve_canvas_local_point(packet, canvas.rect)
+            if local_point is None:
                 continue
+            local_x, local_y = local_point
             cell_size = max(2, int(round(self.life_cell_size)))
             cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
@@ -467,43 +465,4 @@ class _LifeWindowPresenter(WindowPresenter):
         self._update_life()
 
     def _update_life(self):
-        demo = self.host
-        canvas = self.canvas
-        toggle = self.toggle
-        while True:
-            packet = canvas.read_event()
-            if packet is None:
-                break
-            if not packet.is_mouse_down(1):
-                continue
-            if packet.local_pos is not None:
-                local_x, local_y = packet.local_pos
-            elif packet.pos is not None:
-                local_x = packet.pos[0] - canvas.rect.left
-                local_y = packet.pos[1] - canvas.rect.top
-            else:
-                continue
-            cell_size = max(2, int(round(self.feature.life_cell_size)))
-            cell_x = math.floor((local_x - self.feature.life_origin[0]) / cell_size)
-            cell_y = math.floor((local_y - self.feature.life_origin[1]) / cell_size)
-            cell = (cell_x, cell_y)
-            # Apply locally first so render state never lags behind input.
-            if cell in self.feature.life_cells:
-                self.feature.life_cells.remove(cell)
-            else:
-                self.feature.life_cells.add(cell)
-            self.feature._send_life_logic_command("toggle_cell", cell=cell)
-
-        if toggle.pushed:
-            # Step locally first to keep animation deterministic even with message latency.
-            self.feature.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.feature.life_cells)
-            self.feature._send_life_logic_command("next")
-
-        cell_size = max(2, int(round(self.feature.life_cell_size)))
-        canvas.canvas.fill(demo.app.theme.medium)
-        trim = 0 if cell_size <= 2 else 1
-        for cx, cy in self.feature.life_cells:
-            px = int(self.feature.life_origin[0] + (cx * cell_size))
-            py = int(self.feature.life_origin[1] + (cy * cell_size))
-            if -cell_size <= px <= canvas.rect.width and -cell_size <= py <= canvas.rect.height:
-                canvas.canvas.fill((255, 255, 255), Rect(px, py, max(1, cell_size - trim), max(1, cell_size - trim)))
+        self.feature._update_life_frame_core(self.host, self.canvas, self.toggle)

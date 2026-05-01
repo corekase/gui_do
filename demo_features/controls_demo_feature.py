@@ -1039,74 +1039,64 @@ class ControlsShowcaseFeature(Feature):
         col7_w = min(220, col7_anchor.width)
         col7_y = col7_anchor.top
 
-        _num_fmt = NumericFormatter(decimals=2, thousands_sep=",")
-
-        numeric_input_slot_h = slot_h(30)
-        numeric_input = _num_fmt.create_text_input(
-            "control_numeric_fmt_input",
-            Rect(0, 0, col7_w, 30),
-            raw_value="12500",
-            placeholder="0.00",
+        formatted_input_specs = (
+            (
+                "numeric_fmt_input",
+                "Numeric Format",
+                NumericFormatter(decimals=2, thousands_sep=","),
+                "control_numeric_fmt_input",
+                "12500",
+                "0.00",
+                "Numeric formatted text input",
+                120,
+            ),
+            (
+                "pattern_fmt_input",
+                "Pattern Format",
+                PatternFormatter("###-###-####"),
+                "control_pattern_fmt_input",
+                "5551234567",
+                "###-###-####",
+                "Pattern formatted text input",
+                121,
+            ),
+            (
+                "fixed_pattern_fmt_input",
+                "Fixed Pattern Format",
+                FixedPatternFormatter("#####-####"),
+                "control_fixed_pattern_fmt_input",
+                "941010001",
+                "#####-####",
+                "Fixed pattern formatted text input",
+                122,
+            ),
         )
-        self._place_control(
-            host,
-            "numeric_fmt_input",
-            "Numeric Format",
-            numeric_input,
-            Rect(col7_x, col7_y, col7_w, numeric_input_slot_h),
-            focusable=True,
-            accessibility_role="textbox",
-            accessibility_label="Numeric formatted text input",
-            column_index=7,
-            row_index=120,
-        )
-        col7_y += numeric_input_slot_h + row_gap
-
-        # Pattern Format
-        _pat_fmt = PatternFormatter("###-###-####")
-        pattern_input_slot_h = slot_h(30)
-        pattern_input = _pat_fmt.create_text_input(
-            "control_pattern_fmt_input",
-            Rect(0, 0, col7_w, 30),
-            raw_value="5551234567",
-            placeholder="###-###-####",
-        )
-        self._place_control(
-            host,
-            "pattern_fmt_input",
-            "Pattern Format",
-            pattern_input,
-            Rect(col7_x, col7_y, col7_w, pattern_input_slot_h),
-            focusable=True,
-            accessibility_role="textbox",
-            accessibility_label="Pattern formatted text input",
-            column_index=7,
-            row_index=121,
-        )
-        col7_y += pattern_input_slot_h + row_gap
-
-        # Fixed Pattern Format
-        _fixed_pat_fmt = FixedPatternFormatter("#####-####")
-        fixed_pattern_input_slot_h = slot_h(30)
-        fixed_pattern_input = _fixed_pat_fmt.create_text_input(
-            "control_fixed_pattern_fmt_input",
-            Rect(0, 0, col7_w, 30),
-            raw_value="941010001",
-            placeholder="#####-####",
-        )
-        self._place_control(
-            host,
-            "fixed_pattern_fmt_input",
-            "Fixed Pattern Format",
-            fixed_pattern_input,
-            Rect(col7_x, col7_y, col7_w, fixed_pattern_input_slot_h),
-            focusable=True,
-            accessibility_role="textbox",
-            accessibility_label="Fixed pattern formatted text input",
-            column_index=7,
-            row_index=122,
-        )
-        col7_y += fixed_pattern_input_slot_h + row_gap
+        for (
+            name,
+            label_text,
+            formatter,
+            control_id,
+            raw_value,
+            placeholder,
+            accessibility_label,
+            row_index,
+        ) in formatted_input_specs:
+            col7_y = self._place_formatted_text_input(
+                host,
+                name=name,
+                label_text=label_text,
+                formatter=formatter,
+                control_id=control_id,
+                raw_value=raw_value,
+                placeholder=placeholder,
+                x=col7_x,
+                y=col7_y,
+                width=col7_w,
+                row_gap=row_gap,
+                column_index=7,
+                row_index=row_index,
+                accessibility_label=accessibility_label,
+            )
 
         # Column 1 in this row: Dock workspace and property inspector.
         _showcase_dock = DockWorkspace(
@@ -1311,6 +1301,46 @@ class ControlsShowcaseFeature(Feature):
             column_index=column_index,
             row_index=row_index,
         )
+
+    def _place_formatted_text_input(
+        self,
+        host,
+        *,
+        name: str,
+        label_text: str,
+        formatter,
+        control_id: str,
+        raw_value: str,
+        placeholder: str,
+        x: int,
+        y: int,
+        width: int,
+        row_gap: int,
+        column_index: int,
+        row_index: int,
+        accessibility_label: str,
+    ) -> int:
+        control_height = 30
+        input_slot_h = control_height + self.LABEL_HEIGHT + self.LABEL_GAP
+        text_input = formatter.create_text_input(
+            str(control_id),
+            Rect(0, 0, int(width), control_height),
+            raw_value=str(raw_value),
+            placeholder=str(placeholder),
+        )
+        self._place_control(
+            host,
+            name,
+            label_text,
+            text_input,
+            Rect(int(x), int(y), int(width), int(input_slot_h)),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label=accessibility_label,
+            column_index=column_index,
+            row_index=row_index,
+        )
+        return int(y) + int(input_slot_h) + int(row_gap)
 
     def _place_control_unlabeled(
         self,

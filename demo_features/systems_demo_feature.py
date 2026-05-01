@@ -85,8 +85,13 @@ from gui_do import (
 )
 from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
-from demo_features.feature_abstractions import create_presented_anchored_window
-from demo_features.feature_abstractions import register_window_tab_builders
+from demo_features.feature_abstractions import (
+    bind_input_map_actions,
+    create_presented_anchored_window,
+    initialize_locale_registry,
+    register_descriptors,
+    register_window_tab_builders,
+)
 
 _TAB_H = 36
 
@@ -108,6 +113,66 @@ _SYSTEMS_TAB_SPECS = (
     ("listdiff", "ListDiff", "_build_listdiff_tab"),
     ("cache", "Cache", "_build_cache_tab"),
     ("shortcuts", "Shortcuts", "_build_shortcuts_tab"),
+)
+
+_LOCALE_TABLE_SPECS = (
+    (
+        "en",
+        {
+            "greeting": "Hello, World!",
+            "description": "gui_do is a pygame UI toolkit.",
+            "feature_count": "New systems added this session: 10.",
+        },
+    ),
+    (
+        "es",
+        {
+            "greeting": "\u00a1Hola, Mundo!",
+            "description": "gui_do es un kit de herramientas de UI para pygame.",
+            "feature_count": "Sistemas nuevos esta sesi\u00f3n: 10.",
+        },
+    ),
+    (
+        "fr",
+        {
+            "greeting": "Bonjour, le Monde!",
+            "description": "gui_do est une bo\u00eete \u00e0 outils UI pour pygame.",
+            "feature_count": "Nouveaux syst\u00e8mes cette session: 10.",
+        },
+    ),
+)
+
+_LOCALE_BUTTON_SPECS = (
+    ("en", "EN"),
+    ("es", "ES"),
+    ("fr", "FR"),
+)
+
+_INPUT_DECLARE_SPECS = (
+    ("move_up", pygame.K_UP, "Move Up"),
+    ("move_down", pygame.K_DOWN, "Move Down"),
+    ("move_left", pygame.K_LEFT, "Move Left"),
+    ("move_right", pygame.K_RIGHT, "Move Right"),
+)
+
+_INPUT_REMAP_BINDINGS = (
+    (pygame.K_w, "move_up"),
+    (pygame.K_s, "move_down"),
+    (pygame.K_a, "move_left"),
+    (pygame.K_d, "move_right"),
+)
+
+_INPUT_DEFAULT_BINDINGS = (
+    (pygame.K_UP, "move_up"),
+    (pygame.K_DOWN, "move_down"),
+    (pygame.K_LEFT, "move_left"),
+    (pygame.K_RIGHT, "move_right"),
+)
+
+_BUTTON_DESCRIPTOR_SPECS = (
+    ("visible", "Visible", "bool", "Appearance"),
+    ("enabled", "Enabled", "bool", "Behaviour"),
+    ("text", "Label Text", "str", "Content"),
 )
 
 
@@ -510,35 +575,10 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        en = StringTable(
-            "en",
-            {
-                "greeting": "Hello, World!",
-                "description": "gui_do is a pygame UI toolkit.",
-                "feature_count": "New systems added this session: 10.",
-            },
+        self._locale_registry = initialize_locale_registry(
+            [StringTable(locale_id, strings) for locale_id, strings in _LOCALE_TABLE_SPECS],
+            initial_locale="en",
         )
-        es = StringTable(
-            "es",
-            {
-                "greeting": "\u00a1Hola, Mundo!",
-                "description": "gui_do es un kit de herramientas de UI para pygame.",
-                "feature_count": "Sistemas nuevos esta sesi\u00f3n: 10.",
-            },
-        )
-        fr = StringTable(
-            "fr",
-            {
-                "greeting": "Bonjour, le Monde!",
-                "description": "gui_do est une bo\u00eete \u00e0 outils UI pour pygame.",
-                "feature_count": "Nouveaux syst\u00e8mes cette session: 10.",
-            },
-        )
-        self._locale_registry = LocaleRegistry()
-        self._locale_registry.register(en)
-        self._locale_registry.register(es)
-        self._locale_registry.register(fr)
-        self._locale_registry.set_locale("en")
 
         locale_lbl = self.window.add(
             LabelControl(
@@ -547,9 +587,7 @@ class SystemsDemoFeature(RoutedFeature):
         )
         controls.append(locale_lbl)
 
-        for i, (locale_id, locale_name) in enumerate(
-            [("en", "EN"), ("es", "ES"), ("fr", "FR")]
-        ):
+        for i, (locale_id, locale_name) in enumerate(_LOCALE_BUTTON_SPECS):
             btn = self.window.add(
                 ButtonControl(
                     f"nsdf_locale_btn_{locale_id}",
@@ -627,10 +665,8 @@ class SystemsDemoFeature(RoutedFeature):
         x, y = rect.left + pad, rect.top + pad
 
         self._input_map = InputMap()
-        self._input_map.declare("move_up", key=pygame.K_UP, mod=0, label="Move Up")
-        self._input_map.declare("move_down", key=pygame.K_DOWN, mod=0, label="Move Down")
-        self._input_map.declare("move_left", key=pygame.K_LEFT, mod=0, label="Move Left")
-        self._input_map.declare("move_right", key=pygame.K_RIGHT, mod=0, label="Move Right")
+        for action, key, label in _INPUT_DECLARE_SPECS:
+            self._input_map.declare(action, key=key, mod=0, label=label)
 
         title_lbl = self.window.add(
             LabelControl(
@@ -713,27 +749,13 @@ class SystemsDemoFeature(RoutedFeature):
     def _remap_bindings(self) -> None:
         if self._input_map is None:
             return
-        wasd = [
-            (pygame.K_w, "move_up"),
-            (pygame.K_s, "move_down"),
-            (pygame.K_a, "move_left"),
-            (pygame.K_d, "move_right"),
-        ]
-        for key, action in wasd:
-            self._input_map.bind(action, key=key, mod=0)
+        bind_input_map_actions(self._input_map, _INPUT_REMAP_BINDINGS, mod=0)
         self._refresh_binding_labels()
 
     def _reset_bindings(self) -> None:
         if self._input_map is None:
             return
-        defaults = [
-            (pygame.K_UP, "move_up"),
-            (pygame.K_DOWN, "move_down"),
-            (pygame.K_LEFT, "move_left"),
-            (pygame.K_RIGHT, "move_right"),
-        ]
-        for key, action in defaults:
-            self._input_map.bind(action, key=key, mod=0)
+        bind_input_map_actions(self._input_map, _INPUT_DEFAULT_BINDINGS, mod=0)
         self._refresh_binding_labels()
 
     def _refresh_binding_labels(self) -> None:
@@ -742,6 +764,29 @@ class SystemsDemoFeature(RoutedFeature):
         for lbl, binding in zip(self._binding_labels, self._input_map.bindings()):
             key_name = pygame.key.name(binding.key) if binding.key else "?"
             lbl.text = f"  {binding.label}: {key_name}"
+
+    def _add_tab_control(self, controls: list, control):
+        """Add a control to the window and tab-control collection in one call."""
+        added = self.window.add(control)
+        controls.append(added)
+        return added
+
+    def _add_tab_label(self, controls: list, control_id: str, rect: Rect, text: str):
+        """Convenience wrapper for left-aligned tab labels."""
+        return self._add_tab_control(
+            controls,
+            LabelControl(str(control_id), Rect(rect), str(text), align="left"),
+        )
+
+    def _add_tab_button(self, controls: list, control_id: str, rect: Rect, text: str, on_click, *, style=None):
+        """Convenience wrapper for tab buttons with optional style."""
+        kwargs = {}
+        if style is not None:
+            kwargs["style"] = style
+        return self._add_tab_control(
+            controls,
+            ButtonControl(str(control_id), Rect(rect), str(text), on_click, **kwargs),
+        )
 
     # ------------------------------------------------------------------
     # Tab: Event — EventRecorder + EventPlayback + RecordedEvent
@@ -754,85 +799,69 @@ class SystemsDemoFeature(RoutedFeature):
 
         self._recorder = EventRecorder()
 
-        info_lbl = self.window.add(
-            LabelControl(
-                "nsdf_evt_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "EventRecorder captures GuiEvents; EventPlayback replays them via a handler.",
-                align="left",
-            )
+        info_lbl = self._add_tab_label(
+            controls,
+            "nsdf_evt_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "EventRecorder captures GuiEvents; EventPlayback replays them via a handler.",
         )
-        controls.append(info_lbl)
         y += 28
 
-        self._event_status_label = self.window.add(
-            LabelControl(
-                "nsdf_evt_status",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Status: Idle — 0 events recorded",
-                align="left",
-            )
+        self._event_status_label = self._add_tab_label(
+            controls,
+            "nsdf_evt_status",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Status: Idle — 0 events recorded",
         )
-        controls.append(self._event_status_label)
         y += 30
 
         btn_w, btn_gap = 120, 8
-        record_btn = self.window.add(
-            ButtonControl(
-                "nsdf_evt_record",
-                Rect(x, y, btn_w, 28),
-                "Start Rec.",
-                self._start_recording,
-            )
+        record_btn = self._add_tab_button(
+            controls,
+            "nsdf_evt_record",
+            Rect(x, y, btn_w, 28),
+            "Start Rec.",
+            self._start_recording,
         )
-        stop_btn = self.window.add(
-            ButtonControl(
-                "nsdf_evt_stop",
-                Rect(x + btn_w + btn_gap, y, btn_w, 28),
-                "Stop",
-                self._stop_recording,
-            )
+        stop_btn = self._add_tab_button(
+            controls,
+            "nsdf_evt_stop",
+            Rect(x + btn_w + btn_gap, y, btn_w, 28),
+            "Stop",
+            self._stop_recording,
         )
-        sim_btn = self.window.add(
-            ButtonControl(
-                "nsdf_evt_simulate",
-                Rect(x + (btn_w + btn_gap) * 2, y, btn_w, 28),
-                "Sim. Events",
-                self._simulate_events,
-            )
+        sim_btn = self._add_tab_button(
+            controls,
+            "nsdf_evt_simulate",
+            Rect(x + (btn_w + btn_gap) * 2, y, btn_w, 28),
+            "Sim. Events",
+            self._simulate_events,
         )
-        play_btn = self.window.add(
-            ButtonControl(
-                "nsdf_evt_play",
-                Rect(x + (btn_w + btn_gap) * 3, y, btn_w, 28),
-                "Play Back",
-                self._start_playback,
-            )
+        play_btn = self._add_tab_button(
+            controls,
+            "nsdf_evt_play",
+            Rect(x + (btn_w + btn_gap) * 3, y, btn_w, 28),
+            "Play Back",
+            self._start_playback,
         )
-        controls.extend([record_btn, stop_btn, sim_btn, play_btn])
+        _ = (record_btn, stop_btn, sim_btn, play_btn)
         y += 40
 
-        log_title = self.window.add(
-            LabelControl(
-                "nsdf_evt_log_title",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Event log:",
-                align="left",
-            )
+        log_title = self._add_tab_label(
+            controls,
+            "nsdf_evt_log_title",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Event log:",
         )
-        controls.append(log_title)
         y += 24
 
         log_h = max(40, rect.bottom - y - pad)
-        self._event_log_label = self.window.add(
-            LabelControl(
-                "nsdf_evt_log",
-                Rect(x, y, rect.width - pad * 2, log_h),
-                "No events recorded yet.",
-                align="left",
-            )
+        self._event_log_label = self._add_tab_label(
+            controls,
+            "nsdf_evt_log",
+            Rect(x, y, rect.width - pad * 2, log_h),
+            "No events recorded yet.",
         )
-        controls.append(self._event_log_label)
         return controls
 
     def _start_recording(self) -> None:
@@ -923,125 +952,99 @@ class SystemsDemoFeature(RoutedFeature):
         x, y = rect.left + pad, rect.top + pad
 
         # PropertyRegistry / PropertyDescriptor demo
-        prop_title = self.window.add(
-            LabelControl(
-                "nsdf_prop_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "PropertyRegistry — registered descriptors for ButtonControl:",
-                align="left",
-            )
+        prop_title = self._add_tab_label(
+            controls,
+            "nsdf_prop_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "PropertyRegistry — registered descriptors for ButtonControl:",
         )
-        controls.append(prop_title)
         y += 26
 
         # Register sample descriptors to demonstrate the API
         descs = [
             PropertyDescriptor(
-                name="visible", label="Visible", type="bool",
-                group="Appearance", owner_class=ButtonControl,
-            ),
-            PropertyDescriptor(
-                name="enabled", label="Enabled", type="bool",
-                group="Behaviour", owner_class=ButtonControl,
-            ),
-            PropertyDescriptor(
-                name="text", label="Label Text", type="str",
-                group="Content", owner_class=ButtonControl,
-            ),
+                name=name,
+                label=label,
+                type=desc_type,
+                group=group,
+                owner_class=ButtonControl,
+            )
+            for name, label, desc_type, group in _BUTTON_DESCRIPTOR_SPECS
         ]
-        for desc in descs:
-            property_registry.register(ButtonControl, desc)
+        register_descriptors(property_registry, ButtonControl, descs)
 
         for desc in property_registry.descriptors_for(ButtonControl):
-            lbl = self.window.add(
-                LabelControl(
-                    f"nsdf_prop_{desc.name}",
-                    Rect(x, y, rect.width - pad * 2, 20),
-                    f"  [{desc.group}] {desc.label} : {desc.type}",
-                    align="left",
-                )
+            lbl = self._add_tab_label(
+                controls,
+                f"nsdf_prop_{desc.name}",
+                Rect(x, y, rect.width - pad * 2, 20),
+                f"  [{desc.group}] {desc.label} : {desc.type}",
             )
-            controls.append(lbl)
             y += 21
 
         y += 8
 
         # SceneSnapshot demo
-        snap_title = self.window.add(
-            LabelControl(
-                "nsdf_snap_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "SceneSnapshot — capture & restore window rect:",
-                align="left",
-            )
+        snap_title = self._add_tab_label(
+            controls,
+            "nsdf_snap_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "SceneSnapshot — capture & restore window rect:",
         )
-        controls.append(snap_title)
         y += 26
 
-        capture_btn = self.window.add(
-            ButtonControl(
-                "nsdf_snap_capture",
-                Rect(x, y, 110, 28),
-                "Capture",
-                self._capture_snapshot,
-            )
+        capture_btn = self._add_tab_button(
+            controls,
+            "nsdf_snap_capture",
+            Rect(x, y, 110, 28),
+            "Capture",
+            self._capture_snapshot,
         )
-        restore_btn = self.window.add(
-            ButtonControl(
-                "nsdf_snap_restore",
-                Rect(x + 118, y, 110, 28),
-                "Restore",
-                self._restore_snapshot,
-            )
+        restore_btn = self._add_tab_button(
+            controls,
+            "nsdf_snap_restore",
+            Rect(x + 118, y, 110, 28),
+            "Restore",
+            self._restore_snapshot,
         )
-        controls.extend([capture_btn, restore_btn])
+        _ = (capture_btn, restore_btn)
         y += 36
 
-        self._snapshot_label = self.window.add(
-            LabelControl(
-                "nsdf_snap_label",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "No snapshot captured yet.",
-                align="left",
-            )
+        self._snapshot_label = self._add_tab_label(
+            controls,
+            "nsdf_snap_label",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "No snapshot captured yet.",
         )
-        controls.append(self._snapshot_label)
         y += 30
 
         # SceneSpatialIndex demo
-        spatial_title = self.window.add(
-            LabelControl(
-                "nsdf_spatial_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "SceneSpatialIndex — build from scene, then hit-test:",
-                align="left",
-            )
+        spatial_title = self._add_tab_label(
+            controls,
+            "nsdf_spatial_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "SceneSpatialIndex — build from scene, then hit-test:",
         )
-        controls.append(spatial_title)
         y += 26
 
         self._spatial_index = SceneSpatialIndex(cell_size=64)
 
-        build_btn = self.window.add(
-            ButtonControl(
-                "nsdf_spatial_build",
-                Rect(x, y, 160, 28),
-                "Build & Query Center",
-                self._build_and_query_spatial,
-            )
+        build_btn = self._add_tab_button(
+            controls,
+            "nsdf_spatial_build",
+            Rect(x, y, 160, 28),
+            "Build & Query Center",
+            self._build_and_query_spatial,
         )
-        controls.append(build_btn)
+        _ = build_btn
         y += 36
 
-        self._spatial_label = self.window.add(
-            LabelControl(
-                "nsdf_spatial_label",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Press 'Build & Query Center' to run.",
-                align="left",
-            )
+        self._spatial_label = self._add_tab_label(
+            controls,
+            "nsdf_spatial_label",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Press 'Build & Query Center' to run.",
         )
-        controls.append(self._spatial_label)
 
         return controls
 
@@ -1054,30 +1057,25 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        title = self.window.add(
-            LabelControl(
-                "nsdf_props_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "PropertyInspectorPanel — inspect _DemoInspectable properties:",
-                align="left",
-            )
+        title = self._add_tab_label(
+            controls,
+            "nsdf_props_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "PropertyInspectorPanel — inspect _DemoInspectable properties:",
         )
-        controls.append(title)
         y += 28
 
-        hint = self.window.add(
-            LabelControl(
-                "nsdf_props_hint",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Click a property row to select it. Use refresh to re-read values.",
-                align="left",
-            )
+        hint = self._add_tab_label(
+            controls,
+            "nsdf_props_hint",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Click a property row to select it. Use refresh to re-read values.",
         )
-        controls.append(hint)
         y += 26
 
         panel_h = max(120, rect.bottom - y - 60 - pad)
-        self._prop_inspector_panel = self.window.add(
+        self._prop_inspector_panel = self._add_tab_control(
+            controls,
             PropertyInspectorPanel(
                 "nsdf_prop_inspector",
                 Rect(x, y, rect.width - pad * 2, panel_h),
@@ -1085,29 +1083,24 @@ class SystemsDemoFeature(RoutedFeature):
                 on_select=self._on_prop_selected,
             )
         )
-        controls.append(self._prop_inspector_panel)
         y += panel_h + 6
 
-        self._prop_selected_label = self.window.add(
-            LabelControl(
-                "nsdf_prop_selected",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Select a property above…",
-                align="left",
-            )
+        self._prop_selected_label = self._add_tab_label(
+            controls,
+            "nsdf_prop_selected",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Select a property above…",
         )
-        controls.append(self._prop_selected_label)
         y += 26
 
-        refresh_btn = self.window.add(
-            ButtonControl(
-                "nsdf_props_refresh",
-                Rect(x, y, 100, 28),
-                "Refresh",
-                self._refresh_prop_inspector,
-            )
+        refresh_btn = self._add_tab_button(
+            controls,
+            "nsdf_props_refresh",
+            Rect(x, y, 100, 28),
+            "Refresh",
+            self._refresh_prop_inspector,
         )
-        controls.append(refresh_btn)
+        _ = (title, hint, refresh_btn)
 
         return controls
 
@@ -1135,26 +1128,20 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        title = self.window.add(
-            LabelControl(
-                "nsdf_dock_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "DockWorkspacePanel — interactive tab bar backed by DockWorkspace model:",
-                align="left",
-            )
+        title = self._add_tab_label(
+            controls,
+            "nsdf_dock_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "DockWorkspacePanel — interactive tab bar backed by DockWorkspace model:",
         )
-        controls.append(title)
         y += 28
 
-        hint = self.window.add(
-            LabelControl(
-                "nsdf_dock_hint",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Click a tab below to switch the active pane.",
-                align="left",
-            )
+        hint = self._add_tab_label(
+            controls,
+            "nsdf_dock_hint",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Click a tab below to switch the active pane.",
         )
-        controls.append(hint)
         y += 26
 
         # Build a demo DockWorkspace with tabs
@@ -1171,7 +1158,8 @@ class SystemsDemoFeature(RoutedFeature):
         )
 
         panel_h = 36
-        self._dock_panel = self.window.add(
+        self._dock_panel = self._add_tab_control(
+            controls,
             DockWorkspacePanel(
                 "nsdf_dock_panel",
                 Rect(x, y, rect.width - pad * 2, panel_h),
@@ -1179,61 +1167,50 @@ class SystemsDemoFeature(RoutedFeature):
                 on_change=self._on_dock_pane_changed,
             )
         )
-        controls.append(self._dock_panel)
         y += panel_h + 12
 
-        self._dock_active_label = self.window.add(
-            LabelControl(
-                "nsdf_dock_active",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Active pane: editor",
-                align="left",
-            )
+        self._dock_active_label = self._add_tab_label(
+            controls,
+            "nsdf_dock_active",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Active pane: editor",
         )
-        controls.append(self._dock_active_label)
         y += 26
 
         # Buttons: add/remove pane
-        add_btn = self.window.add(
-            ButtonControl(
-                "nsdf_dock_add",
-                Rect(x, y, 120, 28),
-                "Add Extra Pane",
-                self._dock_add_pane,
-            )
+        add_btn = self._add_tab_button(
+            controls,
+            "nsdf_dock_add",
+            Rect(x, y, 120, 28),
+            "Add Extra Pane",
+            self._dock_add_pane,
         )
-        remove_btn = self.window.add(
-            ButtonControl(
-                "nsdf_dock_remove",
-                Rect(x + 128, y, 120, 28),
-                "Remove Active",
-                self._dock_remove_active,
-            )
+        remove_btn = self._add_tab_button(
+            controls,
+            "nsdf_dock_remove",
+            Rect(x + 128, y, 120, 28),
+            "Remove Active",
+            self._dock_remove_active,
         )
-        controls.extend([add_btn, remove_btn])
+        _ = (add_btn, remove_btn)
         y += 36
 
         # Show serialized model
-        model_title = self.window.add(
-            LabelControl(
-                "nsdf_dock_model_title",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "DockWorkspace.to_dict() — model serializes cleanly:",
-                align="left",
-            )
+        model_title = self._add_tab_label(
+            controls,
+            "nsdf_dock_model_title",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "DockWorkspace.to_dict() — model serializes cleanly:",
         )
-        controls.append(model_title)
         y += 24
 
-        self._dock_model_label = self.window.add(
-            LabelControl(
-                "nsdf_dock_model_label",
-                Rect(x, y, rect.width - pad * 2, 20),
-                self._dock_model_summary(),
-                align="left",
-            )
+        self._dock_model_label = self._add_tab_label(
+            controls,
+            "nsdf_dock_model_label",
+            Rect(x, y, rect.width - pad * 2, 20),
+            self._dock_model_summary(),
         )
-        controls.append(self._dock_model_label)
+        _ = (title, hint, model_title)
 
         return controls
 
@@ -1332,61 +1309,51 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_particle_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "ParticleSystem — live GPU-free particle simulation.  Add/burst emitters below.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_particle_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "ParticleSystem — live GPU-free particle simulation.  Add/burst emitters below.",
         )
-        controls.append(info)
         y += 26
 
-        self._particle_count_label = self.window.add(
-            LabelControl(
-                "nsdf_particle_count",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Live particles: 0  Emitters: 0",
-                align="left",
-            )
+        self._particle_count_label = self._add_tab_label(
+            controls,
+            "nsdf_particle_count",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Live particles: 0  Emitters: 0",
         )
-        controls.append(self._particle_count_label)
         y += 30
 
-        btn_gap = 8
-        add_btn = self.window.add(
-            ButtonControl(
-                "nsdf_particle_add",
-                Rect(x, y, 130, 28),
-                "Add Emitter",
-                self._particle_add_emitter,
-            )
+        add_btn = self._add_tab_button(
+            controls,
+            "nsdf_particle_add",
+            Rect(x, y, 130, 28),
+            "Add Emitter",
+            self._particle_add_emitter,
         )
-        burst_btn = self.window.add(
-            ButtonControl(
-                "nsdf_particle_burst",
-                Rect(x + 138, y, 130, 28),
-                "Burst (50)",
-                self._particle_burst,
-            )
+        burst_btn = self._add_tab_button(
+            controls,
+            "nsdf_particle_burst",
+            Rect(x + 138, y, 130, 28),
+            "Burst (50)",
+            self._particle_burst,
         )
-        clear_btn = self.window.add(
-            ButtonControl(
-                "nsdf_particle_clear",
-                Rect(x + 276, y, 130, 28),
-                "Clear Emitters",
-                self._particle_clear,
-            )
+        clear_btn = self._add_tab_button(
+            controls,
+            "nsdf_particle_clear",
+            Rect(x + 276, y, 130, 28),
+            "Clear Emitters",
+            self._particle_clear,
         )
-        controls.extend([add_btn, burst_btn, clear_btn])
+        _ = (info, add_btn, burst_btn, clear_btn)
         y += 38
 
         canvas_h = max(60, rect.bottom - y - pad)
-        self._particle_canvas = self.window.add(
-            CanvasControl("nsdf_particle_canvas", Rect(x, y, rect.width - pad * 2, canvas_h))
+        self._particle_canvas = self._add_tab_control(
+            controls,
+            CanvasControl("nsdf_particle_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
         )
-        controls.append(self._particle_canvas)
 
         # Build particle layer (owns its own ParticleSystem)
         self._particle_layer = ParticleLayer(
@@ -1444,16 +1411,13 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_sprite_info",
-                Rect(x, y, rect.width - pad * 2, 40),
-                "SpriteSheet slices an atlas into frames.  FrameAnimation drives playback.\n"
-                "AnimatedImageControl renders the active frame as a scene-graph node.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_sprite_info",
+            Rect(x, y, rect.width - pad * 2, 40),
+            "SpriteSheet slices an atlas into frames.  FrameAnimation drives playback.\n"
+            "AnimatedImageControl renders the active frame as a scene-graph node.",
         )
-        controls.append(info)
         y += 50
 
         # Build a four-frame colored atlas
@@ -1464,7 +1428,8 @@ class SystemsDemoFeature(RoutedFeature):
         sheet = SpriteSheet(_atlas, frame_w=FW, frame_h=FH)
         self._sprite_anim = FrameAnimation(sheet, frames=list(range(4)), fps=3, loop=True)
         ctrl_w, ctrl_h = min(200, rect.width - pad * 2), 80
-        self._sprite_ctrl = self.window.add(
+        self._sprite_ctrl = self._add_tab_control(
+            controls,
             AnimatedImageControl(
                 "nsdf_sprite_ctrl",
                 Rect(x, y, ctrl_w, ctrl_h),
@@ -1472,45 +1437,38 @@ class SystemsDemoFeature(RoutedFeature):
                 scale=True,
             )
         )
-        controls.append(self._sprite_ctrl)
         y += ctrl_h + 12
 
-        sheet_info = self.window.add(
-            LabelControl(
-                "nsdf_sprite_sheet_info",
-                Rect(x, y, rect.width - pad * 2, 22),
-                f"SpriteSheet: {sheet.frame_count} frames  ({FW}×{FH} px each)",
-                align="left",
-            )
+        sheet_info = self._add_tab_label(
+            controls,
+            "nsdf_sprite_sheet_info",
+            Rect(x, y, rect.width - pad * 2, 22),
+            f"SpriteSheet: {sheet.frame_count} frames  ({FW}×{FH} px each)",
         )
-        controls.append(sheet_info)
         y += 28
 
-        play_btn = self.window.add(
-            ButtonControl(
-                "nsdf_sprite_play",
-                Rect(x, y, 90, 28),
-                "Play",
-                lambda: self._sprite_anim.play() if self._sprite_anim else None,
-            )
+        play_btn = self._add_tab_button(
+            controls,
+            "nsdf_sprite_play",
+            Rect(x, y, 90, 28),
+            "Play",
+            lambda: self._sprite_anim.play() if self._sprite_anim else None,
         )
-        pause_btn = self.window.add(
-            ButtonControl(
-                "nsdf_sprite_pause",
-                Rect(x + 98, y, 90, 28),
-                "Pause",
-                lambda: self._sprite_anim.pause() if self._sprite_anim else None,
-            )
+        pause_btn = self._add_tab_button(
+            controls,
+            "nsdf_sprite_pause",
+            Rect(x + 98, y, 90, 28),
+            "Pause",
+            lambda: self._sprite_anim.pause() if self._sprite_anim else None,
         )
-        reset_btn = self.window.add(
-            ButtonControl(
-                "nsdf_sprite_reset",
-                Rect(x + 196, y, 90, 28),
-                "Reset",
-                lambda: self._sprite_anim.reset() if self._sprite_anim else None,
-            )
+        reset_btn = self._add_tab_button(
+            controls,
+            "nsdf_sprite_reset",
+            Rect(x + 196, y, 90, 28),
+            "Reset",
+            lambda: self._sprite_anim.reset() if self._sprite_anim else None,
         )
-        controls.extend([play_btn, pause_btn, reset_btn])
+        _ = (info, sheet_info, play_btn, pause_btn, reset_btn)
         return controls
 
     # ------------------------------------------------------------------
@@ -1524,58 +1482,47 @@ class SystemsDemoFeature(RoutedFeature):
 
         self._scheduler = CooperativeScheduler()
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_sched_info",
-                Rect(x, y, rect.width - pad * 2, 40),
-                "CooperativeScheduler runs generator coroutines on the frame thread.\n"
-                "Yield Pause, Sleep(s), or WaitUntil(predicate) to suspend.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_sched_info",
+            Rect(x, y, rect.width - pad * 2, 40),
+            "CooperativeScheduler runs generator coroutines on the frame thread.\n"
+            "Yield Pause, Sleep(s), or WaitUntil(predicate) to suspend.",
         )
-        controls.append(info)
         y += 50
 
-        self._sched_step_label = self.window.add(
-            LabelControl(
-                "nsdf_sched_step",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Active coroutines: 0",
-                align="left",
-            )
+        self._sched_step_label = self._add_tab_label(
+            controls,
+            "nsdf_sched_step",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Active coroutines: 0",
         )
-        controls.append(self._sched_step_label)
         y += 30
 
-        self._sched_log_label = self.window.add(
-            LabelControl(
-                "nsdf_sched_log",
-                Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - 50)),
-                "Press a button to start a coroutine…",
-                align="left",
-            )
+        self._sched_log_label = self._add_tab_label(
+            controls,
+            "nsdf_sched_log",
+            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - 50)),
+            "Press a button to start a coroutine…",
         )
-        controls.append(self._sched_log_label)
         log_bottom = y + max(40, rect.bottom - y - 50)
 
         btn_y = log_bottom + 4
-        start_btn = self.window.add(
-            ButtonControl(
-                "nsdf_sched_start",
-                Rect(x, btn_y, 140, 28),
-                "Start Sequence",
-                self._sched_start_sequence,
-            )
+        start_btn = self._add_tab_button(
+            controls,
+            "nsdf_sched_start",
+            Rect(x, btn_y, 140, 28),
+            "Start Sequence",
+            self._sched_start_sequence,
         )
-        cancel_btn = self.window.add(
-            ButtonControl(
-                "nsdf_sched_cancel",
-                Rect(x + 148, btn_y, 140, 28),
-                "Cancel All",
-                self._sched_cancel_all,
-            )
+        cancel_btn = self._add_tab_button(
+            controls,
+            "nsdf_sched_cancel",
+            Rect(x + 148, btn_y, 140, 28),
+            "Cancel All",
+            self._sched_cancel_all,
         )
-        controls.extend([start_btn, cancel_btn])
+        _ = (info, start_btn, cancel_btn)
         return controls
 
     def _sched_log_append(self, msg: str) -> None:
@@ -1617,16 +1564,13 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_tilemap_info",
-                Rect(x, y, rect.width - pad * 2, 40),
-                "TileSet slices an atlas into tile surfaces.  TileMap renders only visible tiles.\n"
-                "Camera culling is automatic via visible_range().",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_tilemap_info",
+            Rect(x, y, rect.width - pad * 2, 40),
+            "TileSet slices an atlas into tile surfaces.  TileMap renders only visible tiles.\n"
+            "Camera culling is automatic via visible_range().",
         )
-        controls.append(info)
         y += 50
 
         TILE_W, TILE_H = 24, 24
@@ -1651,22 +1595,20 @@ class SystemsDemoFeature(RoutedFeature):
             self._tile_map.set_tile(rc, rr, 2)
 
         canvas_h = max(60, rect.bottom - y - 60)
-        self._tile_canvas = self.window.add(
-            CanvasControl("nsdf_tile_canvas", Rect(x, y, rect.width - pad * 2, canvas_h))
+        self._tile_canvas = self._add_tab_control(
+            controls,
+            CanvasControl("nsdf_tile_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
         )
-        controls.append(self._tile_canvas)
         self._tile_dirty = True
         y += canvas_h + 8
 
-        tile_info = self.window.add(
-            LabelControl(
-                "nsdf_tilemap_detail",
-                Rect(x, y, rect.width - pad * 2, 22),
-                f"TileSet: {tile_set.tile_count} tiles  |  TileMap: {COLS}×{ROWS} ({COLS * ROWS} cells)",
-                align="left",
-            )
+        tile_info = self._add_tab_label(
+            controls,
+            "nsdf_tilemap_detail",
+            Rect(x, y, rect.width - pad * 2, 22),
+            f"TileSet: {tile_set.tile_count} tiles  |  TileMap: {COLS}×{ROWS} ({COLS * ROWS} cells)",
         )
-        controls.append(tile_info)
+        _ = (info, tile_info)
         return controls
 
     # ------------------------------------------------------------------
@@ -1678,73 +1620,69 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_progress_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "ProgressBarControl — determinate (0–1) and indeterminate (marquee) modes.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_progress_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "ProgressBarControl — determinate (0–1) and indeterminate (marquee) modes.",
         )
-        controls.append(info)
         y += 30
 
-        det_lbl = self.window.add(
-            LabelControl("nsdf_prog_det_lbl", Rect(x, y, rect.width - pad * 2, 18), "Determinate (value=0.72):", align="left")
+        det_lbl = self._add_tab_label(
+            controls,
+            "nsdf_prog_det_lbl",
+            Rect(x, y, rect.width - pad * 2, 18),
+            "Determinate (value=0.72):",
         )
-        controls.append(det_lbl)
         y += 22
 
-        self._progress_bar = self.window.add(
+        self._progress_bar = self._add_tab_control(
+            controls,
             ProgressBarControl(
                 "nsdf_progress_bar",
                 Rect(x, y, rect.width - pad * 2, 18),
                 value=0.72,
             )
         )
-        controls.append(self._progress_bar)
         y += 30
 
-        indet_lbl = self.window.add(
-            LabelControl("nsdf_prog_indet_lbl", Rect(x, y, rect.width - pad * 2, 18), "Indeterminate (marquee):", align="left")
+        indet_lbl = self._add_tab_label(
+            controls,
+            "nsdf_prog_indet_lbl",
+            Rect(x, y, rect.width - pad * 2, 18),
+            "Indeterminate (marquee):",
         )
-        controls.append(indet_lbl)
         y += 22
 
-        self._progress_indeterminate = self.window.add(
+        self._progress_indeterminate = self._add_tab_control(
+            controls,
             ProgressBarControl(
                 "nsdf_progress_indet",
                 Rect(x, y, rect.width - pad * 2, 18),
                 indeterminate=True,
             )
         )
-        controls.append(self._progress_indeterminate)
         y += 30
 
-        self._progress_label = self.window.add(
-            LabelControl(
-                "nsdf_progress_val_lbl",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Adjust value:",
-                align="left",
-            )
+        self._progress_label = self._add_tab_label(
+            controls,
+            "nsdf_progress_val_lbl",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Adjust value:",
         )
-        controls.append(self._progress_label)
         y += 28
 
-        btn_gap = 8
         for step_pct, label in [(0, "0%"), (25, "25%"), (50, "50%"), (75, "75%"), (100, "100%")]:
-            btn = self.window.add(
-                ButtonControl(
-                    f"nsdf_prog_set_{step_pct}",
-                    Rect(x, y, 70, 26),
-                    label,
-                    self._make_progress_setter(step_pct / 100.0),
-                )
+            _ = self._add_tab_button(
+                controls,
+                f"nsdf_prog_set_{step_pct}",
+                Rect(x, y, 70, 26),
+                label,
+                self._make_progress_setter(step_pct / 100.0),
             )
-            controls.append(btn)
             x += 78
         x = rect.left + pad
+        _ = (info, det_lbl, indet_lbl)
         return controls
 
     def _make_progress_setter(self, value: float):
@@ -1764,54 +1702,45 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_flow_info",
-                Rect(x, y, rect.width - pad * 2, 40),
-                "FlowLayout arranges FlowItem nodes left-to-right with automatic row wrapping.\n"
-                "Items here are LabelControls sized as tags.  Add/clear to see layout reflow.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_flow_info",
+            Rect(x, y, rect.width - pad * 2, 40),
+            "FlowLayout arranges FlowItem nodes left-to-right with automatic row wrapping.\n"
+            "Items here are LabelControls sized as tags.  Add/clear to see layout reflow.",
         )
-        controls.append(info)
         y += 50
 
-        self._flow_result_label = self.window.add(
-            LabelControl(
-                "nsdf_flow_result",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Row info will appear here after layout runs.",
-                align="left",
-            )
+        self._flow_result_label = self._add_tab_label(
+            controls,
+            "nsdf_flow_result",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Row info will appear here after layout runs.",
         )
-        controls.append(self._flow_result_label)
         y += 30
 
-        add_btn = self.window.add(
-            ButtonControl(
-                "nsdf_flow_add",
-                Rect(x, y, 110, 28),
-                "Add Item",
-                self._flow_add_item,
-            )
+        add_btn = self._add_tab_button(
+            controls,
+            "nsdf_flow_add",
+            Rect(x, y, 110, 28),
+            "Add Item",
+            self._flow_add_item,
         )
-        clear_btn = self.window.add(
-            ButtonControl(
-                "nsdf_flow_clear",
-                Rect(x + 118, y, 110, 28),
-                "Clear Items",
-                self._flow_clear_items,
-            )
+        clear_btn = self._add_tab_button(
+            controls,
+            "nsdf_flow_clear",
+            Rect(x + 118, y, 110, 28),
+            "Clear Items",
+            self._flow_clear_items,
         )
-        layout_btn = self.window.add(
-            ButtonControl(
-                "nsdf_flow_layout",
-                Rect(x + 236, y, 110, 28),
-                "Apply Layout",
-                self._flow_apply_layout,
-            )
+        layout_btn = self._add_tab_button(
+            controls,
+            "nsdf_flow_layout",
+            Rect(x + 236, y, 110, 28),
+            "Apply Layout",
+            self._flow_apply_layout,
         )
-        controls.extend([add_btn, clear_btn, layout_btn])
+        _ = (info, add_btn, clear_btn, layout_btn)
         y += 36
 
         self._flow_layout = FlowLayout(gap_x=8, gap_y=6)
@@ -1907,23 +1836,23 @@ class SystemsDemoFeature(RoutedFeature):
         )
         self._searcher = TextSearcher(DEMO_TEXT, case_sensitive=False)
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_search_source",
-                Rect(x, y, rect.width - pad * 2, 50),
-                f'Search target:\n"{DEMO_TEXT[:80]}…"',
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_search_source",
+            Rect(x, y, rect.width - pad * 2, 50),
+            f'Search target:\n"{DEMO_TEXT[:80]}…"',
         )
-        controls.append(info)
         y += 58
 
-        query_lbl = self.window.add(
-            LabelControl("nsdf_search_lbl", Rect(x, y, 60, 26), "Query:", align="left")
+        query_lbl = self._add_tab_label(
+            controls,
+            "nsdf_search_lbl",
+            Rect(x, y, 60, 26),
+            "Query:",
         )
-        controls.append(query_lbl)
 
-        self._search_input = self.window.add(
+        self._search_input = self._add_tab_control(
+            controls,
             TextInputControl(
                 "nsdf_search_input",
                 Rect(x + 68, y, min(260, rect.width - pad * 2 - 68), 28),
@@ -1931,18 +1860,15 @@ class SystemsDemoFeature(RoutedFeature):
                 on_change=self._on_search_changed,
             )
         )
-        controls.append(self._search_input)
         y += 36
 
-        self._search_result_label = self.window.add(
-            LabelControl(
-                "nsdf_search_result",
-                Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
-                "Results appear here…",
-                align="left",
-            )
+        self._search_result_label = self._add_tab_label(
+            controls,
+            "nsdf_search_result",
+            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
+            "Results appear here…",
         )
-        controls.append(self._search_result_label)
+        _ = (info, query_lbl)
         return controls
 
     def _on_search_changed(self, text: str) -> None:
@@ -1969,67 +1895,53 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_listdiff_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "ListDiffCalculator.diff(old, new) returns DiffInsert / DiffRemove / DiffMove ops.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_listdiff_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "ListDiffCalculator.diff(old, new) returns DiffInsert / DiffRemove / DiffMove ops.",
         )
-        controls.append(info)
         y += 28
 
-        old_lbl = self.window.add(
-            LabelControl(
-                "nsdf_listdiff_old",
-                Rect(x, y, rect.width - pad * 2, 22),
-                f"Old: {self._listdiff_old}",
-                align="left",
-            )
+        old_lbl = self._add_tab_label(
+            controls,
+            "nsdf_listdiff_old",
+            Rect(x, y, rect.width - pad * 2, 22),
+            f"Old: {self._listdiff_old}",
         )
-        controls.append(old_lbl)
         y += 26
 
-        new_lbl = self.window.add(
-            LabelControl(
-                "nsdf_listdiff_new",
-                Rect(x, y, rect.width - pad * 2, 22),
-                f"New: {self._listdiff_new}",
-                align="left",
-            )
+        new_lbl = self._add_tab_label(
+            controls,
+            "nsdf_listdiff_new",
+            Rect(x, y, rect.width - pad * 2, 22),
+            f"New: {self._listdiff_new}",
         )
-        controls.append(new_lbl)
         y += 30
 
-        run_btn = self.window.add(
-            ButtonControl(
-                "nsdf_listdiff_run",
-                Rect(x, y, 130, 28),
-                "Compute Diff",
-                self._run_listdiff,
-            )
+        run_btn = self._add_tab_button(
+            controls,
+            "nsdf_listdiff_run",
+            Rect(x, y, 130, 28),
+            "Compute Diff",
+            self._run_listdiff,
         )
-        apply_btn = self.window.add(
-            ButtonControl(
-                "nsdf_listdiff_apply",
-                Rect(x + 138, y, 130, 28),
-                "Apply & Show",
-                self._apply_listdiff,
-            )
+        apply_btn = self._add_tab_button(
+            controls,
+            "nsdf_listdiff_apply",
+            Rect(x + 138, y, 130, 28),
+            "Apply & Show",
+            self._apply_listdiff,
         )
-        controls.extend([run_btn, apply_btn])
+        _ = (info, old_lbl, new_lbl, run_btn, apply_btn)
         y += 38
 
-        self._listdiff_result_label = self.window.add(
-            LabelControl(
-                "nsdf_listdiff_result",
-                Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
-                "Press 'Compute Diff' to see operations.",
-                align="left",
-            )
+        self._listdiff_result_label = self._add_tab_label(
+            controls,
+            "nsdf_listdiff_result",
+            Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+            "Press 'Compute Diff' to see operations.",
         )
-        controls.append(self._listdiff_result_label)
         return controls
 
     def _run_listdiff(self) -> None:
@@ -2076,62 +1988,51 @@ class SystemsDemoFeature(RoutedFeature):
         for k, v in [("user:1", "Alice"), ("user:2", "Bob"), ("user:3", "Carol")]:
             self._cache.put(k, v)
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_cache_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "DataCache — LRU cache (max_size=5) with reactive on_evicted/on_invalidated signals.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_cache_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "DataCache — LRU cache (max_size=5) with reactive on_evicted/on_invalidated signals.",
         )
-        controls.append(info)
         y += 28
 
-        self._cache_stats_label = self.window.add(
-            LabelControl(
-                "nsdf_cache_stats",
-                Rect(x, y, rect.width - pad * 2, 60),
-                self._cache_stats_text(),
-                align="left",
-            )
+        self._cache_stats_label = self._add_tab_label(
+            controls,
+            "nsdf_cache_stats",
+            Rect(x, y, rect.width - pad * 2, 60),
+            self._cache_stats_text(),
         )
-        controls.append(self._cache_stats_label)
         y += 68
 
-        btn_gap = 8
-        get_btn = self.window.add(
-            ButtonControl(
-                "nsdf_cache_get",
-                Rect(x, y, 110, 28),
-                "Get user:1",
-                self._cache_get_user1,
-            )
+        get_btn = self._add_tab_button(
+            controls,
+            "nsdf_cache_get",
+            Rect(x, y, 110, 28),
+            "Get user:1",
+            self._cache_get_user1,
         )
-        miss_btn = self.window.add(
-            ButtonControl(
-                "nsdf_cache_miss",
-                Rect(x + 118, y, 110, 28),
-                "Miss user:99",
-                self._cache_miss,
-            )
+        miss_btn = self._add_tab_button(
+            controls,
+            "nsdf_cache_miss",
+            Rect(x + 118, y, 110, 28),
+            "Miss user:99",
+            self._cache_miss,
         )
-        evict_btn = self.window.add(
-            ButtonControl(
-                "nsdf_cache_evict",
-                Rect(x + 236, y, 130, 28),
-                "Fill (cause evict)",
-                self._cache_fill,
-            )
+        evict_btn = self._add_tab_button(
+            controls,
+            "nsdf_cache_evict",
+            Rect(x + 236, y, 130, 28),
+            "Fill (cause evict)",
+            self._cache_fill,
         )
-        inval_btn = self.window.add(
-            ButtonControl(
-                "nsdf_cache_inval",
-                Rect(x, y + 36, 130, 28),
-                "Invalidate user:2",
-                self._cache_invalidate,
-            )
+        inval_btn = self._add_tab_button(
+            controls,
+            "nsdf_cache_inval",
+            Rect(x, y + 36, 130, 28),
+            "Invalidate user:2",
+            self._cache_invalidate,
         )
-        controls.extend([get_btn, miss_btn, evict_btn, inval_btn])
+        _ = (info, get_btn, miss_btn, evict_btn, inval_btn)
         return controls
 
     def _cache_stats_text(self) -> str:
@@ -2178,39 +2079,32 @@ class SystemsDemoFeature(RoutedFeature):
         pad = 8
         x, y = rect.left + pad, rect.top + pad
 
-        info = self.window.add(
-            LabelControl(
-                "nsdf_shortcuts_info",
-                Rect(x, y, rect.width - pad * 2, 40),
-                "ShortcutHelpOverlay reads ActionRegistry + KeyChordManager and renders\n"
-                "a structured shortcut reference panel via the OverlayManager.",
-                align="left",
-            )
+        info = self._add_tab_label(
+            controls,
+            "nsdf_shortcuts_info",
+            Rect(x, y, rect.width - pad * 2, 40),
+            "ShortcutHelpOverlay reads ActionRegistry + KeyChordManager and renders\n"
+            "a structured shortcut reference panel via the OverlayManager.",
         )
-        controls.append(info)
         y += 50
 
-        show_btn = self.window.add(
-            ButtonControl(
-                "nsdf_shortcuts_show",
-                Rect(x, y, 150, 28),
-                "Show Help Overlay",
-                self._shortcuts_show_overlay,
-            )
+        show_btn = self._add_tab_button(
+            controls,
+            "nsdf_shortcuts_show",
+            Rect(x, y, 150, 28),
+            "Show Help Overlay",
+            self._shortcuts_show_overlay,
         )
-        controls.append(show_btn)
         y += 38
 
-        self._shortcut_info_label = self.window.add(
-            LabelControl(
-                "nsdf_shortcuts_detail",
-                Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
-                "Overlay not yet opened — click 'Show Help Overlay' to display it.\n"
-                "ShortcutHelpOverlay.sections builds structured data from ActionRegistry.",
-                align="left",
-            )
+        self._shortcut_info_label = self._add_tab_label(
+            controls,
+            "nsdf_shortcuts_detail",
+            Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+            "Overlay not yet opened — click 'Show Help Overlay' to display it.\n"
+            "ShortcutHelpOverlay.sections builds structured data from ActionRegistry.",
         )
-        controls.append(self._shortcut_info_label)
+        _ = (info, show_btn)
         return controls
 
     def _shortcuts_show_overlay(self) -> None:

@@ -120,65 +120,23 @@ class BouncingShapesBackdropFeature(DirectFeature):
 
     def _create_circle_shape(self) -> ShapeSpriteState:
         """Create one cached circular sprite with initial velocity."""
-        radius = self._rng.randint(12, 38)
-        diameter = radius * 2
-        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
-        fill_alpha = self._rng.randint(150, 230)
-        border_alpha = self._rng.randint(150, 230)
-        fill_color = base_color + (fill_alpha,)
-        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
+        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
         center = (radius, radius)
         pygame.draw.circle(sprite, border_color, center, radius)
         pygame.draw.circle(sprite, fill_color, center, max(1, radius - 2))
-        dx, dy = self._random_velocity()
-
-        return ShapeSpriteState(
-            kind="circle",
-            radius=radius,
-            sprite=sprite,
-            x=0.0,
-            y=0.0,
-            dx=dx,
-            dy=dy,
-        )
+        return self._build_shape_state("circle", sprite, radius, rotate=False)
 
     def _create_square_shape(self) -> ShapeSpriteState:
         """Create one cached axis-aligned square sprite with velocity."""
-        radius = self._rng.randint(12, 38)
+        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
         diameter = radius * 2
-        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
-        fill_alpha = self._rng.randint(150, 230)
-        border_alpha = self._rng.randint(150, 230)
-        fill_color = base_color + (fill_alpha,)
-        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
         pygame.draw.rect(sprite, fill_color, pygame.Rect(0, 0, diameter, diameter))
         pygame.draw.rect(sprite, border_color, pygame.Rect(0, 0, diameter, diameter), width=2)
-        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
-        radius = sprite.get_width() // 2
-        dx, dy = self._random_velocity()
-
-        return ShapeSpriteState(
-            kind="square",
-            radius=radius,
-            sprite=sprite,
-            x=0.0,
-            y=0.0,
-            dx=dx,
-            dy=dy,
-        )
+        return self._build_shape_state("square", sprite, radius, rotate=True)
 
     def _create_octagon_shape(self) -> ShapeSpriteState:
         """Create one cached regular octagon sprite with velocity."""
-        radius = self._rng.randint(12, 38)
-        diameter = radius * 2
-        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
-        fill_alpha = self._rng.randint(150, 230)
-        border_alpha = self._rng.randint(150, 230)
-        fill_color = base_color + (fill_alpha,)
-        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
+        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
 
         center_x = float(radius)
         center_y = float(radius)
@@ -192,30 +150,11 @@ class BouncingShapesBackdropFeature(DirectFeature):
 
         pygame.draw.polygon(sprite, fill_color, points)
         pygame.draw.polygon(sprite, border_color, points, width=2)
-        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
-        radius = sprite.get_width() // 2
-        dx, dy = self._random_velocity()
-
-        return ShapeSpriteState(
-            kind="octagon",
-            radius=radius,
-            sprite=sprite,
-            x=0.0,
-            y=0.0,
-            dx=dx,
-            dy=dy,
-        )
+        return self._build_shape_state("octagon", sprite, radius, rotate=True)
 
     def _create_star_shape(self) -> ShapeSpriteState:
         """Create one cached five-point star sprite with velocity."""
-        radius = self._rng.randint(12, 38)
-        diameter = radius * 2
-        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
-        fill_alpha = self._rng.randint(150, 230)
-        border_alpha = self._rng.randint(150, 230)
-        fill_color = base_color + (fill_alpha,)
-        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
+        radius, sprite, fill_color, border_color = self._create_shape_surface_and_colors()
 
         center_x = float(radius)
         center_y = float(radius)
@@ -231,14 +170,32 @@ class BouncingShapesBackdropFeature(DirectFeature):
 
         pygame.draw.polygon(sprite, fill_color, points)
         pygame.draw.polygon(sprite, border_color, points, width=2)
-        sprite = pygame.transform.rotate(sprite, self._rng.uniform(0.0, 360.0))
-        radius = sprite.get_width() // 2
-        dx, dy = self._random_velocity()
+        return self._build_shape_state("star", sprite, radius, rotate=True)
 
+    def _create_shape_surface_and_colors(self) -> tuple[int, pygame.Surface, tuple[int, int, int, int], tuple[int, int, int, int]]:
+        """Build a base square ARGB surface plus randomized fill/border colors."""
+        radius = self._rng.randint(12, 38)
+        diameter = radius * 2
+        sprite = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        base_color = self._rng.choice(DEMO_SHAPE_COLOURS)
+        fill_alpha = self._rng.randint(150, 230)
+        border_alpha = self._rng.randint(150, 230)
+        fill_color = base_color + (fill_alpha,)
+        border_color = DEMO_BORDER_BASE_COLOUR + (border_alpha,)
+        return radius, sprite, fill_color, border_color
+
+    def _build_shape_state(self, kind: str, sprite: pygame.Surface, radius: int, *, rotate: bool) -> ShapeSpriteState:
+        """Finalize sprite orientation and motion into a ShapeSpriteState."""
+        resolved_sprite = sprite
+        resolved_radius = int(radius)
+        if rotate:
+            resolved_sprite = pygame.transform.rotate(resolved_sprite, self._rng.uniform(0.0, 360.0))
+            resolved_radius = resolved_sprite.get_width() // 2
+        dx, dy = self._random_velocity()
         return ShapeSpriteState(
-            kind="star",
-            radius=radius,
-            sprite=sprite,
+            kind=str(kind),
+            radius=int(resolved_radius),
+            sprite=resolved_sprite,
             x=0.0,
             y=0.0,
             dx=dx,

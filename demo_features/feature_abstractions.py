@@ -13,8 +13,10 @@ from typing import Iterable, Sequence
 from pygame import Rect
 
 from gui_do import (
+    LocaleRegistry,
     MenuEntry,
     SceneMenuStripControl,
+    ToggleControl,
     WindowControl,
     create_anchored_feature_window,
     resolve_scene_selection_callback,
@@ -106,6 +108,95 @@ def sorted_window_bindings(bindings):
             ),
         )
     )
+
+
+def collect_window_toggle_controls(host, window_presentation):
+    """Return sorted (binding, control) pairs for all available window toggles on host."""
+    controls = []
+    for binding in sorted_window_bindings(window_presentation.bindings()):
+        toggle_attr = getattr(binding, "toggle_attr", None)
+        if toggle_attr is None:
+            continue
+        control = getattr(host, str(toggle_attr), None)
+        if control is not None:
+            controls.append((binding, control))
+    return controls
+
+
+def apply_window_toggle_accessibility(host, window_presentation, *, role: str = "toggle") -> None:
+    """Apply accessibility metadata for all window toggle controls declared by bindings."""
+    for binding, control in collect_window_toggle_controls(host, window_presentation):
+        control.set_accessibility(
+            role=str(role),
+            label=binding.accessibility_label or binding.action_label or binding.key,
+        )
+
+
+def add_window_toggle_task_panel_controls(host, task_panel, app_layout, window_presentation):
+    """Create window toggle controls on the task panel from declarative bindings."""
+    toggle_controls = []
+    max_slot_index = 0
+    for binding in sorted_window_bindings(window_presentation.bindings()):
+        slot_index = 1 if binding.task_panel_slot_index is None else int(binding.task_panel_slot_index)
+        max_slot_index = max(max_slot_index, slot_index)
+        toggle = task_panel.add(
+            ToggleControl(
+                binding.task_panel_button_id or f"show_{binding.key}",
+                app_layout.linear(slot_index),
+                binding.task_panel_label or binding.key.title(),
+                binding.task_panel_label or binding.key.title(),
+                pushed=False,
+                on_toggle=lambda pushed, _key=binding.key: window_presentation.set_visible(
+                    _key,
+                    bool(pushed),
+                    from_toggle=True,
+                ),
+                style=binding.task_panel_style,
+            )
+        )
+        if binding.toggle_attr:
+            setattr(host, binding.toggle_attr, toggle)
+        toggle_controls.append((binding, toggle))
+    return toggle_controls, max_slot_index
+
+
+def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
+    """Register standardized window toggle tooltip labels."""
+    for binding, toggle in toggle_controls:
+        label = binding.task_panel_label or binding.action_label or binding.key.title()
+        tooltip_manager.register(toggle, f"Toggle the {label} window")
+
+
+def initialize_locale_registry(tables, *, initial_locale: str) -> LocaleRegistry:
+    """Create a LocaleRegistry, register all tables, and select the initial locale."""
+    locale_registry = LocaleRegistry()
+    for table in tables:
+        locale_registry.register(table)
+    locale_registry.set_locale(str(initial_locale))
+    return locale_registry
+
+
+def bind_input_map_actions(input_map, bindings, *, mod: int = 0) -> None:
+    """Bind multiple (key, action) pairs on an InputMap using a shared modifier."""
+    for key, action in bindings:
+        input_map.bind(str(action), key=key, mod=int(mod))
+
+
+def register_descriptors(registry, owner_class, descriptors) -> None:
+    """Register a sequence of property descriptors for a given owner class."""
+    for descriptor in descriptors:
+        registry.register(owner_class, descriptor)
+
+
+def resolve_canvas_local_point(packet, canvas_rect: Rect):
+    """Resolve packet coordinates to canvas-local space, if available."""
+    local_pos = getattr(packet, "local_pos", None)
+    if local_pos is not None:
+        return (float(local_pos[0]), float(local_pos[1]))
+    pos = getattr(packet, "pos", None)
+    if pos is None:
+        return None
+    return (float(pos[0] - canvas_rect.left), float(pos[1] - canvas_rect.top))
 
 
 def register_window_tab_builders(tab_manager, feature, host, rect, tab_specs) -> None:

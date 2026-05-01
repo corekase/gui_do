@@ -76,7 +76,11 @@ from gui_do import (
 
 
 )
-from demo_features.feature_abstractions import add_standard_scene_menu_strip, sorted_window_bindings
+from demo_features.feature_abstractions import (
+    add_standard_scene_menu_strip,
+    add_window_toggle_task_panel_controls,
+    register_window_toggle_tooltips,
+)
 
 
 class MainDemoFeature(Feature):
@@ -155,30 +159,12 @@ class MainDemoFeature(Feature):
             )
         )
 
-        toggle_controls = []
-        bindings = sorted_window_bindings(host.window_presentation.bindings())
-        max_slot_index = 0
-        for binding in bindings:
-            slot_index = 1 if binding.task_panel_slot_index is None else int(binding.task_panel_slot_index)
-            max_slot_index = max(max_slot_index, slot_index)
-            toggle = host.task_panel.add(
-                ToggleControl(
-                    binding.task_panel_button_id or f"show_{binding.key}",
-                    host.app.layout.linear(slot_index),
-                    binding.task_panel_label or binding.key.title(),
-                    binding.task_panel_label or binding.key.title(),
-                    pushed=False,
-                    on_toggle=lambda pushed, _key=binding.key: host.window_presentation.set_visible(
-                        _key,
-                        bool(pushed),
-                        from_toggle=True,
-                    ),
-                    style=binding.task_panel_style,
-                )
-            )
-            if binding.toggle_attr:
-                setattr(host, binding.toggle_attr, toggle)
-            toggle_controls.append((binding, toggle))
+        toggle_controls, max_slot_index = add_window_toggle_task_panel_controls(
+            host,
+            host.task_panel,
+            host.app.layout,
+            host.window_presentation,
+        )
 
         host.help_button = host.task_panel.add(
             ButtonControl(
@@ -193,9 +179,7 @@ class MainDemoFeature(Feature):
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
         host._main_tooltip_manager.register(host.exit_button, "Exit the application")
         host._main_tooltip_manager.register(host.showcase_button, "Open the control showcase scene")
-        for binding, toggle in toggle_controls:
-            label = binding.task_panel_label or binding.action_label or binding.key.title()
-            host._main_tooltip_manager.register(toggle, f"Toggle the {label} window")
+        register_window_toggle_tooltips(host._main_tooltip_manager, toggle_controls)
         host._main_tooltip_manager.register(host.help_button, "Show keyboard shortcut reference (F1)")
 
         host.app.tile_windows()

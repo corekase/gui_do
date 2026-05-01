@@ -967,25 +967,16 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         )
         mandel_reset_rect = slots[0]
 
-        self.reset_button = ButtonControl(
-            "mandel_reset", mandel_reset_rect, "Reset",
-            lambda: self.feature.clear(self.host), style="angle"
+        self.reset_button = self._add_button_control(
+            "mandel_reset",
+            mandel_reset_rect,
+            "Reset",
+            lambda: self.feature.clear(self.host),
+            style="angle",
         )
-        self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
-        task_buttons = []
-        for slot_rect, (control_id, label, launch_method_name, style) in zip(slots[1:], _MANDEL_TASK_BUTTON_SPECS):
-            launch_method = getattr(self.feature, launch_method_name)
-            button = ButtonControl(
-                control_id,
-                slot_rect,
-                label,
-                lambda _method=launch_method: _method(self.host),
-                style=style,
-            )
-            self.add_control(button)
-            task_buttons.append(button)
+        task_buttons = self._build_task_buttons(slots[1:])
 
         (
             self.mandel_iter_button,
@@ -996,11 +987,11 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         self.feature.task_buttons = tuple(task_buttons)
 
         status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
-        self.status_label = LabelControl(
-            "mandel_status", Rect(padded.left, status_y, _MANDEL_CANVAS_W, _MANDEL_STATUS_H),
-            self.feature.status_text
+        self.status_label = self._add_label_control(
+            "mandel_status",
+            Rect(padded.left, status_y, _MANDEL_CANVAS_W, _MANDEL_STATUS_H),
+            self.feature.status_text,
         )
-        self.add_control(self.status_label)
         self.feature.status_label = self.status_label
 
         self.feature.demo = self.host
@@ -1009,3 +1000,31 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         self.feature.set_task_buttons_disabled(self.host, False)
         self.feature.clear(self.host)
         self.window.visible = False
+
+    def _add_control(self, control):
+        """Add a presenter-managed control and return it."""
+        self.add_control(control)
+        return control
+
+    def _add_button_control(self, control_id: str, rect: Rect, text: str, on_click, *, style: str):
+        """Create and register a ButtonControl in one call."""
+        return self._add_control(ButtonControl(control_id, Rect(rect), text, on_click, style=style))
+
+    def _add_label_control(self, control_id: str, rect: Rect, text: str):
+        """Create and register a LabelControl in one call."""
+        return self._add_control(LabelControl(control_id, Rect(rect), text))
+
+    def _build_task_buttons(self, task_slots):
+        """Build task launch buttons from declarative specs."""
+        task_buttons = []
+        for slot_rect, (control_id, label, launch_method_name, style) in zip(task_slots, _MANDEL_TASK_BUTTON_SPECS):
+            launch_method = getattr(self.feature, launch_method_name)
+            button = self._add_button_control(
+                control_id,
+                slot_rect,
+                label,
+                lambda _method=launch_method: _method(self.host),
+                style=style,
+            )
+            task_buttons.append(button)
+        return tuple(task_buttons)
