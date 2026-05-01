@@ -36,6 +36,7 @@ Safety rails:
 
 - Unknown settings keys are skipped during restore replay.
 - Missing settings blocks are tracked in restore summaries.
+- GuiEvent.clone() produces an independent copy: mutating propagation_stopped or default_prevented on the clone does not affect the original, and vice versa.
 
 ## 4. Observability and Diagnostics
 

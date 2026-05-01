@@ -125,6 +125,42 @@ class TestRuntimeGuaranteesAndDeterminism(unittest.TestCase):
         self.assertTrue(consumed)
         self.assertEqual(["scene_screen"], calls)
 
+    def test_gui_event_clone_has_independent_propagation_state(self):
+        original = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=1)
+        cloned = original.clone()
+
+        cloned.stop_propagation()
+
+        self.assertFalse(original.propagation_stopped)
+        self.assertTrue(cloned.propagation_stopped)
+
+    def test_gui_event_clone_has_independent_default_prevention_state(self):
+        original = GuiEvent(kind=EventType.MOUSE_BUTTON_DOWN, type=0, button=1)
+        cloned = original.clone()
+
+        cloned.prevent_default()
+
+        self.assertFalse(original.default_prevented)
+        self.assertTrue(cloned.default_prevented)
+
+    def test_gui_event_clone_preserves_payload_fields(self):
+        original = GuiEvent(kind=EventType.KEY_DOWN, type=0, key=65, mod=4, control_id="my_widget")
+        cloned = original.clone()
+
+        self.assertEqual(original.kind, cloned.kind)
+        self.assertEqual(original.key, cloned.key)
+        self.assertEqual(original.mod, cloned.mod)
+        self.assertEqual(original.control_id, cloned.control_id)
+
+    def test_stop_propagation_on_original_does_not_affect_clone(self):
+        original = GuiEvent(kind=EventType.KEY_UP, type=0, key=2)
+        cloned = original.clone()
+
+        original.stop_propagation()
+
+        self.assertTrue(original.propagation_stopped)
+        self.assertFalse(cloned.propagation_stopped)
+
 
 if __name__ == "__main__":
     unittest.main()
