@@ -39,7 +39,7 @@ Safety rails:
 The runtime exposes:
 
 - Telemetry spans in high-frequency app paths.
-- A structured restore summary via WorkspacePersistenceManager.restore_with_report.
+- A structured restore summary via WorkspacePersistenceManager.restore.
 
 The restore report includes:
 

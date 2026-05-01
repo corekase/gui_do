@@ -63,7 +63,7 @@ class _StubSettingsRegistry:
 
 
 class TestWorkspacePersistenceObservability(unittest.TestCase):
-    def test_restore_with_report_tracks_scene_features_snapshot_and_settings(self):
+    def test_restore_tracks_scene_features_snapshot_and_settings(self):
         manager = WorkspacePersistenceManager()
         manager.register_settings("settings", _StubSettingsRegistry())
         app = _StubApp()
@@ -91,7 +91,7 @@ class TestWorkspacePersistenceObservability(unittest.TestCase):
             },
         )
 
-        report = manager.restore_with_report(state, app, feature_manager=feature_manager)
+        report = manager.restore(state, app, feature_manager=feature_manager)
 
         self.assertEqual("systems", app.active_scene_name)
         self.assertEqual(["systems"], app.switched_to)
@@ -111,7 +111,7 @@ class TestWorkspacePersistenceObservability(unittest.TestCase):
         self.assertEqual(1, report["skipped_settings"])
         self.assertEqual([], report["missing_settings_blocks"])
 
-    def test_restore_with_report_tracks_missing_blocks_and_malformed_payloads(self):
+    def test_restore_tracks_missing_blocks_and_malformed_payloads(self):
         manager = WorkspacePersistenceManager()
         app = _StubApp()
         state = WorkspaceState(
@@ -121,7 +121,7 @@ class TestWorkspacePersistenceObservability(unittest.TestCase):
             }
         )
 
-        report = manager.restore_with_report(state, app, feature_manager=None)
+        report = manager.restore(state, app, feature_manager=None)
 
         self.assertFalse(report["switched_scene"])
         self.assertFalse(report["restored_feature_states"])

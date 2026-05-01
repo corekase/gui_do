@@ -19,8 +19,7 @@ Execution was performed according to the staged plan in docs/final_consideration
 
 ### Runtime and API behavior
 
-- Added WorkspacePersistenceManager.restore_with_report in gui_do/persistence/workspace_persistence.py.
-- Kept WorkspacePersistenceManager.restore backward compatible by delegating to restore_with_report.
+- Updated WorkspacePersistenceManager.restore in gui_do/persistence/workspace_persistence.py to return a structured restore report directly.
 - Restore report fields:
   - target_scene
   - switched_scene

@@ -94,16 +94,8 @@ class WorkspacePersistenceManager:
             metadata=dict(metadata or {}),
         )
 
-    def restore(self, state: WorkspaceState, app, *, feature_manager=None) -> None:
-        self.restore_with_report(state, app, feature_manager=feature_manager)
-
-    def restore_with_report(self, state: WorkspaceState, app, *, feature_manager=None) -> Dict[str, Any]:
-        """Restore workspace state and return a structured summary report.
-
-        The return payload provides operational visibility for callers that need
-        diagnostics or test assertions while keeping :meth:`restore` backward
-        compatible for existing consumers.
-        """
+    def restore(self, state: WorkspaceState, app, *, feature_manager=None) -> Dict[str, Any]:
+        """Restore workspace state and return a structured summary report."""
         report: Dict[str, Any] = {
             "target_scene": str(state.active_scene_name),
             "switched_scene": False,
