@@ -23,6 +23,27 @@ from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 
+# ---------------------------------------------------------------------------
+# Mandelbrot window layout constants — single source of truth for sizing and layout
+# ---------------------------------------------------------------------------
+_MANDEL_PAD = 10          # Uniform padding inside the window body on all four sides
+_MANDEL_CTRL_GAP = 8      # Gap between canvas bottom edge and the button strip
+_MANDEL_STATUS_GAP = 6    # Gap between button strip and status label
+_MANDEL_CTRL_H = 30       # Button strip height
+_MANDEL_STATUS_H = 20     # Status label height
+_MANDEL_CANVAS_SIZE = 580 # Square canvas dimension
+_MANDEL_TITLEBAR_H = 24   # Estimated titlebar height (matches size-14 title font)
+
+_MANDEL_BODY_W = _MANDEL_PAD + _MANDEL_CANVAS_SIZE + _MANDEL_PAD
+_MANDEL_BODY_H = (
+    _MANDEL_PAD + _MANDEL_CANVAS_SIZE
+    + _MANDEL_CTRL_GAP + _MANDEL_CTRL_H
+    + _MANDEL_STATUS_GAP + _MANDEL_STATUS_H
+    + _MANDEL_PAD
+)
+_MANDEL_WINDOW_SIZE = (_MANDEL_BODY_W, _MANDEL_TITLEBAR_H + _MANDEL_BODY_H)
+# ---------------------------------------------------------------------------
+
 MANDEL_STATUS_TOPIC = "demo.mandel.status"
 MANDEL_STATUS_SCOPE = "main"
 
@@ -249,7 +270,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             window_control_cls=WindowControl,
             control_id="mandelbrot_window",
             title="Mandelbrot Demo",
-            size=(660, 688),
+            size=_MANDEL_WINDOW_SIZE,
             anchor="top_left",
             margin=(28, 92),
             title_font_role=self.font_role("window_title"),
@@ -863,31 +884,15 @@ class _MandelbrotWindowPresenter(WindowPresenter):
     def on_create(self):
         from gui_do import partition_rects
         content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=0, padding_y=0)
-        left = padded_content_rect.left
-        top = padded_content_rect.top
-        width = padded_content_rect.width
-        height = padded_content_rect.height
-        control_height = 30
-        status_height = 20
-        controls_and_status_height = control_height + status_height + 12
-        bottom_visual_padding = 0
-        grid_gap = 6
-        canvas_area_bottom = padded_content_rect.bottom - bottom_visual_padding - controls_and_status_height
-        canvas_area_width = padded_content_rect.width
+        padded = inset_rect(content_rect, padding_x=_MANDEL_PAD, padding_y=_MANDEL_PAD)
 
-        [primary_canvas_rect] = partition_rects(
-            padded_content_rect, rows=1, cols=1, gap=grid_gap,
-            bottom_padding=bottom_visual_padding, controls_and_status_height=controls_and_status_height,
-        )
-        self.primary_canvas = CanvasControl("mandel_canvas", primary_canvas_rect, max_events=128)
+        canvas_area = Rect(padded.left, padded.top, padded.width, _MANDEL_CANVAS_SIZE)
+
+        self.primary_canvas = CanvasControl("mandel_canvas", Rect(canvas_area), max_events=128)
         self.add_control(self.primary_canvas)
         self.feature.primary_canvas = self.primary_canvas
 
-        canvas_rects = partition_rects(
-            padded_content_rect, rows=2, cols=2, gap=6,
-            bottom_padding=bottom_visual_padding, controls_and_status_height=controls_and_status_height,
-        )
+        canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
         self.split_canvases = {
             "can1": CanvasControl("can1", canvas_rects[0], max_events=32),
             "can2": CanvasControl("can2", canvas_rects[1], max_events=32),
@@ -899,12 +904,12 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             self.add_control(c)
         self.feature.split_canvases = self.split_canvases
 
-        controls_y = canvas_area_bottom + 6
+        controls_y = padded.top + _MANDEL_CANVAS_SIZE + _MANDEL_CTRL_GAP
         row_strip_padding = 12
         slots = centered_horizontal_strip_layout(
-            left=padded_content_rect.left + row_strip_padding,
-            width=max(1, canvas_area_width - (row_strip_padding * 2)),
-            y=controls_y, item_count=5, item_height=control_height, spacing=8,
+            left=padded.left + row_strip_padding,
+            width=max(1, padded.width - (row_strip_padding * 2)),
+            y=controls_y, item_count=5, item_height=_MANDEL_CTRL_H, spacing=8,
         )
         mandel_reset_rect, mandel_iter_rect, mandel_recur_rect, mandel_one_split_rect, mandel_four_split_rect = slots
 
@@ -942,9 +947,9 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             self.mandel_four_split_button,
         )
 
-        status_y = controls_y + control_height + 6
+        status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
         self.status_label = LabelControl(
-            "mandel_status", Rect(padded_content_rect.left, status_y, canvas_area_width, status_height),
+            "mandel_status", Rect(padded.left, status_y, padded.width, _MANDEL_STATUS_H),
             self.feature.status_text
         )
         self.add_control(self.status_label)
