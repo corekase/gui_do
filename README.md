@@ -22,9 +22,6 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - [Data-Driven Bootstrap](#data-driven-bootstrap)
 - [Overview](#overview)
 - [Minimal Runnable Example and Configuration](#minimal-runnable-example-and-configuration)
-- [Package Management](#package-management)
-  - Start a New Project
-  - Add to or Update an Existing Project
 - [Application Bootstrap](#application-bootstrap)
   - Display Creation
   - GuiApplication
@@ -624,50 +621,6 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 ```
-
----
-
-## Package Management
-
-[Back to Top](#table-of-contents)
-
-The repository includes `scripts/manage.py` for consumer-project bootstrap and upgrade flows. The tool supports `init`, `apply`, `verify`, `check`, and `update` so a developer can start from a clean library-first checkout or sync a newer gui_do version into an existing project.
-
-### Start a New Project
-
-Use `init` in a cloned or downloaded gui_do repository when you want to strip bundled demo content and keep the library plus its support files:
-
-```bash
-python scripts/manage.py init --verify
-```
-
-Optional scaffold generation:
-
-```bash
-python scripts/manage.py init --scaffold --scaffold-file myapp.py --scaffold-package features --verify
-```
-
-Useful flags:
-
-- `--dry-run` previews changes.
-- `--skip-doc-sync` skips README and docs synchronization.
-- `--skip-workflow-sync` skips CI workflow synchronization.
-
-### Add to or Update an Existing Project
-
-Use `check` before copying gui_do into another project:
-
-```bash
-python scripts/manage.py check --target D:/Code/my_app
-```
-
-Then use `update` to copy the current library-only directories and root files into the target project and run `apply` there:
-
-```bash
-python scripts/manage.py update --target D:/Code/my_app --verify
-```
-
-The update flow copies `gui_do/`, `scripts/`, `tests/`, `docs/`, `README.md`, and the packaging files that define the public package contract.
 
 ---
 
