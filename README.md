@@ -33,6 +33,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - Display and Container Controls
   - Text Controls
   - TextFlow and TextSpan
+  - TextSearcher and TextMatch
   - Selection, Range, and Data Controls
   - Canvas, Scroll, and Advanced Inputs
 - [Layout](#layout)
@@ -41,6 +42,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ConstraintLayout
   - FlexLayout
   - GridLayout
+  - CellCaretLayout and CellCaretState
   - FlowLayout and FlowItem
   - DockWorkspace and DockWorkspacePanel
   - WindowTilingManager
@@ -170,6 +172,8 @@ gui_do is built around two intertwined paradigms: **data-driven reactive UI** an
 
 ### Getting Started: First Scene
 
+[Back to Top](#table-of-contents)
+
 Every gui_do application needs a display surface, a `GuiApplication`, and at least one scene. `create_display` calls `pygame.init()` internally so no separate initialization is needed. `run_entrypoint` drives the main loop until the window is closed.
 
 ```python
@@ -217,6 +221,8 @@ app.switch_scene("settings")
 ```
 
 ### Observable Data and Reactive Bindings
+
+[Back to Top](#table-of-contents)
 
 Hard-coding attribute updates in callbacks works for trivial cases but becomes unwieldy as state grows. gui_do provides an **observable** layer so that UI controls react to data changes automatically — no polling, no manual refresh calls.
 
@@ -318,6 +324,8 @@ group.dispose()
 
 ### Organizing Code with the Feature System
 
+[Back to Top](#table-of-contents)
+
 As applications grow, packing controls, actions, subscriptions, and event handling into a single `main()` function becomes impractical. The **Feature** system groups all of that into lifecycle-aware, reusable modules that `FeatureManager` drives automatically.
 
 A `Feature` has four primary lifecycle hooks:
@@ -375,6 +383,8 @@ class ToolWindowFeature(Feature):
 ```
 
 ### Pure Graphics with DirectFeature
+
+[Back to Top](#table-of-contents)
 
 `DirectFeature` is a specialized feature subtype for content that **draws directly onto the display surface before GUI controls are composited on top**. Use it for:
 
@@ -443,6 +453,8 @@ app.run_entrypoint(target_fps=60)
 
 ### LogicFeature and RoutedFeature
 
+[Back to Top](#table-of-contents)
+
 **LogicFeature** provides a pure command endpoint pattern: other features send messages with a `command` key; the logic feature receives and handles them. This decouples producers from consumers so neither needs to import the other.
 
 ```python
@@ -490,6 +502,8 @@ self.send_message("event_logger", host, data={"user_id": 42}, topic="user.login"
 
 ### Feature Communication: Logic Binding
 
+[Back to Top](#table-of-contents)
+
 Logic binding lets a feature advertise a service interface under an alias so callers reference the alias instead of the concrete feature name. Swap the implementation without changing any callers.
 
 ```python
@@ -503,6 +517,8 @@ self.send_logic_message("storage", "save", {"key": "settings", "value": config})
 `bind_logic(provider_name, alias)` is stored in `FeatureManager`. All messages to the alias are forwarded to the concrete provider. When you replace the provider later, update one binding — all callers remain unchanged.
 
 ### Data-Driven Bootstrap
+
+[Back to Top](#table-of-contents)
 
 For multi-scene applications with many features, windows, and actions, the declarative **`HostApplicationConfig`** approach eliminates most boilerplate. Define your entire application structure as data, then call `bootstrap_host_application`:
 
@@ -863,6 +879,31 @@ used_height = flow.render(surface, x=20, y=40)
 
 `TextSpan` fields: `text`, `bold`, `italic`, `color` (RGB/RGBA or `None` for theme default), `role` (font role name).
 
+### TextSearcher and TextMatch
+
+`TextSearcher` is a plain-text and regex find/replace engine for searching string content. It wraps Python's `re` module and exposes case-insensitive, whole-word, and full-regex search over a string. `TextMatch` is the immutable result record for each match: `start`, `end`, and `text`. Replace operations return a new string and do not mutate the source; swap `TextSearcher.text` at runtime to search new content without constructing a new instance.
+
+```python
+from gui_do import TextMatch, TextSearcher
+
+searcher = TextSearcher("Hello World hello", case_sensitive=False)
+matches = searcher.find_all("hello")
+# [TextMatch(start=0, end=5, text='Hello'), TextMatch(start=12, end=17, text='hello')]
+
+next_match = searcher.find_next("hello", from_pos=1)
+prev_match  = searcher.find_prev("hello", from_pos=12)
+
+new_text = searcher.replace(next_match, "Hi")
+all_replaced = searcher.replace_all("hello", "Hi")
+
+# Whole-word mode:
+ws = TextSearcher(content, whole_word=True)
+
+# Regex mode (whole_word is ignored; embed \\b yourself if needed):
+rs = TextSearcher(content, use_regex=True)
+rs.find_all(r"\bv\d+\.\d+")
+```
+
 ### Selection, Range, and Data Controls
 
 gui_do includes small-value controls and larger selection/data controls in the same public surface:
@@ -1054,6 +1095,44 @@ layout.apply(container_rect)
 for node in layout.nodes():
     node.invalidate()
 ```
+
+### CellCaretLayout and CellCaretState
+
+`CellCaretLayout` places variable-size items into a grid of equal (or explicitly sized) cells, advancing an internal caret within each cell and overflowing to the next cell when an item no longer fits. It is useful for icon grids, tile palettes, and any layout where items of different sizes must be packed into discrete cell slots. `CellCaretState` is the immutable snapshot of the caret's current column, row, and pixel offset.
+
+```python
+from gui_do import CellCaretLayout, CellCaretState
+from pygame import Rect
+
+# Uniform cells — 4 columns, each cell 80×80 px, 4 px gaps:
+layout = CellCaretLayout(
+    bounds=Rect(0, 0, 340, 200),
+    cell_width=80,
+    cell_height=80,
+    columns=4,
+    cell_gap_x=4,
+    cell_gap_y=4,
+    flow_axis="vertical",   # items fill top-to-bottom within each cell
+)
+
+# Place items; returns the absolute Rect for each placed item:
+icon_rect  = layout.add(64, 64)   # 64×64 item placed in cell 0
+label_rect = layout.add(80, 16)   # overflows to next sub-slot
+
+# Jump to a specific cell:
+layout.move_to_cell(col=2, row=0)
+cell_rect = layout.cell_rect()          # absolute Rect of cell (2, 0)
+content   = layout.cell_content_rect(padding=8)  # inset by 8 px on all sides
+
+# Read caret position:
+state: CellCaretState = layout.state
+print(state.col, state.row, state.x, state.y)
+
+# Bind a LayoutManager's anchor to a cell:
+layout.bind_layout_manager(my_layout_manager, col=1, row=0, padding=4)
+```
+
+For variable cell sizes pass `cell_sizes=[(w1, h1), (w2, h2), ...]` at construction; the layout builds a row/column index from the list automatically.
 
 ### LayoutAnimator
 
@@ -3326,6 +3405,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `ColorPickerControl`
 - `TextFlow`
 - `TextSpan`
+- `TextSearcher`
+- `TextMatch`
 - `ProgressBarControl`
 - `AnimatedImageControl`
 
@@ -3346,6 +3427,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `GridLayout`
 - `GridTrack`
 - `GridPlacement`
+- `CellCaretLayout`
+- `CellCaretState`
 - `LayoutAnimator`
 - `LayoutPass`
 - `MeasureContext`
