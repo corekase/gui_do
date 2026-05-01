@@ -326,7 +326,7 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         presenter = object()
         window = _StubWindow()
 
-        with patch("demo_features.feature_abstractions.create_anchored_feature_window", return_value=window) as create_window:
+        with patch("gui_do.features.data_driven_runtime.create_anchored_feature_window", return_value=window) as create_window:
             result = create_presented_anchored_window(
                 host,
                 control_id="x",

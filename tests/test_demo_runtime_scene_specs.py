@@ -1,8 +1,9 @@
-import unittest
+﻿import unittest
 
 import pygame
 
-from gui_do_demo import GuiDoDemo
+from gui_do import apply_runtime_scene_pristine_assets, bind_runtime_scene_exit_keys, prewarm_runtime_scenes
+from demo_features.demo_config import RUNTIME_SCENE_SPECS
 
 
 class _StubActions:
@@ -27,43 +28,38 @@ class _StubApp:
 
 
 class TestDemoRuntimeSceneSpecs(unittest.TestCase):
-    def _make_demo(self):
-        demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.app = _StubApp()
-        return demo
-
     def test_runtime_scene_specs_apply_pristine_assets(self):
-        demo = self._make_demo()
+        app = _StubApp()
 
-        demo._apply_runtime_scene_pristine_assets()
+        apply_runtime_scene_pristine_assets(app, RUNTIME_SCENE_SPECS)
 
         self.assertEqual(
             [
                 ("demo_features/data/images/backdrop.jpg", "main"),
                 ("demo_features/data/images/backdrop.jpg", "control_showcase"),
             ],
-            demo.app.pristine_calls,
+            app.pristine_calls,
         )
 
     def test_runtime_scene_specs_bind_escape_to_exit(self):
-        demo = self._make_demo()
+        app = _StubApp()
 
-        demo._bind_runtime_scene_exit_keys()
+        bind_runtime_scene_exit_keys(app.actions, RUNTIME_SCENE_SPECS, key=pygame.K_ESCAPE)
 
         self.assertEqual(
             [
                 (pygame.K_ESCAPE, "exit", "main"),
                 (pygame.K_ESCAPE, "exit", "control_showcase"),
             ],
-            demo.app.actions.bound_keys,
+            app.actions.bound_keys,
         )
 
     def test_runtime_scene_specs_prewarm_targets(self):
-        demo = self._make_demo()
+        app = _StubApp()
 
-        demo._prewarm_runtime_scenes()
+        prewarm_runtime_scenes(app, RUNTIME_SCENE_SPECS)
 
-        self.assertEqual(["control_showcase"], demo.app.prewarm_calls)
+        self.assertEqual(["control_showcase"], app.prewarm_calls)
 
 
 if __name__ == "__main__":

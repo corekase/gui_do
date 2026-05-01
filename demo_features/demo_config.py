@@ -5,9 +5,6 @@ except ModuleNotFoundError:
 
 ensure_repo_root_on_path()
 
-from dataclasses import dataclass
-from typing import Callable
-
 from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
 from demo_features.controls_demo_feature import ControlsShowcaseFeature
 from demo_features.life_demo_feature import LifeSimulationFeature
@@ -15,52 +12,19 @@ from demo_features.main_demo_feature import MainDemoFeature
 from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
 from demo_features.systems_demo_feature import SystemsDemoFeature
 
-from gui_do import SceneSetupSpec, SceneTransitionStyle
-
-
-@dataclass(frozen=True)
-class FeatureSpec:
-    attr_name: str
-    factory: Callable[[], object]
-
-
-@dataclass(frozen=True)
-class WindowSpec:
-    key: str
-    feature_attr: str
-    toggle_attr: str
-    action_name: str
-    action_label: str
-    task_panel_button_id: str
-    task_panel_label: str
-    task_panel_style: str
-    task_panel_slot_index: int
-    tab_before_showcase: bool
-    accessibility_label: str
-
-
-@dataclass(frozen=True)
-class RuntimeSceneSpec:
-    scene_name: str
-    pristine_asset: str | None = None
-    bind_escape_to_exit: bool = False
-    prewarm: bool = False
-
-
-@dataclass(frozen=True)
-class ActionSpec:
-    action_id: str
-    label: str
-    kind: str
-    target: str | None = None
-    category: str | None = None
-
-
-@dataclass(frozen=True)
-class StaticAccessibilitySpec:
-    control_attr: str
-    role: str
-    label: str
+from gui_do import (
+    ActionSpec,
+    CursorSpec,
+    FeatureSpec,
+    HostApplicationConfig,
+    RuntimeSceneSpec,
+    SceneRootSpec,
+    SceneSetupSpec,
+    SceneTransitionStyle,
+    StaticAccessibilitySpec,
+    TelemetryConfig,
+    WindowSpec,
+)
 
 
 SCENE_SPECS = (
@@ -193,4 +157,32 @@ STATIC_ACCESSIBILITY_SPECS = (
         role="button",
         label="Showcase",
     ),
+)
+
+DEMO_BOOTSTRAP_CONFIG = HostApplicationConfig(
+    display_size=(1920, 1080),
+    window_title="gui_do demo",
+    fonts={
+        "default": {"file": "demo_features/data/fonts/Ubuntu-B.ttf", "size": 14},
+        "window": "demo_features/data/fonts/Gimbot.ttf",
+    },
+    font_role_specs=(
+        {"title": {"size": 14, "font": "window"}},
+    ),
+    cursors=(
+        CursorSpec("normal", "demo_features/data/cursors/cursor.png", (1, 1)),
+        CursorSpec("hand", "demo_features/data/cursors/hand.png", (12, 12)),
+    ),
+    scene_specs=SCENE_SPECS,
+    feature_specs=FEATURE_SPECS,
+    window_specs=WINDOW_SPECS,
+    runtime_scene_specs=RUNTIME_SCENE_SPECS,
+    action_specs=ACTION_SPECS,
+    static_accessibility_specs=STATIC_ACCESSIBILITY_SPECS,
+    initial_scene_name="main",
+    scene_roots=(
+        SceneRootSpec("control_showcase", "control_showcase_root", draw_background=False),
+    ),
+    telemetry=TelemetryConfig(enabled=False, live_analysis_enabled=True, file_logging_enabled=False),
+    target_fps=120,
 )

@@ -95,6 +95,48 @@ from .features.feature_lifecycle import (
     SceneSetupSpec,
     apply_scene_setup_specs,
 )
+from .features.data_driven_runtime import (
+    build_tools_menu_entries,
+    add_standard_scene_menu_strip,
+    apply_accessibility_sequence,
+    register_companion_logic_features,
+    ensure_scene_scheduler,
+    sorted_window_bindings,
+    collect_window_toggle_controls,
+    apply_window_toggle_accessibility,
+    add_window_toggle_task_panel_controls,
+    register_window_toggle_tooltips,
+    initialize_locale_registry,
+    bind_input_map_actions,
+    register_descriptors,
+    resolve_canvas_local_point,
+    apply_runtime_scene_pristine_assets,
+    bind_runtime_scene_exit_keys,
+    prewarm_runtime_scenes,
+    add_task_panel_button,
+    register_tooltip_specs,
+    instantiate_features_from_specs,
+    register_features_from_specs,
+    register_window_presentation_specs,
+    register_window_tab_builders,
+    create_presented_anchored_window,
+    # Spec dataclasses
+    FeatureSpec,
+    WindowSpec,
+    RuntimeSceneSpec,
+    ActionSpec,
+    StaticAccessibilitySpec,
+    CursorSpec,
+    SceneRootSpec,
+    TelemetryConfig,
+    HostApplicationConfig,
+    # Bootstrap entrypoint
+    bootstrap_host_application,
+    # Promoted internal bootstrap helpers (useful for targeted testing and extension)
+    declare_host_actions,
+    build_host_main_tab_order,
+    apply_host_main_accessibility,
+)
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl
 from .layout.constraint_layout import ConstraintLayout, AnchorConstraint

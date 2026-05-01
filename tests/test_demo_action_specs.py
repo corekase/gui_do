@@ -1,6 +1,7 @@
-import unittest
+﻿import unittest
 
-from gui_do_demo import GuiDoDemo
+from gui_do import declare_host_actions
+from demo_features.demo_config import ACTION_SPECS
 
 
 class _StubActionRegistry:
@@ -47,28 +48,31 @@ class _StubApp:
         self.running = True
 
 
-class TestDemoActionSpecs(unittest.TestCase):
-    def _make_demo(self):
-        demo = GuiDoDemo.__new__(GuiDoDemo)
-        demo.action_registry = _StubActionRegistry()
-        demo.window_presentation = _StubWindowPresentation()
-        demo.scene_transitions = _StubSceneTransitions()
-        demo._palette_manager = _StubPaletteManager()
-        demo.app = _StubApp()
-        return demo
+class _StubHost:
+    def __init__(self):
+        self.action_registry = _StubActionRegistry()
+        self.window_presentation = _StubWindowPresentation()
+        self.scene_transitions = _StubSceneTransitions()
+        self._palette_manager = _StubPaletteManager()
+        self.app = _StubApp()
 
-    def _declarations_by_id(self, demo):
-        return {item["action_id"]: item for item in demo.action_registry.declarations}
+
+class TestDemoActionSpecs(unittest.TestCase):
+    def _make_host(self):
+        return _StubHost()
+
+    def _declarations_by_id(self, host):
+        return {item["action_id"]: item for item in host.action_registry.declarations}
 
     def test_register_app_actions_declares_expected_metadata(self):
-        demo = self._make_demo()
+        host = self._make_host()
 
-        demo._register_app_actions()
+        declare_host_actions(host, ACTION_SPECS)
 
-        by_id = self._declarations_by_id(demo)
+        by_id = self._declarations_by_id(host)
         self.assertEqual(
             ["exit", "nav_main", "nav_showcase", "palette_open"],
-            [d["action_id"] for d in demo.action_registry.declarations],
+            [d["action_id"] for d in host.action_registry.declarations],
         )
         self.assertEqual("Exit", by_id["exit"]["label"])
         self.assertEqual("File", by_id["exit"]["category"])
@@ -79,24 +83,24 @@ class TestDemoActionSpecs(unittest.TestCase):
         self.assertEqual("Open Command Palette (F5)", by_id["palette_open"]["label"])
         self.assertIsNone(by_id["palette_open"]["category"])
 
-        self.assertEqual(1, len(demo.window_presentation.declare_calls))
-        self.assertEqual("Windows", demo.window_presentation.declare_calls[0][1])
+        self.assertEqual(1, len(host.window_presentation.declare_calls))
+        self.assertEqual("Windows", host.window_presentation.declare_calls[0][1])
 
     def test_registered_handlers_preserve_behavior(self):
-        demo = self._make_demo()
+        host = self._make_host()
 
-        demo._register_app_actions()
-        by_id = self._declarations_by_id(demo)
+        declare_host_actions(host, ACTION_SPECS)
+        by_id = self._declarations_by_id(host)
 
         self.assertTrue(by_id["exit"]["handler"](None, None))
-        self.assertFalse(demo.app.running)
+        self.assertFalse(host.app.running)
 
         self.assertTrue(by_id["nav_main"]["handler"](None, None))
         self.assertTrue(by_id["nav_showcase"]["handler"](None, None))
-        self.assertEqual(["main", "control_showcase"], demo.scene_transitions.go_calls)
+        self.assertEqual(["main", "control_showcase"], host.scene_transitions.go_calls)
 
         self.assertTrue(by_id["palette_open"]["handler"](None, None))
-        self.assertEqual([demo.app], demo._palette_manager.show_calls)
+        self.assertEqual([host.app], host._palette_manager.show_calls)
 
 
 if __name__ == "__main__":
