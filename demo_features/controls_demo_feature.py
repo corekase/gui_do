@@ -58,7 +58,6 @@ from gui_do import (
     SpriteSheet,
     TabControl,
     TabItem,
-    TaskPanelControl,
     TextAreaControl,
     TextInputControl,
     ToastSeverity,
@@ -123,7 +122,7 @@ class ControlsShowcaseFeature(Feature):
     """Render all controls except task panel/window in grouped, non-uniform layouts."""
 
     HOST_REQUIREMENTS = {
-        "build": ("app", "control_showcase_root"),
+        "build": ("app", "scene_presentation", "control_showcase_root"),
         "configure_accessibility": ("app",),
         "on_update": ("app",),
         "prewarm": ("app",),
@@ -1432,37 +1431,15 @@ class ControlsShowcaseFeature(Feature):
         self._focus_controls = []
 
     def _build_scene_task_panel(self, host) -> None:
-        screen_rect = getattr(host, "screen_rect", None)
-        if screen_rect is None:
-            screen_rect = host.app.screen.get_rect()
-
-        ensure_task_panel = getattr(host, "ensure_scene_task_panel", None)
-        if callable(ensure_task_panel):
-            self.task_panel = ensure_task_panel(
-                self.scene_name,
-                control_id="control_showcase_task_panel",
-                height=self.TASK_PANEL_HEIGHT,
-                hidden_peek_pixels=self.TASK_PANEL_HIDDEN_PEEK_PIXELS,
-                animation_step_px=self.TASK_PANEL_ANIMATION_STEP_PX,
-                dock_bottom=True,
-                auto_hide=True,
-            )
-        else:
-            self.task_panel = host.app.add(
-                TaskPanelControl(
-                    "control_showcase_task_panel",
-                    Rect(0, screen_rect.height - self.TASK_PANEL_HEIGHT, screen_rect.width, self.TASK_PANEL_HEIGHT),
-                    auto_hide=True,
-                    hidden_peek_pixels=self.TASK_PANEL_HIDDEN_PEEK_PIXELS,
-                    animation_step_px=self.TASK_PANEL_ANIMATION_STEP_PX,
-                    dock_bottom=True,
-                ),
-                scene_name=self.scene_name,
-            )
-
-        register_task_panel = getattr(host, "register_scene_task_panel", None)
-        if callable(register_task_panel):
-            register_task_panel(self.scene_name, self.task_panel)
+        self.task_panel = host.scene_presentation.ensure_scene_task_panel(
+            self.scene_name,
+            control_id="control_showcase_task_panel",
+            height=self.TASK_PANEL_HEIGHT,
+            hidden_peek_pixels=self.TASK_PANEL_HIDDEN_PEEK_PIXELS,
+            animation_step_px=self.TASK_PANEL_ANIMATION_STEP_PX,
+            dock_bottom=True,
+            auto_hide=True,
+        )
 
         return_rect = Rect(
             self.TASK_PANEL_BUTTON_LEFT,

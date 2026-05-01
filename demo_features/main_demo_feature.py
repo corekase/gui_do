@@ -81,12 +81,10 @@ class MainDemoFeature(Feature):
         "build": (
             "app",
             "screen_rect",
-            "ensure_scene_task_panel",
+            "scene_presentation",
             "go_to_main",
             "go_to_control_showcase",
-            "set_life_window_visible",
-            "set_mandel_window_visible",
-            "set_systems_window_visible",
+            "window_presentation",
             "action_registry",
         ),
         "bind_runtime": ("app", "action_registry"),
@@ -97,17 +95,6 @@ class MainDemoFeature(Feature):
         self._help_overlay: ShortcutHelpOverlay | None = None
 
     def build(self, host) -> None:
-        def _on_window_toggled_from_menu(window, next_visible: bool) -> None:
-            control_id = str(getattr(window, "control_id", "")).strip()
-            if control_id == "life_window":
-                host.set_life_window_visible(bool(next_visible))
-                return
-            if control_id == "mandelbrot_window":
-                host.set_mandel_window_visible(bool(next_visible))
-                return
-            if control_id == "systems_window":
-                host.set_systems_window_visible(bool(next_visible))
-
         host.root = host.app.add(
             PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height), draw_background=False),
             scene_name="main",
@@ -131,13 +118,13 @@ class MainDemoFeature(Feature):
                 windows_shown=True,
                 extra_entries_provider=_extra_entries,
                 on_scene_selected=scene_select,
-                on_window_toggled=_on_window_toggled_from_menu,
+                on_window_toggled=host.window_presentation.handle_window_toggle,
             )
         )
         host.screen_title = host.root.add(
             self._make_sized_title_label(host, "screen_title", "gui_do", 24, 36, fallback_size=(640, 96))
         )
-        host.task_panel = host.ensure_scene_task_panel(
+        host.task_panel = host.scene_presentation.ensure_scene_task_panel(
             "main",
             control_id="task_panel",
             height=50,
@@ -155,32 +142,12 @@ class MainDemoFeature(Feature):
             horizontal=True,
         )
 
-        def _on_systems_toggle(pushed: bool) -> None:
-            host.set_systems_window_visible(bool(pushed), from_toggle=True)
-
-        def _on_life_toggle(pushed: bool) -> None:
-            host.set_life_window_visible(bool(pushed), from_toggle=True)
-
-        def _on_mandel_toggle(pushed: bool) -> None:
-            host.set_mandel_window_visible(bool(pushed), from_toggle=True)
-
         host.exit_button = host.task_panel.add(
             ButtonControl(
                 "exit",
                 host.app.layout.linear(0),
                 "Exit",
                 lambda: setattr(host.app, "running", False),
-                style="angle",
-            )
-        )
-        host.systems_toggle_window = host.task_panel.add(
-            ToggleControl(
-                "show_systems",
-                host.app.layout.linear(1),
-                "System",
-                "System",
-                pushed=False,
-                on_toggle=_on_systems_toggle,
                 style="angle",
             )
         )
@@ -193,32 +160,37 @@ class MainDemoFeature(Feature):
                 style="angle",
             )
         )
-        host.life_toggle_window = host.task_panel.add(
-            ToggleControl(
-                "show_life",
-                host.app.layout.linear(3),
-                "Life",
-                "Life",
-                pushed=False,
-                on_toggle=_on_life_toggle,
-                style="round",
+
+        toggle_controls = []
+        bindings = list(host.window_presentation.bindings())
+        next_slot_index = 1
+        for idx, binding in enumerate(bindings):
+            if idx == 1:
+                next_slot_index = 3
+            toggle = host.task_panel.add(
+                ToggleControl(
+                    binding.task_panel_button_id or f"show_{binding.key}",
+                    host.app.layout.linear(next_slot_index),
+                    binding.task_panel_label or binding.key.title(),
+                    binding.task_panel_label or binding.key.title(),
+                    pushed=False,
+                    on_toggle=lambda pushed, _key=binding.key: host.window_presentation.set_visible(
+                        _key,
+                        bool(pushed),
+                        from_toggle=True,
+                    ),
+                    style=binding.task_panel_style,
+                )
             )
-        )
-        host.mandel_toggle_window = host.task_panel.add(
-            ToggleControl(
-                "show_mandel",
-                host.app.layout.linear(4),
-                "Mandelbrot",
-                "Mandelbrot",
-                pushed=False,
-                on_toggle=_on_mandel_toggle,
-                style="round",
-            )
-        )
+            if binding.toggle_attr:
+                setattr(host, binding.toggle_attr, toggle)
+            toggle_controls.append((binding, toggle))
+            next_slot_index += 1
+
         host.help_button = host.task_panel.add(
             ButtonControl(
                 "show_help",
-                host.app.layout.linear(5),
+                host.app.layout.linear(max(5, next_slot_index)),
                 "Help (F9)",
                 lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
                 style="angle",
@@ -227,10 +199,10 @@ class MainDemoFeature(Feature):
 
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
         host._main_tooltip_manager.register(host.exit_button, "Exit the application")
-        host._main_tooltip_manager.register(host.systems_toggle_window, "Toggle the Systems demo window")
         host._main_tooltip_manager.register(host.showcase_button, "Open the control showcase scene")
-        host._main_tooltip_manager.register(host.life_toggle_window, "Toggle the Life simulation window")
-        host._main_tooltip_manager.register(host.mandel_toggle_window, "Toggle the Mandelbrot fractal window")
+        for binding, toggle in toggle_controls:
+            label = binding.task_panel_label or binding.action_label or binding.key.title()
+            host._main_tooltip_manager.register(toggle, f"Toggle the {label} window")
         host._main_tooltip_manager.register(host.help_button, "Show keyboard shortcut reference (F1)")
 
         host.app.tile_windows()

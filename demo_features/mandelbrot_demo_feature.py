@@ -16,10 +16,8 @@ from gui_do import (
     LabelControl,
     LogicFeature,
     RoutedFeature,
-    toggle_window_visibility,
     WindowControl,
 )
-from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 

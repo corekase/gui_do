@@ -18,11 +18,9 @@ from gui_do import (
     RoutedFeature,
     SliderControl,
     split_slot_bounds,
-    toggle_window_visibility,
     ToggleControl,
     WindowControl,
 )
-from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 

@@ -91,6 +91,9 @@ from .features.feature_lifecycle import (
     PlacedControl,
     setup_standard_font_roles,
     register_standard_actions,
+    ScenePresentationModel,
+    SceneSetupSpec,
+    apply_scene_setup_specs,
 )
 from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
 from .controls.input.text_input_control import TextInputControl

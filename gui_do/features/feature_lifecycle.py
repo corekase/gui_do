@@ -21,10 +21,24 @@ if TYPE_CHECKING:
 # Additional Demo/Feature Helpers (2026-04-30)
 # ---------------------------------------------------------------------------
 
+def _resolve_window_target(window):
+    """Return a window instance from a direct value or zero-arg getter."""
+    if callable(window):
+        try:
+            return window()
+        except TypeError:
+            return window
+    return window
+
+
 def register_standard_actions(action_registry, app=None, scene_transitions=None, palette_manager=None, window_toggles=None):
     """
     Register standard demo actions (exit, navigation, palette, window toggles) in the action registry.
-    window_toggles: dict mapping action name to (window, setter_name) or (window, None)
+    window_toggles: dict mapping action name to one of:
+        - callable callback
+        - (window_or_getter, setter_name)
+        - (window_or_getter, setter_callable)
+        - (window_or_getter, None)
     """
     if action_registry is None:
         return
@@ -39,11 +53,33 @@ def register_standard_actions(action_registry, app=None, scene_transitions=None,
         action_registry.register_action("show_palette", lambda *_: palette_manager.show())
     # Window toggles
     if window_toggles:
-        for action, (window, setter_name) in window_toggles.items():
-            if setter_name:
-                action_registry.register_action(action, lambda *_: toggle_window_visibility(window, host=app, host_setter_name=setter_name))
+        for action, binding in window_toggles.items():
+            if callable(binding):
+                action_registry.register_action(action, lambda *_args, _binding=binding: _binding())
+                continue
+            window, setter = binding
+            if callable(setter):
+                action_registry.register_action(
+                    action,
+                    lambda *_args, _window=window, _setter=setter: _setter(
+                        not bool(getattr(_resolve_window_target(_window), "visible", False))
+                    ),
+                )
+                continue
+            if setter:
+                action_registry.register_action(
+                    action,
+                    lambda *_args, _window=window, _setter_name=setter: toggle_window_visibility(
+                        _resolve_window_target(_window),
+                        host=app,
+                        host_setter_name=_setter_name,
+                    ),
+                )
             else:
-                action_registry.register_action(action, lambda *_: toggle_window_visibility(window))
+                action_registry.register_action(
+                    action,
+                    lambda *_args, _window=window: toggle_window_visibility(_resolve_window_target(_window)),
+                )
 
 
 def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
@@ -672,6 +708,309 @@ def set_window_visible_state(
         setter = getattr(host, host_setter_name, None)
         if callable(setter):
             setter(is_visible)
+
+
+@dataclass(frozen=True)
+class FeatureWindowBinding:
+    """Declarative presentation metadata for a feature-owned demo window."""
+
+    key: str
+    feature_attr: str
+    toggle_attr: str | None = None
+    action_name: str | None = None
+    action_label: str | None = None
+    task_panel_button_id: str | None = None
+    task_panel_label: str | None = None
+    task_panel_style: str = "round"
+    accessibility_label: str | None = None
+
+
+class FeatureWindowPresentationModel:
+    """Resolve feature-owned windows and keep demo presentation state in sync."""
+
+    def __init__(self, host, *, tile_windows: Optional[Callable[[], None]] = None) -> None:
+        self.host = host
+        self._tile_windows = tile_windows
+        self._bindings: "OrderedDict[str, FeatureWindowBinding]" = OrderedDict()
+        self._bindings_by_control_id: dict[str, str] = {}
+
+    def register_feature_window(
+        self,
+        key: str,
+        *,
+        feature_attr: str,
+        toggle_attr: str | None = None,
+        action_name: str | None = None,
+        action_label: str | None = None,
+        task_panel_button_id: str | None = None,
+        task_panel_label: str | None = None,
+        task_panel_style: str = "round",
+        accessibility_label: str | None = None,
+    ) -> FeatureWindowBinding:
+        binding = FeatureWindowBinding(
+            key=str(key),
+            feature_attr=str(feature_attr),
+            toggle_attr=None if toggle_attr is None else str(toggle_attr),
+            action_name=None if action_name is None else str(action_name),
+            action_label=None if action_label is None else str(action_label),
+            task_panel_button_id=None if task_panel_button_id is None else str(task_panel_button_id),
+            task_panel_label=None if task_panel_label is None else str(task_panel_label),
+            task_panel_style=str(task_panel_style),
+            accessibility_label=None if accessibility_label is None else str(accessibility_label),
+        )
+        self._bindings[binding.key] = binding
+        return binding
+
+    def bindings(self) -> tuple[FeatureWindowBinding, ...]:
+        return tuple(self._bindings.values())
+
+    def get_binding(self, key: str) -> FeatureWindowBinding:
+        return self._bindings[str(key)]
+
+    def get_window(self, key: str):
+        binding = self.get_binding(key)
+        feature = getattr(self.host, binding.feature_attr, None)
+        if feature is None:
+            return None
+        window = getattr(feature, "window", None)
+        if window is None:
+            return None
+        control_id = getattr(window, "control_id", None)
+        if control_id:
+            self._bindings_by_control_id[str(control_id)] = binding.key
+        return window
+
+    def get_toggle(self, key: str):
+        binding = self.get_binding(key)
+        if binding.toggle_attr is None:
+            return None
+        return getattr(self.host, binding.toggle_attr, None)
+
+    def set_visible(self, key: str, visible: bool, *, from_toggle: bool = False) -> None:
+        set_window_visible_state(
+            self.get_window(key),
+            visible,
+            toggle=self.get_toggle(key),
+            from_toggle=from_toggle,
+            tile_windows=self._tile_windows,
+        )
+
+    def show(self, key: str) -> None:
+        self.set_visible(key, True)
+
+    def toggle(self, key: str, *, from_toggle: bool = False) -> bool:
+        window = self.get_window(key)
+        next_visible = not bool(window is not None and getattr(window, "visible", False))
+        self.set_visible(key, next_visible, from_toggle=from_toggle)
+        return next_visible
+
+    def sync_initial_visibility(self, *, visible: bool = False) -> None:
+        for key in self._bindings:
+            self.set_visible(key, visible)
+
+    def handle_window_toggle(self, window, next_visible: bool) -> bool:
+        if window is None:
+            return False
+        control_id = str(getattr(window, "control_id", "")).strip()
+        key = self._bindings_by_control_id.get(control_id)
+        if key is None:
+            for candidate_key in self._bindings:
+                candidate_window = self.get_window(candidate_key)
+                if candidate_window is window:
+                    key = candidate_key
+                    break
+        if key is None:
+            return False
+        self.set_visible(key, bool(next_visible))
+        return True
+
+    def action_callbacks(self) -> dict[str, Callable[[], None]]:
+        callbacks: dict[str, Callable[[], None]] = {}
+        for binding in self._bindings.values():
+            if not binding.action_name:
+                continue
+            callbacks[binding.action_name] = lambda _key=binding.key: self.toggle(_key)
+        return callbacks
+
+    def declare_actions(self, action_registry, *, category: str = "Windows") -> None:
+        if action_registry is None:
+            return
+        for binding in self._bindings.values():
+            if not binding.action_name or not binding.action_label:
+                continue
+            action_registry.declare(
+                binding.action_name,
+                binding.action_label,
+                lambda _ctx, _ev, _key=binding.key: (self.show(_key) or True),
+                category=category,
+            )
+
+
+@dataclass(frozen=True)
+class SceneTaskPanelSpec:
+    """Declarative settings for per-scene task panel creation."""
+
+    control_id: str
+    height: int = 50
+    hidden_peek_pixels: int = 6
+    animation_step_px: int = 8
+    dock_bottom: bool = True
+    auto_hide: bool = True
+
+
+class ScenePresentationModel:
+    """Own scene roots and per-scene task panel provisioning for demo hosts."""
+
+    def __init__(self, host) -> None:
+        self.host = host
+        self._roots: "OrderedDict[str, object]" = OrderedDict()
+        self._task_panels: "OrderedDict[str, object]" = OrderedDict()
+
+    def ensure_scene_root(
+        self,
+        scene_name: str,
+        *,
+        control_id: str,
+        draw_background: bool = False,
+    ):
+        key = str(scene_name)
+        root = self._roots.get(key)
+        if root is not None:
+            return root
+        from pygame import Rect
+        from ..controls.composite.panel_control import PanelControl
+
+        screen_rect = getattr(self.host, "screen_rect", None)
+        if screen_rect is None:
+            screen = getattr(self.host, "screen", None)
+            if screen is not None:
+                screen_rect = screen.get_rect()
+        if screen_rect is None:
+            screen_rect = self.host.app.screen.get_rect()
+
+        root = self.host.app.add(
+            PanelControl(
+                str(control_id),
+                Rect(0, 0, int(screen_rect.width), int(screen_rect.height)),
+                draw_background=bool(draw_background),
+            ),
+            scene_name=key,
+        )
+        self._roots[key] = root
+        return root
+
+    def get_scene_root(self, scene_name: str):
+        return self._roots.get(str(scene_name))
+
+    def register_scene_root(self, scene_name: str, root) -> None:
+        self._roots[str(scene_name)] = root
+
+    def ensure_scene_task_panel(
+        self,
+        scene_name: str,
+        *,
+        control_id: str,
+        height: int = 50,
+        hidden_peek_pixels: int = 6,
+        animation_step_px: int = 8,
+        dock_bottom: bool = True,
+        auto_hide: bool = True,
+    ):
+        key = str(scene_name)
+        panel = self._task_panels.get(key)
+        if panel is not None:
+            return panel
+        from pygame import Rect
+        from ..controls.chrome.task_panel_control import TaskPanelControl
+
+        screen_rect = getattr(self.host, "screen_rect", None)
+        if screen_rect is None:
+            screen = getattr(self.host, "screen", None)
+            if screen is not None:
+                screen_rect = screen.get_rect()
+        if screen_rect is None:
+            screen_rect = self.host.app.screen.get_rect()
+
+        panel = self.host.app.add(
+            TaskPanelControl(
+                str(control_id),
+                Rect(
+                    0,
+                    int(screen_rect.height) - int(height),
+                    int(screen_rect.width),
+                    int(height),
+                ),
+                auto_hide=bool(auto_hide),
+                hidden_peek_pixels=int(hidden_peek_pixels),
+                animation_step_px=int(animation_step_px),
+                dock_bottom=bool(dock_bottom),
+            ),
+            scene_name=key,
+        )
+        self._task_panels[key] = panel
+        return panel
+
+    def register_scene_task_panel(self, scene_name: str, panel) -> None:
+        self._task_panels[str(scene_name)] = panel
+
+    def get_scene_task_panel(self, scene_name: str):
+        return self._task_panels.get(str(scene_name))
+
+
+@dataclass(frozen=True)
+class SceneSetupSpec:
+    """Declarative scene bootstrap settings for demo or app hosts."""
+
+    name: str
+    pretty_name: str | None = None
+    transition_style: object | None = None
+    transition_duration: float | None = None
+    tiling_enabled: bool = True
+    tiling_gap: int | None = 16
+    tiling_padding: int | None = 16
+    tiling_avoid_task_panel: bool | None = True
+    tiling_center_on_failure: bool | None = True
+    tiling_relayout: bool = False
+    make_initial: bool = False
+
+
+def apply_scene_setup_specs(app, scene_specs, *, scene_transitions=None):
+    """Create scenes from specs and apply transition/tiling defaults in one pass."""
+    initial_scene_name: str | None = None
+    ordered_specs = list(scene_specs)
+
+    for spec in ordered_specs:
+        app.create_scene(str(spec.name), pretty_name=spec.pretty_name)
+
+        app.configure_window_tiling(
+            gap=spec.tiling_gap,
+            padding=spec.tiling_padding,
+            avoid_task_panel=spec.tiling_avoid_task_panel,
+            center_on_failure=spec.tiling_center_on_failure,
+            relayout=bool(spec.tiling_relayout),
+            scene_name=str(spec.name),
+        )
+        app.set_window_tiling_enabled(
+            bool(spec.tiling_enabled),
+            relayout=bool(spec.tiling_relayout),
+            scene_name=str(spec.name),
+        )
+
+        if scene_transitions is not None and spec.transition_style is not None:
+            scene_transitions.set_style(
+                str(spec.name),
+                spec.transition_style,
+                duration=spec.transition_duration,
+            )
+
+        if spec.make_initial:
+            initial_scene_name = str(spec.name)
+
+    if initial_scene_name is None and ordered_specs:
+        initial_scene_name = str(ordered_specs[0].name)
+    if initial_scene_name is not None:
+        app.switch_scene(initial_scene_name)
+    return initial_scene_name
 
 
 def toggle_window_visibility(

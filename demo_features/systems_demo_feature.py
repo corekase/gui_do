@@ -140,7 +140,6 @@ class SystemsDemoFeature(RoutedFeature):
         "build": (
             "app",
             "root",
-            "ensure_scene_task_panel",
         ),
         "bind_runtime": (
             "app",
