@@ -52,6 +52,14 @@ class TestRuntimeOperatingContracts(unittest.TestCase):
         self.assertIn("floor: 0.5 ms", content)
         self.assertIn("ceiling: 4.0 ms", content)
 
+    def test_contract_doc_declares_application_workspace_report_contract(self):
+        content = self._read_contract_doc()
+
+        self.assertIn(
+            "Application workspace facade methods return restore reports (GuiApplication.restore_workspace and GuiApplication.load_workspace).",
+            content,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,6 +20,7 @@ Execution was performed according to the staged plan in docs/final_consideration
 ### Runtime and API behavior
 
 - Updated WorkspacePersistenceManager.restore in gui_do/persistence/workspace_persistence.py to return a structured restore report directly.
+- Updated GuiApplication.restore_workspace and GuiApplication.load_workspace to return structured restore reports.
 - Restore report fields:
   - target_scene
   - switched_scene
