@@ -69,18 +69,22 @@ class ActionManager:
             return False
         scene_name = app.active_scene_name
         has_window = bool(app.scene.active_window())
+        key = int(event.key)
 
-        candidates = [
-            KeyBinding(int(event.key), scene=scene_name, window_only=has_window),
-            KeyBinding(int(event.key), scene=scene_name, window_only=False),
-            KeyBinding(int(event.key), scene=None, window_only=has_window),
-            KeyBinding(int(event.key), scene=None, window_only=False),
-        ]
-        seen_bindings = set()
+        if has_window:
+            candidates = (
+                KeyBinding(key, scene=scene_name, window_only=True),
+                KeyBinding(key, scene=scene_name, window_only=False),
+                KeyBinding(key, scene=None, window_only=True),
+                KeyBinding(key, scene=None, window_only=False),
+            )
+        else:
+            candidates = (
+                KeyBinding(key, scene=scene_name, window_only=False),
+                KeyBinding(key, scene=None, window_only=False),
+            )
+
         for binding in candidates:
-            if binding in seen_bindings:
-                continue
-            seen_bindings.add(binding)
             for action_name in self._keymap.get(binding, ()):
                 handler = self._actions.get(action_name)
                 if handler is not None and self._dispatch(action_name, handler, event):

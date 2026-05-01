@@ -71,8 +71,6 @@ class TextInputControl(AbstractTextInputControl):
                 raw_to_display[i] = last
         return display_to_raw, raw_to_display
 
-    """Single-line editable text field with cursor, selection, masking, and clipboard."""
-
     def __init__(self, control_id: str, rect: Rect, value: str = "", placeholder: str = "", max_length: Optional[int] = None, masked: bool = False, on_change: Optional[Callable[[str], None]] = None, on_submit: Optional[Callable[[str], None]] = None, input_filter: Optional[Callable[[str], str]] = None, font_role: str = "body", display_value_provider: Optional[Callable[[], str]] = None) -> None:
         super().__init__(control_id, rect)
         self._value = str(value)
@@ -101,7 +99,7 @@ class TextInputControl(AbstractTextInputControl):
         lo = 0
         hi = len(display)
         def measure(n):
-            px, _ = font.text_size(display[:n]) if hasattr(font, "text_size") else font.size(display[:n])
+            px, _ = font.text_size(display[:n])
             return px
         while lo < hi:
             mid = (lo + hi) // 2
@@ -131,17 +129,17 @@ class TextInputControl(AbstractTextInputControl):
         display = self._get_display_value()
         _, raw_to_display = self._build_display_raw_mapping()
         disp_idx = raw_to_display[index] if index < len(raw_to_display) else len(display)
-        px, _ = font.text_size(display[:disp_idx]) if hasattr(font, "text_size") else font.size(display[:disp_idx])
+        px, _ = font.text_size(display[:disp_idx])
         return (self.rect.left + _H_PADDING - self._scroll_offset_px + px, self.rect.top)
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
         from ...theme.color_theme import get_global_font_manager
         font_manager = get_global_font_manager()
         if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=font_manager.scaled_size(self._FONT_SCALE))
+            return font_manager.font_instance(self._font_role, size=font_manager.scaled_size(self._FONT_SCALE))
         # Fallback: use theme if provided
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=theme.fonts.scaled_size(self._FONT_SCALE))
+            return theme.fonts.font_instance(self._font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         return None
 
     def _get_display_value(self) -> str:
@@ -427,13 +425,6 @@ class TextInputControl(AbstractTextInputControl):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _get_display_value(self) -> str:
-        if self._display_value_provider is not None:
-            return self._display_value_provider()
-        if self._masked:
-            return "*" * len(self._value)
-        return self._value
-
     def _insert_text(self, text: str, theme=None) -> None:
         if self._input_filter is not None:
             text = self._input_filter(str(text))
@@ -469,30 +460,13 @@ class TextInputControl(AbstractTextInputControl):
         if font is None:
             return
         display = self._get_display_value()
-        cursor_px, _ = font.text_size(display[:self._cursor_pos]) if hasattr(font, "text_size") else font.size(display[:self._cursor_pos])
+        cursor_px, _ = font.text_size(display[:self._cursor_pos])
         visible_width = self.rect.width - 2 * _H_PADDING
         if cursor_px < self._scroll_offset_px:
             self._scroll_offset_px = cursor_px
         elif cursor_px > self._scroll_offset_px + visible_width:
             self._scroll_offset_px = cursor_px - visible_width + 4
         self._scroll_offset_px = max(0, self._scroll_offset_px)
-
-
-    def _get_font(self, theme) -> Optional["pygame.font.Font"]:
-        from ...theme.color_theme import get_global_font_manager
-        font_manager = get_global_font_manager()
-        if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=font_manager.scaled_size(self._FONT_SCALE))
-        if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=theme.fonts.scaled_size(self._FONT_SCALE))
-        return None
-
-    def _get_display_value(self) -> str:
-        if self._display_value_provider is not None:
-            return self._display_value_provider()
-        if self._masked:
-            return "*" * len(self._value)
-        return self._value
 
     def _reset_blink(self) -> None:
         self._reset_text_edit_blink()
@@ -554,14 +528,14 @@ class TextInputControl(AbstractTextInputControl):
         display = self._get_display_value()
 
         if font is not None:
-            font_h = font.line_height if hasattr(font, "line_height") else font.get_height()
+            font_h = font.line_height
             text_y = self.rect.y + (self.rect.height - font_h) // 2
 
             # Selection highlight
             sel = self.selection_range
             if sel[0] != sel[1] and font is not None:
-                sel_x_start, _ = font.text_size(display[:sel[0]]) if hasattr(font, "text_size") else font.size(display[:sel[0]])
-                sel_x_end, _ = font.text_size(display[:sel[1]]) if hasattr(font, "text_size") else font.size(display[:sel[1]])
+                sel_x_start, _ = font.text_size(display[:sel[0]])
+                sel_x_end, _ = font.text_size(display[:sel[1]])
                 sel_rect = Rect(
                     self.rect.x + _H_PADDING + sel_x_start - self._scroll_offset_px,
                     text_y,
@@ -573,16 +547,16 @@ class TextInputControl(AbstractTextInputControl):
 
             # Text or placeholder
             if display:
-                text_surf = font._font.render(display, True, theme.text) if hasattr(font, "_font") else font.render(display, True, theme.text)
+                text_surf = font._font.render(display, True, theme.text)
                 surface.blit(text_surf, (self.rect.x + _H_PADDING - self._scroll_offset_px, text_y))
             elif self._placeholder and not self._focused:
                 ph_color = getattr(theme, "medium", (150, 150, 150))
-                ph_surf = font._font.render(self._placeholder, True, ph_color) if hasattr(font, "_font") else font.render(self._placeholder, True, ph_color)
+                ph_surf = font._font.render(self._placeholder, True, ph_color)
                 surface.blit(ph_surf, (self.rect.x + _H_PADDING, text_y))
 
             # Cursor
             if self._focused and self._cursor_visible:
-                cursor_x_px, _ = font.text_size(display[:self._cursor_pos]) if hasattr(font, "text_size") else font.size(display[:self._cursor_pos])
+                cursor_x_px, _ = font.text_size(display[:self._cursor_pos])
                 cx = self.rect.x + _H_PADDING + cursor_x_px - self._scroll_offset_px
                 pygame.draw.line(
                     surface,

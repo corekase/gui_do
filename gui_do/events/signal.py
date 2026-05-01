@@ -111,12 +111,15 @@ class _SignalInstance(Generic[T]):
     def emit(self, value: T) -> None:
         """Fire all connected callbacks with *value*."""
         # Copy lists so that connect/disconnect inside callbacks is safe.
-        for cb in list(self._callbacks):
-            cb(value)
-        once = list(self._once)
-        self._once.clear()
-        for cb in once:
-            cb(value)
+        callbacks = self._callbacks
+        if callbacks:
+            for cb in (callbacks if len(callbacks) == 1 else list(callbacks)):
+                cb(value)
+        once = self._once
+        if once:
+            self._once = []
+            for cb in once:
+                cb(value)
 
     def _remove(self, callback: Callable) -> None:
         try:

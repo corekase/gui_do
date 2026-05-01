@@ -277,7 +277,7 @@ class GuiApplication:
         elif name not in self._scene_pretty_names:
             self._scene_pretty_names[name] = name
         # --- Automatically apply all font roles for this scene if a registry exists ---
-        if hasattr(self, "font_roles") and self.font_roles is not None:
+        if self.font_roles is not None:
             try:
                 self.font_roles.apply(self, scene_name=name)
             except Exception:
@@ -314,7 +314,7 @@ class GuiApplication:
             # that all nodes registered to it emit dirty rects on invalidate().
             self.scene.set_invalidation_tracker(self.invalidation)
             # --- Automatically apply all font roles for this scene if a registry exists ---
-            if hasattr(self, "font_roles") and self.font_roles is not None:
+            if self.font_roles is not None:
                 try:
                     self.font_roles.apply(self, scene_name=name)
                 except Exception:
@@ -475,29 +475,28 @@ class GuiApplication:
                 self._screen_preamble()
             self.focus.update(dt_seconds)
             self.window_focus.update(dt_seconds)
-            runtime = self._scenes[self._active_scene_name]
-            runtime.timers.update(dt_seconds)
-            runtime.tweens.update(dt_seconds)
-            self.toasts.update(dt_seconds, runtime.tweens)
-            runtime.scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
-            runtime.scheduler.update()
+            self.timers.update(dt_seconds)
+            self.tweens.update(dt_seconds)
+            self.toasts.update(dt_seconds, self.tweens)
+            self.scheduler.set_message_dispatch_time_budget_ms(self._compute_scheduler_dispatch_budget_ms(dt_seconds))
+            self.scheduler.update()
             self.features.update_direct_features(dt_seconds)
-            runtime.scene.update(dt_seconds)
+            self.scene.update(dt_seconds)
             self.invalidation.invalidate_all()
-            self.focus.revalidate_focus(runtime.scene)
-            self.window_focus.revalidate(runtime.scene)
-            self.task_panel_focus.revalidate(runtime.scene, self)
-            active_window = runtime.scene.active_window()
+            self.focus.revalidate_focus(self.scene)
+            self.window_focus.revalidate(self.scene)
+            self.task_panel_focus.revalidate(self.scene, self)
+            active_window = self.scene.active_window()
             if active_window is not self._last_active_window:
                 self._last_active_window = active_window
                 if active_window is not None:
-                    self.focus.restore_remembered_focus_for_window(runtime.scene, active_window)
+                    self.focus.restore_remembered_focus_for_window(self.scene, active_window)
             if self._screen_lifecycle_active and self._screen_postamble is not None:
                 self._screen_postamble()
             self.features.update_features()
 
     def _compute_scheduler_dispatch_budget_ms(self, dt_seconds: float) -> float:
-        dt_ms = max(0.0, float(dt_seconds)) * 1000.0
+        dt_ms = (dt_seconds if dt_seconds > 0.0 else 0.0) * 1000.0
         target_ms = dt_ms * self._SCHEDULER_DISPATCH_BUDGET_FRACTION
         min_ms = self._SCHEDULER_DISPATCH_BUDGET_MIN_MS
         max_ms = self._SCHEDULER_DISPATCH_BUDGET_MAX_MS

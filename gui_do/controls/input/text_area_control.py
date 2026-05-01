@@ -39,12 +39,12 @@ class TextAreaControl(AbstractTextInputControl):
         if font is None:
             return 0
         try:
-            line_h = font.line_height if hasattr(font, "line_height") else font.get_height()
+            line_h = font.line_height
         except Exception:
             return self._cursor_pos
         y_val = y if y is not None else self.rect.top
         rel_y = y_val - self.rect.top - _V_PAD + self._scroll_top
-        lines = self._get_wrapped_lines_cached() if hasattr(self, '_get_wrapped_lines_cached') else [self._get_display_value()]
+        lines = self._get_wrapped_lines_cached()
         if not lines:
             return 0
         line_idx = max(0, rel_y // line_h)
@@ -70,7 +70,7 @@ class TextAreaControl(AbstractTextInputControl):
         if not line_text:
             return abs_offset
         def measure(n):
-            px, _ = font.text_size(line_text[:n]) if hasattr(font, "text_size") else font.size(line_text[:n])
+            px, _ = font.text_size(line_text[:n])
             return px
         lo = 0
         hi = len(line_text)
@@ -90,47 +90,27 @@ class TextAreaControl(AbstractTextInputControl):
 
     def get_pixel_for_char_index(self, index: int, theme=None) -> Tuple[int, int]:
         font = self._get_font(theme)
-        lines = self._get_wrapped_lines_cached() if hasattr(self, '_get_wrapped_lines_cached') else [self._get_display_value()]
+        lines = self._get_wrapped_lines_cached()
         abs_offset = 0
         for line_idx, line_text in enumerate(lines):
             if index <= abs_offset + len(line_text):
-                px, _ = font.text_size(line_text[:index - abs_offset]) if hasattr(font, "text_size") else font.size(line_text[:index - abs_offset])
-                y = self.rect.top + _V_PAD + line_idx * (font.line_height if hasattr(font, "line_height") else font.get_height())
+                px, _ = font.text_size(line_text[:index - abs_offset])
+                y = self.rect.top + _V_PAD + line_idx * font.line_height
                 return (self.rect.left + _H_PAD + px, y)
             abs_offset += len(line_text) + 1
         # Fallback: end of last line
-        px, _ = font.text_size(lines[-1]) if hasattr(font, "text_size") else font.size(lines[-1])
-        y = self.rect.top + _V_PAD + (len(lines) - 1) * (font.line_height if hasattr(font, "line_height") else font.get_height())
+        px, _ = font.text_size(lines[-1])
+        y = self.rect.top + _V_PAD + (len(lines) - 1) * font.line_height
         return (self.rect.left + _H_PAD + px, y)
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
         from ...theme.color_theme import get_global_font_manager
         font_manager = get_global_font_manager()
         if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=self._resolve_fs())
+            return font_manager.font_instance(self._font_role, size=self._resolve_fs())
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=self._resolve_fs(theme))
+            return theme.fonts.font_instance(self._font_role, size=self._resolve_fs(theme))
         return None
-
-    def _get_display_value(self) -> str:
-        return self._value
-    """Multi-line editable text area with word wrap, clipboard, and scrolling.
-
-    Keyboard shortcuts mirror :class:`TextInputControl`:
-    - ``Ctrl+A`` — select all
-    - ``Ctrl+C`` / ``Ctrl+X`` / ``Ctrl+V`` — clipboard
-    - Arrow keys, ``Home``, ``End``, ``Page Up``, ``Page Down``
-    - ``Enter`` inserts a newline
-    - ``Backspace`` / ``Delete`` remove characters
-
-    Usage::
-
-        area = TextAreaControl(
-            "notes", Rect(10, 10, 400, 200),
-            value="line one\\nline two",
-            on_change=lambda v: print(v),
-        )
-    """
 
     def __init__(
         self,

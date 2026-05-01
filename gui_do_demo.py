@@ -239,27 +239,27 @@ class GuiDoDemo:
         set_window_visible_state(
             self.life_window,
             visible,
-            toggle=getattr(self, "life_toggle_window", None),
+            toggle=self.life_toggle_window,
             from_toggle=from_toggle,
-            tile_windows=getattr(self.app, 'tile_windows', None),
+            tile_windows=self.app.tile_windows,
         )
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         set_window_visible_state(
             self.mandel_window,
             visible,
-            toggle=getattr(self, "mandel_toggle_window", None),
+            toggle=self.mandel_toggle_window,
             from_toggle=from_toggle,
-            tile_windows=getattr(self.app, 'tile_windows', None),
+            tile_windows=self.app.tile_windows,
         )
 
     def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
         set_window_visible_state(
             self.systems_window,
             visible,
-            toggle=getattr(self, "systems_toggle_window", None),
+            toggle=self.systems_toggle_window,
             from_toggle=from_toggle,
-            tile_windows=getattr(self.app, 'tile_windows', None),
+            tile_windows=self.app.tile_windows,
         )
 
 def main() -> None:

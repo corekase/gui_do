@@ -4,12 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import pygame
-    from typing import Any, Dict, List, Optional, Tuple
-    from gui_do.app.error_handling import logical_error, report_nonfatal_error
+from typing import Optional
 
 import pygame
 
@@ -34,6 +29,7 @@ class _FontInstance:
         self._role = role
         self._font = font
         self._size = int(size)
+        self._line_height = int(font.get_height())
 
     @property
     def role_name(self) -> str:
@@ -45,7 +41,7 @@ class _FontInstance:
 
     @property
     def line_height(self) -> int:
-        return int(self._font.get_height())
+        return self._line_height
 
     def text_size(self, text: str) -> tuple[int, int]:
         return self._font.size(str(text))
@@ -73,6 +69,7 @@ class FontManager:
         self._roles: dict[str, _FontRole] = {}
         self._role_order: list[str] = []
         self._font_cache: dict[tuple[str, int], pygame.font.Font] = {}
+        self._instance_cache: dict[tuple[str, int], _FontInstance] = {}
         self._reported_load_failures: set[tuple[str, int, str]] = set()
         self._revision = 0
 
@@ -196,8 +193,14 @@ class FontManager:
     def font_instance(self, role_name: str, *, size: Optional[int] = None) -> _FontInstance:
         role = self._resolve_role(role_name)
         resolved_size = role.size if size is None else max(1, int(size))
+        cache_key = (role.name, resolved_size)
+        cached_inst = self._instance_cache.get(cache_key)
+        if cached_inst is not None:
+            return cached_inst
         font = self.get_font(role.name, size=resolved_size)
-        return _FontInstance(role=role, font=font, size=resolved_size)
+        inst = _FontInstance(role=role, font=font, size=resolved_size)
+        self._instance_cache[cache_key] = inst
+        return inst
 
     def render_text(self, text: str, color, *, role_name: str, size: Optional[int] = None) -> pygame.Surface:
         str_text = str(text)
@@ -280,3 +283,4 @@ class FontManager:
         doomed = [key for key in self._font_cache.keys() if key[0] == role_name]
         for key in doomed:
             self._font_cache.pop(key, None)
+            self._instance_cache.pop(key, None)

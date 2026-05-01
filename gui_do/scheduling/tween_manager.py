@@ -264,16 +264,19 @@ class TweenManager:
         """Advance all active tweens. Called from GuiApplication.update()."""
         if not self._entries:
             return
-        dt = max(0.0, float(dt_seconds))
+        dt = float(dt_seconds) if dt_seconds > 0.0 else 0.0
         had_completions = False
         for entry in self._entries:
             if entry.complete or entry.cancelled:
                 continue
             entry.elapsed += dt
-            if entry.duration <= 0.0:
+            duration = entry.duration
+            if duration <= 0.0:
                 t = 1.0
             else:
-                t = min(entry.elapsed / entry.duration, 1.0)
+                t = entry.elapsed / duration
+                if t > 1.0:
+                    t = 1.0
             eased_t = entry.easing_fn(t)
             try:
                 entry.fn(eased_t)
@@ -282,9 +285,10 @@ class TweenManager:
             if t >= 1.0:
                 entry.complete = True
                 had_completions = True
-                if entry.on_complete is not None:
+                on_complete = entry.on_complete
+                if on_complete is not None:
                     try:
-                        entry.on_complete()
+                        on_complete()
                     except Exception:
                         pass
         # Remove finished entries to keep memory bounded

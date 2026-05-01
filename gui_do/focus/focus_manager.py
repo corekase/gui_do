@@ -175,14 +175,14 @@ class FocusManager:
             return
 
         if self._hint_visible:
-            self._hint_elapsed_seconds += float(dt_seconds)
+            self._hint_elapsed_seconds += dt_seconds
             if self._hint_elapsed_seconds >= FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS:
                 self._hint_visible = False
 
         if self._armed_focus_target is None:
             return
 
-        self._armed_focus_elapsed_seconds += float(dt_seconds)
+        self._armed_focus_elapsed_seconds += dt_seconds
         if self._armed_focus_elapsed_seconds < FOCUS_TRAVERSAL_HINT_TIMEOUT_SECONDS:
             return
 

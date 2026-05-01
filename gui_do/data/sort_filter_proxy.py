@@ -166,23 +166,32 @@ class SortFilterProxySource:
 
     def _recompute(self) -> None:
         raw_count = self._raw_count()
-        indices = range(raw_count)
 
-        # Collect raw items for sort/filter operations
-        if self._filter is not None or self._sort_key is not None:
-            pairs = [(i, self._source_item_at(i)) for i in indices]
-        else:
-            self._visible = list(indices)
+        if self._filter is None and self._sort_key is None:
+            # No transform: expose all indices in source order.
+            self._visible = list(range(raw_count))
             self._dirty = False
             return
 
-        # Filter
+        if self._filter is not None and self._sort_key is None:
+            # Filter-only fast path: single streaming pass, no pre-built pairs list.
+            visible = []
+            source_item_at = self._source_item_at
+            predicate = self._filter
+            for i in range(raw_count):
+                if predicate(source_item_at(i)):
+                    visible.append(i)
+            self._visible = visible
+            self._dirty = False
+            return
+
+        # Sort (with optional filter): build (index, item) pairs once.
+        pairs = [(i, self._source_item_at(i)) for i in range(raw_count)]
+
         if self._filter is not None:
             pairs = [(i, item) for i, item in pairs if self._filter(item)]
 
-        # Sort
-        if self._sort_key is not None:
-            pairs.sort(key=lambda p: self._sort_key(p[1]), reverse=self._sort_reverse)
+        pairs.sort(key=lambda p: self._sort_key(p[1]), reverse=self._sort_reverse)
 
         self._visible = [i for i, _ in pairs]
         self._dirty = False

@@ -68,27 +68,14 @@ class ColorTheme:
         italic: bool = False,
     ) -> None:
         """Create or update which typeface and size a named role uses."""
-        # Support both FontManager and FontRoleRegistry
-        if hasattr(self.fonts, "register_role"):
-            self.fonts.register_role(
-                role_name,
-                size=size,
-                file_path=file_path,
-                system_name=system_name,
-                bold=bold,
-                italic=italic,
-            )
-        elif hasattr(self.fonts, "define"):
-            self.fonts.define(
-                role_name,
-                size=size,
-                file_path=file_path,
-                system_name=system_name,
-                bold=bold,
-                italic=italic,
-            )
-        else:
-            raise TypeError(f"Unsupported font registry type: {type(self.fonts)}")
+        self.fonts.register_role(
+            role_name,
+            size=size,
+            file_path=file_path,
+            system_name=system_name,
+            bold=bold,
+            italic=italic,
+        )
 
     def font_roles(self) -> tuple[str, ...]:
         return self.fonts.role_names()

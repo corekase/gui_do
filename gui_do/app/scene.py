@@ -191,7 +191,6 @@ class Scene:
     @staticmethod
     def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         # --- Ensure theme is always valid and has fonts ---
-        from ..theme.color_theme import ColorTheme
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
             from ..theme.color_theme import get_global_font_manager, ColorTheme
             font_manager = get_global_font_manager()

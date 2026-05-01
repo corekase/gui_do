@@ -37,52 +37,69 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ConstraintLayout
   - FlexLayout
   - GridLayout
+  - FlowLayout and FlowItem
   - DockWorkspace and DockWorkspacePanel
   - WindowTilingManager
   - LayoutAnimator
   - LayoutPass
   - ResponsiveLayout and Breakpoint
+  - SnapGrid, AlignmentGuide, SnapComposer, and SnapTarget
+  - Viewport
 - [Events and Input](#events-and-input)
   - GuiEvent and EventManager
   - EventBus
+  - Signal and SignalConnection
   - ActionManager
+  - ActionMiddleware and ActionContext
   - ActionDescriptor and ActionRegistry
   - KeyChordManager
   - InputMap and InputBinding
   - FocusManager
+  - FocusRing
   - FocusScopeManager
   - WindowFocusManager
   - GestureRecognizer
+  - InputSnapshot
   - ValueChangeReason and ValueChangeCallback
   - EventRecorder and EventPlayback
 - [Data and State](#data-and-state)
   - ObservableValue, ComputedValue, and PresentationModel
   - ObservableList and ObservableDict
+  - ObservableStream
   - CollectionView and CollectionViewQuery
   - Binding and BindingGroup
   - SelectionModel
   - InvalidationTracker
   - FormModel
   - FormSchema
+  - ValidationPipeline and Validators
+  - WizardFlow, WizardStep, and WizardHandle
   - CommandHistory
   - DocumentModel
-  - StateMachine and Router
+  - StateMachine, Router, and HierarchicalStateMachine
   - SettingsRegistry
   - TextFormatter
   - VirtualItemSource and FixedItemSource
   - SortFilterProxySource
   - AsyncDataProvider
+  - DataCache and CacheStats
+  - ListDiffCalculator
+  - ObjectPool
   - SceneSnapshot and NodeSnapshot
   - WorkspaceState and WorkspacePersistenceManager
 - [Scheduling and Animation](#scheduling-and-animation)
   - TaskScheduler
+  - CooperativeScheduler
   - Timers
+  - SceneTimeline
   - TweenManager
   - AnimationSequence
+  - AnimationStateMachine
   - TransitionManager
   - Debouncer and Throttler
 - [Overlay and Runtime Services](#overlay-and-runtime-services)
   - OverlayManager and OverlayHandle
+  - PopupPlacement
   - TooltipManager and TooltipHandle
   - ToastManager and ToastHandle
   - DialogManager and DialogHandle
@@ -93,6 +110,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - ResizeManager
   - ClipboardManager
   - CommandPaletteManager, CommandEntry, and CommandPaletteHandle
+  - ShortcutHelpOverlay
   - CanvasViewport
   - CursorManager
   - ErrorBoundary
@@ -108,6 +126,7 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 - [Feature System](#feature-system)
   - Feature Types and FeatureMessage
   - FeatureManager
+  - Feature Layout Helpers
 - [Theme and Graphics](#theme-and-graphics)
   - ColorTheme
   - ThemeManager and DesignTokens
@@ -115,6 +134,19 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
   - BuiltInGraphicsFactory
   - FontManager
   - FontRoleRegistry
+  - ShapeRenderer
+  - VectorPath
+  - SurfaceCompositor and Layer
+  - SurfaceEffects
+  - DirtyRegionTracker
+  - DrawContext and DrawPhase
+  - AssetRegistry
+  - DebugOverlay
+- [Game and Media](#game-and-media)
+  - SpriteSheet and FrameAnimation
+  - AnimatedImageControl
+  - TileSet and TileMap
+  - ParticleSystem
 - [Localization](#localization)
   - StringTable and LocaleRegistry
 - [Introspection](#introspection)
@@ -407,6 +439,7 @@ Use these for structure, chrome, and general interaction:
 - `ArrowBoxControl` is a directional button with repeat support.
 - `FrameControl` draws a decorative border.
 - `ImageControl` displays a file path, `Path`, or `pygame.Surface`.
+- `ProgressBarControl` shows determinate or indeterminate (animated marquee) progress.
 - `WindowControl` is a floating draggable titled window.
 - `TaskPanelControl` is an auto-hide task strip.
 - `OverlayPanelControl` is the overlay-safe panel used by services such as dialogs and menus.
@@ -517,9 +550,10 @@ Use these controls when the built-in list/form controls are not enough:
 - `CanvasControl` gives you a bounded event queue of `CanvasEventPacket` values for custom drawing and interaction.
 - `ScrollViewControl` hosts child controls in content-local coordinates and clips them to a viewport.
 - `ColorPickerControl` provides inline HSV picking plus hex text entry.
+- `AnimatedImageControl` displays a `FrameAnimation` (from a `SpriteSheet`) as a scene-graph node; call `tick(dt)` once per frame.
 
 ```python
-from gui_do import CanvasControl, ColorPickerControl, LabelControl, ScrollViewControl
+from gui_do import AnimatedImageControl, CanvasControl, ColorPickerControl, LabelControl, ScrollViewControl
 
 canvas = CanvasControl("canvas", Rect(20, 20, 300, 180), max_events=256)
 
@@ -579,6 +613,22 @@ items = [
 ]
 layout.apply(items, Rect(20, 20, 420, 32))
 ```
+
+### FlowLayout and FlowItem
+
+`FlowLayout` wraps child controls left-to-right (or top-to-bottom in vertical mode), inserting automatic line breaks when the available cross dimension is exhausted. `FlowItem` describes per-child sizing hints. Unlike `FlexLayout`, `FlowLayout` adapts to a variable number of items without requiring a fixed row/column count. `apply(container_rect)` returns the total used height.
+
+```python
+from gui_do import FlowItem, FlowLayout
+
+layout = FlowLayout(gap_x=8, gap_y=8)
+for btn in toolbar_buttons:
+    layout.add(FlowItem(node=btn))
+
+used_height = layout.apply(container_rect)
+```
+
+Use `FlowItem` width/height arguments to constrain individual items: `FlowItem(node=img, width=64, height=64)`. Omit size arguments to let the item's current `rect` dimensions be used.
 
 ### DockWorkspace and DockWorkspacePanel
 
@@ -698,6 +748,51 @@ if responsive.update(panel.rect.width):
 
 `Breakpoint` fields are `name`, `min_width`, and `layout`. Breakpoints are evaluated in descending `min_width` order; the first matching one wins.
 
+### SnapGrid, AlignmentGuide, SnapComposer, and SnapTarget
+
+These helpers add grid and edge-alignment snapping for drag-and-drop layout editors and vector drawing tools. `SnapGrid` snaps a point or rect to the nearest grid intersection. `AlignmentGuide` finds shared-edge alignment opportunities between the dragged rect and other rects. `SnapComposer` combines both in one step. `SnapTarget` is the exported per-candidate record.
+
+```python
+from gui_do import AlignmentGuide, SnapComposer, SnapGrid, SnapTarget
+
+grid = SnapGrid(cell_w=16, cell_h=16)
+snapped = grid.snap_point(drag_x, drag_y)
+snapped_rect = grid.snap_rect(dragged_rect)
+
+# Draw the grid on an overlay surface for visual feedback:
+grid.draw_grid(overlay_surface, viewport_rect, color=(80, 80, 80), alpha=80)
+
+# Find alignment guides against other controls:
+guide = AlignmentGuide([ctrl.rect for ctrl in sibling_controls])
+targets: list[SnapTarget] = guide.find_snap_targets(dragged_rect, threshold_px=8)
+
+# Combined snap (grid then guide):
+composer = SnapComposer(grid=grid, guides=guide)
+final_rect = composer.snap(dragged_rect, threshold_px=8)
+```
+
+### Viewport
+
+`Viewport` encapsulates scroll offset and zoom level with coordinate transforms between screen space and content space. It is shared between scroll containers, `CanvasControl`, `DataGridControl`, and similar controls so that animated scrolling, snap-to-item, minimap projection, and rubber-band zoom compose without per-control reimplementation.
+
+```python
+from gui_do import Viewport
+
+vp = Viewport(content_size=(2000, 1500), viewport_size=(800, 600))
+
+vp.scroll_to(0, 200)
+vp.scroll_by(0, 50)
+vp.clamp()
+
+vp.set_zoom(2.0, anchor=(400, 300))
+
+local_pt  = vp.screen_to_local((mx, my))
+screen_pt = vp.local_to_screen((lx, ly))
+vis       = vp.visible_rect()    # pygame.Rect in content coordinates
+
+vp.subscribe(lambda: my_canvas.invalidate())
+```
+
 ---
 
 ## Events and Input [Back to Top](#table-of-contents)
@@ -734,6 +829,30 @@ bus.unsubscribe(subscription)
 
 Use `once(...)` for one-shot subscriptions and `unsubscribe_scope(...)` to remove all handlers in one scope.
 
+### Signal and SignalConnection
+
+`Signal` is a typed class-level event descriptor for `UiNode` subclasses. Declare a `Signal` as a class attribute to give instances strongly-typed, zero-cost-when-unconnected publish/subscribe behavior. `SignalConnection` is the returned connection handle.
+
+```python
+from gui_do import Signal, SignalConnection
+
+class MySlider(SliderControl):
+    value_changed: Signal[float] = Signal()
+
+slider = MySlider(...)
+
+# Connect:
+conn: SignalConnection = slider.value_changed.connect(lambda v: print("value:", v))
+
+# Connect once (auto-disconnects after first emit):
+slider.value_changed.connect_once(lambda v: do_one_time_thing(v))
+
+# Disconnect:
+conn.disconnect()
+```
+
+`Signal` integrates with `Binding` via the `control_change_signal` argument for two-way bindings on custom controls.
+
 ### ActionManager
 
 `ActionManager` maps keys to named actions with optional scene and active-window scoping.
@@ -747,6 +866,32 @@ actions.bind_key(pygame.K_s, "save", scene="editor", window_only=False)
 ```
 
 For a one-call setup, use `register_and_bind(...)`.
+
+### ActionMiddleware and ActionContext
+
+`ActionMiddleware` is a composable interception protocol layered on top of `ActionManager`. Each middleware receives an `ActionContext` plus the next handler in the chain, and returns `True` (consumed) or `False`. Middlewares are added via `app.actions.add_middleware(...)` and run LIFO so the most-recently added middleware runs first.
+
+`ActionContext` carries `action_name`, `event`, and an `extras` dict for out-of-band data.
+
+```python
+from gui_do import ActionContext
+
+class LoggingMiddleware:
+    def __call__(self, ctx: ActionContext, next_handler) -> bool:
+        print(f"[action] {ctx.action_name}")
+        return next_handler(ctx)
+
+app.actions.add_middleware(LoggingMiddleware())
+
+# Inline guard — block destructive actions in read-only mode:
+def read_only_guard(ctx: ActionContext, next_handler) -> bool:
+    if app.read_only and ctx.action_name.startswith("edit."):
+        return False
+    return next_handler(ctx)
+
+app.actions.add_middleware(read_only_guard)
+app.actions.remove_middleware(read_only_guard)
+```
 
 ### ActionDescriptor and ActionRegistry
 
@@ -845,6 +990,32 @@ focus.set_focus(name_input, via_keyboard=False)
 print(focus.focused_node)
 ```
 
+### FocusRing
+
+`FocusRing` is a composable, bounded focus traversal ring with optional trap and chain semantics. Declare node ids in order; Tab / Shift+Tab cycle within the ring. Set `trap=True` to prevent Tab from ever leaving the ring (modal dialog behavior). Set `wrap=False` to let Tab fall through to a `parent` ring at boundaries. Rings may be dynamically mutated while open.
+
+```python
+from gui_do import FocusRing
+
+# Modal dialog — Tab never escapes:
+dialog_ring = FocusRing(
+    node_ids=["ok_button", "cancel_button", "text_input"],
+    trap=True,
+)
+
+next_id = dialog_ring.advance(current_id, forward=True)   # Tab
+prev_id = dialog_ring.advance(current_id, forward=False)  # Shift+Tab
+
+# Dynamic updates:
+dialog_ring.insert("new_field", after="text_input")
+dialog_ring.remove("cancel_button")
+
+# Check membership:
+dialog_ring.contains("ok_button")  # True
+```
+
+Chain rings by passing `parent=outer_ring` and setting `wrap=False` so a non-trapping ring delegates boundary advances to its parent.
+
 ### FocusScopeManager
 
 `FocusScopeManager` constrains Tab traversal to a declared subtree while a scope is active, preventing focus from escaping into background controls. It integrates with `FocusManager` through a push/pop scope stack. Use it when opening modal overlays, dialogs, or dropdowns.
@@ -907,6 +1078,27 @@ gr.process_event(event)
 ```
 
 All detection thresholds (`double_click_ms`, `long_press_ms`, `swipe_min_px`, etc.) are configurable at construction time.
+
+### InputSnapshot
+
+`InputSnapshot` is an immutable per-frame snapshot of pointer and keyboard state, assembled once at the start of each frame from the normalized event stream. Passing it to every system that reads input eliminates fragmented per-system bookkeeping and makes input queries deterministic for the entire frame.
+
+```python
+from gui_do import InputSnapshot
+
+snapshot = InputSnapshot.build(events=normalized_events, previous=last_snapshot)
+
+if snapshot.is_button_just_pressed(1):
+    start_drag()
+
+if snapshot.is_key_down(pygame.K_SHIFT):
+    extend_selection()
+
+hovered_id = snapshot.hover_chain[0] if snapshot.hover_chain else None
+wheel = snapshot.accumulated_wheel_delta  # summed across all wheel events this frame
+```
+
+Fields: `pointer_pos`, `pointer_delta`, `buttons_held`, `buttons_just_pressed`, `buttons_just_released`, `modifiers`, `keys_just_pressed`, `keys_just_released`, `accumulated_wheel_delta`, `hover_chain`.
 
 ### ValueChangeReason and ValueChangeCallback
 
@@ -999,6 +1191,31 @@ settings = ObservableDict({"volume": 1.0})
 settings.subscribe(lambda change: print(change.key, "->", change.new_value))
 settings["volume"] = 0.5
 ```
+
+### ObservableStream
+
+`ObservableStream` wraps any `ObservableValue`, `Signal` instance, or callable subscription source and provides operator chaining so that multi-step reactive pipelines can be expressed declaratively. All operators are lazy — no callbacks are wired until `subscribe` is called.
+
+Available operators: `map`, `filter`, `distinct_until_changed`, `debounce`, `throttle`, `merge`, `zip`, `take_until`, `take`, `pairwise`.
+
+```python
+from gui_do import ObservableStream, ObservableValue
+
+speed = ObservableValue(0.0)
+
+stream = (
+    ObservableStream(speed)
+    .distinct_until_changed()
+    .filter(lambda v: v > 0)
+    .map(lambda v: round(v, 1))
+)
+
+unsub = stream.subscribe(lambda v: label.__setattr__("text", f"{v} m/s"))
+# Later:
+unsub()
+```
+
+`merge` combines multiple streams and emits from whichever fires first. `take_until` auto-unsubscribes on a stop-signal's first emission. `pairwise` emits `(previous, current)` tuples for change-delta math.
 
 ### CollectionView and CollectionViewQuery
 
@@ -1107,6 +1324,66 @@ form.commit_all()
 
 `ValidationRule` is the callable type exported for field validators, and `FieldError` is the exported error record type.
 
+### ValidationPipeline and Validators
+
+The standalone validator system composes reusable validation logic without requiring a full `FormModel`. `ValidationPipeline` runs validators in order, collects all errors, and returns a `ValidationResult`. The built-in validators cover the most common field constraints; `CustomValidator` wraps any callable; `DependentValidator` receives the full context dict for cross-field rules.
+
+```python
+from gui_do import (
+    CustomValidator, DependentValidator, LengthValidator, PatternValidator,
+    RangeValidator, RequiredValidator, ValidationPipeline, ValidationResult,
+)
+
+pipeline = ValidationPipeline([
+    RequiredValidator("Name is required"),
+    LengthValidator(min_length=2, max_length=64, message="2–64 characters"),
+    PatternValidator(r"^[A-Za-z ]+$", message="Letters and spaces only"),
+])
+
+result: ValidationResult = pipeline.validate("Alice")
+print(result.ok)      # True
+print(result.errors)  # []
+
+result2 = pipeline.validate("")
+print(result2.ok)        # False
+print(result2.errors[0]) # "Name is required"
+
+# Cross-field rule — receives the enclosing context dict:
+pipeline.add(DependentValidator(
+    lambda v, ctx: None if ctx.get("agree_terms") else "Must accept terms",
+))
+```
+
+Built-in validators: `RequiredValidator`, `RangeValidator`, `LengthValidator`, `PatternValidator`, `CustomValidator`, `DependentValidator`. `Validator` is the protocol type alias.
+
+### WizardFlow, WizardStep, and WizardHandle
+
+`WizardFlow` coordinates a sequential multi-step form where each step is validated before advancing. `WizardStep` declares the title, field keys, and optional `on_validate` / `on_enter` / `on_leave` hooks. `WizardHandle` is the return type of `advance()`. `progress` is an `ObservableValue[float]` (0.0 – 1.0) that can be bound to a `ProgressBarControl`.
+
+```python
+from gui_do import WizardFlow, WizardStep
+
+steps = [
+    WizardStep(
+        title="Name",
+        fields=["first_name", "last_name"],
+        on_validate=lambda d: [] if d.get("first_name") else ["First name required"],
+    ),
+    WizardStep(title="Email", fields=["email"]),
+    WizardStep(title="Confirm", fields=[]),
+]
+
+wizard = WizardFlow(steps, on_complete=lambda data: save(data), on_cancel=lambda: None)
+wizard.progress.subscribe(lambda v: progress_bar.__setattr__("value", v))
+
+ok, errors = wizard.advance({"first_name": "Alice", "last_name": "Smith"})
+ok, errors = wizard.advance({"email": "alice@example.com"})
+ok, errors = wizard.advance({})   # final step — calls on_complete
+
+wizard.back()    # return to previous step
+wizard.cancel()  # calls on_cancel and resets state
+```
+
 ### FormSchema
 
 `FormSchema` is a declarative, reusable field specification that can stamp out pre-configured `FormModel` instances or validate a plain dict of values without building a UI.
@@ -1166,12 +1443,12 @@ doc.load("data.json",  loader=lambda path:   json.loads(path.read_text()))
 
 `DocumentModel` fields: `document_id`, `content`, `path`, `metadata`, `revision`, `saved_revision`. `is_dirty` is `True` when `revision != saved_revision`.
 
-### StateMachine and Router
+### StateMachine, Router, and HierarchicalStateMachine
 
-`StateMachine` models finite-state transitions with observable current state. `Router` models application navigation history and can switch scenes when supplied with a `GuiApplication`.
+`StateMachine` models finite-state transitions with observable current state. `Router` models application navigation history and can switch scenes when supplied with a `GuiApplication`. `HierarchicalStateMachine` extends `StateMachine` with composite states, history states, and parallel (orthogonal) regions.
 
 ```python
-from gui_do import Router, StateMachine
+from gui_do import HierarchicalStateMachine, Router, StateMachine
 
 sm = StateMachine("idle")
 sm.add_state("running")
@@ -1185,6 +1462,20 @@ router.register("/settings", "settings_scene")
 router.push("/home", app=app)
 router.push("/settings", app=app)
 router.pop(app=app)
+
+# Hierarchical — composite sub-machine:
+inner = HierarchicalStateMachine("idle_a")
+inner.add_transition("idle_a", "busy_a", trigger="work")
+
+outer = HierarchicalStateMachine("outer_idle")
+outer.add_composite("active", inner, initial="idle_a")
+outer.add_transition("outer_idle", "active", trigger="activate")
+outer.trigger("activate")
+print(outer.sub_current("active"))  # "idle_a"
+
+# History — resumes last sub-state on re-entry:
+outer2 = HierarchicalStateMachine("home")
+outer2.add_history("wizard", inner, initial="idle_a")
 ```
 
 ### SettingsRegistry
@@ -1295,6 +1586,72 @@ proxy.set_filter(None)   # clear filter; shows all items
 
 Attach to an `ObservableList` for live mutation tracking by subscribing `proxy.invalidate` to the list's change events.
 
+### DataCache and CacheStats
+
+`DataCache` is a typed LRU cache with optional TTL per entry. On miss, `get_or_load(key, factory)` calls the factory and caches its result. `on_evicted` and `on_invalidated` are `Signal` instances for reactive cache-event handling. `CacheStats` is a snapshot of hit/miss/eviction counters.
+
+```python
+from gui_do import DataCache, CacheStats
+
+cache: DataCache[str, dict] = DataCache(max_size=256)
+
+cache.put("user:42", user_data)
+val = cache.get("user:42")          # → user_data or None
+
+# Load-on-miss:
+user = cache.get_or_load("user:42", lambda: fetch_user(42))
+
+# TTL (seconds):
+timed_cache: DataCache[str, bytes] = DataCache(max_size=100, ttl_seconds=30.0)
+
+cache.on_evicted.subscribe(lambda kv: print("evicted", kv[0]))
+cache.on_invalidated.subscribe(lambda k: print("invalidated", k))
+
+stats: CacheStats = cache.stats()
+print(stats.hit_rate)
+```
+
+`CacheStats` fields: `size`, `hits`, `misses`, `evictions`, `invalidations`, `hit_rate`.
+
+### ListDiffCalculator
+
+`ListDiffCalculator` computes the minimal edit sequence (inserts, removes, moves) to transform one list into another using the Myers algorithm. Use it to animate list-view updates or to reconcile reactive data collections. `ListDiff`, `DiffInsert`, `DiffRemove`, and `DiffMove` are the exported result types.
+
+```python
+from gui_do import DiffInsert, DiffRemove, ListDiff, ListDiffCalculator
+
+diff: ListDiff = ListDiffCalculator.diff(["a", "b", "c"], ["b", "c", "e"])
+# diff.removes → [DiffRemove(index=0, item="a")]
+# diff.inserts → [DiffInsert(index=2, item="e")]
+
+# With a key function for object lists:
+diff2 = ListDiffCalculator.diff(old_items, new_items, key_fn=lambda x: x.id)
+
+# Apply in-place:
+ListDiffCalculator.apply_to_list(target_list, diff)
+```
+
+### ObjectPool
+
+`ObjectPool` is a typed, thread-safe object recycler that reduces GC pressure in hot allocation paths. A `reset` callable clears transient state before an object re-enters the pool. The pool is guarded by a lock so it can be shared between background workers and the main frame thread.
+
+```python
+from gui_do import ObjectPool
+
+pool: ObjectPool[MyEvent] = ObjectPool(
+    factory=lambda: MyEvent.__new__(MyEvent),
+    reset=lambda e: e.clear(),
+    max_size=64,
+)
+pool.preallocate(16)
+
+event = pool.acquire()
+# … fill event fields …
+pool.release(event)
+
+stats = pool.stats()  # {"size": 15, "hits": 1, "misses": 0, "discards": 0}
+```
+
 ### SceneSnapshot and NodeSnapshot
 
 `SceneSnapshot` serializes and restores the rect, visibility, and enabled-state of nodes identified by `control_id`. It integrates with `CommandHistory` for structural undo/redo and with `SettingsRegistry` for workspace persistence. Only data state is serialized; callbacks and subscriptions are not touched. `NodeSnapshot` is the exported per-node record type.
@@ -1370,6 +1727,36 @@ if "double" in finished:
 
 Use `send_message(...)` for in-flight task progress, `get_failed_tasks()` for errors, and `clear_events()` after consuming finished/failed event lists.
 
+### CooperativeScheduler
+
+`CooperativeScheduler` runs generator coroutines on the frame thread — no background threads or OS timer APIs. Complex multi-step sequences (tutorials, cutscenes, test scripts) can be written as linear `yield`-based generator functions. Yield tokens control suspension: `Pause` waits one frame, `Sleep` waits N seconds, `WaitForEvent` suspends until an `EventBus` topic fires, `WaitForSignal` waits for a `Signal`, `WaitUntil` waits for a predicate, and `WaitForAll` waits for a list of other handles.
+
+```python
+from gui_do import (
+    CooperativeScheduler, CoroutineHandle,
+    Pause, Sleep, WaitForSignal, WaitUntil, WaitForAll,
+)
+
+scheduler = CooperativeScheduler()
+
+def intro_sequence():
+    show_title()
+    yield Sleep(1.5)
+    fade_in_logo()
+    yield Sleep(2.0)
+    yield WaitUntil(lambda: user_pressed_any_key())
+    start_game()
+
+handle: CoroutineHandle = scheduler.start(intro_sequence())
+
+# In your frame update:
+scheduler.update(dt_seconds)
+
+# Cancel at any time:
+handle.cancel()
+print(handle.is_done)
+```
+
 ### Timers
 
 `Timers` is a frame-driven repeating and one-shot timer registry.
@@ -1379,6 +1766,37 @@ timers = app.timers
 timers.add_timer("blink", 0.5, lambda: print("tick"))
 timers.add_once("intro", 2.0, lambda: print("ready"))
 timers.remove_timer("blink")
+```
+
+### SceneTimeline
+
+`SceneTimeline` schedules callbacks at precise time offsets, fires looping events, and supports labeled seek points and duration-spanning region callbacks. All time tracking is frame-driven; call `update(dt)` once per frame. No OS timer APIs are used.
+
+```python
+from gui_do import SceneTimeline
+
+timeline = SceneTimeline()
+
+timeline.at(0.0,  lambda: spawn_title())
+timeline.at(1.5,  lambda: fade_in_logo())
+timeline.at(4.0,  lambda: start_music())
+timeline.after(5.0, lambda: show_menu())    # relative to play() start
+
+# Duration-spanning region callbacks:
+timeline.between(1.5, 4.0, on_enter=show_logo, on_exit=hide_logo)
+
+# Looping:
+timeline.loop_every(0.5, lambda: blink_cursor())
+
+# Seek labels:
+timeline.label("intro_end", t=4.0)
+timeline.seek_to_label("intro_end")
+
+timeline.on_complete(lambda: show_end_screen())
+timeline.play()
+
+# Per frame:
+timeline.update(dt_seconds)
 ```
 
 ### TweenManager
@@ -1413,6 +1831,31 @@ handle = (
     ])
     .start()
 )
+```
+
+### AnimationStateMachine
+
+`AnimationStateMachine` connects control state changes (hover, press, idle, …) to `TweenManager`-driven `AnimationSequence` chains without requiring each control to manage tween cancellation and sequence selection. `AnimationTransitionMode` controls how an in-progress animation responds to a state change: `INTERRUPT` cancels immediately, `COMPLETE_THEN_TRANSITION` lets it finish, and `REVERSE_THEN_TRANSITION` plays it backward before switching.
+
+```python
+from gui_do import AnimationStateMachine, AnimationTransitionMode
+
+asm = AnimationStateMachine(app.tweens)
+
+def _hover_seq(seq):
+    seq.then(target=button, attr="alpha", end_value=1.0, duration_seconds=0.1)
+
+def _idle_seq(seq):
+    seq.then(target=button, attr="alpha", end_value=0.85, duration_seconds=0.15)
+
+asm.register_state("idle",  _idle_seq)
+asm.register_state("hover", _hover_seq)
+asm.register_transition("hover", "idle",
+                         mode=AnimationTransitionMode.COMPLETE_THEN_TRANSITION)
+
+asm.set_state("hover")
+asm.set_state("idle")
+asm.on_state_changed(lambda name: print("→", name))
 ```
 
 ### TransitionManager
@@ -1475,6 +1918,35 @@ panel.add(LabelControl("msg", Rect(12, 12, 220, 24), "Hello from overlay"))
 handle = app.overlay.show("popup", panel, dismiss_on_outside_click=True)
 print(handle.is_open)
 handle.dismiss()
+```
+
+### PopupPlacement
+
+`PopupPlacement` computes where a transient popup should appear relative to an anchor rect so it stays on screen and flips sides when clipped. `Side` declares the preferred anchor side (`TOP`, `BOTTOM`, `LEFT`, `RIGHT`). `Alignment` controls cross-axis alignment (`START`, `CENTER`, `END`). `PlacementResult` carries the computed `rect` and the `actual_side` used. `compute_popup_rect` is a convenience standalone helper.
+
+```python
+from gui_do import Alignment, PlacementResult, PopupPlacement, Side, compute_popup_rect
+
+placement = PopupPlacement(
+    preferred_side=Side.BOTTOM,
+    alignment=Alignment.START,
+    offset=4,
+)
+
+result: PlacementResult = placement.compute(
+    anchor_rect=button.rect,
+    popup_size=(200, 120),
+    screen_bounds=pygame.display.get_surface().get_rect(),
+)
+popup_panel.rect = result.rect
+
+# Or with the one-call helper:
+rect = compute_popup_rect(
+    anchor=button.rect,
+    popup_size=(200, 120),
+    screen_bounds=pygame.display.get_surface().get_rect(),
+    preferred_side=Side.BOTTOM,
+)
 ```
 
 ### TooltipManager and TooltipHandle
@@ -1658,6 +2130,27 @@ handle.close()
 - `is_open` — property; `True` while the palette overlay is visible.
 
 `CommandPaletteHandle` exposes `is_open` (property) and `close()`.
+
+### ShortcutHelpOverlay
+
+`ShortcutHelpOverlay` auto-generates a keyboard shortcut reference panel from the registered `ActionRegistry` and `KeyChordManager` — no manual maintenance needed. Sections and entries are sorted alphabetically within each category. The overlay is shown/hidden through the `OverlayManager`.
+
+```python
+from gui_do import ShortcutEntry, ShortcutHelpOverlay, ShortcutSection
+
+help_overlay = ShortcutHelpOverlay(app)
+
+help_overlay.show()
+help_overlay.hide()
+help_overlay.toggle()
+
+for section in help_overlay.sections:
+    print(f"[{section.title}]")
+    for entry in section.entries:
+        print(f"  {entry.chord_display:<20} {entry.label}")
+```
+
+`ShortcutSection` fields: `title`, `entries`. `ShortcutEntry` fields: `label`, `chord_display`, `description`, `category`.
 
 ### CanvasViewport
 
@@ -1890,6 +2383,39 @@ features.send_message("status", "other_feature", {"command": "refresh"})
 
 It also exposes direct-feature update/draw helpers, feature prewarm support, state save/restore, logic binding, and runnable registration.
 
+### Feature Layout Helpers
+
+`gui_do` exports a collection of helper functions and small types from `feature_lifecycle` that cover the repetitive wiring common to every feature: font-role setup, action registration, rect geometry, control placement, and window management.
+
+**Font and action setup:**
+- `setup_standard_font_roles(app)` — registers `body`, `title`, `caption`, and `code` font roles using the active theme font.
+- `register_standard_actions(app)` — registers the common app-level actions (`file.new`, `file.open`, `file.save`, `edit.undo`, `edit.redo`, etc.) with `ActionManager`.
+
+**Rect helpers:**
+- `inset_rect(rect, inset)` — returns a rect shrunk by `inset` on all sides.
+- `centered_horizontal_strip_layout(rect, strip_height)` — returns a rect centered vertically in `rect`.
+- `split_slot_bounds(rect, n)` — splits `rect` into `n` equal horizontal slots; returns list.
+- `partition_rects(rect, weights, axis)` — splits proportionally by `weights` along `axis` (`"x"` or `"y"`).
+
+**Control placement:**
+- `place_control(layout, control, label_text, ...)` — grid-place a control with an optional label in the current layout pass; returns a `PlacedControl`.
+- `place_control_unlabeled(layout, control, ...)` — like `place_control` without a label cell.
+- `register_placed_control(host, placed)` — register a `PlacedControl` with the scene so it participates in focus traversal and accessibility.
+- `add_group_label(layout, text)` — adds a full-width group heading row to the current layout pass.
+
+**Window management:**
+- `create_anchored_feature_window(host, rect, title, ...)` — convenience for creating a titled, draggable feature `WindowControl` and registering it with the scene.
+- `add_window_scene_menu_strip(host, ...)` — attach a `SceneMenuStrip` to a feature window.
+- `set_window_visible_state(window, visible)` / `toggle_window_visibility(window)` — idiomatic show/hide helpers.
+- `minimize_window_menu_entries(windows, app)` — build `MenuEntry` list for minimizing a set of windows from a menu.
+
+**Small types:**
+- `TabPanelManager` — manages tab-based panel switching within a feature window.
+- `WindowRelativeRect` — a rect descriptor expressed relative to a parent window rect; resolved at build time.
+- `FrameTimer` — per-feature frame-time accumulator for update-budget tracking.
+- `PlacedControl` — named tuple returned by `place_control`; fields: `name`, `control`, `label`.
+- `resolve_scene_selection_callback(host, cb)` — wraps a callback so it always references the currently active scene.
+
 ---
 
 ## Theme and Graphics [Back to Top](#table-of-contents)
@@ -1974,6 +2500,248 @@ registry.define("caption", size=12)
 registry.apply(app, scene_name="main")
 
 body_font = app.theme.fonts.font_instance("body", size=16)
+```
+
+### ShapeRenderer
+
+`ShapeRenderer` exposes static drawing helpers for common decorated shapes that `pygame.draw` does not provide natively. All methods draw onto a caller-supplied `pygame.Surface` and return `None`.
+
+```python
+from gui_do import ShapeRenderer
+
+ShapeRenderer.rounded_rect(surface, color=(60, 120, 200), rect=btn.rect, radius=6)
+ShapeRenderer.pill(surface, color=(180, 60, 60), rect=label.rect)
+ShapeRenderer.gradient_rect(surface, top_color=(40, 40, 40), bottom_color=(20, 20, 20),
+                             rect=panel.rect, horizontal=False)
+ShapeRenderer.drop_shadow(surface, rect=card.rect, radius=8, shadow_color=(0, 0, 0, 80),
+                           offset=(2, 4))
+ShapeRenderer.check_mark(surface, color=(60, 200, 60), rect=checkbox.rect, thickness=2)
+```
+
+### VectorPath
+
+`VectorPath` is a resolution-independent 2D path builder. Paths are constructed from movement commands and rendered onto any `pygame.Surface` at draw time. Paths are immutable once built — `transform` returns a new `VectorPath` without mutating the original.
+
+```python
+from gui_do import VectorPath
+
+path = (
+    VectorPath()
+    .move_to(0, 0)
+    .line_to(100, 0)
+    .cubic_bezier(cp1=(120, 0), cp2=(120, 60), end=(100, 60))
+    .arc(center=(50, 60), radius=50, angle_start=0, angle_end=180)
+    .close()
+)
+
+path.fill(surface, color=(80, 140, 220))
+path.stroke(surface, color=(20, 60, 140), width=2)
+
+if path.contains_point(mx, my):
+    hover_path = True
+
+scaled = path.transform(translate=(10, 10), scale=2.0, rotate=45.0)
+```
+
+### SurfaceCompositor and Layer
+
+`SurfaceCompositor` manages Z-ordered named layers and composites them onto the screen each frame. Each `Layer` has its own off-screen `pygame.Surface`; draw into the layer surface during the frame, then call `compose` to blit all visible layers in Z order with per-layer opacity.
+
+```python
+from gui_do import Layer, SurfaceCompositor
+
+compositor = SurfaceCompositor(screen)
+compositor.add_layer("background", z_index=0, opacity=1.0, visible=True)
+compositor.add_layer("ui",         z_index=10, opacity=1.0)
+compositor.add_layer("hud",        z_index=20, opacity=0.85)
+
+bg_surface = compositor.layer_surface("background")
+bg_surface.fill((20, 20, 30))
+
+compositor.set_layer_opacity("hud", 0.5)
+compositor.set_layer_visible("hud", False)
+
+compositor.compose(screen, dirty_rects=None)  # pass dirty_rects for partial updates
+```
+
+### SurfaceEffects
+
+`SurfaceEffects` applies post-processing to a surface and returns a new surface. Uses numpy when available for performance; falls back to pure Python otherwise.
+
+```python
+from gui_do import SurfaceEffects
+
+blurred  = SurfaceEffects.blur(surface, radius=4)
+grey     = SurfaceEffects.greyscale(surface)
+tinted   = SurfaceEffects.tint(surface, color=(80, 40, 160), alpha=128)
+bright   = SurfaceEffects.brightness(surface, factor=1.3)
+pixel    = SurfaceEffects.pixelate(surface, block_size=8)
+vignette = SurfaceEffects.vignette(surface, strength=0.6)
+```
+
+### DirtyRegionTracker
+
+`DirtyRegionTracker` accumulates dirty rects during a frame and provides a consolidated list for partial-display update. Integrate with `pygame.display.update(rects)` to skip unchanged areas of the screen.
+
+```python
+from gui_do import DirtyRegionTracker
+
+tracker = DirtyRegionTracker()
+tracker.mark_dirty(control.rect)
+tracker.mark_dirty(tooltip.rect)
+
+if tracker.has_dirty:
+    rects = tracker.consume_dirty_regions()  # resets tracker
+    pygame.display.update(rects)
+
+# Force a full redraw:
+tracker.mark_all_dirty(screen.get_rect())
+```
+
+### DrawContext and DrawPhase
+
+`DrawContext` is the render context passed to every `UiNode.draw()` call. It carries the current target surface, clip rect, draw phase, opacity, and local offset. `DrawPhase` is an enum that controls which layer of the node's visual is currently being drawn.
+
+```python
+from gui_do import DrawContext, DrawPhase
+
+# DrawPhase enum values:
+DrawPhase.BACKGROUND   # drawn first — fills, shadows
+DrawPhase.FOREGROUND   # text, icons, content
+DrawPhase.OVERLAY      # borders, selections, badges
+DrawPhase.DEBUG        # developer diagnostics (zero cost when disabled)
+
+# In a custom UiNode.draw():
+def draw(self, ctx: DrawContext) -> None:
+    if ctx.phase == DrawPhase.BACKGROUND:
+        ctx.surface.fill(self.bg_color, ctx.clip_rect)
+    elif ctx.phase == DrawPhase.FOREGROUND:
+        child_ctx = ctx.clip_to(self.inner_rect())
+        for child in self._children:
+            child.draw(child_ctx)
+```
+
+`ctx.clip_to(rect)` returns a sub-`DrawContext` for child drawing with an adjusted clip and offset.
+
+### AssetRegistry
+
+`AssetRegistry` is a reference-counted surface and font cache with optional file hot-reload. Call `check_hot_reload()` on a timer or each frame to detect changed files; modified assets are reloaded and all subscribers notified automatically.
+
+```python
+from gui_do import AssetRegistry
+
+assets = AssetRegistry()
+surf = assets.get_surface("icons/play.png", size=(32, 32))
+assets.release_surface("icons/play.png", size=(32, 32))
+
+# Hot-reload check (compares os.stat mtime):
+assets.check_hot_reload()
+
+stats = assets.stats()
+# {"surfaces": {"loaded": 5, "refs": 12}, "fonts": {"loaded": 2, "refs": 8}}
+```
+
+### DebugOverlay
+
+`DebugOverlay` is a developer diagnostic layer drawn during `DrawPhase.DEBUG`. It has zero production cost when `enabled = False`. It renders widget bounding rects color-coded by node type, the current focus chain, dirty region flashes, the hovered node highlight, a live FPS counter, and a rolling event log tail. Wire it into your feature's draw call for zero-configuration introspection.
+
+```python
+from gui_do import DebugOverlay
+
+debug = DebugOverlay()
+debug.enabled = True
+debug.log_event("pointer_down")
+
+# In your render loop — after all scene drawing:
+debug.draw(screen, scene, theme, focused_id=focus.focused_node, hovered_id=hovered, fps=fps)
+```
+
+---
+
+## Game and Media [Back to Top](#table-of-contents)
+
+### SpriteSheet and FrameAnimation
+
+`SpriteSheet` slices a surface atlas into indexed frames in left-to-right, top-to-bottom order (0-based). `FrameAnimation` drives frame-sequenced playback from a sheet. Call `anim.update(dt)` per frame and `anim.draw(surface, pos)` to render at a position. `current_surface` exposes the current frame surface for custom drawing.
+
+```python
+from gui_do import FrameAnimation, SpriteSheet
+
+sheet = SpriteSheet(atlas_surface, frame_w=64, frame_h=64)
+anim  = FrameAnimation(sheet, frames=[0, 1, 2, 3, 4, 3, 2, 1], fps=12, loop=True)
+
+# Per frame:
+anim.update(dt)
+anim.draw(surface, (100, 200))
+
+# Control:
+anim.pause()
+anim.play()
+anim.reset()
+anim.seek_frame(3)
+```
+
+### AnimatedImageControl
+
+`AnimatedImageControl` is a scene-graph `UiNode` that renders a `FrameAnimation` directly into a layout rect. Set `scale=True` (default) to fill the rect; set `scale=False` to blit at native frame size clipped to the rect. Swap animations at runtime via `ctrl.animation = new_anim`.
+
+```python
+from gui_do import AnimatedImageControl, FrameAnimation, SpriteSheet
+
+sheet = SpriteSheet(atlas_surface, frame_w=64, frame_h=64)
+anim  = FrameAnimation(sheet, frames=list(range(8)), fps=12)
+ctrl  = AnimatedImageControl("player", Rect(100, 100, 64, 64), animation=anim)
+app.scene.add(ctrl)
+
+# In update:
+ctrl.tick(dt)
+```
+
+### TileSet and TileMap
+
+`TileSet` slices a surface atlas into indexed tiles. `TileMap` manages a 2D grid of tile IDs and renders only tiles visible within the camera rect (frustum culling). Tile ID `TileSet.EMPTY` (`-1`) skips a cell. Coordinate helpers: `tile_to_world(col, row)` and `world_to_tile(x, y)`.
+
+```python
+from gui_do import TileMap, TileSet
+from pygame import Rect
+
+tile_set = TileSet(atlas_surface, tile_w=32, tile_h=32)
+tile_map = TileMap(tile_w=32, tile_h=32, cols=20, rows=15, tile_set=tile_set)
+
+tile_map.fill(0)                    # fill entire map with tile 0
+tile_map.set_tile(5, 3, 2)         # place tile 2 at column 5, row 3
+tile_map.fill_rect(0, 0, 5, 5, 1)  # fill 5×5 top-left block with tile 1
+
+camera_rect = Rect(scroll_x, scroll_y, screen_w, screen_h)
+tile_map.draw(surface, camera_rect, offset=(0, 0))
+```
+
+### ParticleSystem
+
+`ParticleSystem` is a frame-driven 2D particle emitter that draws using `pygame.draw` — no separate assets required. `Emitter` configures spawn parameters. Set `rate=0` for one-shot burst mode. Call `ps.update(dt)` and `ps.draw(surface)` each frame.
+
+```python
+from gui_do import Emitter, ParticleSystem
+
+ps = ParticleSystem()
+burst = Emitter(
+    x=200, y=200,
+    rate=0, burst_count=60,
+    lifetime=(0.5, 1.5),
+    speed=(80, 200),
+    angle_range=(0, 360),
+    size=(3, 7),
+    colors=[(255, 80, 80), (80, 255, 80), (80, 80, 255)],
+    gravity=300,
+)
+ps.add_emitter(burst)
+
+# Per frame:
+ps.update(dt)
+ps.draw(surface)
+
+ps.remove_emitter(burst)
+ps.clear()
 ```
 
 ---
@@ -2170,6 +2938,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `ColorPickerControl`
 - `TextFlow`
 - `TextSpan`
+- `ProgressBarControl`
+- `AnimatedImageControl`
 
 ### Layout
 
@@ -2183,6 +2953,8 @@ The following list is the complete public package export surface from `gui_do.__
 - `FlexDirection`
 - `FlexAlign`
 - `FlexJustify`
+- `FlowLayout`
+- `FlowItem`
 - `GridLayout`
 - `GridTrack`
 - `GridPlacement`
@@ -2198,17 +2970,27 @@ The following list is the complete public package export surface from `gui_do.__
 - `DockSplit`
 - `DockWorkspace`
 - `DockWorkspacePanel`
+- `SnapGrid`
+- `AlignmentGuide`
+- `SnapComposer`
+- `SnapTarget`
+- `Viewport`
 
 ### Events, Input, and Core Runtime
 
+- `Signal`
+- `SignalConnection`
 - `ActionManager`
 - `ActionDescriptor`
 - `ActionRegistry`
+- `ActionContext`
+- `ActionMiddleware`
 - `EventManager`
 - `EventBus`
 - `FocusManager`
 - `FocusScope`
 - `FocusScopeManager`
+- `FocusRing`
 - `WindowFocusManager`
 - `FontManager`
 - `FontRoleRegistry`
@@ -2219,6 +3001,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `ValueChangeReason`
 - `InvalidationTracker`
 - `GestureRecognizer`
+- `InputSnapshot`
 - `KeyChordManager`
 - `KeyChord`
 - `ChordStep`
@@ -2235,6 +3018,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `ComputedValue`
 - `ObservableList`
 - `ObservableDict`
+- `ObservableStream`
 - `ChangeKind`
 - `CollectionChange`
 - `CollectionView`
@@ -2247,6 +3031,18 @@ The following list is the complete public package export surface from `gui_do.__
 - `FormField`
 - `ValidationRule`
 - `FieldError`
+- `Validator`
+- `RequiredValidator`
+- `RangeValidator`
+- `LengthValidator`
+- `PatternValidator`
+- `CustomValidator`
+- `DependentValidator`
+- `ValidationPipeline`
+- `ValidationResult`
+- `WizardFlow`
+- `WizardStep`
+- `WizardHandle`
 - `FormSchema`
 - `SchemaField`
 - `CommandHistory`
@@ -2254,6 +3050,7 @@ The following list is the complete public package export surface from `gui_do.__
 - `Command`
 - `CommandTransaction`
 - `StateMachine`
+- `HierarchicalStateMachine`
 - `SettingsRegistry`
 - `SettingDescriptor`
 - `Router`
@@ -2268,6 +3065,14 @@ The following list is the complete public package export surface from `gui_do.__
 - `AsyncDataProvider`
 - `LoadState`
 - `LoadStateKind`
+- `DataCache`
+- `CacheStats`
+- `ListDiffCalculator`
+- `ListDiff`
+- `DiffInsert`
+- `DiffRemove`
+- `DiffMove`
+- `ObjectPool`
 - `SceneSnapshot`
 - `NodeSnapshot`
 - `WorkspaceState`
@@ -2278,12 +3083,23 @@ The following list is the complete public package export surface from `gui_do.__
 
 - `TaskEvent`
 - `TaskScheduler`
+- `CooperativeScheduler`
+- `CoroutineHandle`
+- `Pause`
+- `Sleep`
+- `WaitForEvent`
+- `WaitForSignal`
+- `WaitUntil`
+- `WaitForAll`
 - `Timers`
+- `SceneTimeline`
 - `TweenManager`
 - `TweenHandle`
 - `Easing`
 - `AnimationSequence`
 - `AnimationHandle`
+- `AnimationStateMachine`
+- `AnimationTransitionMode`
 - `TransitionManager`
 - `TransitionSpec`
 - `TransitionEvent`
@@ -2294,6 +3110,11 @@ The following list is the complete public package export surface from `gui_do.__
 
 - `OverlayManager`
 - `OverlayHandle`
+- `PopupPlacement`
+- `PlacementResult`
+- `Side`
+- `Alignment`
+- `compute_popup_rect`
 - `TooltipManager`
 - `TooltipHandle`
 - `ToastManager`
@@ -2316,6 +3137,9 @@ The following list is the complete public package export surface from `gui_do.__
 - `CommandPaletteManager`
 - `CommandEntry`
 - `CommandPaletteHandle`
+- `ShortcutHelpOverlay`
+- `ShortcutSection`
+- `ShortcutEntry`
 - `CanvasViewport`
 - `CursorManager`
 - `CursorHandle`
@@ -2338,6 +3162,26 @@ The following list is the complete public package export surface from `gui_do.__
 - `FeatureManager`
 - `SceneTransitionManager`
 - `SceneTransitionStyle`
+- `TabPanelManager`
+- `WindowRelativeRect`
+- `FrameTimer`
+- `PlacedControl`
+- `resolve_scene_selection_callback`
+- `minimize_window_menu_entries`
+- `set_window_visible_state`
+- `toggle_window_visibility`
+- `create_anchored_feature_window`
+- `add_window_scene_menu_strip`
+- `inset_rect`
+- `centered_horizontal_strip_layout`
+- `split_slot_bounds`
+- `partition_rects`
+- `place_control`
+- `place_control_unlabeled`
+- `register_placed_control`
+- `add_group_label`
+- `setup_standard_font_roles`
+- `register_standard_actions`
 
 ### Theme and Graphics
 
@@ -2347,6 +3191,27 @@ The following list is the complete public package export surface from `gui_do.__
 - `DesignTokens`
 - `ScopedTheme`
 - `ScopedThemeManager`
+- `ShapeRenderer`
+- `VectorPath`
+- `SurfaceCompositor`
+- `Layer`
+- `SurfaceEffects`
+- `DirtyRegionTracker`
+- `DrawContext`
+- `DrawPhase`
+- `AssetRegistry`
+- `DebugOverlay`
+
+### Game and Media
+
+- `SpriteSheet`
+- `FrameAnimation`
+- `AnimatedImageControl`
+- `TileSet`
+- `TileMap`
+- `ParticleSystem`
+- `Emitter`
+- `ParticleLayer`
 
 ### Localization
 
