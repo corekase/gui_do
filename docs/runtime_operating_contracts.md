@@ -20,6 +20,8 @@ The runtime must preserve these system interactions:
 - Action routing honors scene scope and window-only scope precedence.
 - Workspace restore can switch scene, replay feature state, restore scene snapshots, and replay settings.
 - Application workspace facade methods return restore reports (GuiApplication.restore_workspace and GuiApplication.load_workspace).
+- GuiApplication.run_entrypoint tolerates workspace load/save failures without aborting shutdown sequencing.
+- GuiApplication.run_entrypoint reports runtime loop failures and exits with a non-zero code.
 - Missing settings keys are skipped without aborting restore.
 
 ## 3. Determinism and Safety Rails

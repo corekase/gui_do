@@ -12,3 +12,8 @@ class TestContractCommandParity(unittest.TestCase):
 
         self.assertIn("python -m pytest -q", content)
         self.assertIn("tests/test_boundary_contracts.py", content)
+
+        self.assertIn("tests.test_runtime_operating_contracts", content)
+        self.assertIn("tests.test_gui_application_workspace_contracts", content)
+        self.assertIn("tests/test_runtime_operating_contracts.py", content)
+        self.assertIn("tests/test_gui_application_workspace_contracts.py", content)

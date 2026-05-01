@@ -60,6 +60,18 @@ class TestRuntimeOperatingContracts(unittest.TestCase):
             content,
         )
 
+    def test_contract_doc_declares_run_entrypoint_resilience(self):
+        content = self._read_contract_doc()
+
+        self.assertIn(
+            "GuiApplication.run_entrypoint tolerates workspace load/save failures without aborting shutdown sequencing.",
+            content,
+        )
+        self.assertIn(
+            "GuiApplication.run_entrypoint reports runtime loop failures and exits with a non-zero code.",
+            content,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
