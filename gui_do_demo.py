@@ -66,6 +66,7 @@ class GuiDoDemo:
                 "mandelbrot.status": {"font": "default", "size": 14},
                 "system.control": {"font": "default", "size": 18},
                 "system.label": {"font": "default", "size": 16},
+                "dock_workspace.tab": {"font": "default", "size": 14},
                 # Explicitly define controls.label and controls.control to avoid missing role errors
                 "controls.label": {"size": 14},
                 "controls.control": {"size": 16},
