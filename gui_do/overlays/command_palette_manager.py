@@ -61,7 +61,7 @@ class _CommandPalettePanel(OverlayPanelControl):
         EventType.MOUSE_MOTION,
     ))
 
-    def handle_event(self, event, app) -> bool:
+    def handle_event(self, event, app, theme=None) -> bool:
         # Wheel: move selected item first; scroll_to_item() in _move_selection_by_wheel
         # ensures the new selection scrolls into view automatically.
         if event.kind == EventType.MOUSE_WHEEL:

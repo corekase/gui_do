@@ -225,7 +225,7 @@ class _FileDialogPanel(OverlayPanelControl):
     # UiNode overrides
     # ------------------------------------------------------------------
 
-    def handle_event(self, event: GuiEvent, app: "GuiApplication") -> bool:
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible:
             return False
         if event.kind == EventType.KEY_DOWN and event.key == pygame.K_ESCAPE:

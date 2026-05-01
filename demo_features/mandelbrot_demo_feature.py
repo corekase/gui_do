@@ -26,17 +26,28 @@ from gui_do.controls.chrome.window_presenter import WindowPresenter
 # ---------------------------------------------------------------------------
 # Mandelbrot window layout constants — single source of truth for sizing and layout
 # ---------------------------------------------------------------------------
-_MANDEL_PAD = 10          # Uniform padding inside the window body on all four sides
-_MANDEL_CTRL_GAP = 8      # Gap between canvas bottom edge and the button strip
-_MANDEL_STATUS_GAP = 6    # Gap between button strip and status label
-_MANDEL_CTRL_H = 30       # Button strip height
-_MANDEL_STATUS_H = 20     # Status label height
-_MANDEL_CANVAS_SIZE = 580 # Square canvas dimension
-_MANDEL_TITLEBAR_H = 24   # Estimated titlebar height (matches size-14 title font)
+_MANDEL_PAD = 10            # Uniform padding inside the window body on all four sides
+_MANDEL_CTRL_GAP = 8        # Gap between canvas bottom edge and the button strip
+_MANDEL_STATUS_GAP = 6      # Gap between button strip and status label
+_MANDEL_CTRL_H = 30         # Button strip height
+_MANDEL_STATUS_H = 20       # Status label height
+_MANDEL_CANVAS_H = 560      # Canvas height
+_MANDEL_TITLEBAR_H = 24     # Estimated titlebar height (matches size-14 title font)
 
-_MANDEL_BODY_W = _MANDEL_PAD + _MANDEL_CANVAS_SIZE + _MANDEL_PAD
+# Button strip sizing — canvas width is derived so buttons always fit exactly
+_MANDEL_BTN_COUNT = 5
+_MANDEL_BTN_W = 120         # Per-button width (change this to resize all buttons)
+_MANDEL_BTN_SPACING = 8     # Gap between adjacent buttons
+_MANDEL_ROW_STRIP_PAD = 12  # Padding on each side of the button row
+_MANDEL_CANVAS_W = (
+    _MANDEL_BTN_COUNT * _MANDEL_BTN_W
+    + (_MANDEL_BTN_COUNT - 1) * _MANDEL_BTN_SPACING
+    + 2 * _MANDEL_ROW_STRIP_PAD
+)
+
+_MANDEL_BODY_W = _MANDEL_PAD + _MANDEL_CANVAS_W + _MANDEL_PAD
 _MANDEL_BODY_H = (
-    _MANDEL_PAD + _MANDEL_CANVAS_SIZE
+    _MANDEL_PAD + _MANDEL_CANVAS_H
     + _MANDEL_CTRL_GAP + _MANDEL_CTRL_H
     + _MANDEL_STATUS_GAP + _MANDEL_STATUS_H
     + _MANDEL_PAD
@@ -886,7 +897,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         content_rect = self.window.content_rect()
         padded = inset_rect(content_rect, padding_x=_MANDEL_PAD, padding_y=_MANDEL_PAD)
 
-        canvas_area = Rect(padded.left, padded.top, padded.width, _MANDEL_CANVAS_SIZE)
+        canvas_area = Rect(padded.left, padded.top, _MANDEL_CANVAS_W, _MANDEL_CANVAS_H)
 
         self.primary_canvas = CanvasControl("mandel_canvas", Rect(canvas_area), max_events=128)
         self.add_control(self.primary_canvas)
@@ -904,12 +915,11 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             self.add_control(c)
         self.feature.split_canvases = self.split_canvases
 
-        controls_y = padded.top + _MANDEL_CANVAS_SIZE + _MANDEL_CTRL_GAP
-        row_strip_padding = 12
+        controls_y = padded.top + _MANDEL_CANVAS_H + _MANDEL_CTRL_GAP
         slots = centered_horizontal_strip_layout(
-            left=padded.left + row_strip_padding,
-            width=max(1, padded.width - (row_strip_padding * 2)),
-            y=controls_y, item_count=5, item_height=_MANDEL_CTRL_H, spacing=8,
+            left=padded.left + _MANDEL_ROW_STRIP_PAD,
+            width=max(1, _MANDEL_CANVAS_W - 2 * _MANDEL_ROW_STRIP_PAD),
+            y=controls_y, item_count=_MANDEL_BTN_COUNT, item_height=_MANDEL_CTRL_H, spacing=_MANDEL_BTN_SPACING,
         )
         mandel_reset_rect, mandel_iter_rect, mandel_recur_rect, mandel_one_split_rect, mandel_four_split_rect = slots
 
@@ -949,7 +959,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
 
         status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
         self.status_label = LabelControl(
-            "mandel_status", Rect(padded.left, status_y, padded.width, _MANDEL_STATUS_H),
+            "mandel_status", Rect(padded.left, status_y, _MANDEL_CANVAS_W, _MANDEL_STATUS_H),
             self.feature.status_text
         )
         self.add_control(self.status_label)
