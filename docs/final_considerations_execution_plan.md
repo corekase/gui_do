@@ -48,14 +48,14 @@ Work proceeds in three implementation phases with explicit acceptance criteria.
 ### Steps
 
 1. Extend workspace restore flow with a structured report method.
-2. Keep existing restore API behavior backward compatible.
+2. Prefer a single explicit restore API that returns the report directly.
 3. Add integration tests for scene switch + feature restore + settings replay + scene snapshot restore.
 4. Add tests for malformed settings blocks and unknown keys being skipped safely.
 
 ### Acceptance Criteria
 
 - Restore report captures switched scene, restored node count, and settings apply/skip counts.
-- Existing callers of restore remain unaffected.
+- Restore behavior remains strict, explicit, and easy to assert in tests.
 - Integration tests validate graceful handling for partial state payloads.
 
 ## Phase 3 - Public Surface Policy, Diagnostics, and Release Gates
