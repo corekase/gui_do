@@ -1,7 +1,13 @@
 import pygame
 from demo_features.feature_abstractions import (
+    apply_runtime_scene_pristine_assets,
     apply_window_toggle_accessibility,
+    bind_runtime_scene_exit_keys,
     collect_window_toggle_controls,
+    instantiate_features_from_specs,
+    prewarm_runtime_scenes,
+    register_features_from_specs,
+    register_window_presentation_specs,
 )
 
 from demo_features.demo_config import (
@@ -126,47 +132,27 @@ class GuiDoDemo:
 
     def _instantiate_features(self) -> None:
         # Declarative feature specs keep host bootstrap compact and stable.
-        for spec in FEATURE_SPECS:
-            setattr(self, spec.attr_name, spec.factory())
+        instantiate_features_from_specs(self, FEATURE_SPECS)
 
     def _register_features(self) -> None:
-        for spec in FEATURE_SPECS:
-            feature = getattr(self, spec.attr_name)
-            self.app.register_feature(feature, host=self)
+        register_features_from_specs(self.app, self, FEATURE_SPECS)
 
     def _configure_window_presentation(self) -> None:
-        for spec in WINDOW_SPECS:
-            self.window_presentation.register_feature_window(
-                spec.key,
-                feature_attr=spec.feature_attr,
-                toggle_attr=spec.toggle_attr,
-                action_name=spec.action_name,
-                action_label=spec.action_label,
-                task_panel_button_id=spec.task_panel_button_id,
-                task_panel_label=spec.task_panel_label,
-                task_panel_style=spec.task_panel_style,
-                task_panel_slot_index=spec.task_panel_slot_index,
-                tab_before_showcase=spec.tab_before_showcase,
-                accessibility_label=spec.accessibility_label,
-            )
+        register_window_presentation_specs(self.window_presentation, WINDOW_SPECS)
 
     def _apply_runtime_scene_pristine_assets(self) -> None:
-        for spec in RUNTIME_SCENE_SPECS:
-            if not spec.pristine_asset:
-                continue
-            self.app.set_pristine(spec.pristine_asset, scene_name=spec.scene_name)
+        apply_runtime_scene_pristine_assets(self.app, RUNTIME_SCENE_SPECS)
 
     def _bind_runtime_scene_exit_keys(self) -> None:
-        for spec in RUNTIME_SCENE_SPECS:
-            if not spec.bind_escape_to_exit:
-                continue
-            self.app.actions.bind_key(pygame.K_ESCAPE, "exit", scene=spec.scene_name)
+        bind_runtime_scene_exit_keys(
+            self.app.actions,
+            RUNTIME_SCENE_SPECS,
+            key=pygame.K_ESCAPE,
+            action_name="exit",
+        )
 
     def _prewarm_runtime_scenes(self) -> None:
-        for spec in RUNTIME_SCENE_SPECS:
-            if not spec.prewarm:
-                continue
-            self.app.prewarm_scene(spec.scene_name)
+        prewarm_runtime_scenes(self.app, RUNTIME_SCENE_SPECS)
 
     def run(self) -> int:
         """Run demo via app entrypoint boilerplate."""

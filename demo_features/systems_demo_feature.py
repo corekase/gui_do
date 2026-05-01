@@ -480,23 +480,23 @@ class SystemsDemoFeature(RoutedFeature):
         self._proxy = SortFilterProxySource(source)
         self._proxy.subscribe(self._update_filter_label)
 
-        info_lbl = self.window.add(
-            LabelControl(
-                "nsdf_filter_info",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "SortFilterProxySource wraps any VirtualItemSource with reactive filter + sort.",
-                align="left",
-            )
+        info_lbl = self._add_tab_label(
+            controls,
+            "nsdf_filter_info",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "SortFilterProxySource wraps any VirtualItemSource with reactive filter + sort.",
         )
-        controls.append(info_lbl)
         y += 28
 
-        filter_lbl = self.window.add(
-            LabelControl("nsdf_filter_lbl", Rect(x, y, 60, 26), "Filter:", align="left")
+        filter_lbl = self._add_tab_label(
+            controls,
+            "nsdf_filter_lbl",
+            Rect(x, y, 60, 26),
+            "Filter:",
         )
-        controls.append(filter_lbl)
 
-        filter_input = self.window.add(
+        filter_input = self._add_tab_control(
+            controls,
             TextInputControl(
                 "nsdf_filter_input",
                 Rect(x + 68, y, 200, 28),
@@ -504,10 +504,10 @@ class SystemsDemoFeature(RoutedFeature):
                 on_change=self._on_filter_changed,
             )
         )
-        controls.append(filter_input)
         y += 36
 
-        sort_toggle = self.window.add(
+        sort_toggle = self._add_tab_control(
+            controls,
             ToggleControl(
                 "nsdf_sort_toggle",
                 Rect(x, y, 130, 28),
@@ -518,29 +518,23 @@ class SystemsDemoFeature(RoutedFeature):
                 style="round",
             )
         )
-        controls.append(sort_toggle)
         y += 38
 
-        result_title = self.window.add(
-            LabelControl(
-                "nsdf_filter_result_title",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "Proxy output:",
-                align="left",
-            )
+        result_title = self._add_tab_label(
+            controls,
+            "nsdf_filter_result_title",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "Proxy output:",
         )
-        controls.append(result_title)
         y += 24
 
-        self._filter_label = self.window.add(
-            LabelControl(
-                "nsdf_filter_result_lbl",
-                Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
-                "",
-                align="left",
-            )
+        self._filter_label = self._add_tab_label(
+            controls,
+            "nsdf_filter_result_lbl",
+            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
+            "",
         )
-        controls.append(self._filter_label)
+        _ = (info_lbl, filter_lbl, filter_input, sort_toggle, result_title)
 
         self._update_filter_label()
         return controls
@@ -580,52 +574,45 @@ class SystemsDemoFeature(RoutedFeature):
             initial_locale="en",
         )
 
-        locale_lbl = self.window.add(
-            LabelControl(
-                "nsdf_locale_lbl", Rect(x, y, 80, 26), "Locale:", align="left"
-            )
+        locale_lbl = self._add_tab_label(
+            controls,
+            "nsdf_locale_lbl",
+            Rect(x, y, 80, 26),
+            "Locale:",
         )
-        controls.append(locale_lbl)
 
         for i, (locale_id, locale_name) in enumerate(_LOCALE_BUTTON_SPECS):
-            btn = self.window.add(
-                ButtonControl(
-                    f"nsdf_locale_btn_{locale_id}",
-                    Rect(x + 90 + i * 60, y, 52, 28),
-                    locale_name,
-                    self._make_locale_setter(locale_id),
-                )
+            _ = self._add_tab_button(
+                controls,
+                f"nsdf_locale_btn_{locale_id}",
+                Rect(x + 90 + i * 60, y, 52, 28),
+                locale_name,
+                self._make_locale_setter(locale_id),
             )
-            controls.append(btn)
         y += 36
 
-        self._greeting_label = self.window.add(
-            LabelControl(
-                "nsdf_greeting_lbl",
-                Rect(x, y, rect.width - pad * 2, 26),
-                self._locale_registry.t("greeting"),
-                align="left",
-            )
+        self._greeting_label = self._add_tab_label(
+            controls,
+            "nsdf_greeting_lbl",
+            Rect(x, y, rect.width - pad * 2, 26),
+            self._locale_registry.t("greeting"),
         )
-        controls.append(self._greeting_label)
         y += 34
 
-        canvas_lbl = self.window.add(
-            LabelControl(
-                "nsdf_canvas_lbl",
-                Rect(x, y, rect.width - pad * 2, 20),
-                "TextFlow rendering (word-wrapped, mixed-style):",
-                align="left",
-            )
+        canvas_lbl = self._add_tab_label(
+            controls,
+            "nsdf_canvas_lbl",
+            Rect(x, y, rect.width - pad * 2, 20),
+            "TextFlow rendering (word-wrapped, mixed-style):",
         )
-        controls.append(canvas_lbl)
         y += 24
 
         canvas_h = max(60, rect.bottom - y - pad)
-        self._text_canvas = self.window.add(
-            CanvasControl("nsdf_text_canvas", Rect(x, y, rect.width - pad * 2, canvas_h))
+        self._text_canvas = self._add_tab_control(
+            controls,
+            CanvasControl("nsdf_text_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
         )
-        controls.append(self._text_canvas)
+        _ = (locale_lbl, canvas_lbl)
 
         self._text_flow = TextFlow(width=rect.width - pad * 2 - 16, line_spacing=3)
         self._rebuild_text_flow()
@@ -668,76 +655,61 @@ class SystemsDemoFeature(RoutedFeature):
         for action, key, label in _INPUT_DECLARE_SPECS:
             self._input_map.declare(action, key=key, mod=0, label=label)
 
-        title_lbl = self.window.add(
-            LabelControl(
-                "nsdf_input_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "InputMap — declared action bindings:",
-                align="left",
-            )
+        title_lbl = self._add_tab_label(
+            controls,
+            "nsdf_input_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "InputMap — declared action bindings:",
         )
-        controls.append(title_lbl)
         y += 26
 
         self._binding_labels = []
         for binding in self._input_map.bindings():
             key_name = pygame.key.name(binding.key) if binding.key else "?"
             text = f"  {binding.label}: {key_name}"
-            lbl = self.window.add(
-                LabelControl(
-                    f"nsdf_binding_{binding.action}",
-                    Rect(x, y, rect.width - pad * 2, 22),
-                    text,
-                    align="left",
-                )
+            lbl = self._add_tab_label(
+                controls,
+                f"nsdf_binding_{binding.action}",
+                Rect(x, y, rect.width - pad * 2, 22),
+                text,
             )
-            controls.append(lbl)
             self._binding_labels.append(lbl)
             y += 23
 
         y += 6
-        remap_btn = self.window.add(
-            ButtonControl(
-                "nsdf_input_remap_btn",
-                Rect(x, y, 150, 28),
-                "Remap: W/A/S/D",
-                self._remap_bindings,
-            )
+        remap_btn = self._add_tab_button(
+            controls,
+            "nsdf_input_remap_btn",
+            Rect(x, y, 150, 28),
+            "Remap: W/A/S/D",
+            self._remap_bindings,
         )
-        controls.append(remap_btn)
         y += 36
 
-        reset_btn = self.window.add(
-            ButtonControl(
-                "nsdf_input_reset_btn",
-                Rect(x, y, 150, 28),
-                "Reset to Arrows",
-                self._reset_bindings,
-            )
+        reset_btn = self._add_tab_button(
+            controls,
+            "nsdf_input_reset_btn",
+            Rect(x, y, 150, 28),
+            "Reset to Arrows",
+            self._reset_bindings,
         )
-        controls.append(reset_btn)
         y += 44
 
-        resp_title = self.window.add(
-            LabelControl(
-                "nsdf_resp_title",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "ResponsiveLayout — breakpoints based on window width:",
-                align="left",
-            )
+        resp_title = self._add_tab_label(
+            controls,
+            "nsdf_resp_title",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "ResponsiveLayout — breakpoints based on window width:",
         )
-        controls.append(resp_title)
         y += 26
 
-        self._layout_label = self.window.add(
-            LabelControl(
-                "nsdf_layout_lbl",
-                Rect(x, y, rect.width - pad * 2, 22),
-                "Active breakpoint: (updating...)",
-                align="left",
-            )
+        self._layout_label = self._add_tab_label(
+            controls,
+            "nsdf_layout_lbl",
+            Rect(x, y, rect.width - pad * 2, 22),
+            "Active breakpoint: (updating...)",
         )
-        controls.append(self._layout_label)
+        _ = (title_lbl, remap_btn, reset_btn, resp_title)
 
         self._responsive = ResponsiveLayout()
         self._responsive.add_breakpoint(Breakpoint("narrow", min_width=0, layout=None))
@@ -788,6 +760,40 @@ class SystemsDemoFeature(RoutedFeature):
             ButtonControl(str(control_id), Rect(rect), str(text), on_click, **kwargs),
         )
 
+    def _add_tab_button_row(
+        self,
+        controls: list,
+        *,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        gap: int,
+        specs,
+    ):
+        """Add a horizontal row of tab buttons from (id, label, callback[, style]) specs."""
+        buttons = []
+        left = int(x)
+        for spec in specs:
+            if len(spec) == 3:
+                control_id, label, on_click = spec
+                style = None
+            elif len(spec) == 4:
+                control_id, label, on_click, style = spec
+            else:
+                raise ValueError("Button row spec must have 3 or 4 values")
+            button = self._add_tab_button(
+                controls,
+                str(control_id),
+                Rect(left, int(y), int(width), int(height)),
+                str(label),
+                on_click,
+                style=style,
+            )
+            buttons.append(button)
+            left += int(width) + int(gap)
+        return tuple(buttons)
+
     # ------------------------------------------------------------------
     # Tab: Event — EventRecorder + EventPlayback + RecordedEvent
     # ------------------------------------------------------------------
@@ -815,34 +821,19 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 30
 
-        btn_w, btn_gap = 120, 8
-        record_btn = self._add_tab_button(
+        record_btn, stop_btn, sim_btn, play_btn = self._add_tab_button_row(
             controls,
-            "nsdf_evt_record",
-            Rect(x, y, btn_w, 28),
-            "Start Rec.",
-            self._start_recording,
-        )
-        stop_btn = self._add_tab_button(
-            controls,
-            "nsdf_evt_stop",
-            Rect(x + btn_w + btn_gap, y, btn_w, 28),
-            "Stop",
-            self._stop_recording,
-        )
-        sim_btn = self._add_tab_button(
-            controls,
-            "nsdf_evt_simulate",
-            Rect(x + (btn_w + btn_gap) * 2, y, btn_w, 28),
-            "Sim. Events",
-            self._simulate_events,
-        )
-        play_btn = self._add_tab_button(
-            controls,
-            "nsdf_evt_play",
-            Rect(x + (btn_w + btn_gap) * 3, y, btn_w, 28),
-            "Play Back",
-            self._start_playback,
+            x=x,
+            y=y,
+            width=120,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_evt_record", "Start Rec.", self._start_recording),
+                ("nsdf_evt_stop", "Stop", self._stop_recording),
+                ("nsdf_evt_simulate", "Sim. Events", self._simulate_events),
+                ("nsdf_evt_play", "Play Back", self._start_playback),
+            ),
         )
         _ = (record_btn, stop_btn, sim_btn, play_btn)
         y += 40
@@ -1178,19 +1169,17 @@ class SystemsDemoFeature(RoutedFeature):
         y += 26
 
         # Buttons: add/remove pane
-        add_btn = self._add_tab_button(
+        add_btn, remove_btn = self._add_tab_button_row(
             controls,
-            "nsdf_dock_add",
-            Rect(x, y, 120, 28),
-            "Add Extra Pane",
-            self._dock_add_pane,
-        )
-        remove_btn = self._add_tab_button(
-            controls,
-            "nsdf_dock_remove",
-            Rect(x + 128, y, 120, 28),
-            "Remove Active",
-            self._dock_remove_active,
+            x=x,
+            y=y,
+            width=120,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_dock_add", "Add Extra Pane", self._dock_add_pane),
+                ("nsdf_dock_remove", "Remove Active", self._dock_remove_active),
+            ),
         )
         _ = (add_btn, remove_btn)
         y += 36
@@ -1325,26 +1314,18 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 30
 
-        add_btn = self._add_tab_button(
+        add_btn, burst_btn, clear_btn = self._add_tab_button_row(
             controls,
-            "nsdf_particle_add",
-            Rect(x, y, 130, 28),
-            "Add Emitter",
-            self._particle_add_emitter,
-        )
-        burst_btn = self._add_tab_button(
-            controls,
-            "nsdf_particle_burst",
-            Rect(x + 138, y, 130, 28),
-            "Burst (50)",
-            self._particle_burst,
-        )
-        clear_btn = self._add_tab_button(
-            controls,
-            "nsdf_particle_clear",
-            Rect(x + 276, y, 130, 28),
-            "Clear Emitters",
-            self._particle_clear,
+            x=x,
+            y=y,
+            width=130,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_particle_add", "Add Emitter", self._particle_add_emitter),
+                ("nsdf_particle_burst", "Burst (50)", self._particle_burst),
+                ("nsdf_particle_clear", "Clear Emitters", self._particle_clear),
+            ),
         )
         _ = (info, add_btn, burst_btn, clear_btn)
         y += 38
@@ -1447,26 +1428,18 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 28
 
-        play_btn = self._add_tab_button(
+        play_btn, pause_btn, reset_btn = self._add_tab_button_row(
             controls,
-            "nsdf_sprite_play",
-            Rect(x, y, 90, 28),
-            "Play",
-            lambda: self._sprite_anim.play() if self._sprite_anim else None,
-        )
-        pause_btn = self._add_tab_button(
-            controls,
-            "nsdf_sprite_pause",
-            Rect(x + 98, y, 90, 28),
-            "Pause",
-            lambda: self._sprite_anim.pause() if self._sprite_anim else None,
-        )
-        reset_btn = self._add_tab_button(
-            controls,
-            "nsdf_sprite_reset",
-            Rect(x + 196, y, 90, 28),
-            "Reset",
-            lambda: self._sprite_anim.reset() if self._sprite_anim else None,
+            x=x,
+            y=y,
+            width=90,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_sprite_play", "Play", lambda: self._sprite_anim.play() if self._sprite_anim else None),
+                ("nsdf_sprite_pause", "Pause", lambda: self._sprite_anim.pause() if self._sprite_anim else None),
+                ("nsdf_sprite_reset", "Reset", lambda: self._sprite_anim.reset() if self._sprite_anim else None),
+            ),
         )
         _ = (info, sheet_info, play_btn, pause_btn, reset_btn)
         return controls
@@ -1508,19 +1481,17 @@ class SystemsDemoFeature(RoutedFeature):
         log_bottom = y + max(40, rect.bottom - y - 50)
 
         btn_y = log_bottom + 4
-        start_btn = self._add_tab_button(
+        start_btn, cancel_btn = self._add_tab_button_row(
             controls,
-            "nsdf_sched_start",
-            Rect(x, btn_y, 140, 28),
-            "Start Sequence",
-            self._sched_start_sequence,
-        )
-        cancel_btn = self._add_tab_button(
-            controls,
-            "nsdf_sched_cancel",
-            Rect(x + 148, btn_y, 140, 28),
-            "Cancel All",
-            self._sched_cancel_all,
+            x=x,
+            y=btn_y,
+            width=140,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_sched_start", "Start Sequence", self._sched_start_sequence),
+                ("nsdf_sched_cancel", "Cancel All", self._sched_cancel_all),
+            ),
         )
         _ = (info, start_btn, cancel_btn)
         return controls
@@ -1672,16 +1643,23 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 28
 
-        for step_pct, label in [(0, "0%"), (25, "25%"), (50, "50%"), (75, "75%"), (100, "100%")]:
-            _ = self._add_tab_button(
-                controls,
+        progress_specs = tuple(
+            (
                 f"nsdf_prog_set_{step_pct}",
-                Rect(x, y, 70, 26),
                 label,
                 self._make_progress_setter(step_pct / 100.0),
             )
-            x += 78
-        x = rect.left + pad
+            for step_pct, label in ((0, "0%"), (25, "25%"), (50, "50%"), (75, "75%"), (100, "100%"))
+        )
+        _ = self._add_tab_button_row(
+            controls,
+            x=x,
+            y=y,
+            width=70,
+            height=26,
+            gap=8,
+            specs=progress_specs,
+        )
         _ = (info, det_lbl, indet_lbl)
         return controls
 
@@ -1719,26 +1697,18 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 30
 
-        add_btn = self._add_tab_button(
+        add_btn, clear_btn, layout_btn = self._add_tab_button_row(
             controls,
-            "nsdf_flow_add",
-            Rect(x, y, 110, 28),
-            "Add Item",
-            self._flow_add_item,
-        )
-        clear_btn = self._add_tab_button(
-            controls,
-            "nsdf_flow_clear",
-            Rect(x + 118, y, 110, 28),
-            "Clear Items",
-            self._flow_clear_items,
-        )
-        layout_btn = self._add_tab_button(
-            controls,
-            "nsdf_flow_layout",
-            Rect(x + 236, y, 110, 28),
-            "Apply Layout",
-            self._flow_apply_layout,
+            x=x,
+            y=y,
+            width=110,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_flow_add", "Add Item", self._flow_add_item),
+                ("nsdf_flow_clear", "Clear Items", self._flow_clear_items),
+                ("nsdf_flow_layout", "Apply Layout", self._flow_apply_layout),
+            ),
         )
         _ = (info, add_btn, clear_btn, layout_btn)
         y += 36
@@ -1919,19 +1889,17 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 30
 
-        run_btn = self._add_tab_button(
+        run_btn, apply_btn = self._add_tab_button_row(
             controls,
-            "nsdf_listdiff_run",
-            Rect(x, y, 130, 28),
-            "Compute Diff",
-            self._run_listdiff,
-        )
-        apply_btn = self._add_tab_button(
-            controls,
-            "nsdf_listdiff_apply",
-            Rect(x + 138, y, 130, 28),
-            "Apply & Show",
-            self._apply_listdiff,
+            x=x,
+            y=y,
+            width=130,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_listdiff_run", "Compute Diff", self._run_listdiff),
+                ("nsdf_listdiff_apply", "Apply & Show", self._apply_listdiff),
+            ),
         )
         _ = (info, old_lbl, new_lbl, run_btn, apply_btn)
         y += 38
@@ -2004,19 +1972,17 @@ class SystemsDemoFeature(RoutedFeature):
         )
         y += 68
 
-        get_btn = self._add_tab_button(
+        get_btn, miss_btn = self._add_tab_button_row(
             controls,
-            "nsdf_cache_get",
-            Rect(x, y, 110, 28),
-            "Get user:1",
-            self._cache_get_user1,
-        )
-        miss_btn = self._add_tab_button(
-            controls,
-            "nsdf_cache_miss",
-            Rect(x + 118, y, 110, 28),
-            "Miss user:99",
-            self._cache_miss,
+            x=x,
+            y=y,
+            width=110,
+            height=28,
+            gap=8,
+            specs=(
+                ("nsdf_cache_get", "Get user:1", self._cache_get_user1),
+                ("nsdf_cache_miss", "Miss user:99", self._cache_miss),
+            ),
         )
         evict_btn = self._add_tab_button(
             controls,

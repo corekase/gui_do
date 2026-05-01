@@ -949,14 +949,8 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         self.add_control(self.primary_canvas)
         self.feature.primary_canvas = self.primary_canvas
 
-        canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
-        self.split_canvases = {
-            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=32)
-            for index, canvas_key in enumerate(_MANDEL_SPLIT_CANVAS_KEYS)
-        }
-        for c in self.split_canvases.values():
-            c.visible = False
-            self.add_control(c)
+        self.split_canvases = self._build_split_canvases(canvas_area, partition_rects)
+        self._register_split_canvases(self.split_canvases)
         self.feature.split_canvases = self.split_canvases
 
         controls_y = padded.top + _MANDEL_CANVAS_H + _MANDEL_CTRL_GAP
@@ -1000,6 +994,20 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         self.feature.set_task_buttons_disabled(self.host, False)
         self.feature.clear(self.host)
         self.window.visible = False
+
+    def _build_split_canvases(self, canvas_area: Rect, partition_rects):
+        """Build the four split Mandelbrot canvases mapped by declarative keys."""
+        canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
+        return {
+            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=32)
+            for index, canvas_key in enumerate(_MANDEL_SPLIT_CANVAS_KEYS)
+        }
+
+    def _register_split_canvases(self, split_canvases) -> None:
+        """Register split canvases as hidden controls until split mode is activated."""
+        for canvas in split_canvases.values():
+            canvas.visible = False
+            self.add_control(canvas)
 
     def _add_control(self, control):
         """Add a presenter-managed control and return it."""

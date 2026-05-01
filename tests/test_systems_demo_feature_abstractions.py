@@ -79,6 +79,37 @@ class TestSystemsDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual([button], controls)
         self.assertEqual([button], feature.window.added)
 
+    def test_add_tab_button_row_places_buttons_with_consistent_gap(self):
+        feature = self._make_feature()
+        controls = []
+
+        def first():
+            return None
+
+        def second():
+            return None
+
+        buttons = feature._add_tab_button_row(
+            controls,
+            x=10,
+            y=20,
+            width=100,
+            height=30,
+            gap=8,
+            specs=(
+                ("btn_one", "One", first),
+                ("btn_two", "Two", second),
+            ),
+        )
+
+        self.assertEqual(2, len(buttons))
+        self.assertEqual("btn_one", buttons[0].control_id)
+        self.assertEqual("btn_two", buttons[1].control_id)
+        self.assertEqual(10, buttons[0].rect.left)
+        self.assertEqual(118, buttons[1].rect.left)
+        self.assertEqual([buttons[0], buttons[1]], controls)
+        self.assertEqual([buttons[0], buttons[1]], feature.window.added)
+
 
 if __name__ == "__main__":
     unittest.main()

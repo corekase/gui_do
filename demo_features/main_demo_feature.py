@@ -77,8 +77,10 @@ from gui_do import (
 
 )
 from demo_features.feature_abstractions import (
+    add_task_panel_button,
     add_standard_scene_menu_strip,
     add_window_toggle_task_panel_controls,
+    register_tooltip_specs,
     register_window_toggle_tooltips,
 )
 
@@ -140,23 +142,23 @@ class MainDemoFeature(Feature):
             horizontal=True,
         )
 
-        host.exit_button = host.task_panel.add(
-            ButtonControl(
-                "exit",
-                host.app.layout.linear(0),
-                "Exit",
-                lambda: setattr(host.app, "running", False),
-                style="angle",
-            )
+        host.exit_button = add_task_panel_button(
+            host.task_panel,
+            host.app.layout,
+            control_id="exit",
+            slot_index=0,
+            label="Exit",
+            on_click=lambda: setattr(host.app, "running", False),
+            style="angle",
         )
-        host.showcase_button = host.task_panel.add(
-            ButtonControl(
-                "showcase",
-                host.app.layout.linear(2),
-                "Showcase",
-                host.go_to_control_showcase,
-                style="angle",
-            )
+        host.showcase_button = add_task_panel_button(
+            host.task_panel,
+            host.app.layout,
+            control_id="showcase",
+            slot_index=2,
+            label="Showcase",
+            on_click=host.go_to_control_showcase,
+            style="angle",
         )
 
         toggle_controls, max_slot_index = add_window_toggle_task_panel_controls(
@@ -166,21 +168,29 @@ class MainDemoFeature(Feature):
             host.window_presentation,
         )
 
-        host.help_button = host.task_panel.add(
-            ButtonControl(
-                "show_help",
-                host.app.layout.linear(max(5, max_slot_index + 1)),
-                "Help (F9)",
-                lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
-                style="angle",
-            )
+        host.help_button = add_task_panel_button(
+            host.task_panel,
+            host.app.layout,
+            control_id="show_help",
+            slot_index=max(5, max_slot_index + 1),
+            label="Help (F9)",
+            on_click=lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
+            style="angle",
         )
 
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
-        host._main_tooltip_manager.register(host.exit_button, "Exit the application")
-        host._main_tooltip_manager.register(host.showcase_button, "Open the control showcase scene")
+        register_tooltip_specs(
+            host._main_tooltip_manager,
+            (
+                (host.exit_button, "Exit the application"),
+                (host.showcase_button, "Open the control showcase scene"),
+            ),
+        )
         register_window_toggle_tooltips(host._main_tooltip_manager, toggle_controls)
-        host._main_tooltip_manager.register(host.help_button, "Show keyboard shortcut reference (F1)")
+        register_tooltip_specs(
+            host._main_tooltip_manager,
+            ((host.help_button, "Show keyboard shortcut reference (F1)"),),
+        )
 
         host.app.tile_windows()
 

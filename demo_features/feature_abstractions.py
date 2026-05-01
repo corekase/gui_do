@@ -13,6 +13,7 @@ from typing import Iterable, Sequence
 from pygame import Rect
 
 from gui_do import (
+    ButtonControl,
     LocaleRegistry,
     MenuEntry,
     SceneMenuStripControl,
@@ -197,6 +198,80 @@ def resolve_canvas_local_point(packet, canvas_rect: Rect):
     if pos is None:
         return None
     return (float(pos[0] - canvas_rect.left), float(pos[1] - canvas_rect.top))
+
+
+def apply_runtime_scene_pristine_assets(app, runtime_scene_specs) -> None:
+    """Apply configured pristine assets to runtime scenes from declarative specs."""
+    for spec in runtime_scene_specs:
+        if not spec.pristine_asset:
+            continue
+        app.set_pristine(spec.pristine_asset, scene_name=spec.scene_name)
+
+
+def bind_runtime_scene_exit_keys(actions, runtime_scene_specs, *, key, action_name: str = "exit") -> None:
+    """Bind a shared exit action key for all runtime scenes that opt in."""
+    for spec in runtime_scene_specs:
+        if not spec.bind_escape_to_exit:
+            continue
+        actions.bind_key(key, str(action_name), scene=spec.scene_name)
+
+
+def prewarm_runtime_scenes(app, runtime_scene_specs) -> None:
+    """Prewarm runtime scenes that opt in via declarative scene specs."""
+    for spec in runtime_scene_specs:
+        if not spec.prewarm:
+            continue
+        app.prewarm_scene(spec.scene_name)
+
+
+def add_task_panel_button(task_panel, app_layout, *, control_id: str, slot_index: int, label: str, on_click, style: str = "angle"):
+    """Create and add a standard task-panel button positioned by linear slot index."""
+    return task_panel.add(
+        ButtonControl(
+            str(control_id),
+            app_layout.linear(int(slot_index)),
+            str(label),
+            on_click,
+            style=str(style),
+        )
+    )
+
+
+def register_tooltip_specs(tooltip_manager, specs) -> None:
+    """Register a sequence of tooltip specs as (control, message) pairs."""
+    for control, message in specs:
+        tooltip_manager.register(control, str(message))
+
+
+def instantiate_features_from_specs(host, feature_specs) -> None:
+    """Instantiate feature objects from specs and attach them to host attributes."""
+    for spec in feature_specs:
+        setattr(host, spec.attr_name, spec.factory())
+
+
+def register_features_from_specs(app, host, feature_specs) -> None:
+    """Register instantiated host feature attributes to the application."""
+    for spec in feature_specs:
+        feature = getattr(host, spec.attr_name)
+        app.register_feature(feature, host=host)
+
+
+def register_window_presentation_specs(window_presentation, window_specs) -> None:
+    """Register feature-window presentation bindings from declarative window specs."""
+    for spec in window_specs:
+        window_presentation.register_feature_window(
+            spec.key,
+            feature_attr=spec.feature_attr,
+            toggle_attr=spec.toggle_attr,
+            action_name=spec.action_name,
+            action_label=spec.action_label,
+            task_panel_button_id=spec.task_panel_button_id,
+            task_panel_label=spec.task_panel_label,
+            task_panel_style=spec.task_panel_style,
+            task_panel_slot_index=spec.task_panel_slot_index,
+            tab_before_showcase=spec.tab_before_showcase,
+            accessibility_label=spec.accessibility_label,
+        )
 
 
 def register_window_tab_builders(tab_manager, feature, host, rect, tab_specs) -> None:
