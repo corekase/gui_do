@@ -155,6 +155,7 @@ from .features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     TabBuilderSpec,
     ActiveTabUpdateRouter,
+    TabLayoutContext,
     TelemetryConfig,
     HostApplicationConfig,
     # Bootstrap entrypoint

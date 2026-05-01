@@ -695,6 +695,170 @@ def add_window_button_row(
     return tuple(buttons)
 
 
+class TabLayoutContext:
+    """Cursor-tracking helper for building tab content layouts.
+
+    Carries window, control list, pad, x, and y cursor so tab build
+    methods describe *what* to place rather than tracking coordinates
+    manually.  Call ``build()`` to retrieve the accumulated control list.
+
+    Usage::
+
+        ctx = TabLayoutContext(self.window, rect)
+        ctx.add_label("my_lbl", 22, "Hello")
+        ctx.add_button_row(height=28, gap=8, specs=(...))
+        return ctx.build()
+    """
+
+    def __init__(self, window, rect: Rect, *, pad: int = 8) -> None:
+        self._window = window
+        self._rect = Rect(rect)
+        self._pad = int(pad)
+        self._controls: list = []
+        self._x = rect.left + self._pad
+        self._y = rect.top + self._pad
+        self._w = rect.width - self._pad * 2
+
+    # ------------------------------------------------------------------
+    # Read-only geometry accessors
+    # ------------------------------------------------------------------
+
+    @property
+    def x(self) -> int:
+        """Left x position for content (rect.left + pad)."""
+        return self._x
+
+    @property
+    def y(self) -> int:
+        """Current y cursor position."""
+        return self._y
+
+    @property
+    def width(self) -> int:
+        """Content width (rect.width - pad * 2)."""
+        return self._w
+
+    @property
+    def pad(self) -> int:
+        """Padding value supplied at construction."""
+        return self._pad
+
+    # ------------------------------------------------------------------
+    # Control placement helpers
+    # ------------------------------------------------------------------
+
+    def add_control(self, control):
+        """Add an already-constructed control to the window and control list.
+
+        Does **not** advance the y cursor — call ``advance(n)`` afterwards.
+        """
+        return add_window_control(self._window, self._controls, control)
+
+    def add_label(
+        self,
+        control_id: str,
+        height: int,
+        text: str,
+        *,
+        width: int | None = None,
+        advance: int | None = None,
+        align: str = "left",
+    ):
+        """Add a label at the current cursor and advance y.
+
+        *width* defaults to the full content width (``self.width``).
+        *advance* defaults to ``height + 8``.  Pass ``advance=0`` to keep y
+        unchanged (useful when placing a label beside another control).
+        """
+        w = int(width) if width is not None else self._w
+        ctrl = add_window_label(
+            self._window,
+            self._controls,
+            str(control_id),
+            Rect(self._x, self._y, w, int(height)),
+            str(text),
+            align=str(align),
+        )
+        self._y += int(advance) if advance is not None else int(height) + 8
+        return ctrl
+
+    def add_button(
+        self,
+        control_id: str,
+        width: int,
+        height: int,
+        text: str,
+        on_click,
+        *,
+        style=None,
+        x_offset: int = 0,
+        advance: int | None = None,
+    ):
+        """Add a button at the current cursor and advance y.
+
+        *x_offset* shifts the button right of the standard left margin.
+        *advance* defaults to ``height + 8``.
+        """
+        ctrl = add_window_button(
+            self._window,
+            self._controls,
+            str(control_id),
+            Rect(self._x + int(x_offset), self._y, int(width), int(height)),
+            str(text),
+            on_click,
+            style=style,
+        )
+        self._y += int(advance) if advance is not None else int(height) + 8
+        return ctrl
+
+    def add_button_row(
+        self,
+        *,
+        height: int,
+        gap: int,
+        specs,
+        width: int | None = None,
+        advance: int | None = None,
+    ) -> tuple:
+        """Add a horizontal button row at the current cursor and advance y.
+
+        *width* is the per-button width.  *advance* defaults to ``height + 8``.
+        """
+        result = add_window_button_row(
+            self._window,
+            self._controls,
+            x=self._x,
+            y=self._y,
+            width=int(width) if width is not None else self._w,
+            height=int(height),
+            gap=int(gap),
+            specs=specs,
+        )
+        self._y += int(advance) if advance is not None else int(height) + 8
+        return result
+
+    # ------------------------------------------------------------------
+    # Cursor management
+    # ------------------------------------------------------------------
+
+    def advance(self, n: int) -> "TabLayoutContext":
+        """Manually advance the y cursor by *n* pixels."""
+        self._y += int(n)
+        return self
+
+    def remaining_height(self, *, margin: int = 0) -> int:
+        """Height from the current cursor to the bottom of the rect minus margin."""
+        return max(0, self._rect.bottom - self._y - int(margin))
+
+    # ------------------------------------------------------------------
+    # Output
+    # ------------------------------------------------------------------
+
+    def build(self) -> list:
+        """Return the accumulated control list."""
+        return list(self._controls)
+
+
 def make_window_toggle_spec(
     key: str,
     feature_attr: str,

@@ -84,10 +84,6 @@ from gui_do import (
 from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from demo_features.feature_abstractions import (
-    add_window_button,
-    add_window_button_row,
-    add_window_control,
-    add_window_label,
     ActiveTabUpdateRouter,
     bind_input_map_actions,
     AnchoredWindowSpec,
@@ -98,6 +94,7 @@ from demo_features.feature_abstractions import (
     register_descriptors,
     register_tab_update_handlers,
     setup_feature_presenter_tabs,
+    TabLayoutContext,
 )
 
 _TAB_H = 36
@@ -490,9 +487,7 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_filter_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         fruit_items = [
             ListItem("Apple"),
@@ -510,64 +505,39 @@ class SystemsDemoFeature(RoutedFeature):
         self._proxy = SortFilterProxySource(source)
         self._proxy.subscribe(self._update_filter_label)
 
-        info_lbl = self._add_tab_label(
-            controls,
-            "nsdf_filter_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_filter_info", 20,
             "SortFilterProxySource wraps any VirtualItemSource with reactive filter + sort.",
-        )
-        y += 28
+            advance=28)
 
-        filter_lbl = self._add_tab_label(
-            controls,
-            "nsdf_filter_lbl",
-            Rect(x, y, 60, 26),
-            "Filter:",
-        )
+        ctx.add_label("nsdf_filter_lbl", 26, "Filter:", width=60, advance=0)
+        ctx.add_control(TextInputControl(
+            "nsdf_filter_input",
+            Rect(ctx.x + 68, ctx.y, 200, 28),
+            placeholder="type prefix...",
+            on_change=self._on_filter_changed,
+        ))
+        ctx.advance(36)
 
-        filter_input = self._add_tab_control(
-            controls,
-            TextInputControl(
-                "nsdf_filter_input",
-                Rect(x + 68, y, 200, 28),
-                placeholder="type prefix...",
-                on_change=self._on_filter_changed,
-            )
-        )
-        y += 36
+        ctx.add_control(ToggleControl(
+            "nsdf_sort_toggle",
+            Rect(ctx.x, ctx.y, 130, 28),
+            "Sort: A→Z",
+            "Sort: Z→A",
+            pushed=False,
+            on_toggle=self._on_sort_toggled,
+            style="round",
+        ))
+        ctx.advance(38)
 
-        sort_toggle = self._add_tab_control(
-            controls,
-            ToggleControl(
-                "nsdf_sort_toggle",
-                Rect(x, y, 130, 28),
-                "Sort: A→Z",
-                "Sort: Z→A",
-                pushed=False,
-                on_toggle=self._on_sort_toggled,
-                style="round",
-            )
-        )
-        y += 38
-
-        result_title = self._add_tab_label(
-            controls,
-            "nsdf_filter_result_title",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Proxy output:",
-        )
-        y += 24
-
-        self._filter_label = self._add_tab_label(
-            controls,
+        ctx.add_label("nsdf_filter_result_title", 20, "Proxy output:", advance=24)
+        self._filter_label = ctx.add_label(
             "nsdf_filter_result_lbl",
-            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
+            max(40, ctx.remaining_height(margin=ctx.pad)),
             "",
         )
-        _ = (info_lbl, filter_lbl, filter_input, sort_toggle, result_title)
 
         self._update_filter_label()
-        return controls
+        return ctx.build()
 
     def _on_filter_changed(self, text: str) -> None:
         if not text.strip():
@@ -595,58 +565,35 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_locale_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         self._locale_registry = initialize_locale_registry(
             [StringTable(locale_id, strings) for locale_id, strings in _LOCALE_TABLE_SPECS],
             initial_locale="en",
         )
 
-        locale_lbl = self._add_tab_label(
-            controls,
-            "nsdf_locale_lbl",
-            Rect(x, y, 80, 26),
-            "Locale:",
-        )
-
+        ctx.add_label("nsdf_locale_lbl", 26, "Locale:", width=80, advance=0)
         for i, (locale_id, locale_name) in enumerate(_LOCALE_BUTTON_SPECS):
-            _ = self._add_tab_button(
-                controls,
+            ctx.add_control(ButtonControl(
                 f"nsdf_locale_btn_{locale_id}",
-                Rect(x + 90 + i * 60, y, 52, 28),
+                Rect(ctx.x + 90 + i * 60, ctx.y, 52, 28),
                 locale_name,
                 self._make_locale_setter(locale_id),
-            )
-        y += 36
+            ))
+        ctx.advance(36)
 
-        self._greeting_label = self._add_tab_label(
-            controls,
-            "nsdf_greeting_lbl",
-            Rect(x, y, rect.width - pad * 2, 26),
-            self._locale_registry.t("greeting"),
-        )
-        y += 34
+        self._greeting_label = ctx.add_label(
+            "nsdf_greeting_lbl", 26, self._locale_registry.t("greeting"), advance=34)
+        ctx.add_label("nsdf_canvas_lbl", 20,
+            "TextFlow rendering (word-wrapped, mixed-style):", advance=24)
 
-        canvas_lbl = self._add_tab_label(
-            controls,
-            "nsdf_canvas_lbl",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "TextFlow rendering (word-wrapped, mixed-style):",
-        )
-        y += 24
+        canvas_h = max(60, ctx.remaining_height(margin=ctx.pad))
+        self._text_canvas = ctx.add_control(
+            CanvasControl("nsdf_text_canvas", Rect(ctx.x, ctx.y, ctx.width, canvas_h)))
 
-        canvas_h = max(60, rect.bottom - y - pad)
-        self._text_canvas = self._add_tab_control(
-            controls,
-            CanvasControl("nsdf_text_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
-        )
-        _ = (locale_lbl, canvas_lbl)
-
-        self._text_flow = TextFlow(width=rect.width - pad * 2 - 16, line_spacing=3)
+        self._text_flow = TextFlow(width=ctx.width - 16, line_spacing=3)
         self._rebuild_text_flow()
-        return controls
+        return ctx.build()
 
     def _make_locale_setter(self, locale_id: str):
         def set_locale():
@@ -677,76 +624,40 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_input_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         self._input_map = InputMap()
         for action, key, label in _INPUT_DECLARE_SPECS:
             self._input_map.declare(action, key=key, mod=0, label=label)
 
-        title_lbl = self._add_tab_label(
-            controls,
-            "nsdf_input_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "InputMap — declared action bindings:",
-        )
-        y += 26
+        ctx.add_label("nsdf_input_title", 22,
+            "InputMap — declared action bindings:", advance=26)
 
         self._binding_labels = []
         for binding in self._input_map.bindings():
             key_name = pygame.key.name(binding.key) if binding.key else "?"
-            text = f"  {binding.label}: {key_name}"
-            lbl = self._add_tab_label(
-                controls,
-                f"nsdf_binding_{binding.action}",
-                Rect(x, y, rect.width - pad * 2, 22),
-                text,
-            )
+            lbl = ctx.add_label(
+                f"nsdf_binding_{binding.action}", 22,
+                f"  {binding.label}: {key_name}", advance=23)
             self._binding_labels.append(lbl)
-            y += 23
+        ctx.advance(6)
 
-        y += 6
-        remap_btn = self._add_tab_button(
-            controls,
-            "nsdf_input_remap_btn",
-            Rect(x, y, 150, 28),
-            "Remap: W/A/S/D",
-            self._remap_bindings,
-        )
-        y += 36
+        ctx.add_button("nsdf_input_remap_btn", 150, 28, "Remap: W/A/S/D",
+            self._remap_bindings, advance=36)
+        ctx.add_button("nsdf_input_reset_btn", 150, 28, "Reset to Arrows",
+            self._reset_bindings, advance=44)
 
-        reset_btn = self._add_tab_button(
-            controls,
-            "nsdf_input_reset_btn",
-            Rect(x, y, 150, 28),
-            "Reset to Arrows",
-            self._reset_bindings,
-        )
-        y += 44
-
-        resp_title = self._add_tab_label(
-            controls,
-            "nsdf_resp_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "ResponsiveLayout — breakpoints based on window width:",
-        )
-        y += 26
-
-        self._layout_label = self._add_tab_label(
-            controls,
-            "nsdf_layout_lbl",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Active breakpoint: (updating...)",
-        )
-        _ = (title_lbl, remap_btn, reset_btn, resp_title)
+        ctx.add_label("nsdf_resp_title", 22,
+            "ResponsiveLayout — breakpoints based on window width:", advance=26)
+        self._layout_label = ctx.add_label(
+            "nsdf_layout_lbl", 22, "Active breakpoint: (updating...)")
 
         self._responsive = ResponsiveLayout()
         self._responsive.add_breakpoint(Breakpoint("narrow", min_width=0, layout=None))
         self._responsive.add_breakpoint(Breakpoint("standard", min_width=600, layout=None))
         self._responsive.add_breakpoint(Breakpoint("wide", min_width=900, layout=None))
 
-        return controls
+        return ctx.build()
 
     def _remap_bindings(self) -> None:
         if self._input_map is None:
@@ -767,101 +678,35 @@ class SystemsDemoFeature(RoutedFeature):
             key_name = pygame.key.name(binding.key) if binding.key else "?"
             lbl.text = f"  {binding.label}: {key_name}"
 
-    def _add_tab_control(self, controls: list, control):
-        """Add a control to the window and tab-control collection in one call."""
-        return add_window_control(self.window, controls, control)
-
-    def _add_tab_label(self, controls: list, control_id: str, rect: Rect, text: str):
-        """Convenience wrapper for left-aligned tab labels."""
-        return add_window_label(self.window, controls, control_id, rect, text, align="left")
-
-    def _add_tab_button(self, controls: list, control_id: str, rect: Rect, text: str, on_click, *, style=None):
-        """Convenience wrapper for tab buttons with optional style."""
-        return add_window_button(self.window, controls, control_id, rect, text, on_click, style=style)
-
-    def _add_tab_button_row(
-        self,
-        controls: list,
-        *,
-        x: int,
-        y: int,
-        width: int,
-        height: int,
-        gap: int,
-        specs,
-    ):
-        """Add a horizontal row of tab buttons from (id, label, callback[, style]) specs."""
-        return add_window_button_row(
-            self.window,
-            controls,
-            x=x,
-            y=y,
-            width=width,
-            height=height,
-            gap=gap,
-            specs=specs,
-        )
-
     # ------------------------------------------------------------------
     # Tab: Event — EventRecorder + EventPlayback + RecordedEvent
     # ------------------------------------------------------------------
 
     def _build_event_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         self._recorder = EventRecorder()
 
-        info_lbl = self._add_tab_label(
-            controls,
-            "nsdf_evt_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_evt_info", 20,
             "EventRecorder captures GuiEvents; EventPlayback replays them via a handler.",
-        )
-        y += 28
+            advance=28)
+        self._event_status_label = ctx.add_label(
+            "nsdf_evt_status", 22, "Status: Idle — 0 events recorded", advance=30)
 
-        self._event_status_label = self._add_tab_label(
-            controls,
-            "nsdf_evt_status",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Status: Idle — 0 events recorded",
-        )
-        y += 30
+        ctx.add_button_row(height=28, gap=8, width=120, advance=40, specs=(
+            ("nsdf_evt_record", "Start Rec.", self._start_recording),
+            ("nsdf_evt_stop", "Stop", self._stop_recording),
+            ("nsdf_evt_simulate", "Sim. Events", self._simulate_events),
+            ("nsdf_evt_play", "Play Back", self._start_playback),
+        ))
 
-        record_btn, stop_btn, sim_btn, play_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=120,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_evt_record", "Start Rec.", self._start_recording),
-                ("nsdf_evt_stop", "Stop", self._stop_recording),
-                ("nsdf_evt_simulate", "Sim. Events", self._simulate_events),
-                ("nsdf_evt_play", "Play Back", self._start_playback),
-            ),
-        )
-        _ = (record_btn, stop_btn, sim_btn, play_btn)
-        y += 40
-
-        log_title = self._add_tab_label(
-            controls,
-            "nsdf_evt_log_title",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Event log:",
-        )
-        y += 24
-
-        log_h = max(40, rect.bottom - y - pad)
-        self._event_log_label = self._add_tab_label(
-            controls,
+        ctx.add_label("nsdf_evt_log_title", 20, "Event log:", advance=24)
+        self._event_log_label = ctx.add_label(
             "nsdf_evt_log",
-            Rect(x, y, rect.width - pad * 2, log_h),
+            max(40, ctx.remaining_height(margin=ctx.pad)),
             "No events recorded yet.",
         )
-        return controls
+        return ctx.build()
 
     def _start_recording(self) -> None:
         if self._recorder is None:
@@ -946,18 +791,11 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_inspect_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         # PropertyRegistry / PropertyDescriptor demo
-        prop_title = self._add_tab_label(
-            controls,
-            "nsdf_prop_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "PropertyRegistry — registered descriptors for ButtonControl:",
-        )
-        y += 26
+        ctx.add_label("nsdf_prop_title", 22,
+            "PropertyRegistry — registered descriptors for ButtonControl:", advance=26)
 
         # Register sample descriptors to demonstrate the API
         descs = [
@@ -973,135 +811,61 @@ class SystemsDemoFeature(RoutedFeature):
         register_descriptors(property_registry, ButtonControl, descs)
 
         for desc in property_registry.descriptors_for(ButtonControl):
-            lbl = self._add_tab_label(
-                controls,
-                f"nsdf_prop_{desc.name}",
-                Rect(x, y, rect.width - pad * 2, 20),
-                f"  [{desc.group}] {desc.label} : {desc.type}",
-            )
-            y += 21
-
-        y += 8
+            ctx.add_label(
+                f"nsdf_prop_{desc.name}", 20,
+                f"  [{desc.group}] {desc.label} : {desc.type}", advance=21)
+        ctx.advance(8)
 
         # SceneSnapshot demo
-        snap_title = self._add_tab_label(
-            controls,
-            "nsdf_snap_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "SceneSnapshot — capture & restore window rect:",
-        )
-        y += 26
-
-        capture_btn = self._add_tab_button(
-            controls,
-            "nsdf_snap_capture",
-            Rect(x, y, 110, 28),
-            "Capture",
-            self._capture_snapshot,
-        )
-        restore_btn = self._add_tab_button(
-            controls,
-            "nsdf_snap_restore",
-            Rect(x + 118, y, 110, 28),
-            "Restore",
-            self._restore_snapshot,
-        )
-        _ = (capture_btn, restore_btn)
-        y += 36
-
-        self._snapshot_label = self._add_tab_label(
-            controls,
-            "nsdf_snap_label",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "No snapshot captured yet.",
-        )
-        y += 30
+        ctx.add_label("nsdf_snap_title", 22,
+            "SceneSnapshot — capture & restore window rect:", advance=26)
+        ctx.add_button("nsdf_snap_capture", 110, 28, "Capture",
+            self._capture_snapshot, advance=0)
+        ctx.add_button("nsdf_snap_restore", 110, 28, "Restore",
+            self._restore_snapshot, x_offset=118, advance=36)
+        self._snapshot_label = ctx.add_label(
+            "nsdf_snap_label", 22, "No snapshot captured yet.", advance=30)
 
         # SceneSpatialIndex demo
-        spatial_title = self._add_tab_label(
-            controls,
-            "nsdf_spatial_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "SceneSpatialIndex — build from scene, then hit-test:",
-        )
-        y += 26
-
+        ctx.add_label("nsdf_spatial_title", 22,
+            "SceneSpatialIndex — build from scene, then hit-test:", advance=26)
         self._spatial_index = SceneSpatialIndex(cell_size=64)
+        ctx.add_button("nsdf_spatial_build", 160, 28, "Build & Query Center",
+            self._build_and_query_spatial, advance=36)
+        self._spatial_label = ctx.add_label(
+            "nsdf_spatial_label", 22, "Press 'Build & Query Center' to run.")
 
-        build_btn = self._add_tab_button(
-            controls,
-            "nsdf_spatial_build",
-            Rect(x, y, 160, 28),
-            "Build & Query Center",
-            self._build_and_query_spatial,
-        )
-        _ = build_btn
-        y += 36
-
-        self._spatial_label = self._add_tab_label(
-            controls,
-            "nsdf_spatial_label",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Press 'Build & Query Center' to run.",
-        )
-
-        return controls
+        return ctx.build()
 
     # ------------------------------------------------------------------
     # Tab: Props — PropertyInspectorPanel
     # ------------------------------------------------------------------
 
     def _build_props_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        title = self._add_tab_label(
-            controls,
-            "nsdf_props_title",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "PropertyInspectorPanel — inspect _DemoInspectable properties:",
-        )
-        y += 28
+        ctx.add_label("nsdf_props_title", 22,
+            "PropertyInspectorPanel — inspect _DemoInspectable properties:", advance=28)
+        ctx.add_label("nsdf_props_hint", 20,
+            "Click a property row to select it. Use refresh to re-read values.", advance=26)
 
-        hint = self._add_tab_label(
-            controls,
-            "nsdf_props_hint",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Click a property row to select it. Use refresh to re-read values.",
-        )
-        y += 26
-
-        panel_h = max(120, rect.bottom - y - 60 - pad)
-        self._prop_inspector_panel = self._add_tab_control(
-            controls,
+        panel_h = max(120, ctx.remaining_height(margin=60 + ctx.pad))
+        self._prop_inspector_panel = ctx.add_control(
             PropertyInspectorPanel(
                 "nsdf_prop_inspector",
-                Rect(x, y, rect.width - pad * 2, panel_h),
+                Rect(ctx.x, ctx.y, ctx.width, panel_h),
                 PropertyInspectorModel(self._demo_inspectable),
                 on_select=self._on_prop_selected,
             )
         )
-        y += panel_h + 6
+        ctx.advance(panel_h + 6)
 
-        self._prop_selected_label = self._add_tab_label(
-            controls,
-            "nsdf_prop_selected",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Select a property above…",
-        )
-        y += 26
+        self._prop_selected_label = ctx.add_label(
+            "nsdf_prop_selected", 20, "Select a property above…", advance=26)
+        ctx.add_button("nsdf_props_refresh", 100, 28, "Refresh",
+            self._refresh_prop_inspector)
 
-        refresh_btn = self._add_tab_button(
-            controls,
-            "nsdf_props_refresh",
-            Rect(x, y, 100, 28),
-            "Refresh",
-            self._refresh_prop_inspector,
-        )
-        _ = (title, hint, refresh_btn)
-
-        return controls
+        return ctx.build()
 
     def _on_prop_selected(self, prop) -> None:
         if self._prop_selected_label is None:
@@ -1123,25 +887,13 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_dock_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        title = self._add_tab_label(
-            controls,
-            "nsdf_dock_title",
-            Rect(x, y, rect.width - pad * 2, 22),
+        ctx.add_label("nsdf_dock_title", 22,
             "DockWorkspacePanel — interactive tab bar backed by DockWorkspace model:",
-        )
-        y += 28
-
-        hint = self._add_tab_label(
-            controls,
-            "nsdf_dock_hint",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Click a tab below to switch the active pane.",
-        )
-        y += 26
+            advance=28)
+        ctx.add_label("nsdf_dock_hint", 20,
+            "Click a tab below to switch the active pane.", advance=26)
 
         # Build a demo DockWorkspace with tabs
         self._dock_workspace = DockWorkspace(
@@ -1157,59 +909,30 @@ class SystemsDemoFeature(RoutedFeature):
         )
 
         panel_h = 36
-        self._dock_panel = self._add_tab_control(
-            controls,
+        self._dock_panel = ctx.add_control(
             DockWorkspacePanel(
                 "nsdf_dock_panel",
-                Rect(x, y, rect.width - pad * 2, panel_h),
+                Rect(ctx.x, ctx.y, ctx.width, panel_h),
                 self._dock_workspace,
                 on_change=self._on_dock_pane_changed,
             )
         )
-        y += panel_h + 12
+        ctx.advance(panel_h + 12)
 
-        self._dock_active_label = self._add_tab_label(
-            controls,
-            "nsdf_dock_active",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "Active pane: editor",
-        )
-        y += 26
+        self._dock_active_label = ctx.add_label(
+            "nsdf_dock_active", 20, "Active pane: editor", advance=26)
 
-        # Buttons: add/remove pane
-        add_btn, remove_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=120,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_dock_add", "Add Extra Pane", self._dock_add_pane),
-                ("nsdf_dock_remove", "Remove Active", self._dock_remove_active),
-            ),
-        )
-        _ = (add_btn, remove_btn)
-        y += 36
+        ctx.add_button_row(height=28, gap=8, width=120, advance=36, specs=(
+            ("nsdf_dock_add", "Add Extra Pane", self._dock_add_pane),
+            ("nsdf_dock_remove", "Remove Active", self._dock_remove_active),
+        ))
 
-        # Show serialized model
-        model_title = self._add_tab_label(
-            controls,
-            "nsdf_dock_model_title",
-            Rect(x, y, rect.width - pad * 2, 20),
-            "DockWorkspace.to_dict() — model serializes cleanly:",
-        )
-        y += 24
+        ctx.add_label("nsdf_dock_model_title", 20,
+            "DockWorkspace.to_dict() — model serializes cleanly:", advance=24)
+        self._dock_model_label = ctx.add_label(
+            "nsdf_dock_model_label", 20, self._dock_model_summary())
 
-        self._dock_model_label = self._add_tab_label(
-            controls,
-            "nsdf_dock_model_label",
-            Rect(x, y, rect.width - pad * 2, 20),
-            self._dock_model_summary(),
-        )
-        _ = (title, hint, model_title)
-
-        return controls
+        return ctx.build()
 
     def _on_dock_pane_changed(self, pane_id: str) -> None:
         if self._dock_active_label is not None:
@@ -1302,55 +1025,32 @@ class SystemsDemoFeature(RoutedFeature):
 
     def _build_particle_tab(self, host, rect: Rect) -> list:
         import pygame as _pygame
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_particle_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_particle_info", 20,
             "ParticleSystem — live GPU-free particle simulation.  Add/burst emitters below.",
-        )
-        y += 26
+            advance=26)
+        self._particle_count_label = ctx.add_label(
+            "nsdf_particle_count", 22, "Live particles: 0  Emitters: 0", advance=30)
 
-        self._particle_count_label = self._add_tab_label(
-            controls,
-            "nsdf_particle_count",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Live particles: 0  Emitters: 0",
-        )
-        y += 30
+        ctx.add_button_row(height=28, gap=8, width=130, advance=38, specs=(
+            ("nsdf_particle_add", "Add Emitter", self._particle_add_emitter),
+            ("nsdf_particle_burst", "Burst (50)", self._particle_burst),
+            ("nsdf_particle_clear", "Clear Emitters", self._particle_clear),
+        ))
 
-        add_btn, burst_btn, clear_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=130,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_particle_add", "Add Emitter", self._particle_add_emitter),
-                ("nsdf_particle_burst", "Burst (50)", self._particle_burst),
-                ("nsdf_particle_clear", "Clear Emitters", self._particle_clear),
-            ),
-        )
-        _ = (info, add_btn, burst_btn, clear_btn)
-        y += 38
-
-        canvas_h = max(60, rect.bottom - y - pad)
-        self._particle_canvas = self._add_tab_control(
-            controls,
-            CanvasControl("nsdf_particle_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
-        )
+        canvas_h = max(60, ctx.remaining_height(margin=ctx.pad))
+        self._particle_canvas = ctx.add_control(
+            CanvasControl("nsdf_particle_canvas",
+                Rect(ctx.x, ctx.y, ctx.width, canvas_h)))
 
         # Build particle layer (owns its own ParticleSystem)
         self._particle_layer = ParticleLayer(
             "nsdf_particle_layer",
-            Rect(x, y, rect.width - pad * 2, canvas_h),
+            Rect(ctx.x, ctx.y, ctx.width, canvas_h),
         )
         self._particle_system = self._particle_layer.particle_system
-        return controls
+        return ctx.build()
 
     def _particle_add_emitter(self) -> None:
         if self._particle_system is None or self._particle_canvas is None:
@@ -1396,18 +1096,12 @@ class SystemsDemoFeature(RoutedFeature):
 
     def _build_sprite_tab(self, host, rect: Rect) -> list:
         import pygame as _pygame
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_sprite_info",
-            Rect(x, y, rect.width - pad * 2, 40),
+        ctx.add_label("nsdf_sprite_info", 40,
             "SpriteSheet slices an atlas into frames.  FrameAnimation drives playback.\n"
             "AnimatedImageControl renders the active frame as a scene-graph node.",
-        )
-        y += 50
+            advance=50)
 
         # Build a four-frame colored atlas
         FW, FH = 64, 64
@@ -1416,93 +1110,53 @@ class SystemsDemoFeature(RoutedFeature):
             _atlas.fill(col, Rect(fi * FW, 0, FW, FH))
         sheet = SpriteSheet(_atlas, frame_w=FW, frame_h=FH)
         self._sprite_anim = FrameAnimation(sheet, frames=list(range(4)), fps=3, loop=True)
-        ctrl_w, ctrl_h = min(200, rect.width - pad * 2), 80
-        self._sprite_ctrl = self._add_tab_control(
-            controls,
+        ctrl_w, ctrl_h = min(200, ctx.width), 80
+        self._sprite_ctrl = ctx.add_control(
             AnimatedImageControl(
                 "nsdf_sprite_ctrl",
-                Rect(x, y, ctrl_w, ctrl_h),
+                Rect(ctx.x, ctx.y, ctrl_w, ctrl_h),
                 animation=self._sprite_anim,
                 scale=True,
             )
         )
-        y += ctrl_h + 12
+        ctx.advance(ctrl_h + 12)
 
-        sheet_info = self._add_tab_label(
-            controls,
-            "nsdf_sprite_sheet_info",
-            Rect(x, y, rect.width - pad * 2, 22),
-            f"SpriteSheet: {sheet.frame_count} frames  ({FW}×{FH} px each)",
-        )
-        y += 28
+        ctx.add_label("nsdf_sprite_sheet_info", 22,
+            f"SpriteSheet: {sheet.frame_count} frames  ({FW}×{FH} px each)", advance=28)
 
-        play_btn, pause_btn, reset_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=90,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_sprite_play", "Play", lambda: self._sprite_anim.play() if self._sprite_anim else None),
-                ("nsdf_sprite_pause", "Pause", lambda: self._sprite_anim.pause() if self._sprite_anim else None),
-                ("nsdf_sprite_reset", "Reset", lambda: self._sprite_anim.reset() if self._sprite_anim else None),
-            ),
-        )
-        _ = (info, sheet_info, play_btn, pause_btn, reset_btn)
-        return controls
+        ctx.add_button_row(height=28, gap=8, width=90, specs=(
+            ("nsdf_sprite_play", "Play", lambda: self._sprite_anim.play() if self._sprite_anim else None),
+            ("nsdf_sprite_pause", "Pause", lambda: self._sprite_anim.pause() if self._sprite_anim else None),
+            ("nsdf_sprite_reset", "Reset", lambda: self._sprite_anim.reset() if self._sprite_anim else None),
+        ))
+        return ctx.build()
 
     # ------------------------------------------------------------------
     # Tab: Sched — CooperativeScheduler + Pause + Sleep + WaitUntil
     # ------------------------------------------------------------------
 
     def _build_sched_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         self._scheduler = CooperativeScheduler()
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_sched_info",
-            Rect(x, y, rect.width - pad * 2, 40),
+        ctx.add_label("nsdf_sched_info", 40,
             "CooperativeScheduler runs generator coroutines on the frame thread.\n"
             "Yield Pause, Sleep(s), or WaitUntil(predicate) to suspend.",
-        )
-        y += 50
+            advance=50)
+        self._sched_step_label = ctx.add_label(
+            "nsdf_sched_step", 22, "Active coroutines: 0", advance=30)
 
-        self._sched_step_label = self._add_tab_label(
-            controls,
-            "nsdf_sched_step",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Active coroutines: 0",
-        )
-        y += 30
+        log_h = max(40, ctx.remaining_height(margin=50))
+        self._sched_log_label = ctx.add_label(
+            "nsdf_sched_log", log_h,
+            "Press a button to start a coroutine…", advance=log_h + 4)
 
-        self._sched_log_label = self._add_tab_label(
-            controls,
-            "nsdf_sched_log",
-            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - 50)),
-            "Press a button to start a coroutine…",
-        )
-        log_bottom = y + max(40, rect.bottom - y - 50)
-
-        btn_y = log_bottom + 4
-        start_btn, cancel_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=btn_y,
-            width=140,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_sched_start", "Start Sequence", self._sched_start_sequence),
-                ("nsdf_sched_cancel", "Cancel All", self._sched_cancel_all),
-            ),
-        )
-        _ = (info, start_btn, cancel_btn)
-        return controls
+        ctx.add_button_row(height=28, gap=8, width=140, specs=(
+            ("nsdf_sched_start", "Start Sequence", self._sched_start_sequence),
+            ("nsdf_sched_cancel", "Cancel All", self._sched_cancel_all),
+        ))
+        return ctx.build()
 
     def _sched_log_append(self, msg: str) -> None:
         self._sched_log.append(msg)
@@ -1539,18 +1193,12 @@ class SystemsDemoFeature(RoutedFeature):
     def _build_tilemap_tab(self, host, rect: Rect) -> list:
         import pygame as _pygame
         import random as _random
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_tilemap_info",
-            Rect(x, y, rect.width - pad * 2, 40),
+        ctx.add_label("nsdf_tilemap_info", 40,
             "TileSet slices an atlas into tile surfaces.  TileMap renders only visible tiles.\n"
             "Camera culling is automatic via visible_range().",
-        )
-        y += 50
+            advance=50)
 
         TILE_W, TILE_H = 24, 24
         COLS, ROWS = 16, 10
@@ -1573,83 +1221,50 @@ class SystemsDemoFeature(RoutedFeature):
             rr = _random.randint(1, ROWS - 2)
             self._tile_map.set_tile(rc, rr, 2)
 
-        canvas_h = max(60, rect.bottom - y - 60)
-        self._tile_canvas = self._add_tab_control(
-            controls,
-            CanvasControl("nsdf_tile_canvas", Rect(x, y, rect.width - pad * 2, canvas_h)),
-        )
+        canvas_h = max(60, ctx.remaining_height(margin=60))
+        self._tile_canvas = ctx.add_control(
+            CanvasControl("nsdf_tile_canvas",
+                Rect(ctx.x, ctx.y, ctx.width, canvas_h)))
         self._tile_dirty = True
-        y += canvas_h + 8
+        ctx.advance(canvas_h + 8)
 
-        tile_info = self._add_tab_label(
-            controls,
-            "nsdf_tilemap_detail",
-            Rect(x, y, rect.width - pad * 2, 22),
-            f"TileSet: {tile_set.tile_count} tiles  |  TileMap: {COLS}×{ROWS} ({COLS * ROWS} cells)",
-        )
-        _ = (info, tile_info)
-        return controls
+        ctx.add_label("nsdf_tilemap_detail", 22,
+            f"TileSet: {tile_set.tile_count} tiles  |  TileMap: {COLS}×{ROWS} ({COLS * ROWS} cells)")
+        return ctx.build()
 
     # ------------------------------------------------------------------
     # Tab: Progress — ProgressBarControl
     # ------------------------------------------------------------------
 
     def _build_progress_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_progress_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_progress_info", 20,
             "ProgressBarControl — determinate (0–1) and indeterminate (marquee) modes.",
-        )
-        y += 30
+            advance=30)
 
-        det_lbl = self._add_tab_label(
-            controls,
-            "nsdf_prog_det_lbl",
-            Rect(x, y, rect.width - pad * 2, 18),
-            "Determinate (value=0.72):",
-        )
-        y += 22
-
-        self._progress_bar = self._add_tab_control(
-            controls,
+        ctx.add_label("nsdf_prog_det_lbl", 18, "Determinate (value=0.72):", advance=22)
+        self._progress_bar = ctx.add_control(
             ProgressBarControl(
                 "nsdf_progress_bar",
-                Rect(x, y, rect.width - pad * 2, 18),
+                Rect(ctx.x, ctx.y, ctx.width, 18),
                 value=0.72,
             )
         )
-        y += 30
+        ctx.advance(30)
 
-        indet_lbl = self._add_tab_label(
-            controls,
-            "nsdf_prog_indet_lbl",
-            Rect(x, y, rect.width - pad * 2, 18),
-            "Indeterminate (marquee):",
-        )
-        y += 22
-
-        self._progress_indeterminate = self._add_tab_control(
-            controls,
+        ctx.add_label("nsdf_prog_indet_lbl", 18, "Indeterminate (marquee):", advance=22)
+        self._progress_indeterminate = ctx.add_control(
             ProgressBarControl(
                 "nsdf_progress_indet",
-                Rect(x, y, rect.width - pad * 2, 18),
+                Rect(ctx.x, ctx.y, ctx.width, 18),
                 indeterminate=True,
             )
         )
-        y += 30
+        ctx.advance(30)
 
-        self._progress_label = self._add_tab_label(
-            controls,
-            "nsdf_progress_val_lbl",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Adjust value:",
-        )
-        y += 28
+        self._progress_label = ctx.add_label(
+            "nsdf_progress_val_lbl", 22, "Adjust value:", advance=28)
 
         progress_specs = tuple(
             (
@@ -1659,17 +1274,8 @@ class SystemsDemoFeature(RoutedFeature):
             )
             for step_pct, label in ((0, "0%"), (25, "25%"), (50, "50%"), (75, "75%"), (100, "100%"))
         )
-        _ = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=70,
-            height=26,
-            gap=8,
-            specs=progress_specs,
-        )
-        _ = (info, det_lbl, indet_lbl)
-        return controls
+        ctx.add_button_row(height=26, gap=8, width=70, specs=progress_specs)
+        return ctx.build()
 
     def _make_progress_setter(self, value: float):
         def _set():
@@ -1684,45 +1290,26 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_flow_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_flow_info",
-            Rect(x, y, rect.width - pad * 2, 40),
+        ctx.add_label("nsdf_flow_info", 40,
             "FlowLayout arranges FlowItem nodes left-to-right with automatic row wrapping.\n"
             "Items here are LabelControls sized as tags.  Add/clear to see layout reflow.",
-        )
-        y += 50
+            advance=50)
 
-        self._flow_result_label = self._add_tab_label(
-            controls,
-            "nsdf_flow_result",
-            Rect(x, y, rect.width - pad * 2, 22),
-            "Row info will appear here after layout runs.",
-        )
-        y += 30
+        self._flow_result_label = ctx.add_label(
+            "nsdf_flow_result", 22,
+            "Row info will appear here after layout runs.", advance=30)
 
-        add_btn, clear_btn, layout_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=110,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_flow_add", "Add Item", self._flow_add_item),
-                ("nsdf_flow_clear", "Clear Items", self._flow_clear_items),
-                ("nsdf_flow_layout", "Apply Layout", self._flow_apply_layout),
-            ),
-        )
-        _ = (info, add_btn, clear_btn, layout_btn)
-        y += 36
+        ctx.add_button_row(height=28, gap=8, width=110, advance=36, specs=(
+            ("nsdf_flow_add", "Add Item", self._flow_add_item),
+            ("nsdf_flow_clear", "Clear Items", self._flow_clear_items),
+            ("nsdf_flow_layout", "Apply Layout", self._flow_apply_layout),
+        ))
 
         self._flow_layout = FlowLayout(gap_x=8, gap_y=6)
-        self._flow_items_rect = Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad))
+        self._flow_items_rect = Rect(ctx.x, ctx.y, ctx.width,
+            max(60, ctx.remaining_height(margin=ctx.pad)))
         # Store offset relative to the window rect so layout stays correct if the window moves.
         self._flow_items_win_offset = (
             self._flow_items_rect.left - self.window.rect.left,
@@ -1737,8 +1324,7 @@ class SystemsDemoFeature(RoutedFeature):
             self._flow_add_item_named(tag)
         self._flow_apply_layout()
         # Add flow item labels to controls so _on_tab_change can manage visibility
-        controls.extend(self._flow_items)
-        return controls
+        return ctx.build() + self._flow_items
 
     def _flow_add_item_named(self, name: str) -> None:
         if self._flow_layout is None:
@@ -1804,9 +1390,7 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_search_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         DEMO_TEXT = (
             "TextSearcher wraps Python regex to provide case-insensitive, whole-word, "
@@ -1814,40 +1398,26 @@ class SystemsDemoFeature(RoutedFeature):
         )
         self._searcher = TextSearcher(DEMO_TEXT, case_sensitive=False)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_search_source",
-            Rect(x, y, rect.width - pad * 2, 50),
-            f'Search target:\n"{DEMO_TEXT[:80]}…"',
-        )
-        y += 58
+        ctx.add_label("nsdf_search_source", 50,
+            f'Search target:\n"{DEMO_TEXT[:80]}…"', advance=58)
 
-        query_lbl = self._add_tab_label(
-            controls,
-            "nsdf_search_lbl",
-            Rect(x, y, 60, 26),
-            "Query:",
-        )
-
-        self._search_input = self._add_tab_control(
-            controls,
+        ctx.add_label("nsdf_search_lbl", 26, "Query:", width=60, advance=0)
+        self._search_input = ctx.add_control(
             TextInputControl(
                 "nsdf_search_input",
-                Rect(x + 68, y, min(260, rect.width - pad * 2 - 68), 28),
+                Rect(ctx.x + 68, ctx.y, min(260, ctx.width - 68), 28),
                 placeholder="enter search term…",
                 on_change=self._on_search_changed,
             )
         )
-        y += 36
+        ctx.advance(36)
 
-        self._search_result_label = self._add_tab_label(
-            controls,
+        self._search_result_label = ctx.add_label(
             "nsdf_search_result",
-            Rect(x, y, rect.width - pad * 2, max(40, rect.bottom - y - pad)),
+            max(40, ctx.remaining_height(margin=ctx.pad)),
             "Results appear here…",
         )
-        _ = (info, query_lbl)
-        return controls
+        return ctx.build()
 
     def _on_search_changed(self, text: str) -> None:
         if self._searcher is None or self._search_result_label is None:
@@ -1869,56 +1439,25 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_listdiff_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_listdiff_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_listdiff_info", 20,
             "ListDiffCalculator.diff(old, new) returns DiffInsert / DiffRemove / DiffMove ops.",
-        )
-        y += 28
+            advance=28)
+        ctx.add_label("nsdf_listdiff_old", 22, f"Old: {self._listdiff_old}", advance=26)
+        ctx.add_label("nsdf_listdiff_new", 22, f"New: {self._listdiff_new}", advance=30)
 
-        old_lbl = self._add_tab_label(
-            controls,
-            "nsdf_listdiff_old",
-            Rect(x, y, rect.width - pad * 2, 22),
-            f"Old: {self._listdiff_old}",
-        )
-        y += 26
+        ctx.add_button_row(height=28, gap=8, width=130, advance=38, specs=(
+            ("nsdf_listdiff_run", "Compute Diff", self._run_listdiff),
+            ("nsdf_listdiff_apply", "Apply & Show", self._apply_listdiff),
+        ))
 
-        new_lbl = self._add_tab_label(
-            controls,
-            "nsdf_listdiff_new",
-            Rect(x, y, rect.width - pad * 2, 22),
-            f"New: {self._listdiff_new}",
-        )
-        y += 30
-
-        run_btn, apply_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=130,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_listdiff_run", "Compute Diff", self._run_listdiff),
-                ("nsdf_listdiff_apply", "Apply & Show", self._apply_listdiff),
-            ),
-        )
-        _ = (info, old_lbl, new_lbl, run_btn, apply_btn)
-        y += 38
-
-        self._listdiff_result_label = self._add_tab_label(
-            controls,
+        self._listdiff_result_label = ctx.add_label(
             "nsdf_listdiff_result",
-            Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+            max(60, ctx.remaining_height(margin=ctx.pad)),
             "Press 'Compute Diff' to see operations.",
         )
-        return controls
+        return ctx.build()
 
     def _run_listdiff(self) -> None:
         if self._listdiff_result_label is None:
@@ -1955,59 +1494,35 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_cache_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
         self._cache = DataCache(max_size=5)
         # Pre-populate
         for k, v in [("user:1", "Alice"), ("user:2", "Bob"), ("user:3", "Carol")]:
             self._cache.put(k, v)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_cache_info",
-            Rect(x, y, rect.width - pad * 2, 20),
+        ctx.add_label("nsdf_cache_info", 20,
             "DataCache — LRU cache (max_size=5) with reactive on_evicted/on_invalidated signals.",
-        )
-        y += 28
+            advance=28)
+        self._cache_stats_label = ctx.add_label(
+            "nsdf_cache_stats", 60, self._cache_stats_text(), advance=68)
 
-        self._cache_stats_label = self._add_tab_label(
-            controls,
-            "nsdf_cache_stats",
-            Rect(x, y, rect.width - pad * 2, 60),
-            self._cache_stats_text(),
-        )
-        y += 68
-
-        get_btn, miss_btn = self._add_tab_button_row(
-            controls,
-            x=x,
-            y=y,
-            width=110,
-            height=28,
-            gap=8,
-            specs=(
-                ("nsdf_cache_get", "Get user:1", self._cache_get_user1),
-                ("nsdf_cache_miss", "Miss user:99", self._cache_miss),
-            ),
-        )
-        evict_btn = self._add_tab_button(
-            controls,
+        # Two buttons on the left + one further right, all at same y
+        ctx.add_button_row(height=28, gap=8, width=110, advance=0, specs=(
+            ("nsdf_cache_get", "Get user:1", self._cache_get_user1),
+            ("nsdf_cache_miss", "Miss user:99", self._cache_miss),
+        ))
+        ctx.add_control(ButtonControl(
             "nsdf_cache_evict",
-            Rect(x + 236, y, 130, 28),
+            Rect(ctx.x + 236, ctx.y, 130, 28),
             "Fill (cause evict)",
             self._cache_fill,
-        )
-        inval_btn = self._add_tab_button(
-            controls,
-            "nsdf_cache_inval",
-            Rect(x, y + 36, 130, 28),
-            "Invalidate user:2",
-            self._cache_invalidate,
-        )
-        _ = (info, get_btn, miss_btn, evict_btn, inval_btn)
-        return controls
+        ))
+        ctx.advance(36)
+        ctx.add_button("nsdf_cache_inval", 130, 28, "Invalidate user:2",
+            self._cache_invalidate)
+
+        return ctx.build()
 
     def _cache_stats_text(self) -> str:
         if self._cache is None:
@@ -2049,37 +1564,21 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def _build_shortcuts_tab(self, host, rect: Rect) -> list:
-        controls = []
-        pad = 8
-        x, y = rect.left + pad, rect.top + pad
+        ctx = TabLayoutContext(self.window, rect)
 
-        info = self._add_tab_label(
-            controls,
-            "nsdf_shortcuts_info",
-            Rect(x, y, rect.width - pad * 2, 40),
+        ctx.add_label("nsdf_shortcuts_info", 40,
             "ShortcutHelpOverlay reads ActionRegistry + KeyChordManager and renders\n"
             "a structured shortcut reference panel via the OverlayManager.",
-        )
-        y += 50
-
-        show_btn = self._add_tab_button(
-            controls,
-            "nsdf_shortcuts_show",
-            Rect(x, y, 150, 28),
-            "Show Help Overlay",
-            self._shortcuts_show_overlay,
-        )
-        y += 38
-
-        self._shortcut_info_label = self._add_tab_label(
-            controls,
+            advance=50)
+        ctx.add_button("nsdf_shortcuts_show", 150, 28, "Show Help Overlay",
+            self._shortcuts_show_overlay, advance=38)
+        self._shortcut_info_label = ctx.add_label(
             "nsdf_shortcuts_detail",
-            Rect(x, y, rect.width - pad * 2, max(60, rect.bottom - y - pad)),
+            max(60, ctx.remaining_height(margin=ctx.pad)),
             "Overlay not yet opened — click 'Show Help Overlay' to display it.\n"
             "ShortcutHelpOverlay.sections builds structured data from ActionRegistry.",
         )
-        _ = (info, show_btn)
-        return controls
+        return ctx.build()
 
     def _shortcuts_show_overlay(self) -> None:
         if self._shortcut_overlay is None or self.window is None:

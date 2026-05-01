@@ -47,6 +47,7 @@ from demo_features.feature_abstractions import (
     setup_feature_presenter_tabs,
     register_tab_update_handlers,
     ActiveTabUpdateRouter,
+    TabLayoutContext,
     setup_routed_feature_runtime,
     apply_runtime_scene_pristine_assets,
     bind_runtime_scene_exit_keys,
@@ -1121,6 +1122,116 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(1, kwargs["task_panel_slot_index"])
         self.assertTrue(kwargs["tab_before_showcase"])
         self.assertEqual("Systems Window", kwargs["accessibility_label"])
+
+    # ------------------------------------------------------------------
+    # TabLayoutContext
+    # ------------------------------------------------------------------
+
+    def _make_ctx(self, left=10, top=20, width=400, height=300, *, pad=8):
+        from pygame import Rect
+        window = _StubWindow()
+        rect = Rect(left, top, width, height)
+        return TabLayoutContext(window, rect, pad=pad), window
+
+    def test_tab_layout_context_geometry_properties(self):
+        ctx, _ = self._make_ctx(left=10, top=20, width=400, height=300, pad=8)
+        self.assertEqual(10 + 8, ctx.x)
+        self.assertEqual(20 + 8, ctx.y)
+        self.assertEqual(400 - 16, ctx.width)
+        self.assertEqual(8, ctx.pad)
+
+    def test_tab_layout_context_add_label_default_advance(self):
+        ctx, window = self._make_ctx()
+        start_y = ctx.y
+        ctx.add_label("lbl1", 22, "Hello")
+        # default advance = height + 8
+        self.assertEqual(start_y + 22 + 8, ctx.y)
+        self.assertEqual(1, len(window.added))
+        self.assertEqual("lbl1", window.added[0].control_id)
+
+    def test_tab_layout_context_add_label_explicit_advance(self):
+        ctx, _ = self._make_ctx()
+        start_y = ctx.y
+        ctx.add_label("lbl", 20, "Text", advance=30)
+        self.assertEqual(start_y + 30, ctx.y)
+
+    def test_tab_layout_context_add_label_advance_zero_keeps_y(self):
+        ctx, _ = self._make_ctx()
+        start_y = ctx.y
+        ctx.add_label("lbl", 26, "Side label", advance=0)
+        self.assertEqual(start_y, ctx.y)
+
+    def test_tab_layout_context_add_label_custom_width(self):
+        ctx, window = self._make_ctx()
+        ctx.add_label("lbl", 26, "Narrow", width=60)
+        ctrl = window.added[0]
+        self.assertEqual(60, ctrl.rect.width)
+
+    def test_tab_layout_context_add_button_default_advance(self):
+        ctx, window = self._make_ctx()
+        start_y = ctx.y
+        ctx.add_button("btn1", 120, 28, "Click", lambda: None)
+        self.assertEqual(start_y + 28 + 8, ctx.y)
+        self.assertEqual(1, len(window.added))
+        self.assertEqual("btn1", window.added[0].control_id)
+
+    def test_tab_layout_context_add_button_x_offset(self):
+        ctx, window = self._make_ctx(left=10, pad=8)
+        ctx.add_label("lbl", 26, "Side", advance=0)
+        ctx.add_control(__import__("gui_do").ButtonControl(
+            "btn_offset",
+            __import__("pygame").Rect(ctx.x + 70, ctx.y, 100, 28),
+            "Go",
+            lambda: None,
+        ))
+        btn = window.added[-1]
+        self.assertEqual(ctx.x + 70, btn.rect.left)
+
+    def test_tab_layout_context_add_button_row_advances_correctly(self):
+        ctx, window = self._make_ctx()
+        start_y = ctx.y
+        ctx.add_button_row(height=28, gap=8, width=100, specs=(
+            ("r1", "A", lambda: None),
+            ("r2", "B", lambda: None),
+        ))
+        self.assertEqual(start_y + 28 + 8, ctx.y)
+        self.assertEqual(2, len(window.added))
+
+    def test_tab_layout_context_advance_moves_cursor(self):
+        ctx, _ = self._make_ctx()
+        start_y = ctx.y
+        ctx.advance(15)
+        self.assertEqual(start_y + 15, ctx.y)
+
+    def test_tab_layout_context_remaining_height(self):
+        from pygame import Rect
+        window = _StubWindow()
+        rect = Rect(0, 0, 400, 300)
+        ctx = TabLayoutContext(window, rect, pad=8)
+        # After construction y = 8, rect.bottom = 300
+        self.assertEqual(300 - 8, ctx.remaining_height())
+        self.assertEqual(300 - 8 - 8, ctx.remaining_height(margin=8))
+
+    def test_tab_layout_context_build_returns_copy(self):
+        ctx, _ = self._make_ctx()
+        ctx.add_label("l1", 20, "A")
+        ctx.add_label("l2", 20, "B")
+        result = ctx.build()
+        self.assertEqual(2, len(result))
+        # build() returns a copy; mutating it does not affect ctx internals
+        result.clear()
+        self.assertEqual(2, len(ctx.build()))
+
+    def test_tab_layout_context_add_control_no_advance(self):
+        import gui_do
+        import pygame
+        ctx, window = self._make_ctx()
+        start_y = ctx.y
+        ctrl = gui_do.LabelControl("raw", pygame.Rect(ctx.x, ctx.y, 200, 20), "raw")
+        ctx.add_control(ctrl)
+        # add_control does NOT advance y
+        self.assertEqual(start_y, ctx.y)
+        self.assertIn(ctrl, window.added)
 
 
 if __name__ == "__main__":

@@ -68,6 +68,7 @@ from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     TabBuilderSpec,
     ActiveTabUpdateRouter,
+    TabLayoutContext,
     TelemetryConfig,
     HostApplicationConfig,
     bootstrap_host_application,
