@@ -143,7 +143,7 @@ class LifeSimulationFeature(RoutedFeature):
         self._feature_manager.register(LifeSimulationLogicFeature(), host)
 
     def build(self, host) -> None:
-        """Build the Life feature UI using the application's configured UI types."""
+        """Build the Life feature UI using the new presenter/controller pattern."""
         fonts = {
             "gimbot": "demo_features/data/fonts/Gimbot.ttf",
             "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
@@ -162,15 +162,20 @@ class LifeSimulationFeature(RoutedFeature):
                 "control": "life.control",
             }
         )
-        self.build_window(
+        from demo_features.life_window_presenter import LifeWindowPresenter
+        self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
-            canvas_control_cls=CanvasControl,
-            button_control_cls=ButtonControl,
-            toggle_control_cls=ToggleControl,
-            slider_control_cls=SliderControl,
-            layout_axis_cls=LayoutAxis,
+            control_id="life_window",
+            title="Conway's Game of Life",
+            size=(660, 688),
+            anchor="top_right",
+            margin=(28, 92),
+            title_font_role=self.font_role("window_title"),
+            use_frame_backdrop=True,
         )
+        presenter = LifeWindowPresenter(self, host)
+        self.window.set_presenter(presenter)
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler/runtime services required after scene construction."""

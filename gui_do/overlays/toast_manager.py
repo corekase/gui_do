@@ -179,21 +179,38 @@ class ToastManager:
                 raise RuntimeError("ToastManager requires theme with centralized font roles.")
             self._draw_font = theme.fonts.font_instance("toast.text", size=18)
         font = self._draw_font
-        w = self._toast_width
-        h = self._row_height
         gap = self._gap
         margin = self._margin
         sr = self._screen_rect
 
         default_background_color = getattr(theme, "medium", (0, 150, 150))
         default_outline_color = getattr(theme, "shadow", (0, 0, 0))
-        # gui_do 'none' color is (0, 0, 0) by default, but can be changed if needed
         if hasattr(theme, "none"):
             default_outline_color = getattr(theme, "none")
 
-        for i, entry in enumerate(reversed(self._toasts)):
-            color = entry.background_color if entry.background_color is not None else default_background_color
-            outline = entry.outline_color if entry.outline_color is not None else default_outline_color
+        # Precompute all toast sizes and positions
+        toast_rects = []
+        text_color = (240, 240, 240)
+        padding_x = 16
+        padding_y = 10
+        min_width = 120
+        min_height = 40
+        for entry in reversed(self._toasts):
+            # Measure title and message
+            title_w = title_h = 0
+            if entry.title:
+                title_w, title_h = font.text_size(entry.title)
+            msg_w, msg_h = font.text_size(entry.message)
+            content_w = max(title_w, msg_w)
+            content_h = title_h + msg_h if entry.title else msg_h
+            w = max(content_w + 2 * padding_x, min_width)
+            h = max(content_h + 2 * padding_y + (6 if entry.title else 0), min_height)
+            toast_rects.append((w, h))
+
+        # Compute positions for each toast
+        positions = []
+        y_offset = 0
+        for i, (w, h) in enumerate(toast_rects):
             if "right" in self._position:
                 x = sr.right - w - margin
             elif "left" in self._position:
@@ -202,19 +219,26 @@ class ToastManager:
                 x = sr.centerx - w // 2
 
             if "bottom" in self._position:
-                y = sr.bottom - margin - (h + gap) * (i + 1) + gap
+                y = sr.bottom - margin - y_offset - h
             else:
-                y = sr.top + margin + (h + gap) * i
+                y = sr.top + margin + y_offset
+            positions.append((x, y, w, h))
+            y_offset += h + gap
 
+        # Draw each toast
+        for (entry, (x, y, w, h)) in zip(reversed(self._toasts), positions):
+            color = entry.background_color if entry.background_color is not None else default_background_color
+            outline = entry.outline_color if entry.outline_color is not None else default_outline_color
             rect = Rect(x, y, w, h)
             pygame.draw.rect(surface, color, rect, border_radius=4)
             pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
-            text_color = (240, 240, 240)
+            draw_y = rect.y + padding_y
             if entry.title:
                 title_surf = theme.fonts.render_text(entry.title, text_color, role_name="toast.text", size=font.point_size)
-                surface.blit(title_surf, (rect.x + 8, rect.y + 6))
+                surface.blit(title_surf, (rect.x + padding_x, draw_y))
+                draw_y += title_surf.get_height() + 6
             msg_surf = theme.fonts.render_text(entry.message, text_color, role_name="toast.text", size=font.point_size)
-            surface.blit(msg_surf, (rect.x + 8, rect.y + h // 2))
+            surface.blit(msg_surf, (rect.x + padding_x, draw_y))
 
     def on_event_bus_message(self, payload: Any) -> None:
         """Handle event bus messages with keys: message, title, severity, duration, background_color, outline_color."""

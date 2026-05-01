@@ -49,6 +49,10 @@ class GuiDoDemo:
             self.font_roles,
             fonts,
             {
+                # Add a default 'body' font role for all controls
+                "body": {"font": "window", "size": 16},
+                # Toast notification text
+                "toast.text": {"size": 16},
                 # Main screen label (large font)
                 "screen.main.title": {"font": "main_label", "size": 36},
                 # All window titles use the window font

@@ -234,7 +234,7 @@ class MandelbrotRenderFeature(RoutedFeature):
             self._feature_manager.register(MandelbrotLogicFeature(name), host)
 
     def build(self, host) -> None:
-        """Build the Mandelbrot feature UI using configured application UI types."""
+        """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
         fonts = {
             "gimbot": "demo_features/data/fonts/Gimbot.ttf",
             "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
@@ -257,13 +257,20 @@ class MandelbrotRenderFeature(RoutedFeature):
                 "status": "mandelbrot.status",
             }
         )
-        self.build_window(
+        from demo_features.mandelbrot_window_presenter import MandelbrotWindowPresenter
+        self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
-            label_control_cls=LabelControl,
-            canvas_control_cls=CanvasControl,
-            button_control_cls=ButtonControl,
+            control_id="mandelbrot_window",
+            title="Mandelbrot Demo",
+            size=(660, 688),
+            anchor="top_left",
+            margin=(28, 92),
+            title_font_role=self.font_role("window_title"),
+            use_frame_backdrop=True,
         )
+        presenter = MandelbrotWindowPresenter(self, host)
+        self.window.set_presenter(presenter)
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler, keyboard shortcuts, and event-bus subscription hooks."""

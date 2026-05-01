@@ -255,7 +255,6 @@ class SystemsDemoFeature(RoutedFeature):
             "gimbot": "demo_features/data/fonts/Gimbot.ttf",
             "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
         }
-        # Use the global font role registry from the app
         font_roles = getattr(host, "font_roles", None)
         if font_roles is None:
             font_roles = self.font_roles if hasattr(self, "font_roles") else None
@@ -283,7 +282,7 @@ class SystemsDemoFeature(RoutedFeature):
                 "label": "system.label",
             }
         )
-
+        from demo_features.systems_window_presenter import SystemsWindowPresenter
         self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
@@ -293,70 +292,10 @@ class SystemsDemoFeature(RoutedFeature):
             anchor="top_left",
             margin=(24, 92),
             title_font_role=self.font_role("window_title"),
-            event_handler=self._window_event_handler,
             use_frame_backdrop=True,
         )
-
-        content = self.window.content_rect()
-        pad = 10
-        body_top = content.top + pad
-        body_bottom = content.bottom - pad
-        body_h = body_bottom - body_top
-        # Reserve 2 rows of tab strip height so content doesn't overlap tab bar on wrap
-        body_content_top = body_top + _TAB_H * 2
-        body_content_h = max(60, body_bottom - body_content_top)
-        body_rect = Rect(content.left + pad, body_top, content.width - pad * 2, body_h)
-        body_content_rect = Rect(
-            content.left + pad, body_content_top, content.width - pad * 2, body_content_h
-        )
-
-        self._tab = self.window.add(
-            TabControl(
-                "nsdf_tab",
-                body_rect,
-                items=[
-                    TabItem("filter", "Filter"),
-                    TabItem("locale", "Locale"),
-                    TabItem("input", "Input"),
-                    TabItem("event", "Event"),
-                    TabItem("inspect", "Inspect"),
-                    TabItem("props", "Props"),
-                    TabItem("dock", "Dock"),
-                    TabItem("particle", "Particle"),
-                    TabItem("sprite", "Sprite"),
-                    TabItem("sched", "Sched"),
-                    TabItem("tilemap", "TileMap"),
-                    TabItem("progress", "Progress"),
-                    TabItem("flow", "Flow"),
-                    TabItem("search", "Search"),
-                    TabItem("listdiff", "ListDiff"),
-                    TabItem("cache", "Cache"),
-                    TabItem("shortcuts", "Shortcuts"),
-                ],
-                selected_key="filter",
-                on_change=self._on_tab_change,
-                font_role=self.font_role("control"),
-            )
-        )
-
-        self._tabs.register("filter", self._build_filter_tab(host, Rect(body_content_rect)))
-        self._tabs.register("locale", self._build_locale_tab(host, Rect(body_content_rect)))
-        self._tabs.register("input", self._build_input_tab(host, Rect(body_content_rect)))
-        self._tabs.register("event", self._build_event_tab(host, Rect(body_content_rect)))
-        self._tabs.register("inspect", self._build_inspect_tab(host, Rect(body_content_rect)))
-        self._tabs.register("props", self._build_props_tab(host, Rect(body_content_rect)))
-        self._tabs.register("dock", self._build_dock_tab(host, Rect(body_content_rect)))
-        self._tabs.register("particle", self._build_particle_tab(host, Rect(body_content_rect)))
-        self._tabs.register("sprite", self._build_sprite_tab(host, Rect(body_content_rect)))
-        self._tabs.register("sched", self._build_sched_tab(host, Rect(body_content_rect)))
-        self._tabs.register("tilemap", self._build_tilemap_tab(host, Rect(body_content_rect)))
-        self._tabs.register("progress", self._build_progress_tab(host, Rect(body_content_rect)))
-        self._tabs.register("flow", self._build_flow_tab(host, Rect(body_content_rect)))
-        self._tabs.register("search", self._build_search_tab(host, Rect(body_content_rect)))
-        self._tabs.register("listdiff", self._build_listdiff_tab(host, Rect(body_content_rect)))
-        self._tabs.register("cache", self._build_cache_tab(host, Rect(body_content_rect)))
-        self._tabs.register("shortcuts", self._build_shortcuts_tab(host, Rect(body_content_rect)))
-        self._tabs.on_activate("locale", lambda: setattr(self, "_text_flow_dirty", True))
+        presenter = SystemsWindowPresenter(self, host)
+        self.window.set_presenter(presenter)
 
         self._on_tab_change("filter")
 

@@ -16,7 +16,16 @@ if TYPE_CHECKING:
     from ...theme.color_theme import ColorTheme
 
 
+
 class WindowControl(UiNode):
+    presenter: Optional[object] = None
+
+    def set_presenter(self, presenter) -> None:
+        """Attach a presenter/controller to this window."""
+        self.presenter = presenter
+        presenter.window = self
+        if hasattr(presenter, 'on_create'):
+            presenter.on_create()
     """Window container with title bar and child controls."""
 
     def __init__(
