@@ -229,14 +229,17 @@ class FontManager:
         return out
 
     def _resolve_role(self, role_name: str) -> _FontRole:
-        role = self._roles.get(str(role_name))
+        requested_name = str(role_name)
+        role = self._roles.get(requested_name)
+        if role is None:
+            role = self._roles.get("default")
         if role is None:
             raise logical_error(
                 f"unknown font role: {role_name!r}",
                 subsystem="gui.fonts",
                 operation="FontManager._resolve_role",
                 exc_type=ValueError,
-                details={"role_name": role_name},
+                details={"role_name": role_name, "fallback": "default"},
                 source_skip_frames=1,
             )
         return role

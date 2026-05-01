@@ -4,6 +4,7 @@ from __future__ import annotations
 # Type checking imports for static analysis only
 # ---------------------------------------------------------------------------
 from typing import TYPE_CHECKING
+from collections.abc import Mapping
 
 if TYPE_CHECKING:
     # Corrected import paths for type checking
@@ -48,7 +49,12 @@ def register_standard_actions(action_registry, app=None, scene_transitions=None,
 def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
     """
     Register a set of font roles for any feature or demo.
-    fonts: dict mapping font keys (e.g. 'body', 'title') to font file paths
+        fonts: dict mapping font keys (e.g. 'body', 'title') to either:
+                - a font file path string, or
+                - a dict with optional keys: file/file_path/path, system/system_name,
+                    size, bold, italic.
+            The named font "default" is special: when present with a size, it is
+            registered as a "default" role and used as fallback for missing roles.
     *role_specs: one or more dicts mapping role names to config dicts:
         {
             "role_name": {"size": int, "font": str, "bold": bool, ...}
@@ -68,25 +74,68 @@ def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
     """
     if font_roles is None or not fonts:
         return
-    default_font_key = fonts.get("default")
+
+    normalized_fonts: dict[str, dict[str, object]] = {}
+    for key, raw_spec in fonts.items():
+        if isinstance(raw_spec, str):
+            normalized_fonts[str(key)] = {"file_path": raw_spec}
+            continue
+        if isinstance(raw_spec, Mapping):
+            file_path = raw_spec.get("file_path", raw_spec.get("file", raw_spec.get("path")))
+            system_name = raw_spec.get("system_name", raw_spec.get("system"))
+            size = raw_spec.get("size")
+            normalized_fonts[str(key)] = {
+                "file_path": file_path,
+                "system_name": system_name,
+                "size": size,
+                "bold": bool(raw_spec.get("bold", False)),
+                "italic": bool(raw_spec.get("italic", False)),
+            }
+
+    default_font_spec = normalized_fonts.get("default")
+    body_font_spec = normalized_fonts.get("body")
+
+    # Seed an explicit "default" role when enough data exists so unknown roles
+    # can safely pass through the fallback gate in FontManager._resolve_role().
+    if default_font_spec is not None:
+        default_size = default_font_spec.get("size")
+        if default_size is not None:
+            font_roles.define(
+                "default",
+                size=default_size,
+                file_path=default_font_spec.get("file_path"),
+                system_name=default_font_spec.get("system_name"),
+                bold=bool(default_font_spec.get("bold", False)),
+                italic=bool(default_font_spec.get("italic", False)),
+            )
+
     for spec in role_specs:
         for role, cfg in spec.items():
-            # Use the font specified in the config, or fall back to 'default' if present, else 'body'
+            # Use the role's explicit font key first, then default, then body.
             font_key = cfg.get("font")
             if font_key is None:
-                if default_font_key is not None:
+                if default_font_spec is not None:
                     font_key = "default"
                 else:
                     font_key = "body"
-            file_path = fonts.get(font_key)
-            if not file_path:
+
+            selected_font = normalized_fonts.get(str(font_key))
+            if selected_font is None:
+                selected_font = default_font_spec if default_font_spec is not None else body_font_spec
+            if selected_font is None:
                 continue
+
+            resolved_size = cfg.get("size", selected_font.get("size"))
+            if resolved_size is None:
+                continue
+
             font_roles.define(
                 role,
-                size=cfg["size"],
-                file_path=file_path,
-                bold=cfg.get("bold", False),
-                italic=cfg.get("italic", False),
+                size=resolved_size,
+                file_path=selected_font.get("file_path"),
+                system_name=selected_font.get("system_name"),
+                bold=bool(cfg.get("bold", selected_font.get("bold", False))),
+                italic=bool(cfg.get("italic", selected_font.get("italic", False))),
             )
 
 def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):

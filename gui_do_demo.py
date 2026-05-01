@@ -41,7 +41,7 @@ class GuiDoDemo:
         # Create the font role registry ONCE and register all roles BEFORE creating the app
         self.font_roles = FontRoleRegistry()
         fonts = {
-            "default": "demo_features/data/fonts/Gimbot.ttf",  # Used for all controls unless overridden
+            "default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 16},  # Fallback for undefined roles
             "window": "demo_features/data/fonts/Ubuntu-B.ttf",  # All window titles
             "main_label": "demo_features/data/fonts/Ubuntu-B.ttf",  # Main screen label (large)
         }
@@ -49,42 +49,12 @@ class GuiDoDemo:
             self.font_roles,
             fonts,
             {
-                # Add a default 'body' font role for all controls
-                "body": {"font": "window", "size": 16},
-                # Toast notification text
-                "toast.text": {"size": 16},
                 # Main screen label (large font)
                 "screen.main.title": {"font": "main_label", "size": 36},
                 # All window titles use the window font
-                "screen.main.task_panel.control": {"font": "window", "size": 18},
                 "life.window_title": {"font": "window", "size": 14},
                 "mandelbrot.window_title": {"font": "window", "size": 14},
                 "system.window_title": {"font": "window", "size": 14},
-                "life.control": {"font": "default", "size": 18},
-                "mandelbrot.control": {"font": "default", "size": 18},
-                "mandelbrot.caption": {"font": "default", "size": 16},
-                "mandelbrot.status": {"font": "default", "size": 14},
-                "system.control": {"font": "default", "size": 18},
-                "system.label": {"font": "default", "size": 16},
-                "dock_workspace.tab": {"font": "default", "size": 14},
-                # Explicitly define controls.label and controls.control to avoid missing role errors
-                "controls.label": {"size": 14},
-                "controls.control": {"size": 16},
-                "data_grid.cell": {"size": 18},
-                "list_view.row": {"size": 18},
-                "dropdown.option": {"size": 18},
-                "menu_bar.entry": {"size": 16},
-                "tree.row": {"size": 16},
-                "spinner.button": {"size": 14},
-                "spinner.value": {"size": 18},
-                "color_picker.hex": {"size": 16},
-                "property_inspector.row": {"size": 16},
-                "text_input.text": {"size": 20},
-                "text_area.text": {"size": 16},
-                "notification_panel.header": {"size": 20},
-                "notification_panel.title": {"size": 16},
-                "notification_panel.body": {"size": 14},
-                "notification_panel.timestamp": {"size": 12},
             },
         )
         # Pass the font role registry to the application so it is used globally
