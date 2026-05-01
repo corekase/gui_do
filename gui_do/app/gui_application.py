@@ -1131,9 +1131,9 @@ class GuiApplication:
         """Capture a coordinated workspace state using the registered features."""
         return workspace_manager.capture(self, feature_manager=self.features, metadata=metadata)
 
-    def restore_workspace(self, workspace_manager, state) -> None:
-        """Restore a coordinated workspace state using the registered features."""
-        workspace_manager.restore(state, self, feature_manager=self.features)
+    def restore_workspace(self, workspace_manager, state):
+        """Restore workspace state and return the manager's structured report."""
+        return workspace_manager.restore(state, self, feature_manager=self.features)
 
     def save_workspace(self, workspace_manager, path: str | Path, *, metadata: Optional[dict] = None):
         """Capture and save a workspace state to disk."""
@@ -1146,8 +1146,7 @@ class GuiApplication:
         from ..persistence.workspace_persistence import WorkspaceState
 
         state = WorkspaceState.load(path)
-        self.restore_workspace(workspace_manager, state)
-        return state
+        return self.restore_workspace(workspace_manager, state)
 
     def find(self, control_id: str, scene_name: Optional[str] = None):
         """Find the first node with *control_id* in the active (or named) scene.
