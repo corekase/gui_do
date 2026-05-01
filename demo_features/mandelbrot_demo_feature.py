@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 import pygame
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -11,7 +18,6 @@ from gui_do import (
     ButtonControl,
     CanvasControl,
     centered_horizontal_strip_layout,
-    create_anchored_feature_window,
     inset_rect,
     LabelControl,
     LogicFeature,
@@ -19,6 +25,12 @@ from gui_do import (
     WindowControl,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
+from demo_features.feature_abstractions import (
+    apply_accessibility_sequence,
+    create_presented_anchored_window,
+    ensure_scene_scheduler,
+    register_companion_logic_features,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +128,59 @@ _MANDEL_LOGIC_CAN1 = "mandelbrot_logic_can1"
 _MANDEL_LOGIC_CAN2 = "mandelbrot_logic_can2"
 _MANDEL_LOGIC_CAN3 = "mandelbrot_logic_can3"
 _MANDEL_LOGIC_CAN4 = "mandelbrot_logic_can4"
+
+_MANDEL_SPLIT_CANVAS_KEYS = ("can1", "can2", "can3", "can4")
+_MANDEL_ONE_SPLIT_TASK_IDS = ("1", "2", "3", "4")
+_MANDEL_TASK_BUTTON_SPECS = (
+    ("mandel_iter", "Iterative", "launch_iterative", "round"),
+    ("mandel_recur", "Recursive", "launch_recursive", "round"),
+    ("mandel_one_split", "1M 4Tasks", "launch_one_split", "round"),
+    ("mandel_four_split", "4M 4Tasks", "launch_four_split", "round"),
+)
+_MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS = (
+    "Run Mandelbrot iterative",
+    "Run Mandelbrot recursive",
+    "Run Mandelbrot one canvas split",
+    "Run Mandelbrot four canvases split",
+)
+_MANDEL_LAUNCH_MODE_SPECS = {
+    "iterative": {
+        "busy_profile": "iterative",
+        "split_canvas": False,
+        "running_mode": "running iterative",
+        "event_kind": MANDEL_KIND_RUNNING_ITERATIVE,
+    },
+    "recursive": {
+        "busy_profile": "default",
+        "split_canvas": False,
+        "running_mode": "running recursive",
+        "event_kind": MANDEL_KIND_RUNNING_RECURSIVE,
+    },
+    "one_split": {
+        "busy_profile": "default",
+        "split_canvas": False,
+        "running_mode": "running 1M 4Tasks",
+        "event_kind": MANDEL_KIND_RUNNING_ONE_SPLIT,
+    },
+    "four_split": {
+        "busy_profile": "default",
+        "split_canvas": True,
+        "running_mode": "running 4M 4Tasks",
+        "event_kind": MANDEL_KIND_RUNNING_FOUR_SPLIT,
+    },
+}
+_MANDEL_TASK_CANVAS_KEY_BY_TASK_ID = {
+    "iter": "primary",
+    "recu": "primary",
+    "1": "primary",
+    "2": "primary",
+    "3": "primary",
+    "4": "primary",
+    "can1": "can1",
+    "can2": "can2",
+    "can3": "can3",
+    "can4": "can4",
+}
 
 
 class MandelbrotLogicFeature(LogicFeature):
@@ -255,35 +320,37 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def on_register(self, host) -> None:
         """Auto-register all companion logic features when this feature is registered."""
-        for name in (
-            _MANDEL_LOGIC_PRIMARY,
-            _MANDEL_LOGIC_CAN1,
-            _MANDEL_LOGIC_CAN2,
-            _MANDEL_LOGIC_CAN3,
-            _MANDEL_LOGIC_CAN4,
-        ):
-            self._feature_manager.register(MandelbrotLogicFeature(name), host)
+        register_companion_logic_features(
+            self._feature_manager,
+            host,
+            [
+                MandelbrotLogicFeature(_MANDEL_LOGIC_PRIMARY),
+                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN1),
+                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN2),
+                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN3),
+                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN4),
+            ],
+        )
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
-        self.window = create_anchored_feature_window(
+        presenter = _MandelbrotWindowPresenter(self, host)
+        self.window = create_presented_anchored_window(
             host,
-            window_control_cls=WindowControl,
             control_id="mandelbrot_window",
             title="Mandelbrot Demo",
             size=_MANDEL_WINDOW_SIZE,
             anchor="top_left",
             margin=(28, 92),
+            presenter=presenter,
+            window_control_cls=WindowControl,
             use_frame_backdrop=True,
         )
-        presenter = _MandelbrotWindowPresenter(self, host)
-        self.window.set_presenter(presenter)
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler, keyboard shortcuts, and event-bus subscription hooks."""
         self.demo = host  # Store host reference
-        if self.scheduler is None:
-            self.scheduler = host.app.get_scene_scheduler("main")
+        self.scheduler = ensure_scene_scheduler(self, host, scene_name="main")
         self._bind_logic_aliases()
         self._set_busy_dispatch_mode(False)
         self.status_subscription = host.app.events.subscribe(
@@ -418,9 +485,7 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def _get_scheduler(self, host):
         """Resolve and memoize the scene scheduler used by render tasks."""
-        scheduler = self.scheduler
-        if scheduler is None:
-            scheduler = host.app.get_scene_scheduler("main")
+        scheduler = ensure_scene_scheduler(self, host, scene_name="main")
         if scheduler is None:
             raise AttributeError("Mandelbrot scheduler is not available")
         self.scheduler = scheduler
@@ -428,25 +493,17 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         """Assign accessibility metadata and tab order for Mandelbrot controls."""
-        controls = [
-            self.reset_button,
-            *self.task_buttons,
-        ]
-        labels = [
-            "Clear Mandelbrot surfaces",
-            "Run Mandelbrot iterative",
-            "Run Mandelbrot recursive",
-            "Run Mandelbrot one canvas split",
-            "Run Mandelbrot four canvases split",
-        ]
-        next_index = int(tab_index_start)
-        for control, label in zip(controls, labels):
-            if control is None:
-                continue
-            control.set_tab_index(next_index)
-            control.set_accessibility(role="button", label=label)
-            next_index += 1
-        return next_index
+        task_items = []
+        for index, accessibility_label in enumerate(_MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS):
+            button = self.task_buttons[index] if len(self.task_buttons) > index else None
+            task_items.append((button, "button", accessibility_label))
+        return apply_accessibility_sequence(
+            [
+                (self.reset_button, "button", "Clear Mandelbrot surfaces"),
+                *task_items,
+            ],
+            tab_index_start,
+        )
 
     def on_update(self, _host) -> None:
         """Publish post-frame status updates for Mandelbrot state."""
@@ -540,10 +597,10 @@ class MandelbrotRenderFeature(RoutedFeature):
                 pygame.draw.rect(surface, host.app.theme.medium, padded_content_rect)
 
         self.primary_canvas.canvas.fill(host.app.theme.medium)
-        self.split_canvases["can1"].canvas.fill(host.app.theme.medium)
-        self.split_canvases["can2"].canvas.fill(host.app.theme.medium)
-        self.split_canvases["can3"].canvas.fill(host.app.theme.medium)
-        self.split_canvases["can4"].canvas.fill(host.app.theme.medium)
+        for canvas_key in _MANDEL_SPLIT_CANVAS_KEYS:
+            canvas = self.split_canvases.get(canvas_key)
+            if canvas is not None:
+                canvas.canvas.fill(host.app.theme.medium)
 
     def set_task_buttons_disabled(self, host, disabled: bool) -> None:
         """Enable or disable launch buttons and keep focus state valid."""
@@ -565,10 +622,7 @@ class MandelbrotRenderFeature(RoutedFeature):
     def show_single_canvas(self, host) -> None:
         """Show the primary render canvas and hide split canvases."""
         self.primary_canvas.visible = True
-        self.split_canvases["can1"].visible = False
-        self.split_canvases["can2"].visible = False
-        self.split_canvases["can3"].visible = False
-        self.split_canvases["can4"].visible = False
+        self._set_split_canvas_visibility(False)
         self.clear_surfaces(host)
 
     def prepare_single_canvas_run(self, host) -> None:
@@ -580,27 +634,27 @@ class MandelbrotRenderFeature(RoutedFeature):
         """Prepare UI for split-canvas rendering mode."""
         self.set_task_buttons_disabled(host, True)
         self.primary_canvas.visible = False
-        self.split_canvases["can1"].visible = True
-        self.split_canvases["can2"].visible = True
-        self.split_canvases["can3"].visible = True
-        self.split_canvases["can4"].visible = True
+        self._set_split_canvas_visibility(True)
         self.clear_surfaces(host)
+
+    def _set_split_canvas_visibility(self, visible: bool) -> None:
+        state = bool(visible)
+        for canvas_key in _MANDEL_SPLIT_CANVAS_KEYS:
+            canvas = self.split_canvases.get(canvas_key)
+            if canvas is not None:
+                canvas.visible = state
 
     def canvas_for_task(self, host, task_id: str):
         """Resolve target canvas surface for a given scheduler task id."""
-        canvas_by_task = {
-            "iter": self.primary_canvas.canvas,
-            "recu": self.primary_canvas.canvas,
-            "1": self.primary_canvas.canvas,
-            "2": self.primary_canvas.canvas,
-            "3": self.primary_canvas.canvas,
-            "4": self.primary_canvas.canvas,
-            "can1": self.split_canvases["can1"].canvas,
-            "can2": self.split_canvases["can2"].canvas,
-            "can3": self.split_canvases["can3"].canvas,
-            "can4": self.split_canvases["can4"].canvas,
-        }
-        return canvas_by_task.get(task_id)
+        canvas_key = _MANDEL_TASK_CANVAS_KEY_BY_TASK_ID.get(str(task_id))
+        if canvas_key == "primary":
+            return self.primary_canvas.canvas
+        if canvas_key is None:
+            return None
+        split_canvas = self.split_canvases.get(canvas_key)
+        if split_canvas is None:
+            return None
+        return split_canvas.canvas
 
     def make_progress_handler(self, host, task_id: str):
         """Build a scheduler message callback that applies task render payloads."""
@@ -695,14 +749,51 @@ class MandelbrotRenderFeature(RoutedFeature):
         self._run_logic_runnable(logic_alias, "recursive_task", str(task_id), params)
         return None
 
-    def launch_iterative(self, host) -> None:
-        """Launch iterative render mode when no Mandelbrot task is already running."""
+    def _begin_launch(self, host, *, busy_profile: str, split_canvas: bool):
+        """Run shared launch preflight and return scheduler when launch may proceed."""
         scheduler = self._get_scheduler(host)
         if scheduler.tasks_busy_match_any(*self.task_id_pool):
-            return
-        self._set_busy_profile("iterative")
+            return None
+        self._set_busy_profile(busy_profile)
         self._set_busy_dispatch_mode(True)
-        self.prepare_single_canvas_run(host)
+        if split_canvas:
+            self.prepare_split_canvas_run(host)
+        else:
+            self.prepare_single_canvas_run(host)
+        return scheduler
+
+    def _finalize_launch(self, *, running_mode: str, event_kind: str) -> None:
+        """Apply shared launch completion state and publish running status."""
+        self.running_mode = str(running_mode)
+        self.publish_event(str(event_kind))
+        self.publish_running_status()
+
+    def _launch_mode(self, host, mode_key: str) -> None:
+        """Launch one Mandelbrot mode from declarative metadata and queue strategy."""
+        spec = _MANDEL_LAUNCH_MODE_SPECS.get(str(mode_key))
+        if spec is None:
+            raise ValueError(f"Unsupported Mandelbrot launch mode: {mode_key}")
+        scheduler = self._begin_launch(
+            host,
+            busy_profile=str(spec["busy_profile"]),
+            split_canvas=bool(spec["split_canvas"]),
+        )
+        if scheduler is None:
+            return
+        queue_builders = {
+            "iterative": self._queue_iterative_mode,
+            "recursive": self._queue_recursive_mode,
+            "one_split": self._queue_one_split_mode,
+            "four_split": self._queue_four_split_mode,
+        }
+        queue_builder = queue_builders[str(mode_key)]
+        queue_builder(host, scheduler)
+        self._finalize_launch(
+            running_mode=str(spec["running_mode"]),
+            event_kind=str(spec["event_kind"]),
+        )
+
+    def _queue_iterative_mode(self, host, scheduler) -> None:
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(host, width, height)
         scheduler.add_task(
@@ -712,18 +803,8 @@ class MandelbrotRenderFeature(RoutedFeature):
             message_method=self.make_progress_handler(host, "iter"),
         )
         self.task_ids.add("iter")
-        self.running_mode = "running iterative"
-        self.publish_event(MANDEL_KIND_RUNNING_ITERATIVE)
-        self.publish_running_status()
 
-    def launch_recursive(self, host) -> None:
-        """Launch single-task recursive render mode."""
-        scheduler = self._get_scheduler(host)
-        if scheduler.tasks_busy_match_any(*self.task_id_pool):
-            return
-        self._set_busy_profile("default")
-        self._set_busy_dispatch_mode(True)
-        self.prepare_single_canvas_run(host)
+    def _queue_recursive_mode(self, host, _scheduler) -> None:
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(host, width, height)
         self.queue_recursive_task(
@@ -735,73 +816,36 @@ class MandelbrotRenderFeature(RoutedFeature):
             scale,
             logic_alias=self.LOGIC_ALIAS_PRIMARY,
         )
-        self.running_mode = "running recursive"
-        self.publish_event(MANDEL_KIND_RUNNING_RECURSIVE)
-        self.publish_running_status()
 
-    def launch_one_split(self, host) -> None:
-        """Launch four recursive tasks that render quadrants into one canvas."""
-        scheduler = self._get_scheduler(host)
-        if scheduler.tasks_busy_match_any(*self.task_id_pool):
-            return
-        self._set_busy_profile("default")
-        self._set_busy_dispatch_mode(True)
-        self.prepare_single_canvas_run(host)
+    def _queue_one_split_mode(self, host, _scheduler) -> None:
         width, height = self.primary_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(host, width, height)
         left_w, top_h = width // 2, height // 2
         right_w, bottom_h = width - left_w, height - top_h
-        self.queue_recursive_task(
-            host,
-            "1",
+        quadrants = (
             Rect(0, 0, left_w, top_h),
-            (width, height),
-            center,
-            scale,
-            logic_alias=self.LOGIC_ALIAS_PRIMARY,
-        )
-        self.queue_recursive_task(
-            host,
-            "2",
             Rect(left_w, 0, right_w, top_h),
-            (width, height),
-            center,
-            scale,
-            logic_alias=self.LOGIC_ALIAS_PRIMARY,
-        )
-        self.queue_recursive_task(
-            host,
-            "3",
             Rect(0, top_h, left_w, bottom_h),
-            (width, height),
-            center,
-            scale,
-            logic_alias=self.LOGIC_ALIAS_PRIMARY,
-        )
-        self.queue_recursive_task(
-            host,
-            "4",
             Rect(left_w, top_h, right_w, bottom_h),
-            (width, height),
-            center,
-            scale,
-            logic_alias=self.LOGIC_ALIAS_PRIMARY,
         )
-        self.running_mode = "running 1M 4Tasks"
-        self.publish_event(MANDEL_KIND_RUNNING_ONE_SPLIT)
-        self.publish_running_status()
+        for task_id, rect in zip(_MANDEL_ONE_SPLIT_TASK_IDS, quadrants):
+            self.queue_recursive_task(
+                host,
+                task_id,
+                rect,
+                (width, height),
+                center,
+                scale,
+                logic_alias=self.LOGIC_ALIAS_PRIMARY,
+            )
 
-    def launch_four_split(self, host) -> None:
-        """Launch four recursive tasks across four independent split canvases."""
-        scheduler = self._get_scheduler(host)
-        if scheduler.tasks_busy_match_any(*self.task_id_pool):
+    def _queue_four_split_mode(self, host, _scheduler) -> None:
+        first_split_canvas = self.split_canvases.get(_MANDEL_SPLIT_CANVAS_KEYS[0])
+        if first_split_canvas is None:
             return
-        self._set_busy_profile("default")
-        self._set_busy_dispatch_mode(True)
-        self.prepare_split_canvas_run(host)
-        width, height = self.split_canvases["can1"].canvas.get_size()
+        width, height = first_split_canvas.canvas.get_size()
         center, scale = self.mandel_viewport(host, width, height)
-        for task_id in ("can1", "can2", "can3", "can4"):
+        for task_id in _MANDEL_SPLIT_CANVAS_KEYS:
             self.queue_recursive_task(
                 host,
                 task_id,
@@ -811,9 +855,22 @@ class MandelbrotRenderFeature(RoutedFeature):
                 scale,
                 logic_alias=self._task_logic_alias[task_id],
             )
-        self.running_mode = "running 4M 4Tasks"
-        self.publish_event(MANDEL_KIND_RUNNING_FOUR_SPLIT)
-        self.publish_running_status()
+
+    def launch_iterative(self, host) -> None:
+        """Launch iterative render mode when no Mandelbrot task is already running."""
+        self._launch_mode(host, "iterative")
+
+    def launch_recursive(self, host) -> None:
+        """Launch single-task recursive render mode."""
+        self._launch_mode(host, "recursive")
+
+    def launch_one_split(self, host) -> None:
+        """Launch four recursive tasks that render quadrants into one canvas."""
+        self._launch_mode(host, "one_split")
+
+    def launch_four_split(self, host) -> None:
+        """Launch four recursive tasks across four independent split canvases."""
+        self._launch_mode(host, "four_split")
 
 
     def update_events(self) -> None:
@@ -894,10 +951,8 @@ class _MandelbrotWindowPresenter(WindowPresenter):
 
         canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
         self.split_canvases = {
-            "can1": CanvasControl("can1", canvas_rects[0], max_events=32),
-            "can2": CanvasControl("can2", canvas_rects[1], max_events=32),
-            "can3": CanvasControl("can3", canvas_rects[2], max_events=32),
-            "can4": CanvasControl("can4", canvas_rects[3], max_events=32),
+            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=32)
+            for index, canvas_key in enumerate(_MANDEL_SPLIT_CANVAS_KEYS)
         }
         for c in self.split_canvases.values():
             c.visible = False
@@ -910,7 +965,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             width=max(1, _MANDEL_CANVAS_W - 2 * _MANDEL_ROW_STRIP_PAD),
             y=controls_y, item_count=_MANDEL_BTN_COUNT, item_height=_MANDEL_CTRL_H, spacing=_MANDEL_BTN_SPACING,
         )
-        mandel_reset_rect, mandel_iter_rect, mandel_recur_rect, mandel_one_split_rect, mandel_four_split_rect = slots
+        mandel_reset_rect = slots[0]
 
         self.reset_button = ButtonControl(
             "mandel_reset", mandel_reset_rect, "Reset",
@@ -919,32 +974,26 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
-        self.mandel_iter_button = ButtonControl(
-            "mandel_iter", mandel_iter_rect, "Iterative",
-            lambda: self.feature.launch_iterative(self.host), style="round"
-        )
-        self.add_control(self.mandel_iter_button)
-        self.mandel_recur_button = ButtonControl(
-            "mandel_recur", mandel_recur_rect, "Recursive",
-            lambda: self.feature.launch_recursive(self.host), style="round"
-        )
-        self.add_control(self.mandel_recur_button)
-        self.mandel_one_split_button = ButtonControl(
-            "mandel_one_split", mandel_one_split_rect, "1M 4Tasks",
-            lambda: self.feature.launch_one_split(self.host), style="round"
-        )
-        self.add_control(self.mandel_one_split_button)
-        self.mandel_four_split_button = ButtonControl(
-            "mandel_four_split", mandel_four_split_rect, "4M 4Tasks",
-            lambda: self.feature.launch_four_split(self.host), style="round"
-        )
-        self.add_control(self.mandel_four_split_button)
-        self.feature.task_buttons = (
+        task_buttons = []
+        for slot_rect, (control_id, label, launch_method_name, style) in zip(slots[1:], _MANDEL_TASK_BUTTON_SPECS):
+            launch_method = getattr(self.feature, launch_method_name)
+            button = ButtonControl(
+                control_id,
+                slot_rect,
+                label,
+                lambda _method=launch_method: _method(self.host),
+                style=style,
+            )
+            self.add_control(button)
+            task_buttons.append(button)
+
+        (
             self.mandel_iter_button,
             self.mandel_recur_button,
             self.mandel_one_split_button,
             self.mandel_four_split_button,
-        )
+        ) = tuple(task_buttons)
+        self.feature.task_buttons = tuple(task_buttons)
 
         status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
         self.status_label = LabelControl(

@@ -17,11 +17,22 @@ class _StubControl:
 
 
 class _StubBinding:
-    def __init__(self, *, key: str, toggle_attr: str | None, accessibility_label: str | None, action_label: str | None):
+    def __init__(
+        self,
+        *,
+        key: str,
+        toggle_attr: str | None,
+        accessibility_label: str | None,
+        action_label: str | None,
+        task_panel_slot_index: int | None,
+        tab_before_showcase: bool,
+    ):
         self.key = str(key)
         self.toggle_attr = toggle_attr
         self.accessibility_label = accessibility_label
         self.action_label = action_label
+        self.task_panel_slot_index = task_panel_slot_index
+        self.tab_before_showcase = bool(tab_before_showcase)
 
 
 class _StubWindowPresentation:
@@ -47,18 +58,24 @@ class TestDemoAccessibilitySpecs(unittest.TestCase):
                     toggle_attr="systems_toggle_window",
                     accessibility_label="Show Systems window",
                     action_label="Show Systems Window",
+                    task_panel_slot_index=1,
+                    tab_before_showcase=True,
                 ),
                 _StubBinding(
                     key="life",
                     toggle_attr="life_toggle_window",
                     accessibility_label="Show Life window",
                     action_label="Show Life Window",
+                    task_panel_slot_index=3,
+                    tab_before_showcase=False,
                 ),
                 _StubBinding(
                     key="mandel",
                     toggle_attr="mandel_toggle_window",
                     accessibility_label="Show Mandelbrot window",
                     action_label="Show Mandelbrot Window",
+                    task_panel_slot_index=4,
+                    tab_before_showcase=False,
                 ),
             ]
         )
@@ -68,6 +85,10 @@ class TestDemoAccessibilitySpecs(unittest.TestCase):
         demo = self._make_demo()
 
         toggles = demo._collect_window_toggle_controls()
+        self.assertEqual(
+            ["systems", "life", "mandel"],
+            [binding.key for binding, _control in toggles],
+        )
         ordered = demo._build_main_tab_order_controls(toggles)
 
         self.assertEqual(

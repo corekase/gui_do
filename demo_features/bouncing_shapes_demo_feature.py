@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 import math
 import random
 from dataclasses import dataclass

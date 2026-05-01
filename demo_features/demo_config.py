@@ -1,3 +1,10 @@
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from dataclasses import dataclass
 from typing import Callable
 
@@ -27,6 +34,8 @@ class WindowSpec:
     task_panel_button_id: str
     task_panel_label: str
     task_panel_style: str
+    task_panel_slot_index: int
+    tab_before_showcase: bool
     accessibility_label: str
 
 
@@ -97,6 +106,8 @@ WINDOW_SPECS = (
         task_panel_button_id="show_systems",
         task_panel_label="System",
         task_panel_style="angle",
+        task_panel_slot_index=1,
+        tab_before_showcase=True,
         accessibility_label="Show Systems window",
     ),
     WindowSpec(
@@ -108,6 +119,8 @@ WINDOW_SPECS = (
         task_panel_button_id="show_life",
         task_panel_label="Life",
         task_panel_style="round",
+        task_panel_slot_index=3,
+        tab_before_showcase=False,
         accessibility_label="Show Life window",
     ),
     WindowSpec(
@@ -119,6 +132,8 @@ WINDOW_SPECS = (
         task_panel_button_id="show_mandel",
         task_panel_label="Mandelbrot",
         task_panel_style="round",
+        task_panel_slot_index=4,
+        tab_before_showcase=False,
         accessibility_label="Show Mandelbrot window",
     ),
 )

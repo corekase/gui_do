@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 import math
 from typing import Any, Dict, Set, Tuple
 
@@ -10,7 +17,6 @@ from gui_do import (
     ButtonControl,
     CanvasControl,
     centered_horizontal_strip_layout,
-    create_anchored_feature_window,
     FeatureMessage,
     inset_rect,
     LayoutAxis,
@@ -22,6 +28,12 @@ from gui_do import (
     WindowControl,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
+from demo_features.feature_abstractions import (
+    apply_accessibility_sequence,
+    create_presented_anchored_window,
+    ensure_scene_scheduler,
+    register_companion_logic_features,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +82,12 @@ class LifeSimulationLogicFeature(LogicFeature):
     def __init__(self) -> None:
         super().__init__("life_simulation_logic", scene_name="main")
         self.life_cells: Set[Tuple[int, int]] = set(self.DEFAULT_SEED)
+        self._command_handlers = {
+            "reset": self._handle_reset_command,
+            "next": self._handle_next_command,
+            "toggle_cell": self._handle_toggle_cell_command,
+            "snapshot": self._handle_snapshot_command,
+        }
 
     @classmethod
     def next_life_cycle(cls, cells: Set[Tuple[int, int]]) -> Set[Tuple[int, int]]:
@@ -93,28 +111,32 @@ class LifeSimulationLogicFeature(LogicFeature):
         return count
 
     def on_logic_command(self, _host, message: FeatureMessage) -> None:
-        command = message.command
-        sender_name = message.sender
-        if command == "reset":
-            self.life_cells = set(self.DEFAULT_SEED)
-            self._publish_state(sender_name)
+        command = str(message.command)
+        handler = self._command_handlers.get(command)
+        if handler is None:
             return
-        if command == "next":
-            self.life_cells = self.next_life_cycle(self.life_cells)
+        handler(str(message.sender), message)
+
+    def _handle_reset_command(self, sender_name: str, _message: FeatureMessage) -> None:
+        self.life_cells = set(self.DEFAULT_SEED)
+        self._publish_state(sender_name)
+
+    def _handle_next_command(self, sender_name: str, _message: FeatureMessage) -> None:
+        self.life_cells = self.next_life_cycle(self.life_cells)
+        self._publish_state(sender_name)
+
+    def _handle_toggle_cell_command(self, sender_name: str, message: FeatureMessage) -> None:
+        cell = message.get("cell")
+        if isinstance(cell, tuple) and len(cell) == 2:
+            normalized_cell = (int(cell[0]), int(cell[1]))
+            if normalized_cell in self.life_cells:
+                self.life_cells.remove(normalized_cell)
+            else:
+                self.life_cells.add(normalized_cell)
             self._publish_state(sender_name)
-            return
-        if command == "toggle_cell":
-            cell = message.get("cell")
-            if isinstance(cell, tuple) and len(cell) == 2:
-                normalized_cell = (int(cell[0]), int(cell[1]))
-                if normalized_cell in self.life_cells:
-                    self.life_cells.remove(normalized_cell)
-                else:
-                    self.life_cells.add(normalized_cell)
-                self._publish_state(sender_name)
-            return
-        if command == "snapshot":
-            self._publish_state(sender_name)
+
+    def _handle_snapshot_command(self, sender_name: str, _message: FeatureMessage) -> None:
+        self._publish_state(sender_name)
 
     def _publish_state(self, target_feature_name: str) -> None:
         self.send_message(
@@ -155,27 +177,30 @@ class LifeSimulationFeature(RoutedFeature):
 
     def on_register(self, host) -> None:
         """Auto-register the companion logic feature when this feature is registered."""
-        self._feature_manager.register(LifeSimulationLogicFeature(), host)
+        register_companion_logic_features(
+            self._feature_manager,
+            host,
+            [LifeSimulationLogicFeature()],
+        )
 
     def build(self, host) -> None:
         """Build the Life feature UI using the new presenter/controller pattern."""
-        self.window = create_anchored_feature_window(
+        presenter = _LifeWindowPresenter(self, host)
+        self.window = create_presented_anchored_window(
             host,
-            window_control_cls=WindowControl,
             control_id="life_window",
             title="Conway's Game of Life",
             size=_LIFE_WINDOW_SIZE,
             anchor="top_right",
             margin=(28, 92),
+            presenter=presenter,
+            window_control_cls=WindowControl,
             use_frame_backdrop=True,
         )
-        presenter = _LifeWindowPresenter(self, host)
-        self.window.set_presenter(presenter)
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler/runtime services required after scene construction."""
-        if self.scheduler is None:
-            self.scheduler = host.app.get_scene_scheduler("main")
+        self.scheduler = ensure_scene_scheduler(self, host, scene_name="main")
         self.scheduler.set_message_dispatch_limit(512)
         if self.bound_logic_name(alias=self.LOGIC_ALIAS) is None:
             self.bind_logic("life_simulation_logic", alias=self.LOGIC_ALIAS)
@@ -183,24 +208,14 @@ class LifeSimulationFeature(RoutedFeature):
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         """Assign accessibility metadata and tab order for Life controls."""
-        controls = [
-            self.reset_button,
-            self.toggle,
-            self.zoom_slider,
-        ]
-        roles = [
-            ("button", "Reset life board"),
-            ("toggle", "Run life simulation"),
-            ("slider", "Life zoom"),
-        ]
-        next_index = int(tab_index_start)
-        for control, (role, label) in zip(controls, roles):
-            if control is None:
-                continue
-            control.set_tab_index(next_index)
-            control.set_accessibility(role=role, label=label)
-            next_index += 1
-        return next_index
+        return apply_accessibility_sequence(
+            [
+                (self.reset_button, "button", "Reset life board"),
+                (self.toggle, "toggle", "Run life simulation"),
+                (self.zoom_slider, "slider", "Life zoom"),
+            ],
+            tab_index_start,
+        )
 
     def message_handlers(self):
         """Route lifecycle feature messages by canonical topic."""

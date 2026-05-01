@@ -722,6 +722,8 @@ class FeatureWindowBinding:
     task_panel_button_id: str | None = None
     task_panel_label: str | None = None
     task_panel_style: str = "round"
+    task_panel_slot_index: int | None = None
+    tab_before_showcase: bool = False
     accessibility_label: str | None = None
 
 
@@ -745,6 +747,8 @@ class FeatureWindowPresentationModel:
         task_panel_button_id: str | None = None,
         task_panel_label: str | None = None,
         task_panel_style: str = "round",
+        task_panel_slot_index: int | None = None,
+        tab_before_showcase: bool = False,
         accessibility_label: str | None = None,
     ) -> FeatureWindowBinding:
         binding = FeatureWindowBinding(
@@ -756,6 +760,8 @@ class FeatureWindowPresentationModel:
             task_panel_button_id=None if task_panel_button_id is None else str(task_panel_button_id),
             task_panel_label=None if task_panel_label is None else str(task_panel_label),
             task_panel_style=str(task_panel_style),
+            task_panel_slot_index=None if task_panel_slot_index is None else int(task_panel_slot_index),
+            tab_before_showcase=bool(tab_before_showcase),
             accessibility_label=None if accessibility_label is None else str(accessibility_label),
         )
         self._bindings[binding.key] = binding

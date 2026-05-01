@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,7 +56,6 @@ from gui_do import (
     PropertyInspectorPanel,
     RangeSliderControl,
     RichLabelControl,
-    SceneMenuStripControl,
     ScrollbarControl,
     ScrollViewControl,
     SliderControl,
@@ -64,9 +70,9 @@ from gui_do import (
     ToggleControl,
     TreeControl,
     TreeNode,
-    resolve_scene_selection_callback,
     ui_property,
 )
+from demo_features.feature_abstractions import add_standard_scene_menu_strip
 
 
 class _ShowcaseInspectable:
@@ -158,6 +164,31 @@ class ControlsShowcaseFeature(Feature):
 
     LAYOUT_OVERALL_ROWS_CONSTANT = 7
     LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
+    SHOWCASE_TAB_SPECS = (
+        ("one", "One"),
+        ("two", "Two"),
+        ("three", "Three"),
+    )
+    SHOWCASE_BUTTON_TRIO_SPECS = (
+        ("button", "Button 1", "control_button", "Showcase button 1"),
+        ("button_2", "Button 2", "control_button_2", "Showcase button 2"),
+        ("button_3", "Button 3", "control_button_3", "Showcase button 3"),
+    )
+    SHOWCASE_TOGGLE_TRIO_SPECS = (
+        ("toggle", "Toggle 1", "control_toggle", "Showcase toggle 1"),
+        ("toggle_2", "Toggle 2", "control_toggle_2", "Showcase toggle 2"),
+        ("toggle_3", "Toggle 3", "control_toggle_3", "Showcase toggle 3"),
+    )
+    SHOWCASE_GROUP_COLUMN_SPECS = (
+        ("a", "A"),
+        ("b", "B"),
+        ("c", "C"),
+    )
+    SHOWCASE_GROUP_ROW_SPECS = (
+        (1, True),
+        (2, False),
+        (3, False),
+    )
 
     def __init__(self, rect: Rect | None = None) -> None:
         super().__init__("controls_showcase", scene_name="control_showcase")
@@ -179,31 +210,15 @@ class ControlsShowcaseFeature(Feature):
         self._frame_timer = FrameTimer()
 
     def build(self, host) -> None:
-        def _extra_entries() -> list[MenuEntry]:
-            action_registry = getattr(host, "action_registry", None)
-            if action_registry is None:
-                return []
-            tools_items = [
-                item for item in action_registry.context_menu_items(category="Tools")
-                if item.label != "Open Command Palette (F5)"
-            ]
-            if not tools_items:
-                return []
-            return [MenuEntry("Tools", tools_items)]
-
-        scene_select = resolve_scene_selection_callback(host)
-
-        host.control_showcase_menu_bar = host.control_showcase_root.add(
-            SceneMenuStripControl(
-                "control_showcase_menu_bar",
-                Rect(0, 0, host.control_showcase_root.rect.width, 28),
-                host.app,
-                scene_name="control_showcase",
-                scenes_shown=True,
-                windows_shown=True,
-                extra_entries_provider=_extra_entries,
-                on_scene_selected=scene_select,
-            )
+        host.control_showcase_menu_bar = add_standard_scene_menu_strip(
+            host.control_showcase_root,
+            host,
+            control_id="control_showcase_menu_bar",
+            rect=Rect(0, 0, host.control_showcase_root.rect.width, 28),
+            scene_name="control_showcase",
+            scenes_shown=True,
+            windows_shown=True,
+            tools_exclude_labels=("Open Command Palette (F5)",),
         )
 
         if self.rect.width <= 0 or self.rect.height <= 0:
@@ -452,137 +467,83 @@ class ControlsShowcaseFeature(Feature):
         group_other_h = 34
         tri_w = max(48, (left_lane.width - (self.INNER_GAP * 2)) // 3)
 
-        self._place_control(
-            host,
-            "button",
-            "Button 1",
-            ButtonControl("control_button", Rect(0, 0, 1, 1), "Button"),
-            Rect(left_lane.left, y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Showcase button 1",
-            column_index=2,
-            row_index=0,
-        )
-        self._place_control(
-            host,
-            "button_2",
-            "Button 2",
-            ButtonControl("control_button_2", Rect(0, 0, 1, 1), "Button"),
-            Rect(left_lane.left + tri_w + self.INNER_GAP, y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Showcase button 2",
-            column_index=2,
-            row_index=1,
-        )
-        self._place_control(
-            host,
-            "button_3",
-            "Button 3",
-            ButtonControl("control_button_3", Rect(0, 0, 1, 1), "Button"),
-            Rect(left_lane.left + ((tri_w + self.INNER_GAP) * 2), y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Showcase button 3",
-            column_index=2,
-            row_index=2,
-        )
-        y += button_slot_h + row_gap
-
-        self._place_control(
-            host,
-            "toggle",
-            "Toggle 1",
-            ToggleControl("control_toggle", Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
-            Rect(left_lane.left, y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="toggle",
-            accessibility_label="Showcase toggle 1",
-            column_index=2,
-            row_index=3,
-        )
-        self._place_control(
-            host,
-            "toggle_2",
-            "Toggle 2",
-            ToggleControl("control_toggle_2", Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
-            Rect(left_lane.left + tri_w + self.INNER_GAP, y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="toggle",
-            accessibility_label="Showcase toggle 2",
-            column_index=2,
-            row_index=4,
-        )
-        self._place_control(
-            host,
-            "toggle_3",
-            "Toggle 3",
-            ToggleControl("control_toggle_3", Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
-            Rect(left_lane.left + ((tri_w + self.INNER_GAP) * 2), y, tri_w, button_slot_h),
-            focusable=True,
-            accessibility_role="toggle",
-            accessibility_label="Showcase toggle 3",
-            column_index=2,
-            row_index=5,
-        )
-        y += button_slot_h + row_gap
-
-        for group_col, letter in enumerate(("A", "B", "C")):
-            gx = left_lane.left + (group_col * (tri_w + self.INNER_GAP))
-            first_group_y = y
+        for index, (name, label_text, control_id, accessibility_label) in enumerate(self.SHOWCASE_BUTTON_TRIO_SPECS):
             self._place_control(
                 host,
-                f"button_group_{letter.lower()}1",
-                f"Group {letter}",
-                ButtonGroupControl(
-                    f"control_button_group_{letter.lower()}1",
-                    Rect(0, 0, 1, 1),
-                    f"controls_showcase_{letter.lower()}",
-                    f"{letter}1",
-                    selected=False,
-                ),
-                Rect(gx, first_group_y, tri_w, group_first_slot_h),
+                name,
+                label_text,
+                ButtonControl(control_id, Rect(0, 0, 1, 1), "Button"),
+                Rect(left_lane.left + (index * (tri_w + self.INNER_GAP)), y, tri_w, button_slot_h),
                 focusable=True,
                 accessibility_role="button",
-                accessibility_label=f"Group {letter} option 1",
+                accessibility_label=accessibility_label,
                 column_index=2,
-                row_index=6 + (group_col * 3),
+                row_index=index,
             )
-            self._place_control_unlabeled(
+        y += button_slot_h + row_gap
+
+        for index, (name, label_text, control_id, accessibility_label) in enumerate(self.SHOWCASE_TOGGLE_TRIO_SPECS):
+            self._place_control(
                 host,
-                f"button_group_{letter.lower()}2",
-                ButtonGroupControl(
-                    f"control_button_group_{letter.lower()}2",
-                    Rect(0, 0, 1, 1),
-                    f"controls_showcase_{letter.lower()}",
-                    f"{letter}2",
-                    selected=False,
-                ),
-                Rect(gx, first_group_y + group_first_slot_h + row_gap, tri_w, group_other_h),
+                name,
+                label_text,
+                ToggleControl(control_id, Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
+                Rect(left_lane.left + (index * (tri_w + self.INNER_GAP)), y, tri_w, button_slot_h),
                 focusable=True,
-                accessibility_role="button",
-                accessibility_label=f"Group {letter} option 2",
+                accessibility_role="toggle",
+                accessibility_label=accessibility_label,
                 column_index=2,
-                row_index=7 + (group_col * 3),
+                row_index=3 + index,
             )
-            self._place_control_unlabeled(
-                host,
-                f"button_group_{letter.lower()}3",
-                ButtonGroupControl(
-                    f"control_button_group_{letter.lower()}3",
+        y += button_slot_h + row_gap
+
+        for group_col, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
+            gx = left_lane.left + (group_col * (tri_w + self.INNER_GAP))
+            for option_index, with_label in self.SHOWCASE_GROUP_ROW_SPECS:
+                control_name = f"button_group_{group_key}{option_index}"
+                control = ButtonGroupControl(
+                    f"control_button_group_{group_key}{option_index}",
                     Rect(0, 0, 1, 1),
-                    f"controls_showcase_{letter.lower()}",
-                    f"{letter}3",
+                    f"controls_showcase_{group_key}",
+                    f"{group_letter}{option_index}",
                     selected=False,
-                ),
-                Rect(gx, first_group_y + group_first_slot_h + row_gap + group_other_h + row_gap, tri_w, group_other_h),
-                focusable=True,
-                accessibility_role="button",
-                accessibility_label=f"Group {letter} option 3",
-                column_index=2,
-                row_index=8 + (group_col * 3),
-            )
+                )
+                if option_index == 1:
+                    option_y = y
+                    option_h = group_first_slot_h
+                elif option_index == 2:
+                    option_y = y + group_first_slot_h + row_gap
+                    option_h = group_other_h
+                else:
+                    option_y = y + group_first_slot_h + row_gap + group_other_h + row_gap
+                    option_h = group_other_h
+                placement_rect = Rect(gx, option_y, tri_w, option_h)
+                row_index = 6 + (group_col * 3) + (option_index - 1)
+                if with_label:
+                    self._place_control(
+                        host,
+                        control_name,
+                        f"Group {group_letter}",
+                        control,
+                        placement_rect,
+                        focusable=True,
+                        accessibility_role="button",
+                        accessibility_label=f"Group {group_letter} option {option_index}",
+                        column_index=2,
+                        row_index=row_index,
+                    )
+                else:
+                    self._place_control_unlabeled(
+                        host,
+                        control_name,
+                        control,
+                        placement_rect,
+                        focusable=True,
+                        accessibility_role="button",
+                        accessibility_label=f"Group {group_letter} option {option_index}",
+                        column_index=2,
+                        row_index=row_index,
+                    )
 
         groups_block_h = group_first_slot_h + row_gap + group_other_h + row_gap + group_other_h
         y += groups_block_h + row_gap
@@ -618,9 +579,15 @@ class ControlsShowcaseFeature(Feature):
 
         # Square tab column — width == height == col0_total_h. Three tabs each showing a label.
         tab_col_x = left_lane.right + col_gap
-        _tab_lbl_one = LabelControl("ctrl_tab_lbl_one", Rect(0, 0, sq_size, 30), "One", align="left")
-        _tab_lbl_two = LabelControl("ctrl_tab_lbl_two", Rect(0, 0, sq_size, 30), "Two", align="left")
-        _tab_lbl_three = LabelControl("ctrl_tab_lbl_three", Rect(0, 0, sq_size, 30), "Three", align="left")
+        tab_labels = {
+            tab_key: LabelControl(
+                f"ctrl_tab_lbl_{tab_key}",
+                Rect(0, 0, sq_size, 30),
+                tab_title,
+                align="left",
+            )
+            for tab_key, tab_title in self.SHOWCASE_TAB_SPECS
+        }
         self._place_control_unlabeled(
             host,
             "tab",
@@ -628,9 +595,8 @@ class ControlsShowcaseFeature(Feature):
                 "control_tab",
                 Rect(0, 0, 1, 1),
                 items=[
-                    TabItem("one", "One", _tab_lbl_one),
-                    TabItem("two", "Two", _tab_lbl_two),
-                    TabItem("three", "Three", _tab_lbl_three),
+                    TabItem(tab_key, tab_title, tab_labels[tab_key])
+                    for tab_key, tab_title in self.SHOWCASE_TAB_SPECS
                 ],
                 selected_key="one",
             ),
@@ -707,24 +673,21 @@ class ControlsShowcaseFeature(Feature):
             column_spacing=col_gap,
             row_spacing=row_gap,
         )
-        col0_anchor = flow.column_flow_anchor()
-        col1_anchor = flow.column_flow_anchor()
-        col2_anchor = flow.column_flow_anchor()
-        col3_anchor = flow.column_flow_anchor()
-        col4_anchor = flow.column_flow_anchor()
-        col5_anchor = flow.column_flow_anchor()
-        col6_anchor = flow.column_flow_anchor()
-        col7_anchor = flow.column_flow_anchor()
+        anchors = [flow.column_flow_anchor() for _ in range(8)]
+        (
+            col0_anchor,
+            col1_anchor,
+            col2_anchor,
+            col3_anchor,
+            col4_anchor,
+            col5_anchor,
+            col6_anchor,
+            col7_anchor,
+        ) = anchors
 
         new_row_col_w = min(200, col0_anchor.width)
-        new_row_x0 = col0_anchor.left
-        new_row_x1 = col1_anchor.left
-        new_row_x2 = col2_anchor.left
-        new_row_x3 = col3_anchor.left
-        col0_y = col0_anchor.top
-        col1_y = col1_anchor.top
-        col2_y = col2_anchor.top
-        col3_y = col3_anchor.top
+        new_row_x0, new_row_x1, new_row_x2, new_row_x3 = [anchor.left for anchor in anchors[:4]]
+        col0_y, col1_y, col2_y, col3_y = [anchor.top for anchor in anchors[:4]]
 
         # Column 0: ListView with selected-item label.
         list_selection_label = LabelControl(

@@ -9,6 +9,13 @@ and SceneSpatialIndex.
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from typing import Optional
 
 import pygame
@@ -43,7 +50,6 @@ from gui_do import (
     ListDiffCalculator,
     ListItem,
     LocaleRegistry,
-    create_anchored_feature_window,
     Pause,
     ParticleLayer,
     ParticleSystem,
@@ -79,8 +85,30 @@ from gui_do import (
 )
 from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
+from demo_features.feature_abstractions import create_presented_anchored_window
+from demo_features.feature_abstractions import register_window_tab_builders
 
 _TAB_H = 36
+
+_SYSTEMS_TAB_SPECS = (
+    ("filter", "Filter", "_build_filter_tab"),
+    ("locale", "Locale", "_build_locale_tab"),
+    ("input", "Input", "_build_input_tab"),
+    ("event", "Event", "_build_event_tab"),
+    ("inspect", "Inspect", "_build_inspect_tab"),
+    ("props", "Props", "_build_props_tab"),
+    ("dock", "Dock", "_build_dock_tab"),
+    ("particle", "Particle", "_build_particle_tab"),
+    ("sprite", "Sprite", "_build_sprite_tab"),
+    ("sched", "Sched", "_build_sched_tab"),
+    ("tilemap", "TileMap", "_build_tilemap_tab"),
+    ("progress", "Progress", "_build_progress_tab"),
+    ("flow", "Flow", "_build_flow_tab"),
+    ("search", "Search", "_build_search_tab"),
+    ("listdiff", "ListDiff", "_build_listdiff_tab"),
+    ("cache", "Cache", "_build_cache_tab"),
+    ("shortcuts", "Shortcuts", "_build_shortcuts_tab"),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -250,18 +278,18 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
-        self.window = create_anchored_feature_window(
+        presenter = _SystemsWindowPresenter(self, host)
+        self.window = create_presented_anchored_window(
             host,
-            window_control_cls=WindowControl,
             control_id="systems_window",
             title="System",
             size=(820, 590),
             anchor="top_left",
             margin=(24, 92),
+            presenter=presenter,
+            window_control_cls=WindowControl,
             use_frame_backdrop=True,
         )
-        presenter = _SystemsWindowPresenter(self, host)
-        self.window.set_presenter(presenter)
 
         self._on_tab_change("filter")
 
@@ -2225,6 +2253,10 @@ class _SystemsWindowPresenter(WindowPresenter):
         self.tab = None
 
     def on_create(self):
+        # Tab builders use feature.window.add(...), so ensure this reference
+        # exists before registering/building tab content.
+        self.feature.window = self.window
+        self.feature.demo = self.host
         content = self.window.content_rect()
         pad = 0
         body_top = content.top + pad
@@ -2239,48 +2271,18 @@ class _SystemsWindowPresenter(WindowPresenter):
         self.tab = TabControl(
             "nsdf_tab",
             body_rect,
-            items=[
-                TabItem("filter", "Filter"),
-                TabItem("locale", "Locale"),
-                TabItem("input", "Input"),
-                TabItem("event", "Event"),
-                TabItem("inspect", "Inspect"),
-                TabItem("props", "Props"),
-                TabItem("dock", "Dock"),
-                TabItem("particle", "Particle"),
-                TabItem("sprite", "Sprite"),
-                TabItem("sched", "Sched"),
-                TabItem("tilemap", "TileMap"),
-                TabItem("progress", "Progress"),
-                TabItem("flow", "Flow"),
-                TabItem("search", "Search"),
-                TabItem("listdiff", "ListDiff"),
-                TabItem("cache", "Cache"),
-                TabItem("shortcuts", "Shortcuts"),
-            ],
+            items=[TabItem(tab_key, tab_label) for tab_key, tab_label, _builder_attr in _SYSTEMS_TAB_SPECS],
             selected_key="filter",
             on_change=self.feature._on_tab_change,
         )
         self.add_control(self.tab)
         self.feature.tab = self.tab
-        self.feature._tabs.register("filter", self.feature._build_filter_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("locale", self.feature._build_locale_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("input", self.feature._build_input_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("event", self.feature._build_event_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("inspect", self.feature._build_inspect_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("props", self.feature._build_props_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("dock", self.feature._build_dock_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("particle", self.feature._build_particle_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("sprite", self.feature._build_sprite_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("sched", self.feature._build_sched_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("tilemap", self.feature._build_tilemap_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("progress", self.feature._build_progress_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("flow", self.feature._build_flow_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("search", self.feature._build_search_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("listdiff", self.feature._build_listdiff_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("cache", self.feature._build_cache_tab(self.host, Rect(body_content_rect)))
-        self.feature._tabs.register("shortcuts", self.feature._build_shortcuts_tab(self.host, Rect(body_content_rect)))
+        register_window_tab_builders(
+            self.feature._tabs,
+            self.feature,
+            self.host,
+            body_content_rect,
+            [(tab_key, builder_attr) for tab_key, _tab_label, builder_attr in _SYSTEMS_TAB_SPECS],
+        )
         self.feature._tabs.on_activate("locale", lambda: setattr(self.feature, "_text_flow_dirty", True))
-        self.feature.window = self.window
-        self.feature.demo = self.host
         self.window.visible = False

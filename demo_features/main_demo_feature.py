@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+try:
+    from demo_features._import_bootstrap import ensure_repo_root_on_path
+except ModuleNotFoundError:
+    from _import_bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from pygame import Rect
 
 from gui_do import (
@@ -29,8 +36,6 @@ from gui_do import (
     LayoutAxis,
     LayoutRoot,
     MeasureContext,
-    MenuEntry,
-    SceneMenuStripControl,
     NotificationCenter,
     NotificationPanelControl,
     NotificationRecord,
@@ -51,7 +56,6 @@ from gui_do import (
     SelectionModel,
     SettingsRegistry,
     ShortcutHelpOverlay,
-    resolve_scene_selection_callback,
     SplitterControl,
     StateMachine,
     ThemeManager,
@@ -72,6 +76,7 @@ from gui_do import (
 
 
 )
+from demo_features.feature_abstractions import add_standard_scene_menu_strip, sorted_window_bindings
 
 
 class MainDemoFeature(Feature):
@@ -100,26 +105,15 @@ class MainDemoFeature(Feature):
             scene_name="main",
         )
 
-        def _extra_entries() -> list[MenuEntry]:
-            tools_items = host.action_registry.context_menu_items(category="Tools")
-            if not tools_items:
-                return []
-            return [MenuEntry("Tools", tools_items)]
-
-        scene_select = resolve_scene_selection_callback(host)
-
-        host.desktop_menu_bar = host.root.add(
-            SceneMenuStripControl(
-                "desktop_menu_bar",
-                Rect(0, 0, host.screen_rect.width, 28),
-                host.app,
-                scene_name="main",
-                scenes_shown=True,
-                windows_shown=True,
-                extra_entries_provider=_extra_entries,
-                on_scene_selected=scene_select,
-                on_window_toggled=host.window_presentation.handle_window_toggle,
-            )
+        host.desktop_menu_bar = add_standard_scene_menu_strip(
+            host.root,
+            host,
+            control_id="desktop_menu_bar",
+            rect=Rect(0, 0, host.screen_rect.width, 28),
+            scene_name="main",
+            scenes_shown=True,
+            windows_shown=True,
+            on_window_toggled=host.window_presentation.handle_window_toggle,
         )
         host.screen_title = host.root.add(
             self._make_sized_title_label(host, "screen_title", "gui_do", 24, 36, fallback_size=(640, 96))
@@ -162,15 +156,15 @@ class MainDemoFeature(Feature):
         )
 
         toggle_controls = []
-        bindings = list(host.window_presentation.bindings())
-        next_slot_index = 1
-        for idx, binding in enumerate(bindings):
-            if idx == 1:
-                next_slot_index = 3
+        bindings = sorted_window_bindings(host.window_presentation.bindings())
+        max_slot_index = 0
+        for binding in bindings:
+            slot_index = 1 if binding.task_panel_slot_index is None else int(binding.task_panel_slot_index)
+            max_slot_index = max(max_slot_index, slot_index)
             toggle = host.task_panel.add(
                 ToggleControl(
                     binding.task_panel_button_id or f"show_{binding.key}",
-                    host.app.layout.linear(next_slot_index),
+                    host.app.layout.linear(slot_index),
                     binding.task_panel_label or binding.key.title(),
                     binding.task_panel_label or binding.key.title(),
                     pushed=False,
@@ -185,12 +179,11 @@ class MainDemoFeature(Feature):
             if binding.toggle_attr:
                 setattr(host, binding.toggle_attr, toggle)
             toggle_controls.append((binding, toggle))
-            next_slot_index += 1
 
         host.help_button = host.task_panel.add(
             ButtonControl(
                 "show_help",
-                host.app.layout.linear(max(5, next_slot_index)),
+                host.app.layout.linear(max(5, max_slot_index + 1)),
                 "Help (F9)",
                 lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
                 style="angle",

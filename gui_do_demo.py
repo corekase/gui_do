@@ -1,4 +1,5 @@
 import pygame
+from demo_features.feature_abstractions import sorted_window_bindings
 
 from demo_features.demo_config import (
     ACTION_SPECS,
@@ -141,6 +142,8 @@ class GuiDoDemo:
                 task_panel_button_id=spec.task_panel_button_id,
                 task_panel_label=spec.task_panel_label,
                 task_panel_style=spec.task_panel_style,
+                task_panel_slot_index=spec.task_panel_slot_index,
+                tab_before_showcase=spec.tab_before_showcase,
                 accessibility_label=spec.accessibility_label,
             )
 
@@ -178,31 +181,43 @@ class GuiDoDemo:
         self.window_presentation.declare_actions(r, category="Windows")
 
     def _build_action_handler(self, spec):
-        if spec.kind == "exit":
-            return lambda _ctx, _ev: (setattr(self.app, "running", False) or True)
-        if spec.kind == "scene_nav":
-            scene_name = str(spec.target)
-            return lambda _ctx, _ev: (self.scene_transitions.go(scene_name) or True)
-        if spec.kind == "palette_open":
-            return lambda _ctx, _ev: (self._palette_manager.show(self.app) or True)
-        raise ValueError(f"Unsupported action kind: {spec.kind}")
+        builders = {
+            "exit": self._build_exit_action_handler,
+            "scene_nav": self._build_scene_nav_action_handler,
+            "palette_open": self._build_palette_open_action_handler,
+        }
+        builder = builders.get(str(spec.kind))
+        if builder is None:
+            raise ValueError(f"Unsupported action kind: {spec.kind}")
+        return builder(spec)
 
-    def _collect_window_toggle_controls(self) -> list[object]:
-        controls = []
-        for binding in self.window_presentation.bindings():
+    def _build_exit_action_handler(self, _spec):
+        return lambda _ctx, _ev: (setattr(self.app, "running", False) or True)
+
+    def _build_scene_nav_action_handler(self, spec):
+        scene_name = str(spec.target)
+        return lambda _ctx, _ev: (self.scene_transitions.go(scene_name) or True)
+
+    def _build_palette_open_action_handler(self, _spec):
+        return lambda _ctx, _ev: (self._palette_manager.show(self.app) or True)
+
+    def _collect_window_toggle_controls(self) -> list[tuple[object, object]]:
+        controls: list[tuple[object, object]] = []
+        for binding in sorted_window_bindings(self.window_presentation.bindings()):
             if binding.toggle_attr is None:
                 continue
             control = getattr(self, binding.toggle_attr, None)
             if control is not None:
-                controls.append(control)
+                controls.append((binding, control))
         return controls
 
-    def _build_main_tab_order_controls(self, window_toggle_controls: list[object]) -> list[object]:
+    def _build_main_tab_order_controls(self, window_toggle_controls: list[tuple[object, object]]) -> list[object]:
+        before_showcase = [control for binding, control in window_toggle_controls if binding.tab_before_showcase]
+        after_showcase = [control for binding, control in window_toggle_controls if not binding.tab_before_showcase]
         base_controls = [self.exit_button]
-        if window_toggle_controls:
-            base_controls.append(window_toggle_controls[0])
+        base_controls.extend(before_showcase)
         base_controls.append(self.showcase_button)
-        base_controls.extend(window_toggle_controls[1:])
+        base_controls.extend(after_showcase)
         for index, control in enumerate(base_controls):
             control.set_tab_index(index)
         return base_controls
