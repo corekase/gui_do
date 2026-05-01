@@ -6,9 +6,6 @@ from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
 class GuiDoDemo:
     """Interactive demo app showcasing gui_do controls and scene workflows."""
 
-    TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
-    SCREEN_TITLE_FONT_ROLE = "screen.main.title"
-
     def __init__(self) -> None:
         bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
 
