@@ -23,9 +23,25 @@ from gui_do import (
     WindowControl,
 )
 from gui_do import set_window_visible_state
-from gui_do import partition_rects
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
+
+# ---------------------------------------------------------------------------
+# Life window layout constants — single source of truth for sizing and layout
+# ---------------------------------------------------------------------------
+_LIFE_PAD = 10           # Uniform padding inside the window body on all four sides
+_LIFE_CTRL_GAP = 8       # Gap between the canvas bottom edge and the control strip
+_LIFE_CTRL_H = 28        # Control strip height
+_LIFE_CTRL_SPACING = 12  # Horizontal spacing between items in the control strip
+_LIFE_CANVAS_SIZE = 600  # Square canvas dimension
+_LIFE_TITLEBAR_H = 24    # Estimated titlebar height (matches size-14 title font)
+
+_LIFE_BODY_W = _LIFE_PAD + _LIFE_CANVAS_SIZE + _LIFE_PAD
+_LIFE_BODY_H = (
+    _LIFE_PAD + _LIFE_CANVAS_SIZE + _LIFE_CTRL_GAP + _LIFE_CTRL_H + _LIFE_PAD
+)
+_LIFE_WINDOW_SIZE = (_LIFE_BODY_W, _LIFE_TITLEBAR_H + _LIFE_BODY_H)
+# ---------------------------------------------------------------------------
 
 _LIFE_LOGIC_TOPIC = "life_logic"
 
@@ -156,7 +172,7 @@ class LifeSimulationFeature(RoutedFeature):
             window_control_cls=WindowControl,
             control_id="life_window",
             title="Conway's Game of Life",
-            size=(660, 688),
+            size=_LIFE_WINDOW_SIZE,
             anchor="top_right",
             margin=(28, 92),
             title_font_role=self.font_role("window_title"),
@@ -328,26 +344,21 @@ class _LifeWindowPresenter(WindowPresenter):
 
     def on_create(self):
         content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=0, padding_y=0)
-        left = padded_content_rect.left
-        top = padded_content_rect.top
-        width = padded_content_rect.width
-        height = padded_content_rect.height
-        control_height = 28
-        controls_gap = 10
-        control_spacing = 12
-        grid_gap = 6
-        controls_y = top + height - control_height
-        padded_rect = Rect(left, top, width, max(1, controls_y - controls_gap - top))
-        [canvas_rect] = partition_rects(
-            padded_rect, rows=1, cols=1, gap=grid_gap, bottom_padding=0, controls_and_status_height=0,
-        )
+        padded = inset_rect(content_rect, padding_x=_LIFE_PAD, padding_y=_LIFE_PAD)
+        left = padded.left
+        top = padded.top
+        width = padded.width
+        height = padded.height
+
+        ctrl_y = top + height - _LIFE_CTRL_H
+        canvas_h = max(1, ctrl_y - _LIFE_CTRL_GAP - top)
+        canvas_rect = Rect(left, top, width, canvas_h)
         self.canvas = CanvasControl("life_canvas", canvas_rect, max_events=256)
         self.add_control(self.canvas)
         self.feature.canvas = self.canvas
 
         slots = centered_horizontal_strip_layout(
-            left=left, width=width, y=controls_y, item_count=4, item_height=control_height, spacing=control_spacing,
+            left=left, width=width, y=ctrl_y, item_count=4, item_height=_LIFE_CTRL_H, spacing=_LIFE_CTRL_SPACING,
         )
         life_reset_rect, life_toggle_rect, zoom_slider_slot_1, zoom_slider_slot_2 = slots
 
@@ -365,7 +376,7 @@ class _LifeWindowPresenter(WindowPresenter):
 
         slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
         slider_height = 20
-        slider_y = controls_y + max(0, (control_height - slider_height) // 2)
+        slider_y = ctrl_y + max(0, (_LIFE_CTRL_H - slider_height) // 2)
         self.zoom_slider = SliderControl(
             "life_zoom",
             Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
