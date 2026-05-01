@@ -6,6 +6,11 @@ merges do not require preserving README sections for test/tooling behavior.
 
 ## Public API
 
+Import contract notes:
+
+- Supported usage is explicit named imports from `gui_do`.
+- Star-import behavior is not part of the package contract.
+
 ```python
 from gui_do import (
     GuiApplication,

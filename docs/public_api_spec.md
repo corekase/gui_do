@@ -8,7 +8,13 @@ Terminology in this document aligns with README and architecture docs:
 
 - `strict contracts`: no compatibility/fallback behavior in core dispatch and rendering paths.
 - `scene isolation`: only the active scene executes scene-contained runtime updates.
-- `demo boundary`: demo-only schemas stay outside `gui_do.__all__`.
+- `demo boundary`: demo-only schemas stay outside the gui_do root import contract.
+
+## Import Contract
+
+- Supported consumer imports use explicit named imports from `gui_do`.
+- Star-import behavior is not part of the public contract.
+- The import list documented in this spec and in `docs/package_contracts.md` is authoritative.
 
 ## Public Exports
 

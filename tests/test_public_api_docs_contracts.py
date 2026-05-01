@@ -18,3 +18,11 @@ class TestPublicAPIDocsContracts(unittest.TestCase):
         self.assertIn("- `TelemetrySample`", content)
         self.assertIn("- `configure_telemetry`", content)
         self.assertIn("- `telemetry_collector`", content)
+
+    def test_public_api_spec_declares_named_import_contract(self):
+        path = Path(__file__).resolve().parents[1] / "docs" / "public_api_spec.md"
+        content = path.read_text(encoding="utf-8")
+
+        self.assertIn("## Import Contract", content)
+        self.assertIn("Supported consumer imports use explicit named imports from `gui_do`.", content)
+        self.assertIn("Star-import behavior is not part of the public contract.", content)
