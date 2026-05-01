@@ -21,6 +21,7 @@ Execution was performed according to the staged plan in docs/final_consideration
 
 - Updated WorkspacePersistenceManager.restore in gui_do/persistence/workspace_persistence.py to return a structured restore report directly.
 - Updated GuiApplication.restore_workspace and GuiApplication.load_workspace to return structured restore reports.
+- Added explicit run_entrypoint workspace lifecycle contracts (load/save tolerance and non-zero failure exit behavior).
 - Restore report fields:
   - target_scene
   - switched_scene
@@ -41,6 +42,7 @@ Execution was performed according to the staged plan in docs/final_consideration
 - Added tests/test_runtime_guarantees_and_determinism.py.
 - Added tests/test_workspace_persistence_observability.py.
 - Added tests/test_runtime_operating_contracts.py.
+- Added tests/test_gui_application_workspace_contracts.py.
 
 ### Upgraded prior contract stubs to real checks
 
@@ -56,11 +58,11 @@ Fresh verification runs completed successfully:
 
 - Full suite:
   - C:/Apps/Python/python.exe -m pytest tests/ -q
-  - Result: 125 passed
+  - Result: passing (latest run in this session is green)
 
 - API and contract gates:
   - C:/Apps/Python/python.exe -m pytest tests/test_public_api_exports.py tests/test_public_api_docs_contracts.py tests/test_contract_catalog_consistency.py tests/test_contract_command_parity.py tests/test_boundary_contracts.py -q
-  - Result: 6 passed
+  - Result: passing
 
 - Demo smoke:
   - C:/Apps/Python/python.exe gui_do_demo.py

@@ -42,3 +42,9 @@ class TestContractDocsHelpers(unittest.TestCase):
                 "## 6. Performance Budgets",
             ],
         )
+
+    def test_implementation_notes_avoid_stale_fixed_pass_counts(self):
+        content = _read_doc("final_considerations_implementation_notes.md")
+
+        self.assertIn("Result: passing", content)
+        self.assertNotIn("Result: 125 passed", content)
