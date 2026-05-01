@@ -13,7 +13,6 @@ from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
 from demo_features.systems_demo_feature import SystemsDemoFeature
 
 from gui_do import (
-    ActionSpec,
     CursorSpec,
     FeatureSpec,
     HostApplicationConfig,
@@ -21,9 +20,12 @@ from gui_do import (
     SceneRootSpec,
     SceneSetupSpec,
     SceneTransitionStyle,
-    StaticAccessibilitySpec,
     TelemetryConfig,
-    WindowSpec,
+    make_exit_action,
+    make_palette_open_action,
+    make_scene_nav_action,
+    make_static_accessibility_spec,
+    make_window_toggle_spec,
 )
 
 
@@ -61,44 +63,29 @@ FEATURE_SPECS = (
 )
 
 WINDOW_SPECS = (
-    WindowSpec(
-        key="systems",
-        feature_attr="_systems_feature",
-        toggle_attr="systems_toggle_window",
-        action_name="win_systems",
-        action_label="Show Systems Window",
-        task_panel_button_id="show_systems",
+    make_window_toggle_spec(
+        "systems",
+        "_systems_feature",
+        slot_index=1,
         task_panel_label="System",
         task_panel_style="angle",
-        task_panel_slot_index=1,
         tab_before_showcase=True,
-        accessibility_label="Show Systems window",
     ),
-    WindowSpec(
-        key="life",
-        feature_attr="_life_feature",
-        toggle_attr="life_toggle_window",
-        action_name="win_life",
-        action_label="Show Life Window",
-        task_panel_button_id="show_life",
+    make_window_toggle_spec(
+        "life",
+        "_life_feature",
+        slot_index=3,
         task_panel_label="Life",
         task_panel_style="round",
-        task_panel_slot_index=3,
         tab_before_showcase=False,
-        accessibility_label="Show Life window",
     ),
-    WindowSpec(
-        key="mandel",
-        feature_attr="_mandel_feature",
-        toggle_attr="mandel_toggle_window",
-        action_name="win_mandel",
-        action_label="Show Mandelbrot Window",
-        task_panel_button_id="show_mandel",
+    make_window_toggle_spec(
+        "mandel",
+        "_mandel_feature",
+        slot_index=4,
         task_panel_label="Mandelbrot",
         task_panel_style="round",
-        task_panel_slot_index=4,
         tab_before_showcase=False,
-        accessibility_label="Show Mandelbrot window",
     ),
 )
 
@@ -118,45 +105,23 @@ RUNTIME_SCENE_SPECS = (
 )
 
 ACTION_SPECS = (
-    ActionSpec(
-        action_id="exit",
-        label="Exit",
-        kind="exit",
-        category="File",
-    ),
-    ActionSpec(
-        action_id="nav_main",
+    make_exit_action(),
+    make_scene_nav_action(
+        "nav_main",
         label="Go to Main Scene",
-        kind="scene_nav",
-        target="main",
-        category="Scenes",
+        target_scene="main",
     ),
-    ActionSpec(
-        action_id="nav_showcase",
+    make_scene_nav_action(
+        "nav_showcase",
         label="Go to Controls Showcase",
-        kind="scene_nav",
-        target="control_showcase",
-        category="Scenes",
+        target_scene="control_showcase",
     ),
-    ActionSpec(
-        action_id="palette_open",
-        label="Open Command Palette (F5)",
-        kind="palette_open",
-        category=None,
-    ),
+    make_palette_open_action(),
 )
 
 STATIC_ACCESSIBILITY_SPECS = (
-    StaticAccessibilitySpec(
-        control_attr="exit_button",
-        role="button",
-        label="Exit",
-    ),
-    StaticAccessibilitySpec(
-        control_attr="showcase_button",
-        role="button",
-        label="Showcase",
-    ),
+    make_static_accessibility_spec("exit_button", label="Exit"),
+    make_static_accessibility_spec("showcase_button", label="Showcase"),
 )
 
 DEMO_BOOTSTRAP_CONFIG = HostApplicationConfig(

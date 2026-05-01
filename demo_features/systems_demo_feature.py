@@ -68,8 +68,6 @@ from gui_do import (
     SortFilterProxySource,
     SpriteSheet,
     StringTable,
-    TabControl,
-    TabItem,
     TabPanelManager,
     TextFlow,
     TextInputControl,
@@ -86,34 +84,53 @@ from gui_do import (
 from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from demo_features.feature_abstractions import (
+    add_window_button,
+    add_window_button_row,
+    add_window_control,
+    add_window_label,
+    ActiveTabUpdateRouter,
     bind_input_map_actions,
-    create_presented_anchored_window,
+    AnchoredWindowSpec,
+    build_tab_builder_specs,
+    compute_tabbed_window_layout,
+    create_feature_presented_window,
     initialize_locale_registry,
     register_descriptors,
-    register_window_tab_builders,
+    register_tab_update_handlers,
+    setup_feature_presenter_tabs,
 )
 
 _TAB_H = 36
 
-_SYSTEMS_TAB_SPECS = (
-    ("filter", "Filter", "_build_filter_tab"),
-    ("locale", "Locale", "_build_locale_tab"),
-    ("input", "Input", "_build_input_tab"),
-    ("event", "Event", "_build_event_tab"),
-    ("inspect", "Inspect", "_build_inspect_tab"),
-    ("props", "Props", "_build_props_tab"),
-    ("dock", "Dock", "_build_dock_tab"),
-    ("particle", "Particle", "_build_particle_tab"),
-    ("sprite", "Sprite", "_build_sprite_tab"),
-    ("sched", "Sched", "_build_sched_tab"),
-    ("tilemap", "TileMap", "_build_tilemap_tab"),
-    ("progress", "Progress", "_build_progress_tab"),
-    ("flow", "Flow", "_build_flow_tab"),
-    ("search", "Search", "_build_search_tab"),
-    ("listdiff", "ListDiff", "_build_listdiff_tab"),
-    ("cache", "Cache", "_build_cache_tab"),
-    ("shortcuts", "Shortcuts", "_build_shortcuts_tab"),
+_SYSTEMS_WINDOW_SPEC = AnchoredWindowSpec(
+    control_id="systems_window",
+    title="System",
+    size=(820, 590),
+    anchor="top_left",
+    margin=(24, 92),
+    use_frame_backdrop=True,
 )
+
+_SYSTEMS_TAB_ENTRIES = (
+    ("filter", "Filter"),
+    ("locale", "Locale"),
+    ("input", "Input"),
+    ("event", "Event"),
+    ("inspect", "Inspect"),
+    ("props", "Props"),
+    ("dock", "Dock"),
+    ("particle", "Particle"),
+    ("sprite", "Sprite"),
+    ("sched", "Sched"),
+    ("tilemap", "TileMap"),
+    ("progress", "Progress"),
+    ("flow", "Flow"),
+    ("search", "Search"),
+    ("listdiff", "ListDiff"),
+    ("cache", "Cache"),
+    ("shortcuts", "Shortcuts"),
+)
+_SYSTEMS_TAB_SPECS = build_tab_builder_specs(_SYSTEMS_TAB_ENTRIES)
 
 _LOCALE_TABLE_SPECS = (
     (
@@ -245,6 +262,7 @@ class SystemsDemoFeature(RoutedFeature):
         self._active_tab: str = "filter"
         self._tabs = TabPanelManager()
         self._frame_timer = FrameTimer()
+        self._tab_updates = ActiveTabUpdateRouter()
 
         # Filter tab
         self._proxy: Optional[SortFilterProxySource] = None
@@ -338,22 +356,29 @@ class SystemsDemoFeature(RoutedFeature):
         self._shortcut_overlay: Optional[ShortcutHelpOverlay] = None
         self._shortcut_info_label: Optional[LabelControl] = None
 
+        register_tab_update_handlers(
+            self._tab_updates,
+            (
+                ("locale", self._update_locale_tab_frame),
+                ("particle", self._update_particle_tab_frame),
+                ("sprite", self._update_sprite_tab_frame),
+                ("sched", self._update_sched_tab_frame),
+                ("tilemap", self._update_tilemap_tab_frame),
+                ("progress", self._update_progress_tab_frame),
+            ),
+        )
+
     # ------------------------------------------------------------------
     # Feature lifecycle
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
-        presenter = _SystemsWindowPresenter(self, host)
-        self.window = create_presented_anchored_window(
+        self.window = create_feature_presented_window(
             host,
-            control_id="systems_window",
-            title="System",
-            size=(820, 590),
-            anchor="top_left",
-            margin=(24, 92),
-            presenter=presenter,
+            feature=self,
+            presenter_cls=_SystemsWindowPresenter,
+            spec=_SYSTEMS_WINDOW_SPEC,
             window_control_cls=WindowControl,
-            use_frame_backdrop=True,
         )
 
         self._on_tab_change("filter")
@@ -377,12 +402,13 @@ class SystemsDemoFeature(RoutedFeature):
                     bp = self._responsive.active_breakpoint.value
                     self._layout_label.text = f"Active breakpoint: {bp}"
 
-        # Draw TextFlow to canvas if dirty
+        self._tab_updates.run(self._active_tab, host, dt)
+
+    def _update_locale_tab_frame(self, host, _dt: float) -> None:
         if (
             self._text_flow_dirty
             and self._text_canvas is not None
             and self._text_flow is not None
-            and self._active_tab == "locale"
         ):
             self._text_flow_dirty = False
             canvas = self._text_canvas.canvas
@@ -391,45 +417,49 @@ class SystemsDemoFeature(RoutedFeature):
             self._text_flow.render(canvas, 8, 8)
             self._text_canvas.invalidate()
 
-        # Particle tab — update system and redraw canvas
-        if self._active_tab == "particle" and self._particle_system is not None:
-            self._particle_system.update(dt)
-            if self._particle_canvas is not None:
-                surf = self._particle_canvas.canvas
-                surf.fill((20, 20, 30))
-                self._particle_system.draw(surf)
-                self._particle_canvas.invalidate()
-            if self._particle_count_label is not None:
-                self._particle_count_label.text = (
-                    f"Live particles: {self._particle_system.active_particle_count}  "
-                    f"Emitters: {self._particle_system.emitter_count}"
-                )
+    def _update_particle_tab_frame(self, _host, dt: float) -> None:
+        if self._particle_system is None:
+            return
+        self._particle_system.update(dt)
+        if self._particle_canvas is not None:
+            surf = self._particle_canvas.canvas
+            surf.fill((20, 20, 30))
+            self._particle_system.draw(surf)
+            self._particle_canvas.invalidate()
+        if self._particle_count_label is not None:
+            self._particle_count_label.text = (
+                f"Live particles: {self._particle_system.active_particle_count}  "
+                f"Emitters: {self._particle_system.emitter_count}"
+            )
 
-        # Sprite tab — animate
-        if self._active_tab == "sprite" and self._sprite_anim is not None:
-            self._sprite_anim.update(dt)
-            if self._sprite_ctrl is not None:
-                self._sprite_ctrl.invalidate()
+    def _update_sprite_tab_frame(self, _host, dt: float) -> None:
+        if self._sprite_anim is None:
+            return
+        self._sprite_anim.update(dt)
+        if self._sprite_ctrl is not None:
+            self._sprite_ctrl.invalidate()
 
-        # Scheduler tab — tick
-        if self._active_tab == "sched" and self._scheduler is not None:
-            self._scheduler.update(dt)
-            if self._sched_step_label is not None:
-                self._sched_step_label.text = (
-                    f"Active coroutines: {self._scheduler.coroutine_count}"
-                )
+    def _update_sched_tab_frame(self, _host, dt: float) -> None:
+        if self._scheduler is None:
+            return
+        self._scheduler.update(dt)
+        if self._sched_step_label is not None:
+            self._sched_step_label.text = (
+                f"Active coroutines: {self._scheduler.coroutine_count}"
+            )
 
-        # TileMap tab — draw once when dirty
-        if self._tile_dirty and self._active_tab == "tilemap" and self._tile_canvas is not None and self._tile_map is not None:
-            self._tile_dirty = False
-            surf = self._tile_canvas.canvas
-            surf.fill((20, 30, 20))
-            cam = Rect(0, 0, surf.get_width(), surf.get_height())
-            self._tile_map.draw(surf, cam, offset=(0, 0))
-            self._tile_canvas.invalidate()
+    def _update_tilemap_tab_frame(self, _host, _dt: float) -> None:
+        if not self._tile_dirty or self._tile_canvas is None or self._tile_map is None:
+            return
+        self._tile_dirty = False
+        surf = self._tile_canvas.canvas
+        surf.fill((20, 30, 20))
+        cam = Rect(0, 0, surf.get_width(), surf.get_height())
+        self._tile_map.draw(surf, cam, offset=(0, 0))
+        self._tile_canvas.invalidate()
 
-        # Progress tab — tick indeterminate bar
-        if self._active_tab == "progress" and self._progress_indeterminate is not None:
+    def _update_progress_tab_frame(self, _host, dt: float) -> None:
+        if self._progress_indeterminate is not None:
             self._progress_indeterminate.tick(dt)
 
     # ------------------------------------------------------------------
@@ -739,26 +769,15 @@ class SystemsDemoFeature(RoutedFeature):
 
     def _add_tab_control(self, controls: list, control):
         """Add a control to the window and tab-control collection in one call."""
-        added = self.window.add(control)
-        controls.append(added)
-        return added
+        return add_window_control(self.window, controls, control)
 
     def _add_tab_label(self, controls: list, control_id: str, rect: Rect, text: str):
         """Convenience wrapper for left-aligned tab labels."""
-        return self._add_tab_control(
-            controls,
-            LabelControl(str(control_id), Rect(rect), str(text), align="left"),
-        )
+        return add_window_label(self.window, controls, control_id, rect, text, align="left")
 
     def _add_tab_button(self, controls: list, control_id: str, rect: Rect, text: str, on_click, *, style=None):
         """Convenience wrapper for tab buttons with optional style."""
-        kwargs = {}
-        if style is not None:
-            kwargs["style"] = style
-        return self._add_tab_control(
-            controls,
-            ButtonControl(str(control_id), Rect(rect), str(text), on_click, **kwargs),
-        )
+        return add_window_button(self.window, controls, control_id, rect, text, on_click, style=style)
 
     def _add_tab_button_row(
         self,
@@ -772,27 +791,16 @@ class SystemsDemoFeature(RoutedFeature):
         specs,
     ):
         """Add a horizontal row of tab buttons from (id, label, callback[, style]) specs."""
-        buttons = []
-        left = int(x)
-        for spec in specs:
-            if len(spec) == 3:
-                control_id, label, on_click = spec
-                style = None
-            elif len(spec) == 4:
-                control_id, label, on_click, style = spec
-            else:
-                raise ValueError("Button row spec must have 3 or 4 values")
-            button = self._add_tab_button(
-                controls,
-                str(control_id),
-                Rect(left, int(y), int(width), int(height)),
-                str(label),
-                on_click,
-                style=style,
-            )
-            buttons.append(button)
-            left += int(width) + int(gap)
-        return tuple(buttons)
+        return add_window_button_row(
+            self.window,
+            controls,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            gap=gap,
+            specs=specs,
+        )
 
     # ------------------------------------------------------------------
     # Tab: Event — EventRecorder + EventPlayback + RecordedEvent
@@ -2118,31 +2126,25 @@ class _SystemsWindowPresenter(WindowPresenter):
         self.feature.window = self.window
         self.feature.demo = self.host
         content = self.window.content_rect()
-        pad = 0
-        body_top = content.top + pad
-        body_bottom = content.bottom - pad
-        body_h = body_bottom - body_top
-        body_content_top = body_top + 36 * 2  # _TAB_H * 2
-        body_content_h = max(60, body_bottom - body_content_top)
-        body_rect = Rect(content.left + pad, body_top, content.width - pad * 2, body_h)
-        body_content_rect = Rect(
-            content.left + pad, body_content_top, content.width - pad * 2, body_content_h
+        body_rect, body_content_rect = compute_tabbed_window_layout(
+            content,
+            tab_height=_TAB_H,
+            tab_rows=2,
+            padding=0,
+            min_content_height=60,
         )
-        self.tab = TabControl(
-            "nsdf_tab",
-            body_rect,
-            items=[TabItem(tab_key, tab_label) for tab_key, tab_label, _builder_attr in _SYSTEMS_TAB_SPECS],
+        self.tab = setup_feature_presenter_tabs(
+            self,
+            control_id="nsdf_tab",
+            tab_rect=body_rect,
+            tab_specs=_SYSTEMS_TAB_SPECS,
             selected_key="filter",
             on_change=self.feature._on_tab_change,
+            tab_manager=self.feature._tabs,
+            feature=self.feature,
+            host=self.host,
+            tab_content_rect=body_content_rect,
         )
-        self.add_control(self.tab)
         self.feature.tab = self.tab
-        register_window_tab_builders(
-            self.feature._tabs,
-            self.feature,
-            self.host,
-            body_content_rect,
-            [(tab_key, builder_attr) for tab_key, _tab_label, builder_attr in _SYSTEMS_TAB_SPECS],
-        )
         self.feature._tabs.on_activate("locale", lambda: setattr(self.feature, "_text_flow_dirty", True))
         self.window.visible = False

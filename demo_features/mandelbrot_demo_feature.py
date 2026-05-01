@@ -27,9 +27,12 @@ from gui_do import (
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from demo_features.feature_abstractions import (
     apply_accessibility_sequence,
-    create_presented_anchored_window,
+    AnchoredWindowSpec,
+    LogicBindingSpec,
+    create_feature_presented_window,
     ensure_scene_scheduler,
     register_companion_logic_features,
+    setup_routed_feature_runtime,
 )
 
 
@@ -181,6 +184,23 @@ _MANDEL_TASK_CANVAS_KEY_BY_TASK_ID = {
     "can3": "can3",
     "can4": "can4",
 }
+
+_MANDEL_WINDOW_SPEC = AnchoredWindowSpec(
+    control_id="mandelbrot_window",
+    title="Mandelbrot Demo",
+    size=_MANDEL_WINDOW_SIZE,
+    anchor="top_left",
+    margin=(28, 92),
+    use_frame_backdrop=True,
+)
+
+_MANDEL_LOGIC_BINDINGS = (
+    LogicBindingSpec(alias="primary", provider_name=_MANDEL_LOGIC_PRIMARY),
+    LogicBindingSpec(alias="can1", provider_name=_MANDEL_LOGIC_CAN1),
+    LogicBindingSpec(alias="can2", provider_name=_MANDEL_LOGIC_CAN2),
+    LogicBindingSpec(alias="can3", provider_name=_MANDEL_LOGIC_CAN3),
+    LogicBindingSpec(alias="can4", provider_name=_MANDEL_LOGIC_CAN4),
+)
 
 
 class MandelbrotLogicFeature(LogicFeature):
@@ -334,24 +354,23 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
-        presenter = _MandelbrotWindowPresenter(self, host)
-        self.window = create_presented_anchored_window(
+        self.window = create_feature_presented_window(
             host,
-            control_id="mandelbrot_window",
-            title="Mandelbrot Demo",
-            size=_MANDEL_WINDOW_SIZE,
-            anchor="top_left",
-            margin=(28, 92),
-            presenter=presenter,
+            feature=self,
+            presenter_cls=_MandelbrotWindowPresenter,
+            spec=_MANDEL_WINDOW_SPEC,
             window_control_cls=WindowControl,
-            use_frame_backdrop=True,
         )
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler, keyboard shortcuts, and event-bus subscription hooks."""
         self.demo = host  # Store host reference
-        self.scheduler = ensure_scene_scheduler(self, host, scene_name="main")
-        self._bind_logic_aliases()
+        self.scheduler = setup_routed_feature_runtime(
+            self,
+            host,
+            scene_name="main",
+            logic_bindings=_MANDEL_LOGIC_BINDINGS,
+        )
         self._set_busy_dispatch_mode(False)
         self.status_subscription = host.app.events.subscribe(
             self.status_topic,
@@ -359,18 +378,6 @@ class MandelbrotRenderFeature(RoutedFeature):
             scope=self.status_scope,
         )
         self.status_bus_ready = True
-
-    def _bind_logic_aliases(self) -> None:
-        bindings = {
-            self.LOGIC_ALIAS_PRIMARY: _MANDEL_LOGIC_PRIMARY,
-            self.LOGIC_ALIAS_CAN1: _MANDEL_LOGIC_CAN1,
-            self.LOGIC_ALIAS_CAN2: _MANDEL_LOGIC_CAN2,
-            self.LOGIC_ALIAS_CAN3: _MANDEL_LOGIC_CAN3,
-            self.LOGIC_ALIAS_CAN4: _MANDEL_LOGIC_CAN4,
-        }
-        for alias, provider_name in bindings.items():
-            if self.bound_logic_name(alias=alias) is None:
-                self.bind_logic(provider_name, alias=alias)
 
     def _resolve_logic(self, alias: str) -> Optional[MandelbrotLogicFeature]:
         provider_name = self.bound_logic_name(alias=alias)

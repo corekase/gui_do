@@ -29,11 +29,14 @@ from gui_do import (
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from demo_features.feature_abstractions import (
-    apply_accessibility_sequence,
-    create_presented_anchored_window,
-    ensure_scene_scheduler,
+    AccessibilitySequenceSpec,
+    apply_accessibility_sequence_from_attrs,
+    AnchoredWindowSpec,
+    LogicBindingSpec,
+    create_feature_presented_window,
     resolve_canvas_local_point,
     register_companion_logic_features,
+    setup_routed_feature_runtime,
 )
 
 
@@ -55,6 +58,25 @@ _LIFE_WINDOW_SIZE = (_LIFE_BODY_W, _LIFE_TITLEBAR_H + _LIFE_BODY_H)
 # ---------------------------------------------------------------------------
 
 _LIFE_LOGIC_TOPIC = "life_logic"
+
+_LIFE_WINDOW_SPEC = AnchoredWindowSpec(
+    control_id="life_window",
+    title="Conway's Game of Life",
+    size=_LIFE_WINDOW_SIZE,
+    anchor="top_right",
+    margin=(28, 92),
+    use_frame_backdrop=True,
+)
+
+_LIFE_LOGIC_BINDINGS = (
+    LogicBindingSpec(alias="life", provider_name="life_simulation_logic"),
+)
+
+_LIFE_ACCESSIBILITY_SPECS = (
+    AccessibilitySequenceSpec(control_attr="reset_button", role="button", label="Reset life board"),
+    AccessibilitySequenceSpec(control_attr="toggle", role="toggle", label="Run life simulation"),
+    AccessibilitySequenceSpec(control_attr="zoom_slider", role="slider", label="Life zoom"),
+)
 
 _KEY_TOPIC = "topic"
 _KEY_EVENT = "event"
@@ -186,35 +208,30 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the new presenter/controller pattern."""
-        presenter = _LifeWindowPresenter(self, host)
-        self.window = create_presented_anchored_window(
+        self.window = create_feature_presented_window(
             host,
-            control_id="life_window",
-            title="Conway's Game of Life",
-            size=_LIFE_WINDOW_SIZE,
-            anchor="top_right",
-            margin=(28, 92),
-            presenter=presenter,
+            feature=self,
+            presenter_cls=_LifeWindowPresenter,
+            spec=_LIFE_WINDOW_SPEC,
             window_control_cls=WindowControl,
-            use_frame_backdrop=True,
         )
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler/runtime services required after scene construction."""
-        self.scheduler = ensure_scene_scheduler(self, host, scene_name="main")
-        self.scheduler.set_message_dispatch_limit(512)
-        if self.bound_logic_name(alias=self.LOGIC_ALIAS) is None:
-            self.bind_logic("life_simulation_logic", alias=self.LOGIC_ALIAS)
+        self.scheduler = setup_routed_feature_runtime(
+            self,
+            host,
+            scene_name="main",
+            scheduler_dispatch_limit=512,
+            logic_bindings=_LIFE_LOGIC_BINDINGS,
+        )
         self._send_life_logic_command("snapshot")
 
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         """Assign accessibility metadata and tab order for Life controls."""
-        return apply_accessibility_sequence(
-            [
-                (self.reset_button, "button", "Reset life board"),
-                (self.toggle, "toggle", "Run life simulation"),
-                (self.zoom_slider, "slider", "Life zoom"),
-            ],
+        return apply_accessibility_sequence_from_attrs(
+            self,
+            _LIFE_ACCESSIBILITY_SPECS,
             tab_index_start,
         )
 

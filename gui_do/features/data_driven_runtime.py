@@ -11,7 +11,9 @@ from pygame import Rect
 from ..controls.chrome.menu_bar_control import MenuEntry
 from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from ..controls.chrome.window_control import WindowControl
+from ..controls.data.tab_control import TabControl, TabItem
 from ..controls.input.button_control import ButtonControl
+from ..controls.display.label_control import LabelControl
 from ..controls.input.toggle_control import ToggleControl
 from ..text.localization import LocaleRegistry
 from .feature_lifecycle import (
@@ -93,6 +95,78 @@ class SceneRootSpec:
     scene_name: str
     control_id: str
     draw_background: bool = False
+
+
+@dataclass(frozen=True)
+class AnchoredWindowSpec:
+    """Declarative descriptor for a presenter-backed anchored feature window."""
+    control_id: str
+    title: str
+    size: tuple[int, int]
+    anchor: str
+    margin: tuple[int, int]
+    use_frame_backdrop: bool = True
+
+
+@dataclass(frozen=True)
+class LogicBindingSpec:
+    """Declarative descriptor mapping a routed-feature alias to a provider name."""
+    alias: str
+    provider_name: str
+
+
+@dataclass(frozen=True)
+class TaskPanelButtonSpec:
+    """Declarative descriptor for a task-panel button owned by a host attribute."""
+    attr_name: str
+    control_id: str
+    slot_index: int
+    label: str
+    on_click: Callable[[], object]
+    style: str = "angle"
+
+
+@dataclass(frozen=True)
+class AccessibilitySequenceSpec:
+    """Declarative descriptor for tab-order/accessibility applied from object attributes."""
+    control_attr: str
+    role: str
+    label: str
+
+
+@dataclass(frozen=True)
+class TabBuilderSpec:
+    """Declarative descriptor for tab key/label and feature builder binding."""
+    key: str
+    label: str
+    builder_attr: str
+
+
+class ActiveTabUpdateRouter:
+    """Route per-frame update callbacks by active tab key."""
+
+    def __init__(self) -> None:
+        self._handlers: dict[str, Callable[..., object]] = {}
+
+    def register(self, tab_key: str, handler: Callable[..., object]) -> None:
+        self._handlers[str(tab_key)] = handler
+
+    def unregister(self, tab_key: str) -> bool:
+        key = str(tab_key)
+        if key in self._handlers:
+            del self._handlers[key]
+            return True
+        return False
+
+    def run(self, active_tab_key: str, *args, **kwargs) -> bool:
+        handler = self._handlers.get(str(active_tab_key))
+        if handler is None:
+            return False
+        handler(*args, **kwargs)
+        return True
+
+    def keys(self) -> tuple[str, ...]:
+        return tuple(self._handlers.keys())
 
 
 @dataclass
@@ -373,6 +447,15 @@ def apply_accessibility_sequence(items, tab_index_start: int) -> int:
     return next_index
 
 
+def apply_accessibility_sequence_from_attrs(target, specs: Sequence[AccessibilitySequenceSpec], tab_index_start: int) -> int:
+    """Apply sequential accessibility/tab-order metadata using target attribute names."""
+    items = [
+        (getattr(target, spec.control_attr, None), spec.role, spec.label)
+        for spec in specs
+    ]
+    return apply_accessibility_sequence(items, tab_index_start)
+
+
 def register_companion_logic_features(feature_manager, host, providers) -> None:
     """Register companion logic features for a routed/direct feature."""
     for provider in providers:
@@ -527,10 +610,183 @@ def add_task_panel_button(task_panel, app_layout, *, control_id: str, slot_index
     )
 
 
+def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPanelButtonSpec]):
+    """Create and assign host-owned task-panel buttons from declarative specs."""
+    for spec in specs:
+        button = add_task_panel_button(
+            task_panel,
+            app_layout,
+            control_id=spec.control_id,
+            slot_index=spec.slot_index,
+            label=spec.label,
+            on_click=spec.on_click,
+            style=spec.style,
+        )
+        setattr(host, spec.attr_name, button)
+
+
 def register_tooltip_specs(tooltip_manager, specs) -> None:
     """Register a sequence of tooltip specs as (control, message) pairs."""
     for control, message in specs:
         tooltip_manager.register(control, str(message))
+
+
+def add_window_control(window, controls: list, control):
+    """Add a control to a window and append it to the caller's control list."""
+    added = window.add(control)
+    controls.append(added)
+    return added
+
+
+def add_window_label(window, controls: list, control_id: str, rect: Rect, text: str, *, align: str = "left"):
+    """Create a label control, add it to a window, and track it in controls."""
+    return add_window_control(
+        window,
+        controls,
+        LabelControl(str(control_id), Rect(rect), str(text), align=str(align)),
+    )
+
+
+def add_window_button(window, controls: list, control_id: str, rect: Rect, text: str, on_click, *, style=None):
+    """Create a button control, add it to a window, and track it in controls."""
+    kwargs = {}
+    if style is not None:
+        kwargs["style"] = style
+    return add_window_control(
+        window,
+        controls,
+        ButtonControl(str(control_id), Rect(rect), str(text), on_click, **kwargs),
+    )
+
+
+def add_window_button_row(
+    window,
+    controls: list,
+    *,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    gap: int,
+    specs,
+):
+    """Add a horizontal row of buttons from (id, label, callback[, style]) specs."""
+    buttons = []
+    left = int(x)
+    for spec in specs:
+        if len(spec) == 3:
+            control_id, label, on_click = spec
+            style = None
+        elif len(spec) == 4:
+            control_id, label, on_click, style = spec
+        else:
+            raise ValueError("Button row spec must have 3 or 4 values")
+        button = add_window_button(
+            window,
+            controls,
+            str(control_id),
+            Rect(left, int(y), int(width), int(height)),
+            str(label),
+            on_click,
+            style=style,
+        )
+        buttons.append(button)
+        left += int(width) + int(gap)
+    return tuple(buttons)
+
+
+def make_window_toggle_spec(
+    key: str,
+    feature_attr: str,
+    *,
+    slot_index: int,
+    task_panel_label: str | None = None,
+    task_panel_style: str = "round",
+    tab_before_showcase: bool = False,
+    action_label: str | None = None,
+    action_name: str | None = None,
+    task_panel_button_id: str | None = None,
+    toggle_attr: str | None = None,
+    accessibility_label: str | None = None,
+) -> WindowSpec:
+    """Build a WindowSpec with conventional defaults for demo/host window toggles."""
+    normalized_key = str(key)
+    normalized_label = task_panel_label or normalized_key.replace("_", " ").title()
+    return WindowSpec(
+        key=normalized_key,
+        feature_attr=str(feature_attr),
+        toggle_attr=toggle_attr or f"{normalized_key}_toggle_window",
+        action_name=action_name or f"win_{normalized_key}",
+        action_label=action_label or f"Show {normalized_label} Window",
+        task_panel_button_id=task_panel_button_id or f"show_{normalized_key}",
+        task_panel_label=normalized_label,
+        task_panel_style=str(task_panel_style),
+        task_panel_slot_index=int(slot_index),
+        tab_before_showcase=bool(tab_before_showcase),
+        accessibility_label=accessibility_label or f"Show {normalized_label} window",
+    )
+
+
+def make_scene_nav_action(
+    action_id: str,
+    *,
+    label: str,
+    target_scene: str,
+    category: str = "Scenes",
+) -> ActionSpec:
+    """Build a scene-navigation ActionSpec with consistent defaults."""
+    return ActionSpec(
+        action_id=str(action_id),
+        label=str(label),
+        kind="scene_nav",
+        target=str(target_scene),
+        category=str(category),
+    )
+
+
+def make_exit_action(
+    action_id: str = "exit",
+    *,
+    label: str = "Exit",
+    category: str = "File",
+) -> ActionSpec:
+    """Build a standard exit ActionSpec."""
+    return ActionSpec(
+        action_id=str(action_id),
+        label=str(label),
+        kind="exit",
+        target=None,
+        category=str(category),
+    )
+
+
+def make_palette_open_action(
+    action_id: str = "palette_open",
+    *,
+    label: str = "Open Command Palette (F5)",
+) -> ActionSpec:
+    """Build a standard command-palette open ActionSpec."""
+    return ActionSpec(
+        action_id=str(action_id),
+        label=str(label),
+        kind="palette_open",
+        target=None,
+        category=None,
+    )
+
+
+def make_static_accessibility_spec(
+    control_attr: str,
+    *,
+    label: str,
+    role: str = "button",
+) -> StaticAccessibilitySpec:
+    """Build a StaticAccessibilitySpec with a role default suitable for buttons."""
+    return StaticAccessibilitySpec(
+        control_attr=str(control_attr),
+        role=str(role),
+        label=str(label),
+    )
 
 
 def instantiate_features_from_specs(host, feature_specs) -> None:
@@ -573,6 +829,118 @@ def register_window_tab_builders(tab_manager, feature, host, rect, tab_specs) ->
         tab_manager.register(str(tab_key), builder(host, Rect(rect)))
 
 
+def build_tab_builder_specs(
+    tab_entries: Sequence[tuple[str, str]],
+    *,
+    builder_prefix: str = "_build_",
+    builder_suffix: str = "_tab",
+) -> tuple[TabBuilderSpec, ...]:
+    """Build TabBuilderSpec values from (key, label) entries with builder naming convention."""
+    return tuple(
+        TabBuilderSpec(
+            key=str(tab_key),
+            label=str(tab_label),
+            builder_attr=f"{builder_prefix}{tab_key}{builder_suffix}",
+        )
+        for tab_key, tab_label in tab_entries
+    )
+
+
+def create_tab_control_from_specs(
+    control_id: str,
+    rect,
+    tab_specs: Sequence[TabBuilderSpec],
+    *,
+    selected_key: str,
+    on_change,
+) -> TabControl:
+    """Create a TabControl from declarative tab specs."""
+    return TabControl(
+        str(control_id),
+        Rect(rect),
+        items=[TabItem(spec.key, spec.label) for spec in tab_specs],
+        selected_key=str(selected_key),
+        on_change=on_change,
+    )
+
+
+def compute_tabbed_window_layout(
+    content_rect: Rect,
+    *,
+    tab_height: int,
+    tab_rows: int = 2,
+    padding: int = 0,
+    min_content_height: int = 60,
+) -> tuple[Rect, Rect]:
+    """Return (tab_rect, tab_content_rect) for a tabbed window content surface."""
+    pad = int(padding)
+    body_top = content_rect.top + pad
+    body_bottom = content_rect.bottom - pad
+    body_h = body_bottom - body_top
+    body_content_top = body_top + (int(tab_height) * int(tab_rows))
+    body_content_h = max(int(min_content_height), body_bottom - body_content_top)
+    body_rect = Rect(content_rect.left + pad, body_top, content_rect.width - pad * 2, body_h)
+    body_content_rect = Rect(
+        content_rect.left + pad,
+        body_content_top,
+        content_rect.width - pad * 2,
+        body_content_h,
+    )
+    return body_rect, body_content_rect
+
+
+def register_window_tab_builder_specs(tab_manager, feature, host, rect, tab_specs: Sequence[TabBuilderSpec]) -> None:
+    """Register tab content builders from TabBuilderSpec definitions."""
+    register_window_tab_builders(
+        tab_manager,
+        feature,
+        host,
+        rect,
+        [(spec.key, spec.builder_attr) for spec in tab_specs],
+    )
+
+
+def setup_feature_presenter_tabs(
+    presenter,
+    *,
+    control_id: str,
+    tab_rect,
+    tab_specs: Sequence[TabBuilderSpec],
+    selected_key: str,
+    on_change,
+    tab_manager,
+    feature,
+    host,
+    tab_content_rect,
+):
+    """Create, attach, and register feature tab controls/builders in one call."""
+    tab_control = create_tab_control_from_specs(
+        control_id,
+        tab_rect,
+        tab_specs,
+        selected_key=selected_key,
+        on_change=on_change,
+    )
+    presenter.add_control(tab_control)
+    register_window_tab_builder_specs(
+        tab_manager,
+        feature,
+        host,
+        tab_content_rect,
+        tab_specs,
+    )
+    return tab_control
+
+
+def register_tab_update_handlers(
+    router: ActiveTabUpdateRouter,
+    handlers: Sequence[tuple[str, Callable[..., object]]],
+) -> None:
+    """Register multiple active-tab update handlers on a router."""
+    for tab_key, handler in handlers:
+        router.register(tab_key, handler)
+
+
 def create_presented_anchored_window(
     host,
     *,
@@ -598,3 +966,72 @@ def create_presented_anchored_window(
     )
     window.set_presenter(presenter)
     return window
+
+
+def create_presented_window_from_spec(
+    host,
+    *,
+    presenter,
+    spec: AnchoredWindowSpec,
+    window_control_cls=WindowControl,
+):
+    """Create and attach a presenter-backed anchored window from a typed spec."""
+    return create_presented_anchored_window(
+        host,
+        control_id=spec.control_id,
+        title=spec.title,
+        size=spec.size,
+        anchor=spec.anchor,
+        margin=spec.margin,
+        presenter=presenter,
+        window_control_cls=window_control_cls,
+        use_frame_backdrop=spec.use_frame_backdrop,
+    )
+
+
+def create_feature_presented_window(
+    host,
+    *,
+    feature,
+    presenter_cls,
+    spec: AnchoredWindowSpec,
+    window_control_cls=WindowControl,
+):
+    """Instantiate presenter from (feature, host) and create an anchored window from spec."""
+    presenter = presenter_cls(feature, host)
+    return create_presented_window_from_spec(
+        host,
+        presenter=presenter,
+        spec=spec,
+        window_control_cls=window_control_cls,
+    )
+
+
+def bind_feature_logic_aliases(feature, logic_bindings: Sequence[LogicBindingSpec]) -> None:
+    """Bind routed-feature logic aliases idempotently from declarative bindings."""
+    for binding in logic_bindings:
+        if feature.bound_logic_name(alias=binding.alias) is None:
+            feature.bind_logic(binding.provider_name, alias=binding.alias)
+
+
+def setup_routed_feature_runtime(
+    feature,
+    host,
+    *,
+    scene_name: str = "main",
+    scheduler_attr_name: str = "scheduler",
+    scheduler_dispatch_limit: int | None = None,
+    logic_bindings: Sequence[LogicBindingSpec] = (),
+):
+    """Initialize standard routed-feature runtime dependencies and optional logic bindings."""
+    scheduler = ensure_scene_scheduler(
+        feature,
+        host,
+        scene_name=scene_name,
+        attr_name=scheduler_attr_name,
+    )
+    if scheduler_dispatch_limit is not None:
+        scheduler.set_message_dispatch_limit(int(scheduler_dispatch_limit))
+    if logic_bindings:
+        bind_feature_logic_aliases(feature, logic_bindings)
+    return scheduler

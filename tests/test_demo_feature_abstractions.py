@@ -3,25 +3,51 @@ from unittest.mock import patch
 from pygame import Rect
 
 from demo_features.feature_abstractions import (
+    AccessibilitySequenceSpec,
+    AnchoredWindowSpec,
+    LogicBindingSpec,
+    TaskPanelButtonSpec,
     add_task_panel_button,
+    add_task_panel_buttons,
+    add_window_button,
+    add_window_button_row,
+    add_window_control,
+    add_window_label,
     add_window_toggle_task_panel_controls,
     apply_window_toggle_accessibility,
     apply_accessibility_sequence,
+    apply_accessibility_sequence_from_attrs,
     bind_input_map_actions,
+    bind_feature_logic_aliases,
+    build_tab_builder_specs,
     build_tools_menu_entries,
+    create_tab_control_from_specs,
+    compute_tabbed_window_layout,
     collect_window_toggle_controls,
+    create_feature_presented_window,
     create_presented_anchored_window,
+    create_presented_window_from_spec,
     ensure_scene_scheduler,
     initialize_locale_registry,
     instantiate_features_from_specs,
+    make_exit_action,
+    make_palette_open_action,
+    make_scene_nav_action,
+    make_static_accessibility_spec,
+    make_window_toggle_spec,
     prewarm_runtime_scenes,
     register_features_from_specs,
+    register_window_tab_builder_specs,
     register_window_presentation_specs,
     register_tooltip_specs,
     register_descriptors,
     register_companion_logic_features,
     register_window_toggle_tooltips,
     resolve_canvas_local_point,
+    setup_feature_presenter_tabs,
+    register_tab_update_handlers,
+    ActiveTabUpdateRouter,
+    setup_routed_feature_runtime,
     apply_runtime_scene_pristine_assets,
     bind_runtime_scene_exit_keys,
 )
@@ -67,9 +93,14 @@ class _StubFeatureManager:
 class _StubWindow:
     def __init__(self):
         self.presenter = None
+        self.added = []
 
     def set_presenter(self, presenter):
         self.presenter = presenter
+
+    def add(self, control):
+        self.added.append(control)
+        return control
 
 
 class _StubSchedulerHostApp:
@@ -90,6 +121,26 @@ class _StubSchedulerHost:
 class _StubFeatureWithScheduler:
     def __init__(self):
         self.scheduler = None
+
+
+class _StubConfigurableScheduler:
+    def __init__(self):
+        self.dispatch_limits = []
+
+    def set_message_dispatch_limit(self, value: int):
+        self.dispatch_limits.append(int(value))
+
+
+class _StubRoutedFeature:
+    def __init__(self):
+        self.scheduler = None
+        self._aliases = {}
+
+    def bound_logic_name(self, *, alias: str):
+        return self._aliases.get(str(alias))
+
+    def bind_logic(self, provider_name: str, *, alias: str):
+        self._aliases[str(alias)] = str(provider_name)
 
 
 class _StubToggleBinding:
@@ -147,6 +198,10 @@ class _StubTaskPanel:
     def add(self, control):
         self.added_controls.append(control)
         return control
+
+
+class _StubTaskPanelHost:
+    pass
 
 
 class _StubWindowPresentation:
@@ -274,6 +329,21 @@ class _StubPointerPacket:
         self.pos = pos
 
 
+class _StubAttrAccessibilityTarget:
+    def __init__(self):
+        self.first = _StubControl()
+        self.second = _StubControl()
+
+
+class _StubPresenter:
+    def __init__(self):
+        self.controls = []
+
+    def add_control(self, control):
+        self.controls.append(control)
+        return control
+
+
 class TestDemoFeatureAbstractions(unittest.TestCase):
     def test_build_tools_menu_entries_handles_missing_registry(self):
         entries = build_tools_menu_entries(_StubHost(None))
@@ -341,6 +411,54 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(presenter, window.presenter)
         self.assertEqual(1, create_window.call_count)
 
+    def test_create_presented_window_from_spec_uses_spec_values(self):
+        host = object()
+        presenter = object()
+        window = _StubWindow()
+        spec = AnchoredWindowSpec(
+            control_id="demo_window",
+            title="Demo",
+            size=(420, 260),
+            anchor="top_left",
+            margin=(12, 14),
+            use_frame_backdrop=False,
+        )
+
+        with patch("gui_do.features.data_driven_runtime.create_anchored_feature_window", return_value=window):
+            result = create_presented_window_from_spec(host, presenter=presenter, spec=spec)
+
+        self.assertIs(window, result)
+        self.assertIs(presenter, window.presenter)
+
+    def test_create_feature_presented_window_builds_presenter_from_types(self):
+        host = object()
+        feature = object()
+        window = _StubWindow()
+        spec = AnchoredWindowSpec(
+            control_id="demo_window",
+            title="Demo",
+            size=(320, 240),
+            anchor="top_left",
+            margin=(8, 8),
+        )
+
+        class _Presenter:
+            def __init__(self, f, h):
+                self.feature = f
+                self.host = h
+
+        with patch("gui_do.features.data_driven_runtime.create_anchored_feature_window", return_value=window):
+            result = create_feature_presented_window(
+                host,
+                feature=feature,
+                presenter_cls=_Presenter,
+                spec=spec,
+            )
+
+        self.assertIs(window, result)
+        self.assertIs(feature, window.presenter.feature)
+        self.assertIs(host, window.presenter.host)
+
     def test_ensure_scene_scheduler_caches_scheduler_on_feature(self):
         scheduler = object()
         host = _StubSchedulerHost(scheduler)
@@ -353,6 +471,43 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertIs(scheduler, second)
         self.assertIs(scheduler, feature.scheduler)
         self.assertEqual(["main"], host.app.requests)
+
+    def test_setup_routed_feature_runtime_sets_scheduler_and_logic_aliases(self):
+        scheduler = _StubConfigurableScheduler()
+        host = _StubSchedulerHost(scheduler)
+        feature = _StubRoutedFeature()
+
+        result = setup_routed_feature_runtime(
+            feature,
+            host,
+            scene_name="main",
+            scheduler_dispatch_limit=256,
+            logic_bindings=(
+                LogicBindingSpec(alias="primary", provider_name="provider.main"),
+                LogicBindingSpec(alias="can1", provider_name="provider.can1"),
+            ),
+        )
+
+        self.assertIs(scheduler, result)
+        self.assertIs(scheduler, feature.scheduler)
+        self.assertEqual([256], scheduler.dispatch_limits)
+        self.assertEqual("provider.main", feature.bound_logic_name(alias="primary"))
+        self.assertEqual("provider.can1", feature.bound_logic_name(alias="can1"))
+
+    def test_bind_feature_logic_aliases_is_idempotent(self):
+        feature = _StubRoutedFeature()
+        feature.bind_logic("existing.provider", alias="primary")
+
+        bind_feature_logic_aliases(
+            feature,
+            (
+                LogicBindingSpec(alias="primary", provider_name="new.provider"),
+                LogicBindingSpec(alias="secondary", provider_name="secondary.provider"),
+            ),
+        )
+
+        self.assertEqual("existing.provider", feature.bound_logic_name(alias="primary"))
+        self.assertEqual("secondary.provider", feature.bound_logic_name(alias="secondary"))
 
     def test_collect_window_toggle_controls_returns_sorted_existing_controls(self):
         host = _StubToggleHost()
@@ -501,6 +656,25 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
             tooltip_manager.calls,
         )
 
+    def test_apply_accessibility_sequence_from_attrs_uses_target_attributes(self):
+        target = _StubAttrAccessibilityTarget()
+
+        next_index = apply_accessibility_sequence_from_attrs(
+            target,
+            (
+                AccessibilitySequenceSpec(control_attr="first", role="button", label="First"),
+                AccessibilitySequenceSpec(control_attr="missing", role="button", label="Missing"),
+                AccessibilitySequenceSpec(control_attr="second", role="toggle", label="Second"),
+            ),
+            3,
+        )
+
+        self.assertEqual(5, next_index)
+        self.assertEqual([3], target.first.tab_indices)
+        self.assertEqual([("button", "First")], target.first.accessibility)
+        self.assertEqual([4], target.second.tab_indices)
+        self.assertEqual([("toggle", "Second")], target.second.accessibility)
+
     def test_initialize_locale_registry_registers_tables_and_initial_locale(self):
         from gui_do import StringTable
 
@@ -621,6 +795,251 @@ class TestDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual("run", button.control_id)
         self.assertEqual("Run", button.text)
         self.assertEqual(3, button.rect.left)
+
+    def test_add_task_panel_buttons_assigns_controls_to_host_attributes(self):
+        host = _StubTaskPanelHost()
+        task_panel = _StubTaskPanel()
+        layout = _StubLayout()
+
+        add_task_panel_buttons(
+            host,
+            task_panel,
+            layout,
+            (
+                TaskPanelButtonSpec(
+                    attr_name="first_button",
+                    control_id="first",
+                    slot_index=0,
+                    label="First",
+                    on_click=lambda: None,
+                ),
+                TaskPanelButtonSpec(
+                    attr_name="second_button",
+                    control_id="second",
+                    slot_index=2,
+                    label="Second",
+                    on_click=lambda: None,
+                    style="round",
+                ),
+            ),
+        )
+
+        self.assertEqual(2, len(task_panel.added_controls))
+        self.assertIs(host.first_button, task_panel.added_controls[0])
+        self.assertIs(host.second_button, task_panel.added_controls[1])
+
+    def test_add_window_control_and_label_and_button_helpers(self):
+        window = _StubWindow()
+        controls = []
+
+        label = add_window_label(window, controls, "lbl", Rect(1, 2, 120, 20), "Hello")
+        button = add_window_button(window, controls, "btn", Rect(3, 4, 130, 26), "Run", lambda: None)
+        raw_control = object()
+        added = add_window_control(window, controls, raw_control)
+
+        self.assertEqual("Hello", label.text)
+        self.assertEqual("left", label.align)
+        self.assertEqual("Run", button.text)
+        self.assertEqual("lbl", label.control_id)
+        self.assertEqual("btn", button.control_id)
+        self.assertEqual(3, len(controls))
+        self.assertEqual(3, len(window.added))
+        self.assertIs(added, controls[2])
+        self.assertIs(raw_control, added)
+
+    def test_add_window_button_row_places_buttons_horizontally(self):
+        window = _StubWindow()
+        controls = []
+
+        buttons = add_window_button_row(
+            window,
+            controls,
+            x=10,
+            y=20,
+            width=100,
+            height=30,
+            gap=8,
+            specs=(
+                ("btn_one", "One", lambda: None),
+                ("btn_two", "Two", lambda: None, "round"),
+            ),
+        )
+
+        self.assertEqual(2, len(buttons))
+        self.assertEqual("btn_one", buttons[0].control_id)
+        self.assertEqual("btn_two", buttons[1].control_id)
+        self.assertEqual(10, buttons[0].rect.left)
+        self.assertEqual(118, buttons[1].rect.left)
+        self.assertEqual(2, len(controls))
+        self.assertEqual(2, len(window.added))
+
+    def test_make_spec_builders_provide_compact_defaults(self):
+        window = make_window_toggle_spec("logs", "_logs_feature", slot_index=6)
+        self.assertEqual("logs", window.key)
+        self.assertEqual("_logs_feature", window.feature_attr)
+        self.assertEqual("logs_toggle_window", window.toggle_attr)
+        self.assertEqual("win_logs", window.action_name)
+        self.assertEqual("show_logs", window.task_panel_button_id)
+        self.assertEqual("Logs", window.task_panel_label)
+        self.assertEqual(6, window.task_panel_slot_index)
+
+        nav = make_scene_nav_action("nav_logs", label="Go to Logs", target_scene="logs")
+        self.assertEqual("scene_nav", nav.kind)
+        self.assertEqual("logs", nav.target)
+        self.assertEqual("Scenes", nav.category)
+
+        exit_spec = make_exit_action()
+        self.assertEqual("exit", exit_spec.action_id)
+        self.assertEqual("exit", exit_spec.kind)
+
+        palette = make_palette_open_action()
+        self.assertEqual("palette_open", palette.action_id)
+        self.assertEqual("palette_open", palette.kind)
+        self.assertIsNone(palette.category)
+
+        accessibility = make_static_accessibility_spec("save_button", label="Save")
+        self.assertEqual("save_button", accessibility.control_attr)
+        self.assertEqual("button", accessibility.role)
+        self.assertEqual("Save", accessibility.label)
+
+    def test_build_tab_builder_specs_applies_builder_naming_defaults(self):
+        specs = build_tab_builder_specs(
+            (
+                ("filter", "Filter"),
+                ("tilemap", "TileMap"),
+            )
+        )
+
+        self.assertEqual(["filter", "tilemap"], [spec.key for spec in specs])
+        self.assertEqual(["Filter", "TileMap"], [spec.label for spec in specs])
+        self.assertEqual(["_build_filter_tab", "_build_tilemap_tab"], [spec.builder_attr for spec in specs])
+
+    def test_create_tab_control_from_specs_materializes_tab_items(self):
+        specs = build_tab_builder_specs((("filter", "Filter"), ("event", "Event")))
+
+        tab = create_tab_control_from_specs(
+            "tabs",
+            Rect(0, 0, 300, 120),
+            specs,
+            selected_key="event",
+            on_change=lambda _key: None,
+        )
+
+        self.assertEqual("event", tab.selected_key)
+        self.assertEqual(["filter", "event"], [item.key for item in tab.items()])
+        self.assertEqual(["Filter", "Event"], [item.label for item in tab.items()])
+
+    def test_register_window_tab_builder_specs_registers_builder_pairs(self):
+        class _Feature:
+            def _build_filter_tab(self, _host, _rect):
+                return ["filter"]
+
+            def _build_event_tab(self, _host, _rect):
+                return ["event"]
+
+        class _TabManager:
+            def __init__(self):
+                self.calls = []
+
+            def register(self, key, controls):
+                self.calls.append((str(key), list(controls)))
+
+        feature = _Feature()
+        tab_manager = _TabManager()
+        specs = build_tab_builder_specs((("filter", "Filter"), ("event", "Event")))
+
+        register_window_tab_builder_specs(
+            tab_manager,
+            feature,
+            object(),
+            Rect(0, 0, 100, 80),
+            specs,
+        )
+
+        self.assertEqual(
+            [("filter", ["filter"]), ("event", ["event"])],
+            tab_manager.calls,
+        )
+
+    def test_setup_feature_presenter_tabs_adds_control_and_registers_builders(self):
+        class _Feature:
+            def _build_filter_tab(self, _host, _rect):
+                return ["filter"]
+
+        class _TabManager:
+            def __init__(self):
+                self.calls = []
+
+            def register(self, key, controls):
+                self.calls.append((str(key), list(controls)))
+
+        presenter = _StubPresenter()
+        feature = _Feature()
+        tab_manager = _TabManager()
+        specs = build_tab_builder_specs((("filter", "Filter"),))
+
+        tab = setup_feature_presenter_tabs(
+            presenter,
+            control_id="tabs",
+            tab_rect=Rect(0, 0, 320, 160),
+            tab_specs=specs,
+            selected_key="filter",
+            on_change=lambda _key: None,
+            tab_manager=tab_manager,
+            feature=feature,
+            host=object(),
+            tab_content_rect=Rect(0, 40, 320, 120),
+        )
+
+        self.assertIs(tab, presenter.controls[0])
+        self.assertEqual([("filter", ["filter"])], tab_manager.calls)
+
+    def test_compute_tabbed_window_layout_returns_expected_body_and_content_rects(self):
+        content = Rect(10, 20, 300, 200)
+
+        body_rect, body_content_rect = compute_tabbed_window_layout(
+            content,
+            tab_height=36,
+            tab_rows=2,
+            padding=0,
+            min_content_height=60,
+        )
+
+        self.assertEqual(Rect(10, 20, 300, 200), body_rect)
+        self.assertEqual(Rect(10, 92, 300, 128), body_content_rect)
+
+    def test_active_tab_update_router_runs_only_active_handler(self):
+        router = ActiveTabUpdateRouter()
+        calls = []
+
+        router.register("a", lambda host, dt: calls.append(("a", host, dt)))
+        router.register("b", lambda host, dt: calls.append(("b", host, dt)))
+
+        ran = router.run("b", "HOST", 0.25)
+
+        self.assertTrue(ran)
+        self.assertEqual([("b", "HOST", 0.25)], calls)
+        self.assertEqual(("a", "b"), router.keys())
+
+    def test_register_tab_update_handlers_batches_registration(self):
+        router = ActiveTabUpdateRouter()
+        calls = []
+
+        register_tab_update_handlers(
+            router,
+            (
+                ("locale", lambda: calls.append("locale")),
+                ("particle", lambda: calls.append("particle")),
+            ),
+        )
+
+        self.assertTrue(router.run("locale"))
+        self.assertTrue(router.run("particle"))
+        self.assertFalse(router.run("missing"))
+        self.assertEqual(["locale", "particle"], calls)
+
+        self.assertTrue(router.unregister("locale"))
+        self.assertFalse(router.unregister("locale"))
 
     def test_register_tooltip_specs_registers_all_messages(self):
         manager = _StubTooltipManager()

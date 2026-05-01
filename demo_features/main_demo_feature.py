@@ -77,7 +77,9 @@ from gui_do import (
 
 )
 from demo_features.feature_abstractions import (
+    TaskPanelButtonSpec,
     add_task_panel_button,
+    add_task_panel_buttons,
     add_standard_scene_menu_strip,
     add_window_toggle_task_panel_controls,
     register_tooltip_specs,
@@ -142,23 +144,28 @@ class MainDemoFeature(Feature):
             horizontal=True,
         )
 
-        host.exit_button = add_task_panel_button(
+        add_task_panel_buttons(
+            host,
             host.task_panel,
             host.app.layout,
-            control_id="exit",
-            slot_index=0,
-            label="Exit",
-            on_click=lambda: setattr(host.app, "running", False),
-            style="angle",
-        )
-        host.showcase_button = add_task_panel_button(
-            host.task_panel,
-            host.app.layout,
-            control_id="showcase",
-            slot_index=2,
-            label="Showcase",
-            on_click=host.go_to_control_showcase,
-            style="angle",
+            (
+                TaskPanelButtonSpec(
+                    attr_name="exit_button",
+                    control_id="exit",
+                    slot_index=0,
+                    label="Exit",
+                    on_click=lambda: setattr(host.app, "running", False),
+                    style="angle",
+                ),
+                TaskPanelButtonSpec(
+                    attr_name="showcase_button",
+                    control_id="showcase",
+                    slot_index=2,
+                    label="Showcase",
+                    on_click=host.go_to_control_showcase,
+                    style="angle",
+                ),
+            ),
         )
 
         toggle_controls, max_slot_index = add_window_toggle_task_panel_controls(
