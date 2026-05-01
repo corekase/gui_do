@@ -454,137 +454,6 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.status_label.text = normalized
 
 
-    def build_window(
-        self,
-        host,
-        *,
-        window_control_cls,
-        label_control_cls,
-        canvas_control_cls,
-        button_control_cls,
-    ) -> None:
-        """Create the Mandelbrot window, canvases, controls, and status label."""
-        self.demo = host  # Store host reference for callbacks
-        self.window = create_anchored_feature_window(
-            host,
-            window_control_cls=window_control_cls,
-            control_id="mandel_window",
-            title="Mandelbrot",
-            size=(660, 760),
-            anchor="top_right",
-            margin=(28, 92),
-            title_font_role=self.font_role("window_title"),
-            use_frame_backdrop=True,
-        )
-        content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=8, padding_y=8)
-        padding = 8
-        menu_h = 28
-
-        self.menu_bar = None
-
-        # Bottom control and status heights
-        control_height = 30
-        status_height = 20
-        controls_and_status_height = control_height + status_height + 12
-        bottom_visual_padding = 5
-
-        # Canvas layout using partition_rects
-        from gui_do import partition_rects
-        grid_gap = 6
-        # Compute canvas_area_bottom and canvas_area_width for control layout
-        canvas_area_bottom = padded_content_rect.bottom - bottom_visual_padding - controls_and_status_height
-        canvas_area_width = padded_content_rect.width
-
-        # Single canvas mode
-        [primary_canvas_rect] = partition_rects(
-            padded_content_rect,
-            rows=1,
-            cols=1,
-            gap=grid_gap,
-            bottom_padding=bottom_visual_padding,
-            controls_and_status_height=controls_and_status_height,
-        )
-        self.primary_canvas = self.window.add(
-            canvas_control_cls("mandel_canvas", primary_canvas_rect, max_events=128)
-        )
-
-        # 2x2 grid mode (no gap for demo patch)
-        canvas_rects = partition_rects(
-            padded_content_rect,
-            rows=2,
-            cols=2,
-            gap=6,  # Patch: eliminate gap to cover full area
-            bottom_padding=bottom_visual_padding,
-            controls_and_status_height=controls_and_status_height,
-        )
-        canvas1 = self.window.add(canvas_control_cls("can1", canvas_rects[0], max_events=32))
-        canvas2 = self.window.add(canvas_control_cls("can2", canvas_rects[1], max_events=32))
-        canvas3 = self.window.add(canvas_control_cls("can3", canvas_rects[2], max_events=32))
-        canvas4 = self.window.add(canvas_control_cls("can4", canvas_rects[3], max_events=32))
-        self.split_canvases = {"can1": canvas1, "can2": canvas2, "can3": canvas3, "can4": canvas4}
-
-        # Controls at bottom: evenly divide a padded strip across all controls,
-        # then center each control inside its slot with extra inner spacing.
-        controls_y = canvas_area_bottom + 6
-        row_strip_padding = 12
-        slots = centered_horizontal_strip_layout(
-            left=padded_content_rect.left + row_strip_padding,
-            width=max(1, canvas_area_width - (row_strip_padding * 2)),
-            y=controls_y,
-            item_count=5,
-            item_height=control_height,
-            spacing=8,
-        )
-        mandel_reset_rect, mandel_iter_rect, mandel_recur_rect, mandel_one_split_rect, mandel_four_split_rect = slots
-
-        self.reset_button = self.window.add(
-            button_control_cls("mandel_reset", mandel_reset_rect, "Reset", lambda: self.clear(host), style="angle", font_role=self.font_role("control"))
-        )
-        mandel_iter_button = self.window.add(
-            button_control_cls("mandel_iter", mandel_iter_rect, "Iterative", lambda: self.launch_iterative(host), style="round", font_role=self.font_role("control"))
-        )
-        mandel_recur_button = self.window.add(
-            button_control_cls("mandel_recur", mandel_recur_rect, "Recursive", lambda: self.launch_recursive(host), style="round", font_role=self.font_role("control"))
-        )
-        mandel_one_split_button = self.window.add(
-            button_control_cls("mandel_one_split", mandel_one_split_rect, "1M 4Tasks", lambda: self.launch_one_split(host), style="round", font_role=self.font_role("control"))
-        )
-        mandel_four_split_button = self.window.add(
-            button_control_cls("mandel_four_split", mandel_four_split_rect, "4M 4Tasks", lambda: self.launch_four_split(host), style="round", font_role=self.font_role("control"))
-        )
-        self.task_buttons = (
-            mandel_iter_button,
-            mandel_recur_button,
-            mandel_one_split_button,
-            mandel_four_split_button,
-        )
-
-        # Status label below controls, aligned with left edge
-        status_y = controls_y + control_height + 6
-        default_status = self.status_text
-        self.status_label = host.app.style_label(
-            self.window.add(
-                label_control_cls("mandel_status", Rect(padded_content_rect.left, status_y, canvas_area_width, status_height), default_status)
-            ),
-            role=self.font_role("status"),
-        )
-        self.status_text = default_status
-
-
-
-        canvas1.visible = False
-        canvas2.visible = False
-        canvas3.visible = False
-        canvas4.visible = False
-        self.set_task_buttons_disabled(host, False)
-        self.clear(host)
-        self.window.visible = False
-
-
-
-
-
     def on_status_event(self, host, payload) -> None:
         """Handle status-bus events and render normalized status text."""
         self._set_status_text(self.format_status(host, MandelStatusEvent.from_payload(payload)))
@@ -1026,7 +895,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             bottom_padding=bottom_visual_padding, controls_and_status_height=controls_and_status_height,
         )
         self.primary_canvas = CanvasControl("mandel_canvas", primary_canvas_rect, max_events=128)
-        self.window.add(self.primary_canvas)
+        self.add_control(self.primary_canvas)
         self.feature.primary_canvas = self.primary_canvas
 
         canvas_rects = partition_rects(
@@ -1041,7 +910,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         }
         for c in self.split_canvases.values():
             c.visible = False
-            self.window.add(c)
+            self.add_control(c)
         self.feature.split_canvases = self.split_canvases
 
         controls_y = canvas_area_bottom + 6
@@ -1057,29 +926,29 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             "mandel_reset", mandel_reset_rect, "Reset",
             lambda: self.feature.clear(self.host), style="angle", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.reset_button)
+        self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
         self.mandel_iter_button = ButtonControl(
             "mandel_iter", mandel_iter_rect, "Iterative",
             lambda: self.feature.launch_iterative(self.host), style="round", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.mandel_iter_button)
+        self.add_control(self.mandel_iter_button)
         self.mandel_recur_button = ButtonControl(
             "mandel_recur", mandel_recur_rect, "Recursive",
             lambda: self.feature.launch_recursive(self.host), style="round", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.mandel_recur_button)
+        self.add_control(self.mandel_recur_button)
         self.mandel_one_split_button = ButtonControl(
             "mandel_one_split", mandel_one_split_rect, "1M 4Tasks",
             lambda: self.feature.launch_one_split(self.host), style="round", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.mandel_one_split_button)
+        self.add_control(self.mandel_one_split_button)
         self.mandel_four_split_button = ButtonControl(
             "mandel_four_split", mandel_four_split_rect, "4M 4Tasks",
             lambda: self.feature.launch_four_split(self.host), style="round", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.mandel_four_split_button)
+        self.add_control(self.mandel_four_split_button)
         self.feature.task_buttons = (
             self.mandel_iter_button,
             self.mandel_recur_button,
@@ -1092,7 +961,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             "mandel_status", Rect(padded_content_rect.left, status_y, canvas_area_width, status_height),
             self.feature.status_text
         )
-        self.window.add(self.status_label)
+        self.add_control(self.status_label)
         self.feature.status_label = self.status_label
 
         self.feature.demo = self.host

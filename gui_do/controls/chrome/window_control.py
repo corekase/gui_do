@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import Optional
 from typing import TYPE_CHECKING
 from time import perf_counter
 import pygame
@@ -16,15 +16,56 @@ if TYPE_CHECKING:
     from ...theme.color_theme import ColorTheme
 
 
+class _WindowContentHost(UiNode):
+    """Content-layer host mounted inside a window's body area."""
+
+    def add(self, child: UiNode) -> UiNode:
+        return self.add_child(child)
+
+    def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
+        return self.remove_child(child, dispose=dispose)
+
+    def clear(self, *, dispose: bool = False) -> int:
+        return self.clear_children(dispose=dispose)
+
+    def update(self, dt_seconds: float) -> None:
+        for child in self.children:
+            if child.visible:
+                child.update(dt_seconds)
+
+    def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return self._dispatch_children(event, app, reverse=False, theme=theme)
+
+    def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
+
+    def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        return self._dispatch_children(event, app, reverse=True, theme=theme)
+
+    def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        for child in self.children:
+            if child.visible:
+                child.draw(surface, theme)
+
+
 
 class WindowControl(UiNode):
     presenter: Optional[object] = None
 
     def set_presenter(self, presenter) -> None:
         """Attach a presenter/controller to this window."""
+        if self.presenter is presenter:
+            return
+        previous = self.presenter
         self.presenter = presenter
+        if previous is not None and hasattr(previous, "on_detach"):
+            previous.on_detach(self)
+        if presenter is None:
+            return
         presenter.window = self
-        if hasattr(presenter, 'on_create'):
+        if hasattr(presenter, "on_attach"):
+            presenter.on_attach(self)
+        if hasattr(presenter, "on_create"):
             presenter.on_create()
     """Window container with title bar and child controls."""
 
@@ -34,9 +75,6 @@ class WindowControl(UiNode):
         rect: Rect,
         title: str,
         titlebar_height: int = 24,
-        preamble: Optional[Callable[[], None]] = None,
-        event_handler: Optional[Callable[[object], bool]] = None,
-        postamble: Optional[Callable[[], None]] = None,
         title_font_role: str = "title",
         use_frame_backdrop: bool = False,
     ) -> None:
@@ -44,16 +82,12 @@ class WindowControl(UiNode):
         self.title = title
         self.titlebar_height = max(18, int(titlebar_height))
         self.title_font_role = title_font_role
-        self.children: List[UiNode] = []
         self._active = False
         self.parent: Optional[UiNode] = None
         self._chrome = None
         self._chrome_size = (0, 0, "")
         self._disabled_overlay = None
         self._disabled_overlay_size = (0, 0)
-        self._preamble = preamble
-        self._event_handler = event_handler
-        self._postamble = postamble
         self._pristine = None
         if not use_frame_backdrop:
             self._pristine = pygame.Surface((self.rect.width, self.rect.height))
@@ -62,6 +96,31 @@ class WindowControl(UiNode):
         self._pristine_scaled_size = (0, 0)
         self._frame_visuals = None
         self._frame_visual_size = (0, 0)
+        self._content_host = _WindowContentHost(f"{self.control_id}__content", self.content_rect())
+        super().add_child(self._content_host)
+
+    def _sync_content_host_rect(self) -> None:
+        content_rect = self.content_rect()
+        if self._content_host.rect != content_rect:
+            self._content_host.rect = Rect(content_rect)
+
+    def _notify_presenter_resized(self) -> None:
+        if self.presenter is not None and hasattr(self.presenter, "on_resize"):
+            self.presenter.on_resize(Rect(self.rect))
+
+    def resize(self, width: int, height: int) -> None:
+        previous = Rect(self.rect)
+        super().resize(width, height)
+        self._sync_content_host_rect()
+        if self.rect.size != previous.size:
+            self._notify_presenter_resized()
+
+    def set_rect(self, rect: Rect) -> None:
+        previous = Rect(self.rect)
+        super().set_rect(rect)
+        self._sync_content_host_rect()
+        if self.rect.size != previous.size:
+            self._notify_presenter_resized()
 
     @property
     def title_font_role(self) -> str:
@@ -142,7 +201,12 @@ class WindowControl(UiNode):
         return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
 
     def content_rect(self) -> Rect:
-        return Rect(self.rect.left, self.rect.top + self.titlebar_height, self.rect.width, self.rect.height - self.titlebar_height)
+        return Rect(
+            self.rect.left,
+            self.rect.top + self.titlebar_height,
+            max(1, self.rect.width),
+            max(1, self.rect.height - self.titlebar_height),
+        )
 
     def lower_control_rect(self) -> Rect:
         if self._chrome is not None:
@@ -153,6 +217,13 @@ class WindowControl(UiNode):
         return Rect(self.rect.right - size, top, size, size)
 
     def _on_visibility_changed(self, old_visible: bool, new_visible: bool) -> None:
+        if self.presenter is not None:
+            if new_visible and hasattr(self.presenter, "on_show"):
+                self.presenter.on_show()
+            if not new_visible and hasattr(self.presenter, "on_hide"):
+                self.presenter.on_hide()
+            if not new_visible and hasattr(self.presenter, "on_close"):
+                self.presenter.on_close()
         parent = self.parent
         if parent is None:
             return
@@ -177,31 +248,50 @@ class WindowControl(UiNode):
             return
         self.rect.x += int(dx)
         self.rect.y += int(dy)
+
+        def _move_subtree(node: UiNode) -> None:
+            node.rect.x += int(dx)
+            node.rect.y += int(dy)
+            for descendant in node.children:
+                _move_subtree(descendant)
+
         for child in self.children:
-            child.rect.x += int(dx)
-            child.rect.y += int(dy)
+            _move_subtree(child)
 
     def add(self, child: UiNode) -> UiNode:
-        return self.add_child(child)
+        return self._content_host.add(child)
+
+    def add_child(self, child: UiNode) -> UiNode:
+        if child is self._content_host:
+            return super().add_child(child)
+        return self._content_host.add(child)
 
     def remove(self, child: UiNode, *, dispose: bool = False) -> bool:
-        return self.remove_child(child, dispose=dispose)
+        return self._content_host.remove(child, dispose=dispose)
+
+    def remove_child(self, child: UiNode, *, dispose: bool = False) -> bool:
+        if child is self._content_host:
+            return super().remove_child(child, dispose=dispose)
+        return self._content_host.remove(child, dispose=dispose)
 
     def clear_children(self, *, dispose: bool = False) -> int:
         """Remove all direct children and return the count removed.
 
         Pass ``dispose=True`` to also call ``dispose()`` on every removed child.
         """
-        return super().clear_children(dispose=dispose)
+        return self._content_host.clear(dispose=dispose)
 
     def update(self, dt_seconds: float) -> None:
-        if self._preamble is not None:
-            self._preamble()
+        self._sync_content_host_rect()
+        if self.presenter is not None and hasattr(self.presenter, "before_update"):
+            self.presenter.before_update(dt_seconds)
         for child in self.children:
             if child.visible:
                 child.update(dt_seconds)
-        if self._postamble is not None:
-            self._postamble()
+        if self.presenter is not None and hasattr(self.presenter, "update"):
+            self.presenter.update(dt_seconds)
+        if self.presenter is not None and hasattr(self.presenter, "after_update"):
+            self.presenter.after_update(dt_seconds)
 
     def _owns_node(self, target) -> bool:
         if target is None:
@@ -225,26 +315,49 @@ class WindowControl(UiNode):
                 return False
         return True
 
+    def _accepts_content_scope(self, event: GuiEvent, app: "GuiApplication") -> bool:
+        raw = event.pos
+        content = self.content_rect()
+        if isinstance(raw, tuple) and len(raw) == 2 and not content.collidepoint(raw):
+            lock_object = app.locking_object
+            lock_active = bool(app.mouse_point_locked and app.lock_point_pos is not None)
+            if not (lock_active and self._owns_node(lock_object)):
+                return False
+        return True
+
+    def _dispatch_window_handler(self, event: GuiEvent) -> bool:
+        if self.presenter is not None and hasattr(self.presenter, "handle_event"):
+            if self.presenter.handle_event(event):
+                event.prevent_default()
+                event.stop_propagation()
+                return True
+        return False
+
     def on_event_capture(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
+            return False
+        if not self._accepts_content_scope(event, app):
             return False
         return self._dispatch_children(event, app, reverse=False, theme=theme)
 
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
             return False
-        if self._event_handler is not None and self._event_handler(event):
-            event.prevent_default()
-            event.stop_propagation()
+        if self._dispatch_window_handler(event):
             return True
+        if not self._accepts_content_scope(event, app):
+            return False
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def on_event_bubble(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self._accepts_event_scope(event, app):
             return False
+        if not self._accepts_content_scope(event, app):
+            return False
         return self._dispatch_children(event, app, reverse=True, theme=theme)
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
+        self._sync_content_host_rect()
         factory = theme.graphics_factory
         font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
@@ -284,6 +397,13 @@ class WindowControl(UiNode):
                 self._disabled_overlay = wash
                 self._disabled_overlay_size = overlay_size
             surface.blit(self._disabled_overlay, self.rect.topleft)
-        for child in self.children:
-            if child.visible:
-                child.draw(surface, theme)
+        previous_clip = surface.get_clip()
+        content_clip = self.content_rect()
+        clip_rect = previous_clip.clip(content_clip)
+        surface.set_clip(clip_rect)
+        try:
+            for child in self.children:
+                if child.visible:
+                    child.draw(surface, theme)
+        finally:
+            surface.set_clip(previous_clip)

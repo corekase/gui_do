@@ -242,109 +242,6 @@ class LifeSimulationFeature(RoutedFeature):
         message.update(extra)
         return self.send_logic_message(message, alias=self.LOGIC_ALIAS)
 
-    def build_window(
-        self,
-        host,
-        *,
-        window_control_cls,
-        canvas_control_cls,
-        button_control_cls,
-        toggle_control_cls,
-        slider_control_cls,
-        layout_axis_cls,
-    ) -> None:
-        """Create the Life window, canvas, and interaction controls."""
-        self.demo = host  # Store host reference for use in callback methods
-        self.window = create_anchored_feature_window(
-            host,
-            window_control_cls=window_control_cls,
-            control_id="life_window",
-            title="Conway's Game of Life",
-            size=(660, 688),
-            anchor="top_right",
-            margin=(28, 92),
-            title_font_role=self.font_role("window_title"),
-            preamble=self.life_window_preamble,
-            event_handler=self.life_window_event_handler,
-            postamble=self.life_window_postamble,
-            use_frame_backdrop=True,
-        )
-        content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=10, padding_y=10)
-        left = padded_content_rect.left
-        top = padded_content_rect.top
-        width = padded_content_rect.width
-        height = padded_content_rect.height
-        # menu_h = 28 (removed, no menu)
-        control_height = 28
-        controls_gap = 10
-        control_spacing = 12
-
-        self.menu_bar = None
-        top = padded_content_rect.top
-        height = max(1, padded_content_rect.bottom - top)
-
-        controls_y = top + height - control_height - 10
-
-        grid_gap = 6
-        bottom_visual_padding = 0
-        controls_and_status_height = 0
-        padded_rect = Rect(left, top, width, max(1, controls_y - controls_gap - top))
-        [canvas_rect] = partition_rects(
-            padded_rect,
-            rows=1,
-            cols=1,
-            gap=grid_gap,
-            bottom_padding=bottom_visual_padding,
-            controls_and_status_height=controls_and_status_height,
-        )
-        self.canvas = self.window.add(
-            canvas_control_cls("life_canvas", canvas_rect, max_events=256)
-        )
-
-        slots = centered_horizontal_strip_layout(
-            left=left,
-            width=width,
-            y=controls_y,
-            item_count=4,
-            item_height=control_height,
-            spacing=control_spacing,
-        )
-        life_reset_rect, life_toggle_rect, zoom_slider_slot_1, zoom_slider_slot_2 = slots
-
-        self.reset_button = self.window.add(
-            button_control_cls("life_reset", life_reset_rect, "Reset", self.life_reset, style="angle", font_role=self.font_role("control"))
-        )
-        self.toggle = self.window.add(
-            toggle_control_cls(
-                "life_toggle",
-                life_toggle_rect,
-                "Stop",
-                "Start",
-                pushed=False,
-                style="round",
-                font_role=self.font_role("control"),
-            )
-        )
-
-        slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
-        slider_height = 20
-        slider_y = controls_y + max(0, (control_height - slider_height) // 2)
-        self.zoom_slider = self.window.add(
-            slider_control_cls(
-                "life_zoom",
-                Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
-                layout_axis_cls.HORIZONTAL,
-                0.0,
-                11.0,
-                5.0,
-                on_change=self.on_life_zoom_slider_changed,
-            )
-        )
-        self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
-        self.life_reset()
-        self.window.visible = False
-
     def life_reset(self) -> None:
         """Reset simulation state, viewport origin, zoom level, and run toggle."""
         self.life_origin = [self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0]
@@ -369,11 +266,6 @@ class LifeSimulationFeature(RoutedFeature):
         self.zoom_slider.value = float(slider_value)
         self.life_zoom_slider_last_value = int(slider_value)
 
-    def life_window_preamble(self) -> None:
-        """Window preamble hook that reconciles zoom changes from slider position."""
-        slider_value = max(0, min(11, int(round(self.zoom_slider.value))))
-        self.sync_life_zoom_from_slider(slider_value)
-
     def on_life_zoom_slider_changed(self, value: float, _reason) -> None:
         """Slider callback that converts float slider values into integer zoom steps."""
         self.sync_life_zoom_from_slider(int(round(value)))
@@ -390,62 +282,6 @@ class LifeSimulationFeature(RoutedFeature):
         self.life_zoom_slider_last_value = slider_value
         center_local = (self.canvas.rect.width / 2.0, self.canvas.rect.height / 2.0)
         self.zoom_life_view_about(center_local, new_size)
-
-    def life_window_event_handler(self, event) -> bool:
-        """Handle drag, click, and wheel interactions routed to the Life window."""
-        demo = self.demo
-        canvas = self.canvas
-        window = self.window
-
-        if event.is_mouse_down(3) and event.collides(canvas.rect):
-            pos = event.pos
-            if pos is not None:
-                self.life_dragging = True
-                demo.app.set_cursor("hand")
-                demo.app.set_lock_point(canvas, pos)
-                return True
-
-        if event.is_mouse_up(3):
-            if self.life_dragging:
-                self.life_dragging = False
-                demo.app.set_cursor("normal")
-                demo.app.set_lock_point(None)
-                return True
-
-        if event.is_mouse_motion() and self.life_dragging:
-            # Prefer lock-point delta to keep drag behavior stable under pointer lock.
-            delta = demo.app.get_lock_point_motion_delta(event)
-            if delta is None:
-                rel = event.rel
-                if isinstance(rel, tuple) and len(rel) == 2:
-                    delta = (rel[0], rel[1])
-                else:
-                    delta = (0, 0)
-            self.life_origin[0] -= delta[0]
-            self.life_origin[1] -= delta[1]
-            return True
-
-        if event.is_mouse_wheel():
-            pointer_pos = demo.app.lock_point_pos if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None else event.pos
-            if pointer_pos is not None and canvas.rect.collidepoint(pointer_pos):
-                if demo.app.mouse_point_locked and demo.app.lock_point_pos is not None:
-                    # Convert locked window-space pointer to canvas-local coordinates.
-                    lock_window_pos = demo.app.convert_to_window(demo.app.lock_point_pos, window)
-                    canvas_window_left = canvas.rect.left - window.rect.left
-                    canvas_window_top = canvas.rect.top - window.rect.top
-                    anchor_local = (lock_window_pos[0] - canvas_window_left, lock_window_pos[1] - canvas_window_top)
-                else:
-                    anchor_local = (pointer_pos[0] - canvas.rect.left, pointer_pos[1] - canvas.rect.top)
-                self.zoom_life_view_about(anchor_local, self.life_cell_size - (event.wheel_delta * 2))
-                return True
-
-        return False
-
-    def life_window_postamble(self) -> None:
-        """Window postamble hook that drains queued events and renders the board."""
-        self.update_life()
-
-
 
     def update_life(self) -> None:
         """Process queued canvas input, step simulation, then redraw visible cells."""
@@ -519,7 +355,7 @@ class _LifeWindowPresenter(WindowPresenter):
             padded_rect, rows=1, cols=1, gap=grid_gap, bottom_padding=0, controls_and_status_height=0,
         )
         self.canvas = CanvasControl("life_canvas", canvas_rect, max_events=256)
-        self.window.add(self.canvas)
+        self.add_control(self.canvas)
         self.feature.canvas = self.canvas
 
         slots = centered_horizontal_strip_layout(
@@ -530,13 +366,13 @@ class _LifeWindowPresenter(WindowPresenter):
         self.reset_button = ButtonControl(
             "life_reset", life_reset_rect, "Reset", self.feature.life_reset, style="angle", font_role=self.feature.font_role("control")
         )
-        self.window.add(self.reset_button)
+        self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
         self.toggle = ToggleControl(
             "life_toggle", life_toggle_rect, "Stop", "Start", pushed=False, style="round", font_role=self.feature.font_role("control"),
         )
-        self.window.add(self.toggle)
+        self.add_control(self.toggle)
         self.feature.toggle = self.toggle
 
         slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
@@ -547,7 +383,7 @@ class _LifeWindowPresenter(WindowPresenter):
             Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
             LayoutAxis.HORIZONTAL, 0.0, 11.0, 5.0, on_change=self.feature.on_life_zoom_slider_changed,
         )
-        self.window.add(self.zoom_slider)
+        self.add_control(self.zoom_slider)
         self.feature.zoom_slider = self.zoom_slider
 
         self.feature.demo = self.host
@@ -559,9 +395,16 @@ class _LifeWindowPresenter(WindowPresenter):
         self.feature._send_life_logic_command("snapshot")
         self.window.visible = False
 
-        self.window._event_handler = self._event_handler_impl
-        self.window._preamble = self._preamble_impl
-        self.window._postamble = self._postamble_impl
+    def handle_event(self, event):
+        return self._event_handler_impl(event)
+
+    def before_update(self, dt_seconds: float):
+        _ = dt_seconds
+        self._preamble_impl()
+
+    def after_update(self, dt_seconds: float):
+        _ = dt_seconds
+        self._postamble_impl()
 
     def _event_handler_impl(self, event):
         demo = self.host

@@ -589,22 +589,14 @@ def create_anchored_feature_window(
     anchor: str,
     margin: tuple[int, int],
     title_font_role: Optional[str] = None,
-    event_handler=None,
-    preamble=None,
-    postamble=None,
     use_frame_backdrop: bool = True,
 ):
     """Create and attach a window anchored by layout.anchored to the host root."""
     window_rect = host.app.layout.anchored(size, anchor=anchor, margin=margin, use_rect=True)
     kwargs: Dict[str, Any] = {
         "title_font_role": title_font_role,
-        "event_handler": event_handler,
         "use_frame_backdrop": bool(use_frame_backdrop),
     }
-    if preamble is not None:
-        kwargs["preamble"] = preamble
-    if postamble is not None:
-        kwargs["postamble"] = postamble
     window = window_control_cls(
         str(control_id),
         window_rect,

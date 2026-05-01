@@ -2389,7 +2389,7 @@ class _SystemsWindowPresenter(WindowPresenter):
             on_change=self.feature._on_tab_change,
             font_role=self.feature.font_role("control"),
         )
-        self.window.add(self.tab)
+        self.add_control(self.tab)
         self.feature.tab = self.tab
         self.feature._tabs.register("filter", self.feature._build_filter_tab(self.host, Rect(body_content_rect)))
         self.feature._tabs.register("locale", self.feature._build_locale_tab(self.host, Rect(body_content_rect)))
