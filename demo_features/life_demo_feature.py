@@ -312,15 +312,17 @@ class LifeSimulationFeature(RoutedFeature):
             cell_x = math.floor((local_x - self.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.life_origin[1]) / cell_size)
             cell = (cell_x, cell_y)
-            if not self._send_life_logic_command("toggle_cell", cell=cell):
-                if cell in self.life_cells:
-                    self.life_cells.remove(cell)
-                else:
-                    self.life_cells.add(cell)
+            # Apply locally first so render state never lags behind input.
+            if cell in self.life_cells:
+                self.life_cells.remove(cell)
+            else:
+                self.life_cells.add(cell)
+            self._send_life_logic_command("toggle_cell", cell=cell)
 
         if toggle.pushed:
-            if not self._send_life_logic_command("next"):
-                self.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.life_cells)
+            # Step locally first to keep animation deterministic even with message latency.
+            self.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.life_cells)
+            self._send_life_logic_command("next")
 
         cell_size = max(2, int(round(self.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)
@@ -479,15 +481,17 @@ class _LifeWindowPresenter(WindowPresenter):
             cell_x = math.floor((local_x - self.feature.life_origin[0]) / cell_size)
             cell_y = math.floor((local_y - self.feature.life_origin[1]) / cell_size)
             cell = (cell_x, cell_y)
-            if not self.feature._send_life_logic_command("toggle_cell", cell=cell):
-                if cell in self.feature.life_cells:
-                    self.feature.life_cells.remove(cell)
-                else:
-                    self.feature.life_cells.add(cell)
+            # Apply locally first so render state never lags behind input.
+            if cell in self.feature.life_cells:
+                self.feature.life_cells.remove(cell)
+            else:
+                self.feature.life_cells.add(cell)
+            self.feature._send_life_logic_command("toggle_cell", cell=cell)
 
         if toggle.pushed:
-            if not self.feature._send_life_logic_command("next"):
-                self.feature.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.feature.life_cells)
+            # Step locally first to keep animation deterministic even with message latency.
+            self.feature.life_cells = LifeSimulationLogicFeature.next_life_cycle(self.feature.life_cells)
+            self.feature._send_life_logic_command("next")
 
         cell_size = max(2, int(round(self.feature.life_cell_size)))
         canvas.canvas.fill(demo.app.theme.medium)
