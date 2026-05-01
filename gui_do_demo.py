@@ -57,9 +57,15 @@ class GuiDoDemo:
                 "screen.main.title": {"font": "main_label", "size": 36},
                 # All window titles use the window font
                 "screen.main.task_panel.control": {"font": "window", "size": 18},
-                "life.window_title": {"font": "window", "size": 18},
-                "mandelbrot.window_title": {"font": "window", "size": 18},
-                "system.window_title": {"font": "window", "size": 18},
+                "life.window_title": {"font": "window", "size": 14},
+                "mandelbrot.window_title": {"font": "window", "size": 14},
+                "system.window_title": {"font": "window", "size": 14},
+                "life.control": {"font": "default", "size": 18},
+                "mandelbrot.control": {"font": "default", "size": 18},
+                "mandelbrot.caption": {"font": "default", "size": 16},
+                "mandelbrot.status": {"font": "default", "size": 14},
+                "system.control": {"font": "default", "size": 18},
+                "system.label": {"font": "default", "size": 16},
                 # Explicitly define controls.label and controls.control to avoid missing role errors
                 "controls.label": {"size": 14},
                 "controls.control": {"size": 16},

@@ -371,8 +371,12 @@ class WindowControl(UiNode):
                 self.title,
                 title_font_role=self.title_font_role,
             )
+            old_titlebar_height = self.titlebar_height
             chrome_height = self._chrome.title_bar_active.get_height()
             self.titlebar_height = max(18, chrome_height)
+            if self.titlebar_height != old_titlebar_height:
+                self._sync_content_host_rect()
+                self._notify_presenter_resized()
             self._chrome_size = (self.rect.width, self.titlebar_height, self.title, self.title_font_role, font_revision)
             first_frame_profiler().record_once(
                 "control.first_draw",

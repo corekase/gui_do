@@ -22,7 +22,7 @@ from gui_do import (
     ToggleControl,
     WindowControl,
 )
-from gui_do import set_window_visible_state, setup_standard_font_roles
+from gui_do import set_window_visible_state
 from gui_do import partition_rects
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
@@ -145,18 +145,6 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the new presenter/controller pattern."""
-        fonts = {
-            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
-            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
-        }
-        setup_standard_font_roles(
-            host.font_roles,
-            fonts,
-            {
-                "life.window_title": {"font": "ubuntu_b", "size": 28},
-                "life.control": {"font": "gimbot", "size": 18},
-            },
-        )
         self.use_font_roles(
             {
                 "window_title": "life.window_title",
@@ -340,7 +328,7 @@ class _LifeWindowPresenter(WindowPresenter):
 
     def on_create(self):
         content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=10, padding_y=10)
+        padded_content_rect = inset_rect(content_rect, padding_x=0, padding_y=0)
         left = padded_content_rect.left
         top = padded_content_rect.top
         width = padded_content_rect.width
@@ -349,7 +337,7 @@ class _LifeWindowPresenter(WindowPresenter):
         controls_gap = 10
         control_spacing = 12
         grid_gap = 6
-        controls_y = top + height - control_height - 10
+        controls_y = top + height - control_height
         padded_rect = Rect(left, top, width, max(1, controls_y - controls_gap - top))
         [canvas_rect] = partition_rects(
             padded_rect, rows=1, cols=1, gap=grid_gap, bottom_padding=0, controls_and_status_height=0,

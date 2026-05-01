@@ -19,7 +19,7 @@ from gui_do import (
     toggle_window_visibility,
     WindowControl,
 )
-from gui_do import set_window_visible_state, setup_standard_font_roles
+from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 
@@ -236,20 +236,6 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
-        fonts = {
-            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
-            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
-        }
-        setup_standard_font_roles(
-            host.font_roles,
-            fonts,
-            {
-                "mandelbrot.window_title": {"font": "ubuntu_b", "size": 28},
-                "mandelbrot.control": {"font": "gimbot", "size": 18},
-                "mandelbrot.caption": {"font": "gimbot", "size": 16},
-                "mandelbrot.status": {"font": "gimbot", "size": 14},
-            },
-        )
         self.use_font_roles(
             {
                 "window_title": "mandelbrot.window_title",
@@ -526,7 +512,7 @@ class MandelbrotRenderFeature(RoutedFeature):
         """Clear all Mandelbrot canvases and the padded content area to the theme medium background color."""
         # Fill the padded content area (including gaps between canvases)
         if hasattr(self.window, "content_rect"):
-            padded_content_rect = inset_rect(self.window.content_rect(), padding_x=8, padding_y=8)
+            padded_content_rect = inset_rect(self.window.content_rect(), padding_x=0, padding_y=0)
             surface = self.window.surface if hasattr(self.window, "surface") else None
             if surface is not None:
                 import pygame
@@ -877,7 +863,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
     def on_create(self):
         from gui_do import partition_rects
         content_rect = self.window.content_rect()
-        padded_content_rect = inset_rect(content_rect, padding_x=8, padding_y=8)
+        padded_content_rect = inset_rect(content_rect, padding_x=0, padding_y=0)
         left = padded_content_rect.left
         top = padded_content_rect.top
         width = padded_content_rect.width
@@ -885,7 +871,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         control_height = 30
         status_height = 20
         controls_and_status_height = control_height + status_height + 12
-        bottom_visual_padding = 5
+        bottom_visual_padding = 0
         grid_gap = 6
         canvas_area_bottom = padded_content_rect.bottom - bottom_visual_padding - controls_and_status_height
         canvas_area_width = padded_content_rect.width

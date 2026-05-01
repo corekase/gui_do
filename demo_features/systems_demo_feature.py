@@ -77,7 +77,7 @@ from gui_do import (
     WaitUntil,
     WindowControl,
 )
-from gui_do import set_window_visible_state, setup_standard_font_roles
+from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 
 _TAB_H = 36
@@ -252,30 +252,6 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
-        fonts = {
-            "gimbot": "demo_features/data/fonts/Gimbot.ttf",
-            "ubuntu_b": "demo_features/data/fonts/Ubuntu-B.ttf",
-        }
-        font_roles = getattr(host, "font_roles", None)
-        if font_roles is None:
-            font_roles = self.font_roles if hasattr(self, "font_roles") else None
-        if font_roles is None:
-            raise RuntimeError("No global font role registry available for SystemsDemoFeature")
-        setup_standard_font_roles(
-            font_roles,
-            fonts,
-            {
-                "system.window_title": {"font": "ubuntu_b", "size": 28},
-                "system.control": {"font": "gimbot", "size": 18},
-                "system.label": {"font": "gimbot", "size": 16},
-            },
-        )
-        if "system.window_title" not in font_roles:
-            font_roles.define(
-                "system.window_title",
-                size=28,
-                file_path=fonts["ubuntu_b"],
-            )
         self.use_font_roles(
             {
                 "window_title": "system.window_title",
@@ -2353,7 +2329,7 @@ class _SystemsWindowPresenter(WindowPresenter):
 
     def on_create(self):
         content = self.window.content_rect()
-        pad = 10
+        pad = 0
         body_top = content.top + pad
         body_bottom = content.bottom - pad
         body_h = body_bottom - body_top
