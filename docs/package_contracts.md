@@ -280,6 +280,8 @@ from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 - `docs/public_api_spec.md`: supported exports and strict API contracts.
 - `docs/event_system_spec.md`: normalized event model and routing semantics.
 - `docs/architecture_boundary_spec.md`: package boundary rules and enforcement tests.
+- `docs/final_considerations_execution_plan.md`: staged implementation plan for final hardening work.
+- `docs/runtime_operating_contracts.md`: runtime guarantees, observability, stability policy, and budget contracts.
 
 ## Run Boundary Contract Tests
 

@@ -95,24 +95,57 @@ class WorkspacePersistenceManager:
         )
 
     def restore(self, state: WorkspaceState, app, *, feature_manager=None) -> None:
+        self.restore_with_report(state, app, feature_manager=feature_manager)
+
+    def restore_with_report(self, state: WorkspaceState, app, *, feature_manager=None) -> Dict[str, Any]:
+        """Restore workspace state and return a structured summary report.
+
+        The return payload provides operational visibility for callers that need
+        diagnostics or test assertions while keeping :meth:`restore` backward
+        compatible for existing consumers.
+        """
+        report: Dict[str, Any] = {
+            "target_scene": str(state.active_scene_name),
+            "switched_scene": False,
+            "restored_feature_states": bool(feature_manager is not None),
+            "restored_scene_nodes": 0,
+            "applied_settings": 0,
+            "skipped_settings": 0,
+            "missing_settings_blocks": [],
+        }
+
         if str(app.active_scene_name) != str(state.active_scene_name):
             app.switch_scene(state.active_scene_name)
+            report["switched_scene"] = True
+
         if feature_manager is not None:
             feature_manager.restore_feature_states(state.feature_states)
+
         snapshot = SceneSnapshot.from_dict(state.scene_snapshot)
-        snapshot.restore(app.scene)
+        report["restored_scene_nodes"] = int(snapshot.restore(app.scene))
+
+        missing_settings_blocks = report["missing_settings_blocks"]
         for block_name, values in state.settings_blocks.items():
             registry = self._settings_registries.get(block_name)
             if registry is None:
+                missing_settings_blocks.append(str(block_name))
+                continue
+            if not isinstance(values, dict):
+                report["skipped_settings"] += 1
                 continue
             for namespace, namespace_values in values.items():
                 if not isinstance(namespace_values, dict):
+                    report["skipped_settings"] += 1
                     continue
                 for key, value in namespace_values.items():
                     try:
                         registry.set_value(namespace, key, value)
+                        report["applied_settings"] += 1
                     except KeyError:
+                        report["skipped_settings"] += 1
                         continue
+
+        return report
 
     @staticmethod
     def _registry_values(registry) -> Dict[str, Dict[str, Any]]:
