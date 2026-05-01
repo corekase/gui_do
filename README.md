@@ -168,53 +168,73 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 
 [Back to Top](#table-of-contents)
 
-gui_do is built around two intertwined paradigms: **data-driven reactive UI** and **feature composition**. Controls subscribe to observable data sources so the interface stays in sync automatically, while features bundle controls, logic, and lifecycle hooks into reusable modules. Both paradigms are designed so that gui_do handles the wiring and plumbing, leaving you free to focus on application-specific behavior.
+gui_do is built around two intertwined paradigms: **data-driven reactive UI** and **feature composition**. Controls subscribe to observable data sources so the interface stays in sync automatically, while features bundle controls, logic, and lifecycle hooks into reusable modules. Both paradigms are designed so that gui_do handles the wiring and plumbing, leaving you free to focus on the specific tasks you need to solve. The `Feature` lifecycle and the declarative data-driven bootstrap (`HostApplicationConfig` / `bootstrap_host_application`) are the primary way to structure all gui_do applications; using the underlying GUI API outside of feature lifecycle hooks or data-driven wiring is strongly discouraged.
 
 ### Getting Started: First Scene
 
 [Back to Top](#table-of-contents)
 
-Every gui_do application needs a display surface, a `GuiApplication`, and at least one scene. `create_display` calls `pygame.init()` internally so no separate initialization is needed. `run_entrypoint` drives the main loop until the window is closed.
+Every gui_do application starts with a display surface and a `GuiApplication`. All controls, logic, and lifecycle behavior live inside `Feature` subclasses — these are the primary unit of organization. The `Feature` class provides four lifecycle hooks:
+
+| Hook | When it is called |
+|---|---|
+| `build(host)` | Create and add controls to the scene |
+| `bind_runtime(host)` | Wire observable subscriptions and cross-feature bindings, after all features are built |
+| `configure_accessibility(host, tab_start)` | Set tab order and accessibility metadata |
+| `handle_event(host, event)` | Per-event routing — return `True` to consume |
+
+A minimal feature that places a label:
 
 ```python
 from pygame import Rect
-from gui_do import create_display, GuiApplication, LabelControl
+from gui_do import Feature, LabelControl, create_display, GuiApplication
+
+class HelloFeature(Feature):
+    def build(self, host) -> None:
+        host.scene.add(LabelControl("title", Rect(20, 20, 300, 32), "Hello from gui_do"))
 
 surface = create_display((800, 600), fullscreen=False)
 app = GuiApplication(surface)
-app.scene.add(LabelControl("title", Rect(20, 20, 300, 32), "My First App"))
+app.features.register(HelloFeature("hello"), host=app)
+app.features.build_features(app)
 app.run_entrypoint(target_fps=60)
 ```
 
-**Adding interaction.** Attach `on_click` to a `ButtonControl`. The callback mutates a control's attribute directly — the simplest form of UI update:
+Controls are positioned with a `pygame.Rect` and identified by a `control_id` string. Controls added via `host.scene.add(...)` become top-level nodes in the active scene. Controls added to a container (`PanelControl`, `WindowControl`, etc.) become its children via `parent.add(child)`.
+
+**Adding interaction.** Place interactive controls and connect callback state through feature instance variables:
 
 ```python
 from pygame import Rect
-from gui_do import ButtonControl, LabelControl, create_display, GuiApplication
+from gui_do import ButtonControl, Feature, LabelControl, create_display, GuiApplication
+
+class ClickFeature(Feature):
+    def build(self, host) -> None:
+        self._status = host.scene.add(
+            LabelControl("status", Rect(20, 20, 300, 28), "Waiting…")
+        )
+        host.scene.add(ButtonControl(
+            "go", Rect(20, 60, 120, 32), "Go", on_click=self._on_click,
+        ))
+
+    def _on_click(self) -> None:
+        self._status.text = "Clicked!"
 
 surface = create_display((800, 600), fullscreen=False)
 app = GuiApplication(surface)
-
-status = app.scene.add(LabelControl("status", Rect(20, 20, 300, 28), "Waiting…"))
-
-def on_click() -> None:
-    status.text = "Button clicked!"
-
-app.scene.add(ButtonControl("go", Rect(20, 60, 120, 32), "Go", on_click=on_click))
+app.features.register(ClickFeature("click"), host=app)
+app.features.build_features(app)
 app.run_entrypoint(target_fps=60)
 ```
 
-Every control is placed with a `Rect`. Controls added to `app.scene` become top-level nodes. Controls added to a container (`PanelControl`, `WindowControl`, etc.) become its children via `parent.add(child)`.
-
-**Multiple scenes.** Create and switch named scenes to support multi-view applications. Each scene is fully isolated — it has its own scheduler, timers, tween manager, and services:
+**Multiple scenes.** Create named scenes to support multi-view applications. Each scene is fully isolated — it has its own scheduler, timers, tween manager, and services. Features target a specific scene by passing `scene_name` at registration, or add to a named scene inside `build`:
 
 ```python
 app.create_scene("main")
 app.create_scene("settings")
 
-# Build controls into specific scenes:
-app.add(LabelControl("title", Rect(20, 20, 200, 28), "Main"), scene_name="main")
-app.add(LabelControl("title", Rect(20, 20, 200, 28), "Settings"), scene_name="settings")
+# In Feature.build(self, host) — add controls to a named scene:
+# host.app.add(LabelControl("title", Rect(20, 20, 200, 28), "Main"), scene_name="main")
 
 # Switch at runtime:
 app.switch_scene("settings")
@@ -237,31 +257,32 @@ counter.value = 1   # prints "Count: 1"
 counter.value = 2   # prints "Count: 2"
 ```
 
-Wire an `ObservableValue` to a control attribute so the control updates itself when the value changes:
+In practice, `ObservableValue` instances are created in `Feature.build` and subscriptions are established in `Feature.bind_runtime`, which runs after all features have placed their controls so any cross-feature control reference is already valid:
 
 ```python
 from pygame import Rect
 from gui_do import (
-    Binding, ButtonControl, LabelControl, ObservableValue,
+    ButtonControl, Feature, LabelControl, ObservableValue,
     create_display, GuiApplication,
 )
 
-surface = create_display((800, 600), fullscreen=False)
-app = GuiApplication(surface)
+class CounterFeature(Feature):
+    def build(self, host) -> None:
+        self._count = ObservableValue(0)
+        self._label = host.scene.add(
+            LabelControl("count", Rect(20, 20, 200, 28), "Count: 0")
+        )
+        host.scene.add(ButtonControl(
+            "inc", Rect(20, 60, 120, 32), "+1",
+            on_click=lambda: self._count.__setattr__("value", self._count.value + 1),
+        ))
 
-count = ObservableValue(0)
-label = app.scene.add(LabelControl("count", Rect(20, 20, 200, 28), "Count: 0"))
-
-# One-way binding: count → label.text (with optional value converter)
-b = Binding(count, label, "text", mode="one_way", to_control=lambda v: f"Count: {v}")
-
-app.scene.add(ButtonControl(
-    "inc", Rect(20, 60, 120, 32), "+1",
-    on_click=lambda: count.__setattr__("value", count.value + 1),
-))
-count.value = 0   # fire binding to set initial label text
-app.run_entrypoint(target_fps=60)
+    def bind_runtime(self, host) -> None:
+        self._count.subscribe(lambda v: setattr(self._label, "text", f"Count: {v}"))
+        self._count.value = 0   # fire subscription to set initial label text
 ```
+
+`Binding` wires an `ObservableValue` to a named control attribute and handles type conversion. The pattern below is equivalent but uses a declarative binding instead of a manual subscribe:
 
 **Two-way binding** propagates changes in both directions — model to control and control back to model. Provide `control_change_signal` (or `on_change`) so the binding can listen for control-side mutations:
 
@@ -365,6 +386,8 @@ app.features.build_features(app)
 app.features.bind_runtime(app)
 app.run_entrypoint(target_fps=60)
 ```
+
+For production applications, `bootstrap_host_application` handles all of the above — registration, `build_features`, `bind_runtime`, and scene setup — automatically from a declarative `HostApplicationConfig`. See [Data-Driven Bootstrap](#data-driven-bootstrap) for the recommended pattern.
 
 `Feature.name` is the unique identifier used for message routing and logic binding. Features add their controls to `host.scene` or to a named scene via `host.app.add(..., scene_name="...")`. The `FeatureManager` (available as `app.features`) drives all registered features through each lifecycle phase in registration order.
 
@@ -616,22 +639,68 @@ This data-driven approach is the pattern used by the bundled demo application an
 
 [Back to Top](#table-of-contents)
 
+The recommended pattern is data-driven: declare the entire application structure as a `HostApplicationConfig` and let `bootstrap_host_application` wire everything automatically. Application logic lives in `Feature` subclasses; reactive state uses `ObservableValue` so the UI stays in sync without manual refresh calls.
+
 ```python
 from pygame import Rect
-from gui_do import ButtonControl, create_display, GuiApplication, LabelControl
+from gui_do import (
+    ButtonControl, Feature, FeatureSpec, HostApplicationConfig,
+    LabelControl, ObservableValue, RuntimeSceneSpec,
+    SceneSetupSpec, bootstrap_host_application,
+)
+
+
+class ClickCounterFeature(Feature):
+    """Minimal data-driven feature: reactive counter driven by button clicks."""
+
+    def build(self, host) -> None:
+        self._count = ObservableValue(0)
+        self._label = host.scene.add(
+            LabelControl("status", Rect(20, 20, 220, 30), "Count: 0")
+        )
+        host.scene.add(ButtonControl(
+            "inc", Rect(20, 64, 120, 32), "+1",
+            on_click=lambda: self._count.__setattr__("value", self._count.value + 1),
+        ))
+
+    def bind_runtime(self, host) -> None:
+        self._count.subscribe(
+            lambda v: setattr(self._label, "text", f"Count: {v}")
+        )
+
+
+class MyApp:
+    pass
 
 
 def main() -> None:
-    surface = create_display((640, 480), fullscreen=False, vsync=False)
-    app = GuiApplication(surface)
-
-    status = app.scene.add(LabelControl("status", Rect(20, 20, 220, 30), "Ready"))
-
-    def on_click() -> None:
-        status.text = "Clicked"
-
-    app.scene.add(ButtonControl("go", Rect(20, 64, 120, 32), "Click", on_click=on_click))
-    app.run_entrypoint(target_fps=60)
+    host = MyApp()
+    config = HostApplicationConfig(
+        display_size=(640, 480),
+        window_title="Counter Demo",
+        fonts={},
+        font_role_specs=(),
+        cursors=(),
+        scene_specs=(
+            SceneSetupSpec(name="main", pretty_name="Main", make_initial=True),
+        ),
+        feature_specs=(
+            FeatureSpec(
+                attr_name="counter",
+                factory=lambda: ClickCounterFeature("counter"),
+            ),
+        ),
+        window_specs=(),
+        runtime_scene_specs=(
+            RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),
+        ),
+        action_specs=(),
+        static_accessibility_specs=(),
+        initial_scene_name="main",
+        target_fps=60,
+    )
+    bootstrap_host_application(host, config)
+    host.app.run_entrypoint(target_fps=config.target_fps)
 
 
 if __name__ == "__main__":
@@ -799,7 +868,7 @@ Rebuild via `index.build(scene)` on scene change or full layout reflow. Use `ind
 
 [Back to Top](#table-of-contents)
 
-All built-in controls are added to a scene or container with `parent.add(child)` and expose geometry, visibility, enable/disable, focus, and draw/update behavior through the public control classes exported at the package root.
+All built-in controls are added to a scene or container with `host.scene.add(child)` or `parent.add(child)` from inside `Feature.build(host)`. Every control class is exported at the package root. Controls expose geometry, visibility, enable/disable, focus, and draw/update behavior through their public API.
 
 ### Display and Container Controls
 

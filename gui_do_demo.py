@@ -1,4 +1,3 @@
-import pygame  # noqa: F401  (pygame must be initialised before gui_do imports)
 from gui_do import bootstrap_host_application
 
 from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
