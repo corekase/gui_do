@@ -323,8 +323,11 @@ class BuiltInGraphicsFactory:
     def build_window_chrome_visuals(self, width: int, titlebar_height: int, title: str, *, title_font_role: str = "title") -> WindowChromeVisuals:
         start = perf_counter()
         title_font = self.fonts.get_font(title_font_role)
-        font_based_height = max(18, title_font.get_linesize() + 8)
-        chrome_height = max(2, font_based_height)
+        font_based_height = max(14, title_font.get_linesize() + 8)
+        requested_height = max(2, int(titlebar_height))
+        # Respect caller-provided titlebar height so text centering aligns with
+        # the actual bar size, while still preventing glyph clipping.
+        chrome_height = max(requested_height, font_based_height)
 
         inactive = Surface((width, chrome_height)).convert()
         active = Surface((width, chrome_height)).convert()

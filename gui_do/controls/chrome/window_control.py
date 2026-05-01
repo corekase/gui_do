@@ -51,6 +51,8 @@ class _WindowContentHost(UiNode):
 
 class WindowControl(UiNode):
     presenter: Optional[object] = None
+    _TITLEBAR_MIN_HEIGHT = 14
+    _TITLEBAR_VERTICAL_PADDING = 8
 
     def set_presenter(self, presenter) -> None:
         """Attach a presenter/controller to this window."""
@@ -80,7 +82,7 @@ class WindowControl(UiNode):
     ) -> None:
         super().__init__(control_id, rect)
         self.title = title
-        self.titlebar_height = max(18, int(titlebar_height))
+        self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, int(titlebar_height))
         self.title_font_role = title_font_role
         self._active = False
         self.parent: Optional[UiNode] = None
@@ -199,6 +201,24 @@ class WindowControl(UiNode):
         if width == 0 or width > self.rect.width or lower_left > self.rect.right or lower_left <= self.rect.left:
             width = self.rect.width
         return Rect(self.rect.left, self.rect.top, width, self.titlebar_height)
+
+    def _fit_titlebar_height_to_font(self, theme: "ColorTheme") -> None:
+        """Keep titlebar height aligned to title font metrics for vertical centering."""
+        try:
+            font_instance = theme.fonts.font_instance(self.title_font_role)
+            line_height = int(font_instance.line_height)
+        except Exception:
+            return
+
+        fitted_height = max(
+            self._TITLEBAR_MIN_HEIGHT,
+            line_height + self._TITLEBAR_VERTICAL_PADDING,
+        )
+        if fitted_height == self.titlebar_height:
+            return
+        self.titlebar_height = fitted_height
+        self._sync_content_host_rect()
+        self._notify_presenter_resized()
 
     def content_rect(self) -> Rect:
         return Rect(
@@ -358,6 +378,7 @@ class WindowControl(UiNode):
 
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         self._sync_content_host_rect()
+        self._fit_titlebar_height_to_font(theme)
         factory = theme.graphics_factory
         font_revision = factory.font_revision()
         if not self.restore_pristine(surface):
@@ -373,7 +394,7 @@ class WindowControl(UiNode):
             )
             old_titlebar_height = self.titlebar_height
             chrome_height = self._chrome.title_bar_active.get_height()
-            self.titlebar_height = max(18, chrome_height)
+            self.titlebar_height = max(self._TITLEBAR_MIN_HEIGHT, chrome_height)
             if self.titlebar_height != old_titlebar_height:
                 self._sync_content_host_rect()
                 self._notify_presenter_resized()

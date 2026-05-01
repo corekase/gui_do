@@ -41,16 +41,14 @@ class GuiDoDemo:
         # Create the font role registry ONCE and register all roles BEFORE creating the app
         self.font_roles = FontRoleRegistry()
         fonts = {
-            "default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 16},  # Fallback for undefined roles
-            "window": "demo_features/data/fonts/Ubuntu-B.ttf",  # All window titles
-            "main_label": "demo_features/data/fonts/Ubuntu-B.ttf",  # Main screen label (large)
+            "default": {"file": "demo_features/data/fonts/Ubuntu-B.ttf", "size": 16},  # Fallback for undefined roles
+            "window": "demo_features/data/fonts/Gimbot.ttf",  # All window titles
         }
         setup_standard_font_roles(
             self.font_roles,
             fonts,
             {
-                # Main screen label (large font)
-                "screen.main.title": {"font": "main_label", "size": 36},
+                "title": {"size": 14, "font": "window"},
             },
         )
         # Pass the font role registry to the application so it is used globally

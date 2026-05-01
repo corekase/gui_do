@@ -718,9 +718,12 @@ def create_anchored_feature_window(
     """Create and attach a window anchored by layout.anchored to the host root."""
     window_rect = host.app.layout.anchored(size, anchor=anchor, margin=margin, use_rect=True)
     kwargs: Dict[str, Any] = {
-        "title_font_role": title_font_role,
         "use_frame_backdrop": bool(use_frame_backdrop),
     }
+    if title_font_role is not None:
+        resolved_title_role = str(title_font_role).strip()
+        if resolved_title_role:
+            kwargs["title_font_role"] = resolved_title_role
     window = window_control_cls(
         str(control_id),
         window_rect,

@@ -15,6 +15,25 @@ class _StubApp:
         self.lock_point_pos = None
 
 
+class _StubFontInstance:
+    def __init__(self, line_height: int):
+        self.line_height = int(line_height)
+
+
+class _StubFonts:
+    def __init__(self, line_height: int):
+        self._line_height = int(line_height)
+
+    def font_instance(self, role_name: str):
+        _ = role_name
+        return _StubFontInstance(self._line_height)
+
+
+class _StubTheme:
+    def __init__(self, line_height: int):
+        self.fonts = _StubFonts(line_height)
+
+
 class _TrackingNode(UiNode):
     def __init__(self, control_id: str, rect: Rect):
         super().__init__(control_id, rect)
@@ -150,6 +169,22 @@ class TestWindowLifecyclePresenter(unittest.TestCase):
 
         self.assertTrue(consumed)
         self.assertEqual(1, presenter.handled_events)
+
+    def test_titlebar_height_fits_to_title_font_height_plus_padding(self):
+        window = WindowControl("w", Rect(0, 0, 220, 160), "Window", titlebar_height=24)
+        theme = _StubTheme(line_height=30)
+
+        window._fit_titlebar_height_to_font(theme)
+
+        self.assertEqual(38, window.titlebar_height)
+
+    def test_titlebar_height_respects_minimum_floor_when_font_is_small(self):
+        window = WindowControl("w", Rect(0, 0, 220, 160), "Window", titlebar_height=24)
+        theme = _StubTheme(line_height=6)
+
+        window._fit_titlebar_height_to_font(theme)
+
+        self.assertEqual(14, window.titlebar_height)
 
 
 if __name__ == "__main__":
