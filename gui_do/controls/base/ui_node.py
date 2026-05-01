@@ -1,5 +1,6 @@
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
+from collections import deque
 
 from pygame import Rect
 
@@ -153,11 +154,10 @@ class UiNode:
 
     def find_descendant(self, control_id: str) -> "Optional[UiNode]":
         """Return the first descendant (BFS) whose ``control_id`` matches, or ``None``."""
-        queue = list(self.children)
-        i = 0
-        while i < len(queue):
-            candidate = queue[i]
-            i += 1
+        # Use deque for O(1) popleft instead of list with index scanning
+        queue = deque(self.children)
+        while queue:
+            candidate = queue.popleft()
             if candidate.control_id == control_id:
                 return candidate
             if candidate.children:
@@ -167,11 +167,9 @@ class UiNode:
     def find_descendants(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
         """Return all descendants (BFS) that satisfy *predicate*."""
         result: List[UiNode] = []
-        queue = list(self.children)
-        i = 0
-        while i < len(queue):
-            candidate = queue[i]
-            i += 1
+        queue = deque(self.children)
+        while queue:
+            candidate = queue.popleft()
             if predicate(candidate):
                 result.append(candidate)
             if candidate.children:

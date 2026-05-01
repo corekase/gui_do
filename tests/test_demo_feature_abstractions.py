@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 from pygame import Rect
 
-from demo_features.feature_abstractions import (
+from gui_do.features.data_driven_runtime import (
     AccessibilitySequenceSpec,
     AnchoredWindowSpec,
     LogicBindingSpec,

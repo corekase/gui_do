@@ -73,7 +73,7 @@ from gui_do import (
     TreeNode,
     ui_property,
 )
-from demo_features.feature_abstractions import add_standard_scene_menu_strip
+from gui_do.features.data_driven_runtime import add_standard_scene_menu_strip
 
 
 class _ShowcaseInspectable:

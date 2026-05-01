@@ -101,7 +101,7 @@ class DirtyRegionTracker:
             return self._full_dirty_rect
         if not self._dirty:
             return None
-        union = self._dirty[0].copy()
+        union = Rect(self._dirty[0])
         for r in self._dirty[1:]:
             union.union_ip(r)
         return union
@@ -115,7 +115,7 @@ class DirtyRegionTracker:
         """Union a list of rects. Returns None for empty list."""
         if not rects:
             return None
-        result = rects[0].copy()
+        result = Rect(rects[0])
         for r in rects[1:]:
             result.union_ip(r)
         return result

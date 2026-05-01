@@ -12,9 +12,16 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
+- [Tutorial](#tutorial)
+  - [Getting Started: First Scene](#getting-started-first-scene)
+  - [Observable Data and Reactive Bindings](#observable-data-and-reactive-bindings)
+  - [Organizing Code with the Feature System](#organizing-code-with-the-feature-system)
+  - [Pure Graphics with DirectFeature](#pure-graphics-with-directfeature)
+  - [LogicFeature and RoutedFeature](#logicfeature-and-routedfeature)
+  - [Feature Communication: Logic Binding](#feature-communication-logic-binding)
+  - [Data-Driven Bootstrap](#data-driven-bootstrap)
 - [Overview](#overview)
-- [Minimal Runnable Example](#minimal-runnable-example)
+- [Minimal Runnable Example and Configuration](#minimal-runnable-example-and-configuration)
 - [Package Management](#package-management)
   - Start a New Project
   - Add to or Update an Existing Project
@@ -158,25 +165,411 @@ gui_do is a pygame GUI toolkit for building scene-driven desktop applications wi
 
 ---
 
-## Quick Start
+## Tutorial
 
 [Back to Top](#table-of-contents)
 
-```bash
-pip install -e .
-```
+gui_do is built around two intertwined paradigms: **data-driven reactive UI** and **feature composition**. Controls subscribe to observable data sources so the interface stays in sync automatically, while features bundle controls, logic, and lifecycle hooks into reusable modules. Both paradigms are designed so that gui_do handles the wiring and plumbing, leaving you free to focus on application-specific behavior.
 
-gui_do is not published to PyPI. Install it from a local clone with the command above, or see the [Package Management](#package-management) section for project bootstrap and update workflows.
+### Getting Started: First Scene
+
+Every gui_do application needs a display surface, a `GuiApplication`, and at least one scene. `create_display` calls `pygame.init()` internally so no separate initialization is needed. `run_entrypoint` drives the main loop until the window is closed.
 
 ```python
 from pygame import Rect
 from gui_do import create_display, GuiApplication, LabelControl
 
-surface = create_display((800, 600))
+surface = create_display((800, 600), fullscreen=False)
 app = GuiApplication(surface)
-app.scene.add(LabelControl("hello", Rect(24, 24, 280, 32), "Hello, gui_do"))
+app.scene.add(LabelControl("title", Rect(20, 20, 300, 32), "My First App"))
 app.run_entrypoint(target_fps=60)
 ```
+
+**Adding interaction.** Attach `on_click` to a `ButtonControl`. The callback mutates a control's attribute directly — the simplest form of UI update:
+
+```python
+from pygame import Rect
+from gui_do import ButtonControl, LabelControl, create_display, GuiApplication
+
+surface = create_display((800, 600), fullscreen=False)
+app = GuiApplication(surface)
+
+status = app.scene.add(LabelControl("status", Rect(20, 20, 300, 28), "Waiting…"))
+
+def on_click() -> None:
+    status.text = "Button clicked!"
+
+app.scene.add(ButtonControl("go", Rect(20, 60, 120, 32), "Go", on_click=on_click))
+app.run_entrypoint(target_fps=60)
+```
+
+Every control is placed with a `Rect`. Controls added to `app.scene` become top-level nodes. Controls added to a container (`PanelControl`, `WindowControl`, etc.) become its children via `parent.add(child)`.
+
+**Multiple scenes.** Create and switch named scenes to support multi-view applications. Each scene is fully isolated — it has its own scheduler, timers, tween manager, and services:
+
+```python
+app.create_scene("main")
+app.create_scene("settings")
+
+# Build controls into specific scenes:
+app.add(LabelControl("title", Rect(20, 20, 200, 28), "Main"), scene_name="main")
+app.add(LabelControl("title", Rect(20, 20, 200, 28), "Settings"), scene_name="settings")
+
+# Switch at runtime:
+app.switch_scene("settings")
+```
+
+### Observable Data and Reactive Bindings
+
+Hard-coding attribute updates in callbacks works for trivial cases but becomes unwieldy as state grows. gui_do provides an **observable** layer so that UI controls react to data changes automatically — no polling, no manual refresh calls.
+
+**ObservableValue** is the basic reactive cell. Subscribe a callback to receive every new value:
+
+```python
+from gui_do import ObservableValue
+
+counter = ObservableValue(0)
+counter.subscribe(lambda value: print(f"Count: {value}"))
+counter.value = 1   # prints "Count: 1"
+counter.value = 2   # prints "Count: 2"
+```
+
+Wire an `ObservableValue` to a control attribute so the control updates itself when the value changes:
+
+```python
+from pygame import Rect
+from gui_do import (
+    Binding, ButtonControl, LabelControl, ObservableValue,
+    create_display, GuiApplication,
+)
+
+surface = create_display((800, 600), fullscreen=False)
+app = GuiApplication(surface)
+
+count = ObservableValue(0)
+label = app.scene.add(LabelControl("count", Rect(20, 20, 200, 28), "Count: 0"))
+
+# One-way binding: count → label.text (with optional value converter)
+b = Binding(count, label, "text", mode="one_way", to_control=lambda v: f"Count: {v}")
+
+app.scene.add(ButtonControl(
+    "inc", Rect(20, 60, 120, 32), "+1",
+    on_click=lambda: count.__setattr__("value", count.value + 1),
+))
+count.value = 0   # fire binding to set initial label text
+app.run_entrypoint(target_fps=60)
+```
+
+**Two-way binding** propagates changes in both directions — model to control and control back to model. Provide `control_change_signal` (or `on_change`) so the binding can listen for control-side mutations:
+
+```python
+from gui_do import Binding, ObservableValue, SliderControl, LayoutAxis
+from pygame import Rect
+
+zoom = ObservableValue(1.0)
+slider = SliderControl(
+    "zoom", Rect(20, 20, 240, 24),
+    LayoutAxis.HORIZONTAL, 0.5, 4.0, 1.0,
+    on_change=lambda v, _reason: zoom.__setattr__("value", v),
+)
+
+# Two-way: zoom ↔ slider.value
+b = Binding(zoom, slider, "value", mode="two_way", control_change_signal="on_change")
+```
+
+**ComputedValue** derives a read-only reactive value from one or more other observables. It recalculates whenever any dependency changes:
+
+```python
+from gui_do import ComputedValue, ObservableValue
+
+width  = ObservableValue(640)
+height = ObservableValue(480)
+area   = ComputedValue(lambda: width.value * height.value, deps=[width, height])
+
+area.subscribe(lambda v: print(f"Area: {v}px²"))
+width.value = 1280   # prints "Area: 614400px²"
+```
+
+**ObservableList** and **ObservableDict** fire change notifications on every mutation. Subscribe data controls to them so they refresh only when the source changes rather than on every frame:
+
+```python
+from gui_do import ListItem, ListViewControl, ObservableList
+from pygame import Rect
+
+items = ObservableList([ListItem("Alpha"), ListItem("Beta")])
+list_view = ListViewControl("list", Rect(20, 20, 220, 150))
+
+# Refresh the list view whenever the source mutates:
+items.subscribe(lambda change: list_view.set_items(items.snapshot()))
+
+items.append(ListItem("Gamma"))   # triggers refresh automatically
+items.remove_at(0)                # removes "Alpha" and triggers refresh
+```
+
+**BindingGroup** collects multiple bindings and disposes them together, making feature teardown clean:
+
+```python
+from gui_do import Binding, BindingGroup, ObservableValue
+
+group = BindingGroup()
+group.add(Binding(zoom_model, slider, "value"))
+group.add(Binding(label_text_model, label, "text"))
+
+# Later, on teardown:
+group.dispose()
+```
+
+### Organizing Code with the Feature System
+
+As applications grow, packing controls, actions, subscriptions, and event handling into a single `main()` function becomes impractical. The **Feature** system groups all of that into lifecycle-aware, reusable modules that `FeatureManager` drives automatically.
+
+A `Feature` has four primary lifecycle hooks:
+
+| Hook | When it is called |
+|---|---|
+| `build(host)` | Scene is being constructed — create and add controls here |
+| `bind_runtime(host)` | After all features are built — wire cross-feature bindings and subscriptions |
+| `configure_accessibility(host, tab_start)` | Set tab order and accessibility metadata |
+| `handle_event(host, event)` | Per-event — return `True` to consume the event |
+
+```python
+from pygame import Rect
+from gui_do import (
+    ButtonControl, Feature, LabelControl, ObservableValue,
+    create_display, GuiApplication,
+)
+
+class CounterFeature(Feature):
+    def build(self, host) -> None:
+        self.count = ObservableValue(0)
+        self.label = host.scene.add(
+            LabelControl("counter_label", Rect(20, 20, 200, 28), "Count: 0")
+        )
+        host.scene.add(ButtonControl(
+            "inc", Rect(20, 60, 120, 32), "+1",
+            on_click=lambda: self.count.__setattr__("value", self.count.value + 1),
+        ))
+
+    def bind_runtime(self, host) -> None:
+        self.count.subscribe(lambda v: setattr(self.label, "text", f"Count: {v}"))
+
+surface = create_display((800, 600), fullscreen=False)
+app = GuiApplication(surface)
+app.features.register(CounterFeature("counter"), host=app)
+app.features.build_features(app)
+app.features.bind_runtime(app)
+app.run_entrypoint(target_fps=60)
+```
+
+`Feature.name` is the unique identifier used for message routing and logic binding. Features add their controls to `host.scene` or to a named scene via `host.app.add(..., scene_name="...")`. The `FeatureManager` (available as `app.features`) drives all registered features through each lifecycle phase in registration order.
+
+**Window-centric features.** A feature can own a floating `WindowControl` and manage its visibility through actions or task-panel buttons. `create_anchored_feature_window` builds and registers the window in one call:
+
+```python
+from gui_do import Feature, create_anchored_feature_window, LabelControl
+from pygame import Rect
+
+class ToolWindowFeature(Feature):
+    def build(self, host) -> None:
+        self.window = create_anchored_feature_window(
+            host, size=(300, 200), title="Tool", anchor="center",
+        )
+        self.window.add(LabelControl("hint", Rect(12, 12, 260, 24), "Tool content here"))
+```
+
+### Pure Graphics with DirectFeature
+
+`DirectFeature` is a specialized feature subtype for content that **draws directly onto the display surface before GUI controls are composited on top**. Use it for:
+
+- Custom visualizations (plots, graphs, waveforms, maps)
+- Simulation renderers (physics, cellular automata, particle fields)
+- Canvas-style editors where the primary content is fully custom-drawn
+- Any case where the standard controls are a thin overlay on top of direct rendering
+
+A `DirectFeature` adds three hooks beyond the base `Feature` hooks:
+
+| Hook | When it is called |
+|---|---|
+| `handle_direct_event(host, event)` | Per-event during the direct event pass, before controls |
+| `on_direct_update(host, dt_seconds)` | Per-frame for direct content simulation/state |
+| `draw_direct(host, surface, theme)` | Draw to the pristine surface **before** the GUI overlay |
+
+The `surface` passed to `draw_direct` is the **pristine** display surface — cleared to the background color and ready for direct rendering. The GUI control tree (buttons, labels, overlays) is composited on top afterward automatically.
+
+```python
+import math
+import pygame
+from pygame import Rect
+from gui_do import (
+    DirectFeature, LabelControl, LayoutAxis, ObservableValue,
+    SliderControl, create_display, GuiApplication,
+)
+
+class WaveformFeature(DirectFeature):
+    """Draws a live sine wave directly to the screen; GUI controls overlay on top."""
+
+    def build(self, host) -> None:
+        self.amplitude = ObservableValue(80.0)
+        self._phase = 0.0
+
+        # These controls appear on top of the direct drawing:
+        host.scene.add(SliderControl(
+            "amp", Rect(20, 20, 200, 24),
+            LayoutAxis.HORIZONTAL, 10.0, 200.0, 80.0,
+            on_change=lambda v, _r: self.amplitude.__setattr__("value", v),
+        ))
+        host.scene.add(LabelControl("amp_label", Rect(230, 20, 100, 24), "Amplitude"))
+
+    def on_direct_update(self, host, dt_seconds: float) -> None:
+        self._phase += dt_seconds * 2.0 * math.tau
+
+    def draw_direct(self, host, surface, theme) -> None:
+        w, h = surface.get_size()
+        cy = h // 2
+        amp = self.amplitude.value
+        points = [
+            (px, cy + int(math.sin((px / w) * math.tau + self._phase) * amp))
+            for px in range(w)
+        ]
+        if len(points) > 1:
+            pygame.draw.lines(surface, (80, 200, 120), False, points, 2)
+
+surface = create_display((800, 600), fullscreen=False)
+app = GuiApplication(surface)
+app.features.register(WaveformFeature("waveform"), host=app)
+app.features.build_features(app)
+app.features.bind_runtime(app)
+app.run_entrypoint(target_fps=60)
+```
+
+`DrawContext` and `DrawPhase` are available for more structured draw organization when you need to separate background, foreground, and overlay drawing passes inside the same feature or control. For complex direct-drawing pipelines, `SurfaceCompositor` provides named Z-ordered layers that compose onto the screen each frame.
+
+### LogicFeature and RoutedFeature
+
+**LogicFeature** provides a pure command endpoint pattern: other features send messages with a `command` key; the logic feature receives and handles them. This decouples producers from consumers so neither needs to import the other.
+
+```python
+from gui_do import FeatureMessage, LogicFeature
+
+class CalculatorLogic(LogicFeature):
+    def on_logic_command(self, host, message: FeatureMessage) -> None:
+        if message.command == "add":
+            a = message.data.get("a", 0)
+            b = message.data.get("b", 0)
+            message.reply({"result": a + b})
+```
+
+Call it from another feature's `build` or `bind_runtime`:
+
+```python
+# Inside another Feature method:
+self.send_logic_message("calculator", "add", {"a": 10, "b": 32})
+```
+
+**RoutedFeature** routes incoming messages by their `topic` string using a dispatch table, avoiding a large if-chain in a generic message handler:
+
+```python
+from gui_do import FeatureMessage, RoutedFeature
+
+class EventLogger(RoutedFeature):
+    def message_handlers(self):
+        return {
+            "user.login":  self._on_login,
+            "user.logout": self._on_logout,
+        }
+
+    def _on_login(self, host, message: FeatureMessage) -> None:
+        print("Logged in:", message.data.get("user_id"))
+
+    def _on_logout(self, host, message: FeatureMessage) -> None:
+        print("Logged out")
+```
+
+Send a routed message from any other feature using `topic=`:
+
+```python
+self.send_message("event_logger", host, data={"user_id": 42}, topic="user.login")
+```
+
+### Feature Communication: Logic Binding
+
+Logic binding lets a feature advertise a service interface under an alias so callers reference the alias instead of the concrete feature name. Swap the implementation without changing any callers.
+
+```python
+# In the caller feature's bind_runtime:
+self.bind_logic("data_store_v2", alias="storage")
+
+# Call through the alias anywhere in the same feature:
+self.send_logic_message("storage", "save", {"key": "settings", "value": config})
+```
+
+`bind_logic(provider_name, alias)` is stored in `FeatureManager`. All messages to the alias are forwarded to the concrete provider. When you replace the provider later, update one binding — all callers remain unchanged.
+
+### Data-Driven Bootstrap
+
+For multi-scene applications with many features, windows, and actions, the declarative **`HostApplicationConfig`** approach eliminates most boilerplate. Define your entire application structure as data, then call `bootstrap_host_application`:
+
+```python
+from gui_do import (
+    ActionSpec, FeatureSpec, HostApplicationConfig, RuntimeSceneSpec,
+    SceneSetupSpec, bootstrap_host_application,
+)
+
+class MyApp:
+    pass
+
+host = MyApp()
+
+config = HostApplicationConfig(
+    display_size=(1280, 720),
+    window_title="My App",
+    fonts={},
+    font_role_specs=(),
+    cursors=(),
+    scene_specs=(
+        SceneSetupSpec(name="main",     pretty_name="Main",     make_initial=True),
+        SceneSetupSpec(name="settings", pretty_name="Settings"),
+    ),
+    feature_specs=(
+        FeatureSpec(attr_name="counter",  factory=lambda: CounterFeature("counter")),
+        FeatureSpec(attr_name="waveform", factory=lambda: WaveformFeature("waveform")),
+    ),
+    window_specs=(),
+    runtime_scene_specs=(
+        RuntimeSceneSpec(scene_name="main",     bind_escape_to_exit=True),
+        RuntimeSceneSpec(scene_name="settings"),
+    ),
+    action_specs=(
+        ActionSpec(action_id="app.exit",    label="Exit",     kind="exit"),
+        ActionSpec(action_id="go.settings", label="Settings", kind="scene_nav", target="settings"),
+    ),
+    static_accessibility_specs=(),
+    initial_scene_name="main",
+    target_fps=120,
+)
+
+bootstrap_host_application(host, config)
+# host.app, host.screen, host.scene_transitions, and host.action_registry
+# are all configured; features are registered and built automatically.
+host.app.run_entrypoint(target_fps=config.target_fps)
+```
+
+`bootstrap_host_application` sets the following attributes on the host object as side-effects:
+
+| Attribute | Content |
+|---|---|
+| `host.screen` | Pygame display surface |
+| `host.screen_rect` | Rect covering the full display |
+| `host.app` | `GuiApplication` instance |
+| `host.scene_transitions` | `SceneTransitionManager` with fade default |
+| `host.scene_presentation` | `ScenePresentationModel` for scene root management |
+| `host.window_presentation` | `FeatureWindowPresentationModel` for window bindings |
+| `host.action_registry` | `ActionRegistry` with declared actions |
+| `host._palette_manager` | `CommandPaletteManager` (wired to scene/window entries) |
+| `host.go_to_{scene_name}` | Convenience navigation callable per scene |
+| `host.{attr_name}` | One attribute per `FeatureSpec.attr_name` |
+
+This data-driven approach is the pattern used by the bundled demo application and is recommended for any application with more than two or three scenes. Declaring structure as data rather than procedural code makes it straightforward to add scenes, swap features, or change action bindings without touching multiple call sites.
 
 ---
 
@@ -206,7 +599,7 @@ app.run_entrypoint(target_fps=60)
 
 ---
 
-## Minimal Runnable Example
+## Minimal Runnable Example and Configuration
 
 [Back to Top](#table-of-contents)
 
@@ -3208,6 +3601,9 @@ The following list is the complete public package export surface from `gui_do.__
 - `WindowRelativeRect`
 - `FrameTimer`
 - `PlacedControl`
+- `ScenePresentationModel`
+- `SceneSetupSpec`
+- `apply_scene_setup_specs`
 - `resolve_scene_selection_callback`
 - `minimize_window_menu_entries`
 - `set_window_visible_state`
@@ -3224,6 +3620,71 @@ The following list is the complete public package export surface from `gui_do.__
 - `add_group_label`
 - `setup_standard_font_roles`
 - `register_standard_actions`
+- `FeatureSpec`
+- `WindowSpec`
+- `RuntimeSceneSpec`
+- `ActionSpec`
+- `StaticAccessibilitySpec`
+- `CursorSpec`
+- `SceneRootSpec`
+- `AnchoredWindowSpec`
+- `LogicBindingSpec`
+- `TaskPanelButtonSpec`
+- `AccessibilitySequenceSpec`
+- `TabBuilderSpec`
+- `ActiveTabUpdateRouter`
+- `TabLayoutContext`
+- `TelemetryConfig`
+- `HostApplicationConfig`
+- `bootstrap_host_application`
+- `declare_host_actions`
+- `build_host_main_tab_order`
+- `apply_host_main_accessibility`
+- `build_tools_menu_entries`
+- `add_standard_scene_menu_strip`
+- `apply_accessibility_sequence`
+- `apply_accessibility_sequence_from_attrs`
+- `register_companion_logic_features`
+- `ensure_scene_scheduler`
+- `sorted_window_bindings`
+- `collect_window_toggle_controls`
+- `apply_window_toggle_accessibility`
+- `add_window_toggle_task_panel_controls`
+- `register_window_toggle_tooltips`
+- `initialize_locale_registry`
+- `bind_input_map_actions`
+- `register_descriptors`
+- `resolve_canvas_local_point`
+- `apply_runtime_scene_pristine_assets`
+- `bind_runtime_scene_exit_keys`
+- `prewarm_runtime_scenes`
+- `add_task_panel_button`
+- `add_task_panel_buttons`
+- `register_tooltip_specs`
+- `add_window_control`
+- `add_window_label`
+- `add_window_button`
+- `add_window_button_row`
+- `make_window_toggle_spec`
+- `make_scene_nav_action`
+- `make_exit_action`
+- `make_palette_open_action`
+- `make_static_accessibility_spec`
+- `instantiate_features_from_specs`
+- `register_features_from_specs`
+- `register_window_presentation_specs`
+- `register_window_tab_builders`
+- `build_tab_builder_specs`
+- `create_tab_control_from_specs`
+- `compute_tabbed_window_layout`
+- `register_window_tab_builder_specs`
+- `setup_feature_presenter_tabs`
+- `register_tab_update_handlers`
+- `create_presented_anchored_window`
+- `create_presented_window_from_spec`
+- `create_feature_presented_window`
+- `bind_feature_logic_aliases`
+- `setup_routed_feature_runtime`
 
 ### Theme and Graphics
 

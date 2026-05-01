@@ -83,7 +83,7 @@ from gui_do import (
 )
 from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
-from demo_features.feature_abstractions import (
+from gui_do.features.data_driven_runtime import (
     ActiveTabUpdateRouter,
     bind_input_map_actions,
     AnchoredWindowSpec,

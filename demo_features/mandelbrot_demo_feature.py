@@ -25,7 +25,7 @@ from gui_do import (
     WindowControl,
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
-from demo_features.feature_abstractions import (
+from gui_do.features.data_driven_runtime import (
     apply_accessibility_sequence,
     AnchoredWindowSpec,
     LogicBindingSpec,

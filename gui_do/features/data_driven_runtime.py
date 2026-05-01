@@ -297,7 +297,7 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
         host.app,
         on_scene_selected=host.scene_transitions.go,
     )
-    _declare_host_actions(host, config.action_specs)
+    declare_host_actions(host, config.action_specs)
 
     # 13 – Build features, sync visibility, pristine assets, standard actions
     host.app.build_features(host)
@@ -321,8 +321,8 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
 
     # 14 – Tab order + accessibility
     window_toggle_controls = collect_window_toggle_controls(host, host.window_presentation)
-    base_controls = _build_host_main_tab_order(host, window_toggle_controls)
-    _apply_host_main_accessibility(host, base_controls, config.static_accessibility_specs)
+    base_controls = build_host_main_tab_order(host, window_toggle_controls)
+    apply_host_main_accessibility(host, base_controls, config.static_accessibility_specs)
     host.app.configure_features_accessibility(host, len(base_controls))
 
     # 15 – Switch to initial scene
@@ -339,10 +339,6 @@ def declare_host_actions(host, action_specs) -> None:
         else:
             r.declare(spec.action_id, spec.label, handler, category=spec.category)
     host.window_presentation.declare_actions(r, category="Windows")
-
-
-# Keep private alias for internal bootstrap use
-_declare_host_actions = declare_host_actions
 
 
 def _build_standard_action_handler(host, spec):
@@ -370,10 +366,6 @@ def build_host_main_tab_order(host, window_toggle_controls) -> list:
     return base_controls
 
 
-# Keep private alias for internal bootstrap use
-_build_host_main_tab_order = build_host_main_tab_order
-
-
 def apply_host_main_accessibility(host, base_controls, static_accessibility_specs) -> None:
     """Apply static and dynamic accessibility metadata after build_features."""
     for spec in static_accessibility_specs:
@@ -382,10 +374,6 @@ def apply_host_main_accessibility(host, base_controls, static_accessibility_spec
             continue
         control.set_accessibility(role=spec.role, label=spec.label)
     apply_window_toggle_accessibility(host, host.window_presentation, role="toggle")
-
-
-# Keep private alias for internal bootstrap use
-_apply_host_main_accessibility = apply_host_main_accessibility
 
 
 def build_tools_menu_entries(host, *, exclude_labels: Iterable[str] = ()) -> list[MenuEntry]:

@@ -53,11 +53,11 @@ class InvalidationTracker:
         if not self._dirty_rects:
             return []
         rects = sorted(self._dirty_rects, key=lambda r: (r.y, r.x))
-        merged: List = [rects[0].copy()]
+        merged: List = [PygameRect(rects[0])]
         for r in rects[1:]:
             last = merged[-1]
             if last.colliderect(r):
                 merged[-1] = last.union(r)
             else:
-                merged.append(r.copy())
+                merged.append(PygameRect(r))
         return merged
