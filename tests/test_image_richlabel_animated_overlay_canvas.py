@@ -40,6 +40,11 @@ def _make_animation(fps=12, frames=(0,)):
 
 
 class TestImageControlInitial(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
     def test_scale_true_by_default(self):
         surf = _surface()
         ic = ImageControl("ic", Rect(0, 0, 100, 100), surf)
@@ -68,6 +73,11 @@ class TestImageControlInitial(unittest.TestCase):
 
 
 class TestImageControlSetImage(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
     def test_set_image_replaces_base(self):
         surf1 = _surface(64, 64)
         surf2 = _surface(32, 32)
@@ -302,6 +312,11 @@ class TestCanvasEventPacket(unittest.TestCase):
 
 
 class TestCanvasControlInitial(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
     def test_canvas_surface_created(self):
         cc = CanvasControl("cc", Rect(0, 0, 200, 150))
         self.assertIsNotNone(cc.canvas)
@@ -332,6 +347,11 @@ class TestCanvasControlInitial(unittest.TestCase):
 
 
 class TestCanvasControlEventQueue(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+
     def test_set_overflow_mode_valid(self):
         cc = CanvasControl("cc", Rect(0, 0, 200, 150))
         cc.set_overflow_mode("drop_newest")
