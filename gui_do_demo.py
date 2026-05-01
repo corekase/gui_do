@@ -51,10 +51,6 @@ class GuiDoDemo:
             {
                 # Main screen label (large font)
                 "screen.main.title": {"font": "main_label", "size": 36},
-                # All window titles use the window font
-                "life.window_title": {"font": "window", "size": 14},
-                "mandelbrot.window_title": {"font": "window", "size": 14},
-                "system.window_title": {"font": "window", "size": 14},
             },
         )
         # Pass the font role registry to the application so it is used globally

@@ -161,12 +161,6 @@ class LifeSimulationFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Life feature UI using the new presenter/controller pattern."""
-        self.use_font_roles(
-            {
-                "window_title": "life.window_title",
-                "control": "life.control",
-            }
-        )
         self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
@@ -175,7 +169,6 @@ class LifeSimulationFeature(RoutedFeature):
             size=_LIFE_WINDOW_SIZE,
             anchor="top_right",
             margin=(28, 92),
-            title_font_role=self.font_role("window_title"),
             use_frame_backdrop=True,
         )
         presenter = _LifeWindowPresenter(self, host)
@@ -367,13 +360,13 @@ class _LifeWindowPresenter(WindowPresenter):
         life_reset_rect, life_toggle_rect, zoom_slider_slot_1, zoom_slider_slot_2 = slots
 
         self.reset_button = ButtonControl(
-            "life_reset", life_reset_rect, "Reset", self.feature.life_reset, style="angle", font_role=self.feature.font_role("control")
+            "life_reset", life_reset_rect, "Reset", self.feature.life_reset, style="angle"
         )
         self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
         self.toggle = ToggleControl(
-            "life_toggle", life_toggle_rect, "Stop", "Start", pushed=False, style="round", font_role=self.feature.font_role("control"),
+            "life_toggle", life_toggle_rect, "Stop", "Start", pushed=False, style="round",
         )
         self.add_control(self.toggle)
         self.feature.toggle = self.toggle

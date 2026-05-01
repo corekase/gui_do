@@ -81,10 +81,7 @@ class MainDemoFeature(Feature):
         "build": (
             "app",
             "screen_rect",
-            "font_roles",
             "ensure_scene_task_panel",
-            "TASK_PANEL_CONTROL_FONT_ROLE",
-            "SCREEN_TITLE_FONT_ROLE",
             "go_to_main",
             "go_to_control_showcase",
             "set_life_window_visible",
@@ -100,8 +97,6 @@ class MainDemoFeature(Feature):
         self._help_overlay: ShortcutHelpOverlay | None = None
 
     def build(self, host) -> None:
-        self._register_screen_font_roles(host)
-
         host.root = host.app.add(
             PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height), draw_background=False),
             scene_name="main",
@@ -164,7 +159,6 @@ class MainDemoFeature(Feature):
                 "Exit",
                 lambda: setattr(host.app, "running", False),
                 style="angle",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         host.systems_toggle_window = host.task_panel.add(
@@ -176,7 +170,6 @@ class MainDemoFeature(Feature):
                 pushed=False,
                 on_toggle=_on_systems_toggle,
                 style="angle",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         host.showcase_button = host.task_panel.add(
@@ -186,7 +179,6 @@ class MainDemoFeature(Feature):
                 "Showcase",
                 host.go_to_control_showcase,
                 style="angle",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         host.life_toggle_window = host.task_panel.add(
@@ -198,7 +190,6 @@ class MainDemoFeature(Feature):
                 pushed=False,
                 on_toggle=_on_life_toggle,
                 style="round",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         host.mandel_toggle_window = host.task_panel.add(
@@ -210,7 +201,6 @@ class MainDemoFeature(Feature):
                 pushed=False,
                 on_toggle=_on_mandel_toggle,
                 style="round",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
         host.help_button = host.task_panel.add(
@@ -220,7 +210,6 @@ class MainDemoFeature(Feature):
                 "Help (F9)",
                 lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
                 style="angle",
-                font_role=host.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
 
@@ -253,10 +242,6 @@ class MainDemoFeature(Feature):
         )
         host.app.actions.bind_key(__import__("pygame").K_F9, "show_help", scene="main")
 
-    def _register_screen_font_roles(self, host) -> None:
-        for scene_name in ("main", "control_showcase"):
-            host.font_roles.apply(host.app, scene_name=scene_name)
-
     def _make_sized_title_label(
         self,
         host,
@@ -270,7 +255,6 @@ class MainDemoFeature(Feature):
         label = host.app.style_label(
             LabelControl(control_id, Rect(left, top, int(fallback_size[0]), int(fallback_size[1])), text),
             size=64,
-            role=host.SCREEN_TITLE_FONT_ROLE,
         )
         # Use the per-scene FontManager, not the global FontRoleRegistry
         scene_runtime = host.app._scenes[host.app.active_scene_name]

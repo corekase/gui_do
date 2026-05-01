@@ -141,7 +141,6 @@ class SystemsDemoFeature(RoutedFeature):
             "app",
             "root",
             "ensure_scene_task_panel",
-            "TASK_PANEL_CONTROL_FONT_ROLE",
         ),
         "bind_runtime": (
             "app",
@@ -252,13 +251,6 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
-        self.use_font_roles(
-            {
-                "window_title": "system.window_title",
-                "control": "system.control",
-                "label": "system.label",
-            }
-        )
         self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
@@ -267,7 +259,6 @@ class SystemsDemoFeature(RoutedFeature):
             size=(820, 590),
             anchor="top_left",
             margin=(24, 92),
-            title_font_role=self.font_role("window_title"),
             use_frame_backdrop=True,
         )
         presenter = _SystemsWindowPresenter(self, host)
@@ -405,14 +396,12 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info_lbl.font_role = self.font_role("label")
         controls.append(info_lbl)
         y += 28
 
         filter_lbl = self.window.add(
             LabelControl("nsdf_filter_lbl", Rect(x, y, 60, 26), "Filter:", align="left")
         )
-        filter_lbl.font_role = self.font_role("label")
         controls.append(filter_lbl)
 
         filter_input = self.window.add(
@@ -421,7 +410,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 68, y, 200, 28),
                 placeholder="type prefix...",
                 on_change=self._on_filter_changed,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(filter_input)
@@ -436,7 +424,6 @@ class SystemsDemoFeature(RoutedFeature):
                 pushed=False,
                 on_toggle=self._on_sort_toggled,
                 style="round",
-                font_role=self.font_role("control"),
             )
         )
         controls.append(sort_toggle)
@@ -450,7 +437,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        result_title.font_role = self.font_role("label")
         controls.append(result_title)
         y += 24
 
@@ -462,7 +448,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._filter_label.font_role = self.font_role("label")
         controls.append(self._filter_label)
 
         self._update_filter_label()
@@ -533,7 +518,6 @@ class SystemsDemoFeature(RoutedFeature):
                 "nsdf_locale_lbl", Rect(x, y, 80, 26), "Locale:", align="left"
             )
         )
-        locale_lbl.font_role = self.font_role("label")
         controls.append(locale_lbl)
 
         for i, (locale_id, locale_name) in enumerate(
@@ -545,7 +529,6 @@ class SystemsDemoFeature(RoutedFeature):
                     Rect(x + 90 + i * 60, y, 52, 28),
                     locale_name,
                     self._make_locale_setter(locale_id),
-                    font_role=self.font_role("control"),
                 )
             )
             controls.append(btn)
@@ -559,7 +542,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._greeting_label.font_role = self.font_role("label")
         controls.append(self._greeting_label)
         y += 34
 
@@ -571,7 +553,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        canvas_lbl.font_role = self.font_role("label")
         controls.append(canvas_lbl)
         y += 24
 
@@ -632,7 +613,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        title_lbl.font_role = self.font_role("label")
         controls.append(title_lbl)
         y += 26
 
@@ -648,7 +628,6 @@ class SystemsDemoFeature(RoutedFeature):
                     align="left",
                 )
             )
-            lbl.font_role = self.font_role("label")
             controls.append(lbl)
             self._binding_labels.append(lbl)
             y += 23
@@ -660,7 +639,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 150, 28),
                 "Remap: W/A/S/D",
                 self._remap_bindings,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(remap_btn)
@@ -672,7 +650,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 150, 28),
                 "Reset to Arrows",
                 self._reset_bindings,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(reset_btn)
@@ -686,7 +663,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        resp_title.font_role = self.font_role("label")
         controls.append(resp_title)
         y += 26
 
@@ -698,7 +674,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._layout_label.font_role = self.font_role("label")
         controls.append(self._layout_label)
 
         self._responsive = ResponsiveLayout()
@@ -760,7 +735,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info_lbl.font_role = self.font_role("label")
         controls.append(info_lbl)
         y += 28
 
@@ -772,7 +746,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._event_status_label.font_role = self.font_role("label")
         controls.append(self._event_status_label)
         y += 30
 
@@ -783,7 +756,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, btn_w, 28),
                 "Start Rec.",
                 self._start_recording,
-                font_role=self.font_role("control"),
             )
         )
         stop_btn = self.window.add(
@@ -792,7 +764,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + btn_w + btn_gap, y, btn_w, 28),
                 "Stop",
                 self._stop_recording,
-                font_role=self.font_role("control"),
             )
         )
         sim_btn = self.window.add(
@@ -801,7 +772,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + (btn_w + btn_gap) * 2, y, btn_w, 28),
                 "Sim. Events",
                 self._simulate_events,
-                font_role=self.font_role("control"),
             )
         )
         play_btn = self.window.add(
@@ -810,7 +780,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + (btn_w + btn_gap) * 3, y, btn_w, 28),
                 "Play Back",
                 self._start_playback,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([record_btn, stop_btn, sim_btn, play_btn])
@@ -824,7 +793,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        log_title.font_role = self.font_role("label")
         controls.append(log_title)
         y += 24
 
@@ -837,7 +805,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._event_log_label.font_role = self.font_role("label")
         controls.append(self._event_log_label)
         return controls
 
@@ -937,7 +904,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        prop_title.font_role = self.font_role("label")
         controls.append(prop_title)
         y += 26
 
@@ -968,7 +934,6 @@ class SystemsDemoFeature(RoutedFeature):
                     align="left",
                 )
             )
-            lbl.font_role = self.font_role("label")
             controls.append(lbl)
             y += 21
 
@@ -983,7 +948,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        snap_title.font_role = self.font_role("label")
         controls.append(snap_title)
         y += 26
 
@@ -993,7 +957,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 110, 28),
                 "Capture",
                 self._capture_snapshot,
-                font_role=self.font_role("control"),
             )
         )
         restore_btn = self.window.add(
@@ -1002,7 +965,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 118, y, 110, 28),
                 "Restore",
                 self._restore_snapshot,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([capture_btn, restore_btn])
@@ -1016,7 +978,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._snapshot_label.font_role = self.font_role("label")
         controls.append(self._snapshot_label)
         y += 30
 
@@ -1029,7 +990,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        spatial_title.font_role = self.font_role("label")
         controls.append(spatial_title)
         y += 26
 
@@ -1041,7 +1001,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 160, 28),
                 "Build & Query Center",
                 self._build_and_query_spatial,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(build_btn)
@@ -1055,7 +1014,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._spatial_label.font_role = self.font_role("label")
         controls.append(self._spatial_label)
 
         return controls
@@ -1077,7 +1035,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        title.font_role = self.font_role("label")
         controls.append(title)
         y += 28
 
@@ -1089,7 +1046,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        hint.font_role = self.font_role("label")
         controls.append(hint)
         y += 26
 
@@ -1100,7 +1056,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, rect.width - pad * 2, panel_h),
                 PropertyInspectorModel(self._demo_inspectable),
                 on_select=self._on_prop_selected,
-                font_role=self.font_role("label"),
             )
         )
         controls.append(self._prop_inspector_panel)
@@ -1114,7 +1069,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._prop_selected_label.font_role = self.font_role("label")
         controls.append(self._prop_selected_label)
         y += 26
 
@@ -1124,7 +1078,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 100, 28),
                 "Refresh",
                 self._refresh_prop_inspector,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(refresh_btn)
@@ -1163,7 +1116,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        title.font_role = self.font_role("label")
         controls.append(title)
         y += 28
 
@@ -1175,7 +1127,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        hint.font_role = self.font_role("label")
         controls.append(hint)
         y += 26
 
@@ -1199,7 +1150,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, rect.width - pad * 2, panel_h),
                 self._dock_workspace,
                 on_change=self._on_dock_pane_changed,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(self._dock_panel)
@@ -1213,7 +1163,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._dock_active_label.font_role = self.font_role("label")
         controls.append(self._dock_active_label)
         y += 26
 
@@ -1224,7 +1173,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 120, 28),
                 "Add Extra Pane",
                 self._dock_add_pane,
-                font_role=self.font_role("control"),
             )
         )
         remove_btn = self.window.add(
@@ -1233,7 +1181,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 128, y, 120, 28),
                 "Remove Active",
                 self._dock_remove_active,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([add_btn, remove_btn])
@@ -1248,7 +1195,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        model_title.font_role = self.font_role("label")
         controls.append(model_title)
         y += 24
 
@@ -1260,7 +1206,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._dock_model_label.font_role = self.font_role("label")
         controls.append(self._dock_model_label)
 
         return controls
@@ -1368,7 +1313,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 26
 
@@ -1380,7 +1324,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._particle_count_label.font_role = self.font_role("label")
         controls.append(self._particle_count_label)
         y += 30
 
@@ -1391,7 +1334,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 130, 28),
                 "Add Emitter",
                 self._particle_add_emitter,
-                font_role=self.font_role("control"),
             )
         )
         burst_btn = self.window.add(
@@ -1400,7 +1342,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 138, y, 130, 28),
                 "Burst (50)",
                 self._particle_burst,
-                font_role=self.font_role("control"),
             )
         )
         clear_btn = self.window.add(
@@ -1409,7 +1350,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 276, y, 130, 28),
                 "Clear Emitters",
                 self._particle_clear,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([add_btn, burst_btn, clear_btn])
@@ -1486,7 +1426,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 50
 
@@ -1517,7 +1456,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        sheet_info.font_role = self.font_role("label")
         controls.append(sheet_info)
         y += 28
 
@@ -1527,7 +1465,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 90, 28),
                 "Play",
                 lambda: self._sprite_anim.play() if self._sprite_anim else None,
-                font_role=self.font_role("control"),
             )
         )
         pause_btn = self.window.add(
@@ -1536,7 +1473,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 98, y, 90, 28),
                 "Pause",
                 lambda: self._sprite_anim.pause() if self._sprite_anim else None,
-                font_role=self.font_role("control"),
             )
         )
         reset_btn = self.window.add(
@@ -1545,7 +1481,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 196, y, 90, 28),
                 "Reset",
                 lambda: self._sprite_anim.reset() if self._sprite_anim else None,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([play_btn, pause_btn, reset_btn])
@@ -1571,7 +1506,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 50
 
@@ -1583,7 +1517,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._sched_step_label.font_role = self.font_role("label")
         controls.append(self._sched_step_label)
         y += 30
 
@@ -1595,7 +1528,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._sched_log_label.font_role = self.font_role("label")
         controls.append(self._sched_log_label)
         log_bottom = y + max(40, rect.bottom - y - 50)
 
@@ -1606,7 +1538,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, btn_y, 140, 28),
                 "Start Sequence",
                 self._sched_start_sequence,
-                font_role=self.font_role("control"),
             )
         )
         cancel_btn = self.window.add(
@@ -1615,7 +1546,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 148, btn_y, 140, 28),
                 "Cancel All",
                 self._sched_cancel_all,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([start_btn, cancel_btn])
@@ -1669,7 +1599,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 50
 
@@ -1710,7 +1639,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        tile_info.font_role = self.font_role("label")
         controls.append(tile_info)
         return controls
 
@@ -1731,14 +1659,12 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 30
 
         det_lbl = self.window.add(
             LabelControl("nsdf_prog_det_lbl", Rect(x, y, rect.width - pad * 2, 18), "Determinate (value=0.72):", align="left")
         )
-        det_lbl.font_role = self.font_role("label")
         controls.append(det_lbl)
         y += 22
 
@@ -1755,7 +1681,6 @@ class SystemsDemoFeature(RoutedFeature):
         indet_lbl = self.window.add(
             LabelControl("nsdf_prog_indet_lbl", Rect(x, y, rect.width - pad * 2, 18), "Indeterminate (marquee):", align="left")
         )
-        indet_lbl.font_role = self.font_role("label")
         controls.append(indet_lbl)
         y += 22
 
@@ -1777,7 +1702,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._progress_label.font_role = self.font_role("label")
         controls.append(self._progress_label)
         y += 28
 
@@ -1789,7 +1713,6 @@ class SystemsDemoFeature(RoutedFeature):
                     Rect(x, y, 70, 26),
                     label,
                     self._make_progress_setter(step_pct / 100.0),
-                    font_role=self.font_role("control"),
                 )
             )
             controls.append(btn)
@@ -1823,7 +1746,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 50
 
@@ -1835,7 +1757,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._flow_result_label.font_role = self.font_role("label")
         controls.append(self._flow_result_label)
         y += 30
 
@@ -1845,7 +1766,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 110, 28),
                 "Add Item",
                 self._flow_add_item,
-                font_role=self.font_role("control"),
             )
         )
         clear_btn = self.window.add(
@@ -1854,7 +1774,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 118, y, 110, 28),
                 "Clear Items",
                 self._flow_clear_items,
-                font_role=self.font_role("control"),
             )
         )
         layout_btn = self.window.add(
@@ -1863,7 +1782,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 236, y, 110, 28),
                 "Apply Layout",
                 self._flow_apply_layout,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([add_btn, clear_btn, layout_btn])
@@ -1899,7 +1817,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="center",
             )
         )
-        lbl.font_role = self.font_role("label")
         self._flow_items.append(lbl)
         self._flow_layout.add(FlowItem(node=lbl))
 
@@ -1971,14 +1888,12 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 58
 
         query_lbl = self.window.add(
             LabelControl("nsdf_search_lbl", Rect(x, y, 60, 26), "Query:", align="left")
         )
-        query_lbl.font_role = self.font_role("label")
         controls.append(query_lbl)
 
         self._search_input = self.window.add(
@@ -1987,7 +1902,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 68, y, min(260, rect.width - pad * 2 - 68), 28),
                 placeholder="enter search term…",
                 on_change=self._on_search_changed,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(self._search_input)
@@ -2001,7 +1915,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._search_result_label.font_role = self.font_role("label")
         controls.append(self._search_result_label)
         return controls
 
@@ -2037,7 +1950,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 28
 
@@ -2049,7 +1961,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        old_lbl.font_role = self.font_role("label")
         controls.append(old_lbl)
         y += 26
 
@@ -2061,7 +1972,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        new_lbl.font_role = self.font_role("label")
         controls.append(new_lbl)
         y += 30
 
@@ -2071,7 +1981,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 130, 28),
                 "Compute Diff",
                 self._run_listdiff,
-                font_role=self.font_role("control"),
             )
         )
         apply_btn = self.window.add(
@@ -2080,7 +1989,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 138, y, 130, 28),
                 "Apply & Show",
                 self._apply_listdiff,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([run_btn, apply_btn])
@@ -2094,7 +2002,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._listdiff_result_label.font_role = self.font_role("label")
         controls.append(self._listdiff_result_label)
         return controls
 
@@ -2150,7 +2057,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 28
 
@@ -2162,7 +2068,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._cache_stats_label.font_role = self.font_role("label")
         controls.append(self._cache_stats_label)
         y += 68
 
@@ -2173,7 +2078,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 110, 28),
                 "Get user:1",
                 self._cache_get_user1,
-                font_role=self.font_role("control"),
             )
         )
         miss_btn = self.window.add(
@@ -2182,7 +2086,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 118, y, 110, 28),
                 "Miss user:99",
                 self._cache_miss,
-                font_role=self.font_role("control"),
             )
         )
         evict_btn = self.window.add(
@@ -2191,7 +2094,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x + 236, y, 130, 28),
                 "Fill (cause evict)",
                 self._cache_fill,
-                font_role=self.font_role("control"),
             )
         )
         inval_btn = self.window.add(
@@ -2200,7 +2102,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y + 36, 130, 28),
                 "Invalidate user:2",
                 self._cache_invalidate,
-                font_role=self.font_role("control"),
             )
         )
         controls.extend([get_btn, miss_btn, evict_btn, inval_btn])
@@ -2259,7 +2160,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        info.font_role = self.font_role("label")
         controls.append(info)
         y += 50
 
@@ -2269,7 +2169,6 @@ class SystemsDemoFeature(RoutedFeature):
                 Rect(x, y, 150, 28),
                 "Show Help Overlay",
                 self._shortcuts_show_overlay,
-                font_role=self.font_role("control"),
             )
         )
         controls.append(show_btn)
@@ -2284,7 +2183,6 @@ class SystemsDemoFeature(RoutedFeature):
                 align="left",
             )
         )
-        self._shortcut_info_label.font_role = self.font_role("label")
         controls.append(self._shortcut_info_label)
         return controls
 
@@ -2363,7 +2261,6 @@ class _SystemsWindowPresenter(WindowPresenter):
             ],
             selected_key="filter",
             on_change=self.feature._on_tab_change,
-            font_role=self.feature.font_role("control"),
         )
         self.add_control(self.tab)
         self.feature.tab = self.tab

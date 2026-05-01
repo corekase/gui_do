@@ -157,19 +157,12 @@ class ControlsShowcaseFeature(Feature):
     TASK_PANEL_BUTTON_LEFT = 16
     TASK_PANEL_BUTTON_TOP_OFFSET = 10
 
-    LABEL_FONT_ROLE = "controls.label"
-    CONTROL_FONT_ROLE = "controls.control"
-
-    TASK_PANEL_CONTROL_FONT_ROLE = "screen.main.task_panel.control"
-
     LAYOUT_OVERALL_ROWS_CONSTANT = 7
     LAYOUT_OVERALL_COLUMNS_CONSTANT = 2
 
     def __init__(self, rect: Rect | None = None) -> None:
         super().__init__("controls_showcase", scene_name="control_showcase")
         self.rect = Rect(rect) if rect is not None else Rect(0, 0, 0, 0)
-        self._label_font_role = "body"
-        self._control_font_role = "body"
 
         self.controls: list = []
         self.control_labels: list[LabelControl] = []
@@ -187,9 +180,6 @@ class ControlsShowcaseFeature(Feature):
         self._frame_timer = FrameTimer()
 
     def build(self, host) -> None:
-        self._label_font_role = self.LABEL_FONT_ROLE
-        self._control_font_role = self.CONTROL_FONT_ROLE
-
         def _extra_entries() -> list[MenuEntry]:
             action_registry = getattr(host, "action_registry", None)
             if action_registry is None:
@@ -256,7 +246,6 @@ class ControlsShowcaseFeature(Feature):
             "arrowboxes",
             "ArrowBoxes",
             Rect(col0_x, col0_y, arrow_left_half_w, arrow_group_h),
-            label_font_role=self._label_font_role,
             control_labels=self.control_labels,
         )
         arrow_row0_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP
@@ -332,7 +321,7 @@ class ControlsShowcaseFeature(Feature):
             host,
             "text_input",
             "Text Input",
-            TextInputControl("control_text_input", Rect(0, 0, 1, 1), placeholder="Type here", font_role=self._control_font_role),
+            TextInputControl("control_text_input", Rect(0, 0, 1, 1), placeholder="Type here"),
             Rect(col0_x, col0_row_y, column_width, text_input_slot_h),
             focusable=True,
             accessibility_role="textbox",
@@ -350,7 +339,6 @@ class ControlsShowcaseFeature(Feature):
                 "control_text_area",
                 Rect(0, 0, 1, 1),
                 value="Heading: Notes\n- First line\n- Second line",
-                font_role=self._control_font_role,
             ),
             Rect(col0_x, col0_row_y, column_width, text_area_slot_h),
             focusable=True,
@@ -632,11 +620,8 @@ class ControlsShowcaseFeature(Feature):
         # Square tab column — width == height == col0_total_h. Three tabs each showing a label.
         tab_col_x = left_lane.right + col_gap
         _tab_lbl_one = LabelControl("ctrl_tab_lbl_one", Rect(0, 0, sq_size, 30), "One", align="left")
-        _tab_lbl_one.font_role = self._label_font_role
         _tab_lbl_two = LabelControl("ctrl_tab_lbl_two", Rect(0, 0, sq_size, 30), "Two", align="left")
-        _tab_lbl_two.font_role = self._label_font_role
         _tab_lbl_three = LabelControl("ctrl_tab_lbl_three", Rect(0, 0, sq_size, 30), "Three", align="left")
-        _tab_lbl_three.font_role = self._label_font_role
         self._place_control_unlabeled(
             host,
             "tab",
@@ -649,7 +634,6 @@ class ControlsShowcaseFeature(Feature):
                     TabItem("three", "Three", _tab_lbl_three),
                 ],
                 selected_key="one",
-                font_role=self._control_font_role,
             ),
             Rect(tab_col_x, col0_y, sq_size, sq_size),
             focusable=True,
@@ -750,7 +734,6 @@ class ControlsShowcaseFeature(Feature):
             "Selected: Item 1",
             align="left",
         )
-        list_selection_label.font_role = self._control_font_role
         list_slot_h = slot_h(120)
         self._place_control(
             host,
@@ -762,7 +745,6 @@ class ControlsShowcaseFeature(Feature):
                 [ListItem(label=f"Item {index + 1}", value=index) for index in range(10)],
                 row_height=24,
                 selected_index=0,
-                font_role=self._control_font_role,
                 on_select=lambda _idx, item: setattr(list_selection_label, "text", f"Selected: {item.label}"),
             ),
             Rect(new_row_x0, col0_y, new_row_col_w, list_slot_h),
@@ -789,14 +771,12 @@ class ControlsShowcaseFeature(Feature):
             scroll_y=True,
         )
         scroll_selection_label = LabelControl("sv_selected_label", Rect(0, 0, new_row_col_w, 22), "Selected: Alpha", align="left")
-        scroll_selection_label.font_role = self._control_font_role
         scroll_select_list = ListViewControl(
             "sv_select_list",
             Rect(0, 0, new_row_col_w - 20, scroll_content_h),
             [ListItem(label=item, value=item) for item in scroll_items],
             row_height=24,
             show_scrollbar=False,
-            font_role=self._control_font_role,
             on_select=lambda _idx, item: setattr(scroll_selection_label, "text", f"Selected: {item.label}"),
         )
         # Managed by configure_accessibility ordering; keep out of default tab order.
@@ -830,7 +810,6 @@ class ControlsShowcaseFeature(Feature):
                 "control_rich_label",
                 Rect(0, 0, 1, 1),
                 text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
-                font_role=self._control_font_role,
             ),
             Rect(new_row_x2, col2_y, new_row_col_w, rich_slot_h),
             focusable=False,
@@ -849,7 +828,6 @@ class ControlsShowcaseFeature(Feature):
                 Rect(0, 0, 1, 1),
                 [DropdownOption(label=f"Option {index + 1}", value=index) for index in range(4)],
                 placeholder="Choose",
-                font_role=self._control_font_role,
             ),
             Rect(new_row_x2, rich_col_y, new_row_col_w, dropdown_slot_h),
             focusable=True,
@@ -1048,7 +1026,6 @@ class ControlsShowcaseFeature(Feature):
                 item_text,
                 align="left",
             )
-            child_label.font_role = self._control_font_role
             overlay_panel.add_at(child_label, rel_x=8, rel_y=6 + i * 26)
         self._place_control(
             host,
@@ -1079,7 +1056,6 @@ class ControlsShowcaseFeature(Feature):
             Rect(0, 0, col8_w, 30),
             raw_value="12500",
             placeholder="0.00",
-            font_role=self._control_font_role,
         )
         # Shift all columns from numeric format through animated image left by one column area
         # Numeric Format
@@ -1110,7 +1086,6 @@ class ControlsShowcaseFeature(Feature):
             Rect(0, 0, col7_w, 30),
             raw_value="5551234567",
             placeholder="###-###-####",
-            font_role=self._control_font_role,
         )
         self._place_control(
             host,
@@ -1135,7 +1110,6 @@ class ControlsShowcaseFeature(Feature):
             Rect(0, 0, col7_w, 30),
             raw_value="941010001",
             placeholder="#####-####",
-            font_role=self._control_font_role,
         )
         self._place_control(
             host,
@@ -1343,8 +1317,6 @@ class ControlsShowcaseFeature(Feature):
         control_height = max(1, control_rect.height - self.LABEL_HEIGHT - self.LABEL_GAP)
         actual_control_rect = Rect(control_rect.left, control_top, control_rect.width, control_height)
         label = LabelControl(f"controls_showcase_label_{name}", label_rect, label_text, align="left")
-        label.font_role = self._label_font_role
-
         self._register_placed_control(
             host,
             name,
@@ -1406,11 +1378,6 @@ class ControlsShowcaseFeature(Feature):
         # (for example ScrollView child screen rect projections) on placement.
         control.set_rect(actual_control_rect)
         control.enabled = True
-        if hasattr(control, "font_role"):
-            try:
-                control.font_role = self._control_font_role
-            except Exception:
-                pass
 
         if accessibility_role is not None and accessibility_label is not None:
             control.set_accessibility(role=accessibility_role, label=accessibility_label)
@@ -1440,7 +1407,6 @@ class ControlsShowcaseFeature(Feature):
             text,
             align="left",
         )
-        label.font_role = self._label_font_role
         host.control_showcase_root.add(label)
         self.control_labels.append(label)
 
@@ -1522,7 +1488,6 @@ class ControlsShowcaseFeature(Feature):
                     )
                 ),
                 style="angle",
-                font_role=self.TASK_PANEL_CONTROL_FONT_ROLE,
             )
         )
 

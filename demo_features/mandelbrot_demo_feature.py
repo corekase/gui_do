@@ -268,14 +268,6 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
-        self.use_font_roles(
-            {
-                "window_title": "mandelbrot.window_title",
-                "control": "mandelbrot.control",
-                "caption": "mandelbrot.caption",
-                "status": "mandelbrot.status",
-            }
-        )
         self.window = create_anchored_feature_window(
             host,
             window_control_cls=WindowControl,
@@ -284,7 +276,6 @@ class MandelbrotRenderFeature(RoutedFeature):
             size=_MANDEL_WINDOW_SIZE,
             anchor="top_left",
             margin=(28, 92),
-            title_font_role=self.font_role("window_title"),
             use_frame_backdrop=True,
         )
         presenter = _MandelbrotWindowPresenter(self, host)
@@ -925,29 +916,29 @@ class _MandelbrotWindowPresenter(WindowPresenter):
 
         self.reset_button = ButtonControl(
             "mandel_reset", mandel_reset_rect, "Reset",
-            lambda: self.feature.clear(self.host), style="angle", font_role=self.feature.font_role("control")
+            lambda: self.feature.clear(self.host), style="angle"
         )
         self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
         self.mandel_iter_button = ButtonControl(
             "mandel_iter", mandel_iter_rect, "Iterative",
-            lambda: self.feature.launch_iterative(self.host), style="round", font_role=self.feature.font_role("control")
+            lambda: self.feature.launch_iterative(self.host), style="round"
         )
         self.add_control(self.mandel_iter_button)
         self.mandel_recur_button = ButtonControl(
             "mandel_recur", mandel_recur_rect, "Recursive",
-            lambda: self.feature.launch_recursive(self.host), style="round", font_role=self.feature.font_role("control")
+            lambda: self.feature.launch_recursive(self.host), style="round"
         )
         self.add_control(self.mandel_recur_button)
         self.mandel_one_split_button = ButtonControl(
             "mandel_one_split", mandel_one_split_rect, "1M 4Tasks",
-            lambda: self.feature.launch_one_split(self.host), style="round", font_role=self.feature.font_role("control")
+            lambda: self.feature.launch_one_split(self.host), style="round"
         )
         self.add_control(self.mandel_one_split_button)
         self.mandel_four_split_button = ButtonControl(
             "mandel_four_split", mandel_four_split_rect, "4M 4Tasks",
-            lambda: self.feature.launch_four_split(self.host), style="round", font_role=self.feature.font_role("control")
+            lambda: self.feature.launch_four_split(self.host), style="round"
         )
         self.add_control(self.mandel_four_split_button)
         self.feature.task_buttons = (
