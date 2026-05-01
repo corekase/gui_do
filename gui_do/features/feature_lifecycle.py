@@ -743,6 +743,8 @@ def add_window_scene_menu_strip(
     on_minimize: Callable[[], None],
     scenes_shown: bool = False,
     windows_shown: bool = False,
+    scene_items_provider=None,
+    window_items_provider=None,
     extra_entries_provider=None,
 ):
     """Attach a SceneMenuStripControl to a window using standard scene fallback wiring."""
@@ -757,6 +759,8 @@ def add_window_scene_menu_strip(
             scene_name=str(scene_name),
             scenes_shown=bool(scenes_shown),
             windows_shown=bool(windows_shown),
+            scene_items_provider=scene_items_provider,
+            window_items_provider=window_items_provider,
             extra_entries_provider=entries_provider,
             on_scene_selected=resolve_scene_selection_callback(host),
         )

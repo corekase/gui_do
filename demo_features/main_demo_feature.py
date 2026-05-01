@@ -97,6 +97,17 @@ class MainDemoFeature(Feature):
         self._help_overlay: ShortcutHelpOverlay | None = None
 
     def build(self, host) -> None:
+        def _on_window_toggled_from_menu(window, next_visible: bool) -> None:
+            control_id = str(getattr(window, "control_id", "")).strip()
+            if control_id == "life_window":
+                host.set_life_window_visible(bool(next_visible))
+                return
+            if control_id == "mandelbrot_window":
+                host.set_mandel_window_visible(bool(next_visible))
+                return
+            if control_id == "systems_window":
+                host.set_systems_window_visible(bool(next_visible))
+
         host.root = host.app.add(
             PanelControl("main_root", Rect(0, 0, host.screen_rect.width, host.screen_rect.height), draw_background=False),
             scene_name="main",
@@ -120,6 +131,7 @@ class MainDemoFeature(Feature):
                 windows_shown=True,
                 extra_entries_provider=_extra_entries,
                 on_scene_selected=scene_select,
+                on_window_toggled=_on_window_toggled_from_menu,
             )
         )
         host.screen_title = host.root.add(

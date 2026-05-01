@@ -27,6 +27,7 @@ class MenuEntry:
     label: str
     items: List[ContextMenuItem] = field(default_factory=list)
     enabled: bool = True
+    flyout_min_width: Optional[int] = None
 
 
 class _FlyoutPanel(_MenuOverlayPanelBase):
@@ -60,14 +61,20 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
         )
 
     @classmethod
-    def measure(cls, items: List[ContextMenuItem]) -> Tuple[int, int]:
+    def measure(
+        cls,
+        items: List[ContextMenuItem],
+        *,
+        min_width: Optional[int] = None,
+    ) -> Tuple[int, int]:
+        resolved_min_width = cls._MIN_W if min_width is None else max(cls._MIN_W, int(min_width))
         return _MenuOverlayPanelBase.measure(
             items,
             item_height=cls._ITEM_H,
             separator_height=cls._SEP_H,
             padding=cls._PAD,
             text_padding=cls._TEXT_PAD,
-            min_width=cls._MIN_W,
+            min_width=resolved_min_width,
             font_size=cls._FONT_SIZE,
         )
 
@@ -252,7 +259,7 @@ class MenuBarControl(UiNode):
             return
         owner = f"_menubar_{self.control_id}_{index}"
         er_rect = er[index]
-        w, h = _FlyoutPanel.measure(entry.items)
+        w, h = _FlyoutPanel.measure(entry.items, min_width=entry.flyout_min_width)
         screen = app.surface.get_rect()
         fx = er_rect.x
         fy = er_rect.bottom

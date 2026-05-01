@@ -61,9 +61,9 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
         for item in items:
             h += int(separator_height) if bool(getattr(item, "separator", False)) else int(item_height)
         try:
-            if not hasattr(theme, "fonts"):
-                raise RuntimeError("MenuOverlayPanelBase requires theme with centralized font roles.")
-            font = theme.fonts.font_instance("menu_overlay.text", size=int(font_size))
+            if not pygame.font.get_init():
+                pygame.font.init()
+            font = pygame.font.SysFont(None, int(font_size))
             widths = [
                 font.size(str(getattr(item, "label", "")))[0] + int(text_padding) * 2 + 16
                 for item in items

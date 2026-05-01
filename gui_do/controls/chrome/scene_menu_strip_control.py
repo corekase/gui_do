@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING
 
+import pygame
 from pygame import Rect
 
 from .menu_bar_control import MenuBarControl as _BaseMenuBarControl, MenuEntry
@@ -38,6 +39,8 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         scenes_shown: bool = False,
         windows_shown: bool = False,
         file_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
+        scene_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
+        window_items_provider: Optional[Callable[[], List[ContextMenuItem]]] = None,
         extra_entries_provider: Optional[Callable[[], List[MenuEntry]]] = None,
         on_exit: Optional[Callable[[], None]] = None,
         on_scene_selected: Optional[Callable[[str], None]] = None,
@@ -49,10 +52,13 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         self._scenes_shown = bool(scenes_shown)
         self._windows_shown = bool(windows_shown)
         self._file_items_provider = file_items_provider
+        self._scene_items_provider = scene_items_provider
+        self._window_items_provider = window_items_provider
         self._extra_entries_provider = extra_entries_provider
         self._on_exit = on_exit
         self._on_scene_selected = on_scene_selected
         self._on_window_toggled = on_window_toggled
+        self._dynamic_flyout_min_width_by_label: Dict[str, int] = {}
         # Preserve a stable menu order for windows even if scene walk order changes.
         self._window_order_rank_by_scene: Dict[str, Dict[str, int]] = {}
         self._window_order_next_by_scene: Dict[str, int] = {}
@@ -63,11 +69,23 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         if self._scenes_shown:
             scene_items = self._build_scene_items()
             if scene_items:
-                entries.append(MenuEntry("Scenes", scene_items))
+                entries.append(
+                    MenuEntry(
+                        "Scenes",
+                        scene_items,
+                        flyout_min_width=self._dynamic_flyout_min_width_by_label.get("Scenes"),
+                    )
+                )
         if self._windows_shown:
             window_items = self._build_window_items()
             if window_items:
-                entries.append(MenuEntry("Windows", window_items))
+                entries.append(
+                    MenuEntry(
+                        "Windows",
+                        window_items,
+                        flyout_min_width=self._dynamic_flyout_min_width_by_label.get("Windows"),
+                    )
+                )
         file_items = self._build_file_items()
         if file_items:
             entries.append(MenuEntry("File", file_items))
@@ -122,6 +140,14 @@ class SceneMenuStripControl(_BaseMenuBarControl):
             return []
 
     def _build_scene_items(self) -> List[ContextMenuItem]:
+        if self._scene_items_provider is not None:
+            try:
+                provider_items = self._scene_items_provider() or []
+            except Exception:
+                provider_items = []
+            self._set_dynamic_flyout_min_width("Scenes", provider_items)
+            return provider_items
+
         active = str(getattr(self._app, "active_scene_name", ""))
         scene_pretty_name_fn = getattr(self._app, "scene_pretty_name", None)
         items: List[ContextMenuItem] = []
@@ -133,6 +159,7 @@ class SceneMenuStripControl(_BaseMenuBarControl):
             items.append(
                 ContextMenuItem(label, action=lambda selected=scene: self._select_scene(selected))
             )
+        self._set_dynamic_flyout_min_width("Scenes", items)
         return items
 
     def _allowed_scene_names(self) -> List[str]:
@@ -162,8 +189,17 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         return allowed
 
     def _build_window_items(self) -> List[ContextMenuItem]:
+        if self._window_items_provider is not None:
+            try:
+                provider_items = self._window_items_provider() or []
+            except Exception:
+                provider_items = []
+            self._set_dynamic_flyout_min_width("Windows", provider_items)
+            return provider_items
+
         scene = self._resolve_scene()
         if scene is None:
+            self._set_dynamic_flyout_min_width("Windows", [])
             return []
         windows: List[UiNode] = [node for node in scene._walk_nodes() if node.is_window()]  # noqa: SLF001
         scene_order_key = self._window_scene_order_key(scene)
@@ -180,12 +216,32 @@ class SceneMenuStripControl(_BaseMenuBarControl):
                     action=lambda target=window: self._toggle_window(target),
                 )
             )
+        self._set_dynamic_flyout_min_width("Windows", items)
         return items
 
     def _is_window_allowed_for_dynamic_menu(self, window: "UiNode") -> bool:
-        if self._on_window_toggled is not None:
-            return True
-        return self._resolve_builtin_visibility_setter(window) is not None
+        return window is not None
+
+    def _measure_item_label_width(self, label: str) -> int:
+        text = str(label)
+        try:
+            font = pygame.font.SysFont(None, 17)
+            text_w = font.size(text)[0]
+        except Exception:
+            text_w = len(text) * 8
+        # Keep sizing aligned with menu overlay internals: text padding + icon/check space.
+        return int(text_w) + 40
+
+    def _set_dynamic_flyout_min_width(self, menu_label: str, items: List[ContextMenuItem]) -> None:
+        longest = 0
+        for item in items:
+            if bool(getattr(item, "separator", False)):
+                continue
+            longest = max(longest, self._measure_item_label_width(getattr(item, "label", "")))
+        if longest > 0:
+            self._dynamic_flyout_min_width_by_label[str(menu_label)] = longest
+            return
+        self._dynamic_flyout_min_width_by_label.pop(str(menu_label), None)
 
     def _window_scene_order_key(self, scene) -> str:
         if self._scene_name:

@@ -236,13 +236,31 @@ class GuiDoDemo:
 
 
     def set_life_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(self.life_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
+        set_window_visible_state(
+            self.life_window,
+            visible,
+            toggle=getattr(self, "life_toggle_window", None),
+            from_toggle=from_toggle,
+            tile_windows=getattr(self.app, 'tile_windows', None),
+        )
 
     def set_mandel_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(self.mandel_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
+        set_window_visible_state(
+            self.mandel_window,
+            visible,
+            toggle=getattr(self, "mandel_toggle_window", None),
+            from_toggle=from_toggle,
+            tile_windows=getattr(self.app, 'tile_windows', None),
+        )
 
     def set_systems_window_visible(self, visible: bool, *, from_toggle: bool = False) -> None:
-        set_window_visible_state(self.systems_window, visible, from_toggle=from_toggle, tile_windows=getattr(self.app, 'tile_windows', None))
+        set_window_visible_state(
+            self.systems_window,
+            visible,
+            toggle=getattr(self, "systems_toggle_window", None),
+            from_toggle=from_toggle,
+            tile_windows=getattr(self.app, 'tile_windows', None),
+        )
 
 def main() -> None:
     """Entrypoint for running the gui_do demo as a script."""
