@@ -675,12 +675,15 @@ class ControlsShowcaseFeature(Feature):
             column_index=4,
             row_index=40,
         )
+        image_rect = Rect(img_col_x, col0_y, sq_size, sq_size)
 
         # Place notification panel immediately to the right of the image control (upper-right)
-        notif_col_x = img_col_x + sq_size + col_gap
-        notif_col_w = min(240, sq_size)
+        notif_col_x = image_rect.right + col_gap
+        notif_col_w = max(1, content_rect.right - notif_col_x)
         notif_col_y = col0_y
-        notif_slot_h = slot_h(220)
+        notif_control_top = notif_col_y + self.LABEL_HEIGHT + self.LABEL_GAP
+        notif_control_h = max(1, image_rect.bottom - notif_control_top)
+        notif_slot_h = notif_control_h + self.LABEL_HEIGHT + self.LABEL_GAP
         self._showcase_notification_center = NotificationCenter(None, max_records=6)
         self._showcase_notification_center.add(
             NotificationRecord("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS)

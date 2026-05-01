@@ -253,8 +253,10 @@ class LifeSimulationFeature(RoutedFeature):
         self.zoom_slider.value = 5.0
         self.life_zoom_slider_last_value = int(round(self.zoom_slider.value))
         self.toggle.pushed = False
-        if not self._send_life_logic_command("reset"):
-            self.life_cells = set(LifeSimulationLogicFeature.DEFAULT_SEED)
+        # Apply local state immediately so the next frame cannot render stale cells
+        # with the freshly reset viewport while the logic message is in transit.
+        self.life_cells = set(LifeSimulationLogicFeature.DEFAULT_SEED)
+        self._send_life_logic_command("reset")
 
     def zoom_life_view_about(self, anchor_local: Tuple[float, float], new_size: int) -> None:
         """Zoom around a local canvas anchor while preserving the anchored world point."""
