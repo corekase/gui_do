@@ -83,13 +83,14 @@ class TextInputControl(AbstractTextInputControl):
         self._on_submit = on_submit
         self._input_filter = input_filter
         self._font_role = font_role
-        self._font_size = 16
-        self._display_value_provider = display_value_provider
         self.tab_index = 0
+        self._display_value_provider = display_value_provider
         self._cursor_pos = len(self._value)
         self._sel_anchor = None
         self._sel_active = None
         self._scroll_offset_px = 0
+    _FONT_SCALE: float = 1.25   # 20/16 — slightly larger for text input legibility
+
     def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
         """Map pixel x to logical (raw) caret index using formatter-aware mapping."""
         font = self._get_font(theme)
@@ -137,10 +138,10 @@ class TextInputControl(AbstractTextInputControl):
         from ...theme.color_theme import get_global_font_manager
         font_manager = get_global_font_manager()
         if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=16)
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=font_manager.scaled_size(self._FONT_SCALE))
         # Fallback: use theme if provided
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=16)
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=theme.fonts.scaled_size(self._FONT_SCALE))
         return None
 
     def _get_display_value(self) -> str:
@@ -481,9 +482,9 @@ class TextInputControl(AbstractTextInputControl):
         from ...theme.color_theme import get_global_font_manager
         font_manager = get_global_font_manager()
         if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=20)
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=font_manager.scaled_size(self._FONT_SCALE))
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=20)
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=theme.fonts.scaled_size(self._FONT_SCALE))
         return None
 
     def _get_display_value(self) -> str:

@@ -86,6 +86,22 @@ class FontManager:
     def has_role(self, role_name: str) -> bool:
         return str(role_name) in self._roles
 
+    _DEFAULT_FALLBACK_SIZE: int = 16
+
+    @property
+    def default_size(self) -> int:
+        """Return the registered size of the ``default`` role, or 16 as a fallback."""
+        role = self._roles.get("default")
+        return role.size if role is not None else self._DEFAULT_FALLBACK_SIZE
+
+    def scaled_size(self, ratio: float) -> int:
+        """Return a pixel size derived from the default role size scaled by *ratio*.
+
+        The result is clamped to a minimum of 8 so controls always render
+        something readable regardless of the configured default size.
+        """
+        return max(8, round(self.default_size * float(ratio)))
+
     def register_role(
         self,
         role_name: str,

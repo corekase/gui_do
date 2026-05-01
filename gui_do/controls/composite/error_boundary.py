@@ -68,6 +68,7 @@ class ErrorBoundary(UiNode):
     _FALLBACK_FG = (255, 80, 80)    # pinkish text
     _FALLBACK_BORDER = (200, 40, 40)
     _FALLBACK_FONT_ROLE = "error_boundary.placeholder"
+    _FONT_SCALE: float = 0.75   # 12/16 — small diagnostic text in error placeholder
 
     def __init__(
         self,
@@ -234,7 +235,7 @@ class ErrorBoundary(UiNode):
         # Use theme-based font role resolution only (centralized)
         if not (theme and hasattr(theme, "fonts")):
             raise RuntimeError("ErrorBoundary requires theme with centralized font roles.")
-        font = theme.fonts.font_instance(self._draw_font_role, size=12)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         render_text = lambda text, color: font._font.render(text, True, color) if hasattr(font, "_font") else font.render(text, True, color)
 
         lines = [self._error_text]

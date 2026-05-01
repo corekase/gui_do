@@ -39,14 +39,14 @@ class RichLabelControl(UiNode):
         rect: Rect,
         text: str = "",
         font_role: str = "body",
-        font_size: int = 16,
+        font_size: Optional[int] = None,
         align: str = "left",
         color: Optional[Tuple[int, int, int]] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self._text = str(text)
         self._font_role = str(font_role) or "body"
-        self._font_size = max(6, int(font_size))
+        self._font_size: Optional[int] = None if font_size is None else max(6, int(font_size))
         align = str(align)
         if align not in ("left", "center", "right"):
             align = "left"
@@ -116,6 +116,12 @@ class RichLabelControl(UiNode):
     def accepts_mouse_focus(self) -> bool:
         return False
 
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size rich label text
+
+    def _resolve_fs(self, theme: "ColorTheme") -> int:
+        """Return the effective font size (explicit override or scaled default)."""
+        return self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
@@ -123,10 +129,11 @@ class RichLabelControl(UiNode):
     def draw(self, surface: pygame.Surface, theme: "ColorTheme") -> None:
         color = self._color if self._color is not None else (theme.text if self.enabled else theme.medium)
         font_revision = theme.fonts.revision
+        fs = self._resolve_fs(theme)
         cache_key = (
             self._text,
             self._font_role,
-            self._font_size,
+            fs,
             color,
             font_revision,
             self.rect.width,
@@ -162,7 +169,7 @@ class RichLabelControl(UiNode):
                     theme.render_text(
                         " ",
                         role=self._font_role,
-                        size=self._font_size,
+                        size=self._resolve_fs(theme),
                         color=color,
                     )
                 )
@@ -242,13 +249,13 @@ class RichLabelControl(UiNode):
         return segments
 
     def _style_roles(self, theme: "ColorTheme") -> dict[str, str]:
-        cache_key = (self._font_role, self._font_size)
+        size = self._resolve_fs(theme)
+        cache_key = (self._font_role, size)
         cached = self._style_role_cache.get(cache_key)
         if cached is not None:
             return cached
 
         base = self._font_role
-        size = self._font_size
         roles = {
             "base": base,
             "bold": f"{base}.rich.bold.{size}",
@@ -275,13 +282,13 @@ class RichLabelControl(UiNode):
 
     def _measure_text(self, theme: "ColorTheme", text: str, style: str) -> int:
         role = self._role_for_style(theme, style)
-        width, _ = theme.fonts.font_instance(role, size=self._font_size).text_size(text)
+        width, _ = theme.fonts.font_instance(role, size=self._resolve_fs(theme)).text_size(text)
         return int(width)
 
     def _render_piece(self, theme: "ColorTheme", text: str, style: str, base_color: tuple) -> pygame.Surface:
         role = self._role_for_style(theme, style)
         color = theme.highlight if style == "code" else base_color
-        return theme.render_text(text, role=role, size=self._font_size, color=color, shadow=False)
+        return theme.render_text(text, role=role, size=self._resolve_fs(theme), color=color, shadow=False)
 
     def _render_line(self, theme: "ColorTheme", tokens: List[tuple[str, str]], color: tuple) -> pygame.Surface:
         pieces = [self._render_piece(theme, token, style, color) for token, style in tokens]

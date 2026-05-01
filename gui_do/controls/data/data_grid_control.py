@@ -102,6 +102,8 @@ class DataGridControl(_VirtualizedScrollListBase):
 
         self.tab_index = 0
 
+    _FONT_SCALE: float = 1.125   # 18/16 — slightly larger for data grid cells
+
     # ------------------------------------------------------------------
     # Data API
     # ------------------------------------------------------------------
@@ -468,7 +470,7 @@ class DataGridControl(_VirtualizedScrollListBase):
         border_col = getattr(theme, "border", (80, 80, 90))
         focus_col = getattr(theme, "focus", (100, 160, 255))
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=18)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         r = self.rect
         pygame.draw.rect(surface, bg, r)
 

@@ -92,6 +92,8 @@ class PropertyInspectorPanel(UiNode):
         self.tab_index = 0
         self._draw_font_role: str = "property_inspector.row"
 
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size property labels
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -267,7 +269,7 @@ class PropertyInspectorPanel(UiNode):
         if not self._rows:
             return
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=16)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
 
         # Resolve colors
         text_color = theme.text

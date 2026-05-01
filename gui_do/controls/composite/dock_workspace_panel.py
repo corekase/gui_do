@@ -63,6 +63,8 @@ class DockWorkspacePanel(UiNode):
         self.tab_index = 0
         self._draw_font_role: str = "dock_workspace.tab"
 
+    _FONT_SCALE: float = 0.875   # 14/16 — compact tab label
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -132,7 +134,7 @@ class DockWorkspacePanel(UiNode):
             text = f"(split — {axis}, {len(root.children)} pane(s))"
         else:
             text = "(unsupported root)"
-        font = theme.fonts.font_instance(self._draw_font_role, size=14)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         try:
             surf = font._font.render(text, True, fg) if hasattr(font, "_font") else font.render(text, True, fg)
             cx = self.rect.x + (self.rect.width - surf.get_width()) // 2
@@ -158,7 +160,7 @@ class DockWorkspacePanel(UiNode):
         pygame.draw.rect(surface, bg, tab_rect)
         border_col = getattr(theme, "tab_border", (60, 60, 70))
         pygame.draw.rect(surface, border_col, tab_rect, 1)
-        font = theme.fonts.font_instance(self._draw_font_role, size=14)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         try:
             surf = font._font.render(label, True, fg) if hasattr(font, "_font") else font.render(label, True, fg)
             cx = tab_rect.x + (tab_rect.width - surf.get_width()) // 2

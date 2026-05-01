@@ -64,6 +64,8 @@ class DropdownControl(UiNode):
             self._selected_index = selected_index
         self._ensure_selection_invariant()
 
+    _FONT_SCALE: float = 1.125   # 18/16 — slightly larger for readability in a list
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -251,7 +253,7 @@ class DropdownControl(UiNode):
         pygame.draw.rect(surface, theme.medium, r, border_radius=3)
         pygame.draw.rect(surface, theme.text, r, 1, border_radius=3)
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=18)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         opt = self.selected_option
         label = opt.label if opt is not None else self._placeholder
         text_color = theme.text

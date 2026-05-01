@@ -20,6 +20,20 @@ _SCROLL_SPEED = 3  # lines per mouse wheel tick
 
 
 class TextAreaControl(AbstractTextInputControl):
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size multi-line text area
+
+    def _resolve_fs(self, theme=None) -> int:
+        """Resolve the effective font size from explicit override or scaled default."""
+        if self._font_size is not None:
+            return self._font_size
+        if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
+            return theme.fonts.scaled_size(self._FONT_SCALE)
+        from ...theme.color_theme import get_global_font_manager
+        fm = get_global_font_manager()
+        if fm is not None:
+            return fm.scaled_size(self._FONT_SCALE)
+        return max(8, round(16 * float(self._FONT_SCALE)))
+
     def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
         font = self._get_font(theme)
         if font is None:
@@ -93,9 +107,9 @@ class TextAreaControl(AbstractTextInputControl):
         from ...theme.color_theme import get_global_font_manager
         font_manager = get_global_font_manager()
         if font_manager is not None:
-            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=self._font_size)
+            return font_manager.font_instance(getattr(self, "_font_role", "controls.control"), size=self._resolve_fs())
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
-            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=self._font_size)
+            return theme.fonts.font_instance(getattr(self, "_font_role", "controls.control"), size=self._resolve_fs(theme))
         return None
 
     def _get_display_value(self) -> str:
@@ -128,7 +142,7 @@ class TextAreaControl(AbstractTextInputControl):
         read_only: bool = False,
         on_change: Optional[Callable[[str], None]] = None,
         font_role: str = "body",
-        font_size: int = 16,
+        font_size: Optional[int] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self._value = str(value)
@@ -137,7 +151,7 @@ class TextAreaControl(AbstractTextInputControl):
         self._read_only = bool(read_only)
         self._on_change = on_change
         self._font_role = str(font_role)
-        self._font_size = max(6, int(font_size))
+        self._font_size: Optional[int] = None if font_size is None else max(6, int(font_size))
         self.tab_index = 0  # focusable by default
         self.key_activatable = False  # K_RETURN inserts newline, not button-activate
 
@@ -408,7 +422,7 @@ class TextAreaControl(AbstractTextInputControl):
 
         if not self._value and self._placeholder and not self._focused:
             surf = theme.render_text(
-                self._placeholder, role=self._font_role, size=self._font_size, color=theme.medium
+                self._placeholder, role=self._font_role, size=self._resolve_fs(theme), color=theme.medium
             )
             surface.blit(surf, (r.left + _H_PAD, r.top + _V_PAD))
             return
@@ -448,7 +462,7 @@ class TextAreaControl(AbstractTextInputControl):
                 # Text
                 text_color = theme.text if self.enabled else theme.medium
                 text_surf = theme.render_text(
-                    line_text, role=self._font_role, size=self._font_size, color=text_color
+                    line_text, role=self._font_role, size=self._resolve_fs(theme), color=text_color
                 )
                 surface.blit(text_surf, (r.left + _H_PAD, y))
 
@@ -589,7 +603,7 @@ class TextAreaControl(AbstractTextInputControl):
     def _measure_prefix_width(self, app: "GuiApplication", line_text: str):
         """Return a callable that measures width of line_text[:n] with cached font usage."""
         try:
-            theme_font = app.theme.fonts.font_instance(self._font_role, size=self._font_size)
+            theme_font = app.theme.fonts.font_instance(self._font_role, size=self._resolve_fs(app.theme))
 
             def _measure(n: int) -> int:
                 w, _ = theme_font.text_size(line_text[:n])
@@ -599,7 +613,7 @@ class TextAreaControl(AbstractTextInputControl):
         except Exception:
             if self._measure_font is None:
                 try:
-                    self._measure_font = theme.fonts.font_instance(getattr(self, "_font_role", "text_area.text"), size=self._font_size)
+                    self._measure_font = theme.fonts.font_instance(getattr(self, "_font_role", "text_area.text"), size=self._resolve_fs(theme))
                 except Exception:
                     self._measure_font = False
 
@@ -612,32 +626,32 @@ class TextAreaControl(AbstractTextInputControl):
                 return _measure
 
             def _measure(n: int) -> int:
-                return int(n * (self._font_size // 2))
+                return int(n * (self._resolve_fs() // 2))
 
             return _measure
 
     def _text_width(self, theme: "ColorTheme", text: str) -> int:
         try:
-            w, _ = theme.fonts.font_instance(self._font_role, size=self._font_size).text_size(text)
+            w, _ = theme.fonts.font_instance(self._font_role, size=self._resolve_fs(theme)).text_size(text)
             return w
         except Exception:
-            return len(text) * (self._font_size // 2)
+            return len(text) * (self._resolve_fs() // 2)
 
     def _get_line_height(self, theme: "ColorTheme") -> int:
         try:
-            return theme.fonts.font_instance(self._font_role, size=self._font_size).line_height
+            return theme.fonts.font_instance(self._font_role, size=self._resolve_fs(theme)).line_height
         except Exception:
-            return self._font_size + 2
+            return self._resolve_fs() + 2
 
     def _line_height(self, app: "GuiApplication") -> int:
         try:
-            return app.theme.fonts.font_instance(self._font_role, size=self._font_size).line_height
+            return app.theme.fonts.font_instance(self._font_role, size=self._resolve_fs(app.theme)).line_height
         except Exception:
-            return self._font_size + 2
+            return self._resolve_fs() + 2
 
     def _get_wrapped_lines(self, theme: "ColorTheme") -> List[str]:
         max_width = self.rect.width - _H_PAD * 2
-        cache_key = (self._value, self._font_role, self._font_size, max_width)
+        cache_key = (self._value, self._font_role, self._resolve_fs(), max_width)
         if self._line_cache_key == cache_key:
             return self._wrapped_lines
         self._wrapped_lines = self._wrap(theme, max_width)

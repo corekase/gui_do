@@ -63,13 +63,13 @@ class TabControl(UiNode):
         selected_key: Optional[str] = None,
         on_change: Optional[Callable[[str], None]] = None,
         font_role: str = "body",
-        font_size: int = 16,
+        font_size: Optional[int] = None,
     ) -> None:
         super().__init__(control_id, rect)
         self._items: List[TabItem] = list(items or [])
         self._on_change = on_change
         self._font_role = str(font_role)
-        self._font_size = max(6, int(font_size))
+        self._font_size: Optional[int] = None if font_size is None else max(6, int(font_size))
         self.tab_index = 0  # the whole control is keyboard-navigable
 
         # Determine initial selection
@@ -152,6 +152,8 @@ class TabControl(UiNode):
     # Layout helpers
     # ------------------------------------------------------------------
 
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size tab labels
+
     def _tab_strip_h(self) -> int:
         """Total pixel height of the tab strip, accounting for wrapping."""
         return _TAB_H * self._tab_rows
@@ -167,9 +169,11 @@ class TabControl(UiNode):
         max_x = self.rect.right
         for item in self._items:
             try:
-                w, _ = theme.fonts.font_instance(self._font_role, size=self._font_size).text_size(item.label)
+                fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+                w, _ = theme.fonts.font_instance(self._font_role, size=fs).text_size(item.label)
             except Exception:
-                w = len(item.label) * (self._font_size // 2)
+                fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+                w = len(item.label) * (fs // 2)
             tab_w = w + _TAB_PAD_H * 2
             # Wrap to next row if this tab would overflow the right edge
             if x + tab_w > max_x and x > self.rect.left:
@@ -268,7 +272,7 @@ class TabControl(UiNode):
                 pygame.draw.rect(surface, tab_bg, tab_rect)
             tab_color = theme.text if is_enabled else theme.medium
             label_surf = theme.render_text(
-                item.label, role=self._font_role, size=self._font_size, color=tab_color
+                item.label, role=self._font_role, size=self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE), color=tab_color
             )
             lw, lh = label_surf.get_size()
             lx = tab_rect.left + (tab_rect.width - lw) // 2

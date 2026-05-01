@@ -24,7 +24,6 @@ _INDENT_WIDTH = 18
 _ROW_HEIGHT = 26
 _ARROW_SIZE = 8
 _SCROLLBAR_WIDTH = 12
-_FONT_SIZE = 17
 
 
 @dataclass
@@ -113,6 +112,8 @@ class TreeControl(_VirtualizedScrollListBase):
         self._draw_font_role: str = "tree.row"
         self._rebuild_rows()
         self.tab_index = 0
+
+    _FONT_SCALE: float = 1.0625   # 17/16 — slightly larger for tree row legibility
 
     # ------------------------------------------------------------------
     # Properties
@@ -432,7 +433,7 @@ class TreeControl(_VirtualizedScrollListBase):
         sel_col = theme.highlight
         arrow_col = theme.medium
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
 
         vr = self._visible_rect()
         pygame.draw.rect(surface, bg, self.rect)

@@ -66,6 +66,8 @@ class ListViewControl(_VirtualizedScrollListBase):
             self._selected_indices = [selected_index]
         self._ensure_selection_invariant()
 
+    _FONT_SCALE: float = 1.125   # 18/16 — slightly larger for list view rows
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -467,7 +469,7 @@ class ListViewControl(_VirtualizedScrollListBase):
         bg_color = theme.background
         pygame.draw.rect(surface, bg_color, r)
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=18)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         vh = self._viewport_height()
         if self._parent_scroll_view() is not None and not self._show_scrollbar:
             # Parent ScrollView movement determines visibility; render full list

@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 
 
 _ENTRY_PADDING_X = 12
-_FONT_SIZE = 17
 
 
 @dataclass
@@ -38,6 +37,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
     _PAD = 4
     _TEXT_PAD = 12
     _MIN_W = 140
+    _FONT_SIZE = 17  # legacy concrete size; no theme at construction time
 
     def __init__(
         self,
@@ -56,7 +56,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
             padding=self._PAD,
             text_padding=self._TEXT_PAD,
             min_width=self._MIN_W,
-            font_size=_FONT_SIZE,
+            font_size=self._FONT_SIZE,
         )
 
     @classmethod
@@ -68,7 +68,7 @@ class _FlyoutPanel(_MenuOverlayPanelBase):
             padding=cls._PAD,
             text_padding=cls._TEXT_PAD,
             min_width=cls._MIN_W,
-            font_size=_FONT_SIZE,
+            font_size=cls._FONT_SIZE,
         )
 
 
@@ -112,6 +112,8 @@ class MenuBarControl(UiNode):
         self.tab_index = 0
         self._draw_font_role: str = "menu_bar.entry"
 
+    _FONT_SCALE: float = 1.0625   # 17/16 — slightly larger than body for menu legibility
+
     # ------------------------------------------------------------------
     # API
     # ------------------------------------------------------------------
@@ -141,7 +143,7 @@ class MenuBarControl(UiNode):
         x = self.rect.x
         y = self.rect.y
         h = self.rect.height
-        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         for entry in self._entries:
             if font:
                 if hasattr(font, "text_size"):
@@ -294,7 +296,7 @@ class MenuBarControl(UiNode):
         hover_col = theme.highlight
         border_col = getattr(theme, "border", (60, 60, 70))
 
-        font = theme.fonts.font_instance(self._draw_font_role, size=_FONT_SIZE)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
 
         pygame.draw.rect(surface, bar_bg, self.rect)
         # Bottom border line

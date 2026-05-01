@@ -15,12 +15,13 @@ class LabelControl(UiNode):
     """Simple text label control."""
 
     _VALID_ALIGNS = ("left", "center", "right")
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size label text
 
     def __init__(self, control_id: str, rect: Rect, text: str, align: str = "left") -> None:
         super().__init__(control_id, rect)
         self._text = str(text)
         self._font_role = "body"
-        self._font_size = 16
+        self._font_size: Optional[int] = None
         if align not in self._VALID_ALIGNS:
             raise logical_error(f"align must be one of {self._VALID_ALIGNS!r}, got {align!r}", subsystem="gui.controls", operation="LabelControl.__init__", source_skip_frames=1)
         self._align = align
@@ -97,18 +98,19 @@ class LabelControl(UiNode):
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         colour = theme.text if self.enabled else theme.medium
         font_revision = theme.fonts.revision
-        render_key = (self._text, self._font_role, self._font_size, colour, font_revision)
+        fs = self._font_size if self._font_size is not None else theme.fonts.scaled_size(self._FONT_SCALE)
+        render_key = (self._text, self._font_role, fs, colour, font_revision)
         if self._render_key != render_key:
             start = perf_counter()
             self._rendered_surface = theme.render_text(
-                self._text, role=self._font_role, size=self._font_size, color=colour, shadow=True
+                self._text, role=self._font_role, size=fs, color=colour, shadow=True
             )
             self._render_key = render_key
             first_frame_profiler().record_once(
                 "control.first_draw",
                 f"label:{self.control_id}",
                 (perf_counter() - start) * 1000.0,
-                detail=f"role={self._font_role} size={self._font_size}",
+                detail=f"role={self._font_role} size={fs}",
             )
         rendered = self._rendered_surface
         rw, rh = rendered.get_size()

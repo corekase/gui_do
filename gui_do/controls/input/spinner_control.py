@@ -61,6 +61,9 @@ class SpinnerControl(_TextEditFocusBase):
         self._btn_font_role: str = "spinner.button"
         self._val_font_role: str = "spinner.value"
 
+    _BTN_FONT_SCALE: float = 0.875   # 14/16 — compact arrow glyphs
+    _VAL_FONT_SCALE: float = 1.125   # 18/16 — slightly larger value display
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -192,7 +195,7 @@ class SpinnerControl(_TextEditFocusBase):
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
             raise RuntimeError("SpinnerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
         text_color = theme.text
-        font = theme.fonts.font_instance(self._btn_font_role, size=14)
+        font = theme.fonts.font_instance(self._btn_font_role, size=theme.fonts.scaled_size(self._BTN_FONT_SCALE))
         up_surf = font._font.render("▲", True, text_color) if hasattr(font, "_font") else font.render("▲", True, text_color)
         dn_surf = font._font.render("▼", True, text_color) if hasattr(font, "_font") else font.render("▼", True, text_color)
         surface.blit(
@@ -214,7 +217,7 @@ class SpinnerControl(_TextEditFocusBase):
         display = self._edit_text if self._editing else self._format_value(self._value)
         if self._editing and self._cursor_visible:
             display = display + "|"
-        val_font = theme.fonts.font_instance(self._val_font_role, size=18)
+        val_font = theme.fonts.font_instance(self._val_font_role, size=theme.fonts.scaled_size(self._VAL_FONT_SCALE))
         val_surf = val_font._font.render(display, True, text_color) if hasattr(val_font, "_font") else val_font.render(display, True, text_color)
         text_x = r.x + _H_PAD
         text_y = r.centery - val_surf.get_height() // 2

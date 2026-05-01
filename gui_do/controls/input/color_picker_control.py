@@ -72,6 +72,8 @@ class ColorPickerControl(UiNode):
         self._sv_surface_size: Optional[Tuple[int, int]] = None
         self._draw_font_role: str = "color_picker.hex"
 
+    _FONT_SCALE: float = 1.0   # 16/16 — body-size hex entry
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -209,7 +211,7 @@ class ColorPickerControl(UiNode):
         pygame.draw.rect(surface, hex_border, hex_rect, width=1, border_radius=2)
         if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
             raise RuntimeError("ColorPickerControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
-        font = theme.fonts.font_instance(self._draw_font_role, size=16)
+        font = theme.fonts.font_instance(self._draw_font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         text_color = theme.text
         display_hex = self._hex_text + ("|" if self._hex_editing else "")
         hex_surf = font._font.render(display_hex, True, text_color) if hasattr(font, "_font") else font.render(display_hex, True, text_color)

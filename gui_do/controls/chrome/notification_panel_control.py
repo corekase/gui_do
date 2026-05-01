@@ -19,9 +19,6 @@ if TYPE_CHECKING:
 
 _ROW_H = 60
 _PAD = 8
-_FONT_SIZE = 16
-_TITLE_FONT_SIZE = 13
-_TS_FONT_SIZE = 12
 _SCROLLBAR_W = 10
 _HEADER_H = 32
 
@@ -70,6 +67,11 @@ class NotificationPanelControl(OverlayPanelControl):
         self._title_font_role: str = "notification_panel.title"
         self._body_font_role: str = "notification_panel.body"
         self._ts_font_role: str = "notification_panel.timestamp"
+
+    _HEADER_SCALE: float = 1.125    # 18/16 — slightly larger header
+    _BODY_SCALE: float = 1.0        # 16/16 — body text
+    _TITLE_SCALE: float = 0.8125    # 13/16 — compact title/severity label
+    _TS_SCALE: float = 0.75         # 12/16 — small timestamp
 
     # ------------------------------------------------------------------
     # UiNode overrides
@@ -231,7 +233,7 @@ class NotificationPanelControl(OverlayPanelControl):
         # ...debug code removed...
 
         try:
-            hf = theme.fonts.font_instance(self._header_font_role, size=_FONT_SIZE + 2)
+            hf = theme.fonts.font_instance(self._header_font_role, size=theme.fonts.scaled_size(self._HEADER_SCALE))
             if hasattr(hf, "_font"):
                 ht = hf._font.render("Notifications", True, text_col)
             else:
@@ -240,7 +242,7 @@ class NotificationPanelControl(OverlayPanelControl):
 
             # "Mark all read" button text
             if self._center.unread_count.value > 0:
-                mf = theme.fonts.font_instance(self._title_font_role, size=_TITLE_FONT_SIZE)
+                mf = theme.fonts.font_instance(self._title_font_role, size=theme.fonts.scaled_size(self._TITLE_SCALE))
                 if hasattr(mf, "_font"):
                     mt = mf._font.render("Mark all read", True, (180, 210, 255))
                 else:
@@ -267,9 +269,9 @@ class NotificationPanelControl(OverlayPanelControl):
             if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
                 raise RuntimeError("NotificationPanelControl requires a non-None theme with a valid 'fonts' attribute. Ensure theme is passed everywhere this control is used.")
             try:
-                body_font = theme.fonts.font_instance(self._body_font_role, size=_FONT_SIZE)
-                title_font = theme.fonts.font_instance(self._title_font_role, size=_TITLE_FONT_SIZE)
-                ts_font = theme.fonts.font_instance(self._ts_font_role, size=_TS_FONT_SIZE)
+                body_font = theme.fonts.font_instance(self._body_font_role, size=theme.fonts.scaled_size(self._BODY_SCALE))
+                title_font = theme.fonts.font_instance(self._title_font_role, size=theme.fonts.scaled_size(self._TITLE_SCALE))
+                ts_font = theme.fonts.font_instance(self._ts_font_role, size=theme.fonts.scaled_size(self._TS_SCALE))
             except Exception:
                 body_font = title_font = ts_font = None
 
@@ -323,7 +325,7 @@ class NotificationPanelControl(OverlayPanelControl):
         # Empty state
         if not self._center.all_records:
             try:
-                bf = theme.fonts.font_instance(self._body_font_role, size=_FONT_SIZE)
+                bf = theme.fonts.font_instance(self._body_font_role, size=theme.fonts.scaled_size(self._BODY_SCALE))
                 et = bf._font.render("No notifications", True, muted_col) if hasattr(bf, "_font") else bf.render("No notifications", True, muted_col)
                 surface.blit(et, (
                     lr.x + (lr.width - et.get_width()) // 2,
