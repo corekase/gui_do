@@ -19,6 +19,7 @@ from gui_do import (
     ArrowBoxControl,
     ButtonControl,
     ButtonGroupControl,
+    CellCaretLayout,
     CanvasControl,
     ColorPickerControl,
     ContextMenuItem,
@@ -467,38 +468,63 @@ class ControlsShowcaseFeature(Feature):
         group_other_h = 34
         tri_w = max(48, (left_lane.width - (self.INNER_GAP * 2)) // 3)
 
-        for index, (name, label_text, control_id, accessibility_label) in enumerate(self.SHOWCASE_BUTTON_TRIO_SPECS):
+        lane_controls_h = (
+            button_slot_h + row_gap
+            + button_slot_h + row_gap
+            + group_first_slot_h + row_gap
+            + group_other_h + row_gap
+            + group_other_h
+        )
+        lane_layout = CellCaretLayout(
+            bounds=Rect(left_lane.left, y, left_lane.width, lane_controls_h),
+            cell_width=tri_w,
+            cell_height=lane_controls_h,
+            columns=3,
+            cell_gap_x=self.INNER_GAP,
+            cell_gap_y=row_gap,
+            item_gap_y=row_gap,
+            flow_axis="vertical",
+        )
+        lane_cell_layouts = {
+            col_index: LayoutManager()
+            for col_index in range(3)
+        }
+        # Each cell can host a nested LayoutManager; this keeps per-cell composition
+        # extensible without changing the outer cell-caret progression behavior.
+        for col_index, cell_layout in lane_cell_layouts.items():
+            lane_layout.bind_layout_manager(cell_layout, col=col_index, row=0)
+
+        for col_index, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
+            lane_layout.move_to_cell(col_index, 0)
+
+            button_name, button_label_text, button_control_id, button_accessibility_label = self.SHOWCASE_BUTTON_TRIO_SPECS[col_index]
             self._place_control(
                 host,
-                name,
-                label_text,
-                ButtonControl(control_id, Rect(0, 0, 1, 1), "Button"),
-                Rect(left_lane.left + (index * (tri_w + self.INNER_GAP)), y, tri_w, button_slot_h),
+                button_name,
+                button_label_text,
+                ButtonControl(button_control_id, Rect(0, 0, 1, 1), "Button"),
+                lane_layout.add(tri_w, button_slot_h),
                 focusable=True,
                 accessibility_role="button",
-                accessibility_label=accessibility_label,
+                accessibility_label=button_accessibility_label,
                 column_index=2,
-                row_index=index,
+                row_index=col_index,
             )
-        y += button_slot_h + row_gap
 
-        for index, (name, label_text, control_id, accessibility_label) in enumerate(self.SHOWCASE_TOGGLE_TRIO_SPECS):
+            toggle_name, toggle_label_text, toggle_control_id, toggle_accessibility_label = self.SHOWCASE_TOGGLE_TRIO_SPECS[col_index]
             self._place_control(
                 host,
-                name,
-                label_text,
-                ToggleControl(control_id, Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
-                Rect(left_lane.left + (index * (tri_w + self.INNER_GAP)), y, tri_w, button_slot_h),
+                toggle_name,
+                toggle_label_text,
+                ToggleControl(toggle_control_id, Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
+                lane_layout.add(tri_w, button_slot_h),
                 focusable=True,
                 accessibility_role="toggle",
-                accessibility_label=accessibility_label,
+                accessibility_label=toggle_accessibility_label,
                 column_index=2,
-                row_index=3 + index,
+                row_index=3 + col_index,
             )
-        y += button_slot_h + row_gap
 
-        for group_col, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
-            gx = left_lane.left + (group_col * (tri_w + self.INNER_GAP))
             for option_index, with_label in self.SHOWCASE_GROUP_ROW_SPECS:
                 control_name = f"button_group_{group_key}{option_index}"
                 control = ButtonGroupControl(
@@ -508,17 +534,9 @@ class ControlsShowcaseFeature(Feature):
                     f"{group_letter}{option_index}",
                     selected=False,
                 )
-                if option_index == 1:
-                    option_y = y
-                    option_h = group_first_slot_h
-                elif option_index == 2:
-                    option_y = y + group_first_slot_h + row_gap
-                    option_h = group_other_h
-                else:
-                    option_y = y + group_first_slot_h + row_gap + group_other_h + row_gap
-                    option_h = group_other_h
-                placement_rect = Rect(gx, option_y, tri_w, option_h)
-                row_index = 6 + (group_col * 3) + (option_index - 1)
+                row_index = 6 + (col_index * 3) + (option_index - 1)
+                option_h = group_first_slot_h if option_index == 1 else group_other_h
+                placement_rect = lane_layout.add(tri_w, option_h)
                 if with_label:
                     self._place_control(
                         host,
@@ -545,8 +563,7 @@ class ControlsShowcaseFeature(Feature):
                         row_index=row_index,
                     )
 
-        groups_block_h = group_first_slot_h + row_gap + group_other_h + row_gap + group_other_h
-        y += groups_block_h + row_gap
+        y += lane_controls_h + row_gap
 
         mid_block_h = slot_h(120)
         self._place_control(

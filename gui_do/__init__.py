@@ -157,6 +157,7 @@ from .events.gesture_recognizer import GestureRecognizer
 from .layout.layout_animator import LayoutAnimator
 from .scheduling.rate_limiter import Debouncer, Throttler
 from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
+from .layout.cell_caret_layout import CellCaretLayout, CellCaretState
 from .actions.key_chord_manager import KeyChordManager, KeyChord, ChordStep
 from .controls.composite.error_boundary import ErrorBoundary
 from .overlays.tooltip_manager import TooltipManager, TooltipHandle
