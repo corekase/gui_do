@@ -3,6 +3,8 @@ import unittest
 import pygame
 
 from gui_do import ButtonControl, LabelControl, TabLayoutContext
+from gui_do.persistence.scene_snapshot import SceneSnapshot
+from demo_features.systems_demo_feature import SystemsDemoFeature
 
 
 class _StubWindow:
@@ -12,6 +14,17 @@ class _StubWindow:
     def add(self, control):
         self.added.append(control)
         return control
+
+
+class _StubStatusLabel:
+    def __init__(self):
+        self.text = ""
+
+
+class _StubSnapshotWindow:
+    def __init__(self):
+        self.control_id = "systems_window"
+        self.rect = pygame.Rect(0, 0, 320, 240)
 
 
 class TestSystemsDemoFeatureAbstractions(unittest.TestCase):
@@ -98,6 +111,20 @@ class TestSystemsDemoFeatureAbstractions(unittest.TestCase):
         self.assertEqual(10 + 100 + 8, buttons[1].rect.left)
         self.assertEqual([buttons[0], buttons[1]], ctx.build())
         self.assertEqual([buttons[0], buttons[1]], window.added)
+
+    def test_restore_snapshot_uses_rect_topleft_for_status_text(self):
+        feature = SystemsDemoFeature()
+        window = _StubSnapshotWindow()
+        feature.window = window
+        feature._snapshot_label = _StubStatusLabel()
+        feature._snapshot = SceneSnapshot.from_nodes([window])
+
+        window.rect.topleft = (150, 160)
+
+        feature._restore_snapshot()
+
+        self.assertEqual((0, 0), window.rect.topleft)
+        self.assertEqual("Restored: window moved to (0, 0)", feature._snapshot_label.text)
 
 
 if __name__ == "__main__":

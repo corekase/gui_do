@@ -128,8 +128,8 @@ DEMO_BOOTSTRAP_CONFIG = HostApplicationConfig(
     display_size=(1920, 1080),
     window_title="gui_do demo",
     fonts={
-        "default": {"file": "demo_features/data/fonts/Ubuntu-B.ttf", "size": 14},
-        "window": "demo_features/data/fonts/Gimbot.ttf",
+        "default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14},
+        "window": "demo_features/data/fonts/Ubuntu-B.ttf",
     },
     font_role_specs=(
         {"title": {"size": 14, "font": "window"}},

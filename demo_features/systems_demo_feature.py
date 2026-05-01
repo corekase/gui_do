@@ -994,10 +994,11 @@ class SystemsDemoFeature(RoutedFeature):
             return
         entry = self._snapshot.get(self.window.control_id)
         if entry is not None:
-            self.window.rect = Rect(entry.rect)
+            restored_rect = Rect(entry.rect)
+            self.window.rect = restored_rect
             if self._snapshot_label is not None:
                 self._snapshot_label.text = (
-                    f"Restored: window moved to {entry.rect.topleft}"
+                    f"Restored: window moved to {restored_rect.topleft}"
                 )
 
     def _build_and_query_spatial(self) -> None:
