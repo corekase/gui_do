@@ -1,4 +1,4 @@
-"""Tests for ToastSeverity, NotificationRecord, AnimationTransitionMode, and 
+"""Tests for ToastSeverity, NotificationRecord, AnimationTransitionMode, and
 TaskScheduler.recommended_worker_count — pure-logic classes with no display deps."""
 import unittest
 
