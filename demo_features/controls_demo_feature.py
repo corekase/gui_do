@@ -142,6 +142,7 @@ class ControlsShowcaseFeature(Feature):
 
     HOST_REQUIREMENTS = {
         "build": ("app", "scene_presentation", "control_showcase_root"),
+        "bind_runtime": ("app",),
         "on_update": ("app",),
         "prewarm": ("app",),
     }
@@ -1416,6 +1417,20 @@ class ControlsShowcaseFeature(Feature):
 
         self._initial_focus_control = self._category_tabs
         self._pending_initial_focus = True
+
+    def bind_runtime(self, host) -> None:
+        """Bind scene-owned shortcuts for control showcase runtime behavior."""
+
+        def _toggle_task_panel_focus(_event):
+            overlay = getattr(host.app, "overlay", None)
+            has_overlay = getattr(overlay, "has_overlay", None)
+            if callable(has_overlay) and has_overlay("__command_palette__"):
+                return True
+            task_panel_focus = getattr(host.app, "task_panel_focus", None)
+            return bool(task_panel_focus is not None and task_panel_focus.toggle(host.app.scene, host.app))
+
+        host.app.actions.register_action("toggle_task_panel_focus_control_showcase", _toggle_task_panel_focus)
+        host.app.actions.bind_key(__import__("pygame").K_F1, "toggle_task_panel_focus_control_showcase", scene="control_showcase")
 
     def on_update(self, host) -> None:
         dt = self._frame_timer.tick()

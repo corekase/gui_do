@@ -21,6 +21,13 @@ class KeyboardManager:
         task_panel_focus = getattr(app, "task_panel_focus", None)
 
         if task_panel_focus is not None and task_panel_focus.is_active:
+            # Keep task-panel mode keyboard-only, but allow scene-owned F1 toggles
+            # so users can exit/enter the mode without a mouse.
+            if event.is_key_down(pygame.K_F1):
+                if app.actions.trigger_from_event(event, app):
+                    event.prevent_default()
+                    event.stop_propagation()
+                    return True
             if event.is_key_down(pygame.K_TAB):
                 shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
                 if task_panel_focus.cycle(scene, app, forward=not shift_pressed):

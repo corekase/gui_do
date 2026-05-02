@@ -1,0 +1,145 @@
+import unittest
+
+import pygame
+
+from demo_features.controls_demo_feature import ControlsShowcaseFeature
+from gui_do.events.gui_event import EventType
+from gui_do.events.keyboard_manager import KeyboardManager
+
+
+class _StubKeyEvent:
+    def __init__(self, *, key: int, mod: int = 0):
+        self.kind = EventType.KEY_DOWN
+        self.key = int(key)
+        self.mod = int(mod)
+        self.default_prevented = False
+        self.propagation_stopped = False
+
+    def is_key_down(self, key: int) -> bool:
+        return self.kind == EventType.KEY_DOWN and self.key == int(key)
+
+    def prevent_default(self):
+        self.default_prevented = True
+
+    def stop_propagation(self):
+        self.propagation_stopped = True
+
+
+class _StubActions:
+    def __init__(self):
+        self._handlers = {}
+        self._bound = {}
+        self.trigger_calls = []
+        self.register_calls = []
+        self.bind_calls = []
+
+    def register_action(self, action_id: str, handler):
+        self.register_calls.append((str(action_id), handler))
+        self._handlers[str(action_id)] = handler
+
+    def bind_key(self, key: int, action_id: str, *, scene=None):
+        self.bind_calls.append((int(key), str(action_id), scene))
+        self._bound[(scene, int(key))] = str(action_id)
+
+    def trigger_from_event(self, event, app) -> bool:
+        self.trigger_calls.append((event.key, app.active_scene_name))
+        action_id = self._bound.get((app.active_scene_name, int(event.key)))
+        if action_id is None:
+            return False
+        handler = self._handlers.get(action_id)
+        return bool(handler is not None and handler(event))
+
+
+class _StubTaskPanelFocus:
+    def __init__(self, *, is_active: bool):
+        self.is_active = bool(is_active)
+        self.toggle_calls = []
+        self.cycle_calls = []
+
+    def toggle(self, scene, app):
+        self.toggle_calls.append((scene, app))
+        self.is_active = not self.is_active
+        return True
+
+    def cycle(self, scene, app, *, forward: bool):
+        self.cycle_calls.append((scene, app, bool(forward)))
+        return True
+
+
+class _StubFocus:
+    def route_key_event(self, event, app):
+        return False
+
+    def cycle_focus(self, scene, *, forward: bool, window, pointer_pos):
+        return False
+
+
+class _StubOverlay:
+    def has_overlay(self, overlay_id: str) -> bool:
+        return False
+
+
+class _StubScene:
+    def active_window(self):
+        return None
+
+
+class _StubApp:
+    def __init__(self, *, scene_name: str, task_panel_focus):
+        self.active_scene_name = str(scene_name)
+        self.scene = object()
+        self.actions = _StubActions()
+        self.overlay = _StubOverlay()
+        self.task_panel_focus = task_panel_focus
+        self.focus = _StubFocus()
+
+
+class _StubHost:
+    def __init__(self):
+        self.app = _StubApp(
+            scene_name="control_showcase",
+            task_panel_focus=_StubTaskPanelFocus(is_active=True),
+        )
+
+
+class TestTaskPanelF1Toggle(unittest.TestCase):
+    def test_keyboard_manager_allows_f1_action_while_task_panel_mode_active(self):
+        scene = _StubScene()
+        task_panel_focus = _StubTaskPanelFocus(is_active=True)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+
+        app.actions.register_action("toggle_task_panel_focus", lambda _event: task_panel_focus.toggle(scene, app))
+        app.actions.bind_key(pygame.K_F1, "toggle_task_panel_focus", scene="main")
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_F1)
+
+        consumed = manager.route_key_event(scene, event, app)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual(1, len(task_panel_focus.toggle_calls))
+        self.assertEqual([], task_panel_focus.cycle_calls)
+
+    def test_control_showcase_binds_scene_owned_f1_toggle(self):
+        host = _StubHost()
+        feature = ControlsShowcaseFeature()
+
+        feature.bind_runtime(host)
+
+        self.assertIn(
+            (pygame.K_F1, "toggle_task_panel_focus_control_showcase", "control_showcase"),
+            host.app.actions.bind_calls,
+        )
+
+        action_id, handler = host.app.actions.register_calls[-1]
+        self.assertEqual("toggle_task_panel_focus_control_showcase", action_id)
+
+        result = bool(handler(None))
+        self.assertTrue(result)
+        self.assertEqual(1, len(host.app.task_panel_focus.toggle_calls))
+
+
+if __name__ == "__main__":
+    unittest.main()
