@@ -6,14 +6,9 @@ from typing import TYPE_CHECKING
 from collections.abc import Mapping
 
 if TYPE_CHECKING:
-    # Corrected import paths for type checking
     from gui_do.app.gui_application import GuiApplication
     from gui_do.controls.base.ui_node import UiNode as Control
-    from gui_do.controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem, SceneMenuStripControl
-    from gui_do.controls.display.label_control import LabelControl
-    from gui_do.telemetry.telemetry import telemetry_collector
-    from gui_do.app.error_handling import logical_error
-    from collections.abc import Callable, Iterable, Mapping, Deque
+    from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
 
 # ---------------------------------------------------------------------------
@@ -261,21 +256,10 @@ def calculate_grid_layout(anchor, cols, rows, gap, label_height, label_gap):
             layout.append((x, y, cell_w, cell_h))
     return layout
 
-def register_features_and_scenes(app, features, scenes):
-    """
-    Register all features and create scenes in a single call.
-    features: list of Feature instances
-    scenes: list of (scene_name, root_node) tuples
-    """
-    for feature in features:
-        app.feature_manager.register(feature)
-    for scene_name, root in scenes:
-        app.add_scene(scene_name, root)
 from ..controls.chrome.scene_menu_strip_control import MenuEntry, ContextMenuItem
 from ..app.error_handling import logical_error, report_nonfatal_error
 from time import perf_counter
 from ..controls.chrome.scene_menu_strip_control import SceneMenuStripControl
-from typing import Mapping
 import inspect
 from ..telemetry.telemetry import telemetry_collector
 from collections import deque, OrderedDict
@@ -849,18 +833,6 @@ class FeatureWindowPresentationModel:
                 lambda _ctx, _ev, _key=binding.key: (self.show(_key) or True),
                 category=category,
             )
-
-
-@dataclass(frozen=True)
-class SceneTaskPanelSpec:
-    """Declarative settings for per-scene task panel creation."""
-
-    control_id: str
-    height: int = 50
-    hidden_peek_pixels: int = 6
-    animation_step_px: int = 8
-    dock_bottom: bool = True
-    auto_hide: bool = True
 
 
 class ScenePresentationModel:

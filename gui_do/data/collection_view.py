@@ -71,8 +71,11 @@ class CollectionView:
 
     def refresh(self) -> List[Any]:
         self._materialize()
-        for callback in list(self._refresh_subscribers.values()):
-            callback()
+        if self._refresh_subscribers:
+            # Iterate values directly; subscriber self-removal during callback
+            # is not supported (would require a snapshot copy).
+            for callback in self._refresh_subscribers.values():
+                callback()
         return self.items
 
     def set_source(self, source: Iterable[Any] | Callable[[], Iterable[Any]]) -> None:

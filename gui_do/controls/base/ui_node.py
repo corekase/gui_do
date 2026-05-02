@@ -270,10 +270,10 @@ class UiNode:
 
     def _dispatch_children(self, event: GuiEvent, app: "GuiApplication", *, reverse: bool, theme=None) -> bool:
         children = self.children
-        # Reverse dispatch always iterates a snapshot to be safe under mutation;
-        # forward dispatch iterates the live list because capture-phase handlers
-        # rarely mutate children, avoiding an allocation on every event.
-        iterable = reversed(children[:]) if reverse else children
+        # Reverse dispatch iterates children in reverse without copying:
+        # reversed() on a list returns a list_reverseiterator with no allocation.
+        # Forward dispatch iterates the live list (capture-phase handlers rarely mutate children).
+        iterable = reversed(children) if reverse else children
         for child in iterable:
             if not (child.visible and child.enabled):
                 continue
@@ -379,7 +379,9 @@ class UiNode:
 
     def handle_routed_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         # --- Ensure theme is always valid and has fonts ---
-        if getattr(theme, "fonts", None) is None:
+        # theme is None when called from overlay paths that pass no theme argument;
+        # use identity check (C-level fast path) rather than getattr.
+        if theme is None:
             theme = ColorTheme()
         if event.phase is EventPhase.CAPTURE:
             return bool(self.on_event_capture(event, app, theme=theme))

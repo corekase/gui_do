@@ -17,6 +17,13 @@ class Scene:
     def __init__(self) -> None:
         self.nodes: List[UiNode] = []
         self._invalidation_tracker = None
+        # active_window() cache — invalidated on add/remove/update/_clear_active_windows.
+        self._active_window_dirty: bool = True
+        self._cached_active_window: "Optional[UiNode]" = None
+
+    def _mark_active_window_dirty(self) -> None:
+        self._active_window_dirty = True
+        self._cached_active_window = None
 
     def set_invalidation_tracker(self, tracker) -> None:
         """Attach *tracker* to the scene and all currently registered nodes.
@@ -36,6 +43,7 @@ class Scene:
             node.set_invalidation_tracker(self._invalidation_tracker)
         node.on_mount(None)
         node.invalidate()
+        self._mark_active_window_dirty()
         return node
 
     def remove(self, node: UiNode, *, dispose: bool = False) -> bool:
@@ -46,9 +54,13 @@ class Scene:
         node.on_unmount(None)
         if dispose:
             node.dispose()
+        self._mark_active_window_dirty()
         return True
 
     def update(self, dt_seconds: float) -> None:
+        # Mark dirty so active_window() recomputes after node.update() calls,
+        # which may change visibility/enabled/active state.
+        self._mark_active_window_dirty()
         for node in self.nodes:
             if node.visible:
                 node.update(dt_seconds)
@@ -101,10 +113,14 @@ class Scene:
         return [node for node in self._walk_nodes() if self._is_window_like(node)]
 
     def active_window(self) -> UiNode | None:
+        if not self._active_window_dirty:
+            return self._cached_active_window
         result = None
         for node in self._walk_nodes():
             if self._is_window_like(node) and node.active and node.visible and node.enabled:
                 result = node
+        self._cached_active_window = result
+        self._active_window_dirty = False
         return result
 
     def _point_in_task_panel(self, pos) -> bool:
@@ -148,10 +164,14 @@ class Scene:
         return True
 
     def _clear_active_windows(self) -> None:
+        self._mark_active_window_dirty()
         for node in self.nodes:
             node._clear_active_windows()
 
     def dispatch(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
+        # Validate theme once at the scene level before any per-node dispatch.
+        if getattr(theme, "fonts", None) is None:
+            theme = ColorTheme()
         if event.is_mouse_down(1):
             pos = event.pos
             if isinstance(pos, tuple) and len(pos) == 2:
@@ -190,9 +210,6 @@ class Scene:
 
     @staticmethod
     def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
-        # --- Ensure theme is always valid and has fonts ---
-        if getattr(theme, "fonts", None) is None:
-            theme = ColorTheme()
         return bool(node.handle_routed_event(event, app, theme=theme))
 
     def top_focus_target_at(self, pos) -> UiNode | None:

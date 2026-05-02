@@ -255,6 +255,8 @@ class CooperativeScheduler:
 
         Call once per frame.
         """
+        if not self._handles:
+            return
         for handle in list(self._handles):
             if not handle.is_running:
                 continue

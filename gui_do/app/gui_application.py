@@ -88,96 +88,6 @@ class _FallthroughEntry:
     entry_id: int = 0
 
 
-class _ScrollStackComposer:
-    """Compose controls in a ScrollViewControl with a vertical cursor."""
-
-    def __init__(self, scroll_view, *, start_y: int = 0, default_x: int = 0, non_focus_tab_index: int = -1) -> None:
-        self._scroll_view = scroll_view
-        self._y = int(start_y)
-        self._default_x = int(default_x)
-        self._non_focus_tab_index = int(non_focus_tab_index)
-
-    @property
-    def y(self) -> int:
-        """Current vertical cursor position inside the scroll content."""
-        return self._y
-
-    def set_y(self, y: int) -> int:
-        """Set vertical cursor and return updated value."""
-        self._y = int(y)
-        return self._y
-
-    def advance(self, delta: int) -> int:
-        """Move vertical cursor by *delta* and return updated value."""
-        self._y += int(delta)
-        return self._y
-
-    def add(
-        self,
-        control,
-        *,
-        x: Optional[int] = None,
-        y: Optional[int] = None,
-        focusable: bool = False,
-        height: Optional[int] = None,
-        gap_after: int = 0,
-    ):
-        """Add one control at cursor (or explicit y), optionally advancing cursor."""
-        place_x = self._default_x if x is None else int(x)
-        place_y = self._y if y is None else int(y)
-        if not focusable and hasattr(control, "set_tab_index"):
-            control.set_tab_index(self._non_focus_tab_index)
-        self._scroll_view.add(control, content_x=place_x, content_y=place_y)
-
-        if y is None:
-            if height is None:
-                rect = getattr(control, "rect", None)
-                used_height = int(getattr(rect, "height", 0))
-            else:
-                used_height = int(height)
-            self._y = place_y + max(0, used_height) + int(gap_after)
-        return control
-
-    def add_labeled_value(
-        self,
-        label_control,
-        value_control,
-        *,
-        x: Optional[int] = None,
-        label_gap: int = 4,
-        item_gap: int = 8,
-        focusable_value: bool = False,
-    ):
-        """Add a label row and value/control row using common demo spacing."""
-        self.add(label_control, x=x, gap_after=label_gap)
-        return self.add(value_control, x=x, gap_after=item_gap, focusable=focusable_value)
-
-
-class _VerticalCursor:
-    """Track vertical layout offsets in feature/scene builders."""
-
-    def __init__(self, *, start_y: int = 0) -> None:
-        self._y = int(start_y)
-
-    @property
-    def y(self) -> int:
-        return self._y
-
-    def set_y(self, y: int) -> int:
-        self._y = int(y)
-        return self._y
-
-    def advance(self, delta: int) -> int:
-        self._y += int(delta)
-        return self._y
-
-    def next_slot(self, height: int, *, gap_after: int = 0) -> int:
-        """Return current y and advance by height+gap."""
-        slot_top = self._y
-        self._y += int(height) + int(gap_after)
-        return slot_top
-
-
 class GuiApplication:
     """Application runtime coordinator for scene, input, capture, and rendering."""
 
@@ -219,7 +129,11 @@ class GuiApplication:
         self.toasts = ToastManager(self.surface.get_rect())
         self.events.subscribe("toast", self.toasts.on_event_bus_message)
         self.running = True
-        self._logical_pointer_pos = tuple(map(int, pygame.mouse.get_pos()))
+        self._logical_pointer_pos = (
+            tuple(map(int, pygame.mouse.get_pos()))
+            if pygame.display.get_init()
+            else (0, 0)
+        )
         self._last_dispatched_pointer_pos = self._logical_pointer_pos
         self._pending_warp_target = None
         self._pending_warp_ignore_budget = 0
@@ -286,7 +200,8 @@ class GuiApplication:
 
     def switch_scene(self, name: str) -> None:
         collector = telemetry_collector()
-        if name not in self._scenes:
+        runtime = self._scenes.get(name)
+        if runtime is None:
             raise logical_error(
                 f"unknown scene: {name}",
                 subsystem="gui.application",
@@ -304,7 +219,6 @@ class GuiApplication:
             self._reconcile_task_panel_hover_state(outgoing_scene, force_idle=True)
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
-            runtime = self._scenes[name]
             self.scene = runtime.scene
             self.scheduler = runtime.scheduler
             self.timers = runtime.timers
@@ -341,11 +255,18 @@ class GuiApplication:
             if probe is not None and node.visible and node.enabled:
                 wants_hover = bool(node.rect.collidepoint(probe))
             node.reconcile_hover(wants_hover)
-            for child in node.find_descendants(lambda candidate: True):
+            # Walk the subtree inline (BFS) without materializing a result list.
+            queue = list(node.children)
+            i = 0
+            while i < len(queue):
+                child = queue[i]
+                i += 1
                 child_wants_hover = False
                 if probe is not None and child.visible and child.enabled:
                     child_wants_hover = bool(child.rect.collidepoint(probe))
                 child.reconcile_hover(child_wants_hover)
+                if child.children:
+                    queue.extend(child.children)
 
     @property
     def active_scene_name(self) -> str:
@@ -962,7 +883,8 @@ class GuiApplication:
         return logical_event
 
     def _init_cursor_system(self) -> None:
-        pygame.mouse.set_visible(False)
+        if pygame.display.get_init():
+            pygame.mouse.set_visible(False)
 
     def register_cursor(self, name: str, path: str | Path, hotspot=(0, 0)) -> None:
         """Register a named cursor image. *path* is resolved relative to the application CWD."""
@@ -1087,10 +1009,6 @@ class GuiApplication:
         )
         self.invalidation.invalidate_all()
 
-    def font_roles(self, scene_name: Optional[str] = None) -> tuple[str, ...]:
-        runtime = self._scenes[self._active_scene_name] if scene_name is None else self._scene_runtime(scene_name)
-        return runtime.theme.font_roles()
-
     # --- Convenience helpers ---
 
     def run(self, target_fps: int = 60, max_frames: Optional[int] = None) -> int:
@@ -1198,30 +1116,6 @@ class GuiApplication:
         """
         scene = self.scene if scene_name is None else self._scene_runtime(scene_name).scene
         return self.focus.set_focus_by_id(scene, control_id)
-
-    def compose_scroll_stack(
-        self,
-        scroll_view,
-        *,
-        start_y: int = 0,
-        default_x: int = 0,
-        non_focus_tab_index: int = -1,
-    ):
-        """Return a vertical composition helper bound to one scroll view.
-
-        Use this helper to build repeated label/value/control rows without
-        manually tracking ``y += ...`` math for every insertion.
-        """
-        return _ScrollStackComposer(
-            scroll_view,
-            start_y=start_y,
-            default_x=default_x,
-            non_focus_tab_index=non_focus_tab_index,
-        )
-
-    def vertical_cursor(self, *, start_y: int = 0):
-        """Return a reusable y-cursor helper for manual Rect composition."""
-        return _VerticalCursor(start_y=start_y)
 
     # --- Feature helpers ---
 

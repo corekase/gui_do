@@ -85,7 +85,7 @@ class MyFeature(Feature):
     def build(self, host):
         button = ButtonControl(title="Click Me")
         button.on_click = self.handle_click
-        host.scene.add_control(button)
+        host.add(button)
 
     def handle_click(self):
         print("Clicked!")
@@ -206,10 +206,10 @@ class CounterFeature(Feature):
         self.count = ObservableValue(0)
 
         # Create controls and add to scene
-        self.label = host.scene.add(
+        self.label = host.add(
             LabelControl("counter_label", Rect(20, 20, 200, 28), "Count: 0")
         )
-        host.scene.add(ButtonControl(
+        host.add(ButtonControl(
             "increment", Rect(20, 60, 120, 32), "+1",
             on_click=self._on_increment,
         ))
@@ -229,13 +229,13 @@ app = GuiApplication(surface)
 app.features.register(CounterFeature("counter"), host=app)
 app.features.build_features(app)
 app.features.bind_runtime(app)
-app.run_entrypoint(target_fps=60)
+app.run_entrypoint(target_fps=120)
 ```
 
 **Key Points:**
 - The feature name `"counter"` is the unique identifier for this feature and is used in message routing
 - `build()` creates controls; `bind_runtime()` connects subscriptions (after all features are built)
-- `host.scene` is the active scene root; controls added there become top-level nodes
+- `host.add()` adds controls to the active scene; use `host.add(node, scene_name="…")` to target a specific scene
 - `app.features` is the `FeatureManager` that drives all features through their lifecycle phases
 
 ### Observable Data and Reactive Bindings
@@ -252,7 +252,7 @@ class TodoListFeature(Feature):
             ListItem("Buy milk"),
             ListItem("Walk dog"),
         ])
-        self.list_view = host.scene.add(
+        self.list_view = host.add(
             ListViewControl("todos", Rect(20, 20, 350, 300))
         )
 
@@ -274,8 +274,8 @@ class FormFeature(Feature):
         self.name_model = ObservableValue("")
         self.age_model = ObservableValue(0)
 
-        self.name_input = host.scene.add(TextInputControl(...))
-        self.age_input = host.scene.add(...)
+        self.name_input = host.add(TextInputControl(...))
+        self.age_input = host.add(...)
 
     def bind_runtime(self, host) -> None:
         self.bindings.add(Binding(self.name_model, self.name_input, "text", mode="two_way"))
@@ -324,7 +324,7 @@ class MainFeature(Feature):
 
     def build(self, host) -> None:
         # Controls added to the "main" scene
-        host.scene.add(LabelControl("title", Rect(20, 20, 200, 28), "Main Scene"))
+        host.app.add(LabelControl("title", Rect(20, 20, 200, 28), "Main Scene"), scene_name="main")
 
 class SettingsFeature(Feature):
     def __init__(self):
@@ -332,7 +332,7 @@ class SettingsFeature(Feature):
 
     def build(self, host) -> None:
         # Controls added to the "settings" scene
-        host.scene.add(LabelControl("title", Rect(20, 20, 200, 28), "Settings"))
+        host.app.add(LabelControl("title", Rect(20, 20, 200, 28), "Settings"), scene_name="settings")
 
 # Bootstrap creates scenes from specs
 SCENE_SPECS = (
@@ -362,12 +362,12 @@ class WaveformFeature(DirectFeature):
         self._phase = 0.0
 
         # These controls appear on top of direct drawing
-        host.scene.add(SliderControl(
+        host.add(SliderControl(
             "amp", Rect(20, 20, 200, 24),
             LayoutAxis.HORIZONTAL, 10.0, 200.0, 80.0,
             on_change=lambda v, _r: self.amplitude.__setattr__("value", v),
         ))
-        host.scene.add(LabelControl("amp_label", Rect(230, 20, 100, 24), "Amplitude"))
+        host.add(LabelControl("amp_label", Rect(230, 20, 100, 24), "Amplitude"))
 
     def on_direct_update(self, host, dt_seconds: float) -> None:
         # Simulate waveform progression each frame
@@ -391,7 +391,7 @@ app = GuiApplication(surface)
 app.features.register(WaveformFeature("waveform"), host=app)
 app.features.build_features(app)
 app.features.bind_runtime(app)
-app.run_entrypoint(target_fps=60)
+app.run_entrypoint(target_fps=120)
 ```
 
 DirectFeature provides three additional hooks:
@@ -419,7 +419,7 @@ class CalculatorLogic(LogicFeature):
 # Usage from another feature
 class CalculatorUI(Feature):
     def build(self, host) -> None:
-        host.scene.add(ButtonControl(
+        host.add(ButtonControl(
             "calculate", Rect(20, 20, 120, 32), "Add",
             on_click=lambda: self.send_logic_message("calculator", {"a": 10, "b": 32}),
         ))
@@ -462,7 +462,7 @@ from gui_do import Feature, FeatureMessage
 
 class ProducerFeature(Feature):
     def build(self, host) -> None:
-        host.scene.add(ButtonControl(
+        host.add(ButtonControl(
             "emit", Rect(20, 20, 100, 32), "Emit",
             on_click=self._emit_event,
         ))
@@ -473,7 +473,7 @@ class ProducerFeature(Feature):
 
 class ConsumerFeature(Feature):
     def build(self, host) -> None:
-        self.status = host.scene.add(LabelControl("status", Rect(20, 60, 200, 28), "Waiting…"))
+        self.status = host.add(LabelControl("status", Rect(20, 60, 200, 28), "Waiting…"))
 
     def on_update(self, host) -> None:
         # Drain queued messages from producer
@@ -546,7 +546,7 @@ CONFIG = HostApplicationConfig(
     action_specs=(make_exit_action(),),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 
 
@@ -597,6 +597,7 @@ if __name__ == "__main__":
 | `host._palette_manager` | `CommandPaletteManager` | Command palette overlay |
 | `host.go_to_{scene_name}` | callable | Navigation helper per scene |
 | `host.{feature_attr}` | `Feature` subclass | One attribute per `FeatureSpec.attr_name` |
+| `host.{scene_name}_root` | `PanelControl` | Root panel per `SceneRootSpec` entry |
 
 Example:
 
@@ -620,7 +621,7 @@ config = HostApplicationConfig(
     action_specs=(...),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 bootstrap_host_application(host, config)
 host.app.run_entrypoint(target_fps=config.target_fps)
@@ -689,6 +690,29 @@ make_scene_nav_action(
 )
 make_palette_open_action()      # Standard command palette action
 ```
+**SceneRootSpec** — Declare a managed root panel for a named scene:
+
+```python
+SceneRootSpec(
+    scene_name="main",          # Scene this root belongs to
+    control_id="main_root",     # Control identifier for the PanelControl
+    draw_background=False,      # Whether the panel draws a background
+)
+```
+
+`bootstrap_host_application` creates a `PanelControl` for each `SceneRootSpec` and sets `host.{scene_name}_root` to it. Use the root panel as the parent container for your scene's primary content.
+
+**TelemetryConfig** — Optional performance telemetry configuration:
+
+```python
+TelemetryConfig(
+    enabled=False,               # Master switch for all telemetry collection
+    live_analysis_enabled=True,  # Emit telemetry to the in-process collector
+    file_logging_enabled=False,  # Write telemetry spans to disk
+)
+```
+
+Pass as `HostApplicationConfig(telemetry=TelemetryConfig(enabled=True))` to enable. Disabled by default; has no performance overhead when `enabled=False`.
 
 ### Feature Registration and Window Management
 
@@ -789,6 +813,23 @@ Callers send messages with a `"command"` field; the logic feature handles them. 
 
 Callers send messages with a `"topic"` field; the feature routes to the matching handler.
 
+**FrameTimer** — Per-frame delta time utility for use inside `on_update`:
+
+```python
+from gui_do import FrameTimer
+
+class AnimatedFeature(Feature):
+    def __init__(self) -> None:
+        super().__init__("animated")
+        self._timer = FrameTimer()
+
+    def on_update(self, host) -> None:
+        dt = self._timer.tick()  # Seconds since last frame; 0.0 on first call
+        self._phase += dt * speed
+```
+
+`FrameTimer.reset()` resets the internal clock so the next `tick()` returns `0.0`. Import from `gui_do`.
+
 ### FeatureManager and Feature Coordination
 
 `FeatureManager` (available as `app.features`) coordinates lifecycle and messaging for all registered features:
@@ -859,7 +900,7 @@ class StyledFeature(Feature):
         })
 
         # Create controls using the registered roles
-        label = host.scene.add(LabelControl("title", Rect(...), "Title"))
+        label = host.add(LabelControl("title", Rect(...), "Title"))
         label.font_role = self.font_role("title")  # Access via font_role()
 ```
 
@@ -919,7 +960,7 @@ from pygame import Rect
 class ScoreFeature(Feature):
     def build(self, host) -> None:
         self.score = ObservableValue(0)
-        self.label = host.scene.add(
+        self.label = host.add(
             LabelControl("score_label", Rect(20, 20, 200, 28), "Score: 0")
         )
 

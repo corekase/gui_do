@@ -261,7 +261,7 @@ CONFIG = HostApplicationConfig(
     action_specs=(make_exit_action(),),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 ```
 
@@ -349,7 +349,7 @@ CONFIG = HostApplicationConfig(
     action_specs=(make_exit_action(),),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 
 
@@ -527,6 +527,26 @@ class MyFeature(Feature):
     def on_update(self, host) -> None:
         pass  # per-frame logic here
 ```
+
+### FrameTimer — Per-Frame Delta Time
+
+When you need accurate time elapsed between frames inside `on_update`, use `FrameTimer`:
+
+```python
+from gui_do import Feature, FrameTimer
+
+class AnimatedFeature(Feature):
+    def __init__(self) -> None:
+        super().__init__("animated")
+        self._timer = FrameTimer()
+        self._phase = 0.0
+
+    def on_update(self, host) -> None:
+        dt = self._timer.tick()   # Seconds since last call; 0.0 on first call
+        self._phase += dt * 2.0   # Advance animation at 2 rad/sec
+```
+
+Call `self._timer.reset()` if you want the next `tick()` to return `0.0` again (e.g., after pausing).
 
 ### DirectFeature — Custom Rendering
 
@@ -879,7 +899,7 @@ CONFIG = HostApplicationConfig(
     ),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 
 
@@ -974,6 +994,58 @@ RuntimeSceneSpec(
     prewarm=False,                          # Pre-render scene before first display
 )
 ```
+
+### SceneRootSpec
+
+Declares a managed root `PanelControl` for a named scene. Bootstrap creates the panel and stores it on the host as `host.{scene_name}_root`.
+
+```python
+from gui_do import SceneRootSpec
+
+SceneRootSpec(
+    scene_name="main",          # Scene this root belongs to
+    control_id="main_root",     # Identifier for the PanelControl
+    draw_background=False,      # Whether the panel draws its own background
+)
+```
+
+With this spec in `HostApplicationConfig(scene_roots=(...))`, you get `host.main_root` as a ready-made container for your scene content.
+
+### CursorSpec
+
+Declares a custom cursor to register during bootstrap.
+
+```python
+from gui_do import CursorSpec
+
+CursorSpec(
+    name="crosshair",                  # Cursor identifier used at runtime
+    asset="assets/cursors/cross.png",  # Path to cursor image
+    hot_x=16,                          # Hotspot x offset (pixels from left)
+    hot_y=16,                          # Hotspot y offset (pixels from top)
+)
+```
+
+Pass as `HostApplicationConfig(cursors=(CursorSpec(...),))`. Registered cursors can be activated at runtime via the cursor manager.
+
+### TelemetryConfig
+
+Optional configuration for built-in performance telemetry. Disabled by default.
+
+```python
+from gui_do import TelemetryConfig
+
+HostApplicationConfig(
+    # ...
+    telemetry=TelemetryConfig(
+        enabled=False,               # Master switch
+        live_analysis_enabled=True,  # In-process telemetry collector
+        file_logging_enabled=False,  # Write spans to disk
+    ),
+)
+```
+
+When `enabled=False` (the default), there is no performance overhead.
 
 ### TaskPanelButtonSpec
 
@@ -1141,7 +1213,7 @@ CONFIG = HostApplicationConfig(
     ),
     static_accessibility_specs=(),
     initial_scene_name="main",
-    target_fps=60,
+    target_fps=120,
 )
 
 
