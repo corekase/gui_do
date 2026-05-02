@@ -200,7 +200,7 @@ class MainDemoFeature(Feature):
         host.app.tile_windows()
 
     def bind_runtime(self, host) -> None:
-        """Create the ShortcutHelpOverlay and bind F9 to toggle it."""
+        """Create runtime overlays and bind explicit scene-owned hotkeys."""
         overlay_rect = Rect(
             max(0, host.app.surface.get_width() // 2 - 300),
             max(0, host.app.surface.get_height() // 2 - 220),
@@ -217,6 +217,17 @@ class MainDemoFeature(Feature):
             lambda _event: (self._help_overlay.toggle() or True),
         )
         host.app.actions.bind_key(__import__("pygame").K_F9, "show_help", scene="main")
+
+        def _toggle_task_panel_focus(_event):
+            overlay = getattr(host.app, "overlay", None)
+            has_overlay = getattr(overlay, "has_overlay", None)
+            if callable(has_overlay) and has_overlay("__command_palette__"):
+                return True
+            task_panel_focus = getattr(host.app, "task_panel_focus", None)
+            return bool(task_panel_focus is not None and task_panel_focus.toggle(host.app.scene, host.app))
+
+        host.app.actions.register_action("toggle_task_panel_focus", _toggle_task_panel_focus)
+        host.app.actions.bind_key(__import__("pygame").K_F1, "toggle_task_panel_focus", scene="main")
 
     def _make_sized_title_label(
         self,

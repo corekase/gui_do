@@ -29,8 +29,6 @@ from gui_do import (
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
-    AccessibilitySequenceSpec,
-    apply_accessibility_sequence_from_attrs,
     AnchoredWindowSpec,
     LogicBindingSpec,
     create_feature_presented_window,
@@ -70,12 +68,6 @@ _LIFE_WINDOW_SPEC = AnchoredWindowSpec(
 
 _LIFE_LOGIC_BINDINGS = (
     LogicBindingSpec(alias="life", provider_name="life_simulation_logic"),
-)
-
-_LIFE_ACCESSIBILITY_SPECS = (
-    AccessibilitySequenceSpec(control_attr="reset_button", role="button", label="Reset life board"),
-    AccessibilitySequenceSpec(control_attr="toggle", role="toggle", label="Run life simulation"),
-    AccessibilitySequenceSpec(control_attr="zoom_slider", role="slider", label="Life zoom"),
 )
 
 _KEY_TOPIC = "topic"
@@ -226,14 +218,6 @@ class LifeSimulationFeature(RoutedFeature):
             logic_bindings=_LIFE_LOGIC_BINDINGS,
         )
         self._send_life_logic_command("snapshot")
-
-    def configure_accessibility(self, host, tab_index_start: int) -> int:
-        """Assign accessibility metadata and tab order for Life controls."""
-        return apply_accessibility_sequence_from_attrs(
-            self,
-            _LIFE_ACCESSIBILITY_SPECS,
-            tab_index_start,
-        )
 
     def message_handlers(self):
         """Route lifecycle feature messages by canonical topic."""
@@ -390,12 +374,14 @@ class _LifeWindowPresenter(WindowPresenter):
         self.reset_button = ButtonControl(
             "life_reset", life_reset_rect, "Reset", self.feature.life_reset, style="angle"
         )
+        self.reset_button.set_accessibility(role="button", label="Reset life board")
         self.add_control(self.reset_button)
         self.feature.reset_button = self.reset_button
 
         self.toggle = ToggleControl(
             "life_toggle", life_toggle_rect, "Stop", "Start", pushed=False, style="round",
         )
+        self.toggle.set_accessibility(role="toggle", label="Run life simulation")
         self.add_control(self.toggle)
         self.feature.toggle = self.toggle
 
@@ -407,6 +393,7 @@ class _LifeWindowPresenter(WindowPresenter):
             Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
             LayoutAxis.HORIZONTAL, 0.0, 11.0, 5.0, on_change=self.feature.on_life_zoom_slider_changed,
         )
+        self.zoom_slider.set_accessibility(role="slider", label="Life zoom")
         self.add_control(self.zoom_slider)
         self.feature.zoom_slider = self.zoom_slider
 

@@ -319,11 +319,10 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     host.app.bind_features_runtime(host)
     prewarm_runtime_scenes(host.app, config.runtime_scene_specs)
 
-    # 14 – Tab order + accessibility
+    # 14 – Accessibility metadata
     window_toggle_controls = collect_window_toggle_controls(host, host.window_presentation)
     base_controls = build_host_main_tab_order(host, window_toggle_controls)
     apply_host_main_accessibility(host, base_controls, config.static_accessibility_specs)
-    host.app.configure_features_accessibility(host, len(base_controls))
 
     # 15 – Switch to initial scene
     host.app.switch_scene(config.initial_scene_name)
@@ -354,15 +353,13 @@ def _build_standard_action_handler(host, spec):
 
 
 def build_host_main_tab_order(host, window_toggle_controls) -> list:
-    """Build and apply the main-scene tab order; return the ordered control list."""
+    """Return the main-scene controls in declarative accessibility order."""
     before_showcase = [c for b, c in window_toggle_controls if b.tab_before_showcase]
     after_showcase = [c for b, c in window_toggle_controls if not b.tab_before_showcase]
     base_controls = [host.exit_button]
     base_controls.extend(before_showcase)
     base_controls.append(host.showcase_button)
     base_controls.extend(after_showcase)
-    for index, control in enumerate(base_controls):
-        control.set_tab_index(index)
     return base_controls
 
 

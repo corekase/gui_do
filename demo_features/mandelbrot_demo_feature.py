@@ -26,7 +26,6 @@ from gui_do import (
 )
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
-    apply_accessibility_sequence,
     AnchoredWindowSpec,
     LogicBindingSpec,
     create_feature_presented_window,
@@ -498,20 +497,6 @@ class MandelbrotRenderFeature(RoutedFeature):
         self.scheduler = scheduler
         return scheduler
 
-    def configure_accessibility(self, host, tab_index_start: int) -> int:
-        """Assign accessibility metadata and tab order for Mandelbrot controls."""
-        task_items = []
-        for index, accessibility_label in enumerate(_MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS):
-            button = self.task_buttons[index] if len(self.task_buttons) > index else None
-            task_items.append((button, "button", accessibility_label))
-        return apply_accessibility_sequence(
-            [
-                (self.reset_button, "button", "Clear Mandelbrot surfaces"),
-                *task_items,
-            ],
-            tab_index_start,
-        )
-
     def on_update(self, _host) -> None:
         """Publish post-frame status updates for Mandelbrot state."""
         self.update_events()
@@ -975,6 +960,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             lambda: self.feature.clear(self.host),
             style="angle",
         )
+        self.reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
         self.feature.reset_button = self.reset_button
 
         task_buttons = self._build_task_buttons(slots[1:])
@@ -1032,7 +1018,11 @@ class _MandelbrotWindowPresenter(WindowPresenter):
     def _build_task_buttons(self, task_slots):
         """Build task launch buttons from declarative specs."""
         task_buttons = []
-        for slot_rect, (control_id, label, launch_method_name, style) in zip(task_slots, _MANDEL_TASK_BUTTON_SPECS):
+        for slot_rect, (control_id, label, launch_method_name, style), accessibility_label in zip(
+            task_slots,
+            _MANDEL_TASK_BUTTON_SPECS,
+            _MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS,
+        ):
             launch_method = getattr(self.feature, launch_method_name)
             button = self._add_button_control(
                 control_id,
@@ -1041,5 +1031,6 @@ class _MandelbrotWindowPresenter(WindowPresenter):
                 lambda _method=launch_method: _method(self.host),
                 style=style,
             )
+            button.set_accessibility(role="button", label=accessibility_label)
             task_buttons.append(button)
         return tuple(task_buttons)

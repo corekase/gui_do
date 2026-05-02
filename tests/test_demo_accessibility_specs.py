@@ -57,18 +57,18 @@ class _StubHost:
 
 
 class TestDemoAccessibilitySpecs(unittest.TestCase):
-    def test_tab_order_places_showcase_after_first_toggle(self):
+    def test_main_accessibility_order_places_showcase_after_first_toggle(self):
         host = _StubHost()
         toggles = collect_window_toggle_controls(host, host.window_presentation)
         self.assertEqual(["systems", "life", "mandel"], [b.key for b, _ in toggles])
         ordered = build_host_main_tab_order(host, toggles)
         self.assertEqual([host.exit_button, host.systems_toggle_window, host.showcase_button,
                           host.life_toggle_window, host.mandel_toggle_window], ordered)
-        self.assertEqual([0], host.exit_button.tab_indices)
-        self.assertEqual([1], host.systems_toggle_window.tab_indices)
-        self.assertEqual([2], host.showcase_button.tab_indices)
-        self.assertEqual([3], host.life_toggle_window.tab_indices)
-        self.assertEqual([4], host.mandel_toggle_window.tab_indices)
+        self.assertEqual([], host.exit_button.tab_indices)
+        self.assertEqual([], host.systems_toggle_window.tab_indices)
+        self.assertEqual([], host.showcase_button.tab_indices)
+        self.assertEqual([], host.life_toggle_window.tab_indices)
+        self.assertEqual([], host.mandel_toggle_window.tab_indices)
 
     def test_accessibility_applies_static_and_toggle_labels(self):
         host = _StubHost()

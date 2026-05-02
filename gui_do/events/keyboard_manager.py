@@ -20,16 +20,6 @@ class KeyboardManager:
         has_command_palette = callable(has_overlay) and has_overlay("__command_palette__")
         task_panel_focus = getattr(app, "task_panel_focus", None)
 
-        if event.is_key_down(pygame.K_F1):
-            if has_command_palette:
-                event.prevent_default()
-                event.stop_propagation()
-                return True
-            if task_panel_focus is not None and task_panel_focus.toggle(scene, app):
-                event.prevent_default()
-                event.stop_propagation()
-                return True
-
         if task_panel_focus is not None and task_panel_focus.is_active:
             if event.is_key_down(pygame.K_TAB):
                 shift_pressed = bool(event.mod & pygame.KMOD_SHIFT)
