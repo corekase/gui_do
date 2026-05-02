@@ -206,6 +206,7 @@ from .overlays.menu_bar_manager import MenuBarManager
 from .overlays.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
 from .overlays.notification_center import NotificationCenter, NotificationRecord
 from .overlays.resize_manager import ResizeManager
+from .overlays.cursor_manager import CursorManager, CursorHandle, CursorShape
 from .overlays.drag_drop_manager import DragDropManager, DragPayload
 from .overlays.clipboard import ClipboardManager
 from .overlays.transfer_data import TransferData, TransferManager
@@ -262,6 +263,7 @@ from .controls.input.toggle_control import ToggleControl
 from .controls.input.slider_control import SliderControl
 from .controls.input.scrollbar_control import ScrollbarControl
 from .controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
+from .controls.canvas.canvas_viewport import CanvasViewport
 from .controls.display.frame_control import FrameControl
 from .controls.display.image_control import ImageControl
 from .controls.display.arrow_box_control import ArrowBoxControl
@@ -625,6 +627,9 @@ __all__ = [
     "NotificationCenter",
     "NotificationRecord",
     "ResizeManager",
+    "CursorManager",
+    "CursorHandle",
+    "CursorShape",
     "DragDropManager",
     "DragPayload",
     "ClipboardManager",
@@ -677,6 +682,7 @@ __all__ = [
     "ScrollbarControl",
     "CanvasControl",
     "CanvasEventPacket",
+    "CanvasViewport",
     "FrameControl",
     "ImageControl",
     "ArrowBoxControl",
