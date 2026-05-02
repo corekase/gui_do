@@ -296,6 +296,12 @@ class GuiApplication:
                 source_skip_frames=1,
             )
         with collector.span("gui_application", "switch_scene", metadata={"scene_name": str(name)}):
+            outgoing_scene = self.scene
+            if self.task_panel_focus.is_active:
+                # Exit task-panel focus mode before swapping runtime references so
+                # remembered scope and hover teardown apply to the outgoing scene.
+                self.task_panel_focus.exit(outgoing_scene, self)
+            self._reconcile_task_panel_hover_state(outgoing_scene, force_idle=True)
             self._active_scene_name = name
             self._sync_scene_scheduler_activity(name)
             runtime = self._scenes[name]
@@ -319,7 +325,27 @@ class GuiApplication:
                     self.font_roles.apply(self, scene_name=name)
                 except Exception:
                     pass  # Don't block scene switch if font role registration fails
+            self._reconcile_task_panel_hover_state(self.scene, pointer_pos=self._logical_pointer_pos)
             self._apply_screen_lifecycle_chain()
+
+    def _reconcile_task_panel_hover_state(self, scene: Scene, *, pointer_pos=None, force_idle: bool = False) -> None:
+        if scene is None:
+            return
+        probe = None
+        if not force_idle and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
+            probe = (int(pointer_pos[0]), int(pointer_pos[1]))
+        for node in scene._walk_nodes():
+            if not node.is_task_panel():
+                continue
+            wants_hover = False
+            if probe is not None and node.visible and node.enabled:
+                wants_hover = bool(node.rect.collidepoint(probe))
+            node.reconcile_hover(wants_hover)
+            for child in node.find_descendants(lambda candidate: True):
+                child_wants_hover = False
+                if probe is not None and child.visible and child.enabled:
+                    child_wants_hover = bool(child.rect.collidepoint(probe))
+                child.reconcile_hover(child_wants_hover)
 
     @property
     def active_scene_name(self) -> str:
