@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from operator import attrgetter
 from typing import List, Optional
 
 import pygame
@@ -14,8 +13,6 @@ _MODIFIER_KEYS: frozenset = frozenset((
     pygame.K_LALT, pygame.K_RALT,
     pygame.K_LGUI, pygame.K_RGUI,
 ))
-
-_FOCUS_SORT_KEY = attrgetter('tab_index', 'control_id')
 
 
 
@@ -273,7 +270,7 @@ class FocusManager:
     def _focusable_nodes(self, scene, *, window=None) -> list:
         scope_root = self.active_scope_root
         ordered = []
-        for node in scene._walk_nodes():
+        for walk_index, node in enumerate(scene._walk_nodes()):
             if not node.accepts_focus():
                 continue
             # Combined ancestor walk: check visible/enabled chain AND find nearest
@@ -302,9 +299,9 @@ class FocusManager:
                 continue
             if scope_root is not None and not self._is_descendant(node, scope_root):
                 continue
-            ordered.append(node)
-        ordered.sort(key=_FOCUS_SORT_KEY)
-        return ordered
+            ordered.append((walk_index, node))
+        ordered.sort(key=lambda item: (item[1].tab_index, item[0]))
+        return [node for _, node in ordered]
 
     def cycle_focus(self, scene, *, forward: bool = True, window=None, pointer_pos=None) -> bool:
         focused = self._focused_node

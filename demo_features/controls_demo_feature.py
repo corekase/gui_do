@@ -142,7 +142,6 @@ class ControlsShowcaseFeature(Feature):
 
     HOST_REQUIREMENTS = {
         "build": ("app", "scene_presentation", "control_showcase_root"),
-        "configure_accessibility": ("app",),
         "on_update": ("app",),
         "prewarm": ("app",),
     }
@@ -219,7 +218,6 @@ class ControlsShowcaseFeature(Feature):
         self.control_labels: list[LabelControl] = []
         from gui_do import PlacedControl
         self.placed_controls: list[PlacedControl] = []
-        self._focus_controls: list = []
         self._initial_focus_control = None
         self._pending_initial_focus = False
 
@@ -277,7 +275,6 @@ class ControlsShowcaseFeature(Feature):
         host.control_showcase_root.add(category_tabs)
         self._category_tabs = category_tabs
         self.controls.append(category_tabs)
-        self._focus_controls.append(category_tabs)
 
         content_rect = Rect(
             content_rect.left,
@@ -355,153 +352,10 @@ class ControlsShowcaseFeature(Feature):
             column_index=0, row_index=3,
         )
 
-        col0_row_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP + arrow_group_h + row_gap
-        text_input_slot_h = slot_h(text_input_control_h)
-        text_area_slot_h = slot_h(text_area_control_h)
-        bar_slot_h = slot_h(bar_control_h)
-
-        self._place_control(
-            host,
-            "text_input",
-            "Text Input",
-            TextInputControl("control_text_input", Rect(0, 0, 1, 1), placeholder="Type here"),
-            Rect(col0_x, col0_row_y, column_width, text_input_slot_h),
-            focusable=True,
-            accessibility_role="textbox",
-            accessibility_label="Text input",
-            column_index=0,
-            row_index=4,
-        )
-        col0_row_y += text_input_slot_h + row_gap
-
-        self._place_control(
-            host,
-            "text_area",
-            "Text Area",
-            TextAreaControl(
-                "control_text_area",
-                Rect(0, 0, 1, 1),
-                value="Heading: Notes\n- First line\n- Second line",
-            ),
-            Rect(col0_x, col0_row_y, column_width, text_area_slot_h),
-            focusable=True,
-            accessibility_role="textbox",
-            accessibility_label="Text area",
-            column_index=0,
-            row_index=5,
-        )
-        col0_row_y += text_area_slot_h + row_gap
-
-        self._place_control(
-            host,
-            "horizontal_scrollbar",
-            "Horizontal Scrollbar",
-            ScrollbarControl(
-                "control_horizontal_scrollbar",
-                Rect(0, 0, 1, 1),
-                LayoutAxis.HORIZONTAL,
-                self.SCROLLBAR_CONTENT_SIZE,
-                self.SCROLLBAR_VIEWPORT_SIZE,
-                offset=self.SCROLLBAR_DEFAULT_OFFSET,
-                step=self.SCROLLBAR_STEP,
-            ),
-            Rect(col0_x, col0_row_y, column_width, bar_slot_h),
-            focusable=True,
-            accessibility_role="scrollbar",
-            accessibility_label="Horizontal scrollbar",
-            column_index=0,
-            row_index=6,
-        )
-        col0_row_y += bar_slot_h + row_gap
-
-        self._place_control(
-            host,
-            "horizontal_slider",
-            "Horizontal Slider",
-            SliderControl(
-                "control_horizontal_slider",
-                Rect(0, 0, 1, 1),
-                LayoutAxis.HORIZONTAL,
-                self.SLIDER_MINIMUM,
-                self.SLIDER_MAXIMUM,
-                self.SLIDER_DEFAULT_VALUE,
-            ),
-            Rect(col0_x, col0_row_y, column_width, bar_slot_h),
-            focusable=True,
-            accessibility_role="slider",
-            accessibility_label="Horizontal slider",
-            column_index=0,
-            row_index=7,
-        )
-
-        col0_total_h = (col0_row_y + bar_slot_h) - col0_y
-
-        # Column 2: vertical scrollbar + vertical slider, each full column height and 24px wide.
-        col1_x = col0_x + column_width + col_gap
-        vertical_slot_h = col0_total_h
-        vertical_w = 24
-        _vgl = LabelControl(
-            "controls_showcase_group_label_vertical",
-            Rect(col1_x, col0_y, (vertical_w * 2) + self.INNER_GAP, self.LABEL_HEIGHT),
-            "V.", align="left",
-        )
-        host.control_showcase_root.add(_vgl)
-        self.control_labels.append(_vgl)
-        vertical_controls_top = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP
-        vertical_controls_h = max(1, vertical_slot_h - self.LABEL_HEIGHT - self.LABEL_GAP)
-        self._place_control_unlabeled(
-            host,
-            "vertical_scrollbar",
-            ScrollbarControl(
-                "control_vertical_scrollbar",
-                Rect(0, 0, 1, 1),
-                LayoutAxis.VERTICAL,
-                self.SCROLLBAR_CONTENT_SIZE,
-                self.SCROLLBAR_VIEWPORT_SIZE,
-                offset=self.SCROLLBAR_DEFAULT_OFFSET,
-                step=self.SCROLLBAR_STEP,
-            ),
-            Rect(col1_x, vertical_controls_top, vertical_w, vertical_controls_h),
-            focusable=True,
-            accessibility_role="scrollbar",
-            accessibility_label="Vertical scrollbar",
-            column_index=1,
-            row_index=0,
-        )
-        self._place_control_unlabeled(
-            host,
-            "vertical_slider",
-            SliderControl(
-                "control_vertical_slider",
-                Rect(0, 0, 1, 1),
-                LayoutAxis.VERTICAL,
-                self.SLIDER_MINIMUM,
-                self.SLIDER_MAXIMUM,
-                self.SLIDER_DEFAULT_VALUE,
-            ),
-            Rect(col1_x + vertical_w + self.INNER_GAP, vertical_controls_top, vertical_w, vertical_controls_h),
-            focusable=True,
-            accessibility_role="slider",
-            accessibility_label="Vertical slider",
-            column_index=1,
-            row_index=1,
-        )
-
-        # Next columns: left_lane for buttons/toggles/groups/data_grid, then a square tab column
-        # (side = col0_total_h), a square image column, then remaining controls auto-stacked.
-        col2_x = col1_x + (vertical_w * 2) + self.INNER_GAP + col_gap
-        sq_size = col0_total_h  # each square column has width == height == col0_total_h
-
-        avail_w = max(260, content_rect.right - col2_x)
-        left_lane_w = max(160, int(avail_w * 0.22))
-        left_lane = Rect(col2_x, col0_y, left_lane_w, col0_total_h)
-
-        y = left_lane.top
+        # Compute metrics needed for data_grid_bottom (drives data-tab initial layout Y).
         button_slot_h = slot_h(34)
         group_first_slot_h = slot_h(34)
         group_other_h = 34
-        tri_w = max(48, (left_lane.width - (self.INNER_GAP * 2)) // 3)
-
         lane_controls_h = (
             button_slot_h + row_gap
             + button_slot_h + row_gap
@@ -509,35 +363,21 @@ class ControlsShowcaseFeature(Feature):
             + group_other_h + row_gap
             + group_other_h
         )
-        lane_layout = CellCaretLayout(
-            bounds=Rect(left_lane.left, y, left_lane.width, lane_controls_h),
-            cell_width=tri_w,
-            cell_height=lane_controls_h,
-            columns=3,
-            cell_gap_x=self.INNER_GAP,
-            cell_gap_y=row_gap,
-            item_gap_y=row_gap,
-            flow_axis="vertical",
-        )
-        lane_cell_layouts = {
-            col_index: LayoutManager()
-            for col_index in range(3)
-        }
-        # Each cell can host a nested LayoutManager; this keeps per-cell composition
-        # extensible without changing the outer cell-caret progression behavior.
-        for col_index, cell_layout in lane_cell_layouts.items():
-            lane_layout.bind_layout_manager(cell_layout, col=col_index, row=0)
+        mid_block_h = slot_h(120)
+        data_grid_bottom = col0_y + lane_controls_h + row_gap + mid_block_h
 
+        # Controls are created in visual top-left → bottom-right order so that the
+        # automatic BFS-walk focus cycle matches the on-screen layout.
+
+        # Row: Buttons — all three columns, left to right.
         for col_index, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
-            lane_layout.move_to_cell(col_index, 0)
-
             button_name, button_label_text, button_control_id, button_accessibility_label = self.SHOWCASE_BUTTON_TRIO_SPECS[col_index]
             self._place_control(
                 host,
                 button_name,
                 button_label_text,
                 ButtonControl(button_control_id, Rect(0, 0, 1, 1), "Button"),
-                lane_layout.add(tri_w, button_slot_h),
+                Rect(0, 0, 1, 1),
                 focusable=True,
                 accessibility_role="button",
                 accessibility_label=button_accessibility_label,
@@ -545,13 +385,15 @@ class ControlsShowcaseFeature(Feature):
                 row_index=col_index,
             )
 
+        # Row: Toggles — all three columns, left to right.
+        for col_index, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
             toggle_name, toggle_label_text, toggle_control_id, toggle_accessibility_label = self.SHOWCASE_TOGGLE_TRIO_SPECS[col_index]
             self._place_control(
                 host,
                 toggle_name,
                 toggle_label_text,
                 ToggleControl(toggle_control_id, Rect(0, 0, 1, 1), "On", "Off", pushed=False, style="round"),
-                lane_layout.add(tri_w, button_slot_h),
+                Rect(0, 0, 1, 1),
                 focusable=True,
                 accessibility_role="toggle",
                 accessibility_label=toggle_accessibility_label,
@@ -559,6 +401,9 @@ class ControlsShowcaseFeature(Feature):
                 row_index=3 + col_index,
             )
 
+        # Groups: column is the outer loop, then options within each group column
+        # (a1,a2,a3 then b1,b2,b3 then c1,c2,c3) to match requested focus sequence.
+        for col_index, (group_key, group_letter) in enumerate(self.SHOWCASE_GROUP_COLUMN_SPECS):
             for option_index, with_label in self.SHOWCASE_GROUP_ROW_SPECS:
                 control_name = f"button_group_{group_key}{option_index}"
                 control = ButtonGroupControl(
@@ -569,15 +414,13 @@ class ControlsShowcaseFeature(Feature):
                     selected=False,
                 )
                 row_index = 6 + (col_index * 3) + (option_index - 1)
-                option_h = group_first_slot_h if option_index == 1 else group_other_h
-                placement_rect = lane_layout.add(tri_w, option_h)
                 if with_label:
                     self._place_control(
                         host,
                         control_name,
                         f"Group {group_letter}",
                         control,
-                        placement_rect,
+                        Rect(0, 0, 1, 1),
                         focusable=True,
                         accessibility_role="button",
                         accessibility_label=f"Group {group_letter} option {option_index}",
@@ -589,7 +432,7 @@ class ControlsShowcaseFeature(Feature):
                         host,
                         control_name,
                         control,
-                        placement_rect,
+                        Rect(0, 0, 1, 1),
                         focusable=True,
                         accessibility_role="button",
                         accessibility_label=f"Group {group_letter} option {option_index}",
@@ -597,9 +440,38 @@ class ControlsShowcaseFeature(Feature):
                         row_index=row_index,
                     )
 
-        y += lane_controls_h + row_gap
+        # Remaining-grid items are laid out sorted by row_index; creating them in that
+        # order here ensures the BFS focus cycle matches left-to-right visual order.
+        self._place_control(
+            host,
+            "text_input",
+            "Text Input",
+            TextInputControl("control_text_input", Rect(0, 0, 1, 1), placeholder="Type here"),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Text input",
+            column_index=0,
+            row_index=4,
+        )
 
-        mid_block_h = slot_h(120)
+        self._place_control(
+            host,
+            "text_area",
+            "Text Area",
+            TextAreaControl(
+                "control_text_area",
+                Rect(0, 0, 1, 1),
+                value="Heading: Notes\n- First line\n- Second line",
+            ),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Text area",
+            column_index=0,
+            row_index=5,
+        )
+
         self._place_control(
             host,
             "data_grid",
@@ -608,8 +480,8 @@ class ControlsShowcaseFeature(Feature):
                 "control_data_grid",
                 Rect(0, 0, 1, 1),
                 [
-                    GridColumn(key="name", title="Name", width=max(90, int(left_lane.width * 0.58))),
-                    GridColumn(key="value", title="Value", width=max(70, int(left_lane.width * 0.36))),
+                    GridColumn(key="name", title="Name", width=90),
+                    GridColumn(key="value", title="Value", width=70),
                 ],
                 [
                     GridRow(data={"name": "Alpha", "value": 10}, row_id="a"),
@@ -619,21 +491,18 @@ class ControlsShowcaseFeature(Feature):
                 ],
                 row_height=24,
             ),
-            Rect(left_lane.left, y, left_lane.width, mid_block_h),
+            Rect(0, 0, 1, 1),
             focusable=True,
             accessibility_role="table",
             accessibility_label="Data grid",
             column_index=2,
             row_index=20,
         )
-        data_grid_bottom = y + mid_block_h
 
-        # Square tab column — width == height == col0_total_h. Three tabs each showing a label.
-        tab_col_x = left_lane.right + col_gap
         tab_labels = {
             tab_key: LabelControl(
                 f"ctrl_tab_lbl_{tab_key}",
-                Rect(0, 0, sq_size, 30),
+                Rect(0, 0, 1, 30),
                 tab_title,
                 align="left",
             )
@@ -651,7 +520,7 @@ class ControlsShowcaseFeature(Feature):
                 ],
                 selected_key="one",
             ),
-            Rect(tab_col_x, col0_y, sq_size, sq_size),
+            Rect(0, 0, 1, 1),
             focusable=True,
             accessibility_role="tablist",
             accessibility_label="Tab control",
@@ -659,8 +528,6 @@ class ControlsShowcaseFeature(Feature):
             row_index=30,
         )
 
-        # Square image column — same size as tab column, image is only item.
-        img_col_x = tab_col_x + sq_size + col_gap
         self._place_control_unlabeled(
             host,
             "image",
@@ -670,20 +537,12 @@ class ControlsShowcaseFeature(Feature):
                 str(Path(__file__).parent.parent / self.IMAGE_PATH),
                 scale=True,
             ),
-            Rect(img_col_x, col0_y, sq_size, sq_size),
+            Rect(0, 0, 1, 1),
             focusable=False,
             column_index=4,
             row_index=40,
         )
-        image_rect = Rect(img_col_x, col0_y, sq_size, sq_size)
 
-        # Place notification panel immediately to the right of the image control (upper-right)
-        notif_col_x = image_rect.right + col_gap
-        notif_col_w = max(1, content_rect.right - notif_col_x)
-        notif_col_y = col0_y
-        notif_control_top = notif_col_y + self.LABEL_HEIGHT + self.LABEL_GAP
-        notif_control_h = max(1, image_rect.bottom - notif_control_top)
-        notif_slot_h = notif_control_h + self.LABEL_HEIGHT + self.LABEL_GAP
         self._showcase_notification_center = NotificationCenter(None, max_records=6)
         self._showcase_notification_center.add(
             NotificationRecord("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS)
@@ -700,13 +559,93 @@ class ControlsShowcaseFeature(Feature):
                 Rect(0, 0, 1, 1),
                 self._showcase_notification_center,
             ),
-            Rect(notif_col_x, notif_col_y, notif_col_w, notif_slot_h),
+            Rect(0, 0, 1, 1),
             focusable=False,
             column_index=5,
             row_index=41,
         )
 
+        # Scroll section: horizontal controls (top to bottom), then vertical controls
+        # (left to right).  This creation order matches the visual reading sequence.
+        self._place_control(
+            host,
+            "horizontal_scrollbar",
+            "Horizontal Scrollbar",
+            ScrollbarControl(
+                "control_horizontal_scrollbar",
+                Rect(0, 0, 1, 1),
+                LayoutAxis.HORIZONTAL,
+                self.SCROLLBAR_CONTENT_SIZE,
+                self.SCROLLBAR_VIEWPORT_SIZE,
+                offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                step=self.SCROLLBAR_STEP,
+            ),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="scrollbar",
+            accessibility_label="Horizontal scrollbar",
+            column_index=0,
+            row_index=6,
+        )
 
+        self._place_control(
+            host,
+            "horizontal_slider",
+            "Horizontal Slider",
+            SliderControl(
+                "control_horizontal_slider",
+                Rect(0, 0, 1, 1),
+                LayoutAxis.HORIZONTAL,
+                self.SLIDER_MINIMUM,
+                self.SLIDER_MAXIMUM,
+                self.SLIDER_DEFAULT_VALUE,
+            ),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="slider",
+            accessibility_label="Horizontal slider",
+            column_index=0,
+            row_index=7,
+        )
+
+        self._place_control_unlabeled(
+            host,
+            "vertical_scrollbar",
+            ScrollbarControl(
+                "control_vertical_scrollbar",
+                Rect(0, 0, 1, 1),
+                LayoutAxis.VERTICAL,
+                self.SCROLLBAR_CONTENT_SIZE,
+                self.SCROLLBAR_VIEWPORT_SIZE,
+                offset=self.SCROLLBAR_DEFAULT_OFFSET,
+                step=self.SCROLLBAR_STEP,
+            ),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="scrollbar",
+            accessibility_label="Vertical scrollbar",
+            column_index=1,
+            row_index=0,
+        )
+
+        self._place_control_unlabeled(
+            host,
+            "vertical_slider",
+            SliderControl(
+                "control_vertical_slider",
+                Rect(0, 0, 1, 1),
+                LayoutAxis.VERTICAL,
+                self.SLIDER_MINIMUM,
+                self.SLIDER_MAXIMUM,
+                self.SLIDER_DEFAULT_VALUE,
+            ),
+            Rect(0, 0, 1, 1),
+            focusable=True,
+            accessibility_role="slider",
+            accessibility_label="Vertical slider",
+            column_index=1,
+            row_index=1,
+        )
 
         # New row of columns starts from the left edge at data_grid bottom + 10.
         new_row_y = data_grid_bottom + 10
@@ -740,7 +679,10 @@ class ControlsShowcaseFeature(Feature):
         new_row_x0, new_row_x1, new_row_x2, new_row_x3 = [anchor.left for anchor in anchors[:4]]
         col0_y, col1_y, col2_y, col3_y = [anchor.top for anchor in anchors[:4]]
 
-        # Column 0: ListView with selected-item label.
+        # Data-tab focusable controls are created in the intended traversal order:
+        # list_view → scroll_view → tree → dropdown → splitter → menu_bar.
+
+        # list_view (col 0)
         list_selection_label = LabelControl(
             "lv_selected_label",
             Rect(0, 0, new_row_col_w, 22),
@@ -772,7 +714,7 @@ class ControlsShowcaseFeature(Feature):
         host.control_showcase_root.add(list_selection_label)
         self.control_labels.append(list_selection_label)
 
-        # Column 1: ScrollView with nested ListView and selected-item label.
+        # scroll_view (col 1)
         scroll_viewport_h = 120
         scroll_items = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet"]
         scroll_content_h = 24 * len(scroll_items)
@@ -792,10 +734,10 @@ class ControlsShowcaseFeature(Feature):
             show_scrollbar=False,
             on_select=lambda _idx, item: setattr(scroll_selection_label, "text", f"Selected: {item.label}"),
         )
-        # Managed by configure_accessibility ordering; keep out of default tab order.
+        # The outer scroll view is the focus target for this showcase cell; keep the
+        # nested list selectable with the mouse but out of the tab cycle.
         scroll_select_list.set_tab_index(-1)
         scroll_select_list.set_accessibility(role="listbox", label="Scroll view list")
-        self._focus_controls.append(scroll_select_list)
         scroll_control.add(scroll_select_list, content_x=4, content_y=0)
         scroll_control.set_content_size(new_row_col_w - 20, scroll_content_h)
         scroll_slot_h = slot_h(120)
@@ -805,7 +747,9 @@ class ControlsShowcaseFeature(Feature):
             "Scroll View",
             scroll_control,
             Rect(new_row_x1, col1_y, new_row_col_w, scroll_slot_h),
-            focusable=False,
+            focusable=True,
+            accessibility_role="group",
+            accessibility_label="Scroll view",
             column_index=3,
             row_index=70,
         )
@@ -813,23 +757,37 @@ class ControlsShowcaseFeature(Feature):
         host.control_showcase_root.add(scroll_selection_label)
         self.control_labels.append(scroll_selection_label)
 
-        # Column 2: rich label, then dropdown and splitter.
-        rich_slot_h = slot_h(90)
+        # Remaining Data-tab focusable controls continue here in the same order:
+        # tree → dropdown → splitter. After splitter, traversal wraps to the tab bar.
+
+        # tree (row 91, col 4)
+        new_col_x = col4_anchor.left
+        new_col_w = min(220, col4_anchor.width)
+        col4_y = col4_anchor.top
+        menu_slot_h = slot_h(28)
+        tree_slot_h = slot_h(150)
         self._place_control(
             host,
-            "rich_label",
-            "Rich Label",
-            RichLabelControl(
-                "control_rich_label",
+            "tree",
+            "Tree",
+            TreeControl(
+                "control_tree",
                 Rect(0, 0, 1, 1),
-                text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
+                [
+                    TreeNode("Desktop", expanded=True, children=[TreeNode("Window A"), TreeNode("Window B")]),
+                    TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")]),
+                ],
             ),
-            Rect(new_row_x2, col2_y, new_row_col_w, rich_slot_h),
-            focusable=False,
+            Rect(new_col_x, col4_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
+            focusable=True,
+            accessibility_role="tree",
+            accessibility_label="Tree control",
             column_index=4,
-            row_index=80,
+            row_index=91,
         )
 
+        # dropdown (row 81, col 4)
+        rich_slot_h = slot_h(90)
         rich_col_y = col2_y + rich_slot_h + row_gap
         dropdown_slot_h = slot_h(30)
         self._place_control(
@@ -851,6 +809,7 @@ class ControlsShowcaseFeature(Feature):
         )
         rich_col_y += dropdown_slot_h + row_gap
 
+        # splitter (row 82, col 4)
         splitter_slot_h = slot_h(52)
         self._place_control(
             host,
@@ -871,7 +830,46 @@ class ControlsShowcaseFeature(Feature):
             row_index=82,
         )
 
-        # Column 3: canvas and frame on top row, panel on the next row spanning full width.
+        # menu_bar (row 90, col 4) — visible, but not part of the Data-tab focus cycle.
+        self._place_control(
+            host,
+            "menu_bar",
+            "Menu Bar",
+            MenuBarControl(
+                "control_menu_bar",
+                Rect(0, 0, 1, 1),
+                [
+                    MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
+                    MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")]),
+                ],
+            ),
+            Rect(new_col_x, col4_y, new_col_w, menu_slot_h),
+            focusable=False,
+            accessibility_role="menubar",
+            accessibility_label="Menu bar",
+            column_index=4,
+            row_index=90,
+        )
+
+        # Remaining controls (all non-focusable — creation order does not affect focus cycle).
+
+        # rich_label (row 80, col 4)
+        self._place_control(
+            host,
+            "rich_label",
+            "Rich Label",
+            RichLabelControl(
+                "control_rich_label",
+                Rect(0, 0, 1, 1),
+                text="Sprint Notes\n**Ready** for review, _scheduled_ for Wednesday, run `deploy --env staging`, and **_ship_** after QA.",
+            ),
+            Rect(new_row_x2, col2_y, new_row_col_w, rich_slot_h),
+            focusable=False,
+            column_index=4,
+            row_index=80,
+        )
+
+        # canvas (row 83, col 5), frame (row 84, col 5), panel (row 85, col 5)
         grid_gap = self.INNER_GAP
         cell_w = max(1, (new_row_col_w - grid_gap) // 2)
         cell_w2 = max(1, new_row_col_w - grid_gap - cell_w)
@@ -912,56 +910,7 @@ class ControlsShowcaseFeature(Feature):
             row_index=85,
         )
 
-        # New right-side columns for recently added controls.
-
-        # Shift columns after tree control left by one
-        new_col_x = col4_anchor.left
-        new_col_w = min(220, col4_anchor.width)
-        col4_y = col4_anchor.top
-
-        menu_slot_h = slot_h(28)
-        self._place_control(
-            host,
-            "menu_bar",
-            "Menu Bar",
-            MenuBarControl(
-                "control_menu_bar",
-                Rect(0, 0, 1, 1),
-                [
-                    MenuEntry("File", [ContextMenuItem("Open"), ContextMenuItem("Save")]),
-                    MenuEntry("Tools", [ContextMenuItem("Run"), ContextMenuItem("Reset")]),
-                ],
-            ),
-            Rect(new_col_x, col4_y, new_col_w, menu_slot_h),
-            focusable=True,
-            accessibility_role="menubar",
-            accessibility_label="Menu bar",
-            column_index=4,
-            row_index=90,
-        )
-
-        tree_slot_h = slot_h(150)
-        self._place_control(
-            host,
-            "tree",
-            "Tree",
-            TreeControl(
-                "control_tree",
-                Rect(0, 0, 1, 1),
-                [
-                    TreeNode("Desktop", expanded=True, children=[TreeNode("Window A"), TreeNode("Window B")]),
-                    TreeNode("Scenes", expanded=True, children=[TreeNode("Main"), TreeNode("Control Showcase")]),
-                ],
-            ),
-            Rect(new_col_x, col4_y + menu_slot_h + row_gap, new_col_w, tree_slot_h),
-            focusable=True,
-            accessibility_role="tree",
-            accessibility_label="Tree control",
-            column_index=4,
-            row_index=91,
-        )
-
-        # Now shift all subsequent columns left by one (spinner, range_slider, color_picker, overlay_panel, etc.)
+        # col 5: spinner, range slider, color picker
         col6_x = col5_anchor.left
         col6_w = min(220, col5_anchor.width)
         col6_y = col5_anchor.top
@@ -1465,18 +1414,8 @@ class ControlsShowcaseFeature(Feature):
         # Apply initial tab category visibility after all placements are registered.
         self._apply_category_visibility(host)
 
-        if self._focus_controls:
-            self._initial_focus_control = self._focus_controls[0]
-            self._pending_initial_focus = True
-
-    def configure_accessibility(self, _host, tab_index_start: int) -> int:
-        next_index = int(tab_index_start)
-        for control in self._focus_controls:
-            if not control.visible or not control.enabled:
-                continue
-            control.set_tab_index(next_index)
-            next_index += 1
-        return next_index
+        self._initial_focus_control = self._category_tabs
+        self._pending_initial_focus = True
 
     def on_update(self, host) -> None:
         dt = self._frame_timer.tick()
@@ -1540,9 +1479,9 @@ class ControlsShowcaseFeature(Feature):
         control.enabled = True
         if accessibility_role and accessibility_label:
             control.set_accessibility(role=accessibility_role, label=accessibility_label)
-        if focusable:
-            self._focus_controls.append(control)
-        else:
+        if focusable and int(getattr(control, "tab_index", -1)) < 0:
+            control.set_tab_index(0)
+        if not focusable:
             control.set_tab_index(-1)
         host.control_showcase_root.add(label)
         host.control_showcase_root.add(control)
@@ -1606,9 +1545,9 @@ class ControlsShowcaseFeature(Feature):
         control.enabled = True
         if accessibility_role and accessibility_label:
             control.set_accessibility(role=accessibility_role, label=accessibility_label)
-        if focusable:
-            self._focus_controls.append(control)
-        else:
+        if focusable and int(getattr(control, "tab_index", -1)) < 0:
+            control.set_tab_index(0)
+        if not focusable:
             control.set_tab_index(-1)
         host.control_showcase_root.add(control)
         self.controls.append(control)
@@ -1676,12 +1615,6 @@ class ControlsShowcaseFeature(Feature):
             if label not in matched_labels:
                 label.visible = False
                 label.enabled = False
-
-        # Refresh tab-index sequence for the now-visible set.
-        try:
-            host.app.configure_features_accessibility(host, 0)
-        except Exception:
-            pass
 
         # If current focus became hidden, park focus on the category tab strip.
         focused = getattr(host.app.focus, "focused", None)
@@ -1793,13 +1726,7 @@ class ControlsShowcaseFeature(Feature):
 
         scroll_bounds = Rect(bounds.left, bottom_y, bounds.width, scroll_section_h)
         self._relayout_basics_scroll_cells(scroll_bounds, items_by_name, horizontal_names, vertical_names)
-        self._reorder_basics_focus_controls(
-            items_by_name, remaining,
-            arrow_names, button_names, toggle_names,
-            group_names, horizontal_names, vertical_names,
-        )
-
-    def _reorder_basics_focus_controls(
+    def _reorder_basics_focus_controls_UNUSED(
         self,
         items_by_name: dict,
         remaining: list,
@@ -1972,7 +1899,8 @@ class ControlsShowcaseFeature(Feature):
         min_col_w  = 160 if is_basics else 220
         max_cols   = 5  if is_basics else 4
 
-        items.sort(key=lambda p: (int(p.row_index), int(p.column_index), str(p.name)))
+        if is_basics:
+            items.sort(key=lambda p: (int(p.row_index), int(p.column_index), str(p.name)))
         fit_cols = max(1, (bounds.width + col_gap) // (min_col_w + col_gap))
         col_count = max(1, min(max_cols, fit_cols))
         col_w = max(140, (bounds.width - col_gap * (col_count - 1)) // col_count)
@@ -2100,7 +2028,6 @@ class ControlsShowcaseFeature(Feature):
         self.controls = []
         self.control_labels = []
         self.placed_controls = []
-        self._focus_controls = []
 
     def _build_scene_task_panel(self, host) -> None:
         self.task_panel = host.scene_presentation.ensure_scene_task_panel(
