@@ -148,6 +148,6 @@ DEMO_BOOTSTRAP_CONFIG = HostApplicationConfig(
     scene_roots=(
         SceneRootSpec("control_showcase", "control_showcase_root", draw_background=False),
     ),
-    telemetry=TelemetryConfig(enabled=False, live_analysis_enabled=True, file_logging_enabled=False),
+    telemetry=TelemetryConfig(enabled=False),
     target_fps=120,
 )
