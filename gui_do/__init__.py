@@ -295,10 +295,19 @@ from .controls.display.animated_image_control import AnimatedImageControl
 from .controls.composite.error_boundary import ErrorBoundary
 from .controls.chrome.window_control import WindowControl
 from .controls.chrome.task_panel_control import TaskPanelControl
+from .controls.chrome.window_presenter import WindowPresenter
 from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
 from .controls.chrome.scene_menu_strip_control import SceneMenuStripControl
 from .controls.chrome.notification_panel_control import NotificationPanelControl
 from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
+from .controls.chrome.toolbar_control import ToolbarControl, ToolbarItem
+from .controls.chrome.status_bar_control import StatusBarControl, StatusSlot
+from .controls.composite.expander_control import ExpanderControl
+from .controls.input.date_picker_control import DatePickerControl
+from .controls.input.time_picker_control import TimePickerControl
+from .controls.display.breadcrumb_control import BreadcrumbControl, BreadcrumbItem
+from .controls.input.split_button_control import SplitButtonControl, SplitButtonOption
+from .controls.input.chip_input_control import ChipInputControl
 
 # ============================================================================
 # TIER 14: TEXT & LOCALIZATION
@@ -714,11 +723,24 @@ __all__ = [
     "ErrorBoundary",
     "WindowControl",
     "TaskPanelControl",
+    "WindowPresenter",
     "MenuBarControl",
     "MenuEntry",
     "SceneMenuStripControl",
     "NotificationPanelControl",
     "PropertyInspectorPanel",
+    "ToolbarControl",
+    "ToolbarItem",
+    "StatusBarControl",
+    "StatusSlot",
+    "ExpanderControl",
+    "DatePickerControl",
+    "TimePickerControl",
+    "BreadcrumbControl",
+    "BreadcrumbItem",
+    "SplitButtonControl",
+    "SplitButtonOption",
+    "ChipInputControl",
     # Tier 14: TEXT
     "TextFormatter",
     "NumericFormatter",

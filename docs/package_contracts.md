@@ -267,6 +267,19 @@ from gui_do import (
     ShortcutHelpOverlay,
     ShortcutSection,
     ShortcutEntry,
+    WindowPresenter,
+    ToolbarControl,
+    ToolbarItem,
+    StatusBarControl,
+    StatusSlot,
+    ExpanderControl,
+    BreadcrumbControl,
+    BreadcrumbItem,
+    SplitButtonControl,
+    SplitButtonOption,
+    ChipInputControl,
+    DatePickerControl,
+    TimePickerControl,
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:

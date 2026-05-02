@@ -17,19 +17,24 @@ from pygame import Rect
 from gui_do import (
     AnimatedImageControl,
     ArrowBoxControl,
+    BreadcrumbControl,
+    BreadcrumbItem,
     ButtonControl,
     ButtonGroupControl,
     CellCaretLayout,
     CanvasControl,
+    ChipInputControl,
     ColorPickerControl,
     ContextMenuItem,
     DataGridControl,
+    DatePickerControl,
     DockPane,
     DockTabs,
     DockWorkspace,
     DockWorkspacePanel,
     DropdownControl,
     DropdownOption,
+    ExpanderControl,
     Feature,
     FixedPatternFormatter,
     FrameAnimation,
@@ -61,16 +66,23 @@ from gui_do import (
     ScrollViewControl,
     SliderControl,
     SpinnerControl,
+    SplitButtonControl,
+    SplitButtonOption,
     SplitterControl,
     SpriteSheet,
     TabControl,
     TabItem,
     TextAreaControl,
     TextInputControl,
+    TimePickerControl,
     ToastSeverity,
     ToggleControl,
+    ToolbarControl,
+    ToolbarItem,
     TreeControl,
     TreeNode,
+    StatusBarControl,
+    StatusSlot,
     ui_property,
 )
 from gui_do.features.data_driven_runtime import add_standard_scene_menu_strip
@@ -144,6 +156,8 @@ class ControlsShowcaseFeature(Feature):
     INNER_GAP = 4
     LABEL_HEIGHT = 18
     LABEL_GAP = 4
+    CATEGORY_TAB_STRIP_HEIGHT = 34
+    CATEGORY_TAB_STRIP_GAP = 8
 
     SLIDER_MINIMUM = 0.0
     SLIDER_MAXIMUM = 100.0
@@ -190,6 +204,12 @@ class ControlsShowcaseFeature(Feature):
         (2, False),
         (3, False),
     )
+    SHOWCASE_CATEGORY_TABS = (
+        ("basics", "Basics"),
+        ("data", "Data"),
+        ("advanced", "Advanced"),
+        ("extended", "Extended"),
+    )
 
     def __init__(self, rect: Rect | None = None) -> None:
         super().__init__("controls_showcase", scene_name="control_showcase")
@@ -208,9 +228,15 @@ class ControlsShowcaseFeature(Feature):
         self._showcase_notification_center: NotificationCenter | None = None
         self._indeterminate_bar: ProgressBarControl | None = None
         self._showcase_anim_ctrl: AnimatedImageControl | None = None
+        self._category_tabs: TabControl | None = None
+        self._active_category_key: str = "basics"
+        self._category_content_bounds: Rect = Rect(0, 0, 1, 1)
+        self._showcase_root = None
+        self._basics_aux_labels: dict[str, LabelControl] = {}
         self._frame_timer = FrameTimer()
 
     def build(self, host) -> None:
+        self._showcase_root = host.control_showcase_root
         host.control_showcase_menu_bar = add_standard_scene_menu_strip(
             host.control_showcase_root,
             host,
@@ -234,6 +260,32 @@ class ControlsShowcaseFeature(Feature):
             max(1, self.rect.height - (self.CONTENT_PADDING_Y * 2)),
         )
 
+        # Top-level category tabs drive which control groups are visible and interactive.
+        tab_strip_h = int(self.CATEGORY_TAB_STRIP_HEIGHT)
+        tab_strip_gap = int(self.CATEGORY_TAB_STRIP_GAP)
+        category_tabs = TabControl(
+            "control_showcase_category_tabs",
+            Rect(content_rect.left, content_rect.top, content_rect.width, tab_strip_h),
+            items=[
+                TabItem(key=key, label=label)
+                for key, label in self.SHOWCASE_CATEGORY_TABS
+            ],
+            selected_key=self._active_category_key,
+            on_change=lambda key: self._set_active_category(host, key),
+        )
+        category_tabs.set_accessibility(role="tablist", label="Showcase categories")
+        host.control_showcase_root.add(category_tabs)
+        self._category_tabs = category_tabs
+        self.controls.append(category_tabs)
+        self._focus_controls.append(category_tabs)
+
+        content_rect = Rect(
+            content_rect.left,
+            content_rect.top + tab_strip_h + tab_strip_gap,
+            content_rect.width,
+            max(1, content_rect.height - tab_strip_h - tab_strip_gap),
+        )
+
         def slot_h(control_height: int) -> int:
             return int(control_height) + self.LABEL_HEIGHT + self.LABEL_GAP
 
@@ -246,6 +298,15 @@ class ControlsShowcaseFeature(Feature):
         text_area_row_h = 28
         text_area_control_h = text_area_rows * text_area_row_h
         arrow_control_size = 32
+
+        # Reserve bottom space for the task panel so per-tab reflow does not
+        # collide with docked task controls.
+        self._category_content_bounds = Rect(
+            content_rect.left,
+            content_rect.top,
+            content_rect.width,
+            max(1, content_rect.height - self.TASK_PANEL_HEIGHT - row_gap),
+        )
 
         col0_x = content_rect.left
         col0_y = content_rect.top
@@ -367,7 +428,7 @@ class ControlsShowcaseFeature(Feature):
         self._place_control(
             host,
             "horizontal_scrollbar",
-            "H. Scrollbar",
+            "Horizontal Scrollbar",
             ScrollbarControl(
                 "control_horizontal_scrollbar",
                 Rect(0, 0, 1, 1),
@@ -389,7 +450,7 @@ class ControlsShowcaseFeature(Feature):
         self._place_control(
             host,
             "horizontal_slider",
-            "H. Slider",
+            "Horizontal Slider",
             SliderControl(
                 "control_horizontal_slider",
                 Rect(0, 0, 1, 1),
@@ -1225,7 +1286,211 @@ class ControlsShowcaseFeature(Feature):
             row_index=142,
         )
 
+        # ---------------------------------------------------------------
+        # New controls section — placed below the tallest control column in
+        # the previous section so controls never overlap.
+        # ---------------------------------------------------------------
+        prev_section_bottom = max(
+            col7_y,
+            col9_y + prop_slot_h,
+            col10_y + anim_slot_h,
+        )
+        new_ctrl_section_top = prev_section_bottom + row_gap
+        nc_bounds = Rect(
+            content_rect.left,
+            new_ctrl_section_top,
+            content_rect.width,
+            max(1, content_rect.bottom - new_ctrl_section_top),
+        )
+        nc_flow = LayoutManager()
+        nc_flow.set_column_flow_properties(
+            bounds=nc_bounds,
+            overall_rows=self.LAYOUT_OVERALL_ROWS_CONSTANT,
+            overall_columns=self.LAYOUT_OVERALL_COLUMNS_CONSTANT,
+            column_spacing=col_gap,
+            row_spacing=row_gap,
+        )
+        nc0 = nc_flow.column_flow_anchor()
+        nc1 = nc_flow.column_flow_anchor()
+        nc2 = nc_flow.column_flow_anchor()
+        nc3 = nc_flow.column_flow_anchor()
+
+        nc_w = min(220, nc0.width)
+        nc_slot_h = slot_h(36)
+
+        # Toolbar
+        self._place_control(
+            host,
+            "toolbar",
+            "Toolbar",
+            ToolbarControl(
+                "control_toolbar",
+                Rect(0, 0, nc_w, 36),
+                items=[
+                    ToolbarItem(label="Cut", action_id="cut"),
+                    ToolbarItem(label="Copy", action_id="copy"),
+                    ToolbarItem(separator=True),
+                    ToolbarItem(label="Paste", action_id="paste"),
+                ],
+            ),
+            Rect(nc0.left, nc0.top, nc_w, nc_slot_h),
+            focusable=True,
+            accessibility_role="toolbar",
+            accessibility_label="Toolbar",
+            column_index=11,
+            row_index=150,
+        )
+
+        # Status Bar
+        status_bar_slot_h = slot_h(24)
+        self._place_control(
+            host,
+            "status_bar",
+            "Status Bar",
+            StatusBarControl(
+                "control_status_bar",
+                Rect(0, 0, nc_w, 24),
+                slots=[
+                    StatusSlot("status", "Ready", width=80),
+                    StatusSlot("line", "Ln 1", width=50, separator_after=True),
+                    StatusSlot("col", "Col 1", width=50),
+                ],
+            ),
+            Rect(nc0.left, nc0.top + nc_slot_h + row_gap, nc_w, status_bar_slot_h),
+            focusable=False,
+            accessibility_role="status",
+            accessibility_label="Status bar",
+            column_index=11,
+            row_index=151,
+        )
+
+        # Expander
+        expander_slot_h = slot_h(80)
+        self._place_control(
+            host,
+            "expander",
+            "Expander",
+            ExpanderControl(
+                "control_expander",
+                Rect(0, 0, nc_w, 80),
+                title="Details",
+                body_height=50,
+            ),
+            Rect(nc1.left, nc1.top, nc_w, expander_slot_h),
+            focusable=True,
+            accessibility_role="group",
+            accessibility_label="Expander",
+            column_index=12,
+            row_index=152,
+        )
+
+        # Breadcrumb
+        breadcrumb_slot_h = slot_h(28)
+        self._place_control(
+            host,
+            "breadcrumb",
+            "Breadcrumb",
+            BreadcrumbControl(
+                "control_breadcrumb",
+                Rect(0, 0, nc_w, 28),
+                items=[
+                    BreadcrumbItem(label="Home", value="home"),
+                    BreadcrumbItem(label="Files", value="files"),
+                    BreadcrumbItem(label="Documents", value="documents"),
+                ],
+            ),
+            Rect(nc2.left, nc2.top, nc_w, breadcrumb_slot_h),
+            focusable=True,
+            accessibility_role="navigation",
+            accessibility_label="Breadcrumb navigation",
+            column_index=13,
+            row_index=153,
+        )
+
+        # Split Button
+        split_slot_h = slot_h(32)
+        self._place_control(
+            host,
+            "split_button",
+            "Split Button",
+            SplitButtonControl(
+                "control_split_button",
+                Rect(0, 0, nc_w, 32),
+                label="Save",
+                options=[
+                    SplitButtonOption(label="Save As...", on_click=lambda: None),
+                    SplitButtonOption(label="Save All", on_click=lambda: None),
+                ],
+            ),
+            Rect(nc2.left, nc2.top + breadcrumb_slot_h + row_gap, nc_w, split_slot_h),
+            focusable=True,
+            accessibility_role="button",
+            accessibility_label="Split button",
+            column_index=13,
+            row_index=154,
+        )
+
+        # Chip Input
+        chip_slot_h = slot_h(36)
+        self._place_control(
+            host,
+            "chip_input",
+            "Chip Input",
+            ChipInputControl(
+                "control_chip_input",
+                Rect(0, 0, nc_w, 36),
+                placeholder="Add tag...",
+                values=["Python", "GUI"],
+            ),
+            Rect(nc3.left, nc3.top, nc_w, chip_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Chip input",
+            column_index=14,
+            row_index=155,
+        )
+
+        # Time Picker
+        time_slot_h = slot_h(32)
+        self._place_control(
+            host,
+            "time_picker",
+            "Time Picker",
+            TimePickerControl(
+                "control_time_picker",
+                Rect(0, 0, nc_w, 32),
+                hour=9, minute=30,
+            ),
+            Rect(nc3.left, nc3.top + chip_slot_h + row_gap, nc_w, time_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Time picker",
+            column_index=14,
+            row_index=156,
+        )
+
+        # Date Picker
+        date_slot_h = slot_h(32)
+        self._place_control(
+            host,
+            "date_picker",
+            "Date Picker",
+            DatePickerControl(
+                "control_date_picker",
+                Rect(0, 0, nc_w, 32),
+            ),
+            Rect(nc3.left, nc3.top + chip_slot_h + row_gap + time_slot_h + row_gap, nc_w, date_slot_h),
+            focusable=True,
+            accessibility_role="textbox",
+            accessibility_label="Date picker",
+            column_index=14,
+            row_index=157,
+        )
+
         self._build_scene_task_panel(host)
+
+        # Apply initial tab category visibility after all placements are registered.
+        self._apply_category_visibility(host)
 
         if self._focus_controls:
             self._initial_focus_control = self._focus_controls[0]
@@ -1248,6 +1513,11 @@ class ControlsShowcaseFeature(Feature):
         if self._showcase_anim_ctrl is not None and self._showcase_anim_ctrl.visible:
             self._showcase_anim_ctrl.animation.update(dt)
             self._showcase_anim_ctrl.invalidate()
+
+        # Popup-capable controls draw their popup in their own draw pass.
+        # Keep any currently-open popup control at the end of the root child
+        # list so popup visuals render on top.
+        self._promote_open_popup_controls(host)
 
         if not self._pending_initial_focus:
             return
@@ -1421,6 +1691,514 @@ class ControlsShowcaseFeature(Feature):
         )
         host.control_showcase_root.add(label)
         self.control_labels.append(label)
+
+    def _category_for_row(self, row_index: int) -> str:
+        if row_index < 60:
+            return "basics"
+        if row_index < 100:
+            return "data"
+        if row_index < 140:
+            return "advanced"
+        return "extended"
+
+    def _set_active_category(self, host, key: str) -> None:
+        valid_keys = {k for k, _ in self.SHOWCASE_CATEGORY_TABS}
+        if key not in valid_keys:
+            return
+        if self._active_category_key == key:
+            return
+        self._active_category_key = key
+        self._apply_category_visibility(host)
+
+    def _apply_category_visibility(self, host) -> None:
+        active_key = self._active_category_key
+        self._relayout_category(active_key)
+        for placed in self.placed_controls:
+            show = self._category_for_row(int(placed.row_index)) == active_key
+            control = placed.control
+            control.visible = show
+            control.enabled = show
+            if placed.label is not None:
+                placed.label.visible = show
+                placed.label.enabled = show
+
+        self._hide_orphan_labels()
+        self._hide_duplicate_basics_family_labels(active_key)
+
+        # Keep keyboard traversal valid for the currently visible set.
+        try:
+            host.app.configure_features_accessibility(host, 0)
+        except Exception:
+            pass
+
+        # If current focus became hidden, move focus to the category tabs.
+        focused = getattr(host.app.focus, "focused", None)
+        if focused is not None and not getattr(focused, "visible", True):
+            if self._category_tabs is not None and self._category_tabs.visible and self._category_tabs.enabled:
+                host.app.focus.set_focus(self._category_tabs)
+
+    def _hide_orphan_labels(self) -> None:
+        matched_labels = {
+            placed.label
+            for placed in self.placed_controls
+            if placed.label is not None
+        }
+        matched_labels.update(self._basics_aux_labels.values())
+        for label in self.control_labels:
+            if label in matched_labels:
+                continue
+            label.visible = False
+            label.enabled = False
+
+    def _hide_duplicate_basics_family_labels(self, active_key: str) -> None:
+        if active_key != "basics":
+            return
+        duplicate_names = {
+            "button_2",
+            "button_3",
+            "toggle_2",
+            "toggle_3",
+            "button_group_a2",
+            "button_group_a3",
+            "button_group_b2",
+            "button_group_b3",
+            "button_group_c2",
+            "button_group_c3",
+        }
+        for placed in self.placed_controls:
+            if str(placed.name) in duplicate_names and placed.label is not None:
+                placed.label.visible = False
+                placed.label.enabled = False
+
+    def _relayout_category(self, category_key: str) -> None:
+        bounds = Rect(self._category_content_bounds)
+        if bounds.width <= 0 or bounds.height <= 0:
+            return
+
+        items = [
+            placed
+            for placed in self.placed_controls
+            if self._category_for_row(int(placed.row_index)) == category_key
+        ]
+        if not items:
+            return
+
+        if category_key == "basics":
+            self._relayout_basics(bounds, items)
+            return
+
+        items.sort(key=lambda item: (int(item.row_index), int(item.column_index), str(item.name)))
+
+        col_gap, row_gap, min_col_w, label_h, label_gap, max_cols_cap = self._category_layout_metrics(category_key)
+        fit_cols = max(1, (bounds.width + col_gap) // (min_col_w + col_gap))
+        col_count = max(1, min(int(max_cols_cap), int(fit_cols)))
+        col_w = max(140, (bounds.width - (col_gap * (col_count - 1))) // col_count)
+
+        y = bounds.top
+        for start in range(0, len(items), col_count):
+            row_items = items[start:start + col_count]
+
+            slot_heights: list[int] = []
+            for placed in row_items:
+                target_w, control_h = self._target_control_size(category_key, placed, col_w)
+                slot_label_h = label_h + label_gap if placed.label is not None else 0
+                slot_heights.append(control_h + slot_label_h)
+            row_h = max(slot_heights) if slot_heights else 0
+
+            for col, placed in enumerate(row_items):
+                x = bounds.left + col * (col_w + col_gap)
+                target_w, control_h = self._target_control_size(category_key, placed, col_w)
+                control_x = x + max(0, (col_w - target_w) // 2)
+
+                if placed.label is not None:
+                    placed.label.set_rect(Rect(x, y, col_w, label_h))
+                    control_top = y + label_h + label_gap
+                    placed.control.set_rect(Rect(control_x, control_top, target_w, control_h))
+                else:
+                    placed.control.set_rect(Rect(control_x, y, target_w, control_h))
+
+            y += row_h + row_gap
+
+    def _relayout_basics(self, bounds: Rect, items: list) -> None:
+        items_by_name = {str(item.name): item for item in items}
+        col_gap = 8
+        row_gap = 8
+        label_h = 16
+        label_gap = 2
+
+        arrow_names = ["arrow_up", "arrow_down", "arrow_left", "arrow_right"]
+        horizontal_names = ["horizontal_scrollbar", "horizontal_slider"]
+        vertical_names = ["vertical_scrollbar", "vertical_slider"]
+        button_names = ["button", "button_2", "button_3"]
+        toggle_names = ["toggle", "toggle_2", "toggle_3"]
+        group_names = sorted(
+            [str(item.name) for item in items if str(item.name).startswith("button_group_")],
+            key=lambda name: (
+                name.split("_")[-1][0] if name.split("_")[-1] else "",
+                int(name.split("_")[-1][1:]) if name.split("_")[-1][1:].isdigit() else 0,
+            ),
+        )
+        special_names = set(arrow_names + horizontal_names + vertical_names + button_names + toggle_names + group_names)
+
+        # Top row: compact 2x2 arrow grid only.
+        top_cols = 3
+        top_cell_w = max(140, (bounds.width - (col_gap * (top_cols - 1))) // top_cols)
+        top_y = bounds.top
+
+        arrow_x = bounds.left
+
+        # Arrow boxes: compact 2x2 square grid centered in first cell.
+        arrow_side = max(24, min(30, (top_cell_w - col_gap) // 2))
+        arrow_grid_w = (arrow_side * 2) + col_gap
+        arrow_start_x = arrow_x + max(0, (top_cell_w - arrow_grid_w) // 2)
+        arrow_positions = {
+            "arrow_up": (arrow_start_x, top_y),
+            "arrow_down": (arrow_start_x + arrow_side + col_gap, top_y),
+            "arrow_left": (arrow_start_x, top_y + arrow_side + row_gap),
+            "arrow_right": (arrow_start_x + arrow_side + col_gap, top_y + arrow_side + row_gap),
+        }
+        for name in arrow_names:
+            placed = items_by_name.get(name)
+            if placed is None:
+                continue
+            x, y = arrow_positions[name]
+            placed.control.set_rect(Rect(x, y, arrow_side, arrow_side))
+            if placed.label is not None:
+                placed.label.visible = False
+                placed.label.enabled = False
+
+        top_block_h = (arrow_side * 2) + row_gap
+        section_y = top_y + top_block_h + row_gap
+
+        # Buttons/toggles/groups: each family shares one explicit cell.
+        grouped_families: list[tuple[str, list]] = []
+        button_family = [items_by_name[name] for name in button_names if name in items_by_name]
+        if button_family:
+            grouped_families.append(("Buttons", button_family))
+        toggle_family = [items_by_name[name] for name in toggle_names if name in items_by_name]
+        if toggle_family:
+            grouped_families.append(("Toggles", toggle_family))
+
+        group_families: list[tuple[str, list]] = []
+        for family_key in ("a", "b", "c"):
+            family_items = [
+                items_by_name[name]
+                for name in group_names
+                if name in items_by_name and name.split("_")[-1].startswith(family_key)
+            ]
+            if family_items:
+                group_families.append((f"Group {family_key.upper()}", family_items))
+
+        if grouped_families:
+            group_bounds = Rect(bounds.left, section_y, bounds.width, max(1, bounds.height - (section_y - bounds.top)))
+            section_y = self._relayout_basics_group_cells(group_bounds, grouped_families, col_count=max(1, len(grouped_families)))
+
+        if group_families:
+            group_bounds = Rect(bounds.left, section_y, bounds.width, max(1, bounds.height - (section_y - bounds.top)))
+            section_y = self._relayout_basics_group_cells(group_bounds, group_families, col_count=3)
+
+        # Reserve the final row for horizontal/vertical scroll cells.
+        scroll_section_h = 184
+        flow_bounds = Rect(bounds.left, section_y, bounds.width, max(1, bounds.height - (section_y - bounds.top) - scroll_section_h - row_gap))
+
+        remaining = [item for item in items if str(item.name) not in special_names]
+        bottom_y = section_y
+        if remaining:
+            bottom_y = self._relayout_grid_items("basics", flow_bounds, remaining)
+
+        scroll_bounds = Rect(bounds.left, bottom_y, bounds.width, scroll_section_h)
+        self._relayout_basics_scroll_cells(scroll_bounds, items_by_name, horizontal_names, vertical_names)
+        self._reorder_basics_focus_controls(
+            items_by_name, remaining,
+            arrow_names, button_names, toggle_names,
+            group_names, horizontal_names, vertical_names,
+        )
+
+    def _reorder_basics_focus_controls(
+        self,
+        items_by_name: dict,
+        remaining: list,
+        arrow_names: list,
+        button_names: list,
+        toggle_names: list,
+        group_names: list,
+        horizontal_names: list,
+        vertical_names: list,
+    ) -> None:
+        """Rebuild _focus_controls so Basics-tab focus cycles in cell-visual order:
+        arrows (2x2), buttons, toggles, group A/B/C, remaining grid items
+        (sorted by row then column), horizontal scroll, vertical scroll.
+        Category tabs and all non-Basics controls keep their existing relative order."""
+        focus_id_set = set(id(c) for c in self._focus_controls)
+
+        def _collect(names: list) -> list:
+            result = []
+            for name in names:
+                placed = items_by_name.get(name)
+                if placed is not None and id(placed.control) in focus_id_set:
+                    result.append(placed.control)
+            return result
+
+        basics_ordered = (
+            _collect(arrow_names)
+            + _collect(button_names)
+            + _collect(toggle_names)
+            + _collect(group_names)
+        )
+        sorted_remaining = sorted(
+            remaining,
+            key=lambda item: (int(item.row_index), int(item.column_index), str(item.name)),
+        )
+        for placed in sorted_remaining:
+            if id(placed.control) in focus_id_set:
+                basics_ordered.append(placed.control)
+        basics_ordered += _collect(horizontal_names)
+        basics_ordered += _collect(vertical_names)
+
+        basics_id_set = set(id(c) for c in basics_ordered)
+        non_basics = [c for c in self._focus_controls if id(c) not in basics_id_set]
+        # non_basics[0] is the category_tabs control (first item appended); keep it leading.
+        self._focus_controls[:] = non_basics[:1] + basics_ordered + non_basics[1:]
+
+    def _relayout_basics_scroll_cells(self, bounds: Rect, items_by_name: dict, horizontal_names: list[str], vertical_names: list[str]) -> None:
+        col_gap = 8
+        row_gap = 8
+        label_h = 16
+        label_gap = 2
+        cell_w = max(180, (bounds.width - col_gap) // 2)
+        total_w = (cell_w * 2) + col_gap
+        start_x = bounds.left + max(0, (bounds.width - total_w) // 2)
+        horiz_x = start_x
+        vert_x = horiz_x + cell_w + col_gap
+        top_y = bounds.top
+
+        horiz_control_h = 24
+        horiz_slot_h = label_h + label_gap + horiz_control_h
+        for idx, name in enumerate(horizontal_names):
+            placed = items_by_name.get(name)
+            if placed is None:
+                continue
+            y = top_y + idx * (horiz_slot_h + row_gap)
+            if placed.label is not None:
+                placed.label.set_rect(Rect(horiz_x, y, cell_w, label_h))
+                placed.label.visible = True
+                placed.label.enabled = True
+                control_y = y + label_h + label_gap
+            else:
+                control_y = y
+            placed.control.set_rect(Rect(horiz_x, control_y, cell_w, horiz_control_h))
+
+        vert_bar_w = 22
+        vert_bar_h = 146
+        label_w = max(54, (cell_w // 2) - 24)
+        inner_gap = 4
+        per_control_w = vert_bar_w + 6 + label_w
+        content_w = (per_control_w * 2) + inner_gap
+        vert_start_x = vert_x + max(0, (cell_w - content_w) // 2)
+        for idx, name in enumerate(vertical_names):
+            placed = items_by_name.get(name)
+            if placed is None:
+                continue
+            x = vert_start_x + idx * (per_control_w + inner_gap)
+            control_y = top_y + 12
+            placed.control.set_rect(Rect(x, control_y, vert_bar_w, vert_bar_h))
+            label = placed.label
+            if label is None:
+                label = self._ensure_basics_aux_label(name)
+            if label is not None:
+                label_x = x + vert_bar_w + 6
+                label_y = control_y + (vert_bar_h - label_h) // 2
+                label.set_rect(Rect(label_x, label_y, label_w, label_h))
+                label.visible = True
+                label.enabled = True
+
+    def _ensure_basics_aux_label(self, name: str) -> LabelControl | None:
+        label = self._basics_aux_labels.get(name)
+        if label is not None:
+            return label
+        root = self._showcase_root
+        if root is None:
+            return None
+        text_map = {
+            "vertical_scrollbar": "Vertical scrollbar",
+            "vertical_slider": "Vertical slider",
+        }
+        text = text_map.get(name)
+        if text is None:
+            return None
+        label = LabelControl(f"controls_showcase_aux_label_{name}", Rect(0, 0, 1, 1), text, align="left")
+        root.add(label)
+        self.control_labels.append(label)
+        self._basics_aux_labels[name] = label
+        return label
+
+    def _relayout_basics_group_cells(self, bounds: Rect, families: list[tuple[str, list]], *, col_count: int) -> int:
+        col_gap = 8
+        row_gap = 8
+        label_h = 16
+        label_gap = 2
+        col_count = max(1, int(col_count))
+        col_w = max(140, (bounds.width - (col_gap * (col_count - 1))) // col_count)
+        y = bounds.top
+
+        # Hide all per-control labels in these families first; only one header
+        # label per family cell is restored below.
+        for _title, placed_items in families:
+            for placed in placed_items:
+                if placed.label is not None:
+                    placed.label.visible = False
+                    placed.label.enabled = False
+
+        for start in range(0, len(families), col_count):
+            row_families = families[start:start + col_count]
+            row_h = 0
+            family_metrics: list[tuple[str, list, int, int]] = []
+            for title, placed_items in row_families:
+                control_heights = [self._target_control_size("basics", placed, col_w)[1] for placed in placed_items]
+                family_h = label_h + label_gap + sum(control_heights) + (max(0, len(control_heights) - 1) * 4)
+                family_metrics.append((title, placed_items, family_h, max(control_heights) if control_heights else 0))
+                row_h = max(row_h, family_h)
+
+            for col, (title, placed_items, _family_h, _max_h) in enumerate(family_metrics):
+                x = bounds.left + col * (col_w + col_gap)
+                header_label = placed_items[0].label if placed_items and placed_items[0].label is not None else None
+                if header_label is not None:
+                    header_label.text = title
+                    header_label.set_rect(Rect(x, y, col_w, label_h))
+                    header_label.visible = True
+                    header_label.enabled = True
+
+                control_y = y + label_h + label_gap
+                for idx, placed in enumerate(placed_items):
+                    target_w, control_h = self._target_control_size("basics", placed, col_w)
+                    control_x = x + max(0, (col_w - target_w) // 2)
+                    placed.control.set_rect(Rect(control_x, control_y, target_w, control_h))
+                    control_y += control_h + 4
+            y += row_h + row_gap
+
+        return y
+
+    def _relayout_grid_items(self, category_key: str, bounds: Rect, items: list) -> int:
+        items.sort(key=lambda item: (int(item.row_index), int(item.column_index), str(item.name)))
+
+        col_gap, row_gap, min_col_w, label_h, label_gap, max_cols_cap = self._category_layout_metrics(category_key)
+        fit_cols = max(1, (bounds.width + col_gap) // (min_col_w + col_gap))
+        col_count = max(1, min(int(max_cols_cap), int(fit_cols)))
+        col_w = max(140, (bounds.width - (col_gap * (col_count - 1))) // col_count)
+
+        y = bounds.top
+        for start in range(0, len(items), col_count):
+            row_items = items[start:start + col_count]
+
+            slot_heights: list[int] = []
+            for placed in row_items:
+                target_w, control_h = self._target_control_size(category_key, placed, col_w)
+                slot_label_h = label_h + label_gap if placed.label is not None else 0
+                slot_heights.append(control_h + slot_label_h)
+            row_h = max(slot_heights) if slot_heights else 0
+
+            for col, placed in enumerate(row_items):
+                x = bounds.left + col * (col_w + col_gap)
+                target_w, control_h = self._target_control_size(category_key, placed, col_w)
+                control_x = x + max(0, (col_w - target_w) // 2)
+
+                if placed.label is not None:
+                    placed.label.set_rect(Rect(x, y, col_w, label_h))
+                    placed.label.visible = True
+                    placed.label.enabled = True
+                    control_top = y + label_h + label_gap
+                    placed.control.set_rect(Rect(control_x, control_top, target_w, control_h))
+                else:
+                    placed.control.set_rect(Rect(control_x, y, target_w, control_h))
+
+            y += row_h + row_gap
+
+        return y
+
+    def _category_layout_metrics(self, category_key: str) -> tuple[int, int, int, int, int, int]:
+        if category_key == "basics":
+            return (6, 6, 160, 16, 2, 5)
+        return (max(4, int(self.INNER_GAP * 2)), max(6, int(self.INNER_GAP * 2)), 220, self.LABEL_HEIGHT, self.LABEL_GAP, 4)
+
+    def _target_control_size(self, category_key: str, placed, column_width: int) -> tuple[int, int]:
+        control = placed.control
+        name = str(getattr(placed, "name", ""))
+        current_w = max(1, int(control.rect.width))
+        current_h = max(1, int(control.rect.height))
+
+        if category_key != "basics":
+            return (column_width, current_h)
+
+        compact_w = max(140, column_width)
+
+        if name.startswith("arrow_"):
+            side = max(24, min(column_width, 30))
+            return (side, side)
+        if name in {"vertical_scrollbar", "vertical_slider"}:
+            width = max(18, min(column_width, 24))
+            return (width, 84)
+        if name in {"horizontal_scrollbar", "horizontal_slider"}:
+            return (compact_w, 24)
+        if name in {"text_input", "dropdown", "spinner", "range_slider", "split_button", "date_picker", "time_picker"}:
+            return (compact_w, 32)
+        if name in {"button", "button_2", "button_3", "toggle", "toggle_2", "toggle_3"} or name.startswith("button_group_"):
+            return (compact_w, 30)
+        if name == "text_area":
+            return (compact_w, 96)
+        if name == "data_grid":
+            return (compact_w, 132)
+        if name == "tab":
+            width = max(180, min(column_width, 230))
+            height = max(160, min(current_h if current_h > 0 else 180, 220))
+            return (width, height)
+        if name == "image":
+            side = max(112, min(column_width, 144))
+            return (side, side)
+        if name == "notification_panel":
+            return (compact_w, 168)
+
+        return (compact_w, max(min(current_h, 144), 36))
+
+    def _control_has_open_popup(self, control) -> bool:
+        # Open-state conventions across controls in this demo:
+        # - _open (date picker)
+        # - _dropdown_open (split button)
+        # - _is_open (dropdown control, overlay-backed)
+        # - _open_index >= 0 (menu bar flyout)
+        if bool(getattr(control, "_open", False)):
+            return True
+        if bool(getattr(control, "_dropdown_open", False)):
+            return True
+        if bool(getattr(control, "_is_open", False)):
+            return True
+        open_index = getattr(control, "_open_index", -1)
+        return isinstance(open_index, int) and open_index >= 0
+
+    def _promote_open_popup_controls(self, host) -> None:
+        root = getattr(host, "control_showcase_root", None)
+        if root is None:
+            return
+        children = getattr(root, "children", None)
+        if not isinstance(children, list) or not children:
+            return
+
+        open_controls = [
+            control
+            for control in self.controls
+            if control in children and control.visible and control.enabled and self._control_has_open_popup(control)
+        ]
+        if not open_controls:
+            return
+
+        changed = False
+        for control in open_controls:
+            idx = children.index(control)
+            if idx != len(children) - 1:
+                children.append(children.pop(idx))
+                changed = True
+
+        if changed:
+            root.invalidate()
 
     def _default_rect(self, host) -> Rect:
         screen_rect = getattr(host, "screen_rect", None)
