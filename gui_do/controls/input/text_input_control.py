@@ -133,11 +133,6 @@ class TextInputControl(AbstractTextInputControl):
         return (self.rect.left + _H_PADDING - self._scroll_offset_px + px, self.rect.top)
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
-        from ...theme.color_theme import get_global_font_manager
-        font_manager = get_global_font_manager()
-        if font_manager is not None:
-            return font_manager.font_instance(self._font_role, size=font_manager.scaled_size(self._FONT_SCALE))
-        # Fallback: use theme if provided
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
             return theme.fonts.font_instance(self._font_role, size=theme.fonts.scaled_size(self._FONT_SCALE))
         return None

@@ -1,16 +1,15 @@
 from typing import Callable, List, Optional
 from typing import TYPE_CHECKING
-from collections import deque
 
 from pygame import Rect
 
 from ...events.gui_event import EventPhase, GuiEvent
+from ...theme.color_theme import ColorTheme
 
 if TYPE_CHECKING:
     from typing import Generator
     import pygame
     from ...app.gui_application import GuiApplication
-    from ...theme.color_theme import ColorTheme
     from ...theme.scoped_theme import ScopedTheme
 
 
@@ -154,10 +153,11 @@ class UiNode:
 
     def find_descendant(self, control_id: str) -> "Optional[UiNode]":
         """Return the first descendant (BFS) whose ``control_id`` matches, or ``None``."""
-        # Use deque for O(1) popleft instead of list with index scanning
-        queue = deque(self.children)
-        while queue:
-            candidate = queue.popleft()
+        queue = list(self.children)
+        i = 0
+        while i < len(queue):
+            candidate = queue[i]
+            i += 1
             if candidate.control_id == control_id:
                 return candidate
             if candidate.children:
@@ -167,9 +167,11 @@ class UiNode:
     def find_descendants(self, predicate: "Callable[[UiNode], bool]") -> "List[UiNode]":
         """Return all descendants (BFS) that satisfy *predicate*."""
         result: List[UiNode] = []
-        queue = deque(self.children)
-        while queue:
-            candidate = queue.popleft()
+        queue = list(self.children)
+        i = 0
+        while i < len(queue):
+            candidate = queue[i]
+            i += 1
             if predicate(candidate):
                 result.append(candidate)
             if candidate.children:
@@ -377,15 +379,8 @@ class UiNode:
 
     def handle_routed_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         # --- Ensure theme is always valid and has fonts ---
-        from ...theme.color_theme import get_global_font_manager, ColorTheme
-        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            font_manager = get_global_font_manager()
-            if font_manager is not None:
-                class _Theme:
-                    fonts = font_manager
-                theme = _Theme()
-            else:
-                theme = ColorTheme()
+        if getattr(theme, "fonts", None) is None:
+            theme = ColorTheme()
         if event.phase is EventPhase.CAPTURE:
             return bool(self.on_event_capture(event, app, theme=theme))
         if event.phase is EventPhase.BUBBLE:
@@ -416,18 +411,6 @@ class UiNode:
         """Window-phase draw. No-op for most nodes; PanelControl renders window children here."""
 
     def draw(self, _surface: "pygame.Surface", _theme: "ColorTheme") -> None:
-        # --- Ensure theme is always valid and has fonts ---
-        from ...theme.color_theme import get_global_font_manager, ColorTheme
-        if _theme is None or not hasattr(_theme, "fonts") or _theme.fonts is None:
-            font_manager = get_global_font_manager()
-            if font_manager is not None:
-                class _Theme:
-                    fonts = font_manager
-                _theme = _Theme()
-            else:
-                _theme = ColorTheme()
-        # Subclasses should override this method for custom drawing.
-        pass
         """Draw control onto target surface."""
 
     # ------------------------------------------------------------------

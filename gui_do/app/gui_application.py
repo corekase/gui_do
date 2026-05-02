@@ -368,7 +368,7 @@ class GuiApplication:
     def _create_scene_runtime(self) -> "_SceneRuntime":
         scene = Scene()
         # Always use the global font_roles registry for every scene
-        theme = ColorTheme(font_roles=self.font_roles)
+        theme = ColorTheme()
         factory = BuiltInGraphicsFactory(theme)
         theme.graphics_factory = factory
         pristine = pygame.Surface(self.surface.get_size())
@@ -540,11 +540,10 @@ class GuiApplication:
                 )
                 if can_sync_from_hardware:
                     wheel_pos = pygame.mouse.get_pos()
-                    if isinstance(wheel_pos, tuple) and len(wheel_pos) == 2:
-                        wheel_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
-                        self._logical_pointer_pos = wheel_pos
-                        self.input_state.pointer_pos = wheel_pos
-                        gui_event = replace(gui_event, pos=wheel_pos, raw_pos=wheel_pos)
+                    wheel_pos = (int(wheel_pos[0]), int(wheel_pos[1]))
+                    self._logical_pointer_pos = wheel_pos
+                    self.input_state.pointer_pos = wheel_pos
+                    gui_event = replace(gui_event, pos=wheel_pos, raw_pos=wheel_pos)
             raw_pos = gui_event.pos
             if gui_event.kind == EventType.MOUSE_BUTTON_DOWN:
                 self._pending_warp_target = None

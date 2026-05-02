@@ -117,3 +117,119 @@ The README should guide developers to the data-driven feature-lifecycle approach
 - Remove any sections that aren't explicitly named above
 - Verify all links in the Table of Contents work
 - Ensure all code examples follow data-driven and feature-lifecycle patterns
+
+---
+
+## TUTORIAL.md Generation
+
+After generating README.md, generate (or update) a **TUTORIAL.md** file in the root of the project.
+
+### Purpose
+
+TUTORIAL.md is a standalone, beginner-focused tutorial that teaches gui_do from scratch. It covers the three foundational concepts of the framework — **data-driven design**, **reactive programming**, and the **feature lifecycle** — and walks a beginner through building a complete, runnable application from the first line of code to a finished product.
+
+### Generate vs. Update Behavior
+
+- **If TUTORIAL.md does not exist:** Generate the full tutorial from scratch covering all sections below.
+- **If TUTORIAL.md already exists:** Read it, then update or expand any section that is out of date, missing information, or does not yet cover newly introduced APIs or patterns visible in the current codebase. Preserve any section that is already accurate and complete. Add new sections at the appropriate location if new concepts need coverage.
+
+### Audience
+
+A developer who has never used gui_do before. Assume Python knowledge (functions, classes, modules) but do not assume GUI framework experience.
+
+### Structure and Content Requirements
+
+The tutorial must contain all of the following sections in order:
+
+#### 1. Introduction
+- What gui_do is in plain English (2-3 sentences)
+- What the reader will learn and build
+- What prior knowledge is assumed
+
+#### 2. Core Concepts
+- **Data-driven design:** what it means — behavior is described by data structures (Specs), not by writing imperative setup code. Show a contrast: manual setup vs. spec-based setup.
+- **Reactive programming:** what it means in gui_do — observable data that automatically triggers UI updates when it changes. Introduce `Observable`, `ObservableList`, signals.
+- **Feature lifecycle:** explain what a Feature is and why it exists. List and explain all lifecycle hooks in order: `build`, `bind_runtime`, `handle_event`, `on_update`, `draw`. Explain when each fires and what it is for.
+
+#### 3. Installation and Setup
+- How to install gui_do (pip command)
+- Minimal imports needed to start
+- How to create the pygame display surface and hand it to gui_do
+
+#### 4. Your First Application — Step by Step
+Walk through building a complete basic application with these explicit steps:
+1. Create a surface and a `GuiApplication`
+2. Define a simple `Feature` with a `build` hook that adds a label
+3. Use `HostApplicationConfig` and `FeatureSpec` to declare the feature
+4. Call `bootstrap_host_application` to wire everything together
+5. Write the main run loop
+6. Run and see the result
+
+Each step must include a full, runnable code snippet. At the end of this section, present the complete combined listing.
+
+#### 5. Observable Data and Reactive UI
+- Introduce `Observable` for single values
+- Show how a feature reads and writes observable data
+- Show how to bind a label or control to an observable so the UI updates automatically
+- Explain signals: what they are, how `connect()` works, how to emit and handle changes
+
+#### 6. Feature Types
+Explain each feature type and when to use it:
+- `Feature` — general-purpose, draws and handles events
+- `DirectFeature` — bypasses scene routing; handles raw events directly
+- `LogicFeature` — no drawing, pure logic/data
+- `RoutedFeature` — receives events only when focus or scene context matches
+
+#### 7. Feature Messaging
+- Explain the publish/subscribe model between features
+- Show how to publish a message from one feature
+- Show how to subscribe and handle a message in another feature
+- Practical example: a counter feature that reacts to a button press from another feature
+
+#### 8. Scene Navigation
+- What scenes are and why you use them
+- How to declare multiple scenes with `SceneSetupSpec`
+- How to navigate between scenes using `ActionSpec` or programmatically
+- Example: a two-scene app with a "Go to settings" button
+
+#### 9. Spec Reference for Beginners
+Briefly cover the most commonly used Specs with a one-sentence description and a usage snippet for each:
+- `FeatureSpec`
+- `SceneSetupSpec`
+- `ActionSpec`
+- `WindowSpec`
+- `TaskPanelSpec` (if applicable)
+- `ToastSpec` (if applicable)
+
+#### 10. Complete Example Application
+A full, self-contained application (≥ 40 lines of real code) that combines:
+- At least two features
+- Observable data shared between features
+- At least one reactive UI binding
+- A simple action or button
+- A run loop
+
+This is the capstone of the tutorial. The code must be correct and runnable against the current package.
+
+#### 11. Next Steps
+- Point to README.md for the full API overview
+- Point to demo_features/ for more complex examples
+- Point to docs/ for architecture and contract documentation
+- Encourage reading feature_lifecycle.py and data_driven_runtime.py directly
+
+### Content Rules for TUTORIAL.md
+
+#### DO:
+- Use plain, approachable language throughout
+- Introduce one concept per section before using it in a subsequent section
+- Provide a runnable code snippet in every section that introduces code
+- Use current package APIs only — cross-reference demo_features/ and feature_lifecycle.py for accuracy
+- Clearly label each step in the step-by-step section with a step number
+- Make every code example self-contained or clearly state what it depends on from a prior step
+
+#### DON'T:
+- Assume the reader knows what a feature lifecycle is before you explain it
+- Use low-level control APIs (direct pygame drawing calls, raw UiNode manipulation) without first explaining why
+- Reference internal/private APIs (names starting with `_`)
+- Skip the step-by-step walkthrough in favor of a single large code dump
+- Add sections not listed above

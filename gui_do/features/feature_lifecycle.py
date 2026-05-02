@@ -1,4 +1,3 @@
-# from __future__ import annotations
 from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Type checking imports for static analysis only

@@ -28,10 +28,6 @@ class TextAreaControl(AbstractTextInputControl):
             return self._font_size
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
             return theme.fonts.scaled_size(self._FONT_SCALE)
-        from ...theme.color_theme import get_global_font_manager
-        fm = get_global_font_manager()
-        if fm is not None:
-            return fm.scaled_size(self._FONT_SCALE)
         return max(8, round(16 * float(self._FONT_SCALE)))
 
     def get_char_index_at_pixel(self, x: int, y: Optional[int] = None, theme=None) -> int:
@@ -104,10 +100,6 @@ class TextAreaControl(AbstractTextInputControl):
         return (self.rect.left + _H_PAD + px, y)
 
     def _get_font(self, theme) -> Optional["pygame.font.Font"]:
-        from ...theme.color_theme import get_global_font_manager
-        font_manager = get_global_font_manager()
-        if font_manager is not None:
-            return font_manager.font_instance(self._font_role, size=self._resolve_fs())
         if theme is not None and hasattr(theme, "fonts") and theme.fonts is not None:
             return theme.fonts.font_instance(self._font_role, size=self._resolve_fs(theme))
         return None

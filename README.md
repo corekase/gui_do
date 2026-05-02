@@ -490,178 +490,76 @@ class ConsumerFeature(Feature):
 [Back to Top](#table-of-contents)
 
 ```python
-# demo_features/demo_config.py
-
-from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
-from demo_features.controls_demo_feature import ControlsShowcaseFeature
-from demo_features.life_demo_feature import LifeSimulationFeature
-from demo_features.main_demo_feature import MainDemoFeature
-from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
-from demo_features.systems_demo_feature import SystemsDemoFeature
-
+import pygame
 from gui_do import (
-    CursorSpec,
+    Feature,
     FeatureSpec,
     HostApplicationConfig,
-    RuntimeSceneSpec,
-    SceneRootSpec,
+    LabelControl,
+    ButtonControl,
+    ObservableValue,
     SceneSetupSpec,
-    SceneTransitionStyle,
-    TelemetryConfig,
+    RuntimeSceneSpec,
+    bootstrap_host_application,
     make_exit_action,
-    make_palette_open_action,
-    make_scene_nav_action,
-    make_static_accessibility_spec,
-    make_window_toggle_spec,
 )
+from pygame import Rect
 
 
-SCENE_SPECS = (
-    SceneSetupSpec(
-        name="main",
-        pretty_name="Desktop Demo",
-        transition_style=SceneTransitionStyle.SLIDE_RIGHT,
-        transition_duration=0.5,
-        make_initial=True,
-    ),
-    SceneSetupSpec(
-        name="control_showcase",
-        pretty_name="Control Showcase",
-        transition_style=SceneTransitionStyle.SLIDE_LEFT,
-        transition_duration=0.5,
-    ),
-)
+class CounterFeature(Feature):
+    """A simple counter that reacts to button presses."""
 
-FEATURE_SPECS = (
-    FeatureSpec(
-        attr_name="_shapes_feature",
-        factory=lambda: BouncingShapesBackdropFeature(
-            circle_count=12,
-            square_count=12,
-            octagon_count=12,
-            star_count=12,
-        ),
-    ),
-    FeatureSpec(attr_name="_main_feature", factory=MainDemoFeature),
-    FeatureSpec(attr_name="_life_feature", factory=LifeSimulationFeature),
-    FeatureSpec(attr_name="_controls_feature", factory=ControlsShowcaseFeature),
-    FeatureSpec(attr_name="_mandel_feature", factory=MandelbrotRenderFeature),
-    FeatureSpec(attr_name="_systems_feature", factory=SystemsDemoFeature),
-)
+    def build(self, host) -> None:
+        self.count = ObservableValue(0)
+        screen = host.screen_rect
+        self.label = host.app.add(
+            LabelControl("count_label", Rect(20, 20, 300, 32), "Count: 0")
+        )
+        host.app.add(ButtonControl(
+            "increment",
+            Rect(20, 64, 140, 32),
+            "+1",
+            on_click=self._on_click,
+        ))
 
-WINDOW_SPECS = (
-    make_window_toggle_spec(
-        "systems",
-        "_systems_feature",
-        slot_index=1,
-        task_panel_label="System",
-        task_panel_style="angle",
-        tab_before_showcase=True,
-    ),
-    make_window_toggle_spec(
-        "life",
-        "_life_feature",
-        slot_index=3,
-        task_panel_label="Life",
-        task_panel_style="round",
-        tab_before_showcase=False,
-    ),
-    make_window_toggle_spec(
-        "mandel",
-        "_mandel_feature",
-        slot_index=4,
-        task_panel_label="Mandelbrot",
-        task_panel_style="round",
-        tab_before_showcase=False,
-    ),
-)
+    def bind_runtime(self, host) -> None:
+        self.count.subscribe(
+            lambda v: setattr(self.label, "text", f"Count: {v}")
+        )
 
-RUNTIME_SCENE_SPECS = (
-    RuntimeSceneSpec(
-        scene_name="main",
-        pristine_asset="demo_features/data/images/backdrop.jpg",
-        bind_escape_to_exit=True,
-        prewarm=False,
-    ),
-    RuntimeSceneSpec(
-        scene_name="control_showcase",
-        pristine_asset="demo_features/data/images/backdrop.jpg",
-        bind_escape_to_exit=True,
-        prewarm=True,
-    ),
-)
+    def _on_click(self) -> None:
+        self.count.value += 1
 
-ACTION_SPECS = (
-    make_exit_action(),
-    make_scene_nav_action(
-        "nav_main",
-        label="Go to Main Scene",
-        target_scene="main",
-    ),
-    make_scene_nav_action(
-        "nav_showcase",
-        label="Go to Controls Showcase",
-        target_scene="control_showcase",
-    ),
-    make_palette_open_action(),
-)
 
-STATIC_ACCESSIBILITY_SPECS = (
-    make_static_accessibility_spec("exit_button", label="Exit"),
-    make_static_accessibility_spec("showcase_button", label="Showcase"),
-)
-
-DEMO_BOOTSTRAP_CONFIG = HostApplicationConfig(
-    display_size=(1920, 1080),
-    window_title="gui_do demo",
-    fonts={
-        "default": {"file": "demo_features/data/fonts/Gimbot.ttf", "size": 14},
-        "window": "demo_features/data/fonts/Ubuntu-B.ttf",
-    },
-    font_role_specs=(
-        {"title": {"size": 14, "font": "window"}},
-    ),
-    cursors=(
-        CursorSpec("normal", "demo_features/data/cursors/cursor.png", (1, 1)),
-        CursorSpec("hand", "demo_features/data/cursors/hand.png", (12, 12)),
-    ),
-    scene_specs=SCENE_SPECS,
-    feature_specs=FEATURE_SPECS,
-    window_specs=WINDOW_SPECS,
-    runtime_scene_specs=RUNTIME_SCENE_SPECS,
-    action_specs=ACTION_SPECS,
-    static_accessibility_specs=STATIC_ACCESSIBILITY_SPECS,
+CONFIG = HostApplicationConfig(
+    display_size=(800, 600),
+    window_title="Counter",
+    fonts={"default": {"system_name": "Arial", "size": 14},
+           "window": {"system_name": "Arial"}},
+    font_role_specs=({"body": {"size": 14, "font": "default"},
+                      "title": {"size": 18, "font": "window"}},),
+    cursors=(),
+    scene_specs=(SceneSetupSpec(name="main", make_initial=True),),
+    feature_specs=(FeatureSpec(attr_name="_counter", factory=CounterFeature),),
+    window_specs=(),
+    runtime_scene_specs=(RuntimeSceneSpec(scene_name="main", bind_escape_to_exit=True),),
+    action_specs=(make_exit_action(),),
+    static_accessibility_specs=(),
     initial_scene_name="main",
-    scene_roots=(
-        SceneRootSpec("control_showcase", "control_showcase_root", draw_background=False),
-    ),
-    telemetry=TelemetryConfig(enabled=False),
-    target_fps=120,
+    target_fps=60,
 )
-```
 
-**Usage:**
 
-```python
-# gui_do_demo.py
-
-from gui_do import bootstrap_host_application
-from demo_features.demo_config import DEMO_BOOTSTRAP_CONFIG
-
-class GuiDoDemo:
-    """Interactive demo app showcasing gui_do controls and scene workflows."""
-
+class CounterApp:
     def __init__(self) -> None:
-        bootstrap_host_application(self, DEMO_BOOTSTRAP_CONFIG)
+        bootstrap_host_application(self, CONFIG)
 
-    def run(self) -> int:
-        return self.app.run_entrypoint(target_fps=DEMO_BOOTSTRAP_CONFIG.target_fps)
+    def run(self) -> None:
+        self.app.run_entrypoint(target_fps=CONFIG.target_fps)
 
-def main() -> None:
-    GuiDoDemo().run()
 
 if __name__ == "__main__":
-    main()
+    CounterApp().run()
 ```
 
 ---

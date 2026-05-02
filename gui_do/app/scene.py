@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING
 
 from ..events.gui_event import EventPhase, GuiEvent
 from ..controls.base.ui_node import UiNode
+from ..theme.color_theme import ColorTheme
 
 if TYPE_CHECKING:
     from typing import Generator
     import pygame
     from ..app.gui_application import GuiApplication
-    from ..theme.color_theme import ColorTheme
 
 
 class Scene:
@@ -191,15 +191,8 @@ class Scene:
     @staticmethod
     def _dispatch_node_event(node: UiNode, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         # --- Ensure theme is always valid and has fonts ---
-        if theme is None or not hasattr(theme, "fonts") or theme.fonts is None:
-            from ..theme.color_theme import get_global_font_manager, ColorTheme
-            font_manager = get_global_font_manager()
-            if font_manager is not None:
-                class _Theme:
-                    fonts = font_manager
-                theme = _Theme()
-            else:
-                theme = ColorTheme()
+        if getattr(theme, "fonts", None) is None:
+            theme = ColorTheme()
         return bool(node.handle_routed_event(event, app, theme=theme))
 
     def top_focus_target_at(self, pos) -> UiNode | None:

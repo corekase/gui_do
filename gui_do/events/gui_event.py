@@ -152,7 +152,7 @@ class GuiEvent:
     @classmethod
     def from_pygame(cls, event, pointer_pos: Optional[Tuple[int, int]] = None) -> "GuiEvent":
         try:
-            event_type = int(event.type)
+            event_type = event.type
             payload = event.dict
         except AttributeError as exc:
             raise TypeError("expected pygame event with type and dict fields") from exc
