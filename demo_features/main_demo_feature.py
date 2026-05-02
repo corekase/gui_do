@@ -155,23 +155,36 @@ class MainDemoFeature(Feature):
                     on_click=lambda: setattr(host.app, "running", False),
                     style="angle",
                 ),
-                TaskPanelButtonSpec(
-                    attr_name="showcase_button",
-                    control_id="showcase",
-                    slot_index=2,
-                    label="Showcase",
-                    on_click=host.go_to_control_showcase,
-                    style="angle",
-                ),
             ),
         )
 
-        toggle_controls, max_slot_index = add_window_toggle_task_panel_controls(
+        toggle_controls_before_showcase, max_slot_before_showcase = add_window_toggle_task_panel_controls(
             host,
             host.task_panel,
             host.app.layout,
             host.window_presentation,
+            max_slot_index=1,
         )
+
+        host.showcase_button = add_task_panel_button(
+            host.task_panel,
+            host.app.layout,
+            control_id="showcase",
+            slot_index=2,
+            label="Showcase",
+            on_click=host.go_to_control_showcase,
+            style="angle",
+        )
+
+        toggle_controls_after_showcase, max_slot_after_showcase = add_window_toggle_task_panel_controls(
+            host,
+            host.task_panel,
+            host.app.layout,
+            host.window_presentation,
+            min_slot_index=3,
+        )
+        toggle_controls = toggle_controls_before_showcase + toggle_controls_after_showcase
+        max_slot_index = max(2, max_slot_before_showcase, max_slot_after_showcase)
 
         host.help_button = add_task_panel_button(
             host.task_panel,

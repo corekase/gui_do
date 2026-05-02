@@ -491,13 +491,29 @@ def apply_window_toggle_accessibility(host, window_presentation, *, role: str = 
         )
 
 
-def add_window_toggle_task_panel_controls(host, task_panel, app_layout, window_presentation):
-    """Create window toggle controls on the task panel from declarative bindings."""
+def add_window_toggle_task_panel_controls(
+    host,
+    task_panel,
+    app_layout,
+    window_presentation,
+    *,
+    min_slot_index: int | None = None,
+    max_slot_index: int | None = None,
+):
+    """Create window toggle controls on the task panel from declarative bindings.
+
+    Optional slot bounds allow callers to create controls in phases so focus order
+    can match visual slot order when mixed with non-toggle controls.
+    """
     toggle_controls = []
-    max_slot_index = 0
+    max_seen_slot_index = 0
     for binding in sorted_window_bindings(window_presentation.bindings()):
         slot_index = 1 if binding.task_panel_slot_index is None else int(binding.task_panel_slot_index)
-        max_slot_index = max(max_slot_index, slot_index)
+        if min_slot_index is not None and slot_index < int(min_slot_index):
+            continue
+        if max_slot_index is not None and slot_index > int(max_slot_index):
+            continue
+        max_seen_slot_index = max(max_seen_slot_index, slot_index)
         toggle = task_panel.add(
             ToggleControl(
                 binding.task_panel_button_id or f"show_{binding.key}",
@@ -516,7 +532,7 @@ def add_window_toggle_task_panel_controls(host, task_panel, app_layout, window_p
         if binding.toggle_attr:
             setattr(host, binding.toggle_attr, toggle)
         toggle_controls.append((binding, toggle))
-    return toggle_controls, max_slot_index
+    return toggle_controls, max_seen_slot_index
 
 
 def register_window_toggle_tooltips(tooltip_manager, toggle_controls) -> None:
