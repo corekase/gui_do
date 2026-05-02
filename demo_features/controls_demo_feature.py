@@ -1649,10 +1649,12 @@ class ControlsShowcaseFeature(Feature):
         active_key = self._active_category_key
         self._relayout_category(active_key)
 
-        # Compute the set of labels that are legitimately owned by placed controls
-        # or created as auxiliary labels by the layout (e.g. vertical scrollbar labels).
+        # Compute the set of labels that are legitimately owned by placed controls.
+        # Aux labels (vertical scrollbar/slider) are only valid on the basics tab;
+        # on other tabs they fall through to the orphan sweep and get hidden.
         matched_labels = {p.label for p in self.placed_controls if p.label is not None}
-        matched_labels.update(self._basics_aux_labels.values())
+        if active_key == "basics":
+            matched_labels.update(self._basics_aux_labels.values())
 
         for placed in self.placed_controls:
             show = self._category_for_row(int(placed.row_index)) == active_key
