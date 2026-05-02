@@ -5,24 +5,115 @@ description: trigger a full readme rebuild
 
 <!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
 
-gui_do *is* meant to be data-driven within feature lifecycle considerations, and the methods, classes, and API surface of gui_do/features/data_driven_runtime.py and gui_do/features/feature_lifecycle.py *are* the primary sources of documentation for this readme.
+## Documentation Principles
 
-Discard the current section contents of the readme and determine current state of the package API from primary the primary sources, group like concepts and their overall sections together and for sub-sections similarly organize by like concepts. Only include API information from the primary sources unless the reason to use it is that the function it does isn't in the primary sources.  Only show code examples where the point must be understood, and in those examples always ensure that code reflects data-driven and feature lifecycle considerations, how they are used in features, and other gui_do API shown only as absolutely needed.
+gui_do is a **data-driven, feature-lifecycle-oriented GUI framework**. The primary sources of truth are `gui_do/features/data_driven_runtime.py` and `gui_do/features/feature_lifecycle.py`. All documentation must reflect this architectural focus.
 
-Follows this format: gui_do as a project name, and then at most a few-sentence higher-level overview in plain English of what the package provides to a developer audience.
+## Documentation Structure & Purpose
 
-After that section will be a table of contents with links to sections as each section's name and for sub-sections does not link to them.  Sections titles include a link underneath them linking back to the top of the table of contents. Sub-sections do not have links. Format the table of contents using indentation for sections and sub-sections.
+The README should guide developers to the data-driven feature-lifecycle approach first, and only mention lower-level APIs when necessary for advanced use cases. All code examples must follow data-driven and feature-lifecycle patterns.
 
-All following documentation is written from primary sources and follows data-driven and feature lifecycle approaches, and all code examples must follow those as well.  General gui_do API should not generally be included and it should instead be perfectly clear that gui_do is at the base a gui that the feature lifecyle uses, and feature lifecycles are data-driven by a managed overall lifecycle, and all given points revolve around that.  Data-driven with feature lifecycle integration is the primary focus for all text, code, and primary implementation paradigm in all this documentation.
+## Content Guidelines
 
-The next section is a overview written in plain English of what the major systems are in the package, from data-driven feature-lifecycle-perspectives, and how they work together with each other for data-driven and feature lifecycle dynamics, and what kind of applications the faculties they provide are best suited for with those considerations in mind.  This overview should be fairly comprehensive and everything that helps primarily developers an audience.
+### 1. Project Overview
+- Start with the project name and a 2-3 sentence description in plain English
+- Emphasize data-driven design and feature-based composition
+- Highlight what the framework provides to developers
 
-The next section provides a clear and comprehensive tutorial of both data-driven design and feature lifecycle operations and how they are used in gui_do, covering beginner concepts first and then progressing onto more complex usage patterns.  The section also examines how gui_do automatically handling many common functions and provides many common services as abstractions between your code and through its services and down to the pygame base library.  gui_do is implementation "plumbing" and as automatic as possible so you can focus on the specific tasks you need to solve instead of losing time on that plumbing.  Make sure to cover all feature types like DirectFeature for pure graphics drawing that the gui then overlays on top of, and all needed concepts to use the complete faculties the gui_do data-driven-runtime and feature-lifecycle.  Make this tutorial comprehensive and include code examples always drawn from current state of the package for every major concept.  From the table of contents link to this sections major sub-sections, and underneath all those sections have a link back to the top of the table of contents.
+### 2. Table of Contents
+- Use indentation to show hierarchy (sections, subsections)
+- Link to all main sections and major subsections
+- Include back-to-top links for all sections
 
-The next section should be called "Minimal Runnable Example and Configuration" and have only a code listing which is always generated from the current state information that the title describes.  Must include full "data-driven" code including bootstrap code, with the demo and its features being the reference for that.
+### 3. API Organization Section
+- Show that the public API is tiered by purpose and intended use
+- Tier 1: Primary entry points (Specs, Features, bootstrap_host_application, HostApplicationConfig)
+- Tier 2-7: Core infrastructure (data, events, scheduling, themes, overlays)
+- Tier 8+: Individual controls and advanced internals (secondary/discouraged)
+- Use this as the gateway—guide users to Tier 1 first
 
-And then following that cover the rest of the data-driven-feature-lifecycle API.  Purposely avoid including public API information from gui_do unless it is required for a need data-driven or feature lifecycle doesn't provide.  Subsections should cover their topics from the beginner aspects towards the more advanced aspects.
+### 4. Overview Section
+- Written in plain English, explain major systems from data-driven and lifecycle perspectives
+- Explain how observable data, features, and lifecycle hooks work together
+- Discuss automatic features (rendering, event routing, scene management, etc.)
+- Clarify what types of applications this framework excels at
+- Emphasize gui_do as "plumbing" that eliminates boilerplate
 
-When documentation is done updating place a github unittest badge for this package at the beginning of the readme.
+### 5. Comprehensive Tutorial Section
+- Start with beginner concepts (observable data, features, lifecycle hooks)
+- Progress to advanced patterns (feature messaging, custom rendering, scene transitions)
+- Cover all feature types: Feature, DirectFeature, LogicFeature, RoutedFeature
+- For each major concept, include code examples from the current package
+- Explain what gui_do automates so developers focus on domain logic
+- Include subsections with back-to-top links
 
-Do not create any sections not explictly named here, if there is a section that is not named here remove it.
+### 6. Minimal Runnable Example
+- **Title only:** "Minimal Runnable Example and Configuration"
+- **Content:** A single code listing (no other text)
+- **Must include:** Declarative config (HostApplicationConfig), feature example, bootstrap call, run loop
+- **Must be current:** Generated from actual package code (use demo_features/ as reference)
+
+### 7. Data-Driven Bootstrap and Runtime
+- Cover HostApplicationConfig and bootstrap_host_application
+- Explain all major Spec types (FeatureSpec, SceneSetupSpec, ActionSpec, WindowSpec, etc.)
+- Show how specs eliminate boilerplate
+- Progress from beginner to advanced specs
+- Avoid explaining public API unless required for data-driven use
+
+### 8. Feature Lifecycle and Messaging
+- Explain lifecycle hooks (build, bind_runtime, handle_event, on_update, draw)
+- Cover all feature types and when to use each
+- Explain feature messaging and FeatureManager coordination
+- Include subsections progressing from basic to advanced
+
+### 9. Common Patterns
+- Window toggles with task panel buttons
+- Scene navigation with action specs
+- Observable state management in features
+- Feature-to-feature messaging
+- Practical, real-world patterns
+
+### 10. Benefits of Data-Driven Lifecycle Approach
+- Explain why data-driven + lifecycle approach is better
+- Declarative, automatic wiring, composability, testability, clear flow
+- ~8-10 key benefits with brief explanations
+
+### 11. FAQ
+- "Can I still use controls directly?" → Yes but discouraged; compose via features
+- "How do I customize controls?" → Create a Feature with a factory
+- "Low-level event handling?" → Use Feature.handle_event()
+- "Access app from feature?" → Via context parameter
+- "Mix old and new styles?" → Not recommended; stay consistent
+- Other practical questions developers ask
+
+### 12. See Also
+- Link to comprehensive docs (public_api_spec.md, architecture_boundary_spec.md, runtime_operating_contracts.md)
+- Link to feature source files (feature_lifecycle.py, data_driven_runtime.py)
+- Link to demo_features/ for examples
+
+## Content Rules
+
+### DO:
+- Center everything on data-driven and feature-lifecycle patterns
+- Use current package code for all examples
+- Start with primary APIs (Specs, Features, bootstrap) before mentioning others
+- Include code examples for every major concept
+- Organize beginner → intermediate → advanced
+- Link from TOC to all main sections
+- Include back-to-top links in all sections
+- Make it clear that gui_do automates rendering, routing, scene management, and more
+
+### DON'T:
+- Include sections not explicitly named here
+- Explain individual controls unless needed for data-driven patterns
+- Add low-level API details unless essential for feature use
+- Include theoretical content without practical examples
+- Remove back-to-top links or section links
+- Create subsections for controls or low-level APIs
+
+## Post-Generation
+
+- Place a pytest unittest badge at the very beginning of the README
+- Remove any sections that aren't explicitly named above
+- Verify all links in the Table of Contents work
+- Ensure all code examples follow data-driven and feature-lifecycle patterns

@@ -6,6 +6,7 @@
 
 ## Table of Contents
 
+- [API Organization: Primary vs. Secondary](#api-organization-primary-vs-secondary)
 - [Overview of Data-Driven Feature-Lifecycle Systems](#overview-of-data-driven-feature-lifecycle-systems)
 - [Tutorial: Data-Driven Feature-Lifecycle Design](#tutorial-data-driven-feature-lifecycle-design)
   - [Fundamental Concepts](#fundamental-concepts)
@@ -29,6 +30,66 @@
   - [FeatureManager and Feature Coordination](#featuremanager-and-feature-coordination)
   - [Feature Message Routing](#feature-message-routing)
   - [Font Roles and Feature Styling](#font-roles-and-feature-styling)
+- [Common Patterns](#common-patterns)
+- [Benefits of Data-Driven Lifecycle Approach](#benefits-of-data-driven-lifecycle-approach)
+- [FAQ](#faq)
+- [See Also](#see-also)
+
+---
+
+## API Organization: Primary vs. Secondary
+
+**gui_do's public API is tiered by intended use:**
+
+### Tier 1 — PRIMARY: Data-Driven & Lifecycle (USE THESE)
+Start here. These are the recommended way to build applications:
+
+- **`bootstrap_host_application(host, config)`** — One-line app initialization
+- **`HostApplicationConfig`** — Declarative app specification
+- **Specs** — `FeatureSpec`, `SceneSetupSpec`, `WindowSpec`, `ActionSpec`, etc.
+- **Features** — `Feature`, `DirectFeature`, `LogicFeature`, `RoutedFeature`
+- **Core managers** — `GuiApplication`, `SceneTransitionManager`, `FeatureManager`
+
+**Example:**
+```python
+from gui_do import bootstrap_host_application, HostApplicationConfig
+
+config = HostApplicationConfig(
+    display_size=(1200, 800),
+    scene_specs=[SceneSetupSpec(name="main")],
+    features=[FeatureSpec(attr_name="_game", factory=GameFeature)],
+)
+bootstrap_host_application(self, config)
+```
+
+### Tier 2-7 — SECONDARY: Infrastructure (USE WHEN NEEDED)
+Core runtime systems accessed when you need them:
+
+- **Data** — `ObservableValue`, `PresentationModel`, `Binding`
+- **Events & Actions** — `EventBus`, `ActionRegistry`
+- **Scheduling** — `TaskScheduler`, `TweenManager`
+- **Overlays** — `DialogManager`, `ToastManager`, `CommandPaletteManager`
+- **Layout** — `ConstraintLayout`, `DockWorkspace`, `FlexLayout`
+- **Persistence** — `SettingsRegistry`, `WorkspacePersistenceManager`
+
+### Tier 8+ — TERTIARY: Individual Controls (AVOID IF POSSIBLE)
+Available for completeness, but discourage direct use:
+
+- `ButtonControl`, `LabelControl`, `SliderControl`, `TextInputControl`, etc.
+
+**Why?** These are better composed through features. Direct control instantiation adds boilerplate and breaks declarative structure.
+
+**Better approach:**
+```python
+class MyFeature(Feature):
+    def build(self, host):
+        button = ButtonControl(title="Click Me")
+        button.on_click = self.handle_click
+        host.scene.add_control(button)
+
+    def handle_click(self):
+        print("Clicked!")
+```
 
 ---
 
@@ -704,7 +765,7 @@ RuntimeSceneSpec(
 )
 ```
 
-**WindowSpec** — Feature window presentation:
+**WindowSpec** — Feature window presentation (use `make_window_toggle_spec` helper):
 
 ```python
 make_window_toggle_spec(
@@ -719,7 +780,7 @@ make_window_toggle_spec(
 )
 ```
 
-**ActionSpec** — Application action:
+**ActionSpec** — Application action (use factory helpers):
 
 ```python
 make_exit_action()              # Standard exit action
@@ -869,15 +930,8 @@ Features communicate asynchronously through `FeatureMessage` envelopes:
 ```python
 from gui_do import FeatureMessage
 
-# Sender side (in any feature)
-message = FeatureMessage.from_payload(
-    sender=self.name,
-    target="target_feature",
-    payload={"topic": "data.changed", "data": [1, 2, 3]},
-)
-self.enqueue_message(message)
-# OR use send_message directly:
-self.send_message("target_feature", {"topic": "event", "data": value})
+# Send from any feature
+self.send_message("target_feature", {"topic": "data.changed", "data": [1, 2, 3]})
 
 # Receiver side (RoutedFeature)
 class DataConsumer(RoutedFeature):
@@ -915,4 +969,155 @@ Registered font roles are automatically namespaced as `feature.{feature_name}.{r
 
 ---
 
-This documentation covers the core data-driven and feature-lifecycle APIs. For deeper reference, consult the docstrings in [gui_do/features/data_driven_runtime.py](gui_do/features/data_driven_runtime.py) and [gui_do/features/feature_lifecycle.py](gui_do/features/feature_lifecycle.py).
+## Common Patterns
+
+[Back to Top](#table-of-contents)
+
+### Window Toggle with Task Panel Button
+
+Create a feature window with a task panel button to toggle visibility:
+
+```python
+from gui_do import make_window_toggle_spec
+
+config = HostApplicationConfig(
+    # ...
+    window_specs=(
+        make_window_toggle_spec(
+            "debug",              # window key
+            "_debug_feature",     # feature attribute
+            slot_index=2,
+            task_panel_label="Debug",
+            task_panel_style="angle",
+        ),
+    )
+)
+```
+
+### Scene Navigation with Action Specs
+
+Define actions that navigate between scenes:
+
+```python
+from gui_do import make_scene_nav_action
+
+config = HostApplicationConfig(
+    # ...
+    action_specs=(
+        make_scene_nav_action("go_menu", label="Main Menu", target_scene="main"),
+        make_scene_nav_action("go_game", label="Start Game", target_scene="gameplay"),
+    )
+)
+```
+
+### Observable State Management in Features
+
+Use observable values in features for reactive state management:
+
+```python
+from gui_do import Feature, ObservableValue, LabelControl
+from pygame import Rect
+
+class ScoreFeature(Feature):
+    def build(self, host) -> None:
+        self.score = ObservableValue(0)
+        self.label = host.scene.add(
+            LabelControl("score_label", Rect(20, 20, 200, 28), "Score: 0")
+        )
+
+    def bind_runtime(self, host) -> None:
+        self.score.subscribe(lambda v: setattr(self.label, "text", f"Score: {v}"))
+        self.score.value = 0
+
+    def add_points(self, points: int) -> None:
+        self.score.value += points
+```
+
+### Feature-to-Feature Messaging
+
+`RoutedFeature` enables inter-feature communication with named topics:
+
+```python
+from gui_do import RoutedFeature, Feature, FeatureMessage
+
+class ScoreTracker(RoutedFeature):
+    def build(self, host) -> None:
+        self.total = 0
+
+    def message_handlers(self):
+        return {
+            "add_points": self._on_add_points,
+        }
+
+    def _on_add_points(self, host, message: FeatureMessage) -> None:
+        self.total += message.get("points", 0)
+        print(f"Total score: {self.total}")
+
+class GameLogic(Feature):
+    def on_player_achievement(self) -> None:
+        self.send_message("score_tracker", {"topic": "add_points", "points": 100})
+```
+
+---
+
+## Benefits of Data-Driven Lifecycle Approach
+
+[Back to Top](#table-of-contents)
+
+- **Declarative Over Imperative** — Specs are easier to read, understand, and maintain than procedural setup code
+- **Automatic Wiring** — `bootstrap_host_application` handles setup, reducing boilerplate by ~50% compared to manual construction
+- **Better Separation of Concerns** — Features encapsulate UI, logic, and state independently
+- **Improved Testability** — Declarative specs and isolated features are easier to unit test
+- **Feature Composability** — Features are independent modules that can be easily added, removed, or reused
+- **Framework Automation** — gui_do handles rendering, event routing, scene management, and layout—you focus on domain logic
+- **Clear Lifecycle** — Well-defined feature hooks (`build`, `bind_runtime`, `handle_event`, `on_update`, `draw`) make code flow predictable
+- **Observable Reactivity** — Data automatically propagates changes without polling or manual refresh calls
+- **Zero-Boilerplate Bootstrap** — A single `bootstrap_host_application` call replaces hundreds of lines of manual app wiring
+- **Consistent Patterns** — Spec-based configuration and lifecycle hooks apply uniformly across all application sizes
+
+---
+
+## FAQ
+
+[Back to Top](#table-of-contents)
+
+**Q: Can I still directly instantiate individual controls?**
+
+A: Yes, controls remain in the public API. However, this is discouraged. Instead, instantiate controls within feature lifecycle methods, where they integrate naturally with the feature's state and lifecycle.
+
+**Q: How do I customize control creation?**
+
+A: Create a Feature with a factory method that builds and configures controls in `build()`. The feature owns the controls and wires them to observable data in `bind_runtime()`.
+
+**Q: What if I need low-level event handling?**
+
+A: Implement `handle_event(host, event)` in your Feature. Features receive events in registration order after controls process them. For events that should preempt the control pipeline, use `DirectFeature.handle_direct_event()`.
+
+**Q: How do I access the application from a feature?**
+
+A: The `host` parameter in feature lifecycle methods provides access to the application, scene, action registry, and other services. With `bootstrap_host_application`, `host.app` is the `GuiApplication` instance.
+
+**Q: Can I mix old imperative and new declarative styles?**
+
+A: Not recommended. For consistency and maintainability, use declarative specs and features throughout your application.
+
+**Q: How do I visualize graphics that appear behind controls?**
+
+A: Use `DirectFeature` to draw directly to the surface before the control tree composites on top. Useful for backgrounds, visualizations, and custom renderers.
+
+**Q: What about custom themes or styling?**
+
+A: Use font roles and the `FontRoleRegistry` for consistent styling. Register font roles in `HostApplicationConfig.font_role_specs` and apply them to controls via `control.font_role = "role_name"`.
+
+---
+
+## See Also
+
+[Back to Top](#table-of-contents)
+
+- **[Public API Specification](docs/public_api_spec.md)** — Complete API reference organized by tier (primary, secondary, tertiary)
+- **[Architecture Boundary Specification](docs/architecture_boundary_spec.md)** — Package boundaries between framework and demo code
+- **[Runtime Operating Contracts](docs/runtime_operating_contracts.md)** — Runtime invariants and guarantees
+- **[Feature Lifecycle Implementation](gui_do/features/feature_lifecycle.py)** — Base Feature classes and lifecycle details
+- **[Data-Driven Runtime Implementation](gui_do/features/data_driven_runtime.py)** — Bootstrapping and spec handling
+- **[Demo Features](demo_features/)** — Example feature implementations in the demo application

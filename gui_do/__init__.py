@@ -18,52 +18,12 @@ def _enable_windows_dpi_awareness() -> None:
 
 _enable_windows_dpi_awareness()
 
-from .app.gui_application import GuiApplication
-from .app.display import create_display
-from .app.ui_engine import UiEngine
-from .controls.composite.panel_control import PanelControl
-from .controls.display.label_control import LabelControl
-from .controls.input.button_control import ButtonControl
-from .controls.display.arrow_box_control import ArrowBoxControl
-from .controls.input.button_group_control import ButtonGroupControl
-from .controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
-from .controls.display.frame_control import FrameControl
-from .controls.display.image_control import ImageControl
-from .controls.input.slider_control import SliderControl
-from .controls.input.scrollbar_control import ScrollbarControl
-from .controls.chrome.task_panel_control import TaskPanelControl
-from .controls.input.toggle_control import ToggleControl
-from .controls.chrome.window_control import WindowControl
-from .layout.layout_axis import LayoutAxis
-from .layout.layout_manager import LayoutManager
-from .layout.window_tiling_manager import WindowTilingManager
-from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
-from .controls.composite.dock_workspace_panel import DockWorkspacePanel
-from .actions.action_manager import ActionManager
-from .actions.action_middleware import ActionContext, ActionMiddleware
-from .actions.action_registry import ActionDescriptor, ActionRegistry
-from .events.event_manager import EventManager
-from .events.event_bus import EventBus
-from .focus.focus_manager import FocusManager
-from .theme.font_manager import FontManager
-from .theme.font_role_registry import FontRoleRegistry
-from .events.gui_event import EventPhase, EventType, GuiEvent
-from .events.value_change_callback import ValueChangeCallback
-from .events.value_change_reason import ValueChangeReason
-from .data.invalidation import InvalidationTracker
-from .data.presentation_model import ObservableValue, PresentationModel, ComputedValue
-from .scheduling.task_scheduler import TaskEvent, TaskScheduler
-from .scheduling.timers import Timers
-from .telemetry.telemetry import TelemetryCollector
-from .telemetry.telemetry import TelemetrySample
-from .telemetry.telemetry import configure_telemetry
-from .telemetry.telemetry import telemetry_collector
-from .telemetry.telemetry_analyzer import analyze_telemetry_log_file
-from .telemetry.telemetry_analyzer import analyze_telemetry_records
-from .telemetry.telemetry_analyzer import load_telemetry_log_file
-from .telemetry.telemetry_analyzer import render_telemetry_report
-from .graphics.built_in_factory import BuiltInGraphicsFactory
-from .theme.color_theme import ColorTheme
+# ============================================================================
+# TIER 1: PRIMARY ENTRY POINTS & DATA-DRIVEN APIs
+# ============================================================================
+# These are the recommended way to build applications with gui_do.
+# Use bootstrap_host_application with declarative specs for all new apps.
+
 from .features.feature_lifecycle import (
     Feature,
     DirectFeature,
@@ -71,6 +31,334 @@ from .features.feature_lifecycle import (
     RoutedFeature,
     FeatureMessage,
     FeatureManager,
+    ScenePresentationModel,
+    SceneSetupSpec,
+    setup_standard_font_roles,
+    register_standard_actions,
+)
+from .features.data_driven_runtime import (
+    FeatureSpec,
+    WindowSpec,
+    RuntimeSceneSpec,
+    ActionSpec,
+    StaticAccessibilitySpec,
+    CursorSpec,
+    SceneRootSpec,
+    AnchoredWindowSpec,
+    LogicBindingSpec,
+    TaskPanelButtonSpec,
+    AccessibilitySequenceSpec,
+    TabBuilderSpec,
+    HostApplicationConfig,
+    TelemetryConfig,
+    bootstrap_host_application,
+    make_window_toggle_spec,
+    make_scene_nav_action,
+    make_exit_action,
+    make_palette_open_action,
+    make_static_accessibility_spec,
+)
+
+# ============================================================================
+# TIER 2: CORE APPLICATION & SCENE MANAGEMENT
+# ============================================================================
+# Central managers and containers required for all apps.
+
+from .app.gui_application import GuiApplication
+from .app.display import create_display
+from .persistence.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
+from .features.feature_lifecycle import apply_scene_setup_specs
+
+# ============================================================================
+# TIER 3: ESSENTIAL DATA & STATE MANAGEMENT
+# ============================================================================
+# Core abstractions for reactive programming and presentation models.
+
+from .data.presentation_model import ObservableValue, PresentationModel, ComputedValue
+from .data.invalidation import InvalidationTracker
+from .data.observable_collections import (
+    ChangeKind,
+    CollectionChange,
+    ObservableList,
+    ObservableDict,
+)
+from .data.collection_view import CollectionViewQuery, CollectionView
+from .data.binding import Binding, BindingGroup
+from .data.observable_stream import ObservableStream
+from .data.selection_model import SelectionModel, SelectionMode
+
+# ============================================================================
+# TIER 4: EVENTS, ACTIONS, FOCUS & INPUT
+# ============================================================================
+# Core event and input infrastructure for feature logic.
+
+from .events.gui_event import EventPhase, EventType, GuiEvent
+from .events.value_change_callback import ValueChangeCallback
+from .events.value_change_reason import ValueChangeReason
+from .events.event_manager import EventManager
+from .events.event_bus import EventBus
+from .events.gesture_recognizer import GestureRecognizer
+from .events.event_recorder import EventRecorder, EventPlayback, RecordedEvent
+from .events.input_snapshot import InputSnapshot
+from .events.signal import Signal, SignalConnection
+from .actions.action_manager import ActionManager
+from .actions.action_middleware import ActionContext, ActionMiddleware
+from .actions.action_registry import ActionDescriptor, ActionRegistry
+from .actions.input_map import InputMap, InputBinding
+from .actions.key_chord_manager import KeyChordManager, KeyChord, ChordStep
+from .focus.focus_manager import FocusManager
+from .focus.focus_scope import FocusScope, FocusScopeManager
+from .focus.window_focus_manager import WindowFocusManager
+from .focus.focus_ring import FocusRing
+
+# ============================================================================
+# TIER 5: SCHEDULING & ANIMATION
+# ============================================================================
+# Time-based updates, animations, and asynchronous operations.
+
+from .scheduling.task_scheduler import TaskEvent, TaskScheduler
+from .scheduling.timers import Timers
+from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
+from .scheduling.animation_sequence import AnimationSequence, AnimationHandle
+from .scheduling.transition_manager import TransitionManager, TransitionSpec, TransitionEvent
+from .scheduling.animation_state_machine import AnimationStateMachine, AnimationTransitionMode
+from .scheduling.scene_timeline import SceneTimeline
+from .scheduling.rate_limiter import Debouncer, Throttler
+from .scheduling.cooperative_scheduler import (
+    CooperativeScheduler,
+    CoroutineHandle,
+    Pause,
+    Sleep,
+    WaitForEvent,
+    WaitForSignal,
+    WaitUntil,
+    WaitForAll,
+)
+
+# ============================================================================
+# TIER 6: THEME & FONT MANAGEMENT
+# ============================================================================
+# Visual theming and typography systems.
+
+from .theme.font_manager import FontManager
+from .theme.font_role_registry import FontRoleRegistry
+from .theme.color_theme import ColorTheme
+from .theme.theme_manager import ThemeManager, DesignTokens
+from .theme.scoped_theme import ScopedTheme, ScopedThemeManager
+
+# ============================================================================
+# TIER 7: TELEMETRY & DIAGNOSTICS
+# ============================================================================
+# Performance monitoring and diagnostic tools.
+
+from .telemetry.telemetry import (
+    TelemetryCollector,
+    TelemetrySample,
+    configure_telemetry,
+    telemetry_collector,
+)
+from .telemetry.telemetry_analyzer import (
+    analyze_telemetry_log_file,
+    analyze_telemetry_records,
+    load_telemetry_log_file,
+    render_telemetry_report,
+)
+
+# ============================================================================
+# TIER 8: LAYOUT & SPATIAL
+# ============================================================================
+# Layout engines, constraint systems, and spatial organization.
+
+from .layout.layout_axis import LayoutAxis
+from .layout.layout_manager import LayoutManager
+from .layout.window_tiling_manager import WindowTilingManager
+from .layout.constraint_layout import ConstraintLayout, AnchorConstraint
+from .layout.dock_workspace import DockPane, DockTabs, DockSplit, DockWorkspace
+from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
+from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
+from .layout.cell_caret_layout import CellCaretLayout, CellCaretState
+from .layout.layout_animator import LayoutAnimator
+from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
+from .layout.responsive_layout import ResponsiveLayout, Breakpoint
+from .layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
+from .layout.flow_layout import FlowLayout, FlowItem
+from .layout.viewport import Viewport
+
+# ============================================================================
+# TIER 9: OVERLAY MANAGERS & WINDOWS
+# ============================================================================
+# Modal dialogs, toasts, tooltips, and floating content.
+
+from .overlays.overlay_manager import OverlayManager, OverlayHandle
+from .overlays.popup_placement import (
+    Alignment,
+    PlacementResult,
+    PopupPlacement,
+    Side,
+    compute_popup_rect,
+)
+from .overlays.dialog_manager import DialogManager, DialogHandle
+from .overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
+from .overlays.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
+from .overlays.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
+from .overlays.tooltip_manager import TooltipManager, TooltipHandle
+from .overlays.menu_bar_manager import MenuBarManager
+from .overlays.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
+from .overlays.notification_center import NotificationCenter, NotificationRecord
+from .overlays.resize_manager import ResizeManager
+from .overlays.drag_drop_manager import DragDropManager, DragPayload
+from .overlays.clipboard import ClipboardManager
+from .overlays.transfer_data import TransferData, TransferManager
+from .overlays.shortcut_help_overlay import ShortcutHelpOverlay, ShortcutSection, ShortcutEntry
+
+# ============================================================================
+# TIER 10: FORMS & DATA BINDING
+# ============================================================================
+# Form models, validation, document editing, and structured data.
+
+from .forms.form_model import FormModel, FormField, ValidationRule, FieldError
+from .forms.form_schema import FormSchema, SchemaField
+from .forms.document_model import DocumentModel
+from .forms.wizard_flow import WizardFlow, WizardStep, WizardHandle
+from .data.validator import (
+    ValidationResult,
+    Validator,
+    RequiredValidator,
+    RangeValidator,
+    LengthValidator,
+    PatternValidator,
+    CustomValidator,
+    DependentValidator,
+    ValidationPipeline,
+)
+
+# ============================================================================
+# TIER 11: STATE & PERSISTENCE
+# ============================================================================
+# Application state, command history, routing, and persistent storage.
+
+from .state.command_history import CommandHistory, Command, CommandTransaction
+from .state.state_machine import StateMachine
+from .state.hierarchical_state_machine import HierarchicalStateMachine
+from .state.router import Router, RouteEntry
+from .persistence.settings_registry import SettingsRegistry, SettingDescriptor
+from .persistence.workspace_persistence import (
+    WorkspaceState,
+    WorkspacePersistenceManager,
+    DEFAULT_WORKSPACE_STATE_PATH,
+)
+from .persistence.scene_snapshot import SceneSnapshot, NodeSnapshot
+
+# ============================================================================
+# TIER 12: PRIMARY CONTROLS (BASIC UI BUILDING BLOCKS)
+# ============================================================================
+# Essential controls for layouts and basic user interactions.
+# RECOMMENDATION: Use Feature system and declarative specs to compose these.
+
+from .controls.composite.panel_control import PanelControl
+from .controls.display.label_control import LabelControl
+from .controls.input.button_control import ButtonControl
+from .controls.input.toggle_control import ToggleControl
+from .controls.input.slider_control import SliderControl
+from .controls.input.scrollbar_control import ScrollbarControl
+from .controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
+from .controls.display.frame_control import FrameControl
+from .controls.display.image_control import ImageControl
+from .controls.display.arrow_box_control import ArrowBoxControl
+from .controls.input.button_group_control import ButtonGroupControl
+from .controls.data.tab_control import TabControl, TabItem
+from .controls.composite.dock_workspace_panel import DockWorkspacePanel
+
+# ============================================================================
+# TIER 13: EXTENDED CONTROLS (SPECIALIZED UI COMPONENTS)
+# ============================================================================
+# Advanced controls for rich user interfaces.
+# RECOMMENDATION: Use Feature system to integrate these into your app.
+
+from .controls.input.text_input_control import TextInputControl
+from .controls.input.text_area_control import TextAreaControl
+from .controls.display.rich_label_control import RichLabelControl
+from .controls.input.dropdown_control import DropdownControl, DropdownOption
+from .controls.data.list_view_control import ListViewControl, ListItem
+from .controls.composite.overlay_panel_control import OverlayPanelControl
+from .controls.data.data_grid_control import DataGridControl, GridColumn, GridRow
+from .controls.data.tree_control import TreeControl, TreeNode
+from .controls.composite.splitter_control import SplitterControl
+from .controls.input.spinner_control import SpinnerControl
+from .controls.input.range_slider_control import RangeSliderControl
+from .controls.input.color_picker_control import ColorPickerControl
+from .controls.composite.scroll_view_control import ScrollViewControl
+from .controls.display.progress_bar_control import ProgressBarControl
+from .controls.display.animated_image_control import AnimatedImageControl
+from .controls.composite.error_boundary import ErrorBoundary
+from .controls.chrome.window_control import WindowControl
+from .controls.chrome.task_panel_control import TaskPanelControl
+from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
+from .controls.chrome.scene_menu_strip_control import SceneMenuStripControl
+from .controls.chrome.notification_panel_control import NotificationPanelControl
+from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
+
+# ============================================================================
+# TIER 14: TEXT & LOCALIZATION
+# ============================================================================
+# Text processing, formatting, searching, and internationalization.
+
+from .text.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
+from .text.text_flow import TextFlow, TextSpan
+from .text.text_searcher import TextSearcher, TextMatch
+from .text.localization import StringTable, LocaleRegistry
+
+# ============================================================================
+# TIER 15: DATA & COLLECTIONS
+# ============================================================================
+# Advanced data structures, async loading, and collection operations.
+
+from .data.virtual_item_source import VirtualItemSource, FixedItemSource
+from .data.sort_filter_proxy import SortFilterProxySource
+from .data.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
+from .data.object_pool import ObjectPool
+from .data.data_cache import DataCache, CacheStats
+from .data.list_diff import ListDiffCalculator, ListDiff, DiffInsert, DiffRemove, DiffMove
+
+# ============================================================================
+# TIER 16: GRAPHICS & RENDERING
+# ============================================================================
+# Graphics rendering, asset management, and visual effects.
+
+from .graphics.built_in_factory import BuiltInGraphicsFactory
+from .graphics.dirty_region import DirtyRegionTracker
+from .graphics.draw_context import DrawContext, DrawPhase
+from .graphics.asset_registry import AssetRegistry
+from .graphics.debug_overlay import DebugOverlay
+from .graphics.surface_compositor import SurfaceCompositor, Layer
+from .graphics.shape_renderer import ShapeRenderer
+from .graphics.surface_effects import SurfaceEffects
+from .graphics.vector_path import VectorPath
+from .graphics.sprite_sheet import SpriteSheet, FrameAnimation
+from .graphics.particle_system import ParticleSystem, Emitter, ParticleLayer
+from .graphics.tile_map import TileSet, TileMap
+
+# ============================================================================
+# TIER 17: INTROSPECTION & INSPECTION
+# ============================================================================
+# Runtime property inspection and debugging utilities.
+
+from .introspection.spatial_index import SceneSpatialIndex
+from .introspection.property_registry import (
+    ui_property,
+    PropertyDescriptor,
+    PropertyRegistry,
+    property_registry,
+)
+from .introspection.property_inspector import PropertyInspectorModel, InspectedProperty
+
+# ============================================================================
+# TIER 18: ADVANCED RUNTIME & BOOTSTRAPPING
+# ============================================================================
+# Advanced feature wiring, presentation setup, and internal bootstrap helpers.
+# RECOMMENDATION: Use these only for extending bootstrap_host_application behavior.
+
+from .features.feature_lifecycle import (
     FrameTimer,
     TabPanelManager,
     WindowRelativeRect,
@@ -89,11 +377,6 @@ from .features.feature_lifecycle import (
     register_placed_control,
     add_group_label,
     PlacedControl,
-    setup_standard_font_roles,
-    register_standard_actions,
-    ScenePresentationModel,
-    SceneSetupSpec,
-    apply_scene_setup_specs,
 )
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
@@ -121,11 +404,6 @@ from .features.data_driven_runtime import (
     add_window_label,
     add_window_button,
     add_window_button_row,
-    make_window_toggle_spec,
-    make_scene_nav_action,
-    make_exit_action,
-    make_palette_open_action,
-    make_static_accessibility_spec,
     instantiate_features_from_specs,
     register_features_from_specs,
     register_window_presentation_specs,
@@ -141,169 +419,417 @@ from .features.data_driven_runtime import (
     create_feature_presented_window,
     bind_feature_logic_aliases,
     setup_routed_feature_runtime,
-    # Spec dataclasses
-    FeatureSpec,
-    WindowSpec,
-    RuntimeSceneSpec,
-    ActionSpec,
-    StaticAccessibilitySpec,
-    CursorSpec,
-    SceneRootSpec,
-    AnchoredWindowSpec,
-    LogicBindingSpec,
-    TaskPanelButtonSpec,
-    AccessibilitySequenceSpec,
-    TabBuilderSpec,
     ActiveTabUpdateRouter,
     TabLayoutContext,
-    TelemetryConfig,
-    HostApplicationConfig,
-    # Bootstrap entrypoint
-    bootstrap_host_application,
-    # Promoted internal bootstrap helpers (useful for targeted testing and extension)
     declare_host_actions,
     build_host_main_tab_order,
     apply_host_main_accessibility,
 )
-from .scheduling.tween_manager import TweenManager, TweenHandle, Easing
-from .controls.input.text_input_control import TextInputControl
-from .layout.constraint_layout import ConstraintLayout, AnchorConstraint
-from .overlays.overlay_manager import OverlayManager, OverlayHandle
-from .overlays.popup_placement import (
-    Alignment,
-    PlacementResult,
-    PopupPlacement,
-    Side,
-    compute_popup_rect,
-)
-from .controls.composite.overlay_panel_control import OverlayPanelControl
-from .controls.data.list_view_control import ListViewControl, ListItem
-from .controls.input.dropdown_control import DropdownControl, DropdownOption
-from .overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
-from .overlays.dialog_manager import DialogManager, DialogHandle
-from .overlays.drag_drop_manager import DragDropManager, DragPayload
-from .forms.form_model import FormModel, FormField, ValidationRule, FieldError
-from .forms.form_schema import FormSchema, SchemaField
-from .state.command_history import CommandHistory, Command, CommandTransaction
-from .forms.document_model import DocumentModel
-from .controls.data.data_grid_control import DataGridControl, GridColumn, GridRow
-from .overlays.context_menu_manager import ContextMenuManager, ContextMenuItem, ContextMenuHandle
-from .controls.composite.splitter_control import SplitterControl
-from .state.state_machine import StateMachine
-from .persistence.settings_registry import SettingsRegistry, SettingDescriptor
-from .persistence.workspace_persistence import WorkspaceState, WorkspacePersistenceManager, DEFAULT_WORKSPACE_STATE_PATH
-from .state.router import Router, RouteEntry
-from .theme.theme_manager import ThemeManager, DesignTokens
-from .controls.input.text_area_control import TextAreaControl
-from .controls.display.rich_label_control import RichLabelControl
-from .controls.data.tab_control import TabControl, TabItem
-from .overlays.resize_manager import ResizeManager
-from .controls.chrome.menu_bar_control import MenuBarControl, MenuEntry
-from .controls.chrome.scene_menu_strip_control import SceneMenuStripControl
-from .overlays.menu_bar_manager import MenuBarManager
-from .controls.data.tree_control import TreeControl, TreeNode
-from .overlays.file_dialog_manager import FileDialogManager, FileDialogOptions, FileDialogHandle
-from .layout.flex_layout import FlexLayout, FlexItem, FlexDirection, FlexAlign, FlexJustify
-from .persistence.scene_transition_manager import SceneTransitionManager, SceneTransitionStyle
-from .overlays.notification_center import NotificationCenter, NotificationRecord
-from .controls.chrome.notification_panel_control import NotificationPanelControl
-from .overlays.clipboard import ClipboardManager
-from .overlays.transfer_data import TransferData, TransferManager
-from .scheduling.animation_sequence import AnimationSequence, AnimationHandle
-from .controls.composite.scroll_view_control import ScrollViewControl
-from .controls.input.spinner_control import SpinnerControl
-from .controls.input.range_slider_control import RangeSliderControl
-from .controls.input.color_picker_control import ColorPickerControl
-from .overlays.command_palette_manager import CommandPaletteManager, CommandEntry, CommandPaletteHandle
-from .data.observable_collections import (
-    ChangeKind,
-    CollectionChange,
-    ObservableList,
-    ObservableDict,
-)
-from .data.collection_view import CollectionViewQuery, CollectionView
-from .data.binding import Binding, BindingGroup
-from .events.gesture_recognizer import GestureRecognizer
-from .layout.layout_animator import LayoutAnimator
-from .scheduling.rate_limiter import Debouncer, Throttler
-from .layout.grid_layout import GridLayout, GridTrack, GridPlacement
-from .layout.cell_caret_layout import CellCaretLayout, CellCaretState
-from .actions.key_chord_manager import KeyChordManager, KeyChord, ChordStep
-from .controls.composite.error_boundary import ErrorBoundary
-from .overlays.tooltip_manager import TooltipManager, TooltipHandle
-from .focus.focus_scope import FocusScope, FocusScopeManager
-from .focus.window_focus_manager import WindowFocusManager
-from .data.selection_model import SelectionModel, SelectionMode
-from .text.text_formatter import TextFormatter, NumericFormatter, PatternFormatter, FixedPatternFormatter
-from .data.virtual_item_source import VirtualItemSource, FixedItemSource
-from .controls.canvas.canvas_viewport import CanvasViewport
-from .scheduling.transition_manager import TransitionManager, TransitionSpec, TransitionEvent
-from .theme.scoped_theme import ScopedTheme, ScopedThemeManager
-from .data.async_data_provider import AsyncDataProvider, LoadState, LoadStateKind
-from .layout.layout_pass import LayoutPass, MeasureContext, ArrangeContext, LayoutRoot
-from .overlays.cursor_manager import CursorManager, CursorHandle, CursorShape
-from .data.sort_filter_proxy import SortFilterProxySource
-from .text.localization import StringTable, LocaleRegistry
-from .actions.input_map import InputMap, InputBinding
-from .introspection.spatial_index import SceneSpatialIndex
-from .text.text_flow import TextFlow, TextSpan
-from .layout.responsive_layout import ResponsiveLayout, Breakpoint
-from .events.event_recorder import EventRecorder, EventPlayback, RecordedEvent
-from .introspection.property_registry import ui_property, PropertyDescriptor, PropertyRegistry, property_registry
-from .introspection.property_inspector import PropertyInspectorModel, InspectedProperty
-from .controls.chrome.property_inspector_panel import PropertyInspectorPanel
-from .persistence.scene_snapshot import SceneSnapshot, NodeSnapshot
-from .graphics.dirty_region import DirtyRegionTracker
-from .graphics.draw_context import DrawContext, DrawPhase
-from .graphics.asset_registry import AssetRegistry
-from .graphics.debug_overlay import DebugOverlay
-from .events.input_snapshot import InputSnapshot
-from .events.signal import Signal, SignalConnection
-from .data.validator import (
-    ValidationResult,
-    Validator,
-    RequiredValidator,
-    RangeValidator,
-    LengthValidator,
-    PatternValidator,
-    CustomValidator,
-    DependentValidator,
-    ValidationPipeline,
-)
-from .layout.viewport import Viewport
-from .state.hierarchical_state_machine import HierarchicalStateMachine
-from .focus.focus_ring import FocusRing
-from .data.observable_stream import ObservableStream
-from .graphics.surface_compositor import SurfaceCompositor, Layer
-from .graphics.shape_renderer import ShapeRenderer
-from .graphics.surface_effects import SurfaceEffects
-from .scheduling.animation_state_machine import AnimationStateMachine, AnimationTransitionMode
-from .data.object_pool import ObjectPool
-from .graphics.vector_path import VectorPath
-from .layout.snap_grid import SnapGrid, AlignmentGuide, SnapComposer, SnapTarget
-from .forms.wizard_flow import WizardFlow, WizardStep, WizardHandle
-from .scheduling.scene_timeline import SceneTimeline
-from .graphics.particle_system import ParticleSystem, Emitter, ParticleLayer
-from .graphics.sprite_sheet import SpriteSheet, FrameAnimation
-from .controls.display.animated_image_control import AnimatedImageControl
-from .scheduling.cooperative_scheduler import (
-    CooperativeScheduler,
-    CoroutineHandle,
-    Pause,
-    Sleep,
-    WaitForEvent,
-    WaitForSignal,
-    WaitUntil,
-    WaitForAll,
-)
-from .graphics.tile_map import TileSet, TileMap
-from .controls.display.progress_bar_control import ProgressBarControl
-from .layout.flow_layout import FlowLayout, FlowItem
-from .text.text_searcher import TextSearcher, TextMatch
-from .data.list_diff import ListDiffCalculator, ListDiff, DiffInsert, DiffRemove, DiffMove
-from .data.data_cache import DataCache, CacheStats
-from .overlays.shortcut_help_overlay import ShortcutHelpOverlay, ShortcutSection, ShortcutEntry
+
+# ============================================================================
+# TIER 19: INFRASTRUCTURE & INTERNALS (AVOID IN APPLICATION CODE)
+# ============================================================================
+# Low-level infrastructure that should not be directly used by applications.
+
+from .app.ui_engine import UiEngine
 
 
-# Removed dependency on tests.contract_test_catalog (test suite reset)
-__all__ = []
+# ============================================================================
+# PUBLIC API DEFINITION
+# ============================================================================
+__all__ = [
+    # Tier 1: PRIMARY ENTRY POINTS
+    "Feature",
+    "DirectFeature",
+    "LogicFeature",
+    "RoutedFeature",
+    "FeatureMessage",
+    "FeatureManager",
+    "ScenePresentationModel",
+    "SceneSetupSpec",
+    "setup_standard_font_roles",
+    "register_standard_actions",
+    "FeatureSpec",
+    "WindowSpec",
+    "RuntimeSceneSpec",
+    "ActionSpec",
+    "StaticAccessibilitySpec",
+    "CursorSpec",
+    "SceneRootSpec",
+    "AnchoredWindowSpec",
+    "LogicBindingSpec",
+    "TaskPanelButtonSpec",
+    "AccessibilitySequenceSpec",
+    "TabBuilderSpec",
+    "HostApplicationConfig",
+    "TelemetryConfig",
+    "bootstrap_host_application",
+    "make_window_toggle_spec",
+    "make_scene_nav_action",
+    "make_exit_action",
+    "make_palette_open_action",
+    "make_static_accessibility_spec",
+    # Tier 2: CORE APPLICATION
+    "GuiApplication",
+    "create_display",
+    "SceneTransitionManager",
+    "SceneTransitionStyle",
+    "apply_scene_setup_specs",
+    # Tier 3: DATA & STATE
+    "ObservableValue",
+    "PresentationModel",
+    "ComputedValue",
+    "InvalidationTracker",
+    "ChangeKind",
+    "CollectionChange",
+    "ObservableList",
+    "ObservableDict",
+    "CollectionViewQuery",
+    "CollectionView",
+    "Binding",
+    "BindingGroup",
+    "ObservableStream",
+    "SelectionModel",
+    "SelectionMode",
+    # Tier 4: EVENTS & ACTIONS
+    "EventPhase",
+    "EventType",
+    "GuiEvent",
+    "ValueChangeCallback",
+    "ValueChangeReason",
+    "EventManager",
+    "EventBus",
+    "GestureRecognizer",
+    "EventRecorder",
+    "EventPlayback",
+    "RecordedEvent",
+    "InputSnapshot",
+    "Signal",
+    "SignalConnection",
+    "ActionManager",
+    "ActionContext",
+    "ActionMiddleware",
+    "ActionDescriptor",
+    "ActionRegistry",
+    "InputMap",
+    "InputBinding",
+    "KeyChordManager",
+    "KeyChord",
+    "ChordStep",
+    "FocusManager",
+    "FocusScope",
+    "FocusScopeManager",
+    "WindowFocusManager",
+    "FocusRing",
+    # Tier 5: SCHEDULING
+    "TaskEvent",
+    "TaskScheduler",
+    "Timers",
+    "TweenManager",
+    "TweenHandle",
+    "Easing",
+    "AnimationSequence",
+    "AnimationHandle",
+    "TransitionManager",
+    "TransitionSpec",
+    "TransitionEvent",
+    "AnimationStateMachine",
+    "AnimationTransitionMode",
+    "SceneTimeline",
+    "Debouncer",
+    "Throttler",
+    "CooperativeScheduler",
+    "CoroutineHandle",
+    "Pause",
+    "Sleep",
+    "WaitForEvent",
+    "WaitForSignal",
+    "WaitUntil",
+    "WaitForAll",
+    # Tier 6: THEME
+    "FontManager",
+    "FontRoleRegistry",
+    "ColorTheme",
+    "ThemeManager",
+    "DesignTokens",
+    "ScopedTheme",
+    "ScopedThemeManager",
+    # Tier 7: TELEMETRY
+    "TelemetryCollector",
+    "TelemetrySample",
+    "configure_telemetry",
+    "telemetry_collector",
+    "analyze_telemetry_log_file",
+    "analyze_telemetry_records",
+    "load_telemetry_log_file",
+    "render_telemetry_report",
+    # Tier 8: LAYOUT
+    "LayoutAxis",
+    "LayoutManager",
+    "WindowTilingManager",
+    "ConstraintLayout",
+    "AnchorConstraint",
+    "DockPane",
+    "DockTabs",
+    "DockSplit",
+    "DockWorkspace",
+    "FlexLayout",
+    "FlexItem",
+    "FlexDirection",
+    "FlexAlign",
+    "FlexJustify",
+    "GridLayout",
+    "GridTrack",
+    "GridPlacement",
+    "CellCaretLayout",
+    "CellCaretState",
+    "LayoutAnimator",
+    "LayoutPass",
+    "MeasureContext",
+    "ArrangeContext",
+    "LayoutRoot",
+    "ResponsiveLayout",
+    "Breakpoint",
+    "SnapGrid",
+    "AlignmentGuide",
+    "SnapComposer",
+    "SnapTarget",
+    "FlowLayout",
+    "FlowItem",
+    "Viewport",
+    # Tier 9: OVERLAYS
+    "OverlayManager",
+    "OverlayHandle",
+    "Alignment",
+    "PlacementResult",
+    "PopupPlacement",
+    "Side",
+    "compute_popup_rect",
+    "DialogManager",
+    "DialogHandle",
+    "ToastManager",
+    "ToastHandle",
+    "ToastSeverity",
+    "ContextMenuManager",
+    "ContextMenuItem",
+    "ContextMenuHandle",
+    "CommandPaletteManager",
+    "CommandEntry",
+    "CommandPaletteHandle",
+    "TooltipManager",
+    "TooltipHandle",
+    "MenuBarManager",
+    "FileDialogManager",
+    "FileDialogOptions",
+    "FileDialogHandle",
+    "NotificationCenter",
+    "NotificationRecord",
+    "ResizeManager",
+    "DragDropManager",
+    "DragPayload",
+    "ClipboardManager",
+    "TransferData",
+    "TransferManager",
+    "ShortcutHelpOverlay",
+    "ShortcutSection",
+    "ShortcutEntry",
+    # Tier 10: FORMS
+    "FormModel",
+    "FormField",
+    "ValidationRule",
+    "FieldError",
+    "FormSchema",
+    "SchemaField",
+    "DocumentModel",
+    "WizardFlow",
+    "WizardStep",
+    "WizardHandle",
+    "ValidationResult",
+    "Validator",
+    "RequiredValidator",
+    "RangeValidator",
+    "LengthValidator",
+    "PatternValidator",
+    "CustomValidator",
+    "DependentValidator",
+    "ValidationPipeline",
+    # Tier 11: STATE
+    "CommandHistory",
+    "Command",
+    "CommandTransaction",
+    "StateMachine",
+    "HierarchicalStateMachine",
+    "Router",
+    "RouteEntry",
+    "SettingsRegistry",
+    "SettingDescriptor",
+    "WorkspaceState",
+    "WorkspacePersistenceManager",
+    "DEFAULT_WORKSPACE_STATE_PATH",
+    "SceneSnapshot",
+    "NodeSnapshot",
+    # Tier 12: PRIMARY CONTROLS
+    "PanelControl",
+    "LabelControl",
+    "ButtonControl",
+    "ToggleControl",
+    "SliderControl",
+    "ScrollbarControl",
+    "CanvasControl",
+    "CanvasEventPacket",
+    "FrameControl",
+    "ImageControl",
+    "ArrowBoxControl",
+    "ButtonGroupControl",
+    "TabControl",
+    "TabItem",
+    "DockWorkspacePanel",
+    # Tier 13: EXTENDED CONTROLS
+    "TextInputControl",
+    "TextAreaControl",
+    "RichLabelControl",
+    "DropdownControl",
+    "DropdownOption",
+    "ListViewControl",
+    "ListItem",
+    "OverlayPanelControl",
+    "DataGridControl",
+    "GridColumn",
+    "GridRow",
+    "TreeControl",
+    "TreeNode",
+    "SplitterControl",
+    "SpinnerControl",
+    "RangeSliderControl",
+    "ColorPickerControl",
+    "ScrollViewControl",
+    "ProgressBarControl",
+    "AnimatedImageControl",
+    "ErrorBoundary",
+    "WindowControl",
+    "TaskPanelControl",
+    "MenuBarControl",
+    "MenuEntry",
+    "SceneMenuStripControl",
+    "NotificationPanelControl",
+    "PropertyInspectorPanel",
+    # Tier 14: TEXT
+    "TextFormatter",
+    "NumericFormatter",
+    "PatternFormatter",
+    "FixedPatternFormatter",
+    "TextFlow",
+    "TextSpan",
+    "TextSearcher",
+    "TextMatch",
+    "StringTable",
+    "LocaleRegistry",
+    # Tier 15: DATA
+    "VirtualItemSource",
+    "FixedItemSource",
+    "SortFilterProxySource",
+    "AsyncDataProvider",
+    "LoadState",
+    "LoadStateKind",
+    "ObjectPool",
+    "DataCache",
+    "CacheStats",
+    "ListDiffCalculator",
+    "ListDiff",
+    "DiffInsert",
+    "DiffRemove",
+    "DiffMove",
+    # Tier 16: GRAPHICS
+    "BuiltInGraphicsFactory",
+    "DirtyRegionTracker",
+    "DrawContext",
+    "DrawPhase",
+    "AssetRegistry",
+    "DebugOverlay",
+    "SurfaceCompositor",
+    "Layer",
+    "ShapeRenderer",
+    "SurfaceEffects",
+    "VectorPath",
+    "SpriteSheet",
+    "FrameAnimation",
+    "ParticleSystem",
+    "Emitter",
+    "ParticleLayer",
+    "TileSet",
+    "TileMap",
+    # Tier 17: INTROSPECTION
+    "SceneSpatialIndex",
+    "ui_property",
+    "PropertyDescriptor",
+    "PropertyRegistry",
+    "property_registry",
+    "PropertyInspectorModel",
+    "InspectedProperty",
+    # Tier 18: ADVANCED RUNTIME
+    "FrameTimer",
+    "TabPanelManager",
+    "WindowRelativeRect",
+    "resolve_scene_selection_callback",
+    "minimize_window_menu_entries",
+    "set_window_visible_state",
+    "toggle_window_visibility",
+    "create_anchored_feature_window",
+    "add_window_scene_menu_strip",
+    "inset_rect",
+    "centered_horizontal_strip_layout",
+    "split_slot_bounds",
+    "partition_rects",
+    "place_control",
+    "place_control_unlabeled",
+    "register_placed_control",
+    "add_group_label",
+    "PlacedControl",
+    "build_tools_menu_entries",
+    "add_standard_scene_menu_strip",
+    "apply_accessibility_sequence",
+    "apply_accessibility_sequence_from_attrs",
+    "register_companion_logic_features",
+    "ensure_scene_scheduler",
+    "sorted_window_bindings",
+    "collect_window_toggle_controls",
+    "apply_window_toggle_accessibility",
+    "add_window_toggle_task_panel_controls",
+    "register_window_toggle_tooltips",
+    "initialize_locale_registry",
+    "bind_input_map_actions",
+    "register_descriptors",
+    "resolve_canvas_local_point",
+    "apply_runtime_scene_pristine_assets",
+    "bind_runtime_scene_exit_keys",
+    "prewarm_runtime_scenes",
+    "add_task_panel_button",
+    "add_task_panel_buttons",
+    "register_tooltip_specs",
+    "add_window_control",
+    "add_window_label",
+    "add_window_button",
+    "add_window_button_row",
+    "instantiate_features_from_specs",
+    "register_features_from_specs",
+    "register_window_presentation_specs",
+    "register_window_tab_builders",
+    "build_tab_builder_specs",
+    "create_tab_control_from_specs",
+    "compute_tabbed_window_layout",
+    "register_window_tab_builder_specs",
+    "setup_feature_presenter_tabs",
+    "register_tab_update_handlers",
+    "create_presented_anchored_window",
+    "create_presented_window_from_spec",
+    "create_feature_presented_window",
+    "bind_feature_logic_aliases",
+    "setup_routed_feature_runtime",
+    "ActiveTabUpdateRouter",
+    "TabLayoutContext",
+    "declare_host_actions",
+    "build_host_main_tab_order",
+    "apply_host_main_accessibility",
+    # Tier 19: INFRASTRUCTURE
+    "UiEngine",
+]
