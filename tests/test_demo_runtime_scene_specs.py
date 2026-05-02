@@ -59,7 +59,7 @@ class TestDemoRuntimeSceneSpecs(unittest.TestCase):
 
         prewarm_runtime_scenes(app, RUNTIME_SCENE_SPECS)
 
-        self.assertEqual(["control_showcase"], app.prewarm_calls)
+        self.assertEqual(["main", "control_showcase"], app.prewarm_calls)
 
 
 if __name__ == "__main__":

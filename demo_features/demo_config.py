@@ -94,7 +94,7 @@ RUNTIME_SCENE_SPECS = (
         scene_name="main",
         pristine_asset="demo_features/data/images/backdrop.jpg",
         bind_escape_to_exit=True,
-        prewarm=False,
+        prewarm=True,
     ),
     RuntimeSceneSpec(
         scene_name="control_showcase",
