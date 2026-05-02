@@ -945,13 +945,22 @@ class GuiApplication:
         target_scene = self._active_scene_name if scene_name is None else str(scene_name)
         runtime = self._scene_runtime(target_scene)
         warm_surface = pygame.Surface(self.surface.get_size(), pygame.SRCALPHA)
-        return self.features.prewarm_features(
+        # Prime per-scene pristine scaling cache so first visible draw of a
+        # non-initial scene does not pay smoothscale cost during transition.
+        self.restore_pristine(scene_name=target_scene, surface=warm_surface)
+        warmed = self.features.prewarm_features(
             host,
             warm_surface,
             runtime.theme,
             scene_name=target_scene,
             force=force,
         )
+
+        # Run one synthetic scene frame to warm lazy control internals that are
+        # initialized in update()/draw() rather than feature prewarm hooks.
+        runtime.scene.update(0.0)
+        runtime.scene.draw(warm_surface, runtime.theme)
+        return warmed
 
     def draw_screen_features(self, surface, theme) -> None:
         """Render dedicated screen features behind scene controls each frame."""

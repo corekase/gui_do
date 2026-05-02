@@ -142,6 +142,9 @@ class FontManager:
             bold=bool(bold),
             italic=bool(italic),
         )
+        existing = self._roles.get(normalized_name)
+        if existing == role:
+            return
         if normalized_name not in self._roles:
             self._role_order.append(normalized_name)
         self._roles[normalized_name] = role

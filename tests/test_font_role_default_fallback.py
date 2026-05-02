@@ -115,6 +115,15 @@ class TestFontRoleDefaultFallback(unittest.TestCase):
         self.assertEqual("default", resolved.name)
         self.assertEqual(16, resolved.size)
 
+    def test_register_role_noops_when_definition_unchanged(self):
+        manager = FontManager()
+        manager.register_role("default", size=16)
+        revision_before = manager.revision
+
+        manager.register_role("default", size=16)
+
+        self.assertEqual(revision_before, manager.revision)
+
 
 if __name__ == "__main__":
     unittest.main()

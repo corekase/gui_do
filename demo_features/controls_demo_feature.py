@@ -1461,7 +1461,8 @@ class ControlsShowcaseFeature(Feature):
         self._pending_initial_focus = False
 
     def prewarm(self, _host, surface, theme) -> None:
-        for control in [*self.control_labels, *self.controls, self.task_panel, self.showcase_return_button]:
+        menu_strip = getattr(_host, "control_showcase_menu_bar", None)
+        for control in [menu_strip, *self.control_labels, *self.controls, self.task_panel, self.showcase_return_button]:
             if control is None:
                 continue
             control.draw(surface, theme)
