@@ -316,76 +316,43 @@ class ControlsShowcaseFeature(Feature):
         arrow_cell_w = max(20, (arrow_left_half_w - self.INNER_GAP) // 2)
         arrow_cell_h = arrow_slot_h
         arrow_group_h = (arrow_cell_h * 2) + row_gap
-        from gui_do import add_group_label, place_control, place_control_unlabeled
-        add_group_label(
-            host.control_showcase_root,
-            "arrowboxes",
-            "ArrowBoxes",
-            Rect(col0_x, col0_y, arrow_left_half_w, arrow_group_h),
-            control_labels=self.control_labels,
+        _agl = LabelControl(
+            "controls_showcase_group_label_arrowboxes",
+            Rect(col0_x, col0_y, arrow_left_half_w, self.LABEL_HEIGHT),
+            "ArrowBoxes", align="left",
         )
+        host.control_showcase_root.add(_agl)
+        self.control_labels.append(_agl)
         arrow_row0_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP
         arrow_second_row_y = arrow_row0_y + arrow_cell_h + row_gap
 
-        place_control_unlabeled(
-            host.control_showcase_root,
-            "arrow_up",
+        self._place_control_unlabeled(
+            host, "arrow_up",
             ArrowBoxControl("control_arrow_up", Rect(0, 0, 1, 1), 90),
             Rect(col0_x, arrow_row0_y, arrow_cell_w, arrow_cell_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Arrow up",
-            column_index=0,
-            row_index=0,
-            placed_controls=self.placed_controls,
-            control_labels=self.control_labels,
-            focus_controls=self._focus_controls,
-            controls=self.controls,
+            focusable=True, accessibility_role="button", accessibility_label="Arrow up",
+            column_index=0, row_index=0,
         )
-        place_control_unlabeled(
-            host.control_showcase_root,
-            "arrow_down",
+        self._place_control_unlabeled(
+            host, "arrow_down",
             ArrowBoxControl("control_arrow_down", Rect(0, 0, 1, 1), 270),
             Rect(col0_x + arrow_cell_w + self.INNER_GAP, arrow_row0_y, arrow_cell_w, arrow_cell_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Arrow down",
-            column_index=0,
-            row_index=1,
-            placed_controls=self.placed_controls,
-            control_labels=self.control_labels,
-            focus_controls=self._focus_controls,
-            controls=self.controls,
+            focusable=True, accessibility_role="button", accessibility_label="Arrow down",
+            column_index=0, row_index=1,
         )
-        place_control_unlabeled(
-            host.control_showcase_root,
-            "arrow_left",
+        self._place_control_unlabeled(
+            host, "arrow_left",
             ArrowBoxControl("control_arrow_left", Rect(0, 0, 1, 1), 180),
             Rect(col0_x, arrow_second_row_y, arrow_cell_w, arrow_cell_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Arrow left",
-            column_index=0,
-            row_index=2,
-            placed_controls=self.placed_controls,
-            control_labels=self.control_labels,
-            focus_controls=self._focus_controls,
-            controls=self.controls,
+            focusable=True, accessibility_role="button", accessibility_label="Arrow left",
+            column_index=0, row_index=2,
         )
-        place_control_unlabeled(
-            host.control_showcase_root,
-            "arrow_right",
+        self._place_control_unlabeled(
+            host, "arrow_right",
             ArrowBoxControl("control_arrow_right", Rect(0, 0, 1, 1), 0),
             Rect(col0_x + arrow_cell_w + self.INNER_GAP, arrow_second_row_y, arrow_cell_w, arrow_cell_h),
-            focusable=True,
-            accessibility_role="button",
-            accessibility_label="Arrow right",
-            column_index=0,
-            row_index=3,
-            placed_controls=self.placed_controls,
-            control_labels=self.control_labels,
-            focus_controls=self._focus_controls,
-            controls=self.controls,
+            focusable=True, accessibility_role="button", accessibility_label="Arrow right",
+            column_index=0, row_index=3,
         )
 
         col0_row_y = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP + arrow_group_h + row_gap
@@ -473,7 +440,13 @@ class ControlsShowcaseFeature(Feature):
         col1_x = col0_x + column_width + col_gap
         vertical_slot_h = col0_total_h
         vertical_w = 24
-        self._add_group_label(host, "vertical", "V.", Rect(col1_x, col0_y, (vertical_w * 2) + self.INNER_GAP, vertical_slot_h))
+        _vgl = LabelControl(
+            "controls_showcase_group_label_vertical",
+            Rect(col1_x, col0_y, (vertical_w * 2) + self.INNER_GAP, self.LABEL_HEIGHT),
+            "V.", align="left",
+        )
+        host.control_showcase_root.add(_vgl)
+        self.control_labels.append(_vgl)
         vertical_controls_top = col0_y + self.LABEL_HEIGHT + self.LABEL_GAP
         vertical_controls_h = max(1, vertical_slot_h - self.LABEL_HEIGHT - self.LABEL_GAP)
         self._place_control_unlabeled(
@@ -1545,7 +1518,7 @@ class ControlsShowcaseFeature(Feature):
         name: str,
         label_text: str,
         control,
-        control_rect: Rect,
+        slot_rect: Rect,
         *,
         focusable: bool,
         accessibility_role: str | None = None,
@@ -1553,24 +1526,32 @@ class ControlsShowcaseFeature(Feature):
         column_index: int,
         row_index: int,
     ) -> None:
-        # Treat incoming rect as a full slot and reserve explicit vertical space for label + control.
-        label_rect = Rect(control_rect.left, control_rect.top, control_rect.width, self.LABEL_HEIGHT)
-        control_top = control_rect.top + self.LABEL_HEIGHT + self.LABEL_GAP
-        control_height = max(1, control_rect.height - self.LABEL_HEIGHT - self.LABEL_GAP)
-        actual_control_rect = Rect(control_rect.left, control_top, control_rect.width, control_height)
-        label = LabelControl(f"controls_showcase_label_{name}", label_rect, label_text, align="left")
-        self._register_placed_control(
-            host,
-            name,
-            control,
-            actual_control_rect,
-            label,
-            focusable=focusable,
-            accessibility_role=accessibility_role,
-            accessibility_label=accessibility_label,
-            column_index=column_index,
-            row_index=row_index,
+        from gui_do import PlacedControl
+        label = LabelControl(
+            f"controls_showcase_label_{name}",
+            Rect(slot_rect.left, slot_rect.top, slot_rect.width, self.LABEL_HEIGHT),
+            label_text, align="left",
         )
+        ctrl_rect = Rect(
+            slot_rect.left, slot_rect.top + self.LABEL_HEIGHT + self.LABEL_GAP,
+            slot_rect.width, max(1, slot_rect.height - self.LABEL_HEIGHT - self.LABEL_GAP),
+        )
+        control.set_rect(ctrl_rect)
+        control.enabled = True
+        if accessibility_role and accessibility_label:
+            control.set_accessibility(role=accessibility_role, label=accessibility_label)
+        if focusable:
+            self._focus_controls.append(control)
+        else:
+            control.set_tab_index(-1)
+        host.control_showcase_root.add(label)
+        host.control_showcase_root.add(control)
+        self.control_labels.append(label)
+        self.controls.append(control)
+        self.placed_controls.append(PlacedControl(
+            control=control, label=label, name=name,
+            column_index=column_index, row_index=row_index,
+        ))
 
     def _place_formatted_text_input(
         self,
@@ -1599,16 +1580,11 @@ class ControlsShowcaseFeature(Feature):
             placeholder=str(placeholder),
         )
         self._place_control(
-            host,
-            name,
-            label_text,
-            text_input,
+            host, name, label_text, text_input,
             Rect(int(x), int(y), int(width), int(input_slot_h)),
-            focusable=True,
-            accessibility_role="textbox",
+            focusable=True, accessibility_role="textbox",
             accessibility_label=accessibility_label,
-            column_index=column_index,
-            row_index=row_index,
+            column_index=column_index, row_index=row_index,
         )
         return int(y) + int(input_slot_h) + int(row_gap)
 
@@ -1617,7 +1593,7 @@ class ControlsShowcaseFeature(Feature):
         host,
         name: str,
         control,
-        control_rect: Rect,
+        ctrl_rect: Rect,
         *,
         focusable: bool,
         accessibility_role: str | None = None,
@@ -1625,72 +1601,21 @@ class ControlsShowcaseFeature(Feature):
         column_index: int,
         row_index: int,
     ) -> None:
-        self._register_placed_control(
-            host,
-            name,
-            control,
-            Rect(control_rect),
-            None,
-            focusable=focusable,
-            accessibility_role=accessibility_role,
-            accessibility_label=accessibility_label,
-            column_index=column_index,
-            row_index=row_index,
-        )
-
-    def _register_placed_control(
-        self,
-        host,
-        name: str,
-        control,
-        actual_control_rect: Rect,
-        label: LabelControl | None,
-        *,
-        focusable: bool,
-        accessibility_role: str | None,
-        accessibility_label: str | None,
-        column_index: int,
-        row_index: int,
-    ) -> None:
-        if label is not None:
-            host.control_showcase_root.add(label)
-            self.control_labels.append(label)
-
-        # Use control geometry APIs so controls can synchronize derived internals
-        # (for example ScrollView child screen rect projections) on placement.
-        control.set_rect(actual_control_rect)
+        from gui_do import PlacedControl
+        control.set_rect(Rect(ctrl_rect))
         control.enabled = True
-
-        if accessibility_role is not None and accessibility_label is not None:
+        if accessibility_role and accessibility_label:
             control.set_accessibility(role=accessibility_role, label=accessibility_label)
-
         if focusable:
             self._focus_controls.append(control)
         else:
             control.set_tab_index(-1)
-
         host.control_showcase_root.add(control)
         self.controls.append(control)
-        from gui_do import PlacedControl
-        self.placed_controls.append(
-            PlacedControl(
-                control=control,
-                label=label,
-                name=name,
-                column_index=column_index,
-                row_index=row_index,
-            )
-        )
-
-    def _add_group_label(self, host, name: str, text: str, group_rect: Rect) -> None:
-        label = LabelControl(
-            f"controls_showcase_group_label_{name}",
-            Rect(group_rect.left, group_rect.top, group_rect.width, self.LABEL_HEIGHT),
-            text,
-            align="left",
-        )
-        host.control_showcase_root.add(label)
-        self.control_labels.append(label)
+        self.placed_controls.append(PlacedControl(
+            control=control, label=None, name=name,
+            column_index=column_index, row_index=row_index,
+        ))
 
     def _category_for_row(self, row_index: int) -> str:
         if row_index < 60:
@@ -1700,6 +1625,16 @@ class ControlsShowcaseFeature(Feature):
         if row_index < 140:
             return "advanced"
         return "extended"
+
+    # Labels belonging to grouped family cells that must stay hidden in the Basics tab
+    # (each family shows one header label only; per-item labels are suppressed).
+    _BASICS_SUPPRESSED_LABEL_NAMES: frozenset[str] = frozenset({
+        "button_2", "button_3",
+        "toggle_2", "toggle_3",
+        "button_group_a2", "button_group_a3",
+        "button_group_b2", "button_group_b3",
+        "button_group_c2", "button_group_c3",
+    })
 
     def _set_active_category(self, host, key: str) -> None:
         valid_keys = {k for k, _ in self.SHOWCASE_CATEGORY_TABS}
@@ -1713,111 +1648,59 @@ class ControlsShowcaseFeature(Feature):
     def _apply_category_visibility(self, host) -> None:
         active_key = self._active_category_key
         self._relayout_category(active_key)
+
+        # Compute the set of labels that are legitimately owned by placed controls
+        # or created as auxiliary labels by the layout (e.g. vertical scrollbar labels).
+        matched_labels = {p.label for p in self.placed_controls if p.label is not None}
+        matched_labels.update(self._basics_aux_labels.values())
+
         for placed in self.placed_controls:
             show = self._category_for_row(int(placed.row_index)) == active_key
-            control = placed.control
-            control.visible = show
-            control.enabled = show
+            placed.control.visible = show
+            placed.control.enabled = show
             if placed.label is not None:
-                placed.label.visible = show
-                placed.label.enabled = show
+                # Suppress duplicate family-member labels in the Basics tab —
+                # those cells show a single header label instead.
+                show_label = show and not (
+                    active_key == "basics"
+                    and str(placed.name) in self._BASICS_SUPPRESSED_LABEL_NAMES
+                )
+                placed.label.visible = show_label
+                placed.label.enabled = show_label
 
-        self._hide_orphan_labels()
-        self._hide_duplicate_basics_family_labels(active_key)
+        # Hide any orphan labels (group headers and stale labels not matched to a visible
+        # placed control). Aux labels have their visibility managed by the scroll relayout.
+        for label in self.control_labels:
+            if label not in matched_labels:
+                label.visible = False
+                label.enabled = False
 
-        # Keep keyboard traversal valid for the currently visible set.
+        # Refresh tab-index sequence for the now-visible set.
         try:
             host.app.configure_features_accessibility(host, 0)
         except Exception:
             pass
 
-        # If current focus became hidden, move focus to the category tabs.
+        # If current focus became hidden, park focus on the category tab strip.
         focused = getattr(host.app.focus, "focused", None)
         if focused is not None and not getattr(focused, "visible", True):
             if self._category_tabs is not None and self._category_tabs.visible and self._category_tabs.enabled:
                 host.app.focus.set_focus(self._category_tabs)
 
-    def _hide_orphan_labels(self) -> None:
-        matched_labels = {
-            placed.label
-            for placed in self.placed_controls
-            if placed.label is not None
-        }
-        matched_labels.update(self._basics_aux_labels.values())
-        for label in self.control_labels:
-            if label in matched_labels:
-                continue
-            label.visible = False
-            label.enabled = False
-
-    def _hide_duplicate_basics_family_labels(self, active_key: str) -> None:
-        if active_key != "basics":
-            return
-        duplicate_names = {
-            "button_2",
-            "button_3",
-            "toggle_2",
-            "toggle_3",
-            "button_group_a2",
-            "button_group_a3",
-            "button_group_b2",
-            "button_group_b3",
-            "button_group_c2",
-            "button_group_c3",
-        }
-        for placed in self.placed_controls:
-            if str(placed.name) in duplicate_names and placed.label is not None:
-                placed.label.visible = False
-                placed.label.enabled = False
-
     def _relayout_category(self, category_key: str) -> None:
         bounds = Rect(self._category_content_bounds)
         if bounds.width <= 0 or bounds.height <= 0:
             return
-
         items = [
-            placed
-            for placed in self.placed_controls
-            if self._category_for_row(int(placed.row_index)) == category_key
+            p for p in self.placed_controls
+            if self._category_for_row(int(p.row_index)) == category_key
         ]
         if not items:
             return
-
         if category_key == "basics":
             self._relayout_basics(bounds, items)
-            return
-
-        items.sort(key=lambda item: (int(item.row_index), int(item.column_index), str(item.name)))
-
-        col_gap, row_gap, min_col_w, label_h, label_gap, max_cols_cap = self._category_layout_metrics(category_key)
-        fit_cols = max(1, (bounds.width + col_gap) // (min_col_w + col_gap))
-        col_count = max(1, min(int(max_cols_cap), int(fit_cols)))
-        col_w = max(140, (bounds.width - (col_gap * (col_count - 1))) // col_count)
-
-        y = bounds.top
-        for start in range(0, len(items), col_count):
-            row_items = items[start:start + col_count]
-
-            slot_heights: list[int] = []
-            for placed in row_items:
-                target_w, control_h = self._target_control_size(category_key, placed, col_w)
-                slot_label_h = label_h + label_gap if placed.label is not None else 0
-                slot_heights.append(control_h + slot_label_h)
-            row_h = max(slot_heights) if slot_heights else 0
-
-            for col, placed in enumerate(row_items):
-                x = bounds.left + col * (col_w + col_gap)
-                target_w, control_h = self._target_control_size(category_key, placed, col_w)
-                control_x = x + max(0, (col_w - target_w) // 2)
-
-                if placed.label is not None:
-                    placed.label.set_rect(Rect(x, y, col_w, label_h))
-                    control_top = y + label_h + label_gap
-                    placed.control.set_rect(Rect(control_x, control_top, target_w, control_h))
-                else:
-                    placed.control.set_rect(Rect(control_x, y, target_w, control_h))
-
-            y += row_h + row_gap
+        else:
+            self._relayout_grid_items(category_key, bounds, items)
 
     def _relayout_basics(self, bounds: Rect, items: list) -> None:
         items_by_name = {str(item.name): item for item in items}
@@ -2079,46 +1962,42 @@ class ControlsShowcaseFeature(Feature):
         return y
 
     def _relayout_grid_items(self, category_key: str, bounds: Rect, items: list) -> int:
-        items.sort(key=lambda item: (int(item.row_index), int(item.column_index), str(item.name)))
+        is_basics = category_key == "basics"
+        col_gap    = 6  if is_basics else max(4, self.INNER_GAP * 2)
+        row_gap    = 6  if is_basics else max(6, self.INNER_GAP * 2)
+        label_h    = 16 if is_basics else self.LABEL_HEIGHT
+        label_gap  = 2  if is_basics else self.LABEL_GAP
+        min_col_w  = 160 if is_basics else 220
+        max_cols   = 5  if is_basics else 4
 
-        col_gap, row_gap, min_col_w, label_h, label_gap, max_cols_cap = self._category_layout_metrics(category_key)
+        items.sort(key=lambda p: (int(p.row_index), int(p.column_index), str(p.name)))
         fit_cols = max(1, (bounds.width + col_gap) // (min_col_w + col_gap))
-        col_count = max(1, min(int(max_cols_cap), int(fit_cols)))
-        col_w = max(140, (bounds.width - (col_gap * (col_count - 1))) // col_count)
+        col_count = max(1, min(max_cols, fit_cols))
+        col_w = max(140, (bounds.width - col_gap * (col_count - 1)) // col_count)
 
         y = bounds.top
         for start in range(0, len(items), col_count):
             row_items = items[start:start + col_count]
-
-            slot_heights: list[int] = []
-            for placed in row_items:
-                target_w, control_h = self._target_control_size(category_key, placed, col_w)
-                slot_label_h = label_h + label_gap if placed.label is not None else 0
-                slot_heights.append(control_h + slot_label_h)
+            slot_heights = []
+            for p in row_items:
+                _, ch = self._target_control_size(category_key, p, col_w)
+                slot_heights.append(ch + (label_h + label_gap if p.label is not None else 0))
             row_h = max(slot_heights) if slot_heights else 0
 
-            for col, placed in enumerate(row_items):
+            for col, p in enumerate(row_items):
                 x = bounds.left + col * (col_w + col_gap)
-                target_w, control_h = self._target_control_size(category_key, placed, col_w)
-                control_x = x + max(0, (col_w - target_w) // 2)
-
-                if placed.label is not None:
-                    placed.label.set_rect(Rect(x, y, col_w, label_h))
-                    placed.label.visible = True
-                    placed.label.enabled = True
-                    control_top = y + label_h + label_gap
-                    placed.control.set_rect(Rect(control_x, control_top, target_w, control_h))
+                cw, ch = self._target_control_size(category_key, p, col_w)
+                cx = x + max(0, (col_w - cw) // 2)
+                if p.label is not None:
+                    p.label.set_rect(Rect(x, y, col_w, label_h))
+                    p.label.visible = True
+                    p.label.enabled = True
+                    p.control.set_rect(Rect(cx, y + label_h + label_gap, cw, ch))
                 else:
-                    placed.control.set_rect(Rect(control_x, y, target_w, control_h))
-
+                    p.control.set_rect(Rect(cx, y, cw, ch))
             y += row_h + row_gap
 
         return y
-
-    def _category_layout_metrics(self, category_key: str) -> tuple[int, int, int, int, int, int]:
-        if category_key == "basics":
-            return (6, 6, 160, 16, 2, 5)
-        return (max(4, int(self.INNER_GAP * 2)), max(6, int(self.INNER_GAP * 2)), 220, self.LABEL_HEIGHT, self.LABEL_GAP, 4)
 
     def _target_control_size(self, category_key: str, placed, column_width: int) -> tuple[int, int]:
         control = placed.control
