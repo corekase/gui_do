@@ -169,6 +169,13 @@ class ScrollViewControl(UiNode):
         for child in self.children:
             child.update(dt_seconds)
 
+    def _scrollbar_geometry(self):
+        y_track = self._scrollbar_y_track_rect()
+        y_handle = self._scrollbar_y_handle_rect() if y_track is not None else None
+        x_track = self._scrollbar_x_track_rect()
+        x_handle = self._scrollbar_x_handle_rect() if x_track is not None else None
+        return y_track, y_handle, x_track, x_handle
+
     def handle_event(self, event: GuiEvent, app: "GuiApplication", theme=None) -> bool:
         if not self.visible or not self.enabled:
             if self._drag_axis is not None:
@@ -178,24 +185,21 @@ class ScrollViewControl(UiNode):
 
         event_pointer = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         pointer = event_pointer if event_pointer is not None else app.logical_pointer_pos
+        y_track, y_handle, x_track, x_handle = self._scrollbar_geometry()
 
         if event.kind == EventType.MOUSE_MOTION and self._drag_axis is not None:
             pointer_pos = captured_pointer_pos(app, self.control_id, self._drag_axis)
             if isinstance(pointer_pos, tuple) and len(pointer_pos) == 2:
                 if self._drag_axis == "y":
-                    track_rect = self._scrollbar_y_track_rect()
-                    handle_rect = self._scrollbar_y_handle_rect()
-                    if track_rect is not None and handle_rect is not None:
+                    if y_track is not None and y_handle is not None:
                         top = pointer_pos[1] - self._drag_anchor
-                        top = min(max(top, track_rect.y), track_rect.bottom - handle_rect.height)
+                        top = min(max(top, y_track.y), y_track.bottom - y_handle.height)
                         self._set_scroll_from_y_handle_top(top)
                         return True
                 if self._drag_axis == "x":
-                    track_rect = self._scrollbar_x_track_rect()
-                    handle_rect = self._scrollbar_x_handle_rect()
-                    if track_rect is not None and handle_rect is not None:
+                    if x_track is not None and x_handle is not None:
                         left = pointer_pos[0] - self._drag_anchor
-                        left = min(max(left, track_rect.x), track_rect.right - handle_rect.width)
+                        left = min(max(left, x_track.x), x_track.right - x_handle.width)
                         self._set_scroll_from_x_handle_left(left)
                         return True
 
@@ -205,8 +209,6 @@ class ScrollViewControl(UiNode):
             return True
 
         if event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1 and isinstance(pointer, tuple) and len(pointer) == 2:
-            y_track = self._scrollbar_y_track_rect()
-            y_handle = self._scrollbar_y_handle_rect()
             if y_track is not None and y_handle is not None and y_handle.collidepoint(pointer):
                 self._drag_axis = "y"
                 self._drag_anchor = begin_thumb_drag(
@@ -218,8 +220,6 @@ class ScrollViewControl(UiNode):
                     y_handle,
                 )
                 return True
-            x_track = self._scrollbar_x_track_rect()
-            x_handle = self._scrollbar_x_handle_rect()
             if x_track is not None and x_handle is not None and x_handle.collidepoint(pointer):
                 self._drag_axis = "x"
                 self._drag_anchor = begin_thumb_drag(

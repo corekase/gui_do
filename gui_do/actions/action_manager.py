@@ -34,6 +34,7 @@ class ActionManager:
     def __init__(self) -> None:
         self._actions: dict[str, ActionHandler] = {}
         self._keymap: dict[KeyBinding, list[str]] = defaultdict(list)
+        self._bindings_by_action: dict[str, list[KeyBinding]] = defaultdict(list)
         self._middlewares: List[ActionMiddleware] = []
 
     def register_action(self, action_name: str, handler: ActionHandler) -> None:
@@ -52,6 +53,7 @@ class ActionManager:
 
     def bind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> None:
         key = int(key)
+        action_name = str(action_name)
         if key in _RESERVED_ACCESSIBILITY_KEYS:
             raise logical_error(
                 f"Key {pygame.key.name(key)!r} is reserved for accessibility focus traversal "
@@ -64,9 +66,13 @@ class ActionManager:
         names = self._keymap[binding]
         if action_name not in names:
             names.append(action_name)
+            bindings = self._bindings_by_action[action_name]
+            if binding not in bindings:
+                bindings.append(binding)
 
     def unbind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> bool:
         """Remove one specific key→action binding. Returns True if a binding was removed."""
+        action_name = str(action_name)
         binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only))
         names = self._keymap.get(binding)
         if not names or action_name not in names:
@@ -74,14 +80,20 @@ class ActionManager:
         names.remove(action_name)
         if not names:
             del self._keymap[binding]
+        bindings = self._bindings_by_action.get(action_name)
+        if bindings and binding in bindings:
+            bindings.remove(binding)
+            if not bindings:
+                del self._bindings_by_action[action_name]
         return True
 
     def bindings_for_action(self, action_name: str) -> List[KeyBinding]:
         """Return all key bindings that route to *action_name*."""
-        return [binding for binding, names in self._keymap.items() if action_name in names]
+        return list(self._bindings_by_action.get(str(action_name), ()))
 
     def clear_bindings(self) -> None:
         self._keymap.clear()
+        self._bindings_by_action.clear()
 
     def trigger_from_event(self, event, app) -> bool:
         if event.kind is not EventType.KEY_DOWN or event.key is None:
@@ -159,14 +171,19 @@ class ActionManager:
 
     def clear_bindings_for_action(self, action_name: str) -> int:
         """Remove all key bindings that route to *action_name*. Returns the count removed."""
+        action_name = str(action_name)
+        bindings = list(self._bindings_by_action.get(action_name, ()))
         removed = 0
-        for binding in list(self._keymap.keys()):
-            names = self._keymap[binding]
-            if action_name in names:
-                names.remove(action_name)
-                removed += 1
-                if not names:
-                    del self._keymap[binding]
+        for binding in bindings:
+            names = self._keymap.get(binding)
+            if not names or action_name not in names:
+                continue
+            names.remove(action_name)
+            removed += 1
+            if not names:
+                del self._keymap[binding]
+        if action_name in self._bindings_by_action:
+            del self._bindings_by_action[action_name]
         return removed
 
     def register_and_bind(self, action_name: str, key: int, handler: ActionHandler, *, scene: str | None = None, window_only: bool = False) -> None:

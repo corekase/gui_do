@@ -99,12 +99,19 @@ class WindowControl(UiNode):
         self._frame_visuals = None
         self._frame_visual_size = (0, 0)
         self._content_host = _WindowContentHost(f"{self.control_id}__content", self.content_rect())
+        self._content_host_rect_dirty = False
         super().add_child(self._content_host)
 
+    def _mark_content_host_rect_dirty(self) -> None:
+        self._content_host_rect_dirty = True
+
     def _sync_content_host_rect(self) -> None:
+        if not self._content_host_rect_dirty:
+            return
         content_rect = self.content_rect()
         if self._content_host.rect != content_rect:
             self._content_host.rect = Rect(content_rect)
+        self._content_host_rect_dirty = False
 
     def _notify_presenter_resized(self) -> None:
         if self.presenter is not None and hasattr(self.presenter, "on_resize"):
@@ -113,13 +120,22 @@ class WindowControl(UiNode):
     def resize(self, width: int, height: int) -> None:
         previous = Rect(self.rect)
         super().resize(width, height)
+        self._mark_content_host_rect_dirty()
         self._sync_content_host_rect()
         if self.rect.size != previous.size:
             self._notify_presenter_resized()
 
+    def set_pos(self, x: int, y: int) -> None:
+        previous = self.rect.topleft
+        super().set_pos(x, y)
+        if self.rect.topleft != previous:
+            self._mark_content_host_rect_dirty()
+            self._sync_content_host_rect()
+
     def set_rect(self, rect: Rect) -> None:
         previous = Rect(self.rect)
         super().set_rect(rect)
+        self._mark_content_host_rect_dirty()
         self._sync_content_host_rect()
         if self.rect.size != previous.size:
             self._notify_presenter_resized()
@@ -217,6 +233,7 @@ class WindowControl(UiNode):
         if fitted_height == self.titlebar_height:
             return
         self.titlebar_height = fitted_height
+        self._mark_content_host_rect_dirty()
         self._sync_content_host_rect()
         self._notify_presenter_resized()
 

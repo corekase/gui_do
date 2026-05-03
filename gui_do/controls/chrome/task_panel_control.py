@@ -40,6 +40,8 @@ class TaskPanelControl(PanelControl):
         self._focus_mode_active = False
         self._child_local_offsets: Dict[object, Tuple[int, int]] = {}
         self._focus_cycle_controls: list[object] = []
+        self._child_layout_dirty = True
+        self._focus_cycle_dirty = True
 
     def _compute_hidden_y(self) -> int:
         if self.dock_bottom:
@@ -52,6 +54,12 @@ class TaskPanelControl(PanelControl):
     def _reindex_focus_cycle_slots(self) -> None:
         for index, node in enumerate(self._focus_cycle_controls):
             setattr(node, "task_panel_focus_slot", int(index))
+
+    def _mark_child_layout_dirty(self) -> None:
+        self._child_layout_dirty = True
+
+    def _mark_focus_cycle_dirty(self) -> None:
+        self._focus_cycle_dirty = True
 
     def add_focus_control(self, child, *, before_control_id: str | None = None, after_control_id: str | None = None):
         """Atomically add a child and register it in task-panel focus cycle order."""
@@ -87,6 +95,8 @@ class TaskPanelControl(PanelControl):
 
         self._focus_cycle_controls.insert(insert_index, added)
         self._reindex_focus_cycle_slots()
+        self._child_layout_dirty = False
+        self._focus_cycle_dirty = False
         return added
 
     def add(self, child):
@@ -97,10 +107,14 @@ class TaskPanelControl(PanelControl):
         if removed:
             self._child_local_offsets.pop(child, None)
             self._focus_cycle_controls = [node for node in self._focus_cycle_controls if node is not child]
+            self._mark_child_layout_dirty()
+            self._mark_focus_cycle_dirty()
         return removed
 
     def task_panel_focus_controls(self) -> list:
         """Return direct task-panel controls in add order for focus cycling."""
+        if not self._focus_cycle_dirty:
+            return list(self._focus_cycle_controls)
         live_children = set(self.children)
         seen_object_ids = set()
         seen_control_ids = set()
@@ -128,9 +142,12 @@ class TaskPanelControl(PanelControl):
             ordered_live.append(child)
         self._focus_cycle_controls = list(ordered_live)
         self._reindex_focus_cycle_slots()
+        self._focus_cycle_dirty = False
         return list(self._focus_cycle_controls)
 
     def _sync_children_to_panel_position(self) -> None:
+        if not self._child_layout_dirty:
+            return
         live_children = set(self.children)
         for tracked_child in list(self._child_local_offsets):
             if tracked_child not in live_children:
@@ -142,6 +159,7 @@ class TaskPanelControl(PanelControl):
                 offset = (child.rect.x - self.rect.x, child.rect.y - self.rect.y)
                 self._child_local_offsets[child] = offset
             child.rect.topleft = (self.rect.x + offset[0], self.rect.y + offset[1])
+        self._child_layout_dirty = False
 
     def set_auto_hide(self, auto_hide: bool) -> None:
         self.auto_hide = bool(auto_hide)
@@ -152,6 +170,24 @@ class TaskPanelControl(PanelControl):
 
     def set_animation_step_px(self, animation_step_px: int) -> None:
         self.animation_step_px = max(1, int(animation_step_px))
+
+    def set_pos(self, x: int, y: int) -> None:
+        previous = self.rect.topleft
+        super().set_pos(x, y)
+        if self.rect.topleft != previous:
+            self._mark_child_layout_dirty()
+
+    def set_rect(self, rect: Rect) -> None:
+        previous = Rect(self.rect)
+        super().set_rect(rect)
+        if self.rect != previous:
+            self._mark_child_layout_dirty()
+
+    def resize(self, width: int, height: int) -> None:
+        previous = self.rect.size
+        super().resize(width, height)
+        if self.rect.size != previous:
+            self._mark_child_layout_dirty()
 
     def set_focus_mode(self, active: bool) -> None:
         is_active = bool(active)
@@ -172,8 +208,10 @@ class TaskPanelControl(PanelControl):
             target = self._shown_y if self._hovered else self._hidden_y
             if self.rect.y < target:
                 self.rect.y = min(target, self.rect.y + self.animation_step_px)
+                self._mark_child_layout_dirty()
             elif self.rect.y > target:
                 self.rect.y = max(target, self.rect.y - self.animation_step_px)
+                self._mark_child_layout_dirty()
         self._sync_children_to_panel_position()
         super().update(0.0)
 

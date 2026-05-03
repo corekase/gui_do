@@ -21,11 +21,21 @@ class PanelControl(UiNode):
         self.children: List[UiNode] = []
         self.draw_background = bool(draw_background)
         self.constraints: "Optional[ConstraintLayout]" = constraints
+        self._constraints_dirty = constraints is not None
         self._visuals = None
         self._drag_window = None
         self._drag_last_pos = None
         self._pending_capture_release_owner_id = None
         self._visual_size = None
+
+    def _mark_constraints_dirty(self) -> None:
+        self._constraints_dirty = self.constraints is not None
+
+    def _apply_constraints_if_dirty(self) -> None:
+        if not self._constraints_dirty or self.constraints is None:
+            return
+        self.constraints.apply(self.rect)
+        self._constraints_dirty = False
 
     def _is_window_like(self, child: UiNode) -> bool:
         return child.is_window()
@@ -166,6 +176,12 @@ class PanelControl(UiNode):
         """Attach one child control and return it."""
         return self.add_child(child)
 
+    def add_child(self, child: UiNode) -> UiNode:
+        added = super().add_child(child)
+        self._mark_constraints_dirty()
+        self._apply_constraints_if_dirty()
+        return added
+
     def add_at(self, child: UiNode, rel_x: int = 0, rel_y: int = 0) -> UiNode:
         """Attach *child* at a position relative to this panel's top-left corner.
 
@@ -190,6 +206,9 @@ class PanelControl(UiNode):
         old_rect = Rect(self.rect)
         super().set_rect(rect)
         if self.rect.topleft == old_rect.topleft:
+            if self.rect.size != old_rect.size:
+                self._mark_constraints_dirty()
+                self._apply_constraints_if_dirty()
             return
         for child in self.children:
             local_offset = getattr(child, "_panel_local_offset", None)
@@ -201,6 +220,22 @@ class PanelControl(UiNode):
             ):
                 child.rect.left = self.rect.left + local_offset[0]
                 child.rect.top = self.rect.top + local_offset[1]
+        self._mark_constraints_dirty()
+        self._apply_constraints_if_dirty()
+
+    def set_pos(self, x: int, y: int) -> None:
+        old_topleft = self.rect.topleft
+        super().set_pos(x, y)
+        if self.rect.topleft != old_topleft:
+            self._mark_constraints_dirty()
+            self._apply_constraints_if_dirty()
+
+    def resize(self, width: int, height: int) -> None:
+        old_size = self.rect.size
+        super().resize(width, height)
+        if self.rect.size != old_size:
+            self._mark_constraints_dirty()
+            self._apply_constraints_if_dirty()
 
     @property
     def child_count(self) -> int:
@@ -252,16 +287,17 @@ class PanelControl(UiNode):
                 self._clear_active_windows()
             else:
                 self._set_active_window(next_window)
+        self._mark_constraints_dirty()
+        self._apply_constraints_if_dirty()
         return True
 
     def set_constraints(self, constraints: "Optional[ConstraintLayout]") -> None:
         self.constraints = constraints
-        if constraints is not None:
-            constraints.apply(self.rect)
+        self._mark_constraints_dirty()
+        self._apply_constraints_if_dirty()
 
     def _reapply_constraints(self) -> None:
-        if self.constraints is not None:
-            self.constraints.apply(self.rect)
+        self._apply_constraints_if_dirty()
 
     def update(self, dt_seconds: float) -> None:
         self._reapply_constraints()

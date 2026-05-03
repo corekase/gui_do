@@ -292,6 +292,10 @@ class CommandPaletteManager:
     def __init__(self, overlay_manager: OverlayManager, app: "Optional[GuiApplication]" = None, *, action_registry=None) -> None:
         self._overlays = overlay_manager
         self._entries: Dict[str, CommandEntry] = {}
+        self._entry_snapshot: List[CommandEntry] = []
+        self._entry_items: List[ListItem] = []
+        self._entry_index_by_id: Dict[str, int] = {}
+        self._entries_dirty: bool = True
         self._handle: Optional[OverlayHandle] = None
         self._background_trigger_dispose: Optional[Callable[[], bool]] = None
         self._action_registry = action_registry
@@ -303,6 +307,24 @@ class CommandPaletteManager:
         if app is not None:
             self._register_background_trigger(app)
 
+    def _invalidate_entry_projection(self) -> None:
+        self._entries_dirty = True
+        self._entry_snapshot = []
+        self._entry_items = []
+        self._entry_index_by_id = {}
+
+    def _project_entries(self) -> tuple[List[CommandEntry], List[ListItem], Dict[str, int]]:
+        if self._entries_dirty:
+            entries = list(self._entries.values())
+            self._entry_snapshot = entries
+            self._entry_items = self._build_items(entries)
+            self._entry_index_by_id = {
+                str(entry.entry_id): index
+                for index, entry in enumerate(entries)
+            }
+            self._entries_dirty = False
+        return self._entry_snapshot, self._entry_items, self._entry_index_by_id
+
     # ------------------------------------------------------------------
     # Registry API
     # ------------------------------------------------------------------
@@ -310,10 +332,12 @@ class CommandPaletteManager:
     def register(self, entry: CommandEntry) -> None:
         """Register a command entry.  Replaces any existing entry with the same id."""
         self._entries[str(entry.entry_id)] = entry
+        self._invalidate_entry_projection()
 
     def clear(self) -> None:
         """Remove all registered entries."""
         self._entries.clear()
+        self._invalidate_entry_projection()
 
     def register_action_registry(
         self,
@@ -333,7 +357,10 @@ class CommandPaletteManager:
 
     def unregister(self, entry_id: str) -> bool:
         """Remove a registered entry. Returns ``True`` if it existed."""
-        return bool(self._entries.pop(str(entry_id), None))
+        removed = bool(self._entries.pop(str(entry_id), None))
+        if removed:
+            self._invalidate_entry_projection()
+        return removed
 
     def entry_count(self) -> int:
         """Return the number of registered entries."""
@@ -428,7 +455,7 @@ class CommandPaletteManager:
         if callable(self._before_show_callback):
             self._before_show_callback()
 
-        current_entries = list(self._entries.values())
+        current_entries, current_items, entry_index_by_id = self._project_entries()
         if not current_entries:
             return CommandPaletteHandle(self)
         if selected_entry_id is None and callable(self._selection_provider):
@@ -450,11 +477,11 @@ class CommandPaletteManager:
             rect.width - _PAD * 2,
             rect.height - _PAD * 2,
         )
-        selected_index = self._selected_index_for_entry_id(current_entries, selected_entry_id)
+        selected_index = self._selected_index_for_entry_id(current_entries, selected_entry_id, entry_index_by_id)
         listview = _CommandPaletteListView(
             self._OWNER_ID + "_list",
             list_rect,
-            items=self._build_items(current_entries),
+            items=list(current_items),
             row_height=_ROW_H,
             selected_index=selected_index,
         )
@@ -746,9 +773,13 @@ class CommandPaletteManager:
         ]
 
     @staticmethod
-    def _selected_index_for_entry_id(entries: List[CommandEntry], entry_id: Optional[str]) -> int:
+    def _selected_index_for_entry_id(entries: List[CommandEntry], entry_id: Optional[str], entry_index_by_id: Optional[Dict[str, int]] = None) -> int:
         if not entry_id:
             return 0 if entries else -1
+        if entry_index_by_id is not None:
+            index = entry_index_by_id.get(str(entry_id))
+            if index is not None:
+                return index
         for index, entry in enumerate(entries):
             if str(entry.entry_id) == str(entry_id):
                 return index

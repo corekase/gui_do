@@ -129,27 +129,44 @@ class OverlayManager:
 
         # Left-button MOUSEBUTTONDOWN outside overlays: dismiss dismiss_on_outside_click overlays
         # Important: does NOT consume the event (returns False) so scene can still handle it
-        if event.kind == EventType.MOUSE_BUTTON_DOWN and int(getattr(event, "button", 0) or 0) == 1:
-            pos = event.pos
-            if isinstance(pos, tuple) and len(pos) == 2:
-                if not self.point_in_any_overlay(pos):
-                    # Dismiss all outside-click dismissible overlays
-                    to_dismiss = [r.owner_id for r in self._records if r.dismiss_on_outside_click]
-                    for owner_id in to_dismiss:
-                        self.hide(owner_id)
-                    return False  # scene still processes the click
+        pointer_down = event.kind == EventType.MOUSE_BUTTON_DOWN and int(getattr(event, "button", 0) or 0) == 1
+        pointer_pos = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
+        await_inside_hit = bool(pointer_down and pointer_pos is not None)
+        inside_hit = False
+        deferred_records: list[OverlayRecord] = []
+        dismissible_owner_ids: list[str] = []
+        consume_unhandled_keys = False
 
-        # Route events to overlay controls (top to bottom)
         for rec in reversed(self._records):
-            if rec.control.visible and rec.control.enabled:
-                consumed = rec.control.handle_routed_event(event, app)
-                if consumed:
-                    return True
+            if pointer_down and rec.dismiss_on_outside_click:
+                dismissible_owner_ids.append(rec.owner_id)
+            if not (rec.control.visible and rec.control.enabled):
+                continue
+            if event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING):
+                consume_unhandled_keys = consume_unhandled_keys or rec.consume_unhandled_keys
+            if await_inside_hit:
+                if rec.control.rect.collidepoint(pointer_pos):
+                    inside_hit = True
+                    await_inside_hit = False
+                    for pending in deferred_records:
+                        if pending.control.handle_routed_event(event, app):
+                            return True
+                    deferred_records.clear()
+                    if rec.control.handle_routed_event(event, app):
+                        return True
+                else:
+                    deferred_records.append(rec)
+                continue
+            if rec.control.handle_routed_event(event, app):
+                return True
 
-        if event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING):
-            for rec in reversed(self._records):
-                if rec.control.visible and rec.control.enabled and rec.consume_unhandled_keys:
-                    return True
+        if pointer_down and pointer_pos is not None and not inside_hit:
+            for owner_id in dismissible_owner_ids:
+                self.hide(owner_id)
+            return False
+
+        if consume_unhandled_keys:
+            return True
 
         return False
 

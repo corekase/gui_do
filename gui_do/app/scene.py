@@ -17,13 +17,29 @@ class Scene:
     def __init__(self) -> None:
         self.nodes: List[UiNode] = []
         self._invalidation_tracker = None
-        # active_window() cache — invalidated on add/remove/update/_clear_active_windows.
-        self._active_window_dirty: bool = True
-        self._cached_active_window: "Optional[UiNode]" = None
+        self._window_query_dirty: bool = True
+        self._cached_window_nodes: List[UiNode] = []
+        self._cached_task_panel_nodes: List[UiNode] = []
 
-    def _mark_active_window_dirty(self) -> None:
-        self._active_window_dirty = True
-        self._cached_active_window = None
+    def _invalidate_window_query_cache(self) -> None:
+        self._window_query_dirty = True
+        self._cached_window_nodes = []
+        self._cached_task_panel_nodes = []
+
+    def _window_query_nodes(self) -> tuple[List[UiNode], List[UiNode]]:
+        if not self._window_query_dirty:
+            return self._cached_window_nodes, self._cached_task_panel_nodes
+        windows: List[UiNode] = []
+        task_panels: List[UiNode] = []
+        for node in self._walk_nodes():
+            if self._is_window_like(node):
+                windows.append(node)
+            elif self._is_task_panel(node):
+                task_panels.append(node)
+        self._cached_window_nodes = windows
+        self._cached_task_panel_nodes = task_panels
+        self._window_query_dirty = False
+        return windows, task_panels
 
     def set_invalidation_tracker(self, tracker) -> None:
         """Attach *tracker* to the scene and all currently registered nodes.
@@ -43,7 +59,7 @@ class Scene:
             node.set_invalidation_tracker(self._invalidation_tracker)
         node.on_mount(None)
         node.invalidate()
-        self._mark_active_window_dirty()
+        self._invalidate_window_query_cache()
         return node
 
     def remove(self, node: UiNode, *, dispose: bool = False) -> bool:
@@ -54,13 +70,11 @@ class Scene:
         node.on_unmount(None)
         if dispose:
             node.dispose()
-        self._mark_active_window_dirty()
+        self._invalidate_window_query_cache()
         return True
 
     def update(self, dt_seconds: float) -> None:
-        # Mark dirty so active_window() recomputes after node.update() calls,
-        # which may change visibility/enabled/active state.
-        self._mark_active_window_dirty()
+        self._invalidate_window_query_cache()
         for node in self.nodes:
             if node.visible:
                 node.update(dt_seconds)
@@ -110,39 +124,39 @@ class Scene:
                 queue.extend(node.children)
 
     def _window_nodes(self) -> List[UiNode]:
-        return [node for node in self._walk_nodes() if self._is_window_like(node)]
+        windows, _task_panels = self._window_query_nodes()
+        return list(windows)
 
     def active_window(self) -> UiNode | None:
-        if not self._active_window_dirty:
-            return self._cached_active_window
+        windows, _task_panels = self._window_query_nodes()
         result = None
-        for node in self._walk_nodes():
-            if self._is_window_like(node) and node.active and node.visible and node.enabled:
+        for node in windows:
+            if node.active and node.visible and node.enabled:
                 result = node
-        self._cached_active_window = result
-        self._active_window_dirty = False
         return result
 
     def _point_in_task_panel(self, pos) -> bool:
-        for node in self._walk_nodes():
-            if self._is_task_panel(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
+        _windows, task_panels = self._window_query_nodes()
+        for node in task_panels:
+            if node.visible and node.enabled and node.rect.collidepoint(pos):
                 return True
         return False
 
     def _point_in_window(self, pos) -> bool:
-        for node in self._walk_nodes():
-            if self._is_window_like(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
+        windows, _task_panels = self._window_query_nodes()
+        for node in windows:
+            if node.visible and node.enabled and node.rect.collidepoint(pos):
                 return True
         return False
 
     def top_window_at(self, pos) -> UiNode | None:
         if not (isinstance(pos, tuple) and len(pos) == 2):
             return None
-        result = None
-        for node in self._walk_nodes():
-            if self._is_window_like(node) and node.visible and node.enabled and node.rect.collidepoint(pos):
-                result = node
-        return result
+        windows, _task_panels = self._window_query_nodes()
+        for node in reversed(windows):
+            if node.visible and node.enabled and node.rect.collidepoint(pos):
+                return node
+        return None
 
     @staticmethod
     def _is_descendant_of(node: UiNode, ancestor: UiNode) -> bool:
@@ -164,7 +178,7 @@ class Scene:
         return True
 
     def _clear_active_windows(self) -> None:
-        self._mark_active_window_dirty()
+        self._invalidate_window_query_cache()
         for node in self.nodes:
             node._clear_active_windows()
 
@@ -178,10 +192,9 @@ class Scene:
                 # Single walk to check both task-panel and window hit; avoids two
                 # separate BFS traversals (_point_in_task_panel + _point_in_window).
                 hit_interactive = False
-                for node in self._walk_nodes():
-                    if not (node.visible and node.enabled):
-                        continue
-                    if (self._is_task_panel(node) or self._is_window_like(node)) and node.rect.collidepoint(pos):
+                windows, task_panels = self._window_query_nodes()
+                for node in (*task_panels, *windows):
+                    if node.visible and node.enabled and node.rect.collidepoint(pos):
                         hit_interactive = True
                         break
                 if not hit_interactive:
@@ -219,16 +232,16 @@ class Scene:
         return best
 
     def _pointer_context_at_validated(self, pos) -> tuple[UiNode | None, UiNode | None]:
-        # Single BFS pass: track top window hit and best focusable node together.
-        top_window: UiNode | None = None
+        windows, _task_panels = self._window_query_nodes()
+        top_window = None
+        for node in reversed(windows):
+            if node.visible and node.enabled and node.rect.collidepoint(pos):
+                top_window = node
+                break
         best: UiNode | None = None
         for node in self._walk_nodes():
             if not (node.visible and node.enabled):
                 continue
-            if self._is_window_like(node) and node.rect.collidepoint(pos):
-                top_window = node
-                # A new top window candidate invalidates any best found outside it.
-                best = None
             if (
                 self._is_effectively_interactive(node)
                 and node.accepts_mouse_focus()

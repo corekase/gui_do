@@ -218,6 +218,8 @@ class CooperativeScheduler:
 
     def __init__(self) -> None:
         self._handles: List[CoroutineHandle] = []
+        self._pending_starts: List[CoroutineHandle] = []
+        self._updating: bool = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -230,9 +232,13 @@ class CooperativeScheduler:
         calling a ``def ... yield ...`` function).
         """
         handle = CoroutineHandle(generator)
-        self._handles.append(handle)
         # Run until the first yield
         self._step(handle)
+        if handle.is_running:
+            if self._updating:
+                self._pending_starts.append(handle)
+            else:
+                self._handles.append(handle)
         return handle
 
     def cancel_all(self) -> None:
@@ -256,14 +262,29 @@ class CooperativeScheduler:
         Call once per frame.
         """
         if not self._handles:
+            if self._pending_starts:
+                self._handles.extend(self._pending_starts)
+                self._pending_starts.clear()
             return
-        for handle in list(self._handles):
-            if not handle.is_running:
-                continue
-            if self._try_resume(handle, dt):
-                self._step(handle)
-        # Purge finished handles
-        self._handles = [h for h in self._handles if h.is_running]
+        self._updating = True
+        try:
+            index = 0
+            while index < len(self._handles):
+                handle = self._handles[index]
+                if not handle.is_running:
+                    self._handles.pop(index)
+                    continue
+                if self._try_resume(handle, dt):
+                    self._step(handle)
+                if not handle.is_running:
+                    self._handles.pop(index)
+                    continue
+                index += 1
+        finally:
+            self._updating = False
+            if self._pending_starts:
+                self._handles.extend(self._pending_starts)
+                self._pending_starts.clear()
 
     # ------------------------------------------------------------------
     # Internal helpers

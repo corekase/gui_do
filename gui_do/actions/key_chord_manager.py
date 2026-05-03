@@ -140,9 +140,11 @@ class KeyChordManager:
         self._timeout_s: float = max(0, int(timeout_ms)) / 1000.0
         # Registered chords — each entry: (chord, action_name)
         self._chords: List[Tuple[KeyChord, str]] = []
+        self._root_step_index: dict[int, List[Tuple[KeyChord, str]]] = {}
         # Current partial chord state
         self._progress: int = 0          # depth into the chord sequence so far
         self._active_matches: List[Tuple[KeyChord, str]] = []   # candidate chords
+        self._active_step_index: dict[int, List[Tuple[KeyChord, str]]] = {}
 
         self._timer_id = self._TIMER_ID_PREFIX + str(id(self))
 
@@ -157,11 +159,20 @@ class KeyChordManager:
         """
         self._chords = [(c, a) for c, a in self._chords if c != chord]
         self._chords.append((chord, action_name))
+        self._rebuild_root_step_index()
 
     def unbind(self, chord: KeyChord) -> bool:
         """Remove a chord registration. Returns True if it was present."""
         before = len(self._chords)
         self._chords = [(c, a) for c, a in self._chords if c != chord]
+        if len(self._chords) != before:
+            self._rebuild_root_step_index()
+            if self._active_matches:
+                self._active_matches = [(c, a) for c, a in self._active_matches if c != chord]
+                if self._active_matches:
+                    self._rebuild_active_step_index()
+                else:
+                    self._reset()
         return len(self._chords) < before
 
     def registered_chords(self) -> List[KeyChord]:
@@ -196,7 +207,7 @@ class KeyChordManager:
                 return False  # not the start of any chord
 
             # Advance progress
-            self._active_matches = candidates
+            self._set_active_matches(candidates, progress=1)
             self._progress = 1
             # Check for single-step chords that complete immediately
             complete = [(c, a) for c, a in candidates if len(c) == 1]
@@ -216,7 +227,7 @@ class KeyChordManager:
                 self._reset()
                 return False
 
-            self._active_matches = candidates
+            self._set_active_matches(candidates, progress=step_progress + 1)
             self._progress = step_progress + 1
 
             # Complete any chord that matches fully at current depth
@@ -245,7 +256,10 @@ class KeyChordManager:
 
     def _matching_candidates(self, event, *, step: int) -> List[Tuple[KeyChord, str]]:
         """Return chords that match *event* at *step* from the current active matches."""
-        pool = self._active_matches if step > 0 else self._chords
+        if step > 0:
+            pool = self._active_step_index.get(int(event.key), ())
+        else:
+            pool = self._root_step_index.get(int(event.key), ())
         result = []
         for chord, action_name in pool:
             if step >= len(chord):
@@ -273,8 +287,30 @@ class KeyChordManager:
         self._timers.remove_timer(self._timer_id)
         self._timers.add_once(self._timer_id, self._timeout_s, self._reset)
 
+    def _rebuild_root_step_index(self) -> None:
+        index: dict[int, List[Tuple[KeyChord, str]]] = {}
+        for chord, action_name in self._chords:
+            key = int(chord[0].key)
+            index.setdefault(key, []).append((chord, action_name))
+        self._root_step_index = index
+
+    def _rebuild_active_step_index(self) -> None:
+        index: dict[int, List[Tuple[KeyChord, str]]] = {}
+        for chord, action_name in self._active_matches:
+            if self._progress >= len(chord):
+                continue
+            key = int(chord[self._progress].key)
+            index.setdefault(key, []).append((chord, action_name))
+        self._active_step_index = index
+
+    def _set_active_matches(self, matches: List[Tuple[KeyChord, str]], *, progress: int) -> None:
+        self._active_matches = matches
+        self._progress = int(progress)
+        self._rebuild_active_step_index()
+
     def _reset(self) -> None:
         if self._timers is not None:
             self._timers.remove_timer(self._timer_id)
         self._progress = 0
         self._active_matches = []
+        self._active_step_index = {}

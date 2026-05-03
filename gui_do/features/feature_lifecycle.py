@@ -11,67 +11,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Deque
     from typing import Any, Optional, Dict, List
 
-# ---------------------------------------------------------------------------
-# Additional Demo/Feature Helpers (2026-04-30)
-# ---------------------------------------------------------------------------
-
-def _resolve_window_target(window):
-    """Return a window instance from a direct value or zero-arg getter."""
-    if callable(window):
-        try:
-            return window()
-        except TypeError:
-            return window
-    return window
-
-
-def register_standard_actions(action_registry, app=None, scene_transitions=None, palette_manager=None, window_toggles=None):
-    """
-    Register common application actions (exit, palette, window toggles) in the action registry.
-    window_toggles: dict mapping action name to one of:
-        - callable callback
-        - (window_or_getter, setter_name)
-        - (window_or_getter, setter_callable)
-        - (window_or_getter, None)
-    """
-    if action_registry is None:
-        return
-    # Exit
-    action_registry.register_action("exit", lambda *_: app.quit() if app else None)
-    # Palette
-    if palette_manager is not None:
-        action_registry.register_action("show_palette", lambda *_: palette_manager.show())
-    # Window toggles
-    if window_toggles:
-        for action, binding in window_toggles.items():
-            if callable(binding):
-                action_registry.register_action(action, lambda *_args, _binding=binding: _binding())
-                continue
-            window, setter = binding
-            if callable(setter):
-                action_registry.register_action(
-                    action,
-                    lambda *_args, _window=window, _setter=setter: _setter(
-                        not bool(getattr(_resolve_window_target(_window), "visible", False))
-                    ),
-                )
-                continue
-            if setter:
-                action_registry.register_action(
-                    action,
-                    lambda *_args, _window=window, _setter_name=setter: toggle_window_visibility(
-                        _resolve_window_target(_window),
-                        host=app,
-                        host_setter_name=_setter_name,
-                    ),
-                )
-            else:
-                action_registry.register_action(
-                    action,
-                    lambda *_args, _window=window: toggle_window_visibility(_resolve_window_target(_window)),
-                )
-
-
 def setup_standard_font_roles(font_roles, fonts: dict, *role_specs: dict):
     """
     Register a set of font roles for any feature or demo.
@@ -281,7 +220,6 @@ class FrameTimer:
 
     def tick(self) -> float:
         """Return seconds elapsed since the previous call, or ``0.0`` on first call."""
-        from time import perf_counter
         now = perf_counter()
         if self._last == 0.0:
             self._last = now
@@ -856,6 +794,8 @@ class FeatureWindowPresentationModel:
         self._tile_windows = tile_windows
         self._bindings: "OrderedDict[str, FeatureWindowBinding]" = OrderedDict()
         self._bindings_by_control_id: dict[str, str] = {}
+        self._bindings_by_window_object: dict[object, str] = {}
+        self._window_object_by_key: dict[str, object] = {}
 
     def register_feature_window(
         self,
@@ -902,9 +842,14 @@ class FeatureWindowPresentationModel:
         window = getattr(feature, "window", None)
         if window is None:
             return None
+        previous_window = self._window_object_by_key.get(binding.key)
+        if previous_window is not None and previous_window is not window:
+            self._bindings_by_window_object.pop(previous_window, None)
         control_id = getattr(window, "control_id", None)
         if control_id:
             self._bindings_by_control_id[str(control_id)] = binding.key
+        self._bindings_by_window_object[window] = binding.key
+        self._window_object_by_key[binding.key] = window
         return window
 
     def get_toggle(self, key: str):
@@ -944,8 +889,10 @@ class FeatureWindowPresentationModel:
         """
         if window is None:
             return False
-        control_id = str(getattr(window, "control_id", "")).strip()
-        key = self._bindings_by_control_id.get(control_id)
+        key = self._bindings_by_window_object.get(window)
+        if key is None:
+            control_id = str(getattr(window, "control_id", "")).strip()
+            key = self._bindings_by_control_id.get(control_id)
         if key is None:
             for candidate_key in self._bindings:
                 w = self.get_window(candidate_key)
@@ -960,8 +907,10 @@ class FeatureWindowPresentationModel:
     def handle_window_toggle(self, window, next_visible: bool) -> bool:
         if window is None:
             return False
-        control_id = str(getattr(window, "control_id", "")).strip()
-        key = self._bindings_by_control_id.get(control_id)
+        key = self._bindings_by_window_object.get(window)
+        if key is None:
+            control_id = str(getattr(window, "control_id", "")).strip()
+            key = self._bindings_by_control_id.get(control_id)
         if key is None:
             for candidate_key in self._bindings:
                 candidate_window = self.get_window(candidate_key)
@@ -1803,6 +1752,8 @@ class FeatureManager:
         self._prewarmed: set[tuple[str, str]] = set()
         # Pre-partitioned list of DirectFeature instances to avoid per-frame isinstance checks.
         self._direct_features: List["DirectFeature"] = []
+        self._scene_feature_entries: Dict[str, tuple[tuple[Feature, object], ...]] = {}
+        self._scene_direct_feature_entries: Dict[str, tuple[tuple[DirectFeature, object], ...]] = {}
 
     def register(self, feature: Feature, host=None) -> Feature:
         if not isinstance(feature, Feature):
@@ -1835,6 +1786,7 @@ class FeatureManager:
         if isinstance(feature, DirectFeature):
             self._direct_features.append(feature)
         self._runtime_bound.discard(feature.name)
+        self._invalidate_scene_feature_views()
         return feature
 
     def unregister(self, name: str, host=None) -> bool:
@@ -1865,6 +1817,7 @@ class FeatureManager:
                 self._logic_bindings.pop(consumer_name, None)
         feature._feature_manager = None
         self._runnables.pop(feature.name, None)
+        self._invalidate_scene_feature_views()
         return True
 
     def get(self, name: str) -> Optional[Feature]:
@@ -1990,12 +1943,7 @@ class FeatureManager:
 
     def handle_event(self, event, host=None) -> bool:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._features.values():
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "feature_handle_event", metadata={"feature_name": feature.name}):
                 if feature.handle_event(host_obj, event):
                     return True
@@ -2003,34 +1951,19 @@ class FeatureManager:
 
     def update_features(self, host=None) -> None:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._features.values():
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "feature_update", metadata={"feature_name": feature.name}):
                 feature.on_update(host_obj)
 
     def draw(self, surface, theme, host=None) -> None:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._features.values():
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "feature_draw", metadata={"feature_name": feature.name}):
                 feature.draw(host_obj, surface, theme)
 
     def handle_direct_event(self, event, host=None) -> bool:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._direct_features:
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_direct_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "direct_feature_handle_event", metadata={"feature_name": feature.name}):
                 if feature.handle_direct_event(host_obj, event):
                     return True
@@ -2038,23 +1971,13 @@ class FeatureManager:
 
     def update_direct_features(self, dt_seconds: float, host=None) -> None:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._direct_features:
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_direct_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "direct_feature_update", metadata={"feature_name": feature.name}):
                 feature.on_direct_update(host_obj, dt_seconds)
 
     def draw_direct_features(self, surface, theme, host=None) -> None:
         collector = telemetry_collector()
-        target_scene_name = self.app.active_scene_name
-        for feature in self._direct_features:
-            feature_scene = feature.scene_name
-            if feature_scene is not None and feature_scene != target_scene_name:
-                continue
-            host_obj = self._resolve_host(feature.name, host)
+        for feature, host_obj in self._iter_scene_direct_feature_entries(override_host=host):
             with collector.span("feature_lifecycle", "direct_feature_draw", metadata={"feature_name": feature.name}):
                 feature.draw_direct(host_obj, surface, theme)
 
@@ -2103,14 +2026,14 @@ class FeatureManager:
 
     def build_features(self, host) -> None:
         collector = telemetry_collector()
-        for feature in self._features.values():
+        for feature, _host_obj in self._iter_scene_feature_entries(scene_name=None, include_all=True):
             feature.validate_host_for(host, "build")
             with collector.span("feature_lifecycle", "feature_build", metadata={"feature_name": feature.name}):
                 feature.build(host)
 
     def bind_runtime(self, host) -> None:
         collector = telemetry_collector()
-        for feature in self._features.values():
+        for feature, _host_obj in self._iter_scene_feature_entries(scene_name=None, include_all=True):
             feature.validate_host_for(host, "bind_runtime")
             with collector.span("feature_lifecycle", "feature_bind_runtime", metadata={"feature_name": feature.name}):
                 feature.bind_runtime(host)
@@ -2119,10 +2042,10 @@ class FeatureManager:
     def shutdown_runtime(self, host=None) -> None:
         """Call shutdown_runtime(host) for features with active runtime bindings."""
         collector = telemetry_collector()
-        for feature in reversed(tuple(self._features.values())):
+        active_entries = self._iter_scene_feature_entries(scene_name=None, include_all=True, override_host=host)
+        for feature, host_obj in reversed(active_entries):
             if feature.name not in self._runtime_bound:
                 continue
-            host_obj = self._resolve_host(feature.name, host)
             with collector.span("feature_lifecycle", "feature_shutdown_runtime", metadata={"feature_name": feature.name}):
                 feature.shutdown_runtime(host_obj)
             self._runtime_bound.discard(feature.name)
@@ -2130,11 +2053,59 @@ class FeatureManager:
     def configure_accessibility(self, host, tab_index_start: int) -> int:
         collector = telemetry_collector()
         next_index = int(tab_index_start)
-        for feature in self._features.values():
+        for feature, _host_obj in self._iter_scene_feature_entries(scene_name=None, include_all=True):
             feature.validate_host_for(host, "configure_accessibility")
             with collector.span("feature_lifecycle", "feature_configure_accessibility", metadata={"feature_name": feature.name}):
                 next_index = int(feature.configure_accessibility(host, next_index))
         return next_index
+
+    def _invalidate_scene_feature_views(self) -> None:
+        self._scene_feature_entries.clear()
+        self._scene_direct_feature_entries.clear()
+
+    def _build_scene_feature_entries(self, scene_name: str) -> tuple[tuple[Feature, object], ...]:
+        entries = []
+        for feature in self._features.values():
+            if not self._is_feature_active_for_scene(feature, scene_name=scene_name):
+                continue
+            entries.append((feature, self._feature_hosts.get(feature.name, self.app)))
+        return tuple(entries)
+
+    def _build_scene_direct_feature_entries(self, scene_name: str) -> tuple[tuple[DirectFeature, object], ...]:
+        entries = []
+        for feature in self._direct_features:
+            if not self._is_feature_active_for_scene(feature, scene_name=scene_name):
+                continue
+            entries.append((feature, self._feature_hosts.get(feature.name, self.app)))
+        return tuple(entries)
+
+    def _iter_scene_feature_entries(self, *, scene_name: Optional[str] = None, include_all: bool = False, override_host=None):
+        if include_all:
+            if override_host is None:
+                return tuple((feature, self._feature_hosts.get(feature.name, self.app)) for feature in self._features.values())
+            return tuple((feature, override_host) for feature in self._features.values())
+        target_scene_name = self.app.active_scene_name if scene_name is None else str(scene_name)
+        entries = self._scene_feature_entries.get(target_scene_name)
+        if entries is None:
+            entries = self._build_scene_feature_entries(target_scene_name)
+            self._scene_feature_entries[target_scene_name] = entries
+        if override_host is None:
+            return entries
+        return tuple((feature, override_host) for feature, _host_obj in entries)
+
+    def _iter_scene_direct_feature_entries(self, *, scene_name: Optional[str] = None, include_all: bool = False, override_host=None):
+        if include_all:
+            if override_host is None:
+                return tuple((feature, self._feature_hosts.get(feature.name, self.app)) for feature in self._direct_features)
+            return tuple((feature, override_host) for feature in self._direct_features)
+        target_scene_name = self.app.active_scene_name if scene_name is None else str(scene_name)
+        entries = self._scene_direct_feature_entries.get(target_scene_name)
+        if entries is None:
+            entries = self._build_scene_direct_feature_entries(target_scene_name)
+            self._scene_direct_feature_entries[target_scene_name] = entries
+        if override_host is None:
+            return entries
+        return tuple((feature, override_host) for feature, _host_obj in entries)
 
     def _require_feature(self, feature_name: str) -> Feature:
         feature = self.get(feature_name)

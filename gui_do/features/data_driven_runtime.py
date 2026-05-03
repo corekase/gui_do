@@ -128,20 +128,6 @@ class TaskPanelButtonSpec:
 
 
 @dataclass(frozen=True)
-class RelativeTaskPanelButtonSpec:
-    """Declarative descriptor for a task-panel button placed after dynamic slots."""
-
-    attr_name: str
-    control_id: str
-    label: str
-    on_click: Callable[[], object]
-    minimum_slot: int = 0
-    after_slot_indices: Sequence[int] = field(default_factory=tuple)
-    offset: int = 1
-    style: str = "angle"
-
-
-@dataclass(frozen=True)
 class RightAnchoredTaskPanelButtonSpec:
     """Declarative descriptor for a task-panel button anchored to the right edge."""
 
@@ -1108,24 +1094,6 @@ def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPan
             style=spec.style,
         )
         setattr(host, spec.attr_name, button)
-
-
-def add_relative_task_panel_button(host, task_panel, app_layout, spec: RelativeTaskPanelButtonSpec):
-    """Create one task-panel button from a relative-slot declarative spec."""
-    slot_candidates = [int(spec.minimum_slot)]
-    slot_candidates.extend(int(idx) for idx in tuple(spec.after_slot_indices))
-    slot_index = max(slot_candidates) + int(spec.offset)
-    button = add_task_panel_button(
-        task_panel,
-        app_layout,
-        control_id=spec.control_id,
-        slot_index=slot_index,
-        label=spec.label,
-        on_click=spec.on_click,
-        style=spec.style,
-    )
-    setattr(host, spec.attr_name, button)
-    return button
 
 
 def add_right_anchored_task_panel_button(host, task_panel, spec: RightAnchoredTaskPanelButtonSpec):

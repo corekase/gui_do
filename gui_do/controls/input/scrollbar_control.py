@@ -197,6 +197,21 @@ class ScrollbarControl(_AxisDragControlBase):
                 lock_rect = axis_lock
         app.pointer_capture.lock_rect = Rect(lock_rect)
 
+    def _constrained_drag_pointer(self, app: "GuiApplication", pointer_pos):
+        self._refresh_drag_lock_rect(app, pointer_pos)
+        lock = app.pointer_capture.lock_rect
+        if lock is None:
+            pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+            return pointer_pos, pointer_axis
+        if self.axis == LayoutAxis.HORIZONTAL:
+            pointer_axis = min(max(int(pointer_pos[0]), lock.left), lock.right - 1)
+            pointer_pos = (int(pointer_axis), int(lock.top))
+        else:
+            pointer_axis = min(max(int(pointer_pos[1]), lock.top), lock.bottom - 1)
+            pointer_pos = (int(lock.left), int(pointer_axis))
+        app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
+        return pointer_pos, pointer_axis
+
     def _update_drag_handle_pixel(self, pointer_axis: int) -> int:
         """Compute axis pixel from *pointer_axis*, clamp and store in ``_drag_handle_axis_pixel``, return the raw axis pixel."""
         is_h = self.axis == LayoutAxis.HORIZONTAL
@@ -275,36 +290,13 @@ class ScrollbarControl(_AxisDragControlBase):
             if self._ancestor_window() is None and isinstance(pointer_pos, tuple) and len(pointer_pos) == 2 and app.scene._point_in_window(pointer_pos):
                 self._end_drag(app, sync_pointer=True, release_pos=pointer_pos)
                 return False
-            self._refresh_drag_lock_rect(app, pointer_pos)
-            lock = app.pointer_capture.lock_rect
-            if lock is not None:
-                if self.axis == LayoutAxis.HORIZONTAL:
-                    pointer_axis = min(max(int(pointer_pos[0]), lock.left), lock.right - 1)
-                    pointer_pos = (int(pointer_axis), int(lock.top))
-                else:
-                    pointer_axis = min(max(int(pointer_pos[1]), lock.top), lock.bottom - 1)
-                    pointer_pos = (int(lock.left), int(pointer_axis))
-                # Keep rendered cursor anchored without warping hardware every motion event.
-                app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
-            else:
-                pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
             axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             return self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
 
         if event.is_mouse_up(1) and self.dragging:
             pointer_pos = app.logical_pointer_pos
-            self._refresh_drag_lock_rect(app, pointer_pos)
-            lock = app.pointer_capture.lock_rect
-            if lock is not None:
-                if self.axis == LayoutAxis.HORIZONTAL:
-                    pointer_axis = min(max(int(pointer_pos[0]), lock.left), lock.right - 1)
-                    pointer_pos = (int(pointer_axis), int(lock.top))
-                else:
-                    pointer_axis = min(max(int(pointer_pos[1]), lock.top), lock.bottom - 1)
-                    pointer_pos = (int(lock.left), int(pointer_axis))
-                app.set_logical_pointer_position(pointer_pos, apply_constraints=False)
-            else:
-                pointer_axis = int(pointer_pos[0]) if self.axis == LayoutAxis.HORIZONTAL else int(pointer_pos[1])
+            pointer_pos, pointer_axis = self._constrained_drag_pointer(app, pointer_pos)
             axis_pixel = self._update_drag_handle_pixel(pointer_axis)
             self._set_offset(self._pixel_to_offset(axis_pixel), reason=ValueChangeReason.MOUSE_DRAG)
             self._end_drag(app, sync_pointer=True)
