@@ -71,7 +71,7 @@ class TestDemoActionSpecs(unittest.TestCase):
 
         by_id = self._declarations_by_id(host)
         self.assertEqual(
-            ["exit", "nav_main", "nav_showcase", "palette_open"],
+            ["nav_main", "nav_showcase", "exit", "palette_open"],
             [d["action_id"] for d in host.action_registry.declarations],
         )
         self.assertEqual("Exit", by_id["exit"]["label"])

@@ -30,11 +30,13 @@ from gui_do import (
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
     AnchoredWindowSpec,
+    bind_routed_feature_lifecycle,
     LogicBindingSpec,
     create_feature_presented_window,
+    register_routed_feature_companions,
     resolve_canvas_local_point,
-    register_companion_logic_features,
-    setup_routed_feature_runtime,
+    RoutedFeatureLifecycleSpec,
+    RoutedRuntimeSpec,
 )
 
 
@@ -68,6 +70,20 @@ _LIFE_WINDOW_SPEC = AnchoredWindowSpec(
 
 _LIFE_LOGIC_BINDINGS = (
     LogicBindingSpec(alias="life", provider_name="life_simulation_logic"),
+)
+
+_LIFE_RUNTIME_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    scheduler_attr_name="scheduler",
+    scheduler_dispatch_limit=512,
+    logic_bindings=_LIFE_LOGIC_BINDINGS,
+)
+
+_LIFE_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
+    companion_providers=(lambda: LifeSimulationLogicFeature(),),
+    runtime_spec=_LIFE_RUNTIME_SPEC,
+    runtime_spec_attr_name="_runtime_spec",
+    scheduler_attr_name="scheduler",
 )
 
 _KEY_TOPIC = "topic"
@@ -182,6 +198,7 @@ class LifeSimulationFeature(RoutedFeature):
         self.life_dragging = False
         self.life_zoom_slider_last_value = 5
         self.scheduler = None
+        self._runtime_spec = None
         self.demo = None  # Will be set during build_window
         self.window = None
         self.menu_bar = None
@@ -192,11 +209,7 @@ class LifeSimulationFeature(RoutedFeature):
 
     def on_register(self, host) -> None:
         """Auto-register the companion logic feature when this feature is registered."""
-        register_companion_logic_features(
-            self._feature_manager,
-            host,
-            [LifeSimulationLogicFeature()],
-        )
+        register_routed_feature_companions(self, host, _LIFE_LIFECYCLE_SPEC)
 
     def build(self, host) -> None:
         """Build the Life feature UI using the new presenter/controller pattern."""
@@ -210,13 +223,7 @@ class LifeSimulationFeature(RoutedFeature):
 
     def bind_runtime(self, host) -> None:
         """Bind scheduler/runtime services required after scene construction."""
-        self.scheduler = setup_routed_feature_runtime(
-            self,
-            host,
-            scene_name="main",
-            scheduler_dispatch_limit=512,
-            logic_bindings=_LIFE_LOGIC_BINDINGS,
-        )
+        self.scheduler = bind_routed_feature_lifecycle(self, host, _LIFE_LIFECYCLE_SPEC)
         self._send_life_logic_command("snapshot")
 
     def message_handlers(self):

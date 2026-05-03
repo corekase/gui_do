@@ -1724,6 +1724,13 @@ class LogicFeature(Feature):
 class RoutedFeature(Feature):
     """Feature subtype that routes queued messages by a canonical topic key."""
 
+    def host_requirements_for(self, hook_name: str) -> tuple[str, ...]:
+        """Extend base requirements: bind_runtime always requires 'app' for scheduler wiring."""
+        explicit = super().host_requirements_for(hook_name)
+        if hook_name == "bind_runtime" and "app" not in explicit:
+            return ("app", *explicit)
+        return explicit
+
     def message_handlers(self) -> Dict[str, Callable[[Any, FeatureMessage], None]]:
         """Return mapping of topic names to message handlers."""
         return {}

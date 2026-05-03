@@ -2,7 +2,7 @@ import unittest
 
 from pygame import Rect
 
-from demo_features.control_showcase_category_visibility import (
+from demo_features.controls_demo_feature import (
     apply_category_visibility,
     category_for_row,
 )

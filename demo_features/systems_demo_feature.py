@@ -85,15 +85,19 @@ from gui_do import set_window_visible_state
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
     ActiveTabUpdateRouter,
+    bind_routed_feature_lifecycle,
+    RoutedRuntimeSpec,
+    RoutedFeatureLifecycleSpec,
+    ShortcutOverlaySpec,
+    TabbedPresenterSpec,
     bind_input_map_actions,
     AnchoredWindowSpec,
     build_tab_builder_specs,
-    compute_tabbed_window_layout,
     create_feature_presented_window,
     initialize_locale_registry,
     register_descriptors,
     register_tab_update_handlers,
-    setup_feature_presenter_tabs,
+    setup_feature_presenter_tabs_from_window_content,
     TabLayoutContext,
 )
 
@@ -128,6 +132,33 @@ _SYSTEMS_TAB_ENTRIES = (
     ("shortcuts", "Shortcuts"),
 )
 _SYSTEMS_TAB_SPECS = build_tab_builder_specs(_SYSTEMS_TAB_ENTRIES)
+
+_SYSTEMS_TABBED_PRESENTER_SPEC = TabbedPresenterSpec(
+    control_id="nsdf_tab",
+    selected_key="filter",
+    tab_height=_TAB_H,
+    tab_rows=2,
+    padding=0,
+    min_content_height=60,
+)
+
+_SYSTEMS_RUNTIME_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    shortcut_overlays=(
+        ShortcutOverlaySpec(
+            attr_name="_shortcut_overlay",
+            action_registry_attr="action_registry",
+            width=560,
+            height=400,
+        ),
+    ),
+)
+
+_SYSTEMS_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
+    runtime_spec=_SYSTEMS_RUNTIME_SPEC,
+    runtime_spec_attr_name="_runtime_spec",
+    scheduler_attr_name="scheduler",
+)
 
 _LOCALE_TABLE_SPECS = (
     (
@@ -1595,21 +1626,9 @@ class SystemsDemoFeature(RoutedFeature):
 
     def bind_runtime(self, host) -> None:
         super().bind_runtime(host)
+        bind_routed_feature_lifecycle(self, host, _SYSTEMS_LIFECYCLE_SPEC)
         self._main_scene = host.app.create_scene("main")
         self._frame_timer.reset()
-        # Build ShortcutHelpOverlay once overlay manager is available
-        action_registry = getattr(host, "action_registry", None)
-        overlay_rect = Rect(
-            max(0, host.app.surface.get_width() // 2 - 280),
-            max(0, host.app.surface.get_height() // 2 - 200),
-            560,
-            400,
-        )
-        self._shortcut_overlay = ShortcutHelpOverlay(
-            host.app.overlay,
-            action_registry=action_registry,
-            overlay_rect=overlay_rect,
-        )
 
 
 class _SystemsWindowPresenter(WindowPresenter):
@@ -1625,26 +1644,18 @@ class _SystemsWindowPresenter(WindowPresenter):
         # exists before registering/building tab content.
         self.feature.window = self.window
         self.feature.demo = self.host
-        content = self.window.content_rect()
-        body_rect, body_content_rect = compute_tabbed_window_layout(
-            content,
-            tab_height=_TAB_H,
-            tab_rows=2,
-            padding=0,
-            min_content_height=60,
-        )
-        self.tab = setup_feature_presenter_tabs(
+        self.tab = setup_feature_presenter_tabs_from_window_content(
             self,
-            control_id="nsdf_tab",
-            tab_rect=body_rect,
+            window=self.window,
+            spec=_SYSTEMS_TABBED_PRESENTER_SPEC,
             tab_specs=_SYSTEMS_TAB_SPECS,
-            selected_key="filter",
             on_change=self.feature._on_tab_change,
             tab_manager=self.feature._tabs,
             feature=self.feature,
             host=self.host,
-            tab_content_rect=body_content_rect,
+            on_activate_callbacks=(
+                ("locale", lambda: setattr(self.feature, "_text_flow_dirty", True)),
+            ),
         )
         self.feature.tab = self.tab
-        self.feature._tabs.on_activate("locale", lambda: setattr(self.feature, "_text_flow_dirty", True))
         self.window.visible = False

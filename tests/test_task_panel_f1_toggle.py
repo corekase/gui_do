@@ -92,6 +92,15 @@ class _StubApp:
         self.overlay = _StubOverlay()
         self.task_panel_focus = task_panel_focus
         self.focus = _StubFocus()
+        self._scheduler = _StubScheduler()
+
+    def get_scene_scheduler(self, scene_name: str):
+        return self._scheduler
+
+
+class _StubScheduler:
+    def set_message_dispatch_limit(self, limit: int):
+        pass
 
 
 class _StubHost:

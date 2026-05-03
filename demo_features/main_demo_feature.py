@@ -10,6 +10,7 @@ except ModuleNotFoundError:
 ensure_repo_root_on_path()
 
 from pygame import Rect
+import pygame
 
 from gui_do import (
     ArrowBoxControl,
@@ -75,13 +76,39 @@ from gui_do import (
     TransferManager,
 )
 from gui_do.features.data_driven_runtime import (
+    RoutedRuntimeSpec,
+    ShortcutOverlaySpec,
+    TaskPanelFocusToggleSpec,
     TaskPanelButtonSpec,
     add_task_panel_button,
     add_task_panel_buttons,
     add_standard_scene_menu_strip,
     add_window_toggle_task_panel_controls,
+    setup_routed_runtime,
     register_tooltip_specs,
     register_window_toggle_tooltips,
+)
+
+_MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
+    scene_name="main",
+    shortcut_overlays=(
+        ShortcutOverlaySpec(
+            attr_name="_help_overlay",
+            action_registry_attr="action_registry",
+            width=600,
+            height=440,
+            toggle_action_name="show_help",
+            toggle_key=pygame.K_F9,
+            toggle_scene_name="main",
+        ),
+    ),
+    task_panel_focus_toggles=(
+        TaskPanelFocusToggleSpec(
+            action_name="toggle_task_panel_focus",
+            scene_name="main",
+            key=pygame.K_F1,
+        ),
+    ),
 )
 
 
@@ -98,7 +125,7 @@ class MainDemoFeature(Feature):
             "window_presentation",
             "action_registry",
         ),
-        "bind_runtime": ("app", "action_registry"),
+        "bind_runtime": ("app",),
     }
 
     def __init__(self) -> None:
@@ -213,32 +240,8 @@ class MainDemoFeature(Feature):
         host.app.tile_windows()
 
     def bind_runtime(self, host) -> None:
-        """Create runtime overlays and bind explicit scene-owned hotkeys."""
-        overlay_rect = Rect(
-            max(0, host.app.surface.get_width() // 2 - 300),
-            max(0, host.app.surface.get_height() // 2 - 220),
-            600,
-            440,
-        )
-        self._help_overlay = ShortcutHelpOverlay(
-            host.app.overlay,
-            action_registry=host.action_registry,
-            overlay_rect=overlay_rect,
-        )
-        host.app.actions.register_action(
-            "show_help",
-            lambda _event: (self._help_overlay.toggle() or True),
-        )
-        host.app.actions.bind_key(__import__("pygame").K_F9, "show_help", scene="main")
-
-        from gui_do.features.data_driven_runtime import bind_task_panel_focus_toggle
-        bind_task_panel_focus_toggle(
-            host.app.actions,
-            host.app,
-            action_name="toggle_task_panel_focus",
-            scene_name="main",
-            key=__import__("pygame").K_F1,
-        )
+        """Wire runtime overlays and hotkeys from the declarative runtime spec."""
+        setup_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
 
     def _make_sized_title_label(
         self,

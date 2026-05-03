@@ -27,11 +27,15 @@ from gui_do import (
 from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
     AnchoredWindowSpec,
+    bind_routed_feature_lifecycle,
+    EventSubscriptionSpec,
     LogicBindingSpec,
     create_feature_presented_window,
     ensure_scene_scheduler,
-    register_companion_logic_features,
-    setup_routed_feature_runtime,
+    register_routed_feature_companions,
+    RoutedFeatureLifecycleSpec,
+    RoutedRuntimeSpec,
+    shutdown_routed_feature_lifecycle,
 )
 
 
@@ -201,6 +205,19 @@ _MANDEL_LOGIC_BINDINGS = (
     LogicBindingSpec(alias="can4", provider_name=_MANDEL_LOGIC_CAN4),
 )
 
+_MANDEL_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
+    companion_providers=(
+        lambda: MandelbrotLogicFeature(_MANDEL_LOGIC_PRIMARY),
+        lambda: MandelbrotLogicFeature(_MANDEL_LOGIC_CAN1),
+        lambda: MandelbrotLogicFeature(_MANDEL_LOGIC_CAN2),
+        lambda: MandelbrotLogicFeature(_MANDEL_LOGIC_CAN3),
+        lambda: MandelbrotLogicFeature(_MANDEL_LOGIC_CAN4),
+    ),
+    runtime_spec_factory=lambda feature, host: feature._build_runtime_spec(host),
+    runtime_spec_attr_name="_runtime_spec",
+    scheduler_attr_name="scheduler",
+)
+
 
 class MandelbrotLogicFeature(LogicFeature):
     """Domain logic provider for Mandelbrot pixel and algorithm calculations."""
@@ -336,20 +353,11 @@ class MandelbrotRenderFeature(RoutedFeature):
             "can3": self.LOGIC_ALIAS_CAN3,
             "can4": self.LOGIC_ALIAS_CAN4,
         }
+        self._runtime_spec: RoutedRuntimeSpec | None = None
 
     def on_register(self, host) -> None:
         """Auto-register all companion logic features when this feature is registered."""
-        register_companion_logic_features(
-            self._feature_manager,
-            host,
-            [
-                MandelbrotLogicFeature(_MANDEL_LOGIC_PRIMARY),
-                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN1),
-                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN2),
-                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN3),
-                MandelbrotLogicFeature(_MANDEL_LOGIC_CAN4),
-            ],
-        )
+        register_routed_feature_companions(self, host, _MANDEL_LIFECYCLE_SPEC)
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
@@ -364,19 +372,23 @@ class MandelbrotRenderFeature(RoutedFeature):
     def bind_runtime(self, host) -> None:
         """Bind scheduler, keyboard shortcuts, and event-bus subscription hooks."""
         self.demo = host  # Store host reference
-        self.scheduler = setup_routed_feature_runtime(
-            self,
-            host,
+        self.scheduler = bind_routed_feature_lifecycle(self, host, _MANDEL_LIFECYCLE_SPEC)
+        self._set_busy_dispatch_mode(False)
+        self.status_bus_ready = True
+
+    def _build_runtime_spec(self, host) -> RoutedRuntimeSpec:
+        return RoutedRuntimeSpec(
             scene_name="main",
             logic_bindings=_MANDEL_LOGIC_BINDINGS,
+            event_subscriptions=(
+                EventSubscriptionSpec(
+                    attr_name="status_subscription",
+                    topic=self.status_topic,
+                    handler=lambda payload: self.on_status_event(host, payload),
+                    scope=self.status_scope,
+                ),
+            ),
         )
-        self._set_busy_dispatch_mode(False)
-        self.status_subscription = host.app.events.subscribe(
-            self.status_topic,
-            lambda payload: self.on_status_event(host, payload),
-            scope=self.status_scope,
-        )
-        self.status_bus_ready = True
 
     def _resolve_logic(self, alias: str) -> Optional[MandelbrotLogicFeature]:
         provider_name = self.bound_logic_name(alias=alias)
@@ -403,9 +415,7 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def shutdown_runtime(self, host) -> None:
         """Unsubscribe runtime resources created by bind_runtime."""
-        if self.status_subscription is not None:
-            host.app.events.unsubscribe(self.status_subscription)
-            self.status_subscription = None
+        shutdown_routed_feature_lifecycle(self, host, _MANDEL_LIFECYCLE_SPEC)
         self.status_bus_ready = False
         self._busy_profile_name = "default"
         self._set_busy_dispatch_mode(False)
