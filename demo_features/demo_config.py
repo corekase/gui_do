@@ -18,11 +18,13 @@ from gui_do import (
     FeatureWindowBundleBindingSpec,
     FontRoleBindingSpec,
     HostApplicationBindingSpec,
+    PaletteBindingSpec,
     SceneBundleBindingSpec,
     SceneTransitionStyle,
     TelemetryConfig,
     build_host_application_config,
 )
+import pygame
 
 
 DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
@@ -108,7 +110,8 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
             ActionBindingSpec(
                 kind="palette_open",
                 action_id="palette_open",
-                label="Open Command Palette (F5)",
+                label="Open Command Palette",
+                key=pygame.K_F5,
             ),
         ),
         static_accessibility_entries=(
@@ -124,6 +127,10 @@ DEMO_BOOTSTRAP_CONFIG = build_host_application_config(
         ),
         telemetry=TelemetryConfig(enabled=False),
         target_fps=120,
+        palette_spec=PaletteBindingSpec(
+            enable_builtin_entries=True,
+            connect_window_presentation=True,
+        ),
     )
 )
 

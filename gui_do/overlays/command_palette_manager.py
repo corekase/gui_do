@@ -299,9 +299,9 @@ class CommandPaletteManager:
         self._selection_provider: Optional[Callable[[], Optional[str]]] = None
         self._entry_selected_callback: Optional[Callable[[CommandEntry], None]] = None
         self._selected_entry_id_by_scene: Dict[str, str] = {}
+        self._window_presentation = None
         if app is not None:
             self._register_background_trigger(app)
-            self._bind_builtin_toggle_key(app)
 
     # ------------------------------------------------------------------
     # Registry API
@@ -360,6 +360,7 @@ class CommandPaletteManager:
         app: "GuiApplication",
         *,
         on_scene_selected: Optional[Callable[[str], None]] = None,
+        window_presentation=None,
     ) -> None:
         """Populate built-in scene/window entries and remember selection per scene.
 
@@ -368,7 +369,12 @@ class CommandPaletteManager:
         - window entries for the active scene using window titles
 
         Selection is remembered per active scene and restored on reopen.
+
+        When *window_presentation* (a ``FeatureWindowPresentationModel``) is
+        provided, window toggle actions route through it so that task panel
+        toggle buttons and tile_windows stay in sync with the palette.
         """
+        self._window_presentation = window_presentation
 
         def _before_show() -> None:
             self._register_builtin_scene_and_window_entries(app, on_scene_selected=on_scene_selected)
@@ -664,6 +670,11 @@ class CommandPaletteManager:
             switch_scene(scene_name)
 
     def _toggle_builtin_window(self, app: "GuiApplication", window) -> None:
+        # Route through the user's presentation model when one is connected so
+        # that task panel toggle buttons and tile_windows stay in sync.
+        if self._window_presentation is not None:
+            if self._window_presentation.toggle_window(window):
+                return
         next_visible = not bool(getattr(window, "visible", False))
         setter = self._resolve_builtin_visibility_setter(app, window)
         if setter is not None:

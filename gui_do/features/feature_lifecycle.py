@@ -939,6 +939,28 @@ class FeatureWindowPresentationModel:
         for key in self._bindings:
             self.set_visible(key, visible)
 
+    def toggle_window(self, window) -> bool:
+        """Toggle a window by object reference, routing through the presentation model.
+
+        Looks up the registered key for *window* by control_id so that the task
+        panel toggle button and tile_windows are updated in sync.  Returns
+        ``True`` if the window was found and toggled, ``False`` otherwise.
+        """
+        if window is None:
+            return False
+        control_id = str(getattr(window, "control_id", "")).strip()
+        key = self._bindings_by_control_id.get(control_id)
+        if key is None:
+            for candidate_key in self._bindings:
+                w = self.get_window(candidate_key)
+                if w is window:
+                    key = candidate_key
+                    break
+        if key is None:
+            return False
+        self.toggle(key)
+        return True
+
     def handle_window_toggle(self, window, next_visible: bool) -> bool:
         if window is None:
             return False

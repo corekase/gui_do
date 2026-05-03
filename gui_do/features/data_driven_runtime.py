@@ -72,6 +72,7 @@ class ActionSpec:
     kind: str           # "exit" | "scene_nav" | "palette_open"
     target: str | None = None
     category: str | None = None
+    key: int | None = None
 
 
 @dataclass(frozen=True)
@@ -336,6 +337,7 @@ class ActionBindingSpec:
     label: str
     target: str | None = None
     category: str | None = None
+    key: int | None = None
 
 
 @dataclass(frozen=True)
@@ -375,6 +377,20 @@ class SceneBundleBindingSpec:
 
 
 @dataclass(frozen=True)
+class PaletteBindingSpec:
+    """User-side declaration for command palette behavior.
+
+    gui_do provides the command palette as a facility; this spec lets the user
+    declare whether built-in scene/window entries are populated and whether
+    window toggles route through the window presentation model (keeping task
+    panel toggle buttons in sync).
+    """
+
+    enable_builtin_entries: bool = True
+    connect_window_presentation: bool = True
+
+
+@dataclass(frozen=True)
 class HostApplicationBindingSpec:
     """Input descriptor for building a complete HostApplicationConfig."""
 
@@ -401,6 +417,7 @@ class HostApplicationBindingSpec:
     runtime_default_bind_escape_to_exit: bool = False
     runtime_default_prewarm: bool = False
     static_accessibility_role: str = "button"
+    palette_spec: PaletteBindingSpec | None = None
 
 
 @dataclass(frozen=True)
@@ -543,6 +560,7 @@ class HostApplicationConfig:
     scene_roots: tuple[SceneRootSpec, ...] = field(default_factory=tuple)
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     target_fps: int = 120
+    palette_spec: PaletteBindingSpec | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -641,10 +659,13 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     # 12 – Action registry + command palette
     host.action_registry = ActionRegistry()
     host._palette_manager = CommandPaletteManager(host.app.overlay, host.app)
-    host._palette_manager.enable_builtin_scene_and_window_entries(
-        host.app,
-        on_scene_selected=host.scene_transitions.go,
-    )
+    palette_spec = getattr(config, "palette_spec", None)
+    if palette_spec is not None and palette_spec.enable_builtin_entries:
+        host._palette_manager.enable_builtin_scene_and_window_entries(
+            host.app,
+            on_scene_selected=host.scene_transitions.go,
+            window_presentation=host.window_presentation if palette_spec.connect_window_presentation else None,
+        )
     declare_host_actions(host, config.action_specs)
 
     # 13 – Build features, sync visibility, pristine assets, standard actions
@@ -677,14 +698,22 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
 
 
 def declare_host_actions(host, action_specs) -> None:
-    """Declare all standard actions on host.action_registry from declarative specs."""
+    """Declare all standard actions on host.action_registry from declarative specs.
+
+    Also binds any declared key to the application input dispatcher so the user's
+    key choice (e.g. F5 for palette_open) is honoured without any hidden auto-binding.
+    """
     r = host.action_registry
+    app_actions = getattr(host.app, "actions", None)
     for spec in action_specs:
         handler = _build_standard_action_handler(host, spec)
         if spec.category is None:
             r.declare(spec.action_id, spec.label, handler)
         else:
             r.declare(spec.action_id, spec.label, handler, category=spec.category)
+        if spec.key is not None and app_actions is not None:
+            app_actions.register_action(str(spec.action_id), lambda _ev, _h=handler: _h(None, _ev))
+            app_actions.bind_key(int(spec.key), str(spec.action_id))
     host.window_presentation.declare_actions(r, category="Windows")
 
 
@@ -1581,7 +1610,8 @@ def make_exit_action(
 def make_palette_open_action(
     action_id: str = "palette_open",
     *,
-    label: str = "Open Command Palette (F5)",
+    label: str = "Open Command Palette",
+    key: int | None = None,
 ) -> ActionSpec:
     """Build a standard command-palette open ActionSpec."""
     return ActionSpec(
@@ -1590,6 +1620,7 @@ def make_palette_open_action(
         kind="palette_open",
         target=None,
         category=None,
+        key=key,
     )
 
 
@@ -1760,6 +1791,7 @@ def build_action_specs(entries: Sequence[ActionBindingSpec | ActionSpec]) -> tup
                 make_palette_open_action(
                     action_id=str(entry.action_id),
                     label=str(entry.label),
+                    key=entry.key,
                 )
             )
             continue
@@ -2212,6 +2244,7 @@ def build_host_application_config(
         scene_roots=scene_roots,
         telemetry=telemetry,
         target_fps=int(config.target_fps),
+        palette_spec=config.palette_spec,
     )
 
 

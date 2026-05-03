@@ -80,7 +80,7 @@ class TestDemoActionSpecs(unittest.TestCase):
         self.assertEqual("Scenes", by_id["nav_main"]["category"])
         self.assertEqual("Go to Controls Showcase", by_id["nav_showcase"]["label"])
         self.assertEqual("Scenes", by_id["nav_showcase"]["category"])
-        self.assertEqual("Open Command Palette (F5)", by_id["palette_open"]["label"])
+        self.assertEqual("Open Command Palette", by_id["palette_open"]["label"])
         self.assertIsNone(by_id["palette_open"]["category"])
 
         self.assertEqual(1, len(host.window_presentation.declare_calls))
