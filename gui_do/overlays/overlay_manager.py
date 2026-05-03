@@ -21,6 +21,7 @@ class OverlayRecord:
     control: "OverlayPanelControl"
     dismiss_on_outside_click: bool = True
     dismiss_on_escape: bool = True
+    consume_unhandled_keys: bool = False
     on_dismiss: Optional[Callable[[], None]] = None
 
 
@@ -51,6 +52,7 @@ class OverlayManager:
         *,
         dismiss_on_outside_click: bool = True,
         dismiss_on_escape: bool = True,
+        consume_unhandled_keys: bool = False,
         on_dismiss: Optional[Callable[[], None]] = None,
     ) -> OverlayHandle:
         """Register and show an overlay. Replaces any existing overlay with the same id."""
@@ -60,6 +62,7 @@ class OverlayManager:
             control=control,
             dismiss_on_outside_click=dismiss_on_outside_click,
             dismiss_on_escape=dismiss_on_escape,
+            consume_unhandled_keys=consume_unhandled_keys,
             on_dismiss=on_dismiss,
         )
         self._records.append(record)
@@ -141,6 +144,11 @@ class OverlayManager:
             if rec.control.visible and rec.control.enabled:
                 consumed = rec.control.handle_routed_event(event, app)
                 if consumed:
+                    return True
+
+        if event.kind in (EventType.KEY_DOWN, EventType.KEY_UP, EventType.TEXT_INPUT, EventType.TEXT_EDITING):
+            for rec in reversed(self._records):
+                if rec.control.visible and rec.control.enabled and rec.consume_unhandled_keys:
                     return True
 
         return False

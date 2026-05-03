@@ -4,8 +4,10 @@ Both modules are tested for state-management logic only; draw() is not called
 so no pygame display is required.
 """
 import unittest
+from types import SimpleNamespace
 
 import pygame
+from gui_do.events.gui_event import GuiEvent, EventType
 
 from gui_do.overlays.toast_manager import ToastManager, ToastHandle, ToastSeverity
 from gui_do.overlays.notification_center import NotificationCenter, NotificationRecord
@@ -150,6 +152,58 @@ class TestToastManagerEventBusMessage(unittest.TestCase):
 
     def test_empty_dict_no_error(self):
         self.mgr.on_event_bus_message({})
+
+
+class _StubToastFont:
+    point_size = 18
+
+    @staticmethod
+    def text_size(text):
+        return (max(8, len(str(text)) * 8), 18)
+
+
+class _StubToastFonts:
+    def font_instance(self, *_args, **_kwargs):
+        return _StubToastFont()
+
+
+class _StubToastTheme:
+    fonts = _StubToastFonts()
+
+
+class TestToastManagerClickHandling(unittest.TestCase):
+    def setUp(self):
+        self.mgr = ToastManager(_SCREEN)
+        self.app = SimpleNamespace(theme=_StubToastTheme())
+
+    def _click(self, *, x: int, y: int, kind: EventType = EventType.MOUSE_BUTTON_DOWN):
+        event_type = pygame.MOUSEBUTTONDOWN if kind is EventType.MOUSE_BUTTON_DOWN else pygame.MOUSEBUTTONUP
+        ev = GuiEvent(kind=kind, type=event_type, pos=(x, y), button=1)
+        return self.mgr.route_event(ev, self.app)
+
+    def test_click_inside_toast_consumes_by_default(self):
+        self.mgr.show("hello")
+        consumed = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24)
+        self.assertTrue(consumed)
+
+    def test_click_inside_toast_invokes_callback(self):
+        fired = []
+        self.mgr.show("hello", on_click=lambda: fired.append("ok"))
+        consumed = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24)
+        self.assertTrue(consumed)
+        self.assertEqual(["ok"], fired)
+
+    def test_click_inside_toast_mouse_up_consumes_without_callback(self):
+        fired = []
+        self.mgr.show("hello", on_click=lambda: fired.append("ok"))
+        consumed = self._click(x=_SCREEN.right - 24, y=_SCREEN.bottom - 24, kind=EventType.MOUSE_BUTTON_UP)
+        self.assertTrue(consumed)
+        self.assertEqual([], fired)
+
+    def test_click_outside_toast_not_consumed(self):
+        self.mgr.show("hello")
+        consumed = self._click(x=8, y=8)
+        self.assertFalse(consumed)
 
 
 # ===========================================================================

@@ -44,13 +44,27 @@ class _StubOverlayManager:
         h = _StubHandle(open_=True)
         self._handle = h
         self.shown.append(overlay_id)
+        self._on_dismiss = kwargs.get("on_dismiss")
         return h
 
     def hide(self, overlay_id) -> bool:
         if self._handle is not None:
             self._handle.is_open = False
+        if callable(getattr(self, "_on_dismiss", None)):
+            self._on_dismiss()
         self.hidden.append(overlay_id)
         return True
+
+
+class _StubFocus:
+    def __init__(self):
+        self.focused_node = None
+
+    def set_focus(self, node, *, via_keyboard=False):
+        self.focused_node = node
+
+    def clear_focus(self):
+        self.focused_node = None
 
 
 class _StubActionDescriptor:
@@ -318,6 +332,54 @@ class TestShortcutHelpOverlaySections(unittest.TestCase):
         titles = [s.title for s in ov.sections]
         self.assertEqual(["Animals", "Zoo"], titles)
 
+    def test_sections_include_manual_shortcut_lines(self):
+        ov = ShortcutHelpOverlay(
+            _StubOverlayManager(),
+            manual_shortcut_lines=(
+                "F1: Raise/Lower Task Panel",
+                "F5: Toggle Command Palette",
+            ),
+            manual_section_title="Keyboard",
+        )
+
+        sections = ov.sections
+        self.assertEqual(1, len(sections))
+        self.assertEqual("Keyboard", sections[0].title)
+        self.assertEqual("F1", sections[0].entries[0].chord_display)
+        self.assertEqual("Raise/Lower Task Panel", sections[0].entries[0].label)
+
+    def test_sections_prepend_manual_shortcuts_when_requested(self):
+        registry = _StubActionRegistry([
+            _StubActionDescriptor("save", "Save", category="General"),
+        ])
+        ov = ShortcutHelpOverlay(
+            _StubOverlayManager(),
+            action_registry=registry,
+            manual_shortcut_lines=("F9: Display this help",),
+            manual_section_title="Keyboard",
+            prepend_manual_shortcuts=True,
+        )
+
+        titles = [s.title for s in ov.sections]
+        self.assertEqual("Keyboard", titles[0])
+
+    def test_manual_shortcuts_only_omits_registry_sections(self):
+        registry = _StubActionRegistry([
+            _StubActionDescriptor("save", "Save", category="General"),
+        ])
+        ov = ShortcutHelpOverlay(
+            _StubOverlayManager(),
+            action_registry=registry,
+            manual_shortcut_lines=("F9: Display this help",),
+            manual_section_title="Keyboard",
+            manual_shortcuts_only=True,
+        )
+
+        sections = ov.sections
+        self.assertEqual(1, len(sections))
+        self.assertEqual("Keyboard", sections[0].title)
+        self.assertEqual("Display this help", sections[0].entries[0].label)
+
 
 # ===========================================================================
 # ShortcutHelpOverlay — show / hide / toggle / is_open
@@ -366,6 +428,37 @@ class TestShortcutHelpOverlayVisibility(unittest.TestCase):
         new_rect = Rect(50, 50, 800, 600)
         ov.set_rect(new_rect)
         self.assertEqual(Rect(50, 50, 800, 600), ov._rect)
+
+    def test_show_captures_focus_and_hide_restores_when_no_new_focus(self):
+        mgr = _StubOverlayManager()
+        focus = _StubFocus()
+        prior = SimpleNamespace(control_id="prior", visible=True, enabled=True)
+        focus.set_focus(prior)
+        app = SimpleNamespace(focus=focus, scene=SimpleNamespace(contains=lambda node: node is prior))
+        ov = ShortcutHelpOverlay(mgr, app=app)
+
+        ov.show()
+        self.assertIsNone(focus.focused_node)
+
+        ov.hide()
+        self.assertIs(focus.focused_node, prior)
+
+    def test_hide_preserves_clicked_focus_target(self):
+        mgr = _StubOverlayManager()
+        focus = _StubFocus()
+        prior = SimpleNamespace(control_id="prior", visible=True, enabled=True)
+        clicked = SimpleNamespace(control_id="clicked", visible=True, enabled=True)
+        focus.set_focus(prior)
+        app = SimpleNamespace(
+            focus=focus,
+            scene=SimpleNamespace(contains=lambda node: node in (prior, clicked)),
+        )
+        ov = ShortcutHelpOverlay(mgr, app=app)
+
+        ov.show()
+        focus.set_focus(clicked)
+        ov.hide()
+        self.assertIs(focus.focused_node, clicked)
 
 
 if __name__ == "__main__":

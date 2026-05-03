@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Deque, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Deque, Dict, Optional, Tuple, TYPE_CHECKING
 
 import pygame
 from pygame import Rect
@@ -43,6 +43,7 @@ class _ToastEntry:
     duration_seconds: Optional[float]  # None = persistent
     background_color: Optional[tuple] = None
     outline_color: Optional[tuple] = None
+    on_click: Optional[Callable[[], None]] = None
     elapsed: float = 0.0
     alpha: float = 1.0
 
@@ -95,6 +96,7 @@ class ToastManager:
         duration_seconds: Optional[float] = None,
         background_color: Optional[tuple] = None,
         outline_color: Optional[tuple] = None,
+        on_click: Optional[Callable[[], None]] = None,
     ) -> ToastHandle:
         toast_id = self._next_id
         self._next_id += 1
@@ -107,6 +109,7 @@ class ToastManager:
             duration_seconds=duration,
             background_color=background_color,
             outline_color=outline_color,
+            on_click=on_click,
         )
         self._toasts.append(entry)
         return ToastHandle(toast_id, self)
@@ -119,6 +122,7 @@ class ToastManager:
         severity: ToastSeverity = ToastSeverity.INFO,
         background_color: Optional[tuple] = None,
         outline_color: Optional[tuple] = None,
+        on_click: Optional[Callable[[], None]] = None,
     ) -> ToastHandle:
         toast_id = self._next_id
         self._next_id += 1
@@ -130,6 +134,7 @@ class ToastManager:
             duration_seconds=None,  # persistent
             background_color=background_color,
             outline_color=outline_color,
+            on_click=on_click,
         )
         self._toasts.append(entry)
         return ToastHandle(toast_id, self)
@@ -174,43 +179,95 @@ class ToastManager:
     def draw(self, surface: "pygame.Surface", theme: "ColorTheme") -> None:
         if not self._toasts:
             return
-        if self._draw_font is None:
-            if not hasattr(theme, "fonts"):
-                raise RuntimeError("ToastManager requires theme with centralized font roles.")
-            self._draw_font = theme.fonts.font_instance("toast.text", size=18)
-        font = self._draw_font
-        gap = self._gap
-        margin = self._margin
-        sr = self._screen_rect
+        font = self._ensure_draw_font(theme)
 
         default_background_color = getattr(theme, "medium", (0, 150, 150))
         default_outline_color = getattr(theme, "shadow", (0, 0, 0))
         if hasattr(theme, "none"):
             default_outline_color = getattr(theme, "none")
-
-        # Precompute all toast sizes and positions
-        toast_rects = []
         text_color = (240, 240, 240)
+        layout = self._layout_toasts(font)
+
+        # Draw each toast
+        for entry, rect in layout:
+            color = entry.background_color if entry.background_color is not None else default_background_color
+            outline = entry.outline_color if entry.outline_color is not None else default_outline_color
+            pygame.draw.rect(surface, color, rect, border_radius=4)
+            pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
+            draw_y = rect.y + 10
+            if entry.title:
+                title_surf = theme.fonts.render_text(entry.title, text_color, role_name="toast.text", size=font.point_size)
+                surface.blit(title_surf, (rect.x + 16, draw_y))
+                draw_y += title_surf.get_height() + 6
+            msg_surf = theme.fonts.render_text(entry.message, text_color, role_name="toast.text", size=font.point_size)
+            surface.blit(msg_surf, (rect.x + 16, draw_y))
+
+    def route_event(self, event, app) -> bool:
+        """Consume clicks on toast bounds and invoke optional per-toast callbacks."""
+        if not self._toasts:
+            return False
+        if getattr(event, "kind", None) not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            from ..events.gui_event import EventType
+
+            if getattr(event, "kind", None) not in (EventType.MOUSE_BUTTON_DOWN, EventType.MOUSE_BUTTON_UP):
+                return False
+        if int(getattr(event, "button", 0) or 0) != 1:
+            return False
+        pos = getattr(event, "pos", None)
+        if not (isinstance(pos, tuple) and len(pos) == 2):
+            return False
+
+        theme = getattr(app, "theme", None)
+        if theme is None:
+            return False
+        font = self._ensure_draw_font(theme)
+        for entry, rect in self._layout_toasts(font):
+            if rect.collidepoint(pos):
+                from ..events.gui_event import EventType
+
+                if getattr(event, "kind", None) in (pygame.MOUSEBUTTONDOWN, EventType.MOUSE_BUTTON_DOWN):
+                    callback = entry.on_click
+                    if callable(callback):
+                        try:
+                            callback()
+                        except Exception:
+                            pass
+                return True
+        return False
+
+    def _ensure_draw_font(self, theme):
+        if self._draw_font is not None:
+            return self._draw_font
+        if not hasattr(theme, "fonts"):
+            raise RuntimeError("ToastManager requires theme with centralized font roles.")
+        self._draw_font = theme.fonts.font_instance("toast.text", size=18)
+        return self._draw_font
+
+    def _layout_toasts(self, font) -> list[tuple[_ToastEntry, Rect]]:
+        gap = self._gap
+        margin = self._margin
+        sr = self._screen_rect
         padding_x = 16
         padding_y = 10
         min_width = 120
         min_height = 40
-        for entry in reversed(self._toasts):
-            # Measure title and message
+
+        toast_rects = []
+        ordered_entries = list(reversed(self._toasts))
+        for entry in ordered_entries:
             title_w = title_h = 0
             if entry.title:
                 title_w, title_h = font.text_size(entry.title)
             msg_w, msg_h = font.text_size(entry.message)
             content_w = max(title_w, msg_w)
             content_h = title_h + msg_h if entry.title else msg_h
-            w = max(content_w + 2 * padding_x, min_width)
+            w = max(content_w + 2 * padding_x, min_width, self._toast_width)
             h = max(content_h + 2 * padding_y + (6 if entry.title else 0), min_height)
             toast_rects.append((w, h))
 
-        # Compute positions for each toast
-        positions = []
+        rects: list[Rect] = []
         y_offset = 0
-        for i, (w, h) in enumerate(toast_rects):
+        for w, h in toast_rects:
             if "right" in self._position:
                 x = sr.right - w - margin
             elif "left" in self._position:
@@ -222,23 +279,10 @@ class ToastManager:
                 y = sr.bottom - margin - y_offset - h
             else:
                 y = sr.top + margin + y_offset
-            positions.append((x, y, w, h))
+            rects.append(Rect(int(x), int(y), int(w), int(h)))
             y_offset += h + gap
 
-        # Draw each toast
-        for (entry, (x, y, w, h)) in zip(reversed(self._toasts), positions):
-            color = entry.background_color if entry.background_color is not None else default_background_color
-            outline = entry.outline_color if entry.outline_color is not None else default_outline_color
-            rect = Rect(x, y, w, h)
-            pygame.draw.rect(surface, color, rect, border_radius=4)
-            pygame.draw.rect(surface, outline, rect, width=2, border_radius=4)
-            draw_y = rect.y + padding_y
-            if entry.title:
-                title_surf = theme.fonts.render_text(entry.title, text_color, role_name="toast.text", size=font.point_size)
-                surface.blit(title_surf, (rect.x + padding_x, draw_y))
-                draw_y += title_surf.get_height() + 6
-            msg_surf = theme.fonts.render_text(entry.message, text_color, role_name="toast.text", size=font.point_size)
-            surface.blit(msg_surf, (rect.x + padding_x, draw_y))
+        return list(zip(ordered_entries, rects))
 
     def on_event_bus_message(self, payload: Any) -> None:
         """Handle event bus messages with keys: message, title, severity, duration, background_color, outline_color."""

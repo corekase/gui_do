@@ -128,6 +128,72 @@ class TaskPanelButtonSpec:
 
 
 @dataclass(frozen=True)
+class RelativeTaskPanelButtonSpec:
+    """Declarative descriptor for a task-panel button placed after dynamic slots."""
+
+    attr_name: str
+    control_id: str
+    label: str
+    on_click: Callable[[], object]
+    minimum_slot: int = 0
+    after_slot_indices: Sequence[int] = field(default_factory=tuple)
+    offset: int = 1
+    style: str = "angle"
+
+
+@dataclass(frozen=True)
+class RightAnchoredTaskPanelButtonSpec:
+    """Declarative descriptor for a task-panel button anchored to the right edge."""
+
+    attr_name: str
+    control_id: str
+    label: str
+    on_click: Callable[[], object]
+    width: int
+    height: int
+    top_offset: int
+    right_padding: int = 16
+    style: str = "angle"
+
+
+@dataclass(frozen=True)
+class TooltipBindingSpec:
+    """Declarative descriptor mapping a target attribute to a tooltip message."""
+
+    control_attr: str
+    message: str
+
+
+@dataclass(frozen=True)
+class SceneMenuStripSpec:
+    """Declarative descriptor for attaching a standard scene menu strip."""
+
+    control_id: str
+    rect: Rect | tuple[int, int, int, int]
+    scene_name: str
+    scenes_shown: bool = True
+    windows_shown: bool = True
+    tools_exclude_labels: Sequence[str] = field(default_factory=tuple)
+    on_window_toggled: Callable[[object, bool], object] | None = None
+    tab_index: int = 0
+    accessibility_role: str = "menubar"
+    accessibility_label: str = "Scene menu"
+
+
+@dataclass(frozen=True)
+class AutoSizedStyledLabelSpec:
+    """Declarative descriptor for a styled label that auto-sizes to rendered text."""
+
+    control_id: str
+    text: str
+    left: int
+    top: int
+    fallback_size: tuple[int, int]
+    style_size: int = 64
+    shadow: bool = True
+
+
+@dataclass(frozen=True)
 class ActionHotkeySpec:
     """Declarative descriptor for registering one action and optional key binding."""
 
@@ -207,6 +273,12 @@ class ShortcutOverlaySpec:
     toggle_action_name: str | None = None
     toggle_key: int | None = None
     toggle_scene_name: str | None = None
+    manual_shortcut_lines: Sequence[str] = field(default_factory=tuple)
+    manual_section_title: str = "Keyboard"
+    prepend_manual_shortcuts: bool = False
+    manual_shortcuts_only: bool = False
+    exclude_section_titles: Sequence[str] = field(default_factory=tuple)
+    exclude_entry_labels: Sequence[str] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -794,25 +866,41 @@ def add_standard_scene_menu_strip(
     on_window_toggled=None,
 ):
     """Attach a standardized SceneMenuStripControl with optional Tools menu entries."""
-    menu_strip = container.add(
-        SceneMenuStripControl(
-            str(control_id),
-            rect,
-            host.app,
+    return add_scene_menu_strip_from_spec(
+        container,
+        host,
+        SceneMenuStripSpec(
+            control_id=str(control_id),
+            rect=rect,
             scene_name=str(scene_name),
             scenes_shown=bool(scenes_shown),
             windows_shown=bool(windows_shown),
+            tools_exclude_labels=tuple(tools_exclude_labels),
+            on_window_toggled=on_window_toggled,
+        ),
+    )
+
+
+def add_scene_menu_strip_from_spec(container, host, spec: SceneMenuStripSpec):
+    """Attach a SceneMenuStripControl from a declarative scene-menu spec."""
+    menu_strip = container.add(
+        SceneMenuStripControl(
+            str(spec.control_id),
+            Rect(spec.rect),
+            host.app,
+            scene_name=str(spec.scene_name),
+            scenes_shown=bool(spec.scenes_shown),
+            windows_shown=bool(spec.windows_shown),
             extra_entries_provider=lambda: build_tools_menu_entries(
                 host,
-                exclude_labels=tools_exclude_labels,
+                exclude_labels=tuple(spec.tools_exclude_labels),
             ),
             on_scene_selected=resolve_scene_selection_callback(host),
-            on_window_toggled=on_window_toggled,
+            on_window_toggled=spec.on_window_toggled,
         )
     )
-    # Keep scene menu strips in keyboard traversal by default.
-    menu_strip.set_tab_index(0)
-    menu_strip.set_accessibility(role="menubar", label="Scene menu")
+    menu_strip.set_tab_index(int(spec.tab_index))
+    menu_strip.set_accessibility(role=str(spec.accessibility_role), label=str(spec.accessibility_label))
     return menu_strip
 
 
@@ -1022,10 +1110,58 @@ def add_task_panel_buttons(host, task_panel, app_layout, specs: Sequence[TaskPan
         setattr(host, spec.attr_name, button)
 
 
+def add_relative_task_panel_button(host, task_panel, app_layout, spec: RelativeTaskPanelButtonSpec):
+    """Create one task-panel button from a relative-slot declarative spec."""
+    slot_candidates = [int(spec.minimum_slot)]
+    slot_candidates.extend(int(idx) for idx in tuple(spec.after_slot_indices))
+    slot_index = max(slot_candidates) + int(spec.offset)
+    button = add_task_panel_button(
+        task_panel,
+        app_layout,
+        control_id=spec.control_id,
+        slot_index=slot_index,
+        label=spec.label,
+        on_click=spec.on_click,
+        style=spec.style,
+    )
+    setattr(host, spec.attr_name, button)
+    return button
+
+
+def add_right_anchored_task_panel_button(host, task_panel, spec: RightAnchoredTaskPanelButtonSpec):
+    """Create one task-panel button anchored to the panel's right edge."""
+    rect = Rect(
+        int(task_panel.rect.right) - int(spec.right_padding) - int(spec.width),
+        int(task_panel.rect.top) + int(spec.top_offset),
+        int(spec.width),
+        int(spec.height),
+    )
+    button = task_panel.add(
+        ButtonControl(
+            str(spec.control_id),
+            rect,
+            str(spec.label),
+            spec.on_click,
+            style=str(spec.style),
+        )
+    )
+    setattr(host, spec.attr_name, button)
+    return button
+
+
 def register_tooltip_specs(tooltip_manager, specs) -> None:
     """Register a sequence of tooltip specs as (control, message) pairs."""
     for control, message in specs:
         tooltip_manager.register(control, str(message))
+
+
+def register_tooltip_attr_specs(target, tooltip_manager, specs: Sequence[TooltipBindingSpec]) -> None:
+    """Register tooltips from declarative attribute-based binding specs."""
+    for spec in specs:
+        control = getattr(target, str(spec.control_attr), None)
+        if control is None:
+            continue
+        tooltip_manager.register(control, str(spec.message))
 
 
 def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec]) -> None:
@@ -1079,6 +1215,26 @@ def draw_controls_prewarm(surface, theme, controls: Iterable[object]) -> None:
         draw = getattr(control, "draw", None)
         if callable(draw):
             draw(surface, theme)
+
+
+def create_auto_sized_styled_label(host, spec: AutoSizedStyledLabelSpec, *, scene_name: str | None = None) -> LabelControl:
+    """Create a styled label and auto-size it from the per-scene font manager."""
+    label = host.app.style_label(
+        LabelControl(
+            str(spec.control_id),
+            Rect(int(spec.left), int(spec.top), int(spec.fallback_size[0]), int(spec.fallback_size[1])),
+            str(spec.text),
+        ),
+        size=int(spec.style_size),
+    )
+    active_scene = str(scene_name) if scene_name is not None else str(getattr(host.app, "active_scene_name", ""))
+    scene_runtimes = getattr(host.app, "_scenes", None)
+    scene_runtime = scene_runtimes.get(active_scene) if isinstance(scene_runtimes, dict) else None
+    scene_font_manager = getattr(getattr(scene_runtime, "theme", None), "fonts", None)
+    if scene_font_manager is not None and scene_font_manager.has_role(label.font_role):
+        font = scene_font_manager.font_instance(label.font_role, size=label.font_size)
+        label.rect.size = font.text_surface_size(label.text, shadow=bool(spec.shadow))
+    return label
 
 
 def ensure_scene_task_panel(host, spec: SceneTaskPanelSpec):
@@ -1154,6 +1310,12 @@ def create_shortcut_help_overlay(
     height: int = 440,
     offset_x: int = 0,
     offset_y: int = 0,
+    manual_shortcut_lines: Sequence[str] = (),
+    manual_section_title: str = "Keyboard",
+    prepend_manual_shortcuts: bool = False,
+    manual_shortcuts_only: bool = False,
+    exclude_section_titles: Sequence[str] = (),
+    exclude_entry_labels: Sequence[str] = (),
 ):
     """Create a ShortcutHelpOverlay centered on the app surface."""
     from ..overlays.shortcut_help_overlay import ShortcutHelpOverlay
@@ -1167,8 +1329,15 @@ def create_shortcut_help_overlay(
     )
     return ShortcutHelpOverlay(
         app.overlay,
+        app=app,
         action_registry=action_registry,
         overlay_rect=overlay_rect,
+        manual_shortcut_lines=tuple(manual_shortcut_lines),
+        manual_section_title=str(manual_section_title),
+        prepend_manual_shortcuts=bool(prepend_manual_shortcuts),
+        manual_shortcuts_only=bool(manual_shortcuts_only),
+        exclude_section_titles=tuple(exclude_section_titles),
+        exclude_entry_labels=tuple(exclude_entry_labels),
     )
 
 
@@ -1236,6 +1405,12 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
                 height=int(overlay_spec.height),
                 offset_x=int(overlay_spec.offset_x),
                 offset_y=int(overlay_spec.offset_y),
+                manual_shortcut_lines=tuple(overlay_spec.manual_shortcut_lines),
+                manual_section_title=str(overlay_spec.manual_section_title),
+                prepend_manual_shortcuts=bool(overlay_spec.prepend_manual_shortcuts),
+                manual_shortcuts_only=bool(overlay_spec.manual_shortcuts_only),
+                exclude_section_titles=tuple(overlay_spec.exclude_section_titles),
+                exclude_entry_labels=tuple(overlay_spec.exclude_entry_labels),
             )
             setattr(feature, str(overlay_spec.attr_name), overlay)
             if overlay_spec.toggle_action_name and app_actions is not None:

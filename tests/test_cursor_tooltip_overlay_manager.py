@@ -9,6 +9,7 @@ from pygame import Rect
 from gui_do.overlays.cursor_manager import CursorManager, CursorShape, CursorHandle
 from gui_do.overlays.tooltip_manager import TooltipManager, TooltipHandle
 from gui_do.overlays.overlay_manager import OverlayManager, OverlayHandle
+from gui_do.events.gui_event import GuiEvent, EventType
 
 pygame.init()
 
@@ -396,6 +397,25 @@ class TestOverlayManagerAnchorPosition(unittest.TestCase):
         )
         self.assertGreaterEqual(x, screen.left)
         self.assertLessEqual(x + 60, screen.right)
+
+
+class TestOverlayManagerModalKeys(unittest.TestCase):
+    def setUp(self):
+        self.mgr = OverlayManager()
+
+    def test_consume_unhandled_keys_prevents_fallthrough(self):
+        ctrl = _stub_control(Rect(0, 0, 100, 50))
+        self.mgr.show("o1", ctrl, consume_unhandled_keys=True)
+        ev = GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_a)
+        consumed = self.mgr.route_event(ev, app=SimpleNamespace())
+        self.assertTrue(consumed)
+
+    def test_key_not_consumed_without_modal_flag(self):
+        ctrl = _stub_control(Rect(0, 0, 100, 50))
+        self.mgr.show("o1", ctrl, consume_unhandled_keys=False)
+        ev = GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_a)
+        consumed = self.mgr.route_event(ev, app=SimpleNamespace())
+        self.assertFalse(consumed)
 
 
 if __name__ == "__main__":

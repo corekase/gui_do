@@ -76,16 +76,23 @@ from gui_do import (
     TransferManager,
 )
 from gui_do.features.data_driven_runtime import (
+    AutoSizedStyledLabelSpec,
+    SceneMenuStripSpec,
+    RightAnchoredTaskPanelButtonSpec,
     RoutedRuntimeSpec,
+    SceneTaskPanelSpec,
     ShortcutOverlaySpec,
+    add_right_anchored_task_panel_button,
     TaskPanelFocusToggleSpec,
     TaskPanelButtonSpec,
-    add_task_panel_button,
+    TooltipBindingSpec,
     add_task_panel_buttons,
-    add_standard_scene_menu_strip,
+    add_scene_menu_strip_from_spec,
     add_window_toggle_task_panel_controls,
+    create_auto_sized_styled_label,
+    ensure_scene_task_panel,
     setup_routed_runtime,
-    register_tooltip_specs,
+    register_tooltip_attr_specs,
     register_window_toggle_tooltips,
 )
 
@@ -95,11 +102,31 @@ _MAIN_RUNTIME_SPEC = RoutedRuntimeSpec(
         ShortcutOverlaySpec(
             attr_name="_help_overlay",
             action_registry_attr="action_registry",
-            width=600,
-            height=440,
+            width=760,
+            height=340,
             toggle_action_name="show_help",
             toggle_key=pygame.K_F9,
             toggle_scene_name="main",
+            manual_shortcut_lines=(
+                "F1: Raise/Lower Task Panel",
+                "F5: Toggle Command Palette",
+                "F9: Display this help",
+                "Tab/Shift-Tab: cycle controls",
+                "Control-Tab/Shift-Control-Tab: cycle windows",
+                "Enter/Space: activate control",
+                "Arrow Keys: control selected control",
+            ),
+            manual_section_title="Keyboard",
+            prepend_manual_shortcuts=True,
+            manual_shortcuts_only=True,
+            exclude_section_titles=("General", "Files", "Scenes", "Windows"),
+            exclude_entry_labels=(
+                "Open Command Palette",
+                "Exit",
+                "Go to main scene",
+                "Show System Window",
+                "Show Life Window",
+            ),
         ),
     ),
     task_panel_focus_toggles=(
@@ -138,27 +165,44 @@ class MainDemoFeature(Feature):
             scene_name="main",
         )
 
-        host.desktop_menu_bar = add_standard_scene_menu_strip(
+        host.desktop_menu_bar = add_scene_menu_strip_from_spec(
             host.root,
             host,
-            control_id="desktop_menu_bar",
-            rect=Rect(0, 0, host.screen_rect.width, 28),
-            scene_name="main",
-            scenes_shown=True,
-            windows_shown=True,
-            on_window_toggled=host.window_presentation.handle_window_toggle,
+            SceneMenuStripSpec(
+                control_id="desktop_menu_bar",
+                rect=Rect(0, 0, host.screen_rect.width, 28),
+                scene_name="main",
+                scenes_shown=True,
+                windows_shown=True,
+                on_window_toggled=host.window_presentation.handle_window_toggle,
+            ),
         )
         host.screen_title = host.root.add(
-            self._make_sized_title_label(host, "screen_title", "gui_do", 24, 36, fallback_size=(640, 96))
+            create_auto_sized_styled_label(
+                host,
+                AutoSizedStyledLabelSpec(
+                    control_id="screen_title",
+                    text="gui_do",
+                    left=24,
+                    top=36,
+                    fallback_size=(640, 96),
+                    style_size=64,
+                    shadow=True,
+                ),
+                scene_name="main",
+            )
         )
-        host.task_panel = host.scene_presentation.ensure_scene_task_panel(
-            "main",
-            control_id="task_panel",
-            height=50,
-            hidden_peek_pixels=6,
-            animation_step_px=8,
-            dock_bottom=True,
-            auto_hide=True,
+        host.task_panel = ensure_scene_task_panel(
+            host,
+            SceneTaskPanelSpec(
+                scene_name="main",
+                control_id="task_panel",
+                height=50,
+                hidden_peek_pixels=6,
+                animation_step_px=8,
+                dock_bottom=True,
+                auto_hide=True,
+            ),
         )
 
         host.app.layout.set_linear_properties(
@@ -179,7 +223,7 @@ class MainDemoFeature(Feature):
                     control_id="exit",
                     slot_index=0,
                     label="Exit",
-                    on_click=lambda: setattr(host.app, "running", False),
+                    on_click=host.app.quit,
                     style="angle",
                 ),
             ),
@@ -193,14 +237,20 @@ class MainDemoFeature(Feature):
             max_slot_index=1,
         )
 
-        host.showcase_button = add_task_panel_button(
+        add_task_panel_buttons(
+            host,
             host.task_panel,
             host.app.layout,
-            control_id="showcase",
-            slot_index=2,
-            label="Showcase",
-            on_click=host.go_to_control_showcase,
-            style="angle",
+            (
+                TaskPanelButtonSpec(
+                    attr_name="showcase_button",
+                    control_id="showcase",
+                    slot_index=2,
+                    label="Showcase",
+                    on_click=host.go_to_control_showcase,
+                    style="angle",
+                ),
+            ),
         )
 
         toggle_controls_after_showcase, max_slot_after_showcase = add_window_toggle_task_panel_controls(
@@ -211,31 +261,35 @@ class MainDemoFeature(Feature):
             min_slot_index=3,
         )
         toggle_controls = toggle_controls_before_showcase + toggle_controls_after_showcase
-        max_slot_index = max(2, max_slot_before_showcase, max_slot_after_showcase)
 
-        host.help_button = add_task_panel_button(
+        slot0_rect = host.app.layout.linear(0)
+        host.help_button = add_right_anchored_task_panel_button(
+            host,
             host.task_panel,
-            host.app.layout,
-            control_id="show_help",
-            slot_index=max(5, max_slot_index + 1),
-            label="Help (F9)",
-            on_click=lambda: self._help_overlay.toggle() if self._help_overlay is not None else None,
-            style="angle",
+            RightAnchoredTaskPanelButtonSpec(
+                attr_name="help_button",
+                control_id="show_help",
+                label="Help (F9)",
+                on_click=self._toggle_help_overlay,
+                width=int(slot0_rect.width),
+                height=int(slot0_rect.height),
+                top_offset=int(slot0_rect.top - host.task_panel.rect.top),
+                right_padding=16,
+                style="angle",
+            ),
         )
 
         host._main_tooltip_manager = TooltipManager(default_delay_ms=500)
-        register_tooltip_specs(
+        register_tooltip_attr_specs(
+            host,
             host._main_tooltip_manager,
             (
-                (host.exit_button, "Exit the application"),
-                (host.showcase_button, "Open the control showcase scene"),
+                TooltipBindingSpec("exit_button", "Exit the application"),
+                TooltipBindingSpec("showcase_button", "Open the control showcase scene"),
+                TooltipBindingSpec("help_button", "Show keyboard shortcut reference (F9)"),
             ),
         )
         register_window_toggle_tooltips(host._main_tooltip_manager, toggle_controls)
-        register_tooltip_specs(
-            host._main_tooltip_manager,
-            ((host.help_button, "Show keyboard shortcut reference (F9)"),),
-        )
 
         host.app.tile_windows()
 
@@ -243,24 +297,8 @@ class MainDemoFeature(Feature):
         """Wire runtime overlays and hotkeys from the declarative runtime spec."""
         setup_routed_runtime(self, host, _MAIN_RUNTIME_SPEC)
 
-    def _make_sized_title_label(
-        self,
-        host,
-        control_id: str,
-        text: str,
-        left: int,
-        top: int,
-        *,
-        fallback_size: tuple[int, int],
-    ) -> LabelControl:
-        label = host.app.style_label(
-            LabelControl(control_id, Rect(left, top, int(fallback_size[0]), int(fallback_size[1])), text),
-            size=64,
-        )
-        # Use the per-scene FontManager, not the global FontRoleRegistry
-        scene_runtime = host.app._scenes[host.app.active_scene_name]
-        scene_font_manager = scene_runtime.theme.fonts
-        if scene_font_manager.has_role(label.font_role):
-            font = scene_font_manager.font_instance(label.font_role, size=label.font_size)
-            label.rect.size = font.text_surface_size(label.text, shadow=True)
-        return label
+    def _toggle_help_overlay(self) -> None:
+        overlay = self._help_overlay
+        if overlay is None:
+            return
+        overlay.toggle()

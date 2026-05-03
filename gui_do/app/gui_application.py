@@ -551,6 +551,12 @@ class GuiApplication:
 
         logical_event = self._logicalize_pointer_event(gui_event)
 
+        # Toasts render above overlays/scene. Pointer hits on toast bounds are
+        # consumed so clicks do not fall through to underlying controls.
+        if logical_event.kind in _POINTER_EVENT_KINDS and self.toasts.route_event(logical_event, self):
+            self.invalidation.invalidate_all()
+            return True
+
         if self.task_panel_focus.should_exit_for_pointer_event(logical_event, self):
             self.task_panel_focus.exit(self.scene, self)
 

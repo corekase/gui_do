@@ -95,8 +95,9 @@ from gui_do import (
 )
 from gui_do.features.data_driven_runtime import (
     RoutedRuntimeSpec,
+    SceneMenuStripSpec,
     TaskPanelFocusToggleSpec,
-    add_standard_scene_menu_strip,
+    add_scene_menu_strip_from_spec,
     build_tab_builder_specs,
     create_tab_control_from_specs,
     setup_routed_runtime,
@@ -1093,15 +1094,17 @@ class ControlsShowcaseFeature(Feature):
 
     def build(self, host) -> None:
         self._showcase_root = host.control_showcase_root
-        host.control_showcase_menu_bar = add_standard_scene_menu_strip(
+        host.control_showcase_menu_bar = add_scene_menu_strip_from_spec(
             host.control_showcase_root,
             host,
-            control_id="control_showcase_menu_bar",
-            rect=Rect(0, 0, host.control_showcase_root.rect.width, 28),
-            scene_name="control_showcase",
-            scenes_shown=True,
-            windows_shown=True,
-            tools_exclude_labels=("Open Command Palette (F5)",),
+            SceneMenuStripSpec(
+                control_id="control_showcase_menu_bar",
+                rect=Rect(0, 0, host.control_showcase_root.rect.width, 28),
+                scene_name="control_showcase",
+                scenes_shown=True,
+                windows_shown=True,
+                tools_exclude_labels=("Open Command Palette (F5)",),
+            ),
         )
 
         if self.rect.width <= 0 or self.rect.height <= 0:
