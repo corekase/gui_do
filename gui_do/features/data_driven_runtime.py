@@ -139,6 +139,22 @@ class ActionHotkeySpec:
 
 
 @dataclass(frozen=True)
+class ControlKeyBindingSpec:
+    """Declarative key binding that activates a control by attribute name.
+
+    The key is bound to the control's standard activation path (_invoke_click),
+    which for ButtonControl calls on_click and for ToggleControl commits a toggle.
+    No handler lambda is required — declare the key, the attribute that holds the
+    control, and an optional scene scope.
+    """
+
+    key: int
+    control_attr: str          # attribute on the feature instance holding the control
+    action_name: str | None = None  # optional name in action registry; auto-generated if None
+    scene_name: str | None = None   # optional scene scope for the key binding
+
+
+@dataclass(frozen=True)
 class SceneTaskPanelSpec:
     """Declarative descriptor for scene task-panel creation."""
 
@@ -212,6 +228,7 @@ class RoutedRuntimeSpec:
     scheduler_dispatch_limit: int | None = None
     logic_bindings: Sequence[LogicBindingSpec] = field(default_factory=tuple)
     action_hotkeys: Sequence[ActionHotkeySpec] = field(default_factory=tuple)
+    control_key_bindings: Sequence[ControlKeyBindingSpec] = field(default_factory=tuple)
     event_subscriptions: Sequence[EventSubscriptionSpec] = field(default_factory=tuple)
     shortcut_overlays: Sequence[ShortcutOverlaySpec] = field(default_factory=tuple)
     task_panel_focus_toggles: Sequence[TaskPanelFocusToggleSpec] = field(default_factory=tuple)
@@ -1024,6 +1041,34 @@ def register_action_hotkeys(app_actions, specs: Sequence[ActionHotkeySpec]) -> N
             app_actions.bind_key(spec.key, action_name, scene=str(spec.scene_name))
 
 
+def register_control_key_bindings(feature, app_actions, specs) -> None:
+    """Register declarative key-to-control bindings from ControlKeyBindingSpec entries.
+
+    Each spec resolves ``control_attr`` on *feature* at registration time and binds
+    the key to the control's activation path (_invoke_click).  This covers buttons
+    (on_click) and toggles (_commit_toggle) with no handler lambda required.
+    """
+    if app_actions is None:
+        return
+    for spec in specs:
+        control = getattr(feature, str(spec.control_attr), None)
+        if control is None:
+            continue
+        action_name = str(spec.action_name) if spec.action_name else f"_ctrl_{spec.control_attr}"
+        def _make_handler(c):
+            def _handler(_e):
+                invoke = getattr(c, "_invoke_click", None)
+                if callable(invoke):
+                    invoke()
+                return True
+            return _handler
+        app_actions.register_action(action_name, _make_handler(control))
+        if spec.scene_name is None:
+            app_actions.bind_key(int(spec.key), action_name)
+        else:
+            app_actions.bind_key(int(spec.key), action_name, scene=str(spec.scene_name))
+
+
 def draw_controls_prewarm(surface, theme, controls: Iterable[object]) -> None:
     """Draw a sequence of controls for prewarm, skipping ``None`` entries safely."""
     for control in controls:
@@ -1169,6 +1214,9 @@ def setup_routed_runtime(feature, host, spec: RoutedRuntimeSpec):
 
     if spec.action_hotkeys and app_actions is not None:
         register_action_hotkeys(app_actions, tuple(spec.action_hotkeys))
+
+    if spec.control_key_bindings and app_actions is not None:
+        register_control_key_bindings(feature, app_actions, tuple(spec.control_key_bindings))
 
     if spec.event_subscriptions and app_events is not None:
         for subscription in spec.event_subscriptions:

@@ -4,11 +4,21 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
+import pygame
+
+from ..app.error_handling import logical_error
 from ..events.gui_event import EventType
 from .action_middleware import ActionContext, ActionMiddleware, build_middleware_chain
 
 
 ActionHandler = Callable[[object], bool]
+
+# Keys permanently reserved for accessibility focus traversal.
+# Tab drives Tab/Shift+Tab (control focus) and Ctrl+Tab/Ctrl+Shift+Tab (window focus).
+# These routes are handled unconditionally by KeyboardManager before any user actions.
+_RESERVED_ACCESSIBILITY_KEYS: frozenset[int] = frozenset((
+    pygame.K_TAB,
+))
 
 
 @dataclass(frozen=True)
@@ -41,7 +51,16 @@ class ActionManager:
         return sorted(self._actions.keys())
 
     def bind_key(self, key: int, action_name: str, *, scene: str | None = None, window_only: bool = False) -> None:
-        binding = KeyBinding(int(key), scene=scene, window_only=bool(window_only))
+        key = int(key)
+        if key in _RESERVED_ACCESSIBILITY_KEYS:
+            raise logical_error(
+                f"Key {pygame.key.name(key)!r} is reserved for accessibility focus traversal "
+                f"(Tab/Shift+Tab, Ctrl+Tab/Ctrl+Shift+Tab) and cannot be bound to user actions.",
+                subsystem="gui_do.actions",
+                operation="ActionManager.bind_key",
+                source_skip_frames=1,
+            )
+        binding = KeyBinding(key, scene=scene, window_only=bool(window_only))
         names = self._keymap[binding]
         if action_name not in names:
             names.append(action_name)

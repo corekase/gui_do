@@ -234,7 +234,7 @@ class MainDemoFeature(Feature):
         register_window_toggle_tooltips(host._main_tooltip_manager, toggle_controls)
         register_tooltip_specs(
             host._main_tooltip_manager,
-            ((host.help_button, "Show keyboard shortcut reference (F1)"),),
+            ((host.help_button, "Show keyboard shortcut reference (F9)"),),
         )
 
         host.app.tile_windows()
