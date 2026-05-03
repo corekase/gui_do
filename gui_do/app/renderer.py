@@ -44,8 +44,8 @@ class Renderer:
         anchor = app.lock_point_pos if app.mouse_point_locked else None
         if anchor is None:
             anchor = app.logical_pointer_pos
-        draw_x = int(anchor[0]) - int(hotspot[0])
-        draw_y = int(anchor[1]) - int(hotspot[1])
-        surface.blit(cursor_surface, (draw_x, draw_y))
+        ax, ay = anchor
+        hx, hy = hotspot
+        surface.blit(cursor_surface, (ax - hx, ay - hy))
         app.invalidation.end_frame()
         return None if is_full_redraw else dirty_rects

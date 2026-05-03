@@ -62,6 +62,11 @@ class SortFilterProxySource:
         self._visible: List[int] = []           # indices into raw source
         self._dirty: bool = True
         self._subscribers: List[Callable[[], None]] = []
+        # Cache dispatch callables once so _raw_count/_source_item_at avoid
+        # per-call hasattr lookups during _recompute().
+        self._fn_raw_count = source.item_count if hasattr(source, "item_count") else lambda: len(source)
+        self._fn_item_at = source.item_at if hasattr(source, "item_at") else source.__getitem__
+        self._fn_item_height = source.item_height if hasattr(source, "item_height") else None
 
     # ------------------------------------------------------------------
     # Configuration
@@ -133,8 +138,8 @@ class SortFilterProxySource:
         """Delegate item height to the underlying source when supported."""
         self._ensure_fresh()
         raw_index = self._visible[index]
-        if hasattr(self._source, "item_height"):
-            return self._source.item_height(raw_index)
+        if self._fn_item_height is not None:
+            return self._fn_item_height(raw_index)
         return 32
 
     # ------------------------------------------------------------------
@@ -142,17 +147,10 @@ class SortFilterProxySource:
     # ------------------------------------------------------------------
 
     def _raw_count(self) -> int:
-        if hasattr(self._source, "item_count"):
-            return self._source.item_count()
-        try:
-            return len(self._source)
-        except TypeError:
-            return 0
+        return self._fn_raw_count()
 
     def _source_item_at(self, index: int) -> Any:
-        if hasattr(self._source, "item_at"):
-            return self._source.item_at(index)
-        return self._source[index]
+        return self._fn_item_at(index)
 
     def _invalidate(self) -> None:
         self._dirty = True

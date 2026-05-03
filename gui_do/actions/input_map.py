@@ -38,7 +38,7 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .action_manager import ActionManager
-    from .settings_registry import SettingsRegistry
+    from ..persistence.settings_registry import SettingsRegistry
 
 
 # ---------------------------------------------------------------------------

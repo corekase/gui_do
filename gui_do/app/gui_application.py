@@ -550,10 +550,11 @@ class GuiApplication:
             self.input_state.pointer_pos = self._logical_pointer_pos
 
         logical_event = self._logicalize_pointer_event(gui_event)
+        is_pointer_event = logical_event.kind in _POINTER_EVENT_KINDS
 
         # Toasts render above overlays/scene. Pointer hits on toast bounds are
         # consumed so clicks do not fall through to underlying controls.
-        if logical_event.kind in _POINTER_EVENT_KINDS and self.toasts.route_event(logical_event, self):
+        if is_pointer_event and self.toasts.route_event(logical_event, self):
             self.invalidation.invalidate_all()
             return True
 
@@ -562,10 +563,10 @@ class GuiApplication:
 
         pointer_event_in_window = False
         pointer_focus_target = None
-        if logical_event.kind in _POINTER_EVENT_KINDS:
+        if is_pointer_event:
             pointer_event_in_window, pointer_focus_target = self.scene.pointer_context_at(logical_event.pos)
 
-        if logical_event.kind in _POINTER_EVENT_KINDS:
+        if is_pointer_event:
             # IMPORTANT: for mouse-down clicks inside an open overlay, route the overlay
             # BEFORE changing scene-graph focus.  Setting focus first triggers
             # on_focus_changed(False) on the focused control (e.g. a menu bar), which
@@ -621,8 +622,9 @@ class GuiApplication:
         if consumed or logical_event.default_prevented or logical_event.propagation_stopped:
             self.invalidation.invalidate_all()
             return True
+        active_scene = self._active_scene_name
         for ft_entry in self._fallthrough_handlers:
-            if ft_entry.scene_name is not None and str(ft_entry.scene_name) != str(self._active_scene_name):
+            if ft_entry.scene_name is not None and ft_entry.scene_name != active_scene:
                 continue
             if bool(ft_entry.event_handler(logical_event)):
                 self.invalidation.invalidate_all()
@@ -887,7 +889,7 @@ class GuiApplication:
         if not (isinstance(raw_pos, tuple) and len(raw_pos) == 2):
             return event
 
-        logical_pos = (int(self._logical_pointer_pos[0]), int(self._logical_pointer_pos[1]))
+        logical_pos = self._logical_pointer_pos
         if event.kind is EventType.MOUSE_MOTION:
             prev = self._last_dispatched_pointer_pos
             logical_event = replace(

@@ -9,7 +9,7 @@ from .toast_manager import ToastSeverity
 from ..data.presentation_model import ObservableValue
 
 if TYPE_CHECKING:
-    from .event_bus import EventBus
+    from ..events.event_bus import EventBus
 
 
 @dataclass

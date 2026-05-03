@@ -119,9 +119,13 @@ The README must guide developers into declarative + lifecycle composition first 
 - Build the video URL from `gui_do/_version.py` using the `__demo__` variable value as the YouTube ID.
 - Use this exact README block format:
 
-	Latest Demo (click):
+	---
+
+	Latest Demonstration:
 
 	<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
+
+	---
 
 	Replace `URLPART` with the resolved `__demo__` value.
 - Verify all TOC links and section anchors.

@@ -74,7 +74,6 @@ class Scene:
         return True
 
     def update(self, dt_seconds: float) -> None:
-        self._invalidate_window_query_cache()
         for node in self.nodes:
             if node.visible:
                 node.update(dt_seconds)
