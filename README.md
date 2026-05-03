@@ -1,8 +1,8 @@
 [![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
 
----
+### Latest Demonstration
 
-Latest Demonstration:
+---
 
 <a href="https://www.youtube.com/watch?v=wkEmwIOquCo"><img src="https://img.youtube.com/vi/wkEmwIOquCo/0.jpg" alt="Demo Video"></img></a>
 

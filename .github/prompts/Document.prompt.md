@@ -119,9 +119,9 @@ The README must guide developers into declarative + lifecycle composition first 
 - Build the video URL from `gui_do/_version.py` using the `__demo__` variable value as the YouTube ID.
 - Use this exact README block format:
 
-	---
+	### Latest Demonstration
 
-	Latest Demonstration:
+	---
 
 	<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
 
@@ -149,7 +149,7 @@ Before finalizing README.md and TUTORIAL.md, run and report a compliance pass ag
 		`Minimal Runnable Example and Configuration`.
 	- Minimal runnable example content must be a single listing.
 - Validate README media block compliance:
-	- Exactly one "Latest Demo (click):" block exists.
+	- Exactly one "### Latest Demonstration" section title + divider block exists.
 	- The block is positioned immediately below the unittest badge.
 	- The YouTube/video thumbnail URL uses `gui_do/_version.py` `__demo__` value.
 - Perform at least one automated text/structure check (for example with `rg`) and fix violations before completion.
