@@ -16,6 +16,8 @@ from gui_do.features.data_driven_runtime import (
     TabBuilderSpec,
     TelemetryConfig,
     ActiveTabUpdateRouter,
+    PresenterLabelSpec,
+    PresenterButtonSpec,
 )
 
 
@@ -249,3 +251,72 @@ class TestActiveTabUpdateRouter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ===========================================================================
+# PresenterLabelSpec
+# ===========================================================================
+
+
+class TestPresenterLabelSpec(unittest.TestCase):
+    def test_required_fields(self):
+        spec = PresenterLabelSpec("my_lbl", 22, "Hello world")
+        self.assertEqual("my_lbl", spec.control_id)
+        self.assertEqual(22, spec.height)
+        self.assertEqual("Hello world", spec.text)
+
+    def test_defaults(self):
+        spec = PresenterLabelSpec("x", 20, "text")
+        self.assertIsNone(spec.advance)
+        self.assertIsNone(spec.width)
+        self.assertEqual(0, spec.x_offset)
+
+    def test_explicit_advance_zero(self):
+        spec = PresenterLabelSpec("x", 20, "text", advance=0)
+        self.assertEqual(0, spec.advance)
+
+    def test_explicit_width_and_advance(self):
+        spec = PresenterLabelSpec("lbl", 26, "Label:", width=80, advance=0)
+        self.assertEqual(80, spec.width)
+        self.assertEqual(0, spec.advance)
+
+    def test_frozen(self):
+        spec = PresenterLabelSpec("x", 20, "text")
+        with self.assertRaises(Exception):
+            spec.control_id = "y"  # type: ignore[misc]
+
+
+# ===========================================================================
+# PresenterButtonSpec
+# ===========================================================================
+
+
+class TestPresenterButtonSpec(unittest.TestCase):
+    def test_required_fields(self):
+        spec = PresenterButtonSpec("my_btn", 120, 28, "Click Me", "_on_click")
+        self.assertEqual("my_btn", spec.control_id)
+        self.assertEqual(120, spec.width)
+        self.assertEqual(28, spec.height)
+        self.assertEqual("Click Me", spec.text)
+        self.assertEqual("_on_click", spec.handler_attr)
+
+    def test_defaults(self):
+        spec = PresenterButtonSpec("b", 100, 28, "OK", "_ok")
+        self.assertIsNone(spec.advance)
+        self.assertEqual(0, spec.x_offset)
+        self.assertIsNone(spec.style)
+
+    def test_explicit_advance_and_offset(self):
+        spec = PresenterButtonSpec("b", 110, 28, "Restore", "_restore",
+                                   advance=36, x_offset=118)
+        self.assertEqual(36, spec.advance)
+        self.assertEqual(118, spec.x_offset)
+
+    def test_style(self):
+        spec = PresenterButtonSpec("b", 130, 28, "Toggle", "_toggle", style="round")
+        self.assertEqual("round", spec.style)
+
+    def test_frozen(self):
+        spec = PresenterButtonSpec("b", 100, 28, "OK", "_ok")
+        with self.assertRaises(Exception):
+            spec.control_id = "z"  # type: ignore[misc]

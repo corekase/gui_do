@@ -52,7 +52,7 @@ There are two ways to start an app:
 - Bootstrap path: create `HostApplicationConfig`, call `bootstrap_host_application`, and let gui_do build the runtime.
 - Manual path: create a display surface yourself, construct `GuiApplication`, and wire scenes, features, and actions manually.
 
-For new applications, prefer the bootstrap path.
+For new applications, prefer the bootstrap path. When a config grows large, `HostApplicationBindingSpec` and `build_host_application_config` let you assemble scenes, features, actions, and windows from smaller binding specs rather than building every tuple manually.
 
 ## 4. Your First Application — Step by Step
 
@@ -288,6 +288,8 @@ The key pattern is:
 
 Use the simplest type that fits the feature. Most application modules should begin as `Feature` and only move to the others when the behavior clearly matches.
 
+When a `RoutedFeature` also needs companion logic features and a lifecycle-scoped runtime spec, `RoutedFeatureLifecycleSpec` plus the three orchestration helpers (`register_routed_feature_companions`, `bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle`) keep that wiring declarative across build, bind, and shutdown hooks.
+
 ## 7. Feature Messaging
 
 Features can communicate without tightly coupling themselves to each other's internals.
@@ -459,6 +461,8 @@ runtime_spec = RoutedRuntimeSpec(
 ```
 
 This helper path is the easiest way to keep shortcut overlay behavior declarative. Current overlay semantics still apply: escape dismissal, outside-click dismissal, and optional modal key capture of otherwise unhandled keys.
+
+For tighter control over displayed content, `ShortcutOverlaySpec` also supports `manual_shortcuts_only` (show only the manual lines), `exclude_section_titles` (hide named registry sections), and `exclude_entry_labels` (hide specific entries by label).
 
 ## 10. Complete Example Application
 

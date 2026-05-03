@@ -54,12 +54,12 @@ New applications should start with Tier 1 and stay there for as long as possible
 
 Start here first.
 
-- `HostApplicationConfig` and `build_host_application_config` for declarative host setup.
+- `HostApplicationConfig` and `HostApplicationBindingSpec` for declarative host setup, with `build_host_application_config` for composing large configs from binding specs.
 - `bootstrap_host_application` for display, app, scenes, features, actions, overlays, and runtime wiring.
 - `Feature`, `DirectFeature`, `LogicFeature`, and `RoutedFeature` for lifecycle composition.
 - `FeatureSpec`, `SceneSetupSpec`, `RuntimeSceneSpec`, `ActionSpec`, and `WindowSpec` for declarative runtime structure.
 - `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec` for standard routed-feature wiring.
-- `ScenePresentationModel` and `FeatureWindowPresentationModel` for scene and window coordination.
+- `ScenePresentationModel` for scene and window coordination.
 
 ### Tier 2-7: Runtime Infrastructure
 
@@ -402,6 +402,8 @@ For routed features, `setup_routed_runtime(feature, host, spec)` wires the stand
 
 This is the preferred path when a feature would otherwise contain repetitive `bind_runtime()` code.
 
+For features with companion logic features and lifecycle-scoped runtime specs, `RoutedFeatureLifecycleSpec` pairs with three helpers — `register_routed_feature_companions`, `bind_routed_feature_lifecycle`, and `shutdown_routed_feature_lifecycle` — to orchestrate the full lifecycle declaratively.
+
 ## Feature Lifecycle and Messaging
 
 [Back to Top](#table-of-contents)
@@ -453,7 +455,7 @@ The demo uses declarative helpers such as `SceneMenuStripSpec`, `SceneTaskPanelS
 
 ### Window Toggles and Focus-Aware Routing
 
-Use `FeatureWindowPresentationModel` with declarative `WindowSpec` entries when a window also has an action entry or task-panel toggle. That keeps command palette window toggles, app actions, and task-panel buttons synchronized with actual window visibility.
+Use `WindowSpec` entries with `register_window_presentation_specs` (wired automatically by `bootstrap_host_application`) when a window also has an action entry or task-panel toggle. That keeps command palette window toggles, app actions, and task-panel buttons synchronized with actual window visibility.
 
 ### Shortcut Help Overlay
 

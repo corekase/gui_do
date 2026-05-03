@@ -55,6 +55,54 @@ _LIFE_BODY_H = (
     _LIFE_PAD + _LIFE_CANVAS_SIZE + _LIFE_CTRL_GAP + _LIFE_CTRL_H + _LIFE_PAD
 )
 _LIFE_WINDOW_SIZE = (_LIFE_BODY_W, _LIFE_TITLEBAR_H + _LIFE_BODY_H)
+
+_LIFE_CANVAS_CONTROL_SPEC = {
+    "control_id": "life_canvas",
+    "max_events": 256,
+}
+
+_LIFE_STRIP_CONTROL_SPECS = (
+    {
+        "kind": "button",
+        "slot_index": 0,
+        "presenter_attr": "reset_button",
+        "feature_attr": "reset_button",
+        "control_id": "life_reset",
+        "label": "Reset",
+        "style": "angle",
+        "handler_attr": "life_reset",
+        "accessibility_role": "button",
+        "accessibility_label": "Reset life board",
+    },
+    {
+        "kind": "toggle",
+        "slot_index": 1,
+        "presenter_attr": "toggle",
+        "feature_attr": "toggle",
+        "control_id": "life_toggle",
+        "off_text": "Stop",
+        "on_text": "Start",
+        "pushed": False,
+        "style": "round",
+        "accessibility_role": "toggle",
+        "accessibility_label": "Run life simulation",
+    },
+)
+
+_LIFE_ZOOM_SLIDER_SPEC = {
+    "control_id": "life_zoom",
+    "axis": LayoutAxis.HORIZONTAL,
+    "min": 0.0,
+    "max": 11.0,
+    "value": 5.0,
+    "height": 20,
+    "min_width": 80,
+    "presenter_attr": "zoom_slider",
+    "feature_attr": "zoom_slider",
+    "on_change_attr": "on_life_zoom_slider_changed",
+    "accessibility_role": "slider",
+    "accessibility_label": "Life zoom",
+}
 # ---------------------------------------------------------------------------
 
 _LIFE_LOGIC_TOPIC = "life_logic"
@@ -369,40 +417,49 @@ class _LifeWindowPresenter(WindowPresenter):
         ctrl_y = top + height - _LIFE_CTRL_H
         canvas_h = max(1, ctrl_y - _LIFE_CTRL_GAP - top)
         canvas_rect = Rect(left, top, width, canvas_h)
-        self.canvas = CanvasControl("life_canvas", canvas_rect, max_events=256)
-        self.add_control(self.canvas)
+        self.canvas = self._add_presenter_control(
+            CanvasControl(
+                _LIFE_CANVAS_CONTROL_SPEC["control_id"],
+                canvas_rect,
+                max_events=int(_LIFE_CANVAS_CONTROL_SPEC["max_events"]),
+            )
+        )
         self.feature.canvas = self.canvas
 
         slots = centered_horizontal_strip_layout(
             left=left, width=width, y=ctrl_y, item_count=4, item_height=_LIFE_CTRL_H, spacing=_LIFE_CTRL_SPACING,
         )
-        life_reset_rect, life_toggle_rect, zoom_slider_slot_1, zoom_slider_slot_2 = slots
+        zoom_slider_slot_1, zoom_slider_slot_2 = slots[2], slots[3]
 
-        self.reset_button = ButtonControl(
-            "life_reset", life_reset_rect, "Reset", self.feature.life_reset, style="angle"
-        )
-        self.reset_button.set_accessibility(role="button", label="Reset life board")
-        self.add_control(self.reset_button)
-        self.feature.reset_button = self.reset_button
-
-        self.toggle = ToggleControl(
-            "life_toggle", life_toggle_rect, "Stop", "Start", pushed=False, style="round",
-        )
-        self.toggle.set_accessibility(role="toggle", label="Run life simulation")
-        self.add_control(self.toggle)
-        self.feature.toggle = self.toggle
+        for control_spec in _LIFE_STRIP_CONTROL_SPECS:
+            self._build_strip_control_from_spec(control_spec, slots)
 
         slider_left, slider_right = split_slot_bounds([zoom_slider_slot_1, zoom_slider_slot_2])
-        slider_height = 20
+        slider_height = int(_LIFE_ZOOM_SLIDER_SPEC["height"])
         slider_y = ctrl_y + max(0, (_LIFE_CTRL_H - slider_height) // 2)
-        self.zoom_slider = SliderControl(
-            "life_zoom",
-            Rect(slider_left, slider_y, max(80, slider_right - slider_left), slider_height),
-            LayoutAxis.HORIZONTAL, 0.0, 11.0, 5.0, on_change=self.feature.on_life_zoom_slider_changed,
+        slider_rect = Rect(
+            slider_left,
+            slider_y,
+            max(int(_LIFE_ZOOM_SLIDER_SPEC["min_width"]), slider_right - slider_left),
+            slider_height,
         )
-        self.zoom_slider.set_accessibility(role="slider", label="Life zoom")
-        self.add_control(self.zoom_slider)
-        self.feature.zoom_slider = self.zoom_slider
+        on_change = getattr(self.feature, str(_LIFE_ZOOM_SLIDER_SPEC["on_change_attr"]))
+        self.zoom_slider = self._add_presenter_control(
+            SliderControl(
+                str(_LIFE_ZOOM_SLIDER_SPEC["control_id"]),
+                slider_rect,
+                _LIFE_ZOOM_SLIDER_SPEC["axis"],
+                float(_LIFE_ZOOM_SLIDER_SPEC["min"]),
+                float(_LIFE_ZOOM_SLIDER_SPEC["max"]),
+                float(_LIFE_ZOOM_SLIDER_SPEC["value"]),
+                on_change=on_change,
+            )
+        )
+        self.zoom_slider.set_accessibility(
+            role=str(_LIFE_ZOOM_SLIDER_SPEC["accessibility_role"]),
+            label=str(_LIFE_ZOOM_SLIDER_SPEC["accessibility_label"]),
+        )
+        self._bind_control_refs(_LIFE_ZOOM_SLIDER_SPEC, self.zoom_slider)
 
         self.feature.demo = self.host
         self.feature.window = self.window
@@ -412,6 +469,52 @@ class _LifeWindowPresenter(WindowPresenter):
         self.feature.life_dragging = False
         self.feature._send_life_logic_command("snapshot")
         self.window.visible = False
+
+    def _add_presenter_control(self, control):
+        self.add_control(control)
+        return control
+
+    def _build_strip_control_from_spec(self, control_spec, slots) -> None:
+        slot_rect = Rect(slots[int(control_spec["slot_index"])])
+        kind = str(control_spec["kind"])
+        if kind == "button":
+            handler = getattr(self.feature, str(control_spec["handler_attr"]))
+            control = self._add_presenter_control(
+                ButtonControl(
+                    str(control_spec["control_id"]),
+                    slot_rect,
+                    str(control_spec["label"]),
+                    handler,
+                    style=str(control_spec["style"]),
+                )
+            )
+        elif kind == "toggle":
+            control = self._add_presenter_control(
+                ToggleControl(
+                    str(control_spec["control_id"]),
+                    slot_rect,
+                    str(control_spec["off_text"]),
+                    str(control_spec["on_text"]),
+                    pushed=bool(control_spec["pushed"]),
+                    style=str(control_spec["style"]),
+                )
+            )
+        else:
+            raise ValueError(f"Unsupported life strip control kind: {kind}")
+
+        control.set_accessibility(
+            role=str(control_spec["accessibility_role"]),
+            label=str(control_spec["accessibility_label"]),
+        )
+        self._bind_control_refs(control_spec, control)
+
+    def _bind_control_refs(self, control_spec, control) -> None:
+        presenter_attr = control_spec.get("presenter_attr")
+        feature_attr = control_spec.get("feature_attr")
+        if presenter_attr:
+            setattr(self, str(presenter_attr), control)
+        if feature_attr:
+            setattr(self.feature, str(feature_attr), control)
 
     def handle_event(self, event):
         return self._event_handler_impl(event)

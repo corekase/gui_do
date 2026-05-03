@@ -135,20 +135,35 @@ _MANDEL_LOGIC_CAN2 = "mandelbrot_logic_can2"
 _MANDEL_LOGIC_CAN3 = "mandelbrot_logic_can3"
 _MANDEL_LOGIC_CAN4 = "mandelbrot_logic_can4"
 
-_MANDEL_SPLIT_CANVAS_KEYS = ("can1", "can2", "can3", "can4")
+_MANDEL_SPLIT_CANVAS_SPECS = (
+    ("can1", 32),
+    ("can2", 32),
+    ("can3", 32),
+    ("can4", 32),
+)
+_MANDEL_SPLIT_CANVAS_KEYS = tuple(canvas_key for canvas_key, _ in _MANDEL_SPLIT_CANVAS_SPECS)
 _MANDEL_ONE_SPLIT_TASK_IDS = ("1", "2", "3", "4")
 _MANDEL_TASK_BUTTON_SPECS = (
-    ("mandel_iter", "Iterative", "launch_iterative", "round"),
-    ("mandel_recur", "Recursive", "launch_recursive", "round"),
-    ("mandel_one_split", "1M 4Tasks", "launch_one_split", "round"),
-    ("mandel_four_split", "4M 4Tasks", "launch_four_split", "round"),
+    ("mandel_iter", "Iterative", "launch_iterative", "round", "Run Mandelbrot iterative"),
+    ("mandel_recur", "Recursive", "launch_recursive", "round", "Run Mandelbrot recursive"),
+    ("mandel_one_split", "1M 4Tasks", "launch_one_split", "round", "Run Mandelbrot one canvas split"),
+    ("mandel_four_split", "4M 4Tasks", "launch_four_split", "round", "Run Mandelbrot four canvases split"),
 )
-_MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS = (
-    "Run Mandelbrot iterative",
-    "Run Mandelbrot recursive",
-    "Run Mandelbrot one canvas split",
-    "Run Mandelbrot four canvases split",
-)
+_MANDEL_PRIMARY_CANVAS_SPEC = {
+    "control_id": "mandel_canvas",
+    "max_events": 128,
+}
+_MANDEL_RESET_BUTTON_SPEC = {
+    "control_id": "mandel_reset",
+    "label": "Reset",
+    "style": "angle",
+    "slot_index": 0,
+    "accessibility_role": "button",
+    "accessibility_label": "Clear Mandelbrot surfaces",
+}
+_MANDEL_STATUS_LABEL_SPEC = {
+    "control_id": "mandel_status",
+}
 _MANDEL_LAUNCH_MODE_SPECS = {
     "iterative": {
         "busy_profile": "iterative",
@@ -947,8 +962,13 @@ class _MandelbrotWindowPresenter(WindowPresenter):
 
         canvas_area = Rect(padded.left, padded.top, _MANDEL_CANVAS_W, _MANDEL_CANVAS_H)
 
-        self.primary_canvas = CanvasControl("mandel_canvas", Rect(canvas_area), max_events=128)
-        self.add_control(self.primary_canvas)
+        self.primary_canvas = self._add_control(
+            CanvasControl(
+                str(_MANDEL_PRIMARY_CANVAS_SPEC["control_id"]),
+                Rect(canvas_area),
+                max_events=int(_MANDEL_PRIMARY_CANVAS_SPEC["max_events"]),
+            )
+        )
         self.feature.primary_canvas = self.primary_canvas
 
         self.split_canvases = self._build_split_canvases(canvas_area, partition_rects)
@@ -961,16 +981,18 @@ class _MandelbrotWindowPresenter(WindowPresenter):
             width=max(1, _MANDEL_CANVAS_W - 2 * _MANDEL_ROW_STRIP_PAD),
             y=controls_y, item_count=_MANDEL_BTN_COUNT, item_height=_MANDEL_CTRL_H, spacing=_MANDEL_BTN_SPACING,
         )
-        mandel_reset_rect = slots[0]
-
+        reset_slot = slots[int(_MANDEL_RESET_BUTTON_SPEC["slot_index"])]
         self.reset_button = self._add_button_control(
-            "mandel_reset",
-            mandel_reset_rect,
-            "Reset",
+            str(_MANDEL_RESET_BUTTON_SPEC["control_id"]),
+            reset_slot,
+            str(_MANDEL_RESET_BUTTON_SPEC["label"]),
             lambda: self.feature.clear(self.host),
-            style="angle",
+            style=str(_MANDEL_RESET_BUTTON_SPEC["style"]),
         )
-        self.reset_button.set_accessibility(role="button", label="Clear Mandelbrot surfaces")
+        self.reset_button.set_accessibility(
+            role=str(_MANDEL_RESET_BUTTON_SPEC["accessibility_role"]),
+            label=str(_MANDEL_RESET_BUTTON_SPEC["accessibility_label"]),
+        )
         self.feature.reset_button = self.reset_button
 
         task_buttons = self._build_task_buttons(slots[1:])
@@ -985,7 +1007,7 @@ class _MandelbrotWindowPresenter(WindowPresenter):
 
         status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
         self.status_label = self._add_label_control(
-            "mandel_status",
+            str(_MANDEL_STATUS_LABEL_SPEC["control_id"]),
             Rect(padded.left, status_y, _MANDEL_CANVAS_W, _MANDEL_STATUS_H),
             self.feature.status_text,
         )
@@ -1002,8 +1024,8 @@ class _MandelbrotWindowPresenter(WindowPresenter):
         """Build the four split Mandelbrot canvases mapped by declarative keys."""
         canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
         return {
-            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=32)
-            for index, canvas_key in enumerate(_MANDEL_SPLIT_CANVAS_KEYS)
+            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=max_events)
+            for index, (canvas_key, max_events) in enumerate(_MANDEL_SPLIT_CANVAS_SPECS)
         }
 
     def _register_split_canvases(self, split_canvases) -> None:
@@ -1028,10 +1050,9 @@ class _MandelbrotWindowPresenter(WindowPresenter):
     def _build_task_buttons(self, task_slots):
         """Build task launch buttons from declarative specs."""
         task_buttons = []
-        for slot_rect, (control_id, label, launch_method_name, style), accessibility_label in zip(
+        for slot_rect, (control_id, label, launch_method_name, style, accessibility_label) in zip(
             task_slots,
             _MANDEL_TASK_BUTTON_SPECS,
-            _MANDEL_TASK_BUTTON_ACCESSIBILITY_LABELS,
         ):
             launch_method = getattr(self.feature, launch_method_name)
             button = self._add_button_control(

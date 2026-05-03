@@ -511,6 +511,42 @@ class TabBuilderSpec:
 
 
 @dataclass(frozen=True)
+class PresenterLabelSpec:
+    """Declarative descriptor for a label placed by a tab-builder helper.
+
+    Used with :meth:`~TabLayoutContext.add_label` via the ``_add_tab_labels_from_specs``
+    helper pattern.  When *advance* is ``None`` the context's default advance
+    (``height + 8``) is used.
+    """
+
+    control_id: str
+    height: int
+    text: str
+    advance: int | None = None
+    width: int | None = None
+    x_offset: int = 0
+
+
+@dataclass(frozen=True)
+class PresenterButtonSpec:
+    """Declarative descriptor for a button placed by a tab-builder helper.
+
+    *handler_attr* is the name of the method on the presenter instance to
+    call when the button is clicked.  Resolve it with ``getattr(self, spec.handler_attr)``
+    before passing to :meth:`~TabLayoutContext.add_button`.
+    """
+
+    control_id: str
+    width: int
+    height: int
+    text: str
+    handler_attr: str
+    advance: int | None = None
+    x_offset: int = 0
+    style: str | None = None
+
+
+@dataclass(frozen=True)
 class NotificationSpec:
     """Declarative descriptor for a pre-seeded :class:`~gui_do.NotificationRecord`.
 

@@ -95,6 +95,8 @@ from gui_do.features.data_driven_runtime import (
     build_tab_builder_specs,
     create_feature_presented_window,
     initialize_locale_registry,
+    PresenterButtonSpec,
+    PresenterLabelSpec,
     register_descriptors,
     register_tab_update_handlers,
     setup_feature_presenter_tabs_from_window_content,
@@ -213,6 +215,179 @@ _INPUT_DEFAULT_BINDINGS = (
     (pygame.K_LEFT, "move_left"),
     (pygame.K_RIGHT, "move_right"),
 )
+
+_FILTER_ITEM_LABELS = (
+    "Apple",
+    "Apricot",
+    "Banana",
+    "Blueberry",
+    "Cherry",
+    "Grape",
+    "Lemon",
+    "Mango",
+    "Orange",
+    "Peach",
+)
+
+_FILTER_TAB_LABEL_SPECS = (
+    PresenterLabelSpec(
+        "nsdf_filter_info", 20,
+        "SortFilterProxySource wraps any VirtualItemSource with reactive filter + sort.",
+        advance=28,
+    ),
+    PresenterLabelSpec("nsdf_filter_lbl", 26, "Filter:", width=60, advance=0),
+)
+
+_FILTER_INPUT_SPEC = {
+    "control_id": "nsdf_filter_input",
+    "x_offset": 68,
+    "width": 200,
+    "height": 28,
+    "placeholder": "type prefix...",
+    "advance": 36,
+}
+
+_FILTER_SORT_TOGGLE_SPEC = {
+    "control_id": "nsdf_sort_toggle",
+    "width": 130,
+    "height": 28,
+    "off_text": "Sort: A→Z",
+    "on_text": "Sort: Z→A",
+    "pushed": False,
+    "style": "round",
+    "advance": 38,
+}
+
+_FILTER_RESULT_TITLE_SPEC = PresenterLabelSpec(
+    "nsdf_filter_result_title", 20, "Proxy output:", advance=24)
+
+_FILTER_RESULT_LABEL_SPEC = {
+    "control_id": "nsdf_filter_result_lbl",
+    "min_height": 40,
+    "text": "",
+}
+
+_LOCALE_TAB_LABEL_SPECS = (
+    PresenterLabelSpec("nsdf_locale_lbl", 26, "Locale:", width=80, advance=0),
+    PresenterLabelSpec(
+        "nsdf_canvas_lbl", 20, "TextFlow rendering (word-wrapped, mixed-style):", advance=24),
+)
+
+_LOCALE_BUTTON_LAYOUT_SPEC = {
+    "x_offset": 90,
+    "step": 60,
+    "width": 52,
+    "height": 28,
+    "advance": 36,
+}
+
+_LOCALE_GREETING_LABEL_SPEC = {
+    "control_id": "nsdf_greeting_lbl",
+    "height": 26,
+    "advance": 34,
+}
+
+_LOCALE_TEXT_CANVAS_SPEC = {
+    "control_id": "nsdf_text_canvas",
+    "min_height": 60,
+    "text_flow_horizontal_padding": 16,
+    "line_spacing": 3,
+}
+
+_INPUT_TAB_HEADER_LABEL_SPECS = (
+    PresenterLabelSpec("nsdf_input_title", 22, "InputMap — declared action bindings:", advance=26),
+    PresenterLabelSpec("nsdf_resp_title", 22,
+        "ResponsiveLayout — breakpoints based on window width:", advance=26),
+)
+
+_INPUT_BINDING_LABEL_SPEC = {
+    "control_id_prefix": "nsdf_binding_",
+    "height": 22,
+    "advance": 23,
+    "text_template": "  {label}: {key_name}",
+}
+
+_INPUT_ACTION_BUTTON_SPECS = (
+    PresenterButtonSpec("nsdf_input_remap_btn", 150, 28, "Remap: W/A/S/D",
+        "_remap_bindings", advance=36),
+    PresenterButtonSpec("nsdf_input_reset_btn", 150, 28, "Reset to Arrows",
+        "_reset_bindings", advance=44),
+)
+
+_INPUT_LAYOUT_STATUS_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_layout_lbl", 22, "Active breakpoint: (updating...)")
+
+_INPUT_BREAKPOINT_SPECS = (
+    ("narrow", 0),
+    ("standard", 600),
+    ("wide", 900),
+)
+
+# ---------------------------------------------------------------------------
+# Event tab specs
+# ---------------------------------------------------------------------------
+
+_EVENT_INFO_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_evt_info", 20,
+    "EventRecorder captures GuiEvents; EventPlayback replays them via a handler.",
+    advance=28,
+)
+_EVENT_STATUS_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_evt_status", 22, "Status: Idle \u2014 0 events recorded", advance=30)
+_EVENT_LOG_TITLE_SPEC = PresenterLabelSpec("nsdf_evt_log_title", 20, "Event log:", advance=24)
+_EVENT_LOG_LABEL_SPEC = PresenterLabelSpec("nsdf_evt_log", 40, "No events recorded yet.")
+_EVENT_BUTTON_ROW_HANDLER_ATTRS = (
+    ("nsdf_evt_record", "Start Rec.", "_start_recording"),
+    ("nsdf_evt_stop", "Stop", "_stop_recording"),
+    ("nsdf_evt_simulate", "Sim. Events", "_simulate_events"),
+    ("nsdf_evt_play", "Play Back", "_start_playback"),
+)
+_EVENT_BUTTON_ROW_GEOMETRY = {"height": 28, "gap": 8, "width": 120, "advance": 40}
+
+# ---------------------------------------------------------------------------
+# Inspect tab specs
+# ---------------------------------------------------------------------------
+
+_INSPECT_HEADER_LABEL_SPECS = (
+    PresenterLabelSpec("nsdf_prop_title", 22,
+        "PropertyRegistry \u2014 registered descriptors for ButtonControl:", advance=26),
+    PresenterLabelSpec("nsdf_snap_title", 22,
+        "SceneSnapshot \u2014 capture & restore window rect:", advance=26),
+    PresenterLabelSpec("nsdf_spatial_title", 22,
+        "SceneSpatialIndex \u2014 build from scene, then hit-test:", advance=26),
+)
+_INSPECT_SNAPSHOT_BUTTON_SPECS = (
+    PresenterButtonSpec("nsdf_snap_capture", 110, 28, "Capture",
+        "_capture_snapshot", advance=0),
+    PresenterButtonSpec("nsdf_snap_restore", 110, 28, "Restore",
+        "_restore_snapshot", advance=36, x_offset=118),
+)
+_INSPECT_SNAPSHOT_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_snap_label", 22, "No snapshot captured yet.", advance=30)
+_INSPECT_SPATIAL_BUTTON_SPEC = PresenterButtonSpec(
+    "nsdf_spatial_build", 160, 28, "Build & Query Center",
+    "_build_and_query_spatial", advance=36)
+_INSPECT_SPATIAL_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_spatial_label", 22, "Press 'Build & Query Center' to run.")
+
+# ---------------------------------------------------------------------------
+# Props tab specs
+# ---------------------------------------------------------------------------
+
+_PROPS_HEADER_LABEL_SPECS = (
+    PresenterLabelSpec("nsdf_props_title", 22,
+        "PropertyInspectorPanel \u2014 inspect _DemoInspectable properties:", advance=28),
+    PresenterLabelSpec("nsdf_props_hint", 20,
+        "Click a property row to select it. Use refresh to re-read values.", advance=26),
+)
+_PROPS_SELECTED_LABEL_SPEC = PresenterLabelSpec(
+    "nsdf_prop_selected", 20, "Select a property above\u2026", advance=26)
+_PROPS_REFRESH_BUTTON_SPEC = PresenterButtonSpec(
+    "nsdf_props_refresh", 100, 28, "Refresh", "_refresh_prop_inspector")
+
+# ---------------------------------------------------------------------------
+# Inspect descriptor display specs
+# ---------------------------------------------------------------------------
 
 _BUTTON_DESCRIPTOR_SPECS = (
     ("visible", "Visible", "bool", "Appearance"),
@@ -513,6 +688,43 @@ class SystemsDemoFeature(RoutedFeature):
                 clip_bottom = getattr(self, "_flow_items_rect", Rect(0, 0, 0, 9999)).bottom
             for item in self._flow_items:
                 item.visible = item.rect.bottom <= clip_bottom
+
+    @staticmethod
+    def _add_tab_labels_from_specs(ctx: TabLayoutContext, specs) -> list[LabelControl]:
+        labels = []
+        for spec in specs:
+            kwargs = {}
+            if spec.width is not None:
+                kwargs["width"] = spec.width
+            if spec.advance is not None:
+                kwargs["advance"] = spec.advance
+            label = ctx.add_label(spec.control_id, spec.height, spec.text, **kwargs)
+            labels.append(label)
+        return labels
+
+    def _add_button_from_spec(self, ctx: TabLayoutContext, spec: PresenterButtonSpec):
+        """Add a button described by a PresenterButtonSpec, resolving handler by name."""
+        return ctx.add_button(
+            spec.control_id, spec.width, spec.height, spec.text,
+            getattr(self, spec.handler_attr),
+            x_offset=spec.x_offset,
+            advance=spec.advance,
+            style=spec.style,
+        )
+
+    @staticmethod
+    def _binding_label_text(binding) -> str:
+        key_name = pygame.key.name(binding.key) if binding.key else "?"
+        return str(_INPUT_BINDING_LABEL_SPEC["text_template"]).format(
+            label=binding.label,
+            key_name=key_name,
+        )
+
+    def _configure_input_breakpoints(self) -> None:
+        self._responsive = ResponsiveLayout()
+        for name, min_width in _INPUT_BREAKPOINT_SPECS:
+            self._responsive.add_breakpoint(Breakpoint(str(name), min_width=int(min_width), layout=None))
+
     # ------------------------------------------------------------------
     # Tab: Filter — SortFilterProxySource
     # ------------------------------------------------------------------
@@ -520,51 +732,51 @@ class SystemsDemoFeature(RoutedFeature):
     def _build_filter_tab(self, host, rect: Rect) -> list:
         ctx = TabLayoutContext(self.window, rect)
 
-        fruit_items = [
-            ListItem("Apple"),
-            ListItem("Apricot"),
-            ListItem("Banana"),
-            ListItem("Blueberry"),
-            ListItem("Cherry"),
-            ListItem("Grape"),
-            ListItem("Lemon"),
-            ListItem("Mango"),
-            ListItem("Orange"),
-            ListItem("Peach"),
-        ]
+        fruit_items = [ListItem(name) for name in _FILTER_ITEM_LABELS]
         source = FixedItemSource(fruit_items)
         self._proxy = SortFilterProxySource(source)
         self._proxy.subscribe(self._update_filter_label)
 
-        ctx.add_label("nsdf_filter_info", 20,
-            "SortFilterProxySource wraps any VirtualItemSource with reactive filter + sort.",
-            advance=28)
+        self._add_tab_labels_from_specs(ctx, _FILTER_TAB_LABEL_SPECS)
 
-        ctx.add_label("nsdf_filter_lbl", 26, "Filter:", width=60, advance=0)
-        ctx.add_control(TextInputControl(
-            "nsdf_filter_input",
-            Rect(ctx.x + 68, ctx.y, 200, 28),
-            placeholder="type prefix...",
-            on_change=self._on_filter_changed,
-        ))
-        ctx.advance(36)
+        ctx.add_control(
+            TextInputControl(
+                str(_FILTER_INPUT_SPEC["control_id"]),
+                Rect(
+                    ctx.x + int(_FILTER_INPUT_SPEC["x_offset"]),
+                    ctx.y,
+                    int(_FILTER_INPUT_SPEC["width"]),
+                    int(_FILTER_INPUT_SPEC["height"]),
+                ),
+                placeholder=str(_FILTER_INPUT_SPEC["placeholder"]),
+                on_change=self._on_filter_changed,
+            )
+        )
+        ctx.advance(int(_FILTER_INPUT_SPEC["advance"]))
 
-        ctx.add_control(ToggleControl(
-            "nsdf_sort_toggle",
-            Rect(ctx.x, ctx.y, 130, 28),
-            "Sort: A→Z",
-            "Sort: Z→A",
-            pushed=False,
-            on_toggle=self._on_sort_toggled,
-            style="round",
-        ))
-        ctx.advance(38)
+        ctx.add_control(
+            ToggleControl(
+                str(_FILTER_SORT_TOGGLE_SPEC["control_id"]),
+                Rect(
+                    ctx.x,
+                    ctx.y,
+                    int(_FILTER_SORT_TOGGLE_SPEC["width"]),
+                    int(_FILTER_SORT_TOGGLE_SPEC["height"]),
+                ),
+                str(_FILTER_SORT_TOGGLE_SPEC["off_text"]),
+                str(_FILTER_SORT_TOGGLE_SPEC["on_text"]),
+                pushed=bool(_FILTER_SORT_TOGGLE_SPEC["pushed"]),
+                on_toggle=self._on_sort_toggled,
+                style=str(_FILTER_SORT_TOGGLE_SPEC["style"]),
+            )
+        )
+        ctx.advance(int(_FILTER_SORT_TOGGLE_SPEC["advance"]))
 
-        ctx.add_label("nsdf_filter_result_title", 20, "Proxy output:", advance=24)
+        self._add_tab_labels_from_specs(ctx, (_FILTER_RESULT_TITLE_SPEC,))
         self._filter_label = ctx.add_label(
-            "nsdf_filter_result_lbl",
-            max(40, ctx.remaining_height(margin=ctx.pad)),
-            "",
+            str(_FILTER_RESULT_LABEL_SPEC["control_id"]),
+            max(int(_FILTER_RESULT_LABEL_SPEC["min_height"]), ctx.remaining_height(margin=ctx.pad)),
+            str(_FILTER_RESULT_LABEL_SPEC["text"]),
         )
 
         self._update_filter_label()
@@ -603,26 +815,40 @@ class SystemsDemoFeature(RoutedFeature):
             initial_locale="en",
         )
 
-        ctx.add_label("nsdf_locale_lbl", 26, "Locale:", width=80, advance=0)
+        self._add_tab_labels_from_specs(ctx, (_LOCALE_TAB_LABEL_SPECS[0],))
         for i, (locale_id, locale_name) in enumerate(_LOCALE_BUTTON_SPECS):
-            ctx.add_control(ButtonControl(
-                f"nsdf_locale_btn_{locale_id}",
-                Rect(ctx.x + 90 + i * 60, ctx.y, 52, 28),
-                locale_name,
-                self._make_locale_setter(locale_id),
-            ))
-        ctx.advance(36)
+            ctx.add_control(
+                ButtonControl(
+                    f"nsdf_locale_btn_{locale_id}",
+                    Rect(
+                        ctx.x + int(_LOCALE_BUTTON_LAYOUT_SPEC["x_offset"]) + (i * int(_LOCALE_BUTTON_LAYOUT_SPEC["step"])),
+                        ctx.y,
+                        int(_LOCALE_BUTTON_LAYOUT_SPEC["width"]),
+                        int(_LOCALE_BUTTON_LAYOUT_SPEC["height"]),
+                    ),
+                    locale_name,
+                    self._make_locale_setter(locale_id),
+                )
+            )
+        ctx.advance(int(_LOCALE_BUTTON_LAYOUT_SPEC["advance"]))
 
         self._greeting_label = ctx.add_label(
-            "nsdf_greeting_lbl", 26, self._locale_registry.t("greeting"), advance=34)
-        ctx.add_label("nsdf_canvas_lbl", 20,
-            "TextFlow rendering (word-wrapped, mixed-style):", advance=24)
+            str(_LOCALE_GREETING_LABEL_SPEC["control_id"]),
+            int(_LOCALE_GREETING_LABEL_SPEC["height"]),
+            self._locale_registry.t("greeting"),
+            advance=int(_LOCALE_GREETING_LABEL_SPEC["advance"]),
+        )
+        self._add_tab_labels_from_specs(ctx, (_LOCALE_TAB_LABEL_SPECS[1],))
 
-        canvas_h = max(60, ctx.remaining_height(margin=ctx.pad))
+        canvas_h = max(int(_LOCALE_TEXT_CANVAS_SPEC["min_height"]), ctx.remaining_height(margin=ctx.pad))
         self._text_canvas = ctx.add_control(
-            CanvasControl("nsdf_text_canvas", Rect(ctx.x, ctx.y, ctx.width, canvas_h)))
+            CanvasControl(str(_LOCALE_TEXT_CANVAS_SPEC["control_id"]), Rect(ctx.x, ctx.y, ctx.width, canvas_h))
+        )
 
-        self._text_flow = TextFlow(width=ctx.width - 16, line_spacing=3)
+        self._text_flow = TextFlow(
+            width=ctx.width - int(_LOCALE_TEXT_CANVAS_SPEC["text_flow_horizontal_padding"]),
+            line_spacing=int(_LOCALE_TEXT_CANVAS_SPEC["line_spacing"]),
+        )
         self._rebuild_text_flow()
         return ctx.build()
 
@@ -661,32 +887,30 @@ class SystemsDemoFeature(RoutedFeature):
         for action, key, label in _INPUT_DECLARE_SPECS:
             self._input_map.declare(action, key=key, mod=0, label=label)
 
-        ctx.add_label("nsdf_input_title", 22,
-            "InputMap — declared action bindings:", advance=26)
+        self._add_tab_labels_from_specs(ctx, (_INPUT_TAB_HEADER_LABEL_SPECS[0],))
 
         self._binding_labels = []
         for binding in self._input_map.bindings():
-            key_name = pygame.key.name(binding.key) if binding.key else "?"
             lbl = ctx.add_label(
-                f"nsdf_binding_{binding.action}", 22,
-                f"  {binding.label}: {key_name}", advance=23)
+                f"{_INPUT_BINDING_LABEL_SPEC['control_id_prefix']}{binding.action}",
+                int(_INPUT_BINDING_LABEL_SPEC["height"]),
+                self._binding_label_text(binding),
+                advance=int(_INPUT_BINDING_LABEL_SPEC["advance"]),
+            )
             self._binding_labels.append(lbl)
         ctx.advance(6)
 
-        ctx.add_button("nsdf_input_remap_btn", 150, 28, "Remap: W/A/S/D",
-            self._remap_bindings, advance=36)
-        ctx.add_button("nsdf_input_reset_btn", 150, 28, "Reset to Arrows",
-            self._reset_bindings, advance=44)
+        for spec in _INPUT_ACTION_BUTTON_SPECS:
+            self._add_button_from_spec(ctx, spec)
 
-        ctx.add_label("nsdf_resp_title", 22,
-            "ResponsiveLayout — breakpoints based on window width:", advance=26)
+        self._add_tab_labels_from_specs(ctx, (_INPUT_TAB_HEADER_LABEL_SPECS[1],))
         self._layout_label = ctx.add_label(
-            "nsdf_layout_lbl", 22, "Active breakpoint: (updating...)")
+            _INPUT_LAYOUT_STATUS_LABEL_SPEC.control_id,
+            _INPUT_LAYOUT_STATUS_LABEL_SPEC.height,
+            _INPUT_LAYOUT_STATUS_LABEL_SPEC.text,
+        )
 
-        self._responsive = ResponsiveLayout()
-        self._responsive.add_breakpoint(Breakpoint("narrow", min_width=0, layout=None))
-        self._responsive.add_breakpoint(Breakpoint("standard", min_width=600, layout=None))
-        self._responsive.add_breakpoint(Breakpoint("wide", min_width=900, layout=None))
+        self._configure_input_breakpoints()
 
         return ctx.build()
 
@@ -706,8 +930,7 @@ class SystemsDemoFeature(RoutedFeature):
         if self._input_map is None:
             return
         for lbl, binding in zip(self._binding_labels, self._input_map.bindings()):
-            key_name = pygame.key.name(binding.key) if binding.key else "?"
-            lbl.text = f"  {binding.label}: {key_name}"
+            lbl.text = self._binding_label_text(binding)
 
     # ------------------------------------------------------------------
     # Tab: Event — EventRecorder + EventPlayback + RecordedEvent
@@ -718,24 +941,27 @@ class SystemsDemoFeature(RoutedFeature):
 
         self._recorder = EventRecorder()
 
-        ctx.add_label("nsdf_evt_info", 20,
-            "EventRecorder captures GuiEvents; EventPlayback replays them via a handler.",
-            advance=28)
+        self._add_tab_labels_from_specs(ctx, (_EVENT_INFO_LABEL_SPEC,))
         self._event_status_label = ctx.add_label(
-            "nsdf_evt_status", 22, "Status: Idle — 0 events recorded", advance=30)
+            _EVENT_STATUS_LABEL_SPEC.control_id,
+            _EVENT_STATUS_LABEL_SPEC.height,
+            _EVENT_STATUS_LABEL_SPEC.text,
+            advance=_EVENT_STATUS_LABEL_SPEC.advance,
+        )
 
-        ctx.add_button_row(height=28, gap=8, width=120, advance=40, specs=(
-            ("nsdf_evt_record", "Start Rec.", self._start_recording),
-            ("nsdf_evt_stop", "Stop", self._stop_recording),
-            ("nsdf_evt_simulate", "Sim. Events", self._simulate_events),
-            ("nsdf_evt_play", "Play Back", self._start_playback),
-        ))
+        ctx.add_button_row(
+            **_EVENT_BUTTON_ROW_GEOMETRY,
+            specs=tuple(
+                (cid, lbl, getattr(self, attr))
+                for cid, lbl, attr in _EVENT_BUTTON_ROW_HANDLER_ATTRS
+            ),
+        )
 
-        ctx.add_label("nsdf_evt_log_title", 20, "Event log:", advance=24)
+        self._add_tab_labels_from_specs(ctx, (_EVENT_LOG_TITLE_SPEC,))
         self._event_log_label = ctx.add_label(
-            "nsdf_evt_log",
-            max(40, ctx.remaining_height(margin=ctx.pad)),
-            "No events recorded yet.",
+            _EVENT_LOG_LABEL_SPEC.control_id,
+            max(_EVENT_LOG_LABEL_SPEC.height, ctx.remaining_height(margin=ctx.pad)),
+            _EVENT_LOG_LABEL_SPEC.text,
         )
         return ctx.build()
 
@@ -825,8 +1051,7 @@ class SystemsDemoFeature(RoutedFeature):
         ctx = TabLayoutContext(self.window, rect)
 
         # PropertyRegistry / PropertyDescriptor demo
-        ctx.add_label("nsdf_prop_title", 22,
-            "PropertyRegistry — registered descriptors for ButtonControl:", advance=26)
+        self._add_tab_labels_from_specs(ctx, (_INSPECT_HEADER_LABEL_SPECS[0],))
 
         # Register sample descriptors to demonstrate the API
         descs = [
@@ -848,23 +1073,25 @@ class SystemsDemoFeature(RoutedFeature):
         ctx.advance(8)
 
         # SceneSnapshot demo
-        ctx.add_label("nsdf_snap_title", 22,
-            "SceneSnapshot — capture & restore window rect:", advance=26)
-        ctx.add_button("nsdf_snap_capture", 110, 28, "Capture",
-            self._capture_snapshot, advance=0)
-        ctx.add_button("nsdf_snap_restore", 110, 28, "Restore",
-            self._restore_snapshot, x_offset=118, advance=36)
+        self._add_tab_labels_from_specs(ctx, (_INSPECT_HEADER_LABEL_SPECS[1],))
+        for spec in _INSPECT_SNAPSHOT_BUTTON_SPECS:
+            self._add_button_from_spec(ctx, spec)
         self._snapshot_label = ctx.add_label(
-            "nsdf_snap_label", 22, "No snapshot captured yet.", advance=30)
+            _INSPECT_SNAPSHOT_LABEL_SPEC.control_id,
+            _INSPECT_SNAPSHOT_LABEL_SPEC.height,
+            _INSPECT_SNAPSHOT_LABEL_SPEC.text,
+            advance=_INSPECT_SNAPSHOT_LABEL_SPEC.advance,
+        )
 
         # SceneSpatialIndex demo
-        ctx.add_label("nsdf_spatial_title", 22,
-            "SceneSpatialIndex — build from scene, then hit-test:", advance=26)
+        self._add_tab_labels_from_specs(ctx, (_INSPECT_HEADER_LABEL_SPECS[2],))
         self._spatial_index = SceneSpatialIndex(cell_size=64)
-        ctx.add_button("nsdf_spatial_build", 160, 28, "Build & Query Center",
-            self._build_and_query_spatial, advance=36)
+        self._add_button_from_spec(ctx, _INSPECT_SPATIAL_BUTTON_SPEC)
         self._spatial_label = ctx.add_label(
-            "nsdf_spatial_label", 22, "Press 'Build & Query Center' to run.")
+            _INSPECT_SPATIAL_LABEL_SPEC.control_id,
+            _INSPECT_SPATIAL_LABEL_SPEC.height,
+            _INSPECT_SPATIAL_LABEL_SPEC.text,
+        )
 
         return ctx.build()
 
@@ -875,10 +1102,7 @@ class SystemsDemoFeature(RoutedFeature):
     def _build_props_tab(self, host, rect: Rect) -> list:
         ctx = TabLayoutContext(self.window, rect)
 
-        ctx.add_label("nsdf_props_title", 22,
-            "PropertyInspectorPanel — inspect _DemoInspectable properties:", advance=28)
-        ctx.add_label("nsdf_props_hint", 20,
-            "Click a property row to select it. Use refresh to re-read values.", advance=26)
+        self._add_tab_labels_from_specs(ctx, _PROPS_HEADER_LABEL_SPECS)
 
         panel_h = max(120, ctx.remaining_height(margin=60 + ctx.pad))
         self._prop_inspector_panel = ctx.add_control(
@@ -892,9 +1116,12 @@ class SystemsDemoFeature(RoutedFeature):
         ctx.advance(panel_h + 6)
 
         self._prop_selected_label = ctx.add_label(
-            "nsdf_prop_selected", 20, "Select a property above…", advance=26)
-        ctx.add_button("nsdf_props_refresh", 100, 28, "Refresh",
-            self._refresh_prop_inspector)
+            _PROPS_SELECTED_LABEL_SPEC.control_id,
+            _PROPS_SELECTED_LABEL_SPEC.height,
+            _PROPS_SELECTED_LABEL_SPEC.text,
+            advance=_PROPS_SELECTED_LABEL_SPEC.advance,
+        )
+        self._add_button_from_spec(ctx, _PROPS_REFRESH_BUTTON_SPEC)
 
         return ctx.build()
 
@@ -1627,8 +1854,21 @@ class SystemsDemoFeature(RoutedFeature):
     def bind_runtime(self, host) -> None:
         super().bind_runtime(host)
         bind_routed_feature_lifecycle(self, host, _SYSTEMS_LIFECYCLE_SPEC)
-        self._main_scene = host.app.create_scene("main")
+        self._main_scene = self._resolve_existing_main_scene(host)
         self._frame_timer.reset()
+
+    @staticmethod
+    def _resolve_existing_main_scene(host):
+        app = getattr(host, "app", None)
+        if app is None:
+            return None
+        if hasattr(app, "has_scene") and not app.has_scene("main"):
+            return None
+        runtime_map = getattr(app, "_scenes", None)
+        if isinstance(runtime_map, dict):
+            runtime = runtime_map.get("main")
+            return getattr(runtime, "scene", None)
+        return None
 
 
 class _SystemsWindowPresenter(WindowPresenter):
