@@ -345,6 +345,9 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         self._app.running = False
 
     def _select_scene(self, scene_name: str) -> None:
+        active_scene = str(getattr(self._app, "active_scene_name", ""))
+        if str(scene_name) == active_scene:
+            return
         if self._on_scene_selected is not None:
             self._on_scene_selected(scene_name)
             return

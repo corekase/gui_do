@@ -565,20 +565,34 @@ class GuiApplication:
         if logical_event.kind in _POINTER_EVENT_KINDS:
             pointer_event_in_window, pointer_focus_target = self.scene.pointer_context_at(logical_event.pos)
 
-        if logical_event.is_mouse_down(1):
-            # Mouse click focus: only change focus when a valid mouse-focus target exists.
-            # Background clicks intentionally do not mutate focus state.
-            target = pointer_focus_target
-            if target is not None:
-                self.focus.set_focus(target)
-
-        # Route pointer + mouse events to overlays first.
-        # MOUSEBUTTONDOWN outside overlays returns False (pass-through); inside returns True.
         if logical_event.kind in _POINTER_EVENT_KINDS:
-            overlay_consumed = self.overlay.route_event(logical_event, self)
-            if overlay_consumed:
-                self.invalidation.invalidate_all()
-                return True
+            # IMPORTANT: for mouse-down clicks inside an open overlay, route the overlay
+            # BEFORE changing scene-graph focus.  Setting focus first triggers
+            # on_focus_changed(False) on the focused control (e.g. a menu bar), which
+            # dismisses any open flyout before the click can reach it.
+            click_in_overlay = (
+                logical_event.is_mouse_down(1)
+                and self.overlay.point_in_any_overlay(logical_event.pos)
+            )
+            if click_in_overlay:
+                # Overlay click: route to overlay first, defer focus change.
+                overlay_consumed = self.overlay.route_event(logical_event, self)
+                if overlay_consumed:
+                    self.invalidation.invalidate_all()
+                    return True
+                # Click was inside overlay rect but not consumed (e.g. padding area);
+                # fall through to normal focus change + scene dispatch.
+                if pointer_focus_target is not None:
+                    self.focus.set_focus(pointer_focus_target)
+            else:
+                # Normal path: for mouse-down, apply focus first (background clicks
+                # intentionally do not mutate focus state).
+                if logical_event.is_mouse_down(1) and pointer_focus_target is not None:
+                    self.focus.set_focus(pointer_focus_target)
+                overlay_consumed = self.overlay.route_event(logical_event, self)
+                if overlay_consumed:
+                    self.invalidation.invalidate_all()
+                    return True
 
         if self.keyboard.is_key_event(logical_event):
             # Give overlays first chance to handle key events (e.g. ESC to dismiss)

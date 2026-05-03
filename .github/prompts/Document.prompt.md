@@ -119,6 +119,25 @@ The README must guide developers into declarative + lifecycle composition first 
 - Ensure examples run against current API.
 - Remove stale or contradictory statements.
 
+### Compliance Testing (Required)
+
+Before finalizing README.md and TUTORIAL.md, run and report a compliance pass against this prompt.
+
+- Validate required top-level section order and presence:
+	- README.md must include only the listed top-level sections in this prompt.
+	- TUTORIAL.md must include sections 1 through 11 in exact order.
+- Validate content-rule compliance:
+	- No private/internal symbols in beginner tutorial examples.
+	- Installation step in TUTORIAL.md must use local editable install without dependency resolution:
+		`python -m pip install -e . --no-deps`.
+	- Overlay, toast, and focus/routing behavior descriptions must match current runtime behavior.
+- Validate examples and snippets:
+	- Minimal runnable example section title must be exactly
+		`Minimal Runnable Example and Configuration`.
+	- Minimal runnable example content must be a single listing.
+- Perform at least one automated text/structure check (for example with `rg`) and fix violations before completion.
+- Summarize what was checked and what was changed to reach compliance.
+
 ---
 
 ## TUTORIAL.md Generation
@@ -152,7 +171,7 @@ Developers with basic Python knowledge who are new to gui_do and possibly new to
 - Feature lifecycle and hook roles (build, bind_runtime, handle_event, on_update, draw).
 
 #### 3. Installation and Setup
-- pip install command.
+- Local install command from the repository root (not PyPI), and it must avoid dependency builds so local package installation succeeds without attempting binary dependency compilation: `python -m pip install -e . --no-deps`.
 - Minimal imports.
 - Clarify bootstrap path vs manual GuiApplication surface path.
 

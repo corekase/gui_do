@@ -2,10 +2,15 @@
 
 # gui_do
 
+## Project Overview
+
+[Back to Top](#table-of-contents)
+
 gui_do is a pygame-based GUI framework for building desktop applications through declarative runtime specs and feature lifecycles instead of hand-wired scene code. You describe scenes, features, actions, overlays, and window presentation in data, then bind focused behavior inside Feature hooks. gui_do removes a large amount of boilerplate around scene setup, event routing, overlay dispatch, focus handling, and lifecycle sequencing.
 
 ## Table of Contents
 
+- [Project Overview](#project-overview)
 - [API Organization](#api-organization)
   - [Tier 1: Primary APIs](#tier-1-primary-apis)
   - [Tier 2-7: Runtime Infrastructure](#tier-2-7-runtime-infrastructure)
@@ -101,6 +106,8 @@ gui_do takes care of:
 - Feature registration, build ordering, bind ordering, update sequencing, and shutdown.
 - Action registration and key binding dispatch.
 - Overlay coordination, toast dispatch, and command palette integration.
+- Accessibility key routing: Tab drives traversal, and focused-control Up/Down accessibility navigation keys are consumed at the focused control so they do not fall through to scene-level handlers.
+- Non-accessibility key routing precedence: focused control first, then active window, then screen lifecycle handlers.
 
 ### Overlay and Toast Behavior
 
@@ -163,7 +170,7 @@ runtime_spec = RoutedRuntimeSpec(
     scene_name="main",
     shortcut_overlays=(
         ShortcutOverlaySpec(
-            attr_name="_help_overlay",
+            attr_name="help_overlay",
             action_registry_attr="action_registry",
             toggle_action_name="show_help",
             toggle_key=pygame.K_F9,
@@ -269,7 +276,7 @@ class HelloApp:
                 SceneSetupSpec(name="main", pretty_name="Main", initial=True),
             ),
             feature_specs=(
-                FeatureSpec(attr_name="_hello_feature", factory=HelloFeature),
+                FeatureSpec(attr_name="hello_feature", factory=HelloFeature),
             ),
             window_specs=(),
             runtime_scene_specs=(
@@ -328,7 +335,7 @@ For apps with a lot of entries, `HostApplicationBindingSpec` plus `build_host_ap
 `FeatureSpec(attr_name, factory)` declares one host-owned feature. `bootstrap_host_application` instantiates it, stores it on the host at `attr_name`, and registers it with the app.
 
 ```python
-FeatureSpec(attr_name="_editor_feature", factory=EditorFeature)
+FeatureSpec(attr_name="editor_feature", factory=EditorFeature)
 ```
 
 ### SceneSetupSpec
@@ -453,6 +460,8 @@ Practical guideline: use messages to coordinate features, not direct attribute r
 
 The demo uses declarative helpers such as `SceneMenuStripSpec`, `SceneTaskPanelSpec`, `TaskPanelButtonSpec`, and helper builders from `data_driven_runtime.py` to keep scene shell setup out of individual control wiring. That is the recommended pattern for menu strips, task panels, scene return buttons, and standard shell controls.
 
+`SceneMenuStripControl` ignores selecting the already active scene, so reselecting the current scene is a no-op instead of triggering a redundant scene switch.
+
 ### Window Toggles and Focus-Aware Routing
 
 Use `WindowSpec` entries with `register_window_presentation_specs` (wired automatically by `bootstrap_host_application`) when a window also has an action entry or task-panel toggle. That keeps command palette window toggles, app actions, and task-panel buttons synchronized with actual window visibility.
@@ -505,7 +514,7 @@ Use `build()` for control creation, `bind_runtime()` for subscriptions and runti
 
 **How does event routing work?**
 
-gui_do routes events through overlays, focus-aware controls, scene/window hit testing, feature handlers, and fallthrough handlers. In practice that means overlays get first shot, focused or hit controls handle next, and scene-level logic runs after that.
+gui_do routes events through overlays, focus-aware controls, scene/window hit testing, feature handlers, and fallthrough handlers. In practice that means overlays get first shot, focused or hit controls handle next, and scene-level logic runs after that. For keyboard input, accessibility navigation keys are consumed in focused-control routing (Tab traversal plus focused-control Up/Down accessibility navigation), while non-accessibility keys route focused control first, then active window, then screen lifecycle handlers.
 
 **What overlay behavior should I expect by default?**
 

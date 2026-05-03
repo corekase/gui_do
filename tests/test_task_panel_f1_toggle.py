@@ -67,10 +67,18 @@ class _StubTaskPanelFocus:
 
 
 class _StubFocus:
+    def __init__(self):
+        self.focused_node = None
+        self.route_calls = []
+        self.route_result = False
+        self.cycle_calls = []
+
     def route_key_event(self, event, app):
-        return False
+        self.route_calls.append((event, app))
+        return bool(self.route_result)
 
     def cycle_focus(self, scene, *, forward: bool, window, pointer_pos):
+        self.cycle_calls.append((scene, bool(forward), window, pointer_pos))
         return False
 
 
@@ -80,8 +88,20 @@ class _StubOverlay:
 
 
 class _StubScene:
+    def __init__(self, *, active_window=None):
+        self._active_window = active_window
+
     def active_window(self):
-        return None
+        return self._active_window
+
+
+class _StubWindow:
+    def __init__(self):
+        self.calls = []
+
+    def handle_event(self, event, app):
+        self.calls.append((event, app))
+        return False
 
 
 class _StubApp:
@@ -148,6 +168,90 @@ class TestTaskPanelF1Toggle(unittest.TestCase):
         result = bool(handler(None))
         self.assertTrue(result)
         self.assertEqual(1, len(host.app.task_panel_focus.toggle_calls))
+
+    def test_accessibility_tab_is_consumed_by_focused_control(self):
+        scene = _StubScene()
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+        app.focus.focused_node = object()
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_TAB)
+
+        consumed = manager.route_key_event(scene, event, app)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual(1, len(app.focus.cycle_calls))
+
+    def test_non_accessible_key_routes_to_active_window_before_screen_handler(self):
+        window = _StubWindow()
+        scene = _StubScene(active_window=window)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+        app.focus.route_result = False
+
+        screen_calls = []
+
+        def _screen_handler(_event):
+            screen_calls.append(True)
+            return True
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_F2)
+
+        consumed = manager.route_key_event(scene, event, app, _screen_handler)
+
+        self.assertTrue(consumed)
+        self.assertEqual(1, len(window.calls))
+        self.assertEqual([], screen_calls)
+
+    def test_accessibility_down_is_consumed_by_focused_control_without_fallthrough(self):
+        window = _StubWindow()
+        scene = _StubScene(active_window=window)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+        app.focus.focused_node = object()
+        app.focus.route_result = False
+
+        screen_calls = []
+
+        def _screen_handler(_event):
+            screen_calls.append(True)
+            return True
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_DOWN)
+
+        consumed = manager.route_key_event(scene, event, app, _screen_handler)
+
+        self.assertTrue(consumed)
+        self.assertTrue(event.default_prevented)
+        self.assertTrue(event.propagation_stopped)
+        self.assertEqual(1, len(app.focus.route_calls))
+        self.assertEqual([], window.calls)
+        self.assertEqual([], screen_calls)
+
+    def test_non_accessible_key_routes_to_screen_handler_when_no_active_window(self):
+        scene = _StubScene(active_window=None)
+        task_panel_focus = _StubTaskPanelFocus(is_active=False)
+        app = _StubApp(scene_name="main", task_panel_focus=task_panel_focus)
+        app.focus.route_result = False
+
+        screen_calls = []
+
+        def _screen_handler(_event):
+            screen_calls.append(True)
+            return True
+
+        manager = KeyboardManager()
+        event = _StubKeyEvent(key=pygame.K_F2)
+
+        consumed = manager.route_key_event(scene, event, app, _screen_handler)
+
+        self.assertTrue(consumed)
+        self.assertEqual([True], screen_calls)
 
 
 if __name__ == "__main__":

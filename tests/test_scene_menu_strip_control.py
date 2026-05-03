@@ -10,6 +10,8 @@ from gui_do.events.gui_event import EventType, GuiEvent
 from gui_do.focus.focus_manager import FocusManager
 from gui_do.features.feature_lifecycle import add_window_scene_menu_strip
 from gui_do.overlays.context_menu_manager import ContextMenuItem
+from gui_do.app.gui_application import GuiApplication
+from gui_do.controls.input.button_control import ButtonControl
 
 
 class _StubWindowNode:
@@ -497,6 +499,28 @@ class TestSceneMenuStripControl(unittest.TestCase):
         self.assertTrue(systems_window.visible)
         self.assertEqual([("systems_window", True)], callback_events)
 
+    def test_scene_menu_ignores_selection_of_current_active_scene(self):
+        app = _StubApp(scene=_StubScene([]))
+        selected = []
+        menu = SceneMenuStripControl(
+            "menu",
+            Rect(0, 0, 500, 28),
+            app,
+            scenes_shown=True,
+            on_scene_selected=lambda scene_name: selected.append(str(scene_name)),
+        )
+
+        scenes_entry = next((entry for entry in menu.entries if entry.label == "Scenes"), None)
+        self.assertIsNotNone(scenes_entry)
+        self.assertGreaterEqual(len(scenes_entry.items), 2)
+
+        # Active scene is "main" in the stub app; selecting it again is a no-op.
+        scenes_entry.items[0].action()
+        self.assertEqual([], selected)
+
+        scenes_entry.items[1].action()
+        self.assertEqual(["control_showcase"], selected)
+
     def test_add_window_scene_menu_strip_accepts_optional_scene_and_window_providers(self):
         app = _StubApp(scene=_StubScene([]))
         host = _StubHost(app)
@@ -519,6 +543,61 @@ class TestSceneMenuStripControl(unittest.TestCase):
         entries_by_label = {entry.label: entry for entry in added.entries}
         self.assertEqual(["Custom Scene"], [item.label for item in entries_by_label["Scenes"].items])
         self.assertEqual(["Custom Window"], [item.label for item in entries_by_label["Windows"].items])
+
+
+class TestSceneMenuStripMouseClickRegression(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not pygame.get_init():
+            pygame.init()
+        if not pygame.font.get_init():
+            pygame.font.init()
+
+    def test_mouse_click_on_scene_flyout_item_fires_when_focus_stealer_present(self):
+        from gui_do.app.gui_application import GuiApplication
+        from gui_do.controls.input.button_control import ButtonControl
+        surface = pygame.Surface((800, 200))
+        app = GuiApplication(surface)
+        app.create_scene("main")
+        app.create_scene("control_showcase")
+        app.switch_scene("control_showcase")
+        fired = []
+        menu = SceneMenuStripControl(
+            "menu",
+            Rect(0, 0, 800, 28),
+            app,
+            scene_name="control_showcase",
+            scenes_shown=True,
+            scene_items_provider=lambda: [
+                ContextMenuItem("Main", action=lambda: fired.append("main"))
+            ],
+        )
+        menu.set_tab_index(1)
+        app.add(menu, scene_name="control_showcase")
+        focus_stealer = ButtonControl("stealer", Rect(0, 28, 800, 172), "Steal")
+        focus_stealer.set_tab_index(2)
+        app.add(focus_stealer, scene_name="control_showcase")
+        app.focus.set_focus(menu)
+        app.theme.register_font_role("default", size=14)
+        menu.handle_event(
+            GuiEvent(kind=EventType.KEY_DOWN, type=pygame.KEYDOWN, key=pygame.K_DOWN),
+            app,
+            theme=app.theme,
+        )
+        self.assertGreaterEqual(menu._open_index, 0)
+        self.assertGreater(app.overlay.overlay_count(), 0)
+        flyout_panel = app.overlay._records[0].control
+        flyout_rect = flyout_panel.rect
+        click_x = flyout_rect.x + flyout_rect.width // 2
+        click_y = flyout_rect.y + 4 + 13
+        click = GuiEvent(
+            kind=EventType.MOUSE_BUTTON_DOWN,
+            type=pygame.MOUSEBUTTONDOWN,
+            pos=(click_x, click_y),
+            button=1,
+        )
+        app.process_event(click)
+        self.assertEqual(["main"], fired)
 
 
 if __name__ == "__main__":

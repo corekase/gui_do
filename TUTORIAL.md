@@ -25,12 +25,14 @@ Features are the units of composition. The main hooks are:
 - `on_update(host)` for per-frame logic.
 - `draw(host, surface, theme)` for custom drawing.
 
+Keyboard routing follows focus-first lifecycle rules: accessibility navigation keys are handled at focused-control scope (Tab traversal, plus focused-control Up/Down accessibility navigation), and non-accessibility keys route focused control first, then active window, then screen lifecycle handlers.
+
 ## 3. Installation and Setup
 
-Install the package with pip:
+From the repository root, install the local package in editable mode without dependency resolution:
 
 ```bash
-pip install gui-do
+python -m pip install -e . --no-deps
 ```
 
 Minimal imports for the bootstrap path usually look like this:
@@ -117,7 +119,7 @@ config = HostApplicationConfig(
         SceneSetupSpec(name="main", pretty_name="Main", initial=True),
     ),
     feature_specs=(
-        FeatureSpec(attr_name="_hello_feature", factory=HelloFeature),
+        FeatureSpec(attr_name="hello_feature", factory=HelloFeature),
     ),
     window_specs=(),
     runtime_scene_specs=(
@@ -204,7 +206,7 @@ class HelloApp:
                 SceneSetupSpec(name="main", pretty_name="Main", initial=True),
             ),
             feature_specs=(
-                FeatureSpec(attr_name="_hello_feature", factory=HelloFeature),
+                FeatureSpec(attr_name="hello_feature", factory=HelloFeature),
             ),
             window_specs=(),
             runtime_scene_specs=(
@@ -354,6 +356,8 @@ action_specs = (
 
 You can navigate either through scene actions or by calling the generated host helper such as `host.go_to_settings()`.
 
+When using scene menu strip helpers, selecting the already active scene is intentionally ignored (no redundant scene switch).
+
 ## 9. Spec Reference for Beginners
 
 `FeatureSpec`
@@ -446,7 +450,7 @@ runtime_spec = RoutedRuntimeSpec(
     scene_name="main",
     shortcut_overlays=(
         ShortcutOverlaySpec(
-            attr_name="_help_overlay",
+            attr_name="help_overlay",
             action_registry_attr="action_registry",
             toggle_action_name="show_help",
             toggle_key=pygame.K_F9,
@@ -525,7 +529,7 @@ class StatusFeature(Feature):
         )
 
     def bind_runtime(self, host) -> None:
-        counter = host._counter_feature
+        counter = host.counter_feature
 
         def _sync(value: int) -> None:
             self.status_label.text = f"Status: counter is now {value}"
@@ -552,8 +556,8 @@ class TutorialApp:
                 SceneSetupSpec(name="main", pretty_name="Main", initial=True),
             ),
             feature_specs=(
-                FeatureSpec(attr_name="_counter_feature", factory=CounterFeature),
-                FeatureSpec(attr_name="_status_feature", factory=StatusFeature),
+                FeatureSpec(attr_name="counter_feature", factory=CounterFeature),
+                FeatureSpec(attr_name="status_feature", factory=StatusFeature),
             ),
             window_specs=(),
             runtime_scene_specs=(
