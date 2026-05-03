@@ -115,6 +115,15 @@ The README must guide developers into declarative + lifecycle composition first 
 ## Post-Generation
 
 - Place unittest badge at the top of README.
+- Insert or replace the latest demo video block directly below the unittest badge.
+- Build the video URL from `gui_do/_version.py` using the `__demo__` variable value as the YouTube ID.
+- Use this exact README block format:
+
+	Latest Demo (click):
+
+	<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
+
+	Replace `URLPART` with the resolved `__demo__` value.
 - Verify all TOC links and section anchors.
 - Ensure examples run against current API.
 - Remove stale or contradictory statements.
@@ -135,6 +144,10 @@ Before finalizing README.md and TUTORIAL.md, run and report a compliance pass ag
 	- Minimal runnable example section title must be exactly
 		`Minimal Runnable Example and Configuration`.
 	- Minimal runnable example content must be a single listing.
+- Validate README media block compliance:
+	- Exactly one "Latest Demo (click):" block exists.
+	- The block is positioned immediately below the unittest badge.
+	- The YouTube/video thumbnail URL uses `gui_do/_version.py` `__demo__` value.
 - Perform at least one automated text/structure check (for example with `rg`) and fix violations before completion.
 - Summarize what was checked and what was changed to reach compliance.
 
