@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define final operating contracts for the data-driven GUI runtime so release quality can be measured and enforced.
+Define operating contracts for the data-driven GUI runtime so behavior remains measurable, deterministic, and testable.
 
 ## 1. System Guarantees
 
@@ -83,7 +83,7 @@ This gives predictable upper bounds under slow frames and avoids starvation unde
 
 ## Release Gate
 
-A release is considered final-ready only when:
+A release is considered ready only when:
 
 - runtime guarantees tests pass,
 - cross-system integration tests pass,

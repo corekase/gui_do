@@ -16,18 +16,6 @@ def _assert_headings_present_in_order(test_case: unittest.TestCase, content: str
 
 
 class TestContractDocsHelpers(unittest.TestCase):
-    def test_execution_plan_has_phase_order(self):
-        content = _read_doc("final_considerations_execution_plan.md")
-        _assert_headings_present_in_order(
-            self,
-            content,
-            [
-                "## Phase 1 - Guarantees, Determinism, and Baseline Budgets",
-                "## Phase 2 - Cross-System Restoration and Observability",
-                "## Phase 3 - Public Surface Policy, Diagnostics, and Release Gates",
-            ],
-        )
-
     def test_runtime_operating_contracts_has_numbered_sections(self):
         content = _read_doc("runtime_operating_contracts.md")
         _assert_headings_present_in_order(
@@ -43,8 +31,9 @@ class TestContractDocsHelpers(unittest.TestCase):
             ],
         )
 
-    def test_implementation_notes_avoid_stale_fixed_pass_counts(self):
-        content = _read_doc("final_considerations_implementation_notes.md")
+    def test_library_demo_separation_contract_has_required_sections(self):
+        content = _read_doc("library_demo_separation_contract.md")
 
-        self.assertIn("Result: passing", content)
-        self.assertNotIn("Result: 125 passed", content)
+        self.assertIn("## Principle", content)
+        self.assertIn("## Import Boundary", content)
+        self.assertIn("## Packaging Boundary", content)

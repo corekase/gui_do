@@ -9,6 +9,5 @@ class TestArchitectureBoundaryDocsContracts(unittest.TestCase):
 
         self.assertIn("## Boundary Rule", content)
         self.assertIn("`gui_do/` is framework/runtime package code and must not depend on `demo_features/`.", content)
-        self.assertIn("tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features", content)
-        self.assertIn("tests/test_boundary_contracts.py::test_demo_features_do_not_import_gui_do_internals", content)
-        self.assertIn("tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only", content)
+        self.assertIn("tests/test_boundary_contracts.py::test_gui_package_does_not_import_demo_features", content)
+        self.assertIn("tests/test_boundary_contracts.py::test_demo_entrypoint_uses_gui_root_import", content)

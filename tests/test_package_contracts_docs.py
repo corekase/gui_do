@@ -10,8 +10,8 @@ class TestPackageContractsDocs(unittest.TestCase):
         self.assertIn("docs/public_api_spec.md", content)
         self.assertIn("docs/event_system_spec.md", content)
         self.assertIn("docs/architecture_boundary_spec.md", content)
-        self.assertIn("docs/final_considerations_execution_plan.md", content)
         self.assertIn("docs/runtime_operating_contracts.md", content)
+        self.assertIn("docs/library_demo_separation_contract.md", content)
 
     def test_package_contracts_includes_unittest_and_pytest_commands(self):
         path = Path(__file__).resolve().parents[1] / "docs" / "package_contracts.md"

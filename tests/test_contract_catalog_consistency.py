@@ -10,8 +10,8 @@ class TestContractCatalogConsistency(unittest.TestCase):
             "event_system_spec.md",
             "architecture_boundary_spec.md",
             "package_contracts.md",
-            "final_considerations_execution_plan.md",
             "runtime_operating_contracts.md",
+            "library_demo_separation_contract.md",
         ]
 
         missing = [name for name in required if not (docs_dir / name).exists()]

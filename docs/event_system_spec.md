@@ -2,23 +2,14 @@
 
 ## Purpose
 
-This specification defines the canonical event object model and routing flow for the `gui_do` package.
-It replaces ad hoc direct usage of raw `pygame` events in app-level dispatch with normalized `GuiEvent` objects.
+This document defines the canonical event model used by the `gui_do` runtime.
+The app pipeline normalizes incoming `pygame` events to `GuiEvent` before dispatch.
 
-Terminology mirrors README/public API docs: canonical events at ingress, strict contracts in dispatch, and scene-aware routing behavior.
+## Event Model
 
-## Goals
+### `EventType`
 
-- Provide one event shape throughout GUI internals.
-- Preserve strict event-shape guarantees while still exposing raw pygame type where needed.
-- Align key routing with GUI best practice: active/focused window first, then screen fallback.
-- Keep pointer lock and logical pointer transforms explicit and testable.
-
-## Event Objects
-
-### `EventType` enum
-
-Semantic categories for GUI-level event intent:
+Current semantic event kinds:
 
 - `PASS`
 - `QUIT`
@@ -30,129 +21,66 @@ Semantic categories for GUI-level event intent:
 - `MOUSE_WHEEL`
 - `TEXT_INPUT`
 - `TEXT_EDITING`
-- `WIDGET`
-- `GROUP`
-- `TASK`
 
-### `GuiEvent` dataclass
+### `EventPhase`
 
-Canonical event object used by the app pipeline:
+Routing phase values:
 
-- `kind: EventType` semantic type.
-- `type: int` raw `pygame` event type (raw-type field).
-- `key: Optional[int]`
-- `pos: Optional[tuple[int, int]]`
-- `rel: Optional[tuple[int, int]]`
-- `raw_pos: Optional[tuple[int, int]]`
-- `raw_rel: Optional[tuple[int, int]]`
-- `button: Optional[int]`
-- `wheel_x: int`
-- `wheel_y: int`
-- `mod: int` (keyboard modifier bitmask; non-zero on key events with active modifiers)
-- `text: Optional[str]`
-- `widget_id: Optional[str]`
-- `group: Optional[str]`
-- `window: Optional[object]`
-- `task_panel: bool`
-- `task_id: Optional[Hashable]`
-- `error: Optional[str]`
-- `source_event: Optional[object]` (raw source event, when present)
-- `phase: EventPhase` (`CAPTURE`, `TARGET`, `BUBBLE`)
-- `propagation_stopped: bool`
-- `default_prevented: bool`
+- `CAPTURE`
+- `TARGET`
+- `BUBBLE`
 
-Helper operations on `GuiEvent` simplify consumer code:
+### `GuiEvent`
 
-- `is_kind(...)`
-- `is_key_down(key=None)` / `is_key_up(key=None)`
-- `is_mouse_down(button=None)` / `is_mouse_up(button=None)`
-- `is_mouse_motion()` / `is_mouse_wheel()`
-- `wheel_delta`
-- `collides(rect)`
-- `with_phase(phase)`
-- `stop_propagation()`
-- `prevent_default()`
+Canonical event object fields include:
 
-## Construction and Normalization
+- `kind`, `type`
+- `key`, `pos`, `rel`, `raw_pos`, `raw_rel`, `button`
+- `wheel_x`, `wheel_y`, `mod`, `text`
+- `control_id`, `group`, `window`, `task_panel`, `task_id`, `error`
+- `source_event`
+- `phase`, `propagation_stopped`, `default_prevented`
 
-### `GuiEvent.from_pygame`
+Common helpers:
 
-Input: a raw `pygame` event and optional pointer fallback position.
+- Semantic checks: `is_kind`, `is_key_down`, `is_key_up`, `is_mouse_down`, `is_mouse_up`, `is_mouse_motion`, `is_mouse_wheel`, `is_text_event`
+- Button helpers: `is_left_down`, `is_left_up`, `is_right_down`, `is_right_up`, `is_middle_down`, `is_middle_up`
+- Behavior helpers: `clone`, `with_phase`, `stop_propagation`, `prevent_default`, `wheel_delta`, `collides`
 
-Rules:
+## Normalization
 
-1. Map `pygame` type to `EventType` (`PASS` when unknown).
-2. Normalize optional scalar and tuple fields to strict types.
-3. For wheel events with no event-local `pos`, use fallback pointer position.
-4. Preserve the original source event in `source_event` for diagnostics.
+- `GuiEvent.from_pygame(event, pointer_pos)` maps `pygame` events into normalized `GuiEvent` instances.
+- Unknown `pygame` event types map to `EventType.PASS`.
+- Wheel events can use the fallback pointer position when event-local position data is missing.
+- `EventManager.to_gui_event(...)` is the runtime conversion gateway:
+  - passthrough when input is already a `GuiEvent`
+  - conversion otherwise
 
-### `EventManager`
+## Runtime Dispatch Flow
 
-`EventManager.to_gui_event(event, pointer_pos)` converts arbitrary input into `GuiEvent`:
+`GuiApplication.process_event` follows this contract:
 
-- If already `GuiEvent`, return as-is.
-- Otherwise normalize from raw `pygame` event.
+1. Normalize input to `GuiEvent`.
+2. Handle quit events early.
+3. Update shared input state.
+4. Update logical pointer state and apply pointer lock/capture clamping.
+5. Logicalize pointer events while preserving raw coordinates.
+6. Route overlays/toasts/focus management.
+7. Route keyboard events through keyboard manager and screen handler policy.
+8. Route feature handlers, scene dispatch, then fallthrough handlers.
+9. Respect `default_prevented` and `propagation_stopped` as hard stop signals.
 
-## Dispatch and Routing Flow
+## Behavioral Contracts
 
-App pipeline (`GuiApplication.process_event`) must execute in this order:
+- Application-level routing is `GuiEvent` based.
+- Scene dispatch always targets the active scene runtime.
+- Pointer processing keeps logical and raw pointer coordinates distinct.
+- `GuiEvent.clone()` must produce an independent event object for propagation flags.
 
-1. Convert input to `GuiEvent`.
-2. Handle process quit (`EventType.QUIT`).
-3. Update shared input state from normalized event.
-4. Update logical pointer position from event position (including wheel fallback behavior).
-5. Apply lock-area clamp and pointer-capture clamp.
-6. Enforce point lock recentering policy.
-7. Logicalize pointer events: keep raw coordinates in `raw_pos/raw_rel`, dispatch logical coordinates in `pos/rel`.
-8. Route key/text events via keyboard manager:
-   - active visible enabled window first,
-   - then screen handler fallback.
-   - any consumed key path marks default/prevented propagation semantics.
-9. Route non-key events to screen handler first; if unhandled, dispatch to scene graph.
-   - when `default_prevented` or `propagation_stopped` is set, fallback dispatch is suppressed.
+## Verification
 
-Scene containment note:
+Relevant tests include:
 
-- Event routing is always evaluated against the active scene graph.
-- Scene-scoped screen lifecycle layers are applied only when their `scene_name` matches the active scene.
-
-## Routed Phase Behavior
-
-Scene routing executes in three phases for each event:
-
-1. `CAPTURE` from root toward targets.
-2. `TARGET` on normal hit-tested/stacked dispatch.
-3. `BUBBLE` from target context back outward.
-
-Container controls (`PanelControl`, `WindowControl`) propagate routed phases to children using the same canonical event object.
-
-Propagation and default semantics:
-
-- `stop_propagation()` halts remaining listeners/phases.
-- `prevent_default()` marks fallback/default paths as consumed.
-- Keyboard ownership paths (actions, focus traversal, active window) set these flags when consuming events.
-
-## Best-Practice Integration Notes
-
-- Widgets and controls should consume `GuiEvent` as the canonical event object.
-- New widget code should prefer semantic checks (`event.kind`) where practical.
-- Existing code paths may still rely on `event.type == pygame.*` while all app-level routing remains `GuiEvent`-based.
-- Prefer semantic helper checks in application/demo code to avoid manual `getattr(event, ...)` probing.
-- Synthetic internal events should use `GuiEvent` directly rather than fabricating `pygame.event.Event` objects.
-- Event objects should remain immutable-by-convention after dispatch creation; transform steps should replace fields explicitly.
-
-Focus and keyboard ownership note:
-
-- Mouse click focus paths can suppress focus-hint visualization (`show_hint=False`) while keyboard traversal keeps hint visualization enabled.
-- Keyboard routing precedence is active focused/visible/enabled target first, then screen fallback.
-- Focus traversal must reconcile hover flags from live pointer position while cycling; if the pointer has moved off a control during the hint window, that control returns to idle (non-hover) state.
-- Button and toggle-button activation from focused keyboard events (`Return`/`Space`) must show a focus hint and use the same timeout constant as focus traversal hinting.
-
-## Completion Criteria
-
-The package is considered converted when:
-
-- app-level event intake normalizes to `GuiEvent` before dispatch,
-- keyboard and scene routing consume normalized events,
-- pointer logicalization preserves raw vs logical coordinates on `GuiEvent`,
-- control and test contracts remain stable under the canonical `GuiEvent` pipeline.
+- `tests/test_runtime_operating_contracts.py`
+- `tests/test_gui_application_workspace_contracts.py`
+- `tests/test_boundary_contracts.py`

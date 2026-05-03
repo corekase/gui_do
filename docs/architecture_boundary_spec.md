@@ -2,45 +2,29 @@
 
 ## Purpose
 
-This document defines hard package boundaries between reusable framework code and demo-specific code.
-
-It complements the public API and event-system specs by keeping framework contracts reusable and demo schemas isolated.
+Define and document the import boundary between framework runtime code and demo consumer code.
 
 ## Boundary Rule
 
 - `gui_do/` is framework/runtime package code and must not depend on `demo_features/`.
-- `demo_features/` contains demo-specific contracts and must remain independent from `gui_do` imports.
-- Active demo entrypoints (`*_demo.py`) should consume `gui_do` via public root exports (`from gui_do import ...`) rather than internal submodule imports, keep named imports without aliases, and use a single `from gui_do import (...)` block.
+- `gui_do_demo.py` is a consumer entrypoint and should import from the `gui_do` root package, not internal `gui_do.*` submodules.
 
 Boundary intent:
 
-- Keep `gui_do/` independently reusable in non-demo applications.
-- Allow demo schema evolution inside `demo_features/` without leaking symbols into the `gui_do` root import contract.
-- Keep demo entrypoints readable and enforceable via one canonical gui-root import block.
+- Keep `gui_do/` reusable as a standalone package.
+- Keep demo-specific evolution isolated to `demo_features/` and entrypoint code.
+- Preserve a clear consumer pattern for imports from `gui_do`.
 
-## Current Demo Boundary Assets
-
-- `demo_features/mandelbrot_demo_feature.py`: Mandelbrot status topic, kind constants, and payload dataclass.
-
-## Current Active Demo Entrypoints
+## Active Demo Entrypoint
 
 - `gui_do_demo.py`
 
 ## Enforcement
 
-Automated tests enforce both directions:
+Automated tests enforce the boundary using AST import inspection:
 
-- `tests/test_boundary_contracts.py::test_gui_package_does_not_depend_on_demo_features`
-- `tests/test_boundary_contracts.py::test_demo_features_do_not_import_gui_do_internals`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_use_public_gui_api_only`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_import_gui_submodules_via_import_statement`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_import_only_named_public_gui_exports`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_gui_root_import_names_follow_canonical_order`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_do_not_alias_gui_root_imports`
-- `tests/test_boundary_contracts.py::test_demo_entrypoints_use_single_gui_root_import_block`
-- `tests/test_boundary_contracts.py::test_active_demo_entrypoints_match_expected_contract_set`
-
-The boundary test uses AST-based import inspection, so only real imports are flagged (not comments or strings).
+- `tests/test_boundary_contracts.py::test_gui_package_does_not_import_demo_features`
+- `tests/test_boundary_contracts.py::test_demo_entrypoint_uses_gui_root_import`
 
 Run command:
 
@@ -48,13 +32,8 @@ Run command:
 python -m pytest -q tests/test_boundary_contracts.py
 ```
 
-## Notes
-
-This separation prevents demo implementation details from leaking into the reusable framework API and allows future demos to define their own contracts without modifying `gui_do` internals.
-
-Operationally, boundary tests are treated as release gates for import hygiene and docs parity.
-
-Related documents:
+## Related Documents
 
 - `docs/public_api_spec.md`
 - `docs/event_system_spec.md`
+- `docs/package_contracts.md`
