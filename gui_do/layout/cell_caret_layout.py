@@ -56,6 +56,7 @@ class CellCaretLayout:
         self._row = max(0, int(origin_row))
         self._caret_x = 0
         self._caret_y = 0
+        self._overflow_next_y: int | None = None
 
         self._cell_rects: list[Rect] = []
         self._cell_rows: list[list[int]] = []
@@ -158,6 +159,140 @@ class CellCaretLayout:
 
         self._advance_caret_from_placement(placed)
         return placed
+
+    def add_slot(self, height: int, *, width: int | None = None) -> Rect:
+        """Place a full-width slot (or explicit width) in the current cell flow."""
+        current = self._current_cell_rect()
+        slot_w = current.width if width is None else max(1, int(width))
+        return self.add(slot_w, max(1, int(height)))
+
+    def add_slot_or_overflow(
+        self,
+        height: int,
+        *,
+        width: int | None = None,
+        overflow_gap: int = 0,
+    ) -> Rect:
+        """Place a slot, falling back to virtual overflow placement when cell space is exhausted.
+
+        The returned rect always preserves the requested slot height, so controls keep
+        their intended internal rendering geometry even when a column's visual budget is
+        tight and cannot fit additional cells.
+        """
+        desired_h = max(1, int(height))
+        try:
+            placed = self.add_slot(desired_h, width=width)
+            self._overflow_next_y = int(placed.bottom + max(0, int(overflow_gap)))
+            return placed
+        except (OverflowError, ValueError):
+            cell = self._current_cell_rect()
+            slot_w = cell.width if width is None else max(1, int(width))
+            start_y = cell.top if self._overflow_next_y is None else int(self._overflow_next_y)
+            placed = Rect(cell.left, start_y, slot_w, desired_h)
+            self._overflow_next_y = int(placed.bottom + max(0, int(overflow_gap)))
+            return placed
+
+    def add_labeled_slot(
+        self,
+        control_height: int,
+        *,
+        label_height: int,
+        label_gap: int,
+        width: int | None = None,
+        include_label: bool = True,
+    ) -> tuple[Rect | None, Rect]:
+        """Place a slot and split it into label/control rects."""
+        slot_h = self.labeled_slot_height(
+            control_height,
+            label_height=label_height,
+            label_gap=label_gap,
+            include_label=include_label,
+        )
+        slot_rect = self.add_slot(slot_h, width=width)
+        if not include_label:
+            return None, Rect(slot_rect)
+        label_h = max(0, int(label_height))
+        gap = max(0, int(label_gap))
+        label_rect = Rect(slot_rect.left, slot_rect.top, slot_rect.width, label_h)
+        control_rect = Rect(
+            slot_rect.left,
+            slot_rect.top + label_h + gap,
+            slot_rect.width,
+            max(1, slot_rect.height - label_h - gap),
+        )
+        return label_rect, control_rect
+
+    @staticmethod
+    def labeled_slot_height(
+        control_height: int,
+        *,
+        label_height: int,
+        label_gap: int,
+        include_label: bool = True,
+    ) -> int:
+        """Compute total slot height for a control with optional label area."""
+        base = max(1, int(control_height))
+        if not include_label:
+            return base
+        return base + max(0, int(label_height)) + max(0, int(label_gap))
+
+    @staticmethod
+    def split_columns(
+        bounds: Rect,
+        *,
+        count: int,
+        gap: int = 0,
+        min_width: int = 1,
+        max_width: int | None = None,
+        align: str = "left",
+    ) -> list[Rect]:
+        """Split a bounds rect into equal-width columns."""
+        cols = max(1, int(count))
+        col_gap = max(0, int(gap))
+        minimum = max(1, int(min_width))
+        usable_w = max(1, int(bounds.width) - col_gap * (cols - 1))
+        col_w = max(minimum, usable_w // cols)
+        if max_width is not None:
+            col_w = min(col_w, max(1, int(max_width)))
+
+        total_w = (col_w * cols) + (col_gap * (cols - 1))
+        mode = str(align).lower().strip()
+        if mode not in {"left", "center", "right"}:
+            raise ValueError("align must be 'left', 'center', or 'right'")
+        if mode == "center":
+            start_x = bounds.left + max(0, (bounds.width - total_w) // 2)
+        elif mode == "right":
+            start_x = bounds.left + max(0, bounds.width - total_w)
+        else:
+            start_x = bounds.left
+
+        return [
+            Rect(start_x + idx * (col_w + col_gap), bounds.top, col_w, bounds.height)
+            for idx in range(cols)
+        ]
+
+    @classmethod
+    def column_stack_from_anchor(
+        cls,
+        *,
+        anchor: Rect,
+        content_bottom: int,
+        preferred_width: int,
+        item_gap_y: int,
+    ) -> tuple["CellCaretLayout", int, int, int]:
+        """Create a single-column stack aligned to a flow anchor and return stack + geometry."""
+        col_x = int(anchor.left)
+        col_w = min(int(preferred_width), int(anchor.width))
+        col_y = int(anchor.top)
+        col_h = max(1, int(content_bottom) - col_y)
+        stack = cls(
+            bounds=Rect(col_x, col_y, col_w, col_h),
+            cell_width=col_w,
+            cell_height=col_h,
+            columns=1,
+            item_gap_y=max(0, int(item_gap_y)),
+        )
+        return stack, col_x, col_w, col_y
 
     def _advance_caret_from_placement(self, placed: Rect) -> None:
         cell_rect = self._current_cell_rect()

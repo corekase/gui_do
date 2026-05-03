@@ -258,6 +258,46 @@ class LayoutManager:
         self._column_flow_x_counter += span
         return Rect(x, y, w, h)
 
+    def column_flow_anchors(self, count: int, column_span: int = 1) -> tuple[Rect, ...]:
+        """Return multiple sequential column-flow anchors in one call."""
+        total = max(0, int(count))
+        span = max(1, int(column_span))
+        return tuple(self.column_flow_anchor(span) for _ in range(total))
+
+    @classmethod
+    def column_flow_anchors_for(
+        cls,
+        bounds: Rect,
+        count: int,
+        *,
+        overall_rows: int,
+        overall_columns: int,
+        column_spacing: int = 8,
+        row_spacing: int = 8,
+        column_span: int = 1,
+    ) -> "tuple[Rect, ...]":
+        """Create a temporary layout, configure column flow, and return anchors.
+
+        One-shot alternative to the create-configure-query pattern::
+
+            # Before:
+            flow = LayoutManager()
+            flow.set_column_flow_properties(bounds=b, overall_rows=7, ...)
+            anchors = flow.column_flow_anchors(8)
+
+            # After:
+            anchors = LayoutManager.column_flow_anchors_for(b, 8, overall_rows=7, ...)
+        """
+        mgr = cls()
+        mgr.set_column_flow_properties(
+            bounds=Rect(bounds),
+            overall_rows=int(overall_rows),
+            overall_columns=int(overall_columns),
+            column_spacing=int(column_spacing),
+            row_spacing=int(row_spacing),
+        )
+        return mgr.column_flow_anchors(int(count), int(column_span))
+
     def column_flow_next_row(self) -> None:
         """Advance to a new row band and reset horizontal column cursor."""
         self._column_flow_x_counter = 0

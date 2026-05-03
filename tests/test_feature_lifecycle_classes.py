@@ -4,7 +4,16 @@ import time
 import pygame
 from pygame import Rect
 
-from gui_do.features.feature_lifecycle import FrameTimer, WindowRelativeRect, PlacedControl, FeatureMessage
+from gui_do.features.feature_lifecycle import (
+    ControlPlacementSpec,
+    FeatureMessage,
+    FrameTimer,
+    PlacedControl,
+    WindowRelativeRect,
+    place_control,
+    place_control_specs,
+    place_control_unlabeled,
+)
 
 pygame.init()
 
@@ -161,6 +170,109 @@ class TestFeatureMessage(unittest.TestCase):
         msg = FeatureMessage.from_payload("s", "t", source)
         source["k"] = "changed"
         self.assertEqual("v", msg.payload["k"])
+
+
+class _StubControl:
+    def __init__(self):
+        self.rect = Rect(0, 0, 1, 1)
+        self.tab_index = -1
+        self.enabled = False
+        self.accessibility = None
+
+    def set_rect(self, rect):
+        self.rect = Rect(rect)
+
+    def set_tab_index(self, tab_index):
+        self.tab_index = int(tab_index)
+
+    def set_accessibility(self, *, role, label):
+        self.accessibility = (role, label)
+
+
+class _StubContainer:
+    def __init__(self):
+        self.children = []
+
+    def add(self, control):
+        self.children.append(control)
+        return control
+
+
+class TestPlacementHelpers(unittest.TestCase):
+    def test_place_control_adds_label_and_control_once_each(self):
+        container = _StubContainer()
+        control = _StubControl()
+        labels = []
+        controls = []
+        placed = []
+
+        place_control(
+            container,
+            "alpha",
+            "Alpha",
+            control,
+            Rect(10, 20, 100, 40),
+            focusable=True,
+            placed_controls=placed,
+            control_labels=labels,
+            controls=controls,
+        )
+
+        self.assertEqual(2, len(container.children))
+        self.assertEqual(1, len(labels))
+        self.assertEqual(1, len(controls))
+        self.assertEqual(1, len(placed))
+        self.assertEqual(Rect(10, 42, 100, 18), control.rect)
+
+    def test_place_control_unlabeled_disables_non_focusable(self):
+        container = _StubContainer()
+        control = _StubControl()
+
+        place_control_unlabeled(
+            container,
+            "beta",
+            control,
+            Rect(0, 0, 20, 20),
+            focusable=False,
+        )
+
+        self.assertEqual(-1, control.tab_index)
+        self.assertEqual(1, len(container.children))
+
+    def test_place_control_specs_mixes_labeled_and_unlabeled(self):
+        container = _StubContainer()
+        labeled = _StubControl()
+        unlabeled = _StubControl()
+        placed = []
+
+        specs = (
+            ControlPlacementSpec(
+                name="labeled",
+                label_text="Labeled",
+                control=labeled,
+                control_rect=Rect(0, 0, 100, 32),
+                focusable=True,
+                labeled=True,
+            ),
+            ControlPlacementSpec(
+                name="unlabeled",
+                control=unlabeled,
+                control_rect=Rect(0, 0, 80, 24),
+                focusable=False,
+                labeled=False,
+            ),
+        )
+
+        place_control_specs(
+            container,
+            specs,
+            placed_controls=placed,
+        )
+
+        self.assertEqual(3, len(container.children))
+        self.assertEqual(2, len(placed))
+        self.assertEqual("labeled", placed[0].name)
+        self.assertEqual("unlabeled", placed[1].name)
 
 
 if __name__ == "__main__":

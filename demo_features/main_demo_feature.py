@@ -231,16 +231,14 @@ class MainDemoFeature(Feature):
         )
         host.app.actions.bind_key(__import__("pygame").K_F9, "show_help", scene="main")
 
-        def _toggle_task_panel_focus(_event):
-            overlay = getattr(host.app, "overlay", None)
-            has_overlay = getattr(overlay, "has_overlay", None)
-            if callable(has_overlay) and has_overlay("__command_palette__"):
-                return True
-            task_panel_focus = getattr(host.app, "task_panel_focus", None)
-            return bool(task_panel_focus is not None and task_panel_focus.toggle(host.app.scene, host.app))
-
-        host.app.actions.register_action("toggle_task_panel_focus", _toggle_task_panel_focus)
-        host.app.actions.bind_key(__import__("pygame").K_F1, "toggle_task_panel_focus", scene="main")
+        from gui_do.features.data_driven_runtime import bind_task_panel_focus_toggle
+        bind_task_panel_focus_toggle(
+            host.app.actions,
+            host.app,
+            action_name="toggle_task_panel_focus",
+            scene_name="main",
+            key=__import__("pygame").K_F1,
+        )
 
     def _make_sized_title_label(
         self,

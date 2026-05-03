@@ -204,5 +204,82 @@ class TestCellCaretLayoutErrors(unittest.TestCase):
             layout.add(200, 200)
 
 
+class TestCellCaretLayoutHelpers(unittest.TestCase):
+    def test_labeled_slot_height(self):
+        self.assertEqual(
+            42,
+            CellCaretLayout.labeled_slot_height(
+                24,
+                label_height=16,
+                label_gap=2,
+            ),
+        )
+
+    def test_add_labeled_slot(self):
+        layout = CellCaretLayout(
+            bounds=Rect(10, 20, 200, 100),
+            cell_width=200,
+            cell_height=100,
+            columns=1,
+        )
+        label_rect, control_rect = layout.add_labeled_slot(
+            24,
+            label_height=16,
+            label_gap=2,
+        )
+        self.assertEqual(Rect(10, 20, 200, 16), label_rect)
+        self.assertEqual(Rect(10, 38, 200, 24), control_rect)
+
+    def test_split_columns_centered(self):
+        cols = CellCaretLayout.split_columns(
+            Rect(0, 0, 500, 120),
+            count=2,
+            gap=8,
+            min_width=180,
+            max_width=220,
+            align="center",
+        )
+        self.assertEqual(2, len(cols))
+        self.assertEqual(Rect(26, 0, 220, 120), cols[0])
+        self.assertEqual(Rect(254, 0, 220, 120), cols[1])
+
+    def test_add_slot_or_overflow_uses_normal_slot_when_space_exists(self):
+        layout = CellCaretLayout(
+            bounds=Rect(10, 20, 120, 80),
+            cell_width=120,
+            cell_height=80,
+            columns=1,
+            item_gap_y=4,
+        )
+        first = layout.add_slot_or_overflow(24, overflow_gap=8)
+        self.assertEqual(Rect(10, 20, 120, 24), first)
+
+    def test_add_slot_or_overflow_virtualizes_when_exhausted(self):
+        layout = CellCaretLayout(
+            bounds=Rect(10, 20, 120, 40),
+            cell_width=120,
+            cell_height=40,
+            columns=1,
+            item_gap_y=4,
+        )
+        first = layout.add_slot_or_overflow(24, overflow_gap=6)
+        second = layout.add_slot_or_overflow(24, overflow_gap=6)
+        self.assertEqual(Rect(10, 20, 120, 24), first)
+        self.assertEqual(Rect(10, 50, 120, 24), second)
+
+    def test_column_stack_from_anchor_builds_single_column_layout(self):
+        stack, col_x, col_w, col_y = CellCaretLayout.column_stack_from_anchor(
+            anchor=Rect(40, 60, 180, 50),
+            content_bottom=220,
+            preferred_width=160,
+            item_gap_y=8,
+        )
+        self.assertEqual(40, col_x)
+        self.assertEqual(160, col_w)
+        self.assertEqual(60, col_y)
+        self.assertEqual(Rect(40, 60, 160, 160), stack.bounds)
+        self.assertEqual(Rect(40, 60, 160, 160), stack.cell_rect())
+
+
 if __name__ == "__main__":
     unittest.main()

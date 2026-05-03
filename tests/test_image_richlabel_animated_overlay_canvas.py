@@ -8,6 +8,7 @@ from pygame import Rect
 from gui_do.controls.display.image_control import ImageControl
 from gui_do.controls.display.rich_label_control import RichLabelControl
 from gui_do.controls.display.animated_image_control import AnimatedImageControl
+from gui_do.controls.display.label_control import LabelControl
 from gui_do.controls.composite.overlay_panel_control import OverlayPanelControl
 from gui_do.controls.canvas.canvas_control import CanvasControl, CanvasEventPacket
 from gui_do.graphics.sprite_sheet import SpriteSheet, FrameAnimation
@@ -248,6 +249,15 @@ class TestOverlayPanelControlInitial(unittest.TestCase):
     def test_children_empty(self):
         opc = OverlayPanelControl("opc", Rect(0, 0, 400, 300))
         self.assertEqual([], opc.children)
+
+    def test_add_at_child_tracks_panel_move(self):
+        opc = OverlayPanelControl("opc", Rect(10, 20, 200, 120))
+        child = LabelControl("child", Rect(0, 0, 50, 20), "Item", align="left")
+        opc.add_at(child, rel_x=8, rel_y=6)
+        self.assertEqual((18, 26), child.rect.topleft)
+
+        opc.set_rect(Rect(40, 70, 200, 120))
+        self.assertEqual((48, 76), child.rect.topleft)
 
 
 # ===========================================================================

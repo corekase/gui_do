@@ -142,6 +142,65 @@ class TabBuilderSpec:
     builder_attr: str
 
 
+@dataclass(frozen=True)
+class NotificationSpec:
+    """Declarative descriptor for a pre-seeded :class:`~gui_do.NotificationRecord`.
+
+    Pass a sequence of these to :func:`build_notification_center` to create a
+    fully populated :class:`~gui_do.NotificationCenter` without writing
+    imperative ``.add()`` calls.
+
+    Attributes:
+        message: The notification body text.
+        title: Optional short heading.
+        severity: Visual classification; defaults to ``ToastSeverity.INFO``.
+    """
+
+    message: str
+    title: str = ""
+    severity: object = None  # ToastSeverity.INFO — resolved at call time to avoid import cycle
+
+
+def build_notification_center(
+    specs: Sequence["NotificationSpec"],
+    *,
+    max_records: int = 6,
+) -> "object":
+    """Return a pre-populated :class:`~gui_do.NotificationCenter`.
+
+    Creates the center with *max_records* capacity, then adds one
+    :class:`~gui_do.NotificationRecord` per entry in *specs*.
+
+    Args:
+        specs: Ordered sequence of :class:`NotificationSpec` objects.
+        max_records: Maximum number of records the center will retain.
+
+    Returns:
+        A ready-to-use :class:`~gui_do.NotificationCenter` instance.
+
+    Example::
+
+        from gui_do import NotificationSpec, build_notification_center
+        from gui_do import ToastSeverity
+
+        nc = build_notification_center(
+            (
+                NotificationSpec("Build succeeded", title="Pipeline", severity=ToastSeverity.SUCCESS),
+                NotificationSpec("Unsaved changes", title="Editor", severity=ToastSeverity.WARNING),
+            ),
+            max_records=6,
+        )
+    """
+    from ..overlays.notification_center import NotificationCenter, NotificationRecord
+    from ..overlays.toast_manager import ToastSeverity as _Sev
+
+    center = NotificationCenter(None, max_records=max(1, int(max_records)))
+    for spec in specs:
+        severity = spec.severity if spec.severity is not None else _Sev.INFO
+        center.add(NotificationRecord(spec.message, title=str(spec.title), severity=severity))
+    return center
+
+
 class ActiveTabUpdateRouter:
     """Route per-frame update callbacks by active tab key."""
 
@@ -630,6 +689,38 @@ def register_tooltip_specs(tooltip_manager, specs) -> None:
     """Register a sequence of tooltip specs as (control, message) pairs."""
     for control, message in specs:
         tooltip_manager.register(control, str(message))
+
+
+def bind_task_panel_focus_toggle(
+    app_actions,
+    app,
+    *,
+    action_name: str,
+    scene_name: str,
+    key,
+) -> None:
+    """Register and bind the standard task-panel focus toggle action.
+
+    Encapsulates the repeated pattern of registering a focus-toggle action and
+    binding it to a key per scene::
+
+        bind_task_panel_focus_toggle(
+            host.app.actions, host.app,
+            action_name="toggle_task_panel_focus",
+            scene_name="main",
+            key=pygame.K_F1,
+        )
+    """
+    def _toggle(_event):
+        overlay = getattr(app, "overlay", None)
+        has_overlay = getattr(overlay, "has_overlay", None)
+        if callable(has_overlay) and has_overlay("__command_palette__"):
+            return True
+        task_panel_focus = getattr(app, "task_panel_focus", None)
+        return bool(task_panel_focus is not None and task_panel_focus.toggle(app.scene, app))
+
+    app_actions.register_action(str(action_name), _toggle)
+    app_actions.bind_key(key, str(action_name), scene=str(scene_name))
 
 
 def add_window_control(window, controls: list, control):

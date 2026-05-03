@@ -259,5 +259,31 @@ class TestLayoutManagerAnchored(unittest.TestCase):
         self.assertEqual(10, r.y)
 
 
+class TestLayoutManagerColumnFlow(unittest.TestCase):
+    def test_column_flow_anchors_sequence(self):
+        lm = LayoutManager()
+        lm.set_column_flow_properties(
+            bounds=Rect(0, 0, 206, 100),
+            overall_rows=2,
+            overall_columns=2,
+            column_spacing=6,
+            row_spacing=10,
+        )
+        anchors = lm.column_flow_anchors(3)
+        self.assertEqual(3, len(anchors))
+        self.assertEqual(Rect(0, 0, 100, 45), anchors[0])
+        self.assertEqual(Rect(106, 0, 100, 45), anchors[1])
+        self.assertEqual(Rect(0, 55, 100, 45), anchors[2])
+
+    def test_column_flow_anchors_zero_count(self):
+        lm = LayoutManager()
+        lm.set_column_flow_properties(
+            bounds=Rect(0, 0, 100, 100),
+            overall_rows=2,
+            overall_columns=2,
+        )
+        self.assertEqual(tuple(), lm.column_flow_anchors(0))
+
+
 if __name__ == "__main__":
     unittest.main()

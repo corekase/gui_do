@@ -49,6 +49,7 @@ from .features.data_driven_runtime import (
     TaskPanelButtonSpec,
     AccessibilitySequenceSpec,
     TabBuilderSpec,
+    NotificationSpec,
     HostApplicationConfig,
     TelemetryConfig,
     bootstrap_host_application,
@@ -57,6 +58,11 @@ from .features.data_driven_runtime import (
     make_exit_action,
     make_palette_open_action,
     make_static_accessibility_spec,
+    build_notification_center,
+)
+from .features.control_spec import (
+    ControlDefinition,
+    build_specs_from_column_section,
 )
 
 # ============================================================================
@@ -388,6 +394,8 @@ from .features.feature_lifecycle import (
     register_placed_control,
     add_group_label,
     PlacedControl,
+    make_labeled_slot_height_fn,
+    ControlRegistry,
 )
 from .features.data_driven_runtime import (
     build_tools_menu_entries,
@@ -411,6 +419,7 @@ from .features.data_driven_runtime import (
     add_task_panel_button,
     add_task_panel_buttons,
     register_tooltip_specs,
+    bind_task_panel_focus_toggle,
     add_window_control,
     add_window_label,
     add_window_button,
@@ -813,6 +822,8 @@ __all__ = [
     "register_placed_control",
     "add_group_label",
     "PlacedControl",
+    "make_labeled_slot_height_fn",
+    "ControlRegistry",
     "build_tools_menu_entries",
     "add_standard_scene_menu_strip",
     "apply_accessibility_sequence",
@@ -834,6 +845,7 @@ __all__ = [
     "add_task_panel_button",
     "add_task_panel_buttons",
     "register_tooltip_specs",
+    "bind_task_panel_focus_toggle",
     "add_window_control",
     "add_window_label",
     "add_window_button",

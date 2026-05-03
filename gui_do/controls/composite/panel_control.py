@@ -178,9 +178,29 @@ class PanelControl(UiNode):
 
             overlay.add_at(label, rel_x=8, rel_y=6)
         """
-        child.rect.left = self.rect.left + int(rel_x)
-        child.rect.top = self.rect.top + int(rel_y)
+        offset_x = int(rel_x)
+        offset_y = int(rel_y)
+        # Track panel-local offsets so these children stay anchored if the panel moves.
+        setattr(child, "_panel_local_offset", (offset_x, offset_y))
+        child.rect.left = self.rect.left + offset_x
+        child.rect.top = self.rect.top + offset_y
         return self.add(child)
+
+    def set_rect(self, rect: Rect) -> None:
+        old_rect = Rect(self.rect)
+        super().set_rect(rect)
+        if self.rect.topleft == old_rect.topleft:
+            return
+        for child in self.children:
+            local_offset = getattr(child, "_panel_local_offset", None)
+            if (
+                isinstance(local_offset, tuple)
+                and len(local_offset) == 2
+                and isinstance(local_offset[0], int)
+                and isinstance(local_offset[1], int)
+            ):
+                child.rect.left = self.rect.left + local_offset[0]
+                child.rect.top = self.rect.top + local_offset[1]
 
     @property
     def child_count(self) -> int:

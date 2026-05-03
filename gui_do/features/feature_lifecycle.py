@@ -306,6 +306,26 @@ class PlacedControl:
     name: str
     column_index: int
     row_index: int
+
+
+@dataclass(frozen=True, slots=True)
+class ControlPlacementSpec:
+    """Declarative placement metadata for a single control."""
+
+    name: str
+    control: object
+    control_rect: object
+    focusable: bool
+    labeled: bool = True
+    label_text: str = ""
+    label_font_role: str = "body"
+    control_font_role: str = "body"
+    accessibility_role: str | None = None
+    accessibility_label: str | None = None
+    column_index: int = 0
+    row_index: int = 0
+
+
 from ..controls.display.label_control import LabelControl
 def place_control(
     container,
@@ -338,10 +358,8 @@ def place_control(
     actual_control_rect = _Rect(control_rect.left, control_top, control_rect.width, control_height)
     label = None
     if label_text:
-        label = container.add(LabelControl(f"label_{name}", label_rect, label_text, align="left"))
+        label = LabelControl(f"label_{name}", label_rect, label_text, align="left")
         label.font_role = label_font_role
-        if control_labels is not None:
-            control_labels.append(label)
     register_placed_control(
         container,
         name,
@@ -359,6 +377,56 @@ def place_control(
         focus_controls=focus_controls,
         controls=controls,
     )
+
+
+def place_control_specs(
+    container,
+    specs,
+    *,
+    placed_controls: list | None = None,
+    control_labels: list | None = None,
+    focus_controls: list | None = None,
+    controls: list | None = None,
+):
+    """Place a sequence of ``ControlPlacementSpec`` entries."""
+
+    for spec in specs:
+        if bool(getattr(spec, "labeled", True)):
+            place_control(
+                container,
+                str(spec.name),
+                str(getattr(spec, "label_text", "")),
+                spec.control,
+                spec.control_rect,
+                label_font_role=str(getattr(spec, "label_font_role", "body")),
+                control_font_role=str(getattr(spec, "control_font_role", "body")),
+                focusable=bool(spec.focusable),
+                accessibility_role=getattr(spec, "accessibility_role", None),
+                accessibility_label=getattr(spec, "accessibility_label", None),
+                column_index=int(getattr(spec, "column_index", 0)),
+                row_index=int(getattr(spec, "row_index", 0)),
+                placed_controls=placed_controls,
+                control_labels=control_labels,
+                focus_controls=focus_controls,
+                controls=controls,
+            )
+            continue
+        place_control_unlabeled(
+            container,
+            str(spec.name),
+            spec.control,
+            spec.control_rect,
+            control_font_role=str(getattr(spec, "control_font_role", "body")),
+            focusable=bool(spec.focusable),
+            accessibility_role=getattr(spec, "accessibility_role", None),
+            accessibility_label=getattr(spec, "accessibility_label", None),
+            column_index=int(getattr(spec, "column_index", 0)),
+            row_index=int(getattr(spec, "row_index", 0)),
+            placed_controls=placed_controls,
+            control_labels=control_labels,
+            focus_controls=focus_controls,
+            controls=controls,
+        )
 
 def place_control_unlabeled(
     container,
@@ -451,6 +519,80 @@ def register_placed_control(
             column_index=column_index,
             row_index=row_index,
         ))
+
+def make_labeled_slot_height_fn(label_height: int, label_gap: int):
+    """Return a ``(control_height: int) -> int`` callable for labeled slot heights.
+
+    Captures *label_height* and *label_gap* so callers avoid repeating those
+    constants on every slot-height call::
+
+        slot_h = make_labeled_slot_height_fn(LABEL_HEIGHT, LABEL_GAP)
+        h = slot_h(34)   # same as CellCaretLayout.labeled_slot_height(34, ...)
+    """
+    from ..layout.cell_caret_layout import CellCaretLayout as _CellCaretLayout
+    lh = int(label_height)
+    lg = int(label_gap)
+    return lambda h: _CellCaretLayout.labeled_slot_height(int(h), label_height=lh, label_gap=lg)
+
+
+class ControlRegistry:
+    """Accumulates control placement specs and tracking lists for a single container.
+
+    Simplifies feature ``build()`` methods by managing the three standard
+    tracking lists (``controls``, ``control_labels``, ``placed_controls``) and
+    providing a single :meth:`register` call for :class:`ControlPlacementSpec`
+    sequences::
+
+        registry = ControlRegistry(host.root)
+        registry.register(build_some_specs(...))
+        registry.add_label(my_section_label)   # adds to container + tracks
+        registry.add_control(my_tab_control)   # adds to container + tracks
+
+        # Access tracking lists via properties:
+        prewarm_targets = [*registry.control_labels, *registry.controls]
+    """
+
+    def __init__(self, container) -> None:
+        self._container = container
+        self._controls: list = []
+        self._control_labels: list = []
+        self._placed_controls: list = []
+
+    @property
+    def controls(self) -> list:
+        """All tracked controls (placed via register or add_control)."""
+        return self._controls
+
+    @property
+    def control_labels(self) -> list:
+        """All tracked label controls (placed via register or add_label)."""
+        return self._control_labels
+
+    @property
+    def placed_controls(self) -> list:
+        """All :class:`PlacedControl` records created by :meth:`register`."""
+        return self._placed_controls
+
+    def register(self, specs) -> None:
+        """Place a sequence of :class:`ControlPlacementSpec` entries in the container."""
+        place_control_specs(
+            self._container,
+            specs,
+            placed_controls=self._placed_controls,
+            control_labels=self._control_labels,
+            controls=self._controls,
+        )
+
+    def add_label(self, label) -> None:
+        """Add *label* to the container and track it in ``control_labels``."""
+        self._container.add(label)
+        self._control_labels.append(label)
+
+    def add_control(self, control) -> None:
+        """Add *control* to the container and track it in ``controls``."""
+        self._container.add(control)
+        self._controls.append(control)
+
 
 def add_group_label(container, name: str, text: str, group_rect, *, label_font_role: str = "body", control_labels: list = None):
     """
