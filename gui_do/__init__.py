@@ -34,7 +34,6 @@ from .features.feature_lifecycle import (
     ScenePresentationModel,
     SceneSetupSpec,
     setup_standard_font_roles,
-    register_standard_actions,
 )
 from .features.data_driven_runtime import (
     FeatureSpec,
@@ -516,7 +515,6 @@ __all__ = [
     "ScenePresentationModel",
     "SceneSetupSpec",
     "setup_standard_font_roles",
-    "register_standard_actions",
     "FeatureSpec",
     "WindowSpec",
     "RuntimeSceneSpec",

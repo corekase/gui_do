@@ -121,11 +121,70 @@ class SceneMenuStripControl(_BaseMenuBarControl):
         self.invalidate()
 
     def handle_event(self, event, app: "GuiApplication", theme=None) -> bool:
-        # Keep dynamic menu content current before pointer-driven interactions.
-        if getattr(event, "kind", None) in (EventType.MOUSE_MOTION, EventType.MOUSE_BUTTON_DOWN):
+        # Keep dynamic menu content current before pointer/keyboard interactions.
+        if getattr(event, "kind", None) in (
+            EventType.MOUSE_MOTION,
+            EventType.MOUSE_BUTTON_DOWN,
+            EventType.KEY_DOWN,
+        ):
             self.refresh_entries()
         # Always propagate theme to parent
         return super().handle_event(event, app, theme=theme)
+
+    def update(self, dt_seconds: float) -> None:
+        super().update(dt_seconds)
+        self._refresh_open_flyout_if_needed()
+
+    @staticmethod
+    def _entry_state_signature(entry: MenuEntry) -> tuple:
+        items = []
+        for item in entry.items:
+            items.append(
+                (
+                    str(getattr(item, "label", "")),
+                    bool(getattr(item, "enabled", True)),
+                    bool(getattr(item, "separator", False)),
+                )
+            )
+        return (str(entry.label), bool(entry.enabled), tuple(items), entry.flyout_min_width)
+
+    def _refresh_open_flyout_if_needed(self) -> None:
+        app = self._last_app if self._last_app is not None else self._app
+        if app is None or self._open_index < 0:
+            return
+
+        old_index = int(self._open_index)
+        old_label = None
+        old_signature = None
+        if 0 <= old_index < len(self._entries):
+            old_entry = self._entries[old_index]
+            old_label = str(old_entry.label)
+            old_signature = self._entry_state_signature(old_entry)
+
+        # Rebuild dynamic entries and preserve open/highlight label mapping.
+        self.refresh_entries()
+
+        # If the previously open menu no longer exists, ensure stale flyout is dismissed.
+        if self._open_index < 0:
+            if old_label is not None:
+                app.overlay.hide(f"_menubar_{self.control_id}_{old_index}")
+            return
+
+        if not (0 <= self._open_index < len(self._entries)):
+            return
+
+        refreshed_entry = self._entries[self._open_index]
+        refreshed_signature = self._entry_state_signature(refreshed_entry)
+        if refreshed_signature == old_signature:
+            return
+
+        theme = getattr(app, "theme", None)
+        if theme is None or getattr(theme, "fonts", None) is None:
+            return
+        target_index = int(self._open_index)
+        er = self._entry_rects(theme)
+        self._dismiss_flyout(app)
+        self._open_flyout(target_index, app, er)
 
     # ------------------------------------------------------------------
     # Default section builders

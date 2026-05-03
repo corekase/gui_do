@@ -58,7 +58,6 @@ The public API is organized into **tiers** by purpose and abstraction level:
   - `ScenePresentationModel` — access scene state and bindings
 - Configuration & setup:
   - `setup_standard_font_roles(...)` — register standard font styles
-  - `register_standard_actions(...)` — register common actions (exit, nav, etc.)
   - `TelemetryConfig` — telemetry configuration for the app
 
 ### Tier 2: CORE APPLICATION & SCENE MANAGEMENT
@@ -791,7 +790,6 @@ This approach is more maintainable, testable, and follows the intended design.
 - `ShortcutSection`
 - `ShortcutEntry`
 - `setup_standard_font_roles`
-- `register_standard_actions`
 - `set_window_visible_state`
 - `toggle_window_visibility`
 This root-import export set is treated as an exact, locked public surface and is regression-tested.

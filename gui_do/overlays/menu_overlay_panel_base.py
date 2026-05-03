@@ -150,7 +150,7 @@ class _MenuOverlayPanelBase(OverlayPanelControl):
                 self._hovered_index = self._keyboard_index
                 self.invalidate()
                 return True
-            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
                 if 0 <= self._keyboard_index < len(self._items):
                     self._activate_item(self._keyboard_index)
                 return True

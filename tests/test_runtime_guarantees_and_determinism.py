@@ -7,11 +7,13 @@ from gui_do.focus.window_focus_manager import WindowFocusManager
 
 
 class _StubNode:
-    def __init__(self, control_id: str, *, is_window: bool = True, visible: bool = True, enabled: bool = True):
+    def __init__(self, control_id: str, *, is_window: bool = True, visible: bool = True, enabled: bool = True, accessibility_role: str = "control", parent=None):
         self.control_id = str(control_id)
         self.visible = bool(visible)
         self.enabled = bool(enabled)
         self._is_window = bool(is_window)
+        self.accessibility_role = str(accessibility_role)
+        self.parent = parent
 
     def is_window(self) -> bool:
         return self._is_window
@@ -70,6 +72,30 @@ class TestRuntimeGuaranteesAndDeterminism(unittest.TestCase):
         candidates = manager._candidate_windows(scene)
 
         self.assertEqual(["window_a", "window_b", "window_z"], [node.control_id for node in candidates])
+
+    def test_window_focus_cycle_includes_screen_menubar_targets(self):
+        manager = WindowFocusManager()
+        scene = _StubSceneForFocus(
+            [
+                _StubNode("window_b"),
+                _StubNode("screen_menu", is_window=False, accessibility_role="menubar"),
+                _StubNode("window_a"),
+            ]
+        )
+
+        candidates = manager._candidate_windows(scene)
+
+        self.assertEqual(["screen_menu", "window_a", "window_b"], [node.control_id for node in candidates])
+
+    def test_window_focus_cycle_excludes_menubar_nested_in_window(self):
+        manager = WindowFocusManager()
+        parent_window = _StubNode("window_a", is_window=True)
+        nested_menu = _StubNode("window_menu", is_window=False, accessibility_role="menubar", parent=parent_window)
+        scene = _StubSceneForFocus([parent_window, nested_menu])
+
+        candidates = manager._candidate_windows(scene)
+
+        self.assertEqual(["window_a"], [node.control_id for node in candidates])
 
     def test_action_precedence_prefers_scene_window_binding(self):
         manager = ActionManager()

@@ -156,18 +156,41 @@ class WindowFocusManager:
     # ------------------------------------------------------------------
 
     def _candidate_windows(self, scene: "Scene") -> List:
-        """Return a sorted list of visible, enabled window nodes in *scene*."""
-        windows = [
+        """Return sorted Ctrl+Tab targets: windows plus screen-level menubars."""
+        targets = [
             node
             for node in scene._walk_nodes()
-            if node.is_window() and node.visible and node.enabled
+            if self._is_window_cycle_target(node)
         ]
-        windows.sort(key=lambda w: w.control_id)
-        return windows
+        targets.sort(key=lambda node: str(getattr(node, "control_id", "")))
+        return targets
+
+    @staticmethod
+    def _is_window_cycle_target(node) -> bool:
+        if not (node.visible and node.enabled):
+            return False
+        if node.is_window():
+            return True
+        # Include scene-level menu strips (not hosted inside a window) so
+        # Ctrl+Tab can move to them when they are part of screen chrome.
+        if getattr(node, "accessibility_role", "") != "menubar":
+            return False
+        current = getattr(node, "parent", None)
+        while current is not None:
+            if current.is_window():
+                return False
+            current = getattr(current, "parent", None)
+        return True
 
     def _activate_window(self, scene: "Scene", app: "Optional[GuiApplication]") -> None:
         window = self._focused_window
         if window is None or app is None:
+            return
+
+        if not window.is_window():
+            focus = getattr(app, "focus", None)
+            if focus is not None:
+                focus.set_focus(window, via_keyboard=True)
             return
 
         parent = getattr(window, "parent", None)

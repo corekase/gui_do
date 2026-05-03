@@ -1403,7 +1403,7 @@ class ControlsShowcaseFeature(Feature):
         # Apply initial tab category visibility after all placements are registered.
         self._apply_category_visibility(host)
 
-        self._initial_focus_control = self._category_tabs
+        self._initial_focus_control = host.control_showcase_menu_bar
         self._pending_initial_focus = True
 
     def bind_runtime(self, host) -> None:

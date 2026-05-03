@@ -164,7 +164,7 @@ class FocusManager:
         if self._try_activate_focused_button(event, target):
             return True
         self._try_arm_focused_control_for_adjustment_event(event, target)
-        return bool(target.handle_event(event, app))
+        return bool(target.handle_routed_event(event, app, theme=app.theme))
 
     def update(self, dt_seconds: float) -> None:
         """Advance focus-driven cosmetic states."""
@@ -267,11 +267,23 @@ class FocusManager:
             current = current.parent
         return True
 
+    @staticmethod
+    def _find_ancestor_task_panel(node):
+        current = node
+        while current is not None:
+            if current.is_task_panel():
+                return current
+            current = current.parent
+        return None
+
     def _focusable_nodes(self, scene, *, window=None) -> list:
         scope_root = self.active_scope_root
         ordered = []
         for walk_index, node in enumerate(scene._walk_nodes()):
             if not node.accepts_focus():
+                continue
+            # Task panels are traversed via TaskPanelFocusManager, not regular Tab.
+            if self._find_ancestor_task_panel(node) is not None:
                 continue
             # Combined ancestor walk: check visible/enabled chain AND find nearest
             # ancestor window in a single pass — avoids two separate ancestor walks

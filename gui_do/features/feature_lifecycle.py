@@ -27,7 +27,7 @@ def _resolve_window_target(window):
 
 def register_standard_actions(action_registry, app=None, scene_transitions=None, palette_manager=None, window_toggles=None):
     """
-    Register standard demo actions (exit, navigation, palette, window toggles) in the action registry.
+    Register common application actions (exit, palette, window toggles) in the action registry.
     window_toggles: dict mapping action name to one of:
         - callable callback
         - (window_or_getter, setter_name)
@@ -38,10 +38,6 @@ def register_standard_actions(action_registry, app=None, scene_transitions=None,
         return
     # Exit
     action_registry.register_action("exit", lambda *_: app.quit() if app else None)
-    # Navigation
-    if scene_transitions and hasattr(scene_transitions, "go"):
-        action_registry.register_action("go_to_main", lambda *_: scene_transitions.go("main"))
-        action_registry.register_action("go_to_control_showcase", lambda *_: scene_transitions.go("control_showcase"))
     # Palette
     if palette_manager is not None:
         action_registry.register_action("show_palette", lambda *_: palette_manager.show())

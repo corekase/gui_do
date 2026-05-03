@@ -22,7 +22,6 @@ from .feature_lifecycle import (
     ScenePresentationModel,
     apply_scene_setup_specs,
     create_anchored_feature_window,
-    register_standard_actions,
     resolve_scene_selection_callback,
     setup_standard_font_roles,
 )
@@ -689,13 +688,11 @@ def bootstrap_host_application(host, config: HostApplicationConfig) -> None:
     host.app.build_features(host)
     host.window_presentation.sync_initial_visibility(visible=False)
     apply_runtime_scene_pristine_assets(host.app, config.runtime_scene_specs)
-    register_standard_actions(
-        host.app.actions,
-        app=host.app,
-        scene_transitions=host.scene_transitions,
-        palette_manager=host._palette_manager,
-        window_toggles=host.window_presentation.action_callbacks(),
-    )
+    # Register window-presentation toggle handlers on the app-level action dispatcher
+    # so they are callable by name (e.g. from the command palette selection path).
+    if host.app.actions is not None:
+        for _name, _cb in host.window_presentation.action_callbacks().items():
+            host.app.actions.register_action(_name, lambda _ev, _f=_cb: (_f() or True))
     bind_runtime_scene_exit_keys(
         host.app.actions,
         config.runtime_scene_specs,
@@ -728,8 +725,9 @@ def declare_host_actions(host, action_specs) -> None:
             r.declare(spec.action_id, spec.label, handler)
         else:
             r.declare(spec.action_id, spec.label, handler, category=spec.category)
-        if spec.key is not None and app_actions is not None:
+        if app_actions is not None:
             app_actions.register_action(str(spec.action_id), lambda _ev, _h=handler: _h(None, _ev))
+        if spec.key is not None and app_actions is not None:
             app_actions.bind_key(int(spec.key), str(spec.action_id))
     host.window_presentation.declare_actions(r, category="Windows")
 
@@ -796,7 +794,7 @@ def add_standard_scene_menu_strip(
     on_window_toggled=None,
 ):
     """Attach a standardized SceneMenuStripControl with optional Tools menu entries."""
-    return container.add(
+    menu_strip = container.add(
         SceneMenuStripControl(
             str(control_id),
             rect,
@@ -812,6 +810,10 @@ def add_standard_scene_menu_strip(
             on_window_toggled=on_window_toggled,
         )
     )
+    # Keep scene menu strips in keyboard traversal by default.
+    menu_strip.set_tab_index(0)
+    menu_strip.set_accessibility(role="menubar", label="Scene menu")
+    return menu_strip
 
 
 def apply_accessibility_sequence(items, tab_index_start: int) -> int:

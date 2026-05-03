@@ -133,7 +133,16 @@ class MenuBarControl(UiNode):
         self.invalidate()
 
     def accepts_focus(self) -> bool:
-        return False
+        return True
+
+    def on_focus_changed(self, is_focused: bool) -> None:
+        if is_focused:
+            return
+        if self._open_index < 0:
+            return
+        if self._last_app is None:
+            return
+        self._dismiss_flyout(self._last_app)
 
     @property
     def entries(self) -> List[MenuEntry]:
@@ -183,6 +192,45 @@ class MenuBarControl(UiNode):
             return
         self._dismiss_flyout(app)
         self._open_flyout(self._hovered_index, app, er)
+
+    def _navigable_entry_indices(self) -> List[int]:
+        return [
+            i
+            for i, entry in enumerate(self._entries)
+            if entry.enabled and bool(entry.items)
+        ]
+
+    @staticmethod
+    def _cycle_entry_index(indices: List[int], current: int, step: int) -> int:
+        if not indices:
+            return -1
+        if current not in indices:
+            return indices[0]
+        current_pos = indices.index(current)
+        return indices[(current_pos + step) % len(indices)]
+
+    def _open_for_keyboard(self, app: "GuiApplication", er: List[Rect], *, index: int | None = None) -> bool:
+        indices = self._navigable_entry_indices()
+        if not indices:
+            return False
+        target = indices[0] if index is None else int(index)
+        if target not in indices:
+            target = indices[0]
+        self._dismiss_flyout(app)
+        self._open_flyout(target, app, er)
+        self._hovered_index = target
+        self.invalidate()
+        return True
+
+    def _cycle_top_level_menu(self, app: "GuiApplication", er: List[Rect], *, step: int) -> bool:
+        indices = self._navigable_entry_indices()
+        if not indices:
+            return False
+        current = self._open_index if self._open_index >= 0 else self._hovered_index
+        target = self._cycle_entry_index(indices, current, step)
+        if target < 0:
+            return False
+        return self._open_for_keyboard(app, er, index=target)
 
     def _pointer_in_open_menu_elements(self, pointer_pos) -> bool:
         if not (isinstance(pointer_pos, tuple) and len(pointer_pos) == 2):
@@ -240,6 +288,27 @@ class MenuBarControl(UiNode):
             if self._open_index >= 0:
                 self._dismiss_flyout(app)
             return self.rect.collidepoint(pos)
+
+        if event.kind == EventType.KEY_DOWN:
+            if event.key == pygame.K_LEFT:
+                return self._cycle_top_level_menu(app, er, step=-1)
+            if event.key == pygame.K_RIGHT:
+                return self._cycle_top_level_menu(app, er, step=1)
+            if event.key in (pygame.K_DOWN, pygame.K_UP):
+                if self._open_index >= 0:
+                    # Keep up/down ownership with the active flyout panel.
+                    return False
+                return self._open_for_keyboard(app, er)
+
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                if self._open_index >= 0:
+                    self._dismiss_flyout(app)
+                    return True
+                return self._open_for_keyboard(app, er)
+
+            if event.key == pygame.K_ESCAPE and self._open_index >= 0:
+                self._dismiss_flyout(app)
+                return True
 
         return False
 
