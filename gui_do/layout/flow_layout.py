@@ -31,6 +31,8 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
 
@@ -176,7 +178,7 @@ class FlowLayout:
     # Apply
     # ------------------------------------------------------------------
 
-    def apply(self, container_rect: Rect) -> int:
+    def apply(self, container_rect: RectSource) -> int:
         """Compute and set child rects within *container_rect*.
 
         Returns
@@ -185,10 +187,11 @@ class FlowLayout:
             Total used height (``direction="row"``) or width
             (``direction="column"``) of all placed rows/columns.
         """
+        container = resolve_rect(container_rect)
         if self._direction == self.ROW:
-            return self._apply_row(container_rect)
+            return self._apply_row(container)
         else:
-            return self._apply_column(container_rect)
+            return self._apply_column(container)
 
     def rows(self) -> List[FlowRow]:
         """Return row descriptors from the last :meth:`apply` call."""

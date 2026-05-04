@@ -2,7 +2,7 @@ import unittest
 
 from pygame import Rect
 
-from gui_do.layout.control_gallery_layout_manager import ControlGalleryLayoutManager
+from demo_features.control_gallery_layout_manager import ControlGalleryLayoutManager
 
 
 class _StubControl:

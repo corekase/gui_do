@@ -219,6 +219,14 @@ class TestFlexLayoutPadding(unittest.TestCase):
         layout.apply(CONTAINER)
         self.assertEqual(20, item.node.rect.x)
 
+    def test_apply_accepts_callable_rect_source(self):
+        item = _flex_item(100, 40)
+        layout = FlexLayout(direction=FlexDirection.ROW)
+        layout.items = [item]
+        layout.apply(lambda: Rect(10, 20, 200, 120))
+        self.assertEqual(10, item.node.rect.x)
+        self.assertEqual(20, item.node.rect.y)
+
 
 # ===========================================================================
 # FlowLayout
@@ -297,6 +305,13 @@ class TestFlowLayoutRowBasic(unittest.TestCase):
         layout.add(b)
         h = layout.apply(Rect(0, 0, 200, 200))
         self.assertEqual(70, h)  # 30 + 10 + 30
+
+    def test_apply_accepts_callable_rect_source(self):
+        item = _flow_item(60, 30)
+        self.layout.add(item)
+        self.layout.apply(lambda: Rect(25, 15, 200, 100))
+        self.assertEqual(25, item.node.rect.x)
+        self.assertEqual(15, item.node.rect.y)
 
 
 class TestFlowLayoutItemManagement(unittest.TestCase):

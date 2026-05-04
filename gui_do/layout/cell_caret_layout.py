@@ -7,6 +7,8 @@ from typing import Sequence, Tuple
 
 from pygame import Rect
 
+from .rect_source import LayoutRect, RectSource, resolve_rect
+
 
 @dataclass(frozen=True)
 class CellCaretState:
@@ -24,7 +26,7 @@ class CellCaretLayout:
     def __init__(
         self,
         *,
-        bounds: Rect,
+        bounds: RectSource,
         cell_width: int,
         cell_height: int,
         columns: int,
@@ -37,7 +39,7 @@ class CellCaretLayout:
         origin_col: int = 0,
         origin_row: int = 0,
     ) -> None:
-        self.bounds = Rect(bounds)
+        self.bounds = resolve_rect(bounds)
         self.cell_width = max(1, int(cell_width))
         self.cell_height = max(1, int(cell_height))
         self.columns = max(1, int(columns))
@@ -238,7 +240,7 @@ class CellCaretLayout:
 
     @staticmethod
     def split_columns(
-        bounds: Rect,
+        bounds: RectSource,
         *,
         count: int,
         gap: int = 0,
@@ -247,10 +249,11 @@ class CellCaretLayout:
         align: str = "left",
     ) -> list[Rect]:
         """Split a bounds rect into equal-width columns."""
+        bounds_rect = resolve_rect(bounds)
         cols = max(1, int(count))
         col_gap = max(0, int(gap))
         minimum = max(1, int(min_width))
-        usable_w = max(1, int(bounds.width) - col_gap * (cols - 1))
+        usable_w = max(1, int(bounds_rect.width) - col_gap * (cols - 1))
         col_w = max(minimum, usable_w // cols)
         if max_width is not None:
             col_w = min(col_w, max(1, int(max_width)))
@@ -260,30 +263,36 @@ class CellCaretLayout:
         if mode not in {"left", "center", "right"}:
             raise ValueError("align must be 'left', 'center', or 'right'")
         if mode == "center":
-            start_x = bounds.left + max(0, (bounds.width - total_w) // 2)
+            start_x = bounds_rect.left + max(0, (bounds_rect.width - total_w) // 2)
         elif mode == "right":
-            start_x = bounds.left + max(0, bounds.width - total_w)
+            start_x = bounds_rect.left + max(0, bounds_rect.width - total_w)
         else:
-            start_x = bounds.left
+            start_x = bounds_rect.left
 
         return [
-            Rect(start_x + idx * (col_w + col_gap), bounds.top, col_w, bounds.height)
+            Rect(start_x + idx * (col_w + col_gap), bounds_rect.top, col_w, bounds_rect.height)
             for idx in range(cols)
         ]
+
+    @staticmethod
+    def as_layout_rect(bounds: RectSource) -> LayoutRect:
+        """Return a lazy rect provider from any bounds source."""
+        return LayoutRect.from_source(bounds)
 
     @classmethod
     def column_stack_from_anchor(
         cls,
         *,
-        anchor: Rect,
+        anchor: RectSource,
         content_bottom: int,
         preferred_width: int,
         item_gap_y: int,
     ) -> tuple["CellCaretLayout", int, int, int]:
         """Create a single-column stack aligned to a flow anchor and return stack + geometry."""
-        col_x = int(anchor.left)
-        col_w = min(int(preferred_width), int(anchor.width))
-        col_y = int(anchor.top)
+        anchor_rect = resolve_rect(anchor)
+        col_x = int(anchor_rect.left)
+        col_w = min(int(preferred_width), int(anchor_rect.width))
+        col_y = int(anchor_rect.top)
         col_h = max(1, int(content_bottom) - col_y)
         stack = cls(
             bounds=Rect(col_x, col_y, col_w, col_h),

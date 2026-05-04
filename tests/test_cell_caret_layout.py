@@ -243,6 +243,17 @@ class TestCellCaretLayoutHelpers(unittest.TestCase):
         self.assertEqual(Rect(26, 0, 220, 120), cols[0])
         self.assertEqual(Rect(254, 0, 220, 120), cols[1])
 
+    def test_split_columns_accepts_callable_rect_source(self):
+        cols = CellCaretLayout.split_columns(
+            lambda: Rect(10, 20, 300, 80),
+            count=2,
+            gap=10,
+            min_width=100,
+            align="left",
+        )
+        self.assertEqual(Rect(10, 20, 145, 80), cols[0])
+        self.assertEqual(Rect(165, 20, 145, 80), cols[1])
+
     def test_add_slot_or_overflow_uses_normal_slot_when_space_exists(self):
         layout = CellCaretLayout(
             bounds=Rect(10, 20, 120, 80),

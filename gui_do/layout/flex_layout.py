@@ -7,6 +7,8 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
 
@@ -117,7 +119,7 @@ class FlexLayout:
     # Layout computation
     # ------------------------------------------------------------------
 
-    def apply(self, container_rect: Rect) -> None:
+    def apply(self, container_rect: RectSource) -> None:
         """Compute and mutate child rects so they fill *container_rect*.
 
         The *container_rect* is treated as the available space.  ``padding``
@@ -126,11 +128,12 @@ class FlexLayout:
         if not self.items:
             return
 
+        container = resolve_rect(container_rect)
         pad = self.padding
-        cx = container_rect.x + pad
-        cy = container_rect.y + pad
-        cw = container_rect.width - pad * 2
-        ch = container_rect.height - pad * 2
+        cx = container.x + pad
+        cy = container.y + pad
+        cw = container.width - pad * 2
+        ch = container.height - pad * 2
 
         is_row = self.direction is FlexDirection.ROW
         main_size = cw if is_row else ch

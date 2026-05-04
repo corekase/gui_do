@@ -52,6 +52,8 @@ from typing import Optional, Protocol, Tuple, runtime_checkable, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..data.invalidation import InvalidationTracker
 
@@ -195,7 +197,7 @@ class LayoutRoot:
         if self._invalidation is not None:
             self._invalidation.invalidate_all()
 
-    def update(self, container_rect: Rect) -> bool:
+    def update(self, container_rect: RectSource) -> bool:
         """Run measure + arrange if dirty or the container rect changed.
 
         Parameters
@@ -209,7 +211,7 @@ class LayoutRoot:
         bool
             ``True`` if a layout pass was executed, ``False`` if skipped.
         """
-        rect = Rect(container_rect)
+        rect = resolve_rect(container_rect)
         if not self._dirty and self._last_rect == rect:
             return False
 

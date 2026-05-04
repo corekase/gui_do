@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
 
@@ -32,23 +34,24 @@ class AnchorConstraint:
     min_height: Optional[int] = None
     max_height: Optional[int] = None
 
-    def apply(self, node_rect: Rect, parent_rect: Rect) -> Rect:
+    def apply(self, node_rect: Rect, parent_rect: RectSource) -> Rect:
         """Return a new Rect for node given parent_rect. Does not mutate."""
-        pw = parent_rect.width
-        ph = parent_rect.height
+        parent = resolve_rect(parent_rect)
+        pw = parent.width
+        ph = parent.height
 
         # --- Horizontal resolution ---
         if self.left is not None:
-            new_left = parent_rect.left + int(self.left)
+            new_left = parent.left + int(self.left)
         elif self.left_frac is not None:
-            new_left = parent_rect.left + int(pw * self.left_frac)
+            new_left = parent.left + int(pw * self.left_frac)
         else:
             new_left = node_rect.left
 
         if self.right is not None:
-            new_right = parent_rect.right - int(self.right)
+            new_right = parent.right - int(self.right)
         elif self.right_frac is not None:
-            new_right = parent_rect.right - int(pw * self.right_frac)
+            new_right = parent.right - int(pw * self.right_frac)
         else:
             new_right = node_rect.right
 
@@ -66,16 +69,16 @@ class AnchorConstraint:
 
         # --- Vertical resolution ---
         if self.top is not None:
-            new_top = parent_rect.top + int(self.top)
+            new_top = parent.top + int(self.top)
         elif self.top_frac is not None:
-            new_top = parent_rect.top + int(ph * self.top_frac)
+            new_top = parent.top + int(ph * self.top_frac)
         else:
             new_top = node_rect.top
 
         if self.bottom is not None:
-            new_bottom = parent_rect.bottom - int(self.bottom)
+            new_bottom = parent.bottom - int(self.bottom)
         elif self.bottom_frac is not None:
-            new_bottom = parent_rect.bottom - int(ph * self.bottom_frac)
+            new_bottom = parent.bottom - int(ph * self.bottom_frac)
         else:
             new_bottom = node_rect.bottom
 
@@ -133,23 +136,24 @@ class ConstraintLayout:
     def has(self, node: "UiNode") -> bool:
         return id(node) in self._constraints
 
-    def apply(self, parent_rect: Rect) -> None:
+    def apply(self, parent_rect: RectSource) -> None:
         """Recompute and mutate rect of all registered nodes."""
+        parent = resolve_rect(parent_rect)
         for node in self._nodes:
             nid = id(node)
             constraint = self._constraints.get(nid)
             if constraint is None:
                 continue
-            new_rect = constraint.apply(node.rect, parent_rect)
+            new_rect = constraint.apply(node.rect, parent)
             node.rect = new_rect
 
-    def apply_to(self, node: "UiNode", parent_rect: Rect) -> Rect:
+    def apply_to(self, node: "UiNode", parent_rect: RectSource) -> Rect:
         """Return resolved rect for one node without mutating."""
         nid = id(node)
         constraint = self._constraints.get(nid)
         if constraint is None:
             return Rect(node.rect)
-        return constraint.apply(node.rect, parent_rect)
+        return constraint.apply(node.rect, resolve_rect(parent_rect))
 
     def node_count(self) -> int:
         return len(self._nodes)

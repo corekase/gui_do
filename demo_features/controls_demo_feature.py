@@ -103,7 +103,7 @@ from gui_do.features.data_driven_runtime import (
     setup_routed_runtime,
 )
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
-from gui_do.layout.control_gallery_layout_manager import ControlGalleryLayoutManager
+from demo_features.control_gallery_layout_manager import ControlGalleryLayoutManager
 
 _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
     scene_name="control_showcase",
@@ -1112,7 +1112,7 @@ class ControlsShowcaseFeature(Feature):
 
         self._registry = ControlRegistry(host.control_showcase_root)
 
-        content_rect = Rect(
+        root_content_rect = Rect(
             self.rect.left + self.CONTENT_PADDING_X,
             self.rect.top + self.CONTENT_PADDING_Y,
             max(1, self.rect.width - (self.CONTENT_PADDING_X * 2)),
@@ -1129,7 +1129,7 @@ class ControlsShowcaseFeature(Feature):
         )
         category_tabs = create_tab_control_from_specs(
             "control_showcase_category_tabs",
-            Rect(content_rect.left, content_rect.top, content_rect.width, tab_strip_h),
+            Rect(root_content_rect.left, root_content_rect.top, root_content_rect.width, tab_strip_h),
             category_tab_specs,
             selected_key=self._active_category_key,
             on_change=lambda key: self._set_active_category(host, key),
@@ -1138,12 +1138,9 @@ class ControlsShowcaseFeature(Feature):
         self._registry.add_control(category_tabs)
         self._category_tabs = category_tabs
 
-        content_rect = Rect(
-            content_rect.left,
-            content_rect.top + tab_strip_h + tab_strip_gap,
-            content_rect.width,
-            max(1, content_rect.height - tab_strip_h - tab_strip_gap),
-        )
+        # Build nested content bounds from the base rect so downstream layout
+        # can consume a composable source instead of raw arithmetic-only rects.
+        content_rect = LayoutManager.as_layout_rect(root_content_rect).inset((0, tab_strip_h + tab_strip_gap, 0, 0)).resolve_layout_rect()
 
         slot_h = make_labeled_slot_height_fn(self.LABEL_HEIGHT, self.LABEL_GAP)
 
@@ -1154,12 +1151,7 @@ class ControlsShowcaseFeature(Feature):
 
         # Reserve bottom space for the task panel so per-tab reflow does not
         # collide with docked task controls.
-        self._category_content_bounds = Rect(
-            content_rect.left,
-            content_rect.top,
-            content_rect.width,
-            max(1, content_rect.height - self.TASK_PANEL_HEIGHT - row_gap),
-        )
+        self._category_content_bounds = LayoutManager.as_layout_rect(content_rect).inset((0, 0, 0, self.TASK_PANEL_HEIGHT + row_gap)).resolve_layout_rect()
 
         col0_x = content_rect.left
         col0_y = content_rect.top

@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Sequence, TYPE_CHECKING
 from pygame import Rect
 
 from ..scheduling.tween_manager import Easing, TweenHandle, TweenManager
+from .rect_source import RectSource, resolve_rect
 
 if TYPE_CHECKING:
     from ..layout.constraint_layout import ConstraintLayout
@@ -71,7 +72,7 @@ class LayoutAnimator:
     def apply_constraint(
         self,
         layout: "ConstraintLayout",
-        parent_rect: Rect,
+        parent_rect: RectSource,
     ) -> None:
         """Animate nodes to the positions computed by *layout*.
 
@@ -82,7 +83,7 @@ class LayoutAnimator:
         nodes = list(layout._nodes)
         snapshots = {id(node): Rect(node.rect) for node in nodes}
 
-        layout.apply(parent_rect)
+        layout.apply(resolve_rect(parent_rect))
         targets = {id(node): Rect(node.rect) for node in nodes}
 
         for node in nodes:

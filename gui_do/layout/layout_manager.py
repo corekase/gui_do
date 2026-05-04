@@ -5,6 +5,8 @@ from typing import Optional, Tuple, Union, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import LayoutRect, RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
     from .constraint_layout import ConstraintLayout, ConstraintBuilder
@@ -133,8 +135,8 @@ class LayoutManager:
         col = index % col_count
         return self.gridded(col, row)
 
-    def set_anchor_bounds(self, bounds: Rect) -> None:
-        self._anchor_bounds = Rect(bounds)
+    def set_anchor_bounds(self, bounds: RectSource) -> None:
+        self._anchor_bounds = resolve_rect(bounds)
 
     def anchored(
         self,
@@ -174,7 +176,7 @@ class LayoutManager:
     def constrain(
         self,
         node: "UiNode",
-        parent_rect: Rect,
+        parent_rect: RectSource,
         *,
         left: Optional[int] = None,
         right: Optional[int] = None,
@@ -192,7 +194,7 @@ class LayoutManager:
             min_width=min_width, max_width=max_width,
             min_height=min_height, max_height=max_height,
         )
-        return c.apply(node.rect, parent_rect)
+        return c.apply(node.rect, resolve_rect(parent_rect))
 
     def anchor(self, node: "UiNode", layout: "ConstraintLayout") -> "ConstraintBuilder":
         """Start a fluent constraint builder for node within layout."""
@@ -202,7 +204,7 @@ class LayoutManager:
     def set_column_flow_properties(
         self,
         *,
-        bounds: Rect,
+        bounds: RectSource,
         overall_rows: int,
         overall_columns: int,
         column_spacing: int = 8,
@@ -218,7 +220,7 @@ class LayoutManager:
         cols = max(1, int(overall_columns))
         gap_x = max(0, int(column_spacing))
         gap_y = max(0, int(row_spacing))
-        box = Rect(bounds)
+        box = resolve_rect(bounds)
         self._column_flow = _ColumnFlowConfig(
             bounds=box,
             overall_rows=rows,
@@ -267,7 +269,7 @@ class LayoutManager:
     @classmethod
     def column_flow_anchors_for(
         cls,
-        bounds: Rect,
+        bounds: RectSource,
         count: int,
         *,
         overall_rows: int,
@@ -290,13 +292,18 @@ class LayoutManager:
         """
         mgr = cls()
         mgr.set_column_flow_properties(
-            bounds=Rect(bounds),
+            bounds=resolve_rect(bounds),
             overall_rows=int(overall_rows),
             overall_columns=int(overall_columns),
             column_spacing=int(column_spacing),
             row_spacing=int(row_spacing),
         )
         return mgr.column_flow_anchors(int(count), int(column_span))
+
+    @staticmethod
+    def as_layout_rect(source: RectSource) -> LayoutRect:
+        """Wrap a rect source into a lazy provider for nested composition."""
+        return LayoutRect.from_source(source)
 
     def column_flow_next_row(self) -> None:
         """Advance to a new row band and reset horizontal column cursor."""

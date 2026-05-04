@@ -127,6 +127,13 @@ class TestLayoutRoot(unittest.TestCase):
         root = LayoutRoot(layout)
         self.assertEqual((0, 0), root.preferred_size)
 
+    def test_update_accepts_rect_provider(self):
+        layout = _SimpleLayout()
+        root = LayoutRoot(layout)
+        result = root.update(lambda: Rect(5, 6, 120, 80))
+        self.assertTrue(result)
+        self.assertEqual(Rect(5, 6, 120, 80), layout.arranged[0])
+
 
 # ===========================================================================
 # LayoutManager — linear
@@ -257,6 +264,13 @@ class TestLayoutManagerAnchored(unittest.TestCase):
         r = lm.anchored((40, 20), anchor="top_left", margin=(5, 10))
         self.assertEqual(5, r.x)
         self.assertEqual(10, r.y)
+
+    def test_set_anchor_bounds_accepts_callable_rect_source(self):
+        lm = LayoutManager()
+        lm.set_anchor_bounds(lambda: Rect(100, 200, 300, 200))
+        r = lm.anchored((40, 20), anchor="top_left")
+        self.assertEqual(100, r.x)
+        self.assertEqual(200, r.y)
 
 
 class TestLayoutManagerColumnFlow(unittest.TestCase):

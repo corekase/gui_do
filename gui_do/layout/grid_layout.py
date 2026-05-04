@@ -47,6 +47,8 @@ from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from pygame import Rect
 
+from .rect_source import RectSource, resolve_rect
+
 if TYPE_CHECKING:
     from ..controls.base.ui_node import UiNode
 
@@ -186,7 +188,7 @@ class GridLayout:
     # Layout computation
     # ------------------------------------------------------------------
 
-    def apply(self, container_rect: Rect) -> None:
+    def apply(self, container_rect: RectSource) -> None:
         """Compute and mutate child rects given *container_rect*.
 
         Algorithm:
@@ -197,21 +199,22 @@ class GridLayout:
         4. Compute cell origins.
         5. Apply cell rect + alignment to each registered node.
         """
+        container = resolve_rect(container_rect)
         n_rows = len(self._row_tracks)
         n_cols = len(self._col_tracks)
 
         row_sizes = self._resolve_tracks(
-            self._row_tracks, container_rect.height, self._row_gap,
+            self._row_tracks, container.height, self._row_gap,
             axis="row", placements=self._placements,
         )
         col_sizes = self._resolve_tracks(
-            self._col_tracks, container_rect.width, self._col_gap,
+            self._col_tracks, container.width, self._col_gap,
             axis="col", placements=self._placements,
         )
 
         # Compute track origins (cumulative offset)
-        row_origins = self._track_origins(row_sizes, self._row_gap, container_rect.top)
-        col_origins = self._track_origins(col_sizes, self._col_gap, container_rect.left)
+        row_origins = self._track_origins(row_sizes, self._row_gap, container.top)
+        col_origins = self._track_origins(col_sizes, self._col_gap, container.left)
 
         for node, placement in self._placements:
             r, c = placement.row, placement.col

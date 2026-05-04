@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pygame import Rect
 
-from .cell_caret_layout import CellCaretLayout
+from gui_do.layout.cell_caret_layout import CellCaretLayout
+from gui_do.layout.rect_source import RectSource, resolve_rect
 
 
 class ControlGalleryLayoutManager:
@@ -15,7 +16,8 @@ class ControlGalleryLayoutManager:
         self.label_height = int(label_height)
         self.label_gap = int(label_gap)
 
-    def relayout_basics(self, bounds: Rect, items: list, *, ensure_aux_label) -> None:
+    def relayout_basics(self, bounds: RectSource, items: list, *, ensure_aux_label) -> None:
+        bounds = resolve_rect(bounds)
         items_by_name = {str(item.name): item for item in items}
         col_gap = 8
         row_gap = 8
@@ -106,13 +108,14 @@ class ControlGalleryLayoutManager:
 
     def relayout_basics_scroll_cells(
         self,
-        bounds: Rect,
+        bounds: RectSource,
         items_by_name: dict,
         horizontal_names: list[str],
         vertical_names: list[str],
         *,
         ensure_aux_label,
     ) -> None:
+        bounds = resolve_rect(bounds)
         col_gap = 8
         row_gap = 8
         label_h = 16
@@ -170,7 +173,8 @@ class ControlGalleryLayoutManager:
                 label.visible = True
                 label.enabled = True
 
-    def relayout_basics_group_cells(self, bounds: Rect, families: list[tuple[str, list]], *, col_count: int) -> int:
+    def relayout_basics_group_cells(self, bounds: RectSource, families: list[tuple[str, list]], *, col_count: int) -> int:
+        bounds = resolve_rect(bounds)
         col_gap = 8
         row_gap = 8
         label_h = 16
@@ -223,7 +227,8 @@ class ControlGalleryLayoutManager:
 
         return y
 
-    def relayout_grid_items(self, category_key: str, bounds: Rect, items: list) -> int:
+    def relayout_grid_items(self, category_key: str, bounds: RectSource, items: list) -> int:
+        bounds = resolve_rect(bounds)
         is_basics = category_key == "basics"
         col_gap = 6 if is_basics else max(4, self.inner_gap * 2)
         row_gap = 6 if is_basics else max(6, self.inner_gap * 2)

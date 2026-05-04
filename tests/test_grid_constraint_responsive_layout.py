@@ -469,6 +469,14 @@ class TestConstraintLayout(unittest.TestCase):
         self.assertEqual(10, n.rect.left)
         self.assertEqual(390, n.rect.right)
 
+    def test_apply_accepts_callable_parent_rect(self):
+        layout = ConstraintLayout()
+        n = _node(0, 40)
+        layout.add(n, AnchorConstraint(left=8, right=8))
+        layout.apply(lambda: Rect(10, 20, 300, 200))
+        self.assertEqual(18, n.rect.left)
+        self.assertEqual(302, n.rect.right)
+
     def test_apply_to_returns_rect_without_mutating(self):
         layout = ConstraintLayout()
         n = _node(80, 40)
