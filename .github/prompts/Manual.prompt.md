@@ -58,6 +58,7 @@ For each step:
 
 After all assigned steps are done:
 - Confirm `MANUAL.md` exists and contains no remaining `<!-- MANUAL_PLACEHOLDER: -->` comments.
+- **pygame-ce cleanup.** Search `MANUAL.md` for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 - Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
 
 ---

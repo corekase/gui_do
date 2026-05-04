@@ -34,6 +34,7 @@ Write a practical, step-by-step path from installation to a working app. Must in
 python -m pip install -e . --no-deps
 python -m pytest -q tests/test_public_api_exports.py
 ```
+Note: requires `pygame` and `numpy` (`numpy` is used internally for pixel buffer operations via `PixelArray`).
 
 ### Step 2: Create a Minimal Host
 Show a complete `HostApplicationConfig` construction with all required fields. Use real field names.

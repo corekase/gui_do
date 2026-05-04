@@ -141,7 +141,7 @@ Then add a brief paragraph explaining the split:
 
 One section, short and direct:
 - Local install from repository root: `python -m pip install -e . --no-deps`
-- Dependency note: requires `pygame`
+- Dependency note: requires `pygame` and `numpy`
 
 #### 7. Project Structure
 
@@ -247,7 +247,7 @@ Write TUTORIAL.md with exactly these sections, in this order. Each section must 
 
 - What gui_do is (2–3 plain-English sentences)
 - What we will build: state the project, name its features, describe the end result
-- Prerequisites: Python, pip, pygame; no GUI framework experience required
+- Prerequisites: Python, pip, pygame, numpy; no GUI framework experience required
 - Link to MANUAL.md for deeper reference on any topic covered here
 
 #### 2. Core Concepts
@@ -263,6 +263,7 @@ Introduce the three core ideas before any code:
 #### 3. Installation and Setup
 
 - Install command: `python -m pip install -e . --no-deps` (local editable install, no binary dependency compilation)
+- Dependencies: requires `pygame` and `numpy` (numpy is used internally for pixel buffer operations via `PixelArray`)
 - Verify install: `python -c "import gui_do; print(gui_do.__version__)"`
 - Minimal imports needed to start: `from gui_do import HostApplicationBindingSpec, build_host_application_config, bootstrap_host_application, Feature`
 - Clarify the two startup paths: declarative bootstrap (recommended, covered in this tutorial) vs manual `GuiApplication` construction (advanced, see MANUAL.md)
@@ -380,5 +381,6 @@ After generating both files, run a compliance pass:
 4. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
 5. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
 6. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
+7. **pygame-ce cleanup.** Search both README.md and TUTORIAL.md for all exact occurrences of the string `pygame-ce` and replace every one with `pygame`. The project targets generic pygame and documentation must not name the pygame-ce variant.
 
 Report: what was checked, what was fixed, and confirm both files are complete and compliant.

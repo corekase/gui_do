@@ -6,7 +6,7 @@ gui_do is a Python GUI framework built on pygame that structures desktop applica
 
 In this tutorial you will build a **Counter Dashboard** — a two-feature interactive application with a live counter display, a reactive activity log, a keyboard shortcut, and a shortcut help overlay. By the end you will have worked through the full gui_do programming model: feature classes, observable state, feature communication, actions, and routed runtime specs.
 
-**Prerequisites.** Python 3.10+, `pip`, and `pygame` installed. No prior GUI framework experience is required. Familiarity with basic Python classes and functions is assumed.
+**Prerequisites.** Python 3.10+, `pip`, `pygame`, and `numpy` installed. No prior GUI framework experience is required. Familiarity with basic Python classes and functions is assumed.
 
 For deeper reference on any topic introduced here, see [MANUAL.md](MANUAL.md). The MANUAL covers all 32 API tiers with full system chapters, usage patterns, integration recipes, and appendices.
 
@@ -65,7 +65,7 @@ From the repository root, install in local editable mode:
 python -m pip install -e . --no-deps
 ```
 
-This performs no binary compilation. The `--no-deps` flag skips pip's dependency solver for the local package; install `pygame` separately if it is not already present.
+This performs no binary compilation. The `--no-deps` flag skips pip's dependency solver for the local package; install `pygame` and `numpy` separately if they are not already present. `numpy` is used internally for pixel buffer operations.
 
 Verify the install:
 

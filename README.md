@@ -156,7 +156,7 @@ From the repository root:
 python -m pip install -e . --no-deps
 ```
 
-Requires `pygame`. The `--no-deps` flag skips pip's dependency resolution for the local install; install `pygame` separately if it is not already present.
+Requires `pygame` and `numpy`. The `--no-deps` flag skips pip's dependency resolution for the local install; install `pygame` and `numpy` separately if they are not already present. `numpy` is used internally for pixel buffer operations.
 
 ---
 

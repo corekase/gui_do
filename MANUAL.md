@@ -114,8 +114,8 @@ When in doubt about a specific behavioral guarantee, the contract document takes
 
 `gui_do` intentionally does not aim to:
 
-- **Be a general-purpose game engine.** The framework is designed for structured GUI applications and productivity tools on a pygame-ce surface.
-- **Abstract away pygame-ce.** Developers using advanced graphics features will interact with pygame surfaces and rects directly.
+- **Be a general-purpose game engine.** The framework is designed for structured GUI applications and productivity tools on a pygame surface.
+- **Abstract away pygame.** Developers using advanced graphics features will interact with pygame surfaces and rects directly.
 - **Provide native OS widget toolkit.** All rendering is software-rendered to a pygame surface.
 - **Support non-Python targets.** The framework is Python-only and depends on CPython behaviors.
 - **Be a web framework.** There is no HTML/CSS rendering, no DOM model, and no network I/O in the framework core.
@@ -238,7 +238,7 @@ python -m pip install -e . --no-deps
 python -m pytest -q tests/test_public_api_exports.py
 ```
 
-The first command installs `gui_do` in editable mode using only the dependencies already declared in `pyproject.toml`. The second command verifies that the public API surface exported from `gui_do/__init__.py` matches what the test suite expects. If both commands succeed without errors, your environment is ready.
+The first command installs `gui_do` in editable mode using only the dependencies already declared in `pyproject.toml`; this workflow requires `pygame` and `numpy` to already be installed in the environment (`numpy` is used internally for pixel buffer operations). The second command verifies that the public API surface exported from `gui_do/__init__.py` matches what the test suite expects. If both commands succeed without errors, your environment is ready.
 
 ### Step 2: Create a Minimal Host Configuration
 
@@ -444,7 +444,7 @@ The following behavioral guarantees are contractual — they are specified in `d
 
 `gui_do` intentionally does not aim to:
 
-- Achieve OS-native widget parity across all platforms. The surface is pygame-ce; native widget integration is out of scope.
+- Achieve OS-native widget parity across all platforms. The surface is pygame; native widget integration is out of scope.
 - Make architectural decisions for application business logic. The framework provides structure for UI features; domain logic organization is the application's responsibility.
 - Expose internal infrastructure tiers as beginner entry points. Tiers 19 and above are framework internals; application code should not depend on them.
 - Make star-import behavior part of the public API compatibility contract. Import from the `gui_do` root by explicit name; `from gui_do import *` is not a supported usage pattern.
@@ -1987,7 +1987,7 @@ for op in diff.ops:
 
 #### What it is and why it exists
 
-Some features go beyond what the control tree can express — particle effects, tile maps, 2D camera-relative worlds, or custom sprite animations. `gui_do` provides graphics helpers that build on pygame-ce surfaces, giving features structured access to offscreen rendering, dirty-region tracking, shape drawing, and layered compositing. For audio, a portable cue-based system wraps `pygame.mixer` so features can trigger named sounds without knowing mixer internals.
+Some features go beyond what the control tree can express — particle effects, tile maps, 2D camera-relative worlds, or custom sprite animations. `gui_do` provides graphics helpers that build on pygame surfaces, giving features structured access to offscreen rendering, dirty-region tracking, shape drawing, and layered compositing. For audio, a portable cue-based system wraps `pygame.mixer` so features can trigger named sounds without knowing mixer internals.
 
 #### Mental model and lifecycle placement
 

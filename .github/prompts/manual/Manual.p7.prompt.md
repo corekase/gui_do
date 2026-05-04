@@ -172,7 +172,7 @@ using `ObjectPool` incorrectly (returning objects that are still referenced else
 the control tree (particles, tile maps, 2D scene graphs) and portable audio cue playback.
 
 **Mental model:** Custom rendering lives in `draw(host, screen)` or inside `CanvasControl`.
-Graphics helpers build on pygame-ce surfaces. Audio cues are event-driven via `SoundEventBus`.
+Graphics helpers build on pygame surfaces. Audio cues are event-driven via `SoundEventBus`.
 The scene graph (`SceneGraph2D`) provides a hierarchical 2D transform tree for camera-relative
 rendering.
 
