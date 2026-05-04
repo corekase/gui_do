@@ -2,11 +2,11 @@
 
 ## 1. Introduction
 
-gui_do is a Python GUI framework built on pygame-ce that structures desktop applications around declarative specs and feature lifecycles instead of imperative wiring. You describe what your application needs — its scenes, features, actions, windows, and overlays — using plain data objects, and the bootstrap system builds the runtime from those descriptions automatically.
+gui_do is a Python GUI framework built on pygame that structures desktop applications around declarative specs and feature lifecycles instead of imperative wiring. You describe what your application needs — its scenes, features, actions, windows, and overlays — using plain data objects, and the bootstrap system builds the runtime from those descriptions automatically.
 
 In this tutorial you will build a **Counter Dashboard** — a two-feature interactive application with a live counter display, a reactive activity log, a keyboard shortcut, and a shortcut help overlay. By the end you will have worked through the full gui_do programming model: feature classes, observable state, feature communication, actions, and routed runtime specs.
 
-**Prerequisites.** Python 3.10+, `pip`, and `pygame-ce` installed. No prior GUI framework experience is required. Familiarity with basic Python classes and functions is assumed.
+**Prerequisites.** Python 3.10+, `pip`, and `pygame` installed. No prior GUI framework experience is required. Familiarity with basic Python classes and functions is assumed.
 
 For deeper reference on any topic introduced here, see [MANUAL.md](MANUAL.md). The MANUAL covers all 32 API tiers with full system chapters, usage patterns, integration recipes, and appendices.
 
@@ -65,7 +65,7 @@ From the repository root, install in local editable mode:
 python -m pip install -e . --no-deps
 ```
 
-This performs no binary compilation. The `--no-deps` flag skips pip's dependency solver for the local package; install `pygame-ce` separately if it is not already present.
+This performs no binary compilation. The `--no-deps` flag skips pip's dependency solver for the local package; install `pygame` separately if it is not already present.
 
 Verify the install:
 

@@ -31,7 +31,7 @@ Use this discovered data exclusively. Every API name in examples must be verifie
 
 ## Documentation Principles
 
-gui_do is a data-driven, feature-lifecycle-oriented GUI framework built on pygame-ce.
+gui_do is a data-driven, feature-lifecycle-oriented GUI framework built on pygame.
 
 Primary truth sources for architecture and API behavior:
 - `gui_do/__init__.py` — authoritative public API (tiers 1–32)
@@ -82,7 +82,7 @@ Write README.md with exactly these top-level sections, in this order:
 - Project name (`gui_do`) and the latest demo video block (see Media Block spec below).
 - Unittest badge immediately below the video block.
 - One-paragraph plain-English description (3–5 sentences):
-  - What gui_do is (a Python GUI framework built on pygame-ce)
+  - What gui_do is (a Python GUI framework built on pygame)
   - The central programming model (declarative specs, feature lifecycle, reactive state)
   - What it automates away (event routing, overlay dispatch, focus management, scene transitions, lifecycle sequencing)
   - Who it is for (Python developers building desktop tools, game UIs, simulations, and interactive applications)
@@ -141,7 +141,7 @@ Then add a brief paragraph explaining the split:
 
 One section, short and direct:
 - Local install from repository root: `python -m pip install -e . --no-deps`
-- Dependency note: requires `pygame-ce`
+- Dependency note: requires `pygame`
 
 #### 7. Project Structure
 
@@ -214,7 +214,7 @@ TUTORIAL.md is a complete, standalone, beginning-to-end tutorial that teaches gu
 
 ### Audience
 
-Developers with working Python knowledge who are new to gui_do. They may be new to GUI frameworks entirely. No assumed knowledge of pygame-ce internals.
+Developers with working Python knowledge who are new to gui_do. They may be new to GUI frameworks entirely. No assumed knowledge of pygame internals.
 
 ### The Project
 
@@ -247,7 +247,7 @@ Write TUTORIAL.md with exactly these sections, in this order. Each section must 
 
 - What gui_do is (2–3 plain-English sentences)
 - What we will build: state the project, name its features, describe the end result
-- Prerequisites: Python, pip, pygame-ce; no GUI framework experience required
+- Prerequisites: Python, pip, pygame; no GUI framework experience required
 - Link to MANUAL.md for deeper reference on any topic covered here
 
 #### 2. Core Concepts

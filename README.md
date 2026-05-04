@@ -10,7 +10,7 @@
 
 [![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)
 
-gui_do is a Python GUI framework built on pygame-ce that replaces imperative scene setup with a declarative spec-and-lifecycle model. You describe your application — its scenes, features, actions, windows, and overlays — using data objects, and the bootstrap system wires the full runtime automatically. Reactive state, focus management, event routing, overlay dispatch, and lifecycle sequencing are handled by the framework so your code stays focused on application behavior. It targets Python developers building desktop tools, game UIs, simulations, and interactive applications.
+gui_do is a Python GUI framework built on pygame that replaces imperative scene setup with a declarative spec-and-lifecycle model. You describe your application — its scenes, features, actions, windows, and overlays — using data objects, and the bootstrap system wires the full runtime automatically. Reactive state, focus management, event routing, overlay dispatch, and lifecycle sequencing are handled by the framework so your code stays focused on application behavior. It targets Python developers building desktop tools, game UIs, simulations, and interactive applications.
 
 ---
 
@@ -156,7 +156,7 @@ From the repository root:
 python -m pip install -e . --no-deps
 ```
 
-Requires `pygame-ce`. The `--no-deps` flag skips pip's dependency resolution for the local install; install `pygame-ce` separately if it is not already present.
+Requires `pygame`. The `--no-deps` flag skips pip's dependency resolution for the local install; install `pygame` separately if it is not already present.
 
 ---
 
