@@ -42,7 +42,7 @@ Usage::
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Generator, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:

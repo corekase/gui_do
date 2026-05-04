@@ -60,18 +60,11 @@ from enum import Enum
 from typing import (
     Callable,
     Dict,
-    FrozenSet,
     Iterator,
     List,
     Optional,
-    Sequence,
-    Set,
     Tuple,
-    TYPE_CHECKING,
 )
-
-if TYPE_CHECKING:
-    pass  # widget type is intentionally untyped here for portability
 
 
 # ---------------------------------------------------------------------------

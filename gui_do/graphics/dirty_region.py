@@ -40,6 +40,7 @@ class DirtyRegionTracker:
 
     def __init__(self) -> None:
         self._dirty: List[Rect] = []
+        self._dirty_union: Optional[Rect] = None
         self._full_dirty: bool = False
         self._full_dirty_rect: Optional[Rect] = None
 
@@ -52,13 +53,19 @@ class DirtyRegionTracker:
         if self._full_dirty:
             return  # already a full-screen dirty — no point accumulating
         if rect.width > 0 and rect.height > 0:
-            self._dirty.append(Rect(rect))
+            r = Rect(rect)
+            self._dirty.append(r)
+            if self._dirty_union is None:
+                self._dirty_union = Rect(r)
+            else:
+                self._dirty_union.union_ip(r)
 
     def mark_all_dirty(self, screen_rect: Rect) -> None:
         """Mark the entire *screen_rect* as dirty (e.g. after scene switch)."""
         self._full_dirty = True
         self._full_dirty_rect = Rect(screen_rect)
         self._dirty.clear()
+        self._dirty_union = None
 
     # ------------------------------------------------------------------
     # Query
@@ -88,6 +95,7 @@ class DirtyRegionTracker:
             return rects
         result = self._dirty
         self._dirty = []
+        self._dirty_union = None
         return result
 
     def dirty_union(self) -> Optional[Rect]:
@@ -123,13 +131,11 @@ class DirtyRegionTracker:
     def overlaps_dirty(self, rect: Rect) -> bool:
         """Return True if *rect* intersects any current dirty region.
 
-        Useful for skipping ``draw()`` on controls outside the dirty union.
+        Uses a cached union of all dirty rects for O(1) overlap testing
+        instead of iterating every individual dirty rect.
         """
         if not self.has_dirty:
             return False
         if self._full_dirty:
             return True
-        for dirty in self._dirty:
-            if dirty.colliderect(rect):
-                return True
-        return False
+        return self._dirty_union is not None and self._dirty_union.colliderect(rect)

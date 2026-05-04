@@ -129,7 +129,7 @@ class OverlayManager:
 
         # Left-button MOUSEBUTTONDOWN outside overlays: dismiss dismiss_on_outside_click overlays
         # Important: does NOT consume the event (returns False) so scene can still handle it
-        pointer_down = event.kind == EventType.MOUSE_BUTTON_DOWN and int(getattr(event, "button", 0) or 0) == 1
+        pointer_down = event.kind == EventType.MOUSE_BUTTON_DOWN and event.button == 1
         pointer_pos = event.pos if isinstance(event.pos, tuple) and len(event.pos) == 2 else None
         await_inside_hit = bool(pointer_down and pointer_pos is not None)
         inside_hit = False

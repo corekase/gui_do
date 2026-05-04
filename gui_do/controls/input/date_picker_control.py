@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import calendar
-from datetime import date, timedelta
+from datetime import date
 from typing import Callable, Optional, TYPE_CHECKING
 
 import pygame

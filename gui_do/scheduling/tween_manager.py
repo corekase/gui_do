@@ -294,13 +294,14 @@ class TweenManager:
         # Remove finished entries to keep memory bounded
         if had_completions or self._has_cancelled:
             self._has_cancelled = False
-            active = []
+            write = 0
             for e in self._entries:
                 if e.complete or e.cancelled:
                     self._entry_by_id.pop(e.tween_id, None)
                 else:
-                    active.append(e)
-            self._entries = active
+                    self._entries[write] = e
+                    write += 1
+            del self._entries[write:]
 
     def _get_entry(self, tween_id: int) -> Optional[_TweenEntry]:
         return self._entry_by_id.get(tween_id)

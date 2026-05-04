@@ -43,7 +43,7 @@ Async-compatible usage::
 from __future__ import annotations
 
 import contextlib
-from typing import Generator, List, Tuple
+from typing import Generator
 
 
 # ---------------------------------------------------------------------------

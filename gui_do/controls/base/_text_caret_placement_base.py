@@ -1,5 +1,5 @@
 from ._text_edit_focus_base import _TextEditFocusBase
-from typing import Optional, Callable, Tuple
+from typing import Optional, Tuple
 
 class _TextCaretPlacementBase(_TextEditFocusBase):
     """

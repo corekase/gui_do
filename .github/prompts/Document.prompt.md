@@ -1,285 +1,384 @@
 ---
 name: Document
-description: trigger a full readme rebuild
+description: Rebuild README.md and TUTORIAL.md from the current codebase. The MANUAL.md is separate (Manual.prompt.md pipeline).
 ---
 
-<!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
+## Scope
+
+This prompt generates two files only:
+
+1. **README.md** — a high-level project overview that sells gui_do and links to TUTORIAL.md and MANUAL.md as the primary learning resources.
+2. **TUTORIAL.md** — a complete step-by-step project tutorial that teaches the full gui_do programming model from zero.
+
+MANUAL.md is produced by a separate prompt pipeline (`Manual.prompt.md`). Do not regenerate or modify MANUAL.md from this prompt.
+
+---
+
+## Autodiscovery Requirement
+
+Before writing either file, autodiscover the current state of the codebase:
+
+1. **Read `gui_do/__init__.py`** from top to bottom. Collect all tier comment headers and all exported names. Use these as the authoritative API surface. Do not use names from memory or prior runs — verify against the current file.
+2. **Read `gui_do/_version.py`** to get `__version__` and `__demo__`.
+3. **List `demo_features/`** and read each package `__init__.py` to understand what demo patterns are available.
+4. **Read `docs/runtime_operating_contracts.md`** for behavioral guarantees (scheduler budget, restore report fields, event normalization contract).
+5. **Read `MANUAL.md`** title and TOC only (first ~80 lines) to extract the exact section headings to link to.
+6. **Read `TUTORIAL.md`** if it exists, to determine whether to generate from scratch or update.
+
+Use this discovered data exclusively. Every API name in examples must be verified present in `gui_do/__init__.py`.
+
+---
 
 ## Documentation Principles
 
-gui_do is a data-driven, feature-lifecycle-oriented GUI framework. Documentation must prioritize declarative specs, lifecycle orchestration, and runtime wiring through public APIs.
+gui_do is a data-driven, feature-lifecycle-oriented GUI framework built on pygame-ce.
 
 Primary truth sources for architecture and API behavior:
-- gui_do/features/data_driven_runtime.py
-- gui_do/features/feature_lifecycle.py
-- gui_do/app/gui_application.py
-- gui_do/overlays/* (especially overlay_manager.py, shortcut_help_overlay.py, toast_manager.py)
-- demo_features/* as runnable reference patterns
+- `gui_do/__init__.py` — authoritative public API (tiers 1–32)
+- `gui_do/features/data_driven_runtime.py`
+- `gui_do/features/feature_lifecycle.py`
+- `gui_do/app/gui_application.py`
+- `gui_do/overlays/` (especially `overlay_manager.py`, `shortcut_help_overlay.py`, `toast_manager.py`)
+- `demo_features/` as runnable reference patterns
 
-## Demo Features Organizational Convention (Locked In)
+## Demo Features Organizational Convention
 
-This convention is established and must be reflected accurately in documentation:
+This convention must be reflected accurately in documentation:
 
-**Folder-per-feature/scene**: Each subfolder under `demo_features/` is exactly one feature package (or a tightly related cluster). Examples: `life/`, `mandelbrot/`, `systems/`, `controls/`, `bouncing_shapes/`, `main_scene/`.
+**Folder-per-feature/scene**: Each subfolder under `demo_features/` is exactly one feature package (or a tightly related cluster).
 
-**`__init__.py` is the sole public surface**: All cross-package imports target the package root only. `demo_config.py` and any other consumer imports exclusively from the package name (e.g. `from demo_features.life import LifeSimulationFeature`), never from internal submodules. This means internal code reorganizations — moving a class from one file to another within the same folder — have zero effect on the bootstrap or any consumer. The data (specs and config) drives wiring; code location is irrelevant to bootstrap.
+**`__init__.py` is the sole public surface**: All cross-package imports target the package root only. Internal reorganizations have zero effect on bootstrap. The data (specs and config) drives wiring; code location is irrelevant to bootstrap.
 
-**File-per-concern within a folder**: Each file inside a feature folder owns exactly one concern and is the true implementation owner (not a wrapper or alias-re-export):
-- `*_feature.py` — the Feature class with its lifecycle methods and routing logic
-- `*_presenter.py` — the WindowPresenter subclass that handles window layout and control construction
-- `*_specs.py` or `*_specs.py`-equivalent — specs and layout constants shared within the package
-- `*_logic_feature.py` — a companion LogicFeature or background-computation feature
-- Named standalone types in their own files (e.g. `shape_sprite_state.py`, `demo_inspectable.py`, `set_int_command.py`, `mandel_status_event.py`)
+**File-per-concern within a folder**: Each file inside a feature folder owns exactly one concern (`*_feature.py`, `*_presenter.py`, `*_specs.py`, `*_logic_feature.py`).
 
-**Why no bootstrap changes are ever needed for reorganization**: The bootstrap system is data-driven. `HostApplicationBindingSpec` and `build_host_application_config` consume specs (feature classes, scene configs, action bindings) not code locations. As long as each feature package's `__init__.py` continues to export the same public names, the bootstrap is entirely insulated from any internal reorganization.
+Documentation must present this folder+`__init__.py` model as the established pattern and must not suggest internal submodule imports at any layer.
 
-Documentation must present this folder+`__init__.py` model as the established pattern for demo composition, and must not suggest or imply internal submodule imports at any layer.
+---
 
-## Documentation Structure & Purpose
+## README.md Generation
 
-The README must guide developers into declarative + lifecycle composition first and keep lower-level APIs as secondary material. All examples must be current with the package as it exists now.
+### Generate vs Update Behavior
 
-## Content Guidelines
+- If README.md does not exist: generate from scratch using all required sections below, constructing the header from the Media Block spec and the badge URL verbatim.
+- If README.md exists: read it fully, then update sections that are stale, incomplete, or missing newer patterns. Preserve sections that are accurate and match the required structure. Do not silently omit required sections. Always carry forward the preserved header elements (heading, demonstration block, badge) exactly as specified under **Preserved README Header Elements**.
 
-### 1. Project Overview
-- Start with project name and 2-3 sentence plain-English summary.
-- Emphasize declarative runtime setup, feature composition, and reactive state.
-- Explain what boilerplate gui_do removes (scene wiring, event routing, overlays, lifecycle sequencing).
+### Purpose
 
-### 2. Table of Contents
-- Include all top-level sections and major subsections.
-- Keep hierarchy clear.
-- Add back-to-top links for each major section.
+README.md is a high-level project overview. Its job is to:
+- Explain what gui_do is in plain English
+- Communicate its strengths and distinguishing characteristics
+- Describe the range of applications it is suited for
+- Provide a minimal taste of the programming model
+- Point developers to TUTORIAL.md and MANUAL.md as the primary learning resources
 
-### 3. API Organization Section
-- Keep the tiered model and intent:
-- Tier 1: Primary APIs (HostApplicationConfig, bootstrap_host_application, Feature* types, Specs, lifecycle helpers).
-- Tier 2-7: Runtime infrastructure (state/data/events/scheduling/layout/theme/overlays/persistence).
-- Tier 8+: Individual controls and lower-level internals (available, but secondary).
-- Explicitly steer new users to Tier 1 first.
+README.md is **not** a tutorial, reference manual, or API listing. Those live in TUTORIAL.md and MANUAL.md respectively. The README should leave the reader wanting to explore those documents.
 
-### 4. Overview Section
-- Explain how observable data, feature lifecycle phases, declarative specs, and runtime wiring work together.
-- Mention what gui_do handles automatically (rendering, keyboard/mouse routing, scene transitions, overlay dispatch, focus behavior).
-- Include current overlay/event nuances:
-- OverlayManager supports dismiss-on-escape, dismiss-on-outside-click, and modal key consumption for unhandled keys.
-- Toast clicks are consumed (no click-through), with optional per-toast click callbacks.
+### Required Section Order
 
-### 5. Comprehensive Tutorial Section
-- Keep beginner-to-advanced flow.
-- Cover Feature, DirectFeature, LogicFeature, RoutedFeature with practical guidance.
-- Use current public APIs and demo_features patterns.
-- Include declarative runtime helpers and examples of RoutedRuntimeSpec usage.
+Write README.md with exactly these top-level sections, in this order:
 
-### 6. Minimal Runnable Example
-- Title exactly: Minimal Runnable Example and Configuration
-- Content is one single runnable listing (no prose around it).
-- Include HostApplicationConfig + FeatureSpec + bootstrap_host_application + run loop.
-- Ensure imports and API names are current.
+#### 1. Project Header
 
-### 7. Data-Driven Bootstrap and Runtime
-- Cover HostApplicationConfig and bootstrap_host_application in depth.
-- Explain beginner-to-advanced spec composition:
-- FeatureSpec, SceneSetupSpec, ActionSpec, WindowSpec, runtime scene specs.
-- Routed runtime helpers and specs (for declarative runtime wiring).
-- Include examples that match current package behavior.
+- Project name (`gui_do`) and the latest demo video block (see Media Block spec below).
+- Unittest badge immediately below the video block.
+- One-paragraph plain-English description (3–5 sentences):
+  - What gui_do is (a Python GUI framework built on pygame-ce)
+  - The central programming model (declarative specs, feature lifecycle, reactive state)
+  - What it automates away (event routing, overlay dispatch, focus management, scene transitions, lifecycle sequencing)
+  - Who it is for (Python developers building desktop tools, game UIs, simulations, and interactive applications)
 
-### 8. Feature Lifecycle and Messaging
-- Explain lifecycle order and intent: build, bind_runtime, handle_event, on_update, draw (+ relevant optional hooks if public).
-- Explain feature messaging and coordination via FeatureManager.
-- Include guidance on where to place subscriptions, action bindings, and cleanup.
+#### 2. Strengths
 
-### 9. Common Patterns
-- Keep real-world patterns, updated to current usage:
-- Scene menu strip/task panel declarative setup.
-- Window toggles and focus-aware key routing.
-- Shortcut help overlay setup and filtering/manual-shortcut patterns.
-- Toast notifications with optional click callback behavior.
-- Observable/reactive state flow across features.
+A focused list (6–10 items) of gui_do's distinguishing characteristics. Each item is a short heading + one-sentence explanation. Cover:
+- Declarative runtime wiring — specs describe what, bootstrap builds how
+- Feature lifecycle isolation — each feature owns its build, bind, update, draw, and teardown
+- Reactive state — `ObservableValue`, `ObservableList`, `ObservableDict` trigger UI updates without polling
+- Composable overlays — dialogs, toasts, tooltips, command palette, context menus with consistent routing
+- Tiered API surface — 32 tiers from high-level bootstrap helpers down to 2D scene graph and audio
+- Scene management — multi-scene apps with animated transitions and scene-scoped routing
+- Persistence and migration — workspace state saved/restored with versioned snapshot migration
+- Accessibility and focus — semantic accessibility tree, focus rings, live region announcements
+- Built-in diagnostics — telemetry spans, property inspector, event recorder/playback
+- Extensible without framework changes — new features add behavior by implementing lifecycle methods
 
-### 10. Benefits of Data-Driven Lifecycle Approach
-- Keep concise list of major benefits (about 8-10).
-- Focus on composability, testability, deterministic wiring, and reduced boilerplate.
+#### 3. Use Cases
 
-### 11. FAQ
-- Keep practical Q&A for new users.
-- Include at least one question each for:
-- Direct controls vs feature composition.
-- Lifecycle hook selection.
-- Event handling and routing.
-- Overlay behavior (escape/outside-click/modal key capture).
-- Toast click behavior (default consume + optional callback).
+A prose section (or short list with brief descriptions) covering the range of applications gui_do is suited for:
+- Developer tools and internal utilities (dashboards, inspectors, data explorers)
+- Game interfaces and HUDs (particle effects, tile maps, 2D scene graph, audio cues)
+- Interactive simulations (cellular automata, physics visualizations, parameter explorers)
+- Data visualization tools (sortable/filterable lists, grids, charts with dirty-region rendering)
+- Multi-window workbench applications (tabbed panels, task panels, floating tool windows)
+- Rapid prototyping of GUI layouts with the constraint and flex layout systems
 
-### 12. See Also
-- Link docs contracts/specs and architecture documents under docs/.
-- Link primary source files (data_driven_runtime.py, feature_lifecycle.py, gui_application.py).
-- Link demo_features/ as living examples.
+#### 4. Quick Look
 
-## Content Rules
+A single minimal runnable listing demonstrating the core pattern. Title this section exactly: `Quick Look`. The listing must:
+- Use `HostApplicationBindingSpec`, `build_host_application_config`, `bootstrap_host_application`
+- Define one `Feature` subclass with `build` and `bind_runtime`
+- Show one `ObservableValue` wired to a `LabelControl`
+- Include the run loop (`host.app.run_entrypoint`)
+- All names verified present in `gui_do/__init__.py`
 
-### DO:
-- Keep data-driven + lifecycle-first framing.
-- Use current public APIs and runnable examples.
-- Start with Tier 1 APIs before infrastructure/control details.
-- Keep examples practical and aligned to current behavior.
-- Preserve TOC coverage and back-to-top navigation.
+#### 5. Documentation
 
-### DON'T:
-- Add sections not listed above.
-- Depend on private/internal names (leading underscore) in beginner docs.
-- Use stale API names or signatures.
-- Over-focus on individual controls outside data-driven patterns.
-- Present behavior that contradicts current runtime/overlay/focus semantics.
+This section is the primary navigation hub. Write it with the following structure:
 
-## Post-Generation
+```
+## Documentation
 
-- Place unittest badge at the top of README.
-- Insert or replace the latest demo video block directly below the `gui_do` project label (above the unittest badge).
-- Build the video URL from `gui_do/_version.py` using the `__demo__` variable value as the YouTube ID.
-- Use this exact README block format:
+| Document | Purpose |
+|----------|---------|
+| [TUTORIAL.md](TUTORIAL.md) | Step-by-step project tutorial — start here if you are new to gui_do |
+| [MANUAL.md](MANUAL.md) | Complete developer reference for all systems and APIs |
+```
 
-	### Latest Demonstration
+Then add a brief paragraph explaining the split:
+- TUTORIAL.md teaches the framework through building a complete project from scratch, explaining both how and why at every step.
+- MANUAL.md is the comprehensive reference organized by system, with API tables, usage patterns, examples, integration recipes, and appendices.
 
-	---
+#### 6. Installation
 
-	<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
+One section, short and direct:
+- Local install from repository root: `python -m pip install -e . --no-deps`
+- Dependency note: requires `pygame-ce`
 
-	---
+#### 7. Project Structure
 
-	Replace `URLPART` with the resolved `__demo__` value.
-- Verify all TOC links and section anchors.
-- Ensure examples run against current API.
-- Remove stale or contradictory statements.
+Brief overview of the repository layout: `gui_do/` (library), `demo_features/` (runnable reference patterns), `tests/` (contract and behavioral tests), `docs/` (architecture contracts), `TUTORIAL.md`, `MANUAL.md`.
 
-### Compliance Testing (Required)
+#### 8. See Also
 
-Before finalizing README.md and TUTORIAL.md, run and report a compliance pass against this prompt.
+Links to:
+- `TUTORIAL.md` and `MANUAL.md` (primary learning resources)
+- `demo_features/` (living reference patterns)
+- `docs/` (architecture boundary and runtime contracts)
+- `gui_do/__init__.py` (authoritative public API source)
 
-- Validate required top-level section order and presence:
-	- README.md must include only the listed top-level sections in this prompt.
-	- TUTORIAL.md must include sections 1 through 11 in exact order.
-- Validate content-rule compliance:
-	- No private/internal symbols in beginner tutorial examples.
-	- Installation step in TUTORIAL.md must use local editable install without dependency resolution:
-		`python -m pip install -e . --no-deps`.
-	- Overlay, toast, and focus/routing behavior descriptions must match current runtime behavior.
-- Validate examples and snippets:
-	- Minimal runnable example section title must be exactly
-		`Minimal Runnable Example and Configuration`.
-	- Minimal runnable example content must be a single listing.
-- Validate README media block compliance:
-	- Exactly one "### Latest Demonstration" section title + divider block exists.
-	- The block is positioned immediately below the `gui_do` project label (above the unittest badge).
-	- The YouTube/video thumbnail URL uses `gui_do/_version.py` `__demo__` value.
-- Perform at least one automated text/structure check (for example with `rg`) and fix violations before completion.
-- Summarize what was checked and what was changed to reach compliance.
+### Preserved README Header Elements
+
+If README.md exists, read it before generating and carry forward its header elements exactly. If README.md does not exist, construct the header from the Media Block spec and the verbatim badge line below — no file read is needed. The following elements must appear in the generated file regardless of which path applies:
+
+- **Project heading**: `# gui_do` (first line of the file)
+- **Latest Demonstration block**: the `### Latest Demonstration` section with its surrounding `---` dividers and the `<a href=...><img ...></a>` video thumbnail block. Read `gui_do/_version.py` `__demo__` and use that value as `URLPART`. If README.md existed and the URL already matched, preserve it unchanged; otherwise construct it from the Media Block spec below.
+- **Unittest badge**: `[![unittest](https://github.com/corekase/gui_do/actions/workflows/unittest.yml/badge.svg?branch=main)](https://github.com/corekase/gui_do/actions/workflows/unittest.yml)` — copy this line verbatim; do not alter the URL or badge text.
+
+The ordering of these three elements must remain:
+1. `# gui_do`
+2. `### Latest Demonstration` block (with `---` dividers)
+3. Unittest badge line
+
+### Media Block Spec
+
+Read `gui_do/_version.py` for `__demo__`. Use its value as `URLPART`.
+
+Position: immediately below the `# gui_do` project name heading, before the unittest badge.
+
+Exact format:
+```
+### Latest Demonstration
+
+---
+
+<a href="https://www.youtube.com/watch?v=URLPART"><img src="https://img.youtube.com/vi/URLPART/0.jpg" alt="Demo Video"></img></a>
+
+---
+```
+
+### Content Rules for README.md
+
+**DO:**
+- Keep it high-level and motivating — not a reference
+- Link TUTORIAL.md and MANUAL.md as the primary next steps after every section that might prompt deeper questions
+- Use current API names (verified from autodiscovery)
+- Keep the listing in Quick Look to ≤ 40 lines
+
+**DON'T:**
+- Include a full API reference, tier listing, or control catalog — that belongs in MANUAL.md
+- Include step-by-step tutorial content — that belongs in TUTORIAL.md
+- Use private/internal symbols
+- Add sections not listed above
 
 ---
 
 ## TUTORIAL.md Generation
 
-After generating README.md, generate or update TUTORIAL.md in the project root.
-
 ### Purpose
 
-TUTORIAL.md is a standalone beginner tutorial for gui_do. It must teach the framework from zero to a complete runnable app while staying accurate to current declarative runtime and lifecycle behavior.
+TUTORIAL.md is a complete, standalone, beginning-to-end tutorial that teaches gui_do by building a real project. It must explain both **how** to do things and **why** you are doing them at every step. A reader who finishes the tutorial should understand the gui_do programming model well enough to build their own feature-complete application.
 
 ### Generate vs Update Behavior
 
-- If TUTORIAL.md does not exist: generate complete tutorial from scratch using all required sections below.
-- If TUTORIAL.md exists: read and update sections that are stale or missing newer APIs/patterns; preserve sections that are still accurate.
+- If TUTORIAL.md does not exist: generate from scratch using all required sections below.
+- If TUTORIAL.md exists: read it fully, then update sections that are stale, incomplete, or missing newer patterns. Preserve sections that are accurate. Do not silently omit required sections.
 
 ### Audience
 
-Developers with basic Python knowledge who are new to gui_do and possibly new to GUI frameworks.
+Developers with working Python knowledge who are new to gui_do. They may be new to GUI frameworks entirely. No assumed knowledge of pygame-ce internals.
 
-### Required Tutorial Structure (keep section order)
+### The Project
+
+The tutorial builds a single complete project from scratch — a **multi-feature interactive application** that the reader constructs step by step. Choose a project that demonstrates the full programming model naturally:
+
+- At least two features with distinct responsibilities
+- Observable state shared or communicated between features
+- At least one action wired to a keyboard shortcut
+- A reactive UI (label or display that updates automatically when state changes)
+- A clean shutdown
+
+Good example projects: a note-taking tool, a simple dashboard with a counter and log, a two-panel data explorer. Pick one that is genuinely usable, not a toy.
+
+State the chosen project clearly at the start of the tutorial and keep the narrative focused on building it throughout.
+
+### Autodiscovery for Tutorial
+
+Before writing tutorial content:
+1. Read `gui_do/__init__.py` fully to verify every API name used in examples.
+2. Read `demo_features/__init__.py` and subdirectory `__init__.py` files to identify patterns available as reference.
+3. Read `MANUAL.md` section headings (TOC) to identify cross-reference targets.
+
+Every API name in the tutorial must be verified present in `gui_do/__init__.py`. Do not use names from memory.
+
+### Required Tutorial Structure
+
+Write TUTORIAL.md with exactly these sections, in this order. Each section must include both explanatory prose and runnable code snippets. The narrative thread of building the project must run continuously through all sections.
 
 #### 1. Introduction
-- What gui_do is (plain English, 2-3 sentences).
-- What will be built.
-- Assumed prerequisites.
+
+- What gui_do is (2–3 plain-English sentences)
+- What we will build: state the project, name its features, describe the end result
+- Prerequisites: Python, pip, pygame-ce; no GUI framework experience required
+- Link to MANUAL.md for deeper reference on any topic covered here
 
 #### 2. Core Concepts
-- Data-driven design via specs (contrast imperative wiring vs declarative specs).
-- Reactive programming with current observable API names:
-- ObservableValue, ObservableList, ObservableDict, optional ComputedValue mention.
-- Feature lifecycle and hook roles (build, bind_runtime, handle_event, on_update, draw).
+
+Introduce the three core ideas before any code:
+
+**Declarative specs vs imperative wiring.** Explain why gui_do uses data objects (specs) to declare application structure instead of imperative call sequences. Explain the benefit: the bootstrap system reads specs and wires everything automatically, so features never need to know about each other's internals.
+
+**Reactive state.** Explain `ObservableValue` — a value that notifies subscribers when it changes. Contrast with polling. Show the subscribe/unsubscribe pattern. Mention `ObservableList` and `ObservableDict` for collections. Briefly mention `ComputedValue` for derived state.
+
+**Feature lifecycle.** Explain the five phases (`build`, `bind_runtime`, `on_update`, `handle_event`, `draw`, `shutdown_runtime`) and the intent of each. Explain that all features in a scene complete `build` before any `bind_runtime` runs — this is a framework guarantee, not a coincidence. Explain that subscriptions are set up in `bind_runtime` and torn down in `shutdown_runtime`.
 
 #### 3. Installation and Setup
-- Local install command from the repository root (not PyPI), and it must avoid dependency builds so local package installation succeeds without attempting binary dependency compilation: `python -m pip install -e . --no-deps`.
-- Minimal imports.
-- Clarify bootstrap path vs manual GuiApplication surface path.
 
-#### 4. Your First Application — Step by Step
-Use these exact steps with runnable snippets:
-1. Create a surface and GuiApplication (and explain bootstrap alternative).
-2. Define a Feature with build hook.
-3. Declare HostApplicationConfig + FeatureSpec.
-4. Call bootstrap_host_application.
-5. Add main run loop.
-6. Show full combined listing.
+- Install command: `python -m pip install -e . --no-deps` (local editable install, no binary dependency compilation)
+- Verify install: `python -c "import gui_do; print(gui_do.__version__)"`
+- Minimal imports needed to start: `from gui_do import HostApplicationBindingSpec, build_host_application_config, bootstrap_host_application, Feature`
+- Clarify the two startup paths: declarative bootstrap (recommended, covered in this tutorial) vs manual `GuiApplication` construction (advanced, see MANUAL.md)
 
-#### 5. Observable Data and Reactive UI
-- Show ObservableValue usage.
-- Show subscription/update flow.
-- Include at least one practical UI update binding pattern.
-- Explain signal/subscription cleanup basics.
+#### 4. Your First Feature
+
+*Narrative: build the first piece of the project.*
+
+Step by step, with a numbered sequence and a code snippet after each step:
+
+1. **Define the feature class.** Show a `Feature` subclass with an empty `build` method. Explain why `Feature` is the right choice here (vs `DirectFeature`, `RoutedFeature` — covered in Section 6). Explain that `build` is where the control tree is constructed.
+2. **Add a control.** Show adding a `LabelControl` inside `build`. Explain that controls are layout objects inside the feature's region, not independent widgets. Explain `host.screen_rect` as the available canvas.
+3. **Declare the config.** Show `HostApplicationBindingSpec` with a `SceneBundleBindingSpec` and a `FeatureSpec`. Explain each field. Show `build_host_application_config`.
+4. **Bootstrap and run.** Show `bootstrap_host_application(config)` and `host.app.run_entrypoint(target_fps=60)`. Explain what `bootstrap_host_application` does (reads specs, initializes all systems, returns the host object). Explain `run_entrypoint` (starts the frame loop).
+5. **Show the full listing.** Combine all steps into a single runnable file. The reader should be able to run it and see a window.
+
+#### 5. Reactive State: Making the UI Respond
+
+*Narrative: add the project's first interactive element.*
+
+1. **Introduce `ObservableValue`.** Show declaring one on the feature. Explain that it is just a value — setting `.value` fires all subscribers.
+2. **Add a button.** Show a `ButtonControl` with an `on_click` callback that updates the observable.
+3. **Wire the observable to the label.** In `bind_runtime`, show `self._sub = self._count.subscribe(lambda v: setattr(self._label, "text", f"Count: {v}"))` — or equivalently the property-setter form `self._label.text = f"Count: {v}"` inside the callback. Explain why this is in `bind_runtime` and not `build` (controls exist after build; subscriptions need a live control tree).
+4. **Unsubscribe in `shutdown_runtime`.** Show `if self._sub: self._sub(); self._sub = None`. Explain why: subscriptions hold references; failing to unsubscribe causes memory leaks and callbacks firing after the feature is gone.
+5. **Run the updated listing.** Show the full file for this step.
 
 #### 6. Feature Types
-- Feature, DirectFeature, LogicFeature, RoutedFeature.
-- When to use each.
 
-#### 7. Feature Messaging
-- Publish/subscribe between features.
-- Practical two-feature interaction example.
+Explain when to use each type. Use the project as context:
 
-#### 8. Scene Navigation
-- SceneSetupSpec and scene switching.
-- Action-based or programmatic navigation.
+- **`Feature`** — standard choice; all five lifecycle methods; use when building a visual feature with state and interaction.
+- **`DirectFeature`** — full control; no default method stubs; use when you need to override the exact set of lifecycle methods with no defaults. Rarely needed.
+- **`LogicFeature`** — no draw or control tree; use for background computation, cross-feature coordination, or data pipeline management.
+- **`RoutedFeature`** — extends `Feature` with topic-based message dispatch; use when declaring hotkeys, shortcut overlays, and event subscriptions via `RoutedRuntimeSpec` and `RoutedFeatureLifecycleSpec`.
 
-#### 9. Spec Reference for Beginners
-Include concise descriptions + snippets for:
-- FeatureSpec
-- SceneSetupSpec
-- ActionSpec
-- WindowSpec
-- Task panel spec/runtime helper patterns if applicable
-- Toast/notification specs or manager usage if applicable
-- Shortcut/help overlay spec/runtime helper patterns if applicable
+#### 7. A Second Feature and Feature Communication
 
-#### 10. Complete Example Application
-- 40+ lines, runnable.
-- At least two features.
-- Shared observable data.
-- One action/button flow.
-- Run loop included.
+*Narrative: add the project's second feature.*
+
+1. **Define the second feature.** It has a different visual region and a different responsibility in the project.
+2. **Shared state via `ObservableValue`.** Show two approaches:
+   - Both features reference an observable stored on one of them, accessed through the host (if the host carries it as an attribute set in `build`).
+   - Or: use `FeatureMessage` to send a typed message from one feature to another via `FeatureManager`.
+3. **Feature messaging.** Show a concrete `FeatureMessage` subclass, publishing it from one feature, and receiving it in another. Explain when to use messaging (when features should not hold direct references to each other).
+4. **Updated full listing** showing both features working together.
+
+#### 8. Actions and Keyboard Shortcuts
+
+*Narrative: wire a keyboard shortcut to the project's primary action.*
+
+1. **Declare an `ActionSpec`.** Show adding it to `HostApplicationBindingSpec` with an `ActionHotkeySpec` (key name). Explain that this is the entire registration — no manual input map wiring needed.
+2. **Handle the action in the feature.** For a plain `Feature`, show binding an action callback via `host.actions.bind(action_id, callback)` in `bind_runtime`, and unbinding in `shutdown_runtime`.
+3. **`RoutedFeature` shortcut.** Show the same pattern using `RoutedRuntimeSpec` with the action name — demonstrate that the routed lifecycle handles binding and unbinding automatically via `bind_routed_feature_lifecycle` / `shutdown_routed_feature_lifecycle`.
+4. **Shortcut help overlay.** Show adding `ShortcutOverlaySpec` to `RoutedRuntimeSpec` so users can discover keyboard shortcuts by pressing a configurable toggle key.
+5. **Updated listing** showing the action wired and triggering behavior in the project.
+
+#### 9. Spec Reference for Builders
+
+A concise reference section (not a tutorial — link to MANUAL.md for full detail). Include one short paragraph + minimal snippet for each:
+
+- **`FeatureSpec`** — declares a feature class and its scene membership
+- **`SceneBundleBindingSpec`** — declares a named scene with transition style and escape behavior
+- **`ActionSpec` + `ActionHotkeySpec`** — declares a named action with optional keyboard binding
+- **`ShortcutOverlaySpec`** — configures the shortcut discovery overlay
+- **`RoutedRuntimeSpec` + `RoutedFeatureLifecycleSpec`** — declarative bundle of runtime wiring for a `RoutedFeature`
+- **`ToastManager`** — brief note on how to show a toast notification from a feature (via `host.toasts.show(...)`)
+- Link each to the corresponding section in MANUAL.md
+
+#### 10. Complete Project Listing
+
+The full, runnable, end-to-end listing of the project built throughout the tutorial. Requirements:
+
+- Minimum 60 lines of meaningful application code (not counting blank lines and comments)
+- Two or more features with distinct responsibilities
+- Observable state wired to UI controls
+- At least one keyboard action with `ActionSpec`
+- At least one `RoutedFeature` with `RoutedRuntimeSpec`
+- Clean subscription teardown in `shutdown_runtime`
+- A comment above each logical section explaining what it does and why
+
+This listing must run as-is. All imports must be from `gui_do` root. All API names verified in `gui_do/__init__.py`.
 
 #### 11. Next Steps
-- Point to README.md, demo_features/, docs/.
-- Encourage reading data_driven_runtime.py and feature_lifecycle.py.
 
-### Mandatory Current-Behavior Coverage
-
-Tutorial content must reflect these current behaviors where relevant:
-- Declarative routed runtime wiring via RoutedRuntimeSpec and helper utilities.
-- Overlay routing semantics: escape dismissal, outside-click dismissal, optional modal key capture.
-- Shortcut help overlay can be configured with manual shortcut content and filtering.
-- Toast clicks are consumed by default to prevent click-through; optional on_click callback is explicit.
-- Focus behavior should be described in lifecycle/routing terms consistent with current runtime.
+- What to read next: MANUAL.md (link directly), then `demo_features/` as living examples
+- What to explore: overlays, persistence, scene navigation, telemetry, graphics
+- The MANUAL.md sections most relevant to common next steps: system chapters 8.1 (bootstrap), 8.2 (features), 8.3 (events/actions), 8.4 (state/observables)
+- Encouragement: `data_driven_runtime.py` and `feature_lifecycle.py` are readable and well-commented; reading them will demystify bootstrap entirely
 
 ### Content Rules for TUTORIAL.md
 
-#### DO:
-- Use plain, approachable language.
-- Introduce concepts before using them.
-- Keep snippets runnable or clearly state dependencies from prior steps.
-- Prefer public APIs and current examples from demo_features/.
-- Keep section structure exactly as required.
+**DO:**
+- Explain **why** before showing how at every step
+- Keep the project narrative continuous — every section advances the same project
+- Show the full updated listing at the end of each step that changes the code
+- Use public APIs only — everything must be importable from `gui_do` root
+- Cross-reference MANUAL.md for deeper coverage of any topic
 
-#### DON'T:
-- Assume lifecycle knowledge before explanation.
-- Use stale names (for example generic Observable when ObservableValue is intended).
-- Rely on private/internal symbols in beginner examples.
-- Skip the step-by-step build-up.
-- Add extra top-level sections outside required structure.
+**DON'T:**
+- Use private/internal symbols (`_` prefix) in any example
+- Jump to a new topic without explaining why it is needed for the project
+- Omit `shutdown_runtime` cleanup for any subscription set up in `bind_runtime`
+- Add extra top-level sections outside the required structure
+- Use stale API names — verify every name against the current `gui_do/__init__.py`
+
+---
+
+## Post-Generation Compliance Pass
+
+After generating both files, run a compliance pass:
+
+1. **README.md header check.** Confirm the file opens with `# gui_do`, followed by the `### Latest Demonstration` block (with `---` dividers), followed by the unittest badge line. Confirm the video URL uses the `__demo__` value from `gui_do/_version.py`. Confirm the badge URL is the exact verbatim string from the existing README.
+2. **README.md structure check.** Confirm the eight required sections are present in order after the header.
+3. **TUTORIAL.md structure check.** Confirm all 11 required sections are present in order. Confirm the install command is `python -m pip install -e . --no-deps`. Confirm no private/internal symbol appears in any code example.
+4. **API name verification.** For every name used in code listings in both files: confirm it appears in `gui_do/__init__.py`. Flag and fix any names that do not.
+5. **Cross-reference check.** Confirm TUTORIAL.md links to MANUAL.md in Sections 1, 9, and 11. Confirm README.md links to both TUTORIAL.md and MANUAL.md in the Documentation section.
+6. **Run a text search** (e.g. `rg "MANUAL_PLACEHOLDER\|from gui_do\." README.md TUTORIAL.md`) to catch any internal submodule imports or stale placeholder text. Fix violations before completing.
+
+Report: what was checked, what was fixed, and confirm both files are complete and compliant.

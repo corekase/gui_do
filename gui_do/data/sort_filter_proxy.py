@@ -189,7 +189,8 @@ class SortFilterProxySource:
         if self._filter is not None:
             pairs = [(i, item) for i, item in pairs if self._filter(item)]
 
-        pairs.sort(key=lambda p: self._sort_key(p[1]), reverse=self._sort_reverse)
+        _sort_key = self._sort_key
+        pairs.sort(key=lambda p: _sort_key(p[1]), reverse=self._sort_reverse)
 
         self._visible = [i for i, _ in pairs]
         self._dirty = False

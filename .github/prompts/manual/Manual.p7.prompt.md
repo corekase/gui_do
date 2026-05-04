@@ -1,0 +1,406 @@
+---
+name: Manual.p7
+description: Expand Systems 13–16 + Integration Patterns + End-to-End Reference Application
+---
+
+# Manual Step 7 — Systems 13–16 + Integration Patterns + E2E Reference
+
+## Scope
+
+Replace placeholders for:
+- `### Text, Input, Forms, and Validation Systems` (8.13)
+- `### Data and Dataflow Helpers` (8.14)
+- `### Graphics and Audio Integration Points` (8.15)
+- `### Telemetry, Introspection, and Operational Hooks` (8.16)
+- `## Integration Patterns and Composition Recipes`
+- `## End-to-End Reference Application`
+
+Replace from `### Text, Input, Forms, and Validation Systems` through to (but not including)
+`## Testing, Diagnostics, and Reliability`.
+
+## Inventory (Required Before Writing)
+
+1. Read the current text of all six sections in `MANUAL.md`.
+2. Read `gui_do/__init__.py` **Tier 10** (forms), **Tier 14** (text/localization), **Tier 24**
+   (async form validation), **Tier 31** (schema-driven form runtime), **Tier 15** (data/collections),
+   **Tier 26** (cancelable dataflow pipeline), **Tier 16** (graphics/rendering), **Tier 20**
+   (audio), **Tier 7** (telemetry), and **Tier 17** (introspection) sections.
+   Extract all exported names from each tier block.
+3. Skim `demo_features/` directory listing for patterns used in integration recipes
+   (e.g., routed feature + window bundles, presenter patterns, data pipelines).
+   Read any relevant demo feature files to verify the actual composition pattern.
+4. For the End-to-End Reference Application, read `gui_do/__init__.py` Tier 1 and Tier 2
+   to confirm bootstrap API names used in the listing are still current.
+
+Use only names found in `gui_do/__init__.py`. Do not carry forward API names from prior
+MANUAL.md content without verifying they still appear in the actual tier blocks.
+
+## Standard Chapter Template (Systems)
+
+Every system chapter: What/why · Mental model · Primary APIs · Typical usage flow ·
+Minimal example · Advanced pattern · Common mistakes · Cross-links ·
+`[Back to Table of Contents](#table-of-contents)`
+
+---
+
+## 8.13 — Text, Input, Forms, and Validation Systems
+
+**What/why:** Structured text entry, document editing, form modeling, and validation are
+common enough to deserve first-class support rather than ad hoc implementations.
+
+**Mental model:** `TextInputControl` and `TextAreaControl` handle keystroke-level text entry.
+`FormModel` and `FormSchema` sit above them — they model the logical form with fields,
+validation rules, and cross-field dependencies. `SchemaFormRuntime` drives validation policy
+and fires updates. `AsyncFormValidator` handles debounced remote validation.
+
+**APIs (Tiers 10, 24, 31 — Forms; Tier 14 — Text; Tier 13 — Input controls
+from `gui_do/__init__.py`):**
+Use all names from TIER 10 (forms, validation, document model, wizard), TIER 24 (async form
+validation), TIER 31 (schema-driven form runtime), TIER 14 (text formatters, flow, searcher,
+localization), and the input control names from TIER 13 (TextInputControl, TextAreaControl,
+SpinnerControl, DatePickerControl, TimePickerControl, ColorPickerControl, ChipInputControl)
+discovered in the inventory step. Check `__init__.py` for any new form or text types.
+
+**`DocumentModel`:** Rich-text document backing for `TextAreaControl`. Represents text as a
+sequence of styled spans; supports editing operations (insert, delete, selection).
+
+**`WizardFlow`:** Multi-step guided workflow. Each `WizardStep` has a control tree and
+validation. `WizardHandle` navigates forward/backward and reports completion.
+
+**`ValidationPipeline`:** Ordered list of `Validator` instances that run in sequence.
+Stop on first failure or collect all. `DependentValidator` fires only when a condition passes.
+
+**`SchemaFormRuntime`:** Drives `FieldGraphSchema` (a DAG of fields with visibility
+dependencies) with a `ValidationPolicy` (`ON_CHANGE`, `ON_SUBMIT`, etc.).
+
+**`AsyncFormValidator`:** Wraps `AsyncFieldValidator` instances with debouncing and
+stale-result suppression. Use for email existence checks or server-side uniqueness validation.
+
+**`StringTable` and `LocaleRegistry`:** Internationalization support. Register locale-keyed
+string tables; look up strings by key at render time.
+
+**Typical usage:**
+1. Define `FormSchema` with `SchemaField` entries.
+2. Build `FieldGraphSchema.from_form_schema(schema)`.
+3. Construct `SchemaFormRuntime` with the graph schema and a `ValidationPolicy`.
+4. Bind form fields to `TextInputControl` instances.
+5. Run validation; display `FieldError` messages near each field.
+
+**Minimal example:** A two-field form (email + password) with `RequiredValidator` and
+`PatternValidator`, validated `ON_CHANGE`.
+
+**Advanced pattern:** `AsyncFormValidator` for a registration form that checks username
+availability via a debounced async call, with stale-result suppression when the user keeps
+typing.
+
+**Mistakes:** Validating only on submit when continuous feedback is UX expectation;
+ignoring `ValidationPolicy` (e.g., always validating when the field is dirty regardless of
+policy); wiring `AsyncFormValidator` without cancellation support for stale generations.
+
+**Cross-links:** 8.4 (Observables for field binding), 8.5 (Input controls), 8.14 (Data pipeline)
+
+---
+
+## 8.14 — Data and Dataflow Helpers
+
+**What/why:** Data-heavy features need efficient loading, sorting, filtering, and virtualized
+rendering of large datasets. gui_do provides a composable pipeline from async loading through
+to virtualized display.
+
+**Mental model:** Data flows from a source (`AsyncDataProvider` or `FixedItemSource`) through
+a `SortFilterProxySource` into a virtualized control (`ListViewControl`, `DataGridControl`,
+`TreeControl`, or `VirtualizationCore`). The `DataflowPipeline` handles multi-stage background
+processing with `CancellationToken` for stale-generation suppression.
+
+**APIs (Tiers 15, 26, 27, 29 from `gui_do/__init__.py`):**
+Use all names from TIER 15 (virtual item sources, sort/filter proxy, async data provider,
+object pool, data cache, list diff), TIER 26 (cancelable dataflow pipeline), TIER 27
+(transactional app state store), and TIER 29 (virtualization core) discovered in the
+inventory step. Check `__init__.py` for any new data helper types.
+
+**`VirtualItemSource`:** Abstract base for item providers. Implementations provide `count` and
+`get_item(index)` on demand. `FixedItemSource` wraps a plain list.
+
+**`SortFilterProxySource`:** Wraps a `VirtualItemSource` and provides sort/filter without
+copying the source data. Set `set_sort_key`, `set_filter`, `set_sort_reverse`.
+
+**`AsyncDataProvider`:** Loads data asynchronously. Exposes `LoadState` with `LoadStateKind`
+(`IDLE`, `LOADING`, `LOADED`, `ERROR`). Subscribe to state changes to drive a progress
+indicator.
+
+**`DataflowPipeline`:** Multi-stage processing pipeline. Each `PipelineStage` transforms a
+generation token. `CancellationToken` makes stale pipeline runs cancel automatically when a
+new generation starts. Use for search, filter, and transform pipelines that may be preempted.
+
+**`VirtualizationCore`:** Low-level windowed rendering engine — only renders items that are
+visible in the scroll window. `RecyclePool` provides item view reuse. `VirtualizedWindow`
+is the higher-level wrapper for most use cases.
+
+**`ObjectPool`:** Pre-allocated pool for high-churn objects (particles, event records,
+temporary render items). Reduces GC pressure.
+
+**`DataCache`:** LRU-style keyed cache with `CacheStats` for hit/miss metrics.
+
+**`ListDiffCalculator`:** Computes minimal `DiffInsert`/`DiffRemove`/`DiffMove` patches
+between two list snapshots. Use to drive incremental UI updates instead of full redraws.
+
+**Typical usage (sort/filter + list):**
+```python
+source = FixedItemSource(items)
+proxy = SortFilterProxySource(source)
+proxy.set_filter(lambda item: item.active)
+proxy.set_sort_key(lambda item: item.name)
+list_view.set_source(proxy)
+```
+
+**Advanced pattern:** `DataflowPipeline` with three stages (load → parse → rank) where each
+stage has a `CancellationToken`; new user input cancels the current pipeline run and starts
+a fresh generation.
+
+**Mistakes:** Full-list redraws without `ListDiffCalculator`; forgetting to cancel stale
+`DataflowPipeline` generations; holding large datasets in memory without `DataCache` expiry;
+using `ObjectPool` incorrectly (returning objects that are still referenced elsewhere).
+
+**Cross-links:** 8.4 (Observables), 8.5 (Controls — ListView/DataGrid/TreeControl),
+8.10 (Scheduling — CooperativeScheduler for async work), 8.16 (Telemetry for pipeline metrics)
+
+---
+
+## 8.15 — Graphics and Audio Integration Points
+
+**What/why:** gui_do supports high-fidelity custom rendering for features that go beyond
+the control tree (particles, tile maps, 2D scene graphs) and portable audio cue playback.
+
+**Mental model:** Custom rendering lives in `draw(host, screen)` or inside `CanvasControl`.
+Graphics helpers build on pygame-ce surfaces. Audio cues are event-driven via `SoundEventBus`.
+The scene graph (`SceneGraph2D`) provides a hierarchical 2D transform tree for camera-relative
+rendering.
+
+**APIs (Tier 16 — Graphics; Tier 20 — Audio from `gui_do/__init__.py`):**
+Use all names from TIER 16 (graphics: draw context, dirty region tracker, surface compositor,
+layers, shape renderer, sprite sheet, particle system, tile map, scene graph, camera, render
+targets, asset registry, debug overlay) and TIER 20 (audio: sound cue, sound bank registry,
+sound event bus) discovered in the inventory step. Check `__init__.py` for any new graphics
+or audio types.
+
+**`DirtyRegionTracker`:** Per-frame dirty-rect accumulation. Call `mark_dirty(rect)` when
+a region changes; call `overlaps_dirty(rect)` before redrawing a region to skip unchanged areas.
+`consume_dirty_regions()` returns the dirty list and resets it. Uses an incremental union
+cache for O(1) overlap checks.
+
+**`SurfaceCompositor` and `Layer`:** Layered rendering pipeline. Each `Layer` has a z-order
+and optional blend mode. `SurfaceCompositor` composites all layers in order onto the final surface.
+
+**`DrawContext` and `DrawPhase`:** Structured draw pass with explicit phases (background,
+content, overlay, debug). Controls and features draw in the appropriate phase.
+
+**`ShapeRenderer`:** Utility for drawing common shapes (rounded rects, arrows, circles, lines)
+without managing low-level pygame draw calls.
+
+**`SurfaceEffects`:** Post-processing effects on a surface (blur, tint, darken). Apply to
+an offscreen target before compositing.
+
+**`VectorPath`:** Declarative path builder (move_to, line_to, curve_to, arc) rendered via
+pygame's draw primitives or an offscreen surface.
+
+**`SpriteSheet` and `FrameAnimation`:** Extract frames from a sprite atlas; drive playback
+with frame duration and loop settings.
+
+**`ParticleSystem`, `Emitter`, `ParticleLayer`:** Particle emission with configurable
+spawn rates, velocities, lifetimes, and colors. Tick in `on_update`; draw in `draw`.
+
+**`TileSet` and `TileMap`:** Grid-based tile rendering. `TileSet` holds the texture atlas;
+`TileMap` holds the grid data and renders only visible tiles.
+
+**`SceneGraph2D`, `Node2D`, `Camera2D`:** Hierarchical 2D transform tree. Nodes inherit
+parent transforms. `Camera2D` applies a viewport transform for scrolling/zooming.
+
+**`RenderTarget` / `OffscreenRenderTarget` / `create_render_target`:** Render to an offscreen
+surface then composite it — for caching expensive drawing or applying effects.
+
+**`AssetRegistry`:** Centralized registry for loaded surfaces, fonts, and other assets.
+Prevents duplicate loading.
+
+**Audio — `SoundCue`, `SoundBankRegistry`, `SoundEventBus`:** Declare named sound cues in a
+`SoundBankRegistry`; publish `SoundCue` events via `SoundEventBus` on semantic application events.
+The bus routes to the mixer without features needing to know mixer internals.
+
+**Typical usage (particle):**
+```python
+# in on_update:
+self.particles.tick(dt)
+# in draw:
+self.particles.draw(screen)
+```
+
+**Audio usage:**
+```python
+host.sound_bus.publish(SoundCue("notify"))
+```
+
+**Advanced pattern:** `DirtyRegionTracker` + `OffscreenRenderTarget` composite — track which
+regions of a complex canvas changed each frame; re-render only dirty tiles from an offscreen
+cache; composite the final frame in one blit. Combine with `SceneGraph2D` and `Camera2D`
+for a scrollable world with camera transforms.
+
+**Mistakes:** Full-surface redraw every frame when `DirtyRegionTracker` could gate it;
+triggering audio cues from low-level pointer noise instead of semantic actions; loading assets
+in `draw` instead of `build` (causes per-frame disk I/O); creating `ParticleSystem` emitters
+without bounds so particles escape the rendering region.
+
+**Cross-links:** 8.2 (Feature — `draw` hook), 8.5 (CanvasControl), 8.10 (Scheduling — particle tick),
+8.16 (Telemetry — profiling draw cost)
+
+---
+
+## 8.16 — Telemetry, Introspection, and Operational Hooks
+
+**What/why:** Runtime observability — performance measurement, property inspection, and
+spatial indexing — lets developers diagnose behavior without relying on visual inspection.
+
+**Mental model:** Telemetry spans instrument hot paths and store structured records.
+`PropertyRegistry` and `PropertyInspectorModel` expose control properties for runtime
+inspection. `SceneSpatialIndex` answers geometric queries about control positions.
+
+**APIs (Tier 7 — Telemetry; Tier 17 — Introspection from `gui_do/__init__.py`):**
+Use all names from TIER 7 (telemetry collector, configure, analyze, render report) and
+TIER 17 (spatial index, ui_property, property registry, property inspector model) discovered
+in the inventory step. Check `__init__.py` for any new observability types.
+
+**`TelemetryConfig`:** Declare in `HostApplicationConfig` to enable telemetry at bootstrap time.
+
+**`configure_telemetry(enabled=True)`:** Enables the global telemetry collector.
+`telemetry_collector` is a module-level singleton; `TelemetryCollector` is the class.
+
+**Telemetry analysis:** `analyze_telemetry_records(records)` produces a report; `render_telemetry_report`
+formats it for display. `load_telemetry_log_file` and `analyze_telemetry_log_file` support
+offline analysis of recorded telemetry.
+
+**`ui_property` decorator:** Marks a control attribute as an inspectable UI property.
+`property_registry` (the module-level singleton `PropertyRegistry`) collects all `@ui_property`
+descriptors. `PropertyInspectorModel` drives the `PropertyInspectorPanel` control.
+
+**`SceneSpatialIndex`:** Spatial query engine for the control tree. Query which controls
+overlap a rect, find controls at a point, or enumerate control bounds in a region.
+
+**Typical usage:**
+```python
+configure_telemetry(enabled=True)
+# ... run scenarios ...
+report = analyze_telemetry_records(telemetry_collector.records)
+print(render_telemetry_report(report))
+```
+
+**Advanced pattern:** Combine telemetry traces with `PropertyInspectorModel` snapshots to
+localize layout or routing regressions. Build a `DebugOverlay` that renders `SceneSpatialIndex`
+query results as colored rects over the live scene.
+
+**Mistakes:** Profiling without representative user scenarios (idle loop is not meaningful);
+relying on visual inspection alone for frame budget issues; forgetting to call
+`configure_telemetry` before the scenarios you want to measure.
+
+**Cross-links:** 8.10 (Scheduler budget), 8.11 (Persistence — telemetry log paths), 8.15 (Graphics draw cost)
+
+---
+
+## Integration Patterns and Composition Recipes
+
+Write four recipes with full prose explanation, not just bullets. Each recipe must show:
+goal, why this combination, step-by-step pattern, complete code example, and validation notes.
+
+### Recipe 1: Routed Feature + Actions + Shortcut Overlay
+
+Goal: A feature with discoverable keyboard shortcuts, auto-wired via `RoutedRuntimeSpec`.
+Why: Declarative wiring reduces boilerplate and makes the overlay automatically reflect the
+registered action list.
+
+Steps:
+1. Declare `ActionSpec` entries in `HostApplicationConfig`.
+2. In the feature's `__init__`, build a `RoutedRuntimeSpec` with a `ShortcutOverlaySpec`.
+3. Build a `RoutedFeatureLifecycleSpec` referencing the runtime spec.
+4. In `bind_runtime`, call `bind_routed_feature_lifecycle(self, host, self._lifecycle_spec)`.
+5. In `shutdown_runtime`, call `shutdown_routed_feature_lifecycle(self, host, self._lifecycle_spec)`.
+
+Show complete code: feature `__init__`, `bind_runtime`, `shutdown_runtime`.
+
+Validation: overlay toggle key works; filtered/manual shortcuts render correctly.
+
+### Recipe 2: Window Presenter + Task Panel + Focus Toggle
+
+Goal: A floating window in a scene, toggled from the task panel, with correct focus routing.
+
+Steps:
+1. Declare `AnchoredWindowSpec` in config (or in `FeatureWindowBundleBindingSpec`).
+2. Implement `WindowPresenter` subclass with the window's control tree.
+3. In feature `build`, call `create_feature_presented_window` or `create_anchored_feature_window`.
+4. In `RoutedRuntimeSpec`, add a `TaskPanelFocusToggleSpec` for the window.
+5. Wire the window toggle button to `set_window_visible_state`.
+
+Show complete code. Validation: hidden windows excluded from focus traversal; task-panel
+button state and focus mode stay synchronized.
+
+### Recipe 3: State Store + Persistence + Snapshot Migration
+
+Goal: Centralized application state that survives schema evolution across releases.
+
+Steps:
+1. Define `AppStateStore` with initial state.
+2. Use `StateSelector` to derive slices for individual features.
+3. Serialize via `make_snapshot(current_version, state_dict)`.
+4. On load, call `read_version(raw)` then `SnapshotMigrator.migrate(snapshot)`.
+5. Register `MigrationStep` objects for each schema version transition.
+
+Validation: skipped/missing setting keys reported not fatal; restore report fields asserted.
+
+### Recipe 4: Dataflow Pipeline + Telemetry + Error Boundary
+
+Goal: Safe background processing with measurable performance and UI failure containment.
+
+Steps:
+1. Stage work in `DataflowPipeline` with per-stage `CancellationToken`.
+2. Instrument the pipeline stage callbacks with telemetry spans.
+3. Wrap the output control tree in `ErrorBoundary` so rendering failures degrade gracefully.
+4. Expose progress via `ObservableValue` that the UI feature subscribes to.
+
+Validation: stale generations cancel; telemetry report identifies bottleneck stage;
+`ErrorBoundary` renders fallback when the presenter raises.
+
+---
+
+## End-to-End Reference Application
+
+Write one consolidated reference application listing (60–100 lines of Python) that demonstrates:
+- `HostApplicationConfig` construction with real field names
+- A `RoutedFeature` subclass with `build`, `bind_runtime`, `shutdown_runtime`
+- `ObservableValue` subscribed to a `LabelControl`
+- `RoutedRuntimeSpec` with `ShortcutOverlaySpec`
+- `RoutedFeatureLifecycleSpec` + `bind_routed_feature_lifecycle`
+- `ActionSpec` entries (exit + help)
+- `RuntimeSceneSpec` with `bind_escape_to_exit=True`
+- `TelemetryConfig` enabled
+- Host class that calls `bootstrap_host_application` and `run_entrypoint`
+- Workspace save/load hooks
+
+After the listing, write:
+
+### What This Listing Demonstrates
+Brief prose explaining each system illustrated.
+
+### Validation Checklist
+Numbered list: 1. app opens; 2. increment updates label; 3. F9 toggles help overlay; etc.
+
+---
+
+## Replace Target
+
+Replace from the line containing:
+```
+### Text, Input, Forms, and Validation Systems
+```
+through to (but not including) the line containing:
+```
+## Testing, Diagnostics, and Reliability
+```
+
+Include the `### Text, Input, Forms, and Validation Systems` heading in your output.
+Preserve the parent `## Main Systems Reference` heading above it — do not remove it.

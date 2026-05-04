@@ -45,7 +45,7 @@ Surface creation helper::
 from __future__ import annotations
 
 import io
-from typing import Optional, Protocol, Sequence, Tuple, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 import pygame
 from pygame import Rect, Surface

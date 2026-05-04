@@ -45,7 +45,7 @@ Usage::
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, Iterator, List, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pygame

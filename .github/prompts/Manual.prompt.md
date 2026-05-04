@@ -1,11 +1,237 @@
 ---
 name: Manual
-description: generate or evolve a complete MANUAL.md reference guide
+description: Generate or update MANUAL.md — invoke this file directly to run the full pipeline
+mode: agent
 ---
 
-<!-- Tip: Use /create-prompt in chat to generate content with agent assistance -->
+# gui_do Manual — Pipeline Orchestrator
 
-Generate or update a single-file, complete reference manual at repository root: MANUAL.md.
+You are an agent. Execute the steps below **sequentially in a single session**. Complete each
+step fully — file written and verified — before reading the next sub-prompt. Do not skip steps.
+Do not batch them. This file is the only entry point; do not ask the user to run sub-prompts
+manually.
+
+## Determine Run Mode First
+
+Before executing any step:
+
+1. Check whether `MANUAL.md` exists at the repository root.
+
+   **First Run** (file does not exist or is empty):
+   - Execute all 8 steps in sequence.
+   - p1 creates the full skeleton; p2–p8 expand each section in turn.
+
+   **Update Run** (file exists with content):
+   - If the user specifies which chapters changed (e.g., “update the Controls chapter”):
+     run only the sub-prompts covering those chapters. Skip p1 unless the preamble or
+     TOC itself is explicitly mentioned.
+   - If any section still contains a `<!-- MANUAL_PLACEHOLDER: -->` comment:
+     run the sub-prompts that cover those stale sections. Skip p1 unless the preamble
+     placeholder is present.
+   - Otherwise (general request such as “update the manual” or “regenerate the manual”
+     with no specific section constraint): run all 8 steps, same as First Run.
+
+   When in doubt about run mode, prefer running all 8 steps over skipping any.
+
+---
+
+## Step-by-Step Execution
+
+For each step:
+1. Read the sub-prompt file listed below using `read_file`.
+2. Follow every instruction in that sub-prompt exactly as if it were your direct instruction.
+3. Verify the target section of `MANUAL.md` was written (non-empty, no placeholder remaining).
+4. Only then proceed to the next step.
+
+| Step | Sub-prompt file | Scope |
+|------|----------------|-------|
+| 1 | `.github/prompts/manual/Manual.p1.prompt.md` | Full MANUAL.md skeleton + preamble chapters |
+| 2 | `.github/prompts/manual/Manual.p2.prompt.md` | Conceptual Foundations chapter |
+| 3 | `.github/prompts/manual/Manual.p3.prompt.md` | Quickstart Path + Architecture + Core Workflow |
+| 4 | `.github/prompts/manual/Manual.p4.prompt.md` | Systems 8.1–8.4 |
+| 5 | `.github/prompts/manual/Manual.p5.prompt.md` | Systems 8.5–8.8 |
+| 6 | `.github/prompts/manual/Manual.p6.prompt.md` | Systems 8.9–8.12 |
+| 7 | `.github/prompts/manual/Manual.p7.prompt.md` | Systems 8.13–8.16 + Integration Patterns + E2E Reference |
+| 8 | `.github/prompts/manual/Manual.p8.prompt.md` | Testing/Diagnostics · Performance · Migration · FAQ · Appendices |
+
+## Completion Check
+
+After all assigned steps are done:
+- Confirm `MANUAL.md` exists and contains no remaining `<!-- MANUAL_PLACEHOLDER: -->` comments.
+- Report: steps executed, line count of final MANUAL.md, any sections that were skipped and why.
+
+---
+
+# Shared Specification
+
+All sub-prompts inherit these shared rules. Sub-prompt files do not need to repeat them fully — they reference this document for the common framework.
+
+## Source-of-Truth Priority
+
+1. Current code behavior in `gui_do` package.
+2. Tests asserting behavior.
+3. Contract/spec docs under `docs/`.
+4. Demo feature usage patterns under `demo_features/`.
+5. Existing README/TUTORIAL prose.
+
+## Verbosity Standard
+
+Write comprehensive prose throughout. Every major concept should have enough explanation that a developer reading only that section comes away with a genuine working mental model — not just a list of bullet points. Terse bullet lists are acceptable only in quick-reference appendices and API signature sections. Conceptual sections and system chapters must contain substantial paragraphs that explain *what*, *why*, *how it compares to alternatives*, and *how it connects to adjacent systems*. Cover the material as thoroughly as it requires; do not pad unnecessarily but do not truncate genuine content either.
+
+## Document Structure (Fixed Section Order)
+
+MANUAL.md must contain these top-level sections in this order:
+
+1. Title and Purpose
+2. Table of Contents
+3. How to Use This Manual (includes Reading Paths, Tri-Lens Markers, Contract Alignment)
+4. Conceptual Foundations (Theory)
+5. Quickstart Path (Practice)
+6. Architecture and Runtime Model
+7. Core Workflow: Build, Bind, Route, Update, Draw
+8. Main Systems Reference (16 system chapters in fixed order — see below)
+9. Integration Patterns and Composition Recipes
+10. End-to-End Reference Application
+11. Testing, Diagnostics, and Reliability
+12. Performance and Scaling Guidance
+13. Migration, Versioning, and Deprecation Notes
+14. FAQ and Troubleshooting
+15. Appendix (A: Glossary · B: Lifecycle/Event Sequence · C: System Dependency Map · D: API Quick Index · D.1: Tier Matrix · D.2: Selection Heuristics · E: Architecture Templates)
+
+## System Chapters (Fixed Order)
+
+| # | Chapter title |
+|---|--------------|
+| 8.1 | Application Bootstrap and Host Configuration |
+| 8.2 | Feature Lifecycle and Feature Types |
+| 8.3 | Events, Actions, Input Mapping, and Routing |
+| 8.4 | State and Observables |
+| 8.5 | Controls and Control Composition |
+| 8.6 | Layout Systems |
+| 8.7 | Focus and Accessibility |
+| 8.8 | Overlays, Dialogs, Notifications, and Command Surfaces |
+| 8.9 | Scene, Window, and Task-Panel Presentation Models |
+| 8.10 | Scheduling, Timing, Animation, and Transitions |
+| 8.11 | Persistence and Workspace/Session State |
+| 8.12 | Theme, Styling, and Visual Systems |
+| 8.13 | Text, Input, Forms, and Validation Systems |
+| 8.14 | Data and Dataflow Helpers |
+| 8.15 | Graphics and Audio Integration Points |
+| 8.16 | Telemetry, Introspection, and Operational Hooks |
+
+## System Chapter Template
+
+Every system chapter must include all of these subsections:
+
+- **What it is and why it exists** — purpose and design rationale
+- **Mental model and lifecycle placement** — how to think about it; when in the lifecycle it is used
+- **Primary public APIs and key types** — list the relevant exports by name
+- **Typical usage flow** — numbered steps for the common case
+- **Minimal example** — short runnable code block
+- **Advanced pattern(s)** — at least one non-trivial composition
+- **Common mistakes and anti-patterns** — specific, actionable
+- **Cross-links to related systems** — reference other chapters by number
+- **Back-to-top link** — `[Back to Table of Contents](#table-of-contents)`
+
+## Navigation Rules
+
+- Every major section must have a `[Back to Table of Contents](#table-of-contents)` link.
+- All TOC links must resolve to stable anchor names.
+- Keep anchor names consistent across manual updates.
+
+## Quality Gates (All Sub-Prompts Must Pass)
+
+1. **Coverage**: every assigned system has a chapter or explicit non-applicability note.
+2. **Accuracy**: examples and statements match current behavior; no stale API names.
+3. **Navigation**: TOC links resolve; back-to-top links present in every major section.
+4. **Coherence**: section ordering supports learning progression.
+5. **Maintenance**: obsolete content removed or quarantined in migration notes.
+
+## Codebase Discovery Protocol
+
+Sub-prompts must **discover API names from the actual codebase** rather than from pre-compiled
+lists. The codebase has two authoritative sources that are always current:
+
+### Primary Sources
+
+| Source | What to read | What it provides |
+|--------|-------------|------------------|
+| `gui_do/__init__.py` | Tier comment sections (`# TIER N: ...`) | All public exports, grouped by tier |
+| `docs/runtime_operating_contracts.md` | Sections 4 and 6 | Scheduler budget values, restore report fields |
+| `docs/public_api_spec.md` | All sections | Tier descriptions, stability policy |
+| `docs/architecture_boundary_spec.md` | All | Boundary rules between library and demo |
+| `tests/` directory listing | Filename scan | Contract test file names |
+| `demo_features/` | Key files | Real usage patterns |
+
+### Discovery Rule
+
+Each sub-prompt must read its relevant tier sections from `gui_do/__init__.py` **before**
+writing any API names into MANUAL.md content. The tier comment headers are the canonical
+grouping key. Do not copy names from prior MANUAL.md content without verifying they still
+appear in `__init__.py`. Do not invent or assume names.
+
+`gui_do/__init__.py` is intentionally organized with tier comment blocks in this form:
+```python
+# ============================================================================
+# TIER N: SYSTEM NAME
+# ============================================================================
+from .some.module import TypeA, TypeB
+```
+
+Read the full `gui_do/__init__.py` to see what tiers currently exist and which names each
+tier contains. New tiers added to `__init__.py` must be discovered and included in the
+appropriate system chapter.
+
+### Tier → System Chapter Mapping
+
+Use this table to know which tiers belong to which system chapter. **Verify against
+`gui_do/__init__.py`** — if new tiers exist that are not in this table, assign them to the
+most thematically appropriate chapter and note the addition.
+
+| System Chapter | Primary Tiers | Notes |
+|----------------|--------------|-------|
+| 8.1 Bootstrap and Host Configuration | 1, 2 | Specs, builders, bootstrap, app, scene mgmt |
+| 8.2 Feature Lifecycle and Feature Types | 1 (Feature classes only), 18 | Feature types, routed wiring helpers |
+| 8.3 Events, Actions, Input Mapping, and Routing | 4 (events + actions + input + focus) | Also covers `FocusManager` for routing context |
+| 8.4 State and Observables | 3, 27 | Core observables + transactional store |
+| 8.5 Controls and Control Composition | 12, 13 | Basic + extended + chrome controls |
+| 8.6 Layout Systems | 8, 28, 29 | Layout engines + adaptive constraint + virtualization |
+| 8.7 Focus and Accessibility | 4 (Focus* only), 21 | Focus managers + accessibility tree |
+| 8.8 Overlays, Dialogs, Notifications, and Command Surfaces | 9 | All overlay managers |
+| 8.9 Scene, Window, and Task-Panel Presentation Models | 18 (window helpers only) | Presentation helpers from Tier 18 |
+| 8.10 Scheduling, Timing, Animation, and Transitions | 5 | Scheduler, tweens, coroutines, timers |
+| 8.11 Persistence and Workspace/Session State | 11, 23, 32 | State machines, persistence, undo, migration |
+| 8.12 Theme, Styling, and Visual Systems | 6, 22 | Theme + font + invalidation bus |
+| 8.13 Text, Input, Forms, and Validation Systems | 10, 14, 24, 31 | Forms + text + async validation + schema runtime |
+| 8.14 Data and Dataflow Helpers | 15, 26 | Collections + async pipeline |
+| 8.15 Graphics and Audio Integration Points | 16, 20 | Rendering, graphics, audio |
+| 8.16 Telemetry, Introspection, and Operational Hooks | 7, 17 | Telemetry + property inspection |
+
+### Runtime Facts (read from docs, not hardcoded here)
+
+- **Scheduler budget**: Read `docs/runtime_operating_contracts.md` Section 6 for the
+  exact `fraction`, `floor`, and `ceiling` values.
+- **Workspace restore report fields**: Read `docs/runtime_operating_contracts.md` Section 4.
+- **Event types**: Read the `EventType` enum from `gui_do/__init__.py` Tier 4 source or
+  `gui_do/events/gui_event.py` for the current enum members.
+- **Contract test files**: List `tests/` directory and filter for `test_*_contracts.py`
+  and `test_runtime_*` filenames to discover the current contract test set.
+
+### Tier Listing (autodiscovered — do not hardcode here)
+
+Read `gui_do/__init__.py` directly. The file is organized with tier comment headers that
+identify each group. All names exported from each tier block are the authoritative public API
+for that tier at the time of generation. Do not rely on any cached or prior-run list.
+
+As a structural reference (not exhaustive): as of the last audit, tiers run from 1 through
+at least 32. Check `gui_do/__init__.py` to find the actual highest tier number and any new
+tiers added since the last manual generation.
+
+---
+
+# Original Full Specification (Reference)
+
+The sections below are the full original specification for content requirements. Sub-prompts refer to their assigned subsections here. Do not generate output from this file directly — use the sub-prompts.
 
 The manual is the primary learning and reference source for gui_do. It must teach the framework end-to-end, from first principles to advanced usage, while staying aligned with current code, tests, demos, and contracts.
 
@@ -259,10 +485,13 @@ Include appendices that materially improve usability, such as:
 
 In addition to the base request, include:
 - A short "Reading Paths" section for beginner, intermediate, and maintainer audiences.
-- A "What Changed Since Last Manual" summary when an older MANUAL.md existed.
 - A "Known Non-Goals" subsection to prevent misuse and wrong expectations.
 - A "Contract Alignment" note that points readers to docs/ contracts when behavior is normative.
 - A "Maintainer Diff Checklist" subsection under testing/maintenance guidance that is explicitly designed for future manual regeneration passes.
+
+Do NOT include a version/generation header, pipeline metadata, generation date, or
+"What Changed Since Last Manual" section. Each generation is self-contained and describes
+the current state of the codebase only.
 
 ## Maintainer Diff Checklist Requirements
 

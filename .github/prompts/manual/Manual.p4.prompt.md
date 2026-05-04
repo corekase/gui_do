@@ -1,0 +1,227 @@
+---
+name: Manual.p4
+description: Expand Main Systems chapters 1–4 (Bootstrap, Feature Lifecycle, Events/Actions, State/Observables)
+---
+
+# Manual Step 4 — Systems 1–4
+
+## Scope
+
+Replace the four system chapter placeholders for:
+- `### Application Bootstrap and Host Configuration` (8.1)
+- `### Feature Lifecycle and Feature Types` (8.2)
+- `### Events, Actions, Input Mapping, and Routing` (8.3)
+- `### State and Observables` (8.4)
+
+These are all subsections under `## Main Systems Reference`. Replace from the heading
+`### Application Bootstrap and Host Configuration` through to (but not including)
+`### Controls and Control Composition`.
+
+## Inventory (Required Before Writing)
+
+1. Read the current text of these four sections in `MANUAL.md` to find exact placeholder text.
+2. Read `gui_do/__init__.py` **Tier 1** (bootstrap/spec types), **Tier 2** (app/scene),
+   **Tier 3** (data/state/observables), and **Tier 4** (events/actions/focus/input) sections.
+   These are the primary API tiers for chapters 8.1–8.4. Extract the actual exported names.
+3. Read the first 60 lines of `gui_do/features/data_driven_runtime.py` (builder functions).
+4. Read the first 40 lines of `gui_do/features/feature_lifecycle.py` (Feature class and phases).
+5. Read `docs/event_system_spec.md` for event routing details.
+6. Read `docs/runtime_operating_contracts.md` Section 4 for workspace restore report fields.
+
+Use only names found in `gui_do/__init__.py` or verified in source files.
+Do not carry forward API names from prior MANUAL.md content without re-checking.
+
+## Each Chapter Must Use the Standard Template
+
+For each chapter write:
+1. **What it is and why it exists** — purpose and design rationale in prose
+2. **Mental model and lifecycle placement** — how to think about it; when in the lifecycle it is used
+3. **Primary public APIs and key types** — list by name (use names discovered from `gui_do/__init__.py` in the inventory step)
+4. **Typical usage flow** — numbered steps
+5. **Minimal example** — short runnable code block using only public APIs
+6. **Advanced pattern(s)** — at least one non-trivial composition
+7. **Common mistakes and anti-patterns** — specific, actionable
+8. **Cross-links to related systems**
+9. `[Back to Table of Contents](#table-of-contents)`
+
+---
+
+## 8.1 — Application Bootstrap and Host Configuration
+
+**What/why:** `HostApplicationConfig` and `bootstrap_host_application` establish deterministic
+host startup. A developer describes everything declaratively through spec objects; bootstrap
+realizes the full graph in one pass and attaches all runtime members to the host object.
+
+**Mental model:** Think of the host as a plain Python object that bootstrap populates.
+After `bootstrap_host_application(host, config)` returns, `host.app` is the live `GuiApplication`,
+and every declared feature, scene, action, window, font, and cursor is wired and ready.
+
+**APIs (Tier 1 and Tier 2 from `gui_do/__init__.py`):**
+Use the bootstrap/spec/builder names from TIER 1 and TIER 2 discovered in the inventory step.
+Key types include `HostApplicationConfig`, `bootstrap_host_application`,
+`build_host_application_config`, `HostApplicationBindingSpec`, and the full set of `*Spec`
+and `build_*` builder names. Always use names verified in `__init__.py`.
+
+**Typical usage:** Either use `HostApplicationConfig` directly (set all fields), or call
+`build_host_application_config(HostApplicationBindingSpec(...))` which uses binding helpers
+to produce the config from a higher-level declarative spec.
+
+**Minimal example:** Show direct `HostApplicationConfig` construction and bootstrap call.
+
+**Advanced pattern:** Use `HostApplicationBindingSpec` + `SceneBundleBindingSpec` +
+`FeatureWindowBundleBindingSpec` to compose a multi-scene, multi-window app from binding
+bundles. Explain `build_host_application_config` as the builder that resolves all cross-references
+in one pass.
+
+**Mistakes:** Manually mutating host attributes after bootstrap in ways that bypass the spec
+graph; declaring features with scene names that have no matching `SceneSetupSpec`;
+forgetting `initial_scene_name`.
+
+---
+
+## 8.2 — Feature Lifecycle and Feature Types
+
+**What/why:** Features are the primary unit of application behavior. The framework orchestrates
+their lifecycle phases in a deterministic order and routes events to the correct feature.
+
+**Mental model:** Each Feature is a self-contained object with clearly separated phases.
+`build` is for construction; `bind_runtime` is for wiring; `handle_event`/`on_update`/`draw`
+are the frame-by-frame loop. Never mix concerns across phases.
+
+**APIs (Tier 1 Feature types and Tier 18 from `gui_do/__init__.py`):**
+Use the Feature class names from TIER 1 (`Feature`, `DirectFeature`, `LogicFeature`,
+`RoutedFeature`, `FeatureMessage`, `FeatureManager`) and the routed lifecycle helpers from
+TIER 18 (e.g., `bind_routed_feature_lifecycle`, `shutdown_routed_feature_lifecycle`,
+`register_routed_feature_companions`). Always verify names in `__init__.py`.
+
+**Phase detail:** Describe each of build / bind_runtime / handle_event / on_update / draw
+with invariants (what is safe to do, what is not).
+
+**HOST_REQUIREMENTS:** Describe the dict protocol — keys are phase names, values are tuples
+of required host attribute names. The framework validates at startup.
+
+**Typical usage:** Implement the appropriate Feature subclass, declare its `HOST_REQUIREMENTS`,
+implement lifecycle methods, register via `FeatureSpec`.
+
+**Minimal example:** A `Feature` with `ObservableValue`, a `LabelControl` in `build`, and
+a subscription in `bind_runtime` with cleanup in `shutdown_runtime`.
+
+**Advanced pattern:** Logic + presentation split — `LogicFeature` owns an `ObservableValue`
+and publishes `FeatureMessage` events; a companion `RoutedFeature` subscribes to the observable
+and drives the control tree. Wire them via `register_routed_feature_companions`.
+
+**Mistakes:** Subscribing in `build` (controls may not exist yet); mixing draw-heavy rendering
+logic into non-`DirectFeature` types; failing to call `shutdown_routed_feature_lifecycle` when
+using `RoutedFeatureLifecycleSpec`.
+
+---
+
+## 8.3 — Events, Actions, Input Mapping, and Routing
+
+**What/why:** gui_do normalizes all input to `GuiEvent` before dispatch, then routes through
+a stable candidate order. `ActionManager` and `InputMap` bridge user input to named actions.
+
+**Mental model:** Raw pygame events → `GuiEvent` normalization → overlay/focus routing →
+scene/feature routing → action registry execution. Actions are named commands; input bindings
+map keys/chords to action IDs.
+
+**APIs (Tier 4 from `gui_do/__init__.py`):**
+Use all names from the TIER 4 section (events, actions, input map, key chords, interaction
+state machine, gesture recognizer, signal, recording/playback) discovered in the inventory
+step. Also read Tier 30 (interaction state machine) if it appears separately.
+Check `__init__.py` for any new event or action types added since the last generation.
+
+**Spec types (from Tier 1 discovery):** `ActionSpec`, `ActionHotkeySpec`, `ControlKeyBindingSpec`,
+`EventSubscriptionSpec` — verify these still appear in the Tier 1 block.
+
+**`GuiEvent` fields:** `kind`, `type`, `key`, `pos`, `rel`, `raw_pos`, `raw_rel`, `button`,
+`wheel_x`, `wheel_y`, `mod`, `text`, `control_id`, `group`, `window`, `task_panel`,
+`task_id`, `error`, `source_event`, `phase`, `propagation_stopped`, `default_prevented`.
+
+**`EventType` values:** `PASS`, `QUIT`, `KEY_DOWN`, `KEY_UP`, `MOUSE_BUTTON_DOWN`,
+`MOUSE_BUTTON_UP`, `MOUSE_MOTION`, `MOUSE_WHEEL`, `TEXT_INPUT`, `TEXT_EDITING`.
+
+**Routing contract:** Window focus candidates sorted by `control_id`. Key binding dispatch uses
+stable candidate order based on scene and window scope. `propagation_stopped` and
+`default_prevented` are hard stops.
+
+**Typical usage:** Declare `ActionSpec` entries in config, declare `ActionHotkeySpec` entries
+(or use `RoutedRuntimeSpec` for auto-wiring), implement action handlers on the host or features.
+
+**Minimal example:** Show declaring two actions in config and binding a hotkey for one.
+
+**Advanced pattern:** `InteractionStateMachine` for multi-phase pointer gesture tracking
+(press → drag → release with guarded transitions). `EventRecorder`/`EventPlayback` for
+deterministic test scenarios.
+
+**Mistakes:** Bypassing `GuiEvent` normalization and handling raw pygame events directly;
+assuming global routing when handlers are scene-scoped; forgetting to respect
+`propagation_stopped` in custom routing code.
+
+---
+
+## 8.4 — State and Observables
+
+**What/why:** Reactive state decouples view updates from imperative control mutation.
+Observables are the preferred mechanism for sharing live data between features and controls.
+
+**Mental model:** Observables are the data bus. Controls read from observables and update
+automatically. Features write to observables without knowing who is watching. The framework
+is not involved in the subscription mechanism — it is pure Python callbacks.
+
+**APIs (Tier 3 and Tier 27 from `gui_do/__init__.py`):**
+Use all names from TIER 3 (observable primitives, batch, invalidation, collection views,
+bindings, selection model) and TIER 27 (transactional app state store) discovered in the
+inventory step. Check `__init__.py` for any new state/observable types added since the
+last generation.
+
+**`ObservableValue`:** `.value` property to get/set; `.subscribe(callback)` returns a
+disposable; mutate `.value` to trigger notification.
+
+**`ObservableList`/`ObservableDict`:** Same subscription model; `CollectionChange` carries
+`kind`, affected index/key, old/new values.
+
+**`reactive_batch`:** Context manager that defers all subscriber notifications until the
+`with` block exits, then fires once per subscriber.
+
+**`ComputedValue`:** A derived `ObservableValue` that recomputes from one or more sources.
+Automatically subscribes to sources; invalidates and recomputes on source change.
+
+**`AppStateStore`:** Single-source-of-truth state store with `StateSelector` for derived
+slices and `StateTransaction` for atomic multi-field updates.
+
+**Typical usage:** Create `ObservableValue` in feature `__init__` or `build`; subscribe in
+`bind_runtime`; dispose subscription in `shutdown_runtime`.
+
+**Minimal example:**
+```python
+self.count = ObservableValue(0)
+# in bind_runtime:
+self._sub = self.count.subscribe(lambda v: setattr(self.label, "text", str(v)))
+# in shutdown_runtime:
+self._sub.dispose()
+```
+
+**Advanced pattern:** `AppStateStore` + `StateSelector` for centralized state shared across
+many features; `StateTransaction` for atomic updates that should fire subscribers once.
+`CollectionView` with `CollectionViewQuery` for sorted/filtered live views of `ObservableList`.
+
+**Mistakes:** Polling `.value` in `on_update`; subscribing in `build` before controls exist;
+leaking subscriptions by forgetting `.dispose()`; using plain Python lists/dicts across
+features instead of `ObservableList`/`ObservableDict` (breaks the reactive contract).
+
+---
+
+## Replace Target
+
+Replace from the line containing:
+```
+### Application Bootstrap and Host Configuration
+```
+through to (but not including) the line containing:
+```
+### Controls and Control Composition
+```
+
+Include the `### Application Bootstrap and Host Configuration` heading in your output.
+Preserve the parent `## Main Systems Reference` heading — do not remove it.

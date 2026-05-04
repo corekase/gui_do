@@ -31,7 +31,7 @@ Usage::
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import pygame
 from pygame import Rect, Surface
