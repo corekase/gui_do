@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Callable, Generic, List, Optional, TypeVar
 
+# Imported lazily inside methods to avoid circular import during module init.
+import gui_do.data.reactive_batch as _batch_mod
+
 
 T = TypeVar("T")
 Observer = Callable[[T], None]
@@ -51,6 +54,13 @@ class ObservableValue(Generic[T]):
         if self._value == new_value:
             return
         self._value = new_value
+        if _batch_mod.is_batching():
+            _batch_mod._enqueue(self)
+        else:
+            self._notify_observers()
+
+    def _notify_observers(self) -> None:
+        """Fire all registered observers with the current value."""
         observers = self._observers
         n = len(observers)
         if n == 0:

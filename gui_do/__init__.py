@@ -114,6 +114,7 @@ from .features.feature_lifecycle import apply_scene_setup_specs
 # Core abstractions for reactive programming and presentation models.
 
 from .data.presentation_model import ObservableValue, PresentationModel, ComputedValue
+from .data.reactive_batch import reactive_batch, is_batching
 from .data.invalidation import InvalidationTracker
 from .data.observable_collections import (
     ChangeKind,
@@ -387,6 +388,14 @@ from .graphics.vector_path import VectorPath
 from .graphics.sprite_sheet import SpriteSheet, FrameAnimation
 from .graphics.particle_system import ParticleSystem, Emitter, ParticleLayer
 from .graphics.tile_map import TileSet, TileMap
+from .graphics.offscreen_backend import (
+    RenderTarget,
+    LiveRenderTarget,
+    OffscreenRenderTarget,
+    create_render_target,
+    create_surface,
+)
+from .graphics.scene_graph_2d import Node2D, SceneGraph2D, Camera2D
 
 # ============================================================================
 # TIER 17: INTROSPECTION & INSPECTION
@@ -499,6 +508,48 @@ from .features.data_driven_runtime import (
 # Low-level infrastructure that should not be directly used by applications.
 
 from .app.ui_engine import UiEngine
+
+# ============================================================================
+# TIER 20: AUDIO
+# ============================================================================
+# Portable audio cue system wrapping pygame.mixer.
+
+from .audio.sound_event_bus import SoundCue, SoundBankRegistry, SoundEventBus
+
+# ============================================================================
+# TIER 21: ACCESSIBILITY
+# ============================================================================
+# Semantic node tree, role vocabulary, and live-region announcements.
+
+from .accessibility.accessibility_tree import (
+    AccessibilityRole,
+    LivePoliteness,
+    AccessibilityNode,
+    AccessibilityTree,
+    AccessibilityAnnouncement,
+    AccessibilityBus,
+)
+
+# ============================================================================
+# TIER 22: THEME INVALIDATION
+# ============================================================================
+# Automatic visual cache flush on theme switch.
+
+from .theme.theme_invalidation_bus import ThemeInvalidationBus
+
+# ============================================================================
+# TIER 23: UNDO CONTEXT ROUTING
+# ============================================================================
+# Named multi-stack undo/redo context routing.
+
+from .state.undo_context_manager import UndoContextManager
+
+# ============================================================================
+# TIER 24: ASYNC FORM VALIDATION
+# ============================================================================
+# Debounced cross-field reactive validation pipeline.
+
+from .forms.async_form_validator import AsyncFieldValidator, AsyncFormValidator
 
 
 # ============================================================================

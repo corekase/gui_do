@@ -25,10 +25,12 @@ from gui_do import (
     AnimatedImageControl,
     Breakpoint,
     ButtonControl,
+    CommandHistory,
     CanvasControl,
     CooperativeScheduler,
     CoroutineHandle,
     DataCache,
+    FormField,
     DiffInsert,
     DiffMove,
     DiffRemove,
@@ -57,7 +59,25 @@ from gui_do import (
     PropertyDescriptor,
     PropertyInspectorModel,
     PropertyInspectorPanel,
+    AccessibilityBus,
+    AccessibilityNode,
+    AccessibilityRole,
+    AccessibilityTree,
+    AsyncFieldValidator,
+    AsyncFormValidator,
+    Camera2D,
+    LivePoliteness,
+    Node2D,
+    ObservableValue,
+    OffscreenRenderTarget,
+    SceneGraph2D,
+    SoundBankRegistry,
+    SoundCue,
+    SoundEventBus,
+    ThemeInvalidationBus,
+    UndoContextManager,
     property_registry,
+    reactive_batch,
     RecordedEvent,
     ResponsiveLayout,
     RoutedFeature,
@@ -132,6 +152,7 @@ _SYSTEMS_TAB_ENTRIES = (
     ("listdiff", "ListDiff"),
     ("cache", "Cache"),
     ("shortcuts", "Shortcuts"),
+    ("arch2", "New Arch"),
 )
 _SYSTEMS_TAB_SPECS = build_tab_builder_specs(_SYSTEMS_TAB_ENTRIES)
 
@@ -446,6 +467,27 @@ class _DemoInspectable:
         self._active = bool(v)
 
 
+class _SetIntCommand:
+    """Small demo command used by the New Arch tab undo context demo."""
+
+    def __init__(self, target: dict[str, int], key: str, new_value: int, description: str) -> None:
+        self._target = target
+        self._key = key
+        self._new_value = int(new_value)
+        self._old_value = int(target.get(key, 0))
+        self._description = str(description)
+
+    @property
+    def description(self) -> str:
+        return self._description
+
+    def execute(self) -> None:
+        self._target[self._key] = self._new_value
+
+    def undo(self) -> None:
+        self._target[self._key] = self._old_value
+
+
 class SystemsDemoFeature(RoutedFeature):
     """Demonstrates all 10 new gui_do systems in a tabbed window."""
 
@@ -559,6 +601,25 @@ class SystemsDemoFeature(RoutedFeature):
         self._shortcut_overlay: Optional[ShortcutHelpOverlay] = None
         self._shortcut_info_label: Optional[LabelControl] = None
 
+        # New Arch tab (newly added architecture systems)
+        self._arch_status_label: Optional[LabelControl] = None
+        self._arch_form_status_label: Optional[LabelControl] = None
+        self._arch_batch_counter_a: Optional[ObservableValue] = None
+        self._arch_batch_counter_b: Optional[ObservableValue] = None
+        self._arch_sound_bus: Optional[SoundEventBus] = None
+        self._arch_access_tree: Optional[AccessibilityTree] = None
+        self._arch_access_bus = None
+        self._arch_theme_bus: Optional[ThemeInvalidationBus] = None
+        self._arch_theme_hits: int = 0
+        self._arch_scene_graph: Optional[SceneGraph2D] = None
+        self._arch_scene_camera: Optional[Camera2D] = None
+        self._arch_offscreen_target: Optional[OffscreenRenderTarget] = None
+        self._arch_undo_context: Optional[UndoContextManager] = None
+        self._arch_undo_state: dict[str, int] = {"doc": 0, "canvas": 0}
+        self._arch_form_field: Optional[FormField] = None
+        self._arch_field_validator: Optional[AsyncFieldValidator] = None
+        self._arch_form_validator: Optional[AsyncFormValidator] = None
+
         register_tab_update_handlers(
             self._tab_updates,
             (
@@ -568,6 +629,7 @@ class SystemsDemoFeature(RoutedFeature):
                 ("sched", self._update_sched_tab_frame),
                 ("tilemap", self._update_tilemap_tab_frame),
                 ("progress", self._update_progress_tab_frame),
+                ("arch2", self._update_arch2_tab_frame),
             ),
         )
 
@@ -1850,6 +1912,294 @@ class SystemsDemoFeature(RoutedFeature):
                 f"Overlay {'open' if self._shortcut_overlay.is_open else 'closed'}.\n"
                 f"{len(sections)} section(s), {total} shortcut entry/entries built from ActionRegistry."
             )
+
+    # ------------------------------------------------------------------
+    # Tab: New Arch — integration of newly added architecture systems
+    # ------------------------------------------------------------------
+
+    def _build_arch2_tab(self, host, rect: Rect) -> list:
+        ctx = TabLayoutContext(self.window, rect)
+
+        # S1: ObservableBatch
+        self._arch_batch_counter_a = ObservableValue(0)
+        self._arch_batch_counter_b = ObservableValue(0)
+
+        # S2: SoundEventBus
+        self._arch_sound_bus = SoundEventBus()
+        sound_bank = SoundBankRegistry()
+        sound_bank.register(
+            "ui.click",
+            SoundCue("demo_features/data/sounds/click.wav", volume=0.4),
+        )
+        self._arch_sound_bus.load_bank(sound_bank)
+
+        # S3: AccessibilityTree + AccessibilityBus
+        self._arch_access_tree = AccessibilityTree()
+        self._arch_access_bus = AccessibilityBus()
+        root_node = AccessibilityNode(role=AccessibilityRole.DIALOG, label="Systems Demo")
+        button_node = AccessibilityNode(
+            role=AccessibilityRole.BUTTON,
+            label="Run integration action",
+            live_politeness=LivePoliteness.POLITE,
+        )
+        self._arch_access_tree.register(root_node)
+        self._arch_access_tree.register(button_node, parent=root_node)
+
+        # S5: ThemeInvalidationBus
+        self._arch_theme_hits = 0
+        theme_source = getattr(host.app, "theme_manager", None)
+        if theme_source is None:
+            theme_source = host.app.theme
+
+        self._arch_theme_bus = ThemeInvalidationBus(
+            theme_manager=theme_source,
+            dirty_tracker=getattr(host.app, "dirty_tracker", None),
+            graphics_factory=getattr(host.app, "graphics_factory", None),
+            font_manager=getattr(host.app.theme, "fonts", None),
+            screen_rect=getattr(host, "screen_rect", None),
+        )
+        self._arch_theme_bus.register(self, self._on_arch_theme_invalidation)
+
+        # S4 + S8: SceneGraph2D + OffscreenBackend
+        self._arch_offscreen_target = OffscreenRenderTarget(220, 120)
+        self._arch_scene_camera = Camera2D(Rect(0, 0, 220, 120), zoom=1.0)
+        self._arch_scene_graph = SceneGraph2D()
+        root = Node2D("root", pos=(36.0, 60.0))
+        body = Node2D("body", pos=(0.0, 0.0))
+        shadow = Node2D("shadow", pos=(8.0, 14.0))
+
+        def _draw_body(surface, x, y, sx, sy):
+            pygame.draw.circle(surface, (70, 200, 140), (int(x), int(y)), max(3, int(14 * sx)))
+
+        def _draw_shadow(surface, x, y, sx, sy):
+            pygame.draw.ellipse(surface, (40, 45, 56), Rect(int(x) - 12, int(y) - 4, 24, 10))
+
+        body.on_draw = _draw_body
+        shadow.on_draw = _draw_shadow
+        root.add_child(shadow)
+        root.add_child(body)
+        self._arch_scene_graph.add(root)
+
+        # S6: UndoContextManager
+        self._arch_undo_context = UndoContextManager(default_key="doc")
+        self._arch_undo_context.register("doc", CommandHistory(max_size=16), make_active=True)
+        self._arch_undo_context.register("canvas", CommandHistory(max_size=16))
+        self._arch_undo_state = {"doc": 0, "canvas": 0}
+
+        # S7: AsyncFormValidator
+        self._arch_form_field = FormField("username", "")
+        self._arch_field_validator = AsyncFieldValidator(
+            field=self._arch_form_field,
+            local_rules=[
+                lambda value: None if str(value).strip() else "Username required",
+                lambda value: None if len(str(value).strip()) >= 3 else "Minimum 3 characters",
+            ],
+            async_check=self._arch_username_async_check,
+            debounce_ms=300,
+        )
+        self._arch_form_validator = AsyncFormValidator([self._arch_field_validator])
+
+        ctx.add_label(
+            "nsdf_arch2_title",
+            40,
+            "New architecture integrations: ObservableBatch, SoundEventBus, Accessibility, "
+            "SceneGraph2D, ThemeInvalidationBus, UndoContextManager, AsyncFormValidator, OffscreenBackend.",
+            advance=46,
+        )
+
+        ctx.add_button_row(
+            height=28,
+            gap=8,
+            width=152,
+            advance=38,
+            specs=(
+                ("nsdf_arch_batch_btn", "Batch Counters", self._arch_run_batch),
+                ("nsdf_arch_sound_btn", "Emit Sound", self._arch_emit_sound),
+                ("nsdf_arch_a11y_btn", "Announce A11y", self._arch_announce_accessibility),
+            ),
+        )
+
+        ctx.add_button_row(
+            height=28,
+            gap=8,
+            width=152,
+            advance=38,
+            specs=(
+                ("nsdf_arch_theme_btn", "Trigger Theme Bus", self._arch_trigger_theme_invalidation),
+                ("nsdf_arch_render_btn", "Render Offscreen", self._arch_render_offscreen_scene),
+                ("nsdf_arch_undo_push_btn", "Push Undo Step", self._arch_push_undo_step),
+            ),
+        )
+
+        ctx.add_button_row(
+            height=28,
+            gap=8,
+            width=110,
+            advance=36,
+            specs=(
+                ("nsdf_arch_undo_btn", "Undo", self._arch_undo),
+                ("nsdf_arch_redo_btn", "Redo", self._arch_redo),
+                ("nsdf_arch_ctx_btn", "Switch Ctx", self._arch_toggle_undo_context),
+            ),
+        )
+
+        ctx.add_label("nsdf_arch_form_lbl", 22, "Async username validator:", advance=0)
+        ctx.add_control(
+            TextInputControl(
+                "nsdf_arch_username_input",
+                Rect(ctx.x + 180, ctx.y, 220, 28),
+                placeholder="type username...",
+                on_change=self._arch_on_username_changed,
+            )
+        )
+        ctx.advance(34)
+
+        self._arch_status_label = ctx.add_label(
+            "nsdf_arch_status",
+            72,
+            "Press a button to run a New Arch system integration.",
+            advance=78,
+        )
+        self._arch_form_status_label = ctx.add_label(
+            "nsdf_arch_form_status",
+            max(46, ctx.remaining_height(margin=ctx.pad)),
+            "Form status: idle",
+        )
+        self._update_arch_status("Initialized all 8 systems in this tab.")
+        self._update_arch_form_status()
+        return ctx.build()
+
+    def _update_arch2_tab_frame(self, _host, dt: float) -> None:
+        if self._arch_form_validator is not None:
+            self._arch_form_validator.update(dt)
+            self._update_arch_form_status()
+
+    def _update_arch_status(self, message: str) -> None:
+        if self._arch_status_label is None:
+            return
+        self._arch_status_label.text = message
+
+    def _update_arch_form_status(self) -> None:
+        if self._arch_form_status_label is None or self._arch_field_validator is None or self._arch_form_validator is None:
+            return
+        local_error = self._arch_field_validator.local_error.value
+        async_error = self._arch_field_validator.async_error.value
+        state = "validating" if self._arch_form_validator.is_validating else ("valid" if self._arch_form_validator.is_valid else "invalid")
+        self._arch_form_status_label.text = (
+            f"Form status: {state}\n"
+            f"Local: {local_error or 'ok'}\n"
+            f"Async: {async_error or 'ok'}"
+        )
+
+    def _arch_run_batch(self) -> None:
+        if self._arch_batch_counter_a is None or self._arch_batch_counter_b is None:
+            return
+        with reactive_batch():
+            self._arch_batch_counter_a.value += 1
+            self._arch_batch_counter_b.value += 2
+        self._update_arch_status(
+            "ObservableBatch applied: "
+            f"A={self._arch_batch_counter_a.value}, B={self._arch_batch_counter_b.value}"
+        )
+
+    def _arch_emit_sound(self) -> None:
+        if self._arch_sound_bus is None:
+            return
+        played = self._arch_sound_bus.emit("ui.click")
+        self._update_arch_status(
+            f"SoundEventBus emit('ui.click') => {played}; mixer available={self._arch_sound_bus.is_available}"
+        )
+
+    def _arch_announce_accessibility(self) -> None:
+        if self._arch_access_bus is None:
+            return
+        self._arch_access_bus.announce("Integration action completed", politeness=LivePoliteness.POLITE)
+        pending = self._arch_access_bus.pending_count
+        self._update_arch_status(
+            f"AccessibilityBus queued {pending} announcement(s); semantic nodes={len(self._arch_access_tree) if self._arch_access_tree is not None else 0}"
+        )
+
+    def _on_arch_theme_invalidation(self) -> None:
+        self._arch_theme_hits += 1
+
+    def _arch_trigger_theme_invalidation(self) -> None:
+        if self._arch_theme_bus is None:
+            return
+        self._arch_theme_bus.trigger_invalidation()
+        self._update_arch_status(
+            f"ThemeInvalidationBus trigger count={self._arch_theme_hits}"
+        )
+
+    def _arch_render_offscreen_scene(self) -> None:
+        if self._arch_scene_graph is None or self._arch_scene_camera is None or self._arch_offscreen_target is None:
+            return
+        roots = self._arch_scene_graph.find_all()
+        if roots:
+            root = roots[0]
+            root.x += 6.0
+            if root.x > 180.0:
+                root.x = 36.0
+        self._arch_offscreen_target.fill((22, 24, 32, 255))
+        self._arch_scene_graph.draw(self._arch_offscreen_target.surface, self._arch_scene_camera)
+        png = self._arch_offscreen_target.to_png_bytes()
+        self._update_arch_status(
+            f"SceneGraph2D rendered to OffscreenBackend ({len(png)} PNG bytes)."
+        )
+
+    def _arch_push_undo_step(self) -> None:
+        if self._arch_undo_context is None or self._arch_undo_context.active_key is None:
+            return
+        key = self._arch_undo_context.active_key
+        next_value = int(self._arch_undo_state.get(key, 0)) + 1
+        history = self._arch_undo_context.active
+        if history is None:
+            return
+        history.push(_SetIntCommand(self._arch_undo_state, key, next_value, f"Set {key}={next_value}"))
+        self._update_arch_status(
+            f"UndoContextManager[{key}] set value={self._arch_undo_state.get(key, 0)}"
+        )
+
+    def _arch_undo(self) -> None:
+        if self._arch_undo_context is None:
+            return
+        active = self._arch_undo_context.active_key
+        did = self._arch_undo_context.undo()
+        self._update_arch_status(
+            f"Undo [{active}] => {did}; values={self._arch_undo_state}"
+        )
+
+    def _arch_redo(self) -> None:
+        if self._arch_undo_context is None:
+            return
+        active = self._arch_undo_context.active_key
+        did = self._arch_undo_context.redo()
+        self._update_arch_status(
+            f"Redo [{active}] => {did}; values={self._arch_undo_state}"
+        )
+
+    def _arch_toggle_undo_context(self) -> None:
+        if self._arch_undo_context is None:
+            return
+        active = self._arch_undo_context.active_key
+        self._arch_undo_context.set_active("canvas" if active == "doc" else "doc")
+        self._update_arch_status(f"Active undo context => {self._arch_undo_context.active_key}")
+
+    def _arch_on_username_changed(self, value: str) -> None:
+        if self._arch_form_field is None:
+            return
+        self._arch_form_field.value.value = value
+
+    @staticmethod
+    def _arch_username_async_check(value: object) -> Optional[str]:
+        username = str(value).strip().lower()
+        if not username:
+            return None
+        reserved = {"admin", "root", "system", "operator"}
+        if username in reserved:
+            return "Reserved username"
+        if " " in username:
+            return "Whitespace is not allowed"
+        return None
 
     def bind_runtime(self, host) -> None:
         super().bind_runtime(host)

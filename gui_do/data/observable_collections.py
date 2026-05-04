@@ -230,6 +230,22 @@ class ObservableList(Generic[T]):
         self.clear()
         self.extend(items)
 
+    def batch_replace(self, items: Iterable[T]) -> None:
+        """Replace all contents and fire exactly one CLEARED notification.
+
+        Unlike :meth:`set_all`, this fires a single :attr:`ChangeKind.CLEARED`
+        event after the replacement so subscribers rebuild once rather than
+        once for the clear and once per appended item.
+
+        Parameters
+        ----------
+        items:
+            Iterable of replacement items.  Consumed eagerly so generators are
+            safe to pass.
+        """
+        self._items = list(items)
+        self._notify(CollectionChange(kind=ChangeKind.CLEARED))
+
     def sort(self, *, key: Optional[Callable[[T], Any]] = None, reverse: bool = False) -> None:
         """Sort the list in-place, firing CLEARED then ADDED events for each item.
 

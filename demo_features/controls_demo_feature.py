@@ -28,6 +28,7 @@ from gui_do import (
     FrameAnimation,
     SceneReturnButtonSpec,
     SceneTaskPanelSpec,
+    SceneMenuStripControl,
     CellCaretLayout,
     ControlRegistry,
     ColorPickerControl,
@@ -752,7 +753,7 @@ def build_formatted_input_section_specs(
     return build_specs_from_column_section(defs, stack=stack, slot_height_for=slot_height_for, overflow_gap=overflow_gap)
 
 
-def _nc_control_definitions(nc_w: int):
+def _nc_control_definitions(nc_w: int, app):
     return (
         ControlDefinition(
             name="toolbar", label_text="Toolbar", control_height=36, row_index=150, column_index=11,
@@ -807,6 +808,26 @@ def _nc_control_definitions(nc_w: int):
             focusable=True, accessibility_role="textbox", accessibility_label="Date picker",
             control_factory=lambda: DatePickerControl("control_date_picker", Rect(0, 0, nc_w, 32)),
         ),
+        ControlDefinition(
+            name="scene_menu_strip", label_text="Scene Menu Strip", control_height=30, row_index=158, column_index=14,
+            focusable=False, accessibility_role="menubar", accessibility_label="Scene menu strip",
+            control_factory=lambda: SceneMenuStripControl(
+                "control_scene_menu_strip",
+                Rect(0, 0, nc_w, 30),
+                app,
+                scenes_shown=False,
+                windows_shown=False,
+                extra_entries_provider=lambda: [
+                    MenuEntry(
+                        "Demo",
+                        [
+                            ContextMenuItem("Inspect", action=lambda: None),
+                            ContextMenuItem("Refresh", action=lambda: None),
+                        ],
+                    ),
+                ],
+            ),
+        ),
     )
 
 
@@ -819,6 +840,7 @@ def build_new_controls_section_specs(
     overall_rows: int,
     overall_columns: int,
     slot_height_for,
+    app,
 ):
     flow = LayoutManager()
     flow.set_column_flow_properties(
@@ -834,12 +856,12 @@ def build_new_controls_section_specs(
         )
         return stack
 
-    nc_defs = _nc_control_definitions(nc_w)
+    nc_defs = _nc_control_definitions(nc_w, app)
     column_groups = (
         (_make_stack(anchors[0]), (nc_defs[0], nc_defs[1])),
         (_make_stack(anchors[1]), (nc_defs[2],)),
         (_make_stack(anchors[2]), (nc_defs[3], nc_defs[4])),
-        (_make_stack(anchors[3]), (nc_defs[5], nc_defs[6], nc_defs[7])),
+        (_make_stack(anchors[3]), (nc_defs[5], nc_defs[6], nc_defs[7], nc_defs[8])),
     )
     all_specs: list[ControlPlacementSpec] = []
     for stack, group in column_groups:
@@ -1390,6 +1412,7 @@ class ControlsShowcaseFeature(Feature):
             overall_rows=self.LAYOUT_OVERALL_ROWS_CONSTANT,
             overall_columns=self.LAYOUT_OVERALL_COLUMNS_CONSTANT,
             slot_height_for=slot_h,
+            app=host.app,
         )
         self._registry.register(nc_place_specs)
 
