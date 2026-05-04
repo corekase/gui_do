@@ -16,6 +16,25 @@ Primary truth sources for architecture and API behavior:
 - gui_do/overlays/* (especially overlay_manager.py, shortcut_help_overlay.py, toast_manager.py)
 - demo_features/* as runnable reference patterns
 
+## Demo Features Organizational Convention (Locked In)
+
+This convention is established and must be reflected accurately in documentation:
+
+**Folder-per-feature/scene**: Each subfolder under `demo_features/` is exactly one feature package (or a tightly related cluster). Examples: `life/`, `mandelbrot/`, `systems/`, `controls/`, `bouncing_shapes/`, `main_scene/`.
+
+**`__init__.py` is the sole public surface**: All cross-package imports target the package root only. `demo_config.py` and any other consumer imports exclusively from the package name (e.g. `from demo_features.life import LifeSimulationFeature`), never from internal submodules. This means internal code reorganizations — moving a class from one file to another within the same folder — have zero effect on the bootstrap or any consumer. The data (specs and config) drives wiring; code location is irrelevant to bootstrap.
+
+**File-per-concern within a folder**: Each file inside a feature folder owns exactly one concern and is the true implementation owner (not a wrapper or alias-re-export):
+- `*_feature.py` — the Feature class with its lifecycle methods and routing logic
+- `*_presenter.py` — the WindowPresenter subclass that handles window layout and control construction
+- `*_specs.py` or `*_specs.py`-equivalent — specs and layout constants shared within the package
+- `*_logic_feature.py` — a companion LogicFeature or background-computation feature
+- Named standalone types in their own files (e.g. `shape_sprite_state.py`, `demo_inspectable.py`, `set_int_command.py`, `mandel_status_event.py`)
+
+**Why no bootstrap changes are ever needed for reorganization**: The bootstrap system is data-driven. `HostApplicationBindingSpec` and `build_host_application_config` consume specs (feature classes, scene configs, action bindings) not code locations. As long as each feature package's `__init__.py` continues to export the same public names, the bootstrap is entirely insulated from any internal reorganization.
+
+Documentation must present this folder+`__init__.py` model as the established pattern for demo composition, and must not suggest or imply internal submodule imports at any layer.
+
 ## Documentation Structure & Purpose
 
 The README must guide developers into declarative + lifecycle composition first and keep lower-level APIs as secondary material. All examples must be current with the package as it exists now.

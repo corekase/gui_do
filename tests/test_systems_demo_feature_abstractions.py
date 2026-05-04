@@ -4,7 +4,7 @@ import pygame
 
 from gui_do import ButtonControl, LabelControl, TabLayoutContext
 from gui_do.persistence.scene_snapshot import SceneSnapshot
-from demo_features.systems_demo_feature import SystemsDemoFeature
+from demo_features.systems import SystemsDemoFeature
 
 
 class _StubWindow:

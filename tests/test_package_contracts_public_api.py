@@ -36,7 +36,7 @@ class TestPackageContractsPublicAPI(unittest.TestCase):
         content = _read_package_contracts()
 
         self.assertIn("from gui_do import (", content)
-        self.assertIn("from demo_features.mandelbrot_demo_feature import MandelStatusEvent", content)
+        self.assertIn("from demo_features.mandelbrot import MandelStatusEvent", content)
 
     def test_all_documented_gui_root_symbols_resolve(self):
         content = _read_package_contracts()

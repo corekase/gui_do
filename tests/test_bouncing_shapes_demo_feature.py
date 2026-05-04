@@ -2,7 +2,7 @@ import unittest
 
 import pygame
 
-from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature, ShapeSpriteState
+from demo_features.bouncing_shapes import BouncingShapesBackdropFeature, ShapeSpriteState
 
 
 class _StubHost:

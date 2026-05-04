@@ -2,29 +2,11 @@
 
 from __future__ import annotations
 
-try:
-    from demo_features._import_bootstrap import ensure_repo_root_on_path
-except ModuleNotFoundError:
-    from _import_bootstrap import ensure_repo_root_on_path
-
-ensure_repo_root_on_path()
-
 import pygame
-from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from pygame import Rect
-from gui_do import (
-    ButtonControl,
-    CanvasControl,
-    centered_horizontal_strip_layout,
-    inset_rect,
-    LabelControl,
-    LogicFeature,
-    RoutedFeature,
-    WindowControl,
-)
-from gui_do.controls.chrome.window_presenter import WindowPresenter
+from gui_do import inset_rect, RoutedFeature, WindowControl
 from gui_do.features.data_driven_runtime import (
     AnchoredWindowSpec,
     bind_routed_feature_lifecycle,
@@ -37,6 +19,8 @@ from gui_do.features.data_driven_runtime import (
     RoutedRuntimeSpec,
     shutdown_routed_feature_lifecycle,
 )
+from .mandel_status_event import MandelStatusEvent
+from .mandelbrot_logic_feature import MandelbrotLogicFeature
 
 
 # ---------------------------------------------------------------------------
@@ -83,35 +67,6 @@ MANDEL_KIND_RUNNING_FOUR_SPLIT = "running_four_split"
 MANDEL_KIND_FAILED = "failed"
 MANDEL_KIND_COMPLETE = "complete"
 MANDEL_KIND_STATUS = "status"
-
-
-@dataclass(frozen=True)
-class MandelStatusEvent:
-    """Typed status payload used for Mandelbrot status bus publication."""
-
-    kind: str
-    detail: Optional[str] = None
-
-    def to_payload(self) -> dict[str, str]:
-        """Serialize event fields into a transport-safe dictionary payload."""
-        payload = {"kind": str(self.kind)}
-        if self.detail is not None:
-            payload["detail"] = str(self.detail)
-        return payload
-
-    @classmethod
-    def from_payload(cls, payload) -> "MandelStatusEvent":
-        """Build a status event from event instance, dict payload, or raw value."""
-        if isinstance(payload, MandelStatusEvent):
-            return payload
-        if isinstance(payload, dict):
-            kind = str(payload.get("kind", MANDEL_KIND_STATUS))
-            detail = payload.get("detail")
-            if detail is not None:
-                detail = str(detail)
-            return cls(kind=kind, detail=detail)
-        return cls(kind=MANDEL_KIND_STATUS, detail=str(payload))
-
 
 __all__ = [
     "MANDEL_STATUS_TOPIC",
@@ -232,84 +187,6 @@ _MANDEL_LIFECYCLE_SPEC = RoutedFeatureLifecycleSpec(
     runtime_spec_attr_name="_runtime_spec",
     scheduler_attr_name="scheduler",
 )
-
-
-class MandelbrotLogicFeature(LogicFeature):
-    """Domain logic provider for Mandelbrot pixel and algorithm calculations."""
-
-    RECURSIVE_LEAF_SPAN = 8
-
-    def __init__(self, name: str = _MANDEL_LOGIC_PRIMARY, *, scene_name: str = "main") -> None:
-        super().__init__(name, scene_name=scene_name)
-        self.mandel_cols = (
-            (66, 30, 15), (25, 7, 26), (9, 1, 47), (4, 4, 73),
-            (0, 7, 100), (12, 44, 138), (24, 82, 177), (57, 125, 209),
-            (134, 181, 229), (211, 236, 248), (241, 233, 191), (248, 201, 95),
-            (255, 170, 0), (204, 128, 0), (153, 87, 0), (106, 52, 3),
-        )
-        self.max_iter = 48
-
-    def bind_runtime(self, _host) -> None:
-        self._feature_manager.register_runnable(self.name, "iterative_task", self.run_iterative_task)
-        self._feature_manager.register_runnable(self.name, "recursive_task", self.run_recursive_task)
-
-    def mandel_col(self, k: int) -> Tuple[int, int, int]:
-        if k >= self.max_iter - 1:
-            return (0, 0, 0)
-        return self.mandel_cols[k % len(self.mandel_cols)]
-
-    @staticmethod
-    def mandel_viewport(width: int, height: int) -> Tuple[complex, float]:
-        center = -0.7 + 0.0j
-        extent = 2.5 + 2.5j
-        scale = max((extent / width).real, (extent / height).imag)
-        return center, scale
-
-    def mandel_pixel(self, px: int, py: int, width: int, height: int, center: complex, scale: float) -> int:
-        c = center + (px - width // 2 + (py - height // 2) * 1j) * scale
-        z = 0j
-        for k in range(self.max_iter):
-            z = z * z + c
-            if (z * z.conjugate()).real > 4.0:
-                return k
-        return self.max_iter - 1
-
-    def run_iterative_task(self, scheduler, task_id, params):
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        for y in range(height):
-            row = [self.mandel_pixel(x, y, width, height, center, scale) for x in range(width)]
-            scheduler.send_message(task_id, (y, row))
-        return None
-
-    def _recursive_fill(self, scheduler, task_id: str, x: int, y: int, w: int, h: int, width: int, height: int, center: complex, scale: float) -> None:
-        if w <= 0 or h <= 0:
-            return
-        if w <= self.RECURSIVE_LEAF_SPAN or h <= self.RECURSIVE_LEAF_SPAN:
-            values = []
-            for yy in range(y, y + h):
-                for xx in range(x, x + w):
-                    values.append(self.mandel_pixel(xx, yy, width, height, center, scale))
-            scheduler.send_message(task_id, (x, y, w, h, values))
-            return
-        hw = w // 2
-        hh = h // 2
-        self._recursive_fill(scheduler, task_id, x, y, hw, hh, width, height, center, scale)
-        self._recursive_fill(scheduler, task_id, x + hw, y, w - hw, hh, width, height, center, scale)
-        self._recursive_fill(scheduler, task_id, x, y + hh, hw, h - hh, width, height, center, scale)
-        self._recursive_fill(scheduler, task_id, x + hw, y + hh, w - hw, h - hh, width, height, center, scale)
-
-    def run_recursive_task(self, scheduler, task_id, params):
-        width, height = params["size"]
-        center = params["center"]
-        scale = params["scale"]
-        rect = Rect(params.get("rect", Rect(0, 0, width, height)))
-        self._recursive_fill(scheduler, task_id, rect.x, rect.y, rect.width, rect.height, width, height, center, scale)
-        return None
-
-
-
 class MandelbrotRenderFeature(RoutedFeature):
     """Build and run the Mandelbrot demo windows, tasks, and status plumbing."""
 
@@ -376,10 +253,12 @@ class MandelbrotRenderFeature(RoutedFeature):
 
     def build(self, host) -> None:
         """Build the Mandelbrot feature UI using the new presenter/controller pattern."""
+        from .mandelbrot_window_presenter import MandelbrotWindowPresenter
+
         self.window = create_feature_presented_window(
             host,
             feature=self,
-            presenter_cls=_MandelbrotWindowPresenter,
+            presenter_cls=MandelbrotWindowPresenter,
             spec=_MANDEL_WINDOW_SPEC,
             window_control_cls=WindowControl,
         )
@@ -937,131 +816,3 @@ class MandelbrotRenderFeature(RoutedFeature):
         if not busy and self.status_text.startswith("Mandelbrot: running"):
             self.running_mode = None
             self.publish_event(MANDEL_KIND_COMPLETE)
-
-
-class _MandelbrotWindowPresenter(WindowPresenter):
-    """Window presenter for the Mandelbrot demo window."""
-
-    def __init__(self, feature, host):
-        super().__init__(None)
-        self.feature = feature
-        self.host = host
-        self.primary_canvas = None
-        self.split_canvases = {}
-        self.reset_button = None
-        self.mandel_iter_button = None
-        self.mandel_recur_button = None
-        self.mandel_one_split_button = None
-        self.mandel_four_split_button = None
-        self.status_label = None
-
-    def on_create(self):
-        from gui_do import partition_rects
-        content_rect = self.window.content_rect()
-        padded = inset_rect(content_rect, padding_x=_MANDEL_PAD, padding_y=_MANDEL_PAD)
-
-        canvas_area = Rect(padded.left, padded.top, _MANDEL_CANVAS_W, _MANDEL_CANVAS_H)
-
-        self.primary_canvas = self._add_control(
-            CanvasControl(
-                str(_MANDEL_PRIMARY_CANVAS_SPEC["control_id"]),
-                Rect(canvas_area),
-                max_events=int(_MANDEL_PRIMARY_CANVAS_SPEC["max_events"]),
-            )
-        )
-        self.feature.primary_canvas = self.primary_canvas
-
-        self.split_canvases = self._build_split_canvases(canvas_area, partition_rects)
-        self._register_split_canvases(self.split_canvases)
-        self.feature.split_canvases = self.split_canvases
-
-        controls_y = padded.top + _MANDEL_CANVAS_H + _MANDEL_CTRL_GAP
-        slots = centered_horizontal_strip_layout(
-            left=padded.left + _MANDEL_ROW_STRIP_PAD,
-            width=max(1, _MANDEL_CANVAS_W - 2 * _MANDEL_ROW_STRIP_PAD),
-            y=controls_y, item_count=_MANDEL_BTN_COUNT, item_height=_MANDEL_CTRL_H, spacing=_MANDEL_BTN_SPACING,
-        )
-        reset_slot = slots[int(_MANDEL_RESET_BUTTON_SPEC["slot_index"])]
-        self.reset_button = self._add_button_control(
-            str(_MANDEL_RESET_BUTTON_SPEC["control_id"]),
-            reset_slot,
-            str(_MANDEL_RESET_BUTTON_SPEC["label"]),
-            lambda: self.feature.clear(self.host),
-            style=str(_MANDEL_RESET_BUTTON_SPEC["style"]),
-        )
-        self.reset_button.set_accessibility(
-            role=str(_MANDEL_RESET_BUTTON_SPEC["accessibility_role"]),
-            label=str(_MANDEL_RESET_BUTTON_SPEC["accessibility_label"]),
-        )
-        self.feature.reset_button = self.reset_button
-
-        task_buttons = self._build_task_buttons(slots[1:])
-
-        (
-            self.mandel_iter_button,
-            self.mandel_recur_button,
-            self.mandel_one_split_button,
-            self.mandel_four_split_button,
-        ) = tuple(task_buttons)
-        self.feature.task_buttons = tuple(task_buttons)
-
-        status_y = controls_y + _MANDEL_CTRL_H + _MANDEL_STATUS_GAP
-        self.status_label = self._add_label_control(
-            str(_MANDEL_STATUS_LABEL_SPEC["control_id"]),
-            Rect(padded.left, status_y, _MANDEL_CANVAS_W, _MANDEL_STATUS_H),
-            self.feature.status_text,
-        )
-        self.feature.status_label = self.status_label
-
-        self.feature.demo = self.host
-        self.feature.window = self.window
-        self.feature.menu_bar = None
-        self.feature.set_task_buttons_disabled(self.host, False)
-        self.feature.clear(self.host)
-        self.window.visible = False
-
-    def _build_split_canvases(self, canvas_area: Rect, partition_rects):
-        """Build the four split Mandelbrot canvases mapped by declarative keys."""
-        canvas_rects = partition_rects(canvas_area, rows=2, cols=2, gap=6)
-        return {
-            canvas_key: CanvasControl(canvas_key, canvas_rects[index], max_events=max_events)
-            for index, (canvas_key, max_events) in enumerate(_MANDEL_SPLIT_CANVAS_SPECS)
-        }
-
-    def _register_split_canvases(self, split_canvases) -> None:
-        """Register split canvases as hidden controls until split mode is activated."""
-        for canvas in split_canvases.values():
-            canvas.visible = False
-            self.add_control(canvas)
-
-    def _add_control(self, control):
-        """Add a presenter-managed control and return it."""
-        self.add_control(control)
-        return control
-
-    def _add_button_control(self, control_id: str, rect: Rect, text: str, on_click, *, style: str):
-        """Create and register a ButtonControl in one call."""
-        return self._add_control(ButtonControl(control_id, Rect(rect), text, on_click, style=style))
-
-    def _add_label_control(self, control_id: str, rect: Rect, text: str):
-        """Create and register a LabelControl in one call."""
-        return self._add_control(LabelControl(control_id, Rect(rect), text))
-
-    def _build_task_buttons(self, task_slots):
-        """Build task launch buttons from declarative specs."""
-        task_buttons = []
-        for slot_rect, (control_id, label, launch_method_name, style, accessibility_label) in zip(
-            task_slots,
-            _MANDEL_TASK_BUTTON_SPECS,
-        ):
-            launch_method = getattr(self.feature, launch_method_name)
-            button = self._add_button_control(
-                control_id,
-                slot_rect,
-                label,
-                lambda _method=launch_method: _method(self.host),
-                style=style,
-            )
-            button.set_accessibility(role="button", label=accessibility_label)
-            task_buttons.append(button)
-        return tuple(task_buttons)

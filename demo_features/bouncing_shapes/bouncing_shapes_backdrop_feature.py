@@ -2,47 +2,16 @@
 
 from __future__ import annotations
 
-try:
-    from demo_features._import_bootstrap import ensure_repo_root_on_path
-except ModuleNotFoundError:
-    from _import_bootstrap import ensure_repo_root_on_path
-
-ensure_repo_root_on_path()
-
 import math
 import random
-from dataclasses import dataclass
 from typing import Optional
 
 import pygame
 
 from gui_do import DirectFeature
 
-
-DEMO_SHAPE_COLOURS = (
-    (220, 60, 60),
-    (220, 140, 60),
-    (220, 220, 60),
-    (60, 190, 100),
-    (60, 170, 220),
-    (120, 120, 230),
-    (190, 120, 220),
-    (235, 115, 170),
-)
-DEMO_BORDER_BASE_COLOUR = (0, 0, 0)
-
-
-@dataclass
-class ShapeSpriteState:
-    """Per-shape cached sprite with runtime position and velocity."""
-
-    kind: str
-    radius: int
-    sprite: pygame.Surface
-    x: float
-    y: float
-    dx: float
-    dy: float
+from .bouncing_shapes_specs import DEMO_BORDER_BASE_COLOUR, DEMO_SHAPE_COLOURS
+from .shape_sprite_state import ShapeSpriteState
 
 
 class BouncingShapesBackdropFeature(DirectFeature):

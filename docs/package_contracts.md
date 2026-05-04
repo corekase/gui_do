@@ -52,7 +52,7 @@ from gui_do import (
 )
 
 # Consumer-side contracts are intentionally outside the gui_do library boundary:
-from demo_features.mandelbrot_demo_feature import MandelStatusEvent
+from demo_features.mandelbrot import MandelStatusEvent
 ```
 
 ## Demo/Package Boundary
@@ -60,6 +60,7 @@ from demo_features.mandelbrot_demo_feature import MandelStatusEvent
 - `gui_do/` contains reusable framework/runtime functionality.
 - Consumer/demo code lives outside `gui_do/` (currently in `demo_features/` and `gui_do_demo.py`).
 - Demo entrypoints should consume the framework through `from gui_do import ...`.
+- Demo feature code should follow the folder-package best practice described in `docs/demo_feature_layout.md`.
 
 ## Architecture Docs
 

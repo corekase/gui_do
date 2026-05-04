@@ -1,16 +1,9 @@
-try:
-    from demo_features._import_bootstrap import ensure_repo_root_on_path
-except ModuleNotFoundError:
-    from _import_bootstrap import ensure_repo_root_on_path
-
-ensure_repo_root_on_path()
-
-from demo_features.bouncing_shapes_demo_feature import BouncingShapesBackdropFeature
-from demo_features.controls_demo_feature import ControlsShowcaseFeature
-from demo_features.life_demo_feature import LifeSimulationFeature
-from demo_features.main_demo_feature import MainDemoFeature
-from demo_features.mandelbrot_demo_feature import MandelbrotRenderFeature
-from demo_features.systems_demo_feature import SystemsDemoFeature
+from demo_features.bouncing_shapes import BouncingShapesBackdropFeature
+from demo_features.controls import ControlsShowcaseFeature
+from demo_features.life import LifeSimulationFeature
+from demo_features.main_scene import MainDemoFeature
+from demo_features.mandelbrot import MandelbrotRenderFeature
+from demo_features.systems import SystemsDemoFeature
 
 from gui_do import (
     ActionBindingSpec,

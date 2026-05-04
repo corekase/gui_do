@@ -9,6 +9,10 @@ Generate or update a single-file, complete reference manual at repository root: 
 
 The manual is the primary learning and reference source for gui_do. It must teach the framework end-to-end, from first principles to advanced usage, while staying aligned with current code, tests, demos, and contracts.
 
+## Verbosity Standard
+
+The manual must be genuinely comprehensive and verbose throughout. "Verbose" means: every major concept gets multiple paragraphs of explanation that stand alone as complete understanding, not just terse bullet lists. Readers should be able to understand not only what something does but why it works that way, how it compares to alternatives, and how it connects to adjacent systems. Terse sections are appropriate only for quick-reference appendices and API signatures. Conceptual chapters, system chapters, and integration patterns must each contain substantial prose. The goal is a manual that replaces the need to read source code to understand purpose and design.
+
 ## Objective
 
 Produce a conceptually complete MANUAL.md that:
@@ -80,6 +84,82 @@ Use these top-level sections in this order:
 12. Migration, Versioning, and Deprecation Notes
 13. FAQ and Troubleshooting
 14. Appendix
+
+---
+
+## Conceptual Foundations Chapter Requirements
+
+This chapter is the most important in the manual. It must be written first and treated as the theoretical backbone that every subsequent chapter references back to. It must be very long — many paragraphs per concept, not bullet lists. Each subsection should read as a complete, standalone explanation that a developer could read in isolation and come away with a genuine mental model.
+
+### Data-Driven Design
+
+This subsection must be comprehensive — a minimum of five to eight substantial paragraphs covering all of the following points in depth:
+
+- **What it means**: Explain that data-driven design separates the description of what a program should do from the code that carries out those actions. In gui_do this means that application structure is expressed as configuration data — specs, bindings, and descriptors — rather than as sequences of imperative calls. The runtime receives that data and performs all wiring automatically. A developer describes a scene, its features, its actions, and its windows through spec objects; the framework interprets those specs and builds the live application.
+
+- **The spec pipeline**: Describe in detail how `HostApplicationBindingSpec` and `build_host_application_config` form the entry point. A developer populates spec objects (`FeatureSpec`, `SceneSetupSpec`, `ActionSpec`, `WindowSpec`, and dozens of others) and hands them to the builder. The builder performs a single deterministic pass that resolves all cross-references, validates requirements, and produces a fully wired `HostApplicationConfig` ready to hand to `bootstrap_host_application`. Explain why this two-step (build config then run) design is deliberate: it separates the description phase from the execution phase, making both independently testable.
+
+- **How it differs from imperative wiring**: Describe a concrete contrast. In an imperative approach, adding a keyboard shortcut would require finding the input-handling code, inserting a new branch, wiring a callback, and ensuring cleanup on scene exit. In the data-driven approach, the developer adds one `ActionSpec` entry to the config. The framework picks it up, registers it with the action registry, routes the key through the input map, and tears it down when the scene exits — with no manual wiring. The developer never touches the router.
+
+- **Reorganization without bootstrap impact**: Explain why internal code reorganization — moving a class from one file to another, extracting a presenter into its own module, splitting a feature into logic + presentation companions — never requires changes to bootstrap code. The bootstrap only consumes public class references and spec values, not file paths or module locations. As long as each feature package's `__init__.py` continues to export the same public names, the bootstrap is completely insulated from structural changes inside the package. This is a direct consequence of data-driven design: the data that drives the application (the spec objects and class references) is kept in one place (`__init__.py` surfaces and the config module), not scattered throughout the application's internal structure.
+
+- **Testability**: Explain how data-driven design makes the framework trivially testable at every level. Specs can be constructed and validated in unit tests with no running display. Feature instances can be built with mock hosts. The entire app config can be assembled and inspected without starting the event loop. This determinism is only possible because the application's structure is data, not hidden inside call sequences.
+
+- **The design philosophy behind specs**: Explain that the framework's authors chose to expose richer, named specs over primitive arguments because specs are inherently self-documenting, composable, and forward-compatible. A `ShortcutOverlaySpec` with named fields can be extended with new optional fields in future versions without breaking existing callers. A raw positional-argument API cannot offer the same stability. Specs are also the serialization boundary: they are pure data and could, in principle, be stored, loaded, or generated programmatically.
+
+- **Where the boundary is**: Clarify what is and is not data-driven. The wiring of the application (scene graph, action registry, input routing, feature orchestration) is data-driven. The runtime behavior of individual features (what they do in `on_update`, `handle_event`, and `draw`) is imperative Python inside feature methods. The philosophy is: describe structure declaratively, implement behavior imperatively.
+
+### Reactive Data and Observable State
+
+This subsection must be comprehensive — a minimum of five to seven substantial paragraphs covering all of the following:
+
+- **What reactive data means**: Explain the reactive programming model as it applies to a GUI framework. A value is reactive when changes to it automatically propagate to everything that depends on it, without the producer needing to know who the consumers are. In a traditional imperative GUI, updating a value means manually calling every UI element that displays it. In a reactive model, the value itself holds a list of subscribers and notifies them when it changes. The UI element subscribes once; after that, updates flow automatically.
+
+- **The observable primitives**: Describe `ObservableValue`, `ObservableList`, and `ObservableDict` in depth. `ObservableValue` wraps a single value; any code that calls `.subscribe(callback)` is notified when the value changes. `ObservableList` and `ObservableDict` provide the same notification semantics for mutable collections, with change events that identify what was added, removed, or modified. Explain that these are the building blocks for all reactive state in gui_do and that virtually every piece of live data that drives UI should be expressed as one of these types.
+
+- **Subscription lifecycle and cleanup**: Explain that subscriptions must be managed carefully. A subscription holds a reference back to the subscriber, so failing to unsubscribe when a feature or control is destroyed will result in memory leaks and callbacks firing on dead objects. Explain where to subscribe (typically in `bind_runtime` or `on_create`) and where to unsubscribe (typically in feature teardown or presenter lifecycle cleanup). Describe the pattern of storing subscription handles and calling unsubscribe in cleanup methods.
+
+- **How controls bind to observable state**: Explain the binding model used in gui_do controls. Controls generally expose a value property that accepts either a plain value or an observable. When bound to an observable, the control registers an internal subscription and refreshes its display whenever the observable changes. This means the feature code never needs to touch a control to update its displayed state — it only changes the observable, and the control updates itself. Describe why this is the correct approach: it keeps features decoupled from specific control implementations and makes it easy to swap one control for another without changing the data logic.
+
+- **Derived and computed state**: Describe patterns for building derived state. When one observable should always reflect a function of another (for example, a label text that should always show the count of items in an observable list), the right approach is a subscriber that writes to a second observable whenever the source changes. Explain when this is appropriate versus when a direct binding is better. If `ComputedValue` exists in the public API, describe it specifically; otherwise describe the manual derivation pattern.
+
+- **Cross-feature reactive state**: Explain that observable values are the preferred mechanism for features to share live data. One feature owns an `ObservableValue` and exposes it through its public interface; other features subscribe to it. This is looser coupling than direct method calls: the producing feature never knows who is observing, and observers do not depend on the producer's internal implementation. Describe how this is set up during `bind_runtime` when features can access each other's state through the host or through a shared state store.
+
+- **Anti-patterns**: Describe common reactive mistakes in detail: polling an observable in `on_update` instead of subscribing (creates unnecessary CPU load and introduces latency), subscribing in `build` before the runtime is ready (subscriptions created before bind_runtime may fire before controls exist), forgetting to unsubscribe (produces memory leaks and phantom callbacks), and sharing mutable plain Python objects across features instead of observables (breaks the reactive contract and prevents automatic UI updates).
+
+### Feature Composition and Lifecycles
+
+This subsection must be comprehensive — a minimum of six to eight substantial paragraphs covering all of the following:
+
+- **What a Feature is**: Explain that a Feature is the primary unit of application behavior in gui_do. It is a self-contained object that declares what resources it requires from the host, builds its own UI elements, registers its own event handlers, and tears itself down cleanly. Features are composable: an application is a collection of features that coexist in scenes, each managing its own slice of the UI and data. The framework orchestrates their lifecycle phases in the correct order and routes events to the correct feature.
+
+- **Feature types and when to use each**: Give a detailed explanation of each Feature type:
+  - `DirectFeature`: Renders directly to the screen surface on every update. Use for background elements (animated backdrops, full-screen effects) that do not need the control tree. It is the lowest-overhead feature type.
+  - `Feature`: The standard feature. Builds controls in the scene's control tree during `build`. Participates in focus, hit-testing, and event routing. Use for any feature that shows interactive UI.
+  - `LogicFeature`: Has no UI of its own. Exists to hold domain logic, manage shared state, run background computations, and publish results that other features react to. Use when behavior needs to be separated from presentation and tested in isolation.
+  - `RoutedFeature`: A Feature that also participates in the action routing infrastructure. It can define route targets that receive named messages and dispatch them to specific handler methods. Use when a feature must respond to framework-level actions or coordinate with the action registry.
+
+- **Lifecycle phases in depth**: Describe every lifecycle phase with precision and detail:
+  - `build(host)`: Called once when the scene is being constructed. Use this phase to create controls, add them to the scene tree, build window specs, and set up any static structure that does not depend on runtime state. `host` provides all resources declared in `HOST_REQUIREMENTS`. Controls created here exist for the lifetime of the scene.
+  - `bind_runtime(host)`: Called after all features in the scene have completed `build`. By this point, all controls exist and all sibling features are built. Use this phase to subscribe to observable values, bind controls to data, register callbacks, initialize state from runtime sources (screen size, settings, etc.), and wire up cross-feature interactions.
+  - `handle_event(host, event)`: Called for every pygame event that reaches the feature. The routing layer filters events by scene, focus, and overlay state before calling this method. Return `True` to consume the event and stop further propagation; return `False` or `None` to pass it on.
+  - `on_update(host, dt_seconds)`: Called on every frame. Use for animations, timers, polling background results, and any per-frame state updates. Keep this method fast; avoid expensive computation here.
+  - `draw(host, screen)`: Called on every frame after `on_update`. Use for custom drawing operations that bypass the control tree (particles, canvas effects, overlays). Most features do not need this hook.
+
+- **HOST_REQUIREMENTS protocol**: Explain the `HOST_REQUIREMENTS` dictionary in detail. It declares what attributes the host must provide for each lifecycle method. The framework validates these at startup and provides clear error messages for missing bindings. This protocol is how features express their dependencies declaratively — a feature says "I need `app`, `screen_rect`, and `scene_presentation` in `build`" and the framework ensures those are available before calling the method. This replaces constructor injection and makes dependency relationships explicit and machine-verifiable.
+
+- **Feature messaging and coordination**: Describe the inter-feature communication model. Features do not hold references to each other directly. Instead, they communicate through `FeatureMessage` publishing. A feature publishes a message by name with optional payload; the framework delivers it to any feature that has registered a handler for that name. This is the loose-coupling mechanism that prevents features from depending on each other's implementations. Describe common patterns: a LogicFeature publishing a "data_ready" message when a background computation finishes, a RoutedFeature listening for route-targeted messages to update its display, and features using observable state as a shared bus when tighter coupling is acceptable.
+
+- **Scene assignment and multi-scene composition**: Explain how features declare their scene membership via `scene_name`. A feature belongs to exactly one scene (or the global scene). The framework activates and deactivates features as scenes transition, calling lifecycle teardown on the departing scene's features and lifecycle build/bind on the arriving scene's features. Describe how this makes scene transitions safe: features from the previous scene do not receive events or update calls after the transition, so there is no risk of stale state from one scene leaking into another.
+
+- **The folder/package composition convention**: Explain the established organizational convention for demo_features and how it should be followed in any similar project. Each feature package lives in its own folder. The `__init__.py` is the sole public surface — it exports the Feature class and any public types, and nothing else. Internal files are separated by concern: the feature file owns the Feature class and lifecycle methods; the presenter file owns the WindowPresenter; the specs file owns shared constants and spec objects; logic companion files own background computation; standalone data types live in their own files. This separation makes each file's purpose immediately clear from its name and prevents concerns from bleeding across files. Crucially, the bootstrap code never imports from internal submodules — it only imports from the package surface. This means any internal reorganization is completely transparent to bootstrap consumers.
+
+- **Composition recipes**: Describe the most common multi-feature patterns:
+  - Logic + presentation split: a `LogicFeature` runs computations and publishes results via observables; a `RoutedFeature` subscribes to those observables and drives the UI. This is the cleanest separation and makes both halves independently testable.
+  - Presenter pattern: a `WindowPresenter` subclass handles window layout and control construction, while the Feature handles lifecycle and routing. The Feature lazily imports the presenter in `build` to avoid circular imports.
+  - Background feature pattern: a `LogicFeature` drives a cooperative scheduler or coroutine for long-running work, publishing progress and results to observables that the UI feature displays.
+
+---
 
 ## Main Systems Reference Requirements
 

@@ -9,13 +9,6 @@ and SceneSpatialIndex.
 
 from __future__ import annotations
 
-try:
-    from demo_features._import_bootstrap import ensure_repo_root_on_path
-except ModuleNotFoundError:
-    from _import_bootstrap import ensure_repo_root_on_path
-
-ensure_repo_root_on_path()
-
 from typing import Optional
 
 import pygame
@@ -137,12 +130,10 @@ from gui_do import (
     TileMap,
     TileSet,
     ToggleControl,
-    ui_property,
     WaitUntil,
     WindowControl,
 )
 from gui_do import set_window_visible_state
-from gui_do.controls.chrome.window_presenter import WindowPresenter
 from gui_do.features.data_driven_runtime import (
     ActiveTabUpdateRouter,
     bind_routed_feature_lifecycle,
@@ -162,6 +153,9 @@ from gui_do.features.data_driven_runtime import (
     setup_feature_presenter_tabs_from_window_content,
     TabLayoutContext,
 )
+
+from .demo_inspectable import DemoInspectable
+from .set_int_command import SetIntCommand
 
 _TAB_H = 36
 
@@ -462,73 +456,6 @@ _BUTTON_DESCRIPTOR_SPECS = (
 # Inspectable demo target
 # ---------------------------------------------------------------------------
 
-class _DemoInspectable:
-    """Simple object decorated with ``@ui_property`` for PropertyInspectorPanel demo."""
-
-    def __init__(self) -> None:
-        self._opacity: float = 1.0
-        self._speed: int = 50
-        self._label: str = "demo"
-        self._active: bool = True
-
-    @property
-    @ui_property(label="Opacity", type="float", min=0.0, max=1.0, group="Appearance")
-    def opacity(self) -> float:
-        return self._opacity
-
-    @opacity.setter
-    def opacity(self, v: float) -> None:
-        self._opacity = float(v)
-
-    @property
-    @ui_property(label="Speed", type="int", min=0, max=200, group="Behaviour")
-    def speed(self) -> int:
-        return self._speed
-
-    @speed.setter
-    def speed(self, v: int) -> None:
-        self._speed = int(v)
-
-    @property
-    @ui_property(label="Label", type="str", group="Content")
-    def label(self) -> str:
-        return self._label
-
-    @label.setter
-    def label(self, v: str) -> None:
-        self._label = str(v)
-
-    @property
-    @ui_property(label="Active", type="bool", group="Behaviour")
-    def active(self) -> bool:
-        return self._active
-
-    @active.setter
-    def active(self, v: bool) -> None:
-        self._active = bool(v)
-
-
-class _SetIntCommand:
-    """Small demo command used by the New Arch tab undo context demo."""
-
-    def __init__(self, target: dict[str, int], key: str, new_value: int, description: str) -> None:
-        self._target = target
-        self._key = key
-        self._new_value = int(new_value)
-        self._old_value = int(target.get(key, 0))
-        self._description = str(description)
-
-    @property
-    def description(self) -> str:
-        return self._description
-
-    def execute(self) -> None:
-        self._target[self._key] = self._new_value
-
-    def undo(self) -> None:
-        self._target[self._key] = self._old_value
-
-
 class SystemsDemoFeature(RoutedFeature):
     """Demonstrates all 10 new gui_do systems in a tabbed window."""
 
@@ -582,7 +509,7 @@ class SystemsDemoFeature(RoutedFeature):
         self._main_scene = None
 
         # Props tab — PropertyInspectorPanel demo
-        self._demo_inspectable = _DemoInspectable()
+        self._demo_inspectable = DemoInspectable()
         self._prop_inspector_panel: Optional[PropertyInspectorPanel] = None
         self._prop_selected_label: Optional[LabelControl] = None
 
@@ -695,10 +622,11 @@ class SystemsDemoFeature(RoutedFeature):
     # ------------------------------------------------------------------
 
     def build(self, host) -> None:
+        from .systems_window_presenter import SystemsWindowPresenter
         self.window = create_feature_presented_window(
             host,
             feature=self,
-            presenter_cls=_SystemsWindowPresenter,
+            presenter_cls=SystemsWindowPresenter,
             spec=_SYSTEMS_WINDOW_SPEC,
             window_control_cls=WindowControl,
         )
@@ -2503,7 +2431,7 @@ class SystemsDemoFeature(RoutedFeature):
         history = self._arch_undo_context.active
         if history is None:
             return
-        history.push(_SetIntCommand(self._arch_undo_state, key, next_value, f"Set {key}={next_value}"))
+        history.push(SetIntCommand(self._arch_undo_state, key, next_value, f"Set {key}={next_value}"))
         self._update_arch_status(
             f"UndoContextManager[{key}] set value={self._arch_undo_state.get(key, 0)}"
         )
@@ -2568,33 +2496,3 @@ class SystemsDemoFeature(RoutedFeature):
             runtime = runtime_map.get("main")
             return getattr(runtime, "scene", None)
         return None
-
-
-class _SystemsWindowPresenter(WindowPresenter):
-
-    def __init__(self, feature, host):
-        super().__init__(None)
-        self.feature = feature
-        self.host = host
-        self.tab = None
-
-    def on_create(self):
-        # Tab builders use feature.window.add(...), so ensure this reference
-        # exists before registering/building tab content.
-        self.feature.window = self.window
-        self.feature.demo = self.host
-        self.tab = setup_feature_presenter_tabs_from_window_content(
-            self,
-            window=self.window,
-            spec=_SYSTEMS_TABBED_PRESENTER_SPEC,
-            tab_specs=_SYSTEMS_TAB_SPECS,
-            on_change=self.feature._on_tab_change,
-            tab_manager=self.feature._tabs,
-            feature=self.feature,
-            host=self.host,
-            on_activate_callbacks=(
-                ("locale", lambda: setattr(self.feature, "_text_flow_dirty", True)),
-            ),
-        )
-        self.feature.tab = self.tab
-        self.window.visible = False

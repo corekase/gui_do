@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-try:
-    from demo_features._import_bootstrap import ensure_repo_root_on_path
-except ModuleNotFoundError:
-    from _import_bootstrap import ensure_repo_root_on_path
-
-ensure_repo_root_on_path()
-
 from pygame import Rect
 import pygame
 
@@ -104,7 +97,8 @@ from gui_do.features.data_driven_runtime import (
     setup_routed_runtime,
 )
 from gui_do.features.feature_lifecycle import ControlPlacementSpec
-from demo_features.control_gallery_layout_manager import ControlGalleryLayoutManager
+from demo_features.controls.control_gallery_layout_manager import ControlGalleryLayoutManager
+from .showcase_inspectable import ShowcaseInspectable
 
 _CONTROLS_RUNTIME_SPEC = RoutedRuntimeSpec(
     scene_name="control_showcase",
@@ -966,55 +960,6 @@ def build_progress_column_specs(*, stack, col_w, slot_height_for, overflow_gap):
     return indeterminate_bar, anim_ctrl, specs, int(anim_slot_rect.bottom)
 
 
-class _ShowcaseInspectable:
-    """Simple object with @ui_property decorators for the PropertyInspectorPanel showcase."""
-
-    def __init__(self) -> None:
-        self._label: str = "Showcase"
-        self._value: float = 0.5
-        self._active: bool = True
-        self._priority: int = 1
-
-    @property
-    @ui_property(label="Label", type="str", group="Display")
-    def label(self) -> str:
-        return self._label
-
-    @label.setter
-    def label(self, v: str) -> None:
-        self._label = str(v)
-
-    @property
-    @ui_property(label="Value", type="float", min=0.0, max=1.0, group="Display")
-    def value(self) -> float:
-        return self._value
-
-    @value.setter
-    def value(self, v: float) -> None:
-        self._value = float(v)
-
-    @property
-    @ui_property(label="Active", type="bool", group="State")
-    def active(self) -> bool:
-        return self._active
-
-    @active.setter
-    def active(self, v: bool) -> None:
-        self._active = bool(v)
-
-    @property
-    @ui_property(label="Priority", type="int", min=1, max=10, group="State")
-    def priority(self) -> int:
-        return self._priority
-
-    @priority.setter
-    def priority(self, v: int) -> None:
-        self._priority = int(v)
-
-
-
-
-
 class ControlsShowcaseFeature(Feature):
     """Render all controls except task panel/window in grouped, non-uniform layouts."""
 
@@ -1045,7 +990,7 @@ class ControlsShowcaseFeature(Feature):
     SCROLLBAR_DEFAULT_OFFSET = 0
     SCROLLBAR_STEP = 24
 
-    IMAGE_PATH = "demo_features/data/images/realize.png"
+    IMAGE_PATH = "data/images/realize.png"
 
     TASK_PANEL_HEIGHT = 50
     TASK_PANEL_HIDDEN_PEEK_PIXELS = 6
@@ -1365,7 +1310,7 @@ class ControlsShowcaseFeature(Feature):
             label_height=self.LABEL_HEIGHT,
             label_gap=self.LABEL_GAP,
             prop_inner_h=160,
-            inspectable=_ShowcaseInspectable(),
+            inspectable=ShowcaseInspectable(),
             include_property_inspector=True,
         )
         self._registry.register(dock_specs)

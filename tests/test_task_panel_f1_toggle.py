@@ -2,7 +2,7 @@ import unittest
 
 import pygame
 
-from demo_features.controls_demo_feature import ControlsShowcaseFeature
+from demo_features.controls import ControlsShowcaseFeature
 from gui_do.events.gui_event import EventType
 from gui_do.events.keyboard_manager import KeyboardManager
 

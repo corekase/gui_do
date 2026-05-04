@@ -1,6 +1,6 @@
 import unittest
 
-from demo_features.mandelbrot_demo_feature import (
+from demo_features.mandelbrot import (
     MANDEL_KIND_RUNNING_ITERATIVE,
     MANDEL_KIND_STATUS,
     MANDEL_STATUS_SCOPE,
