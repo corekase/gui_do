@@ -80,6 +80,46 @@ from gui_do import (
     reactive_batch,
     RecordedEvent,
     ResponsiveLayout,
+    # N1 – Scoped Service Graph
+    ServiceKey,
+    ServiceScope,
+    ScopeStack,
+    # N2 – Cancelable Dataflow Pipeline
+    CancellationToken,
+    DataflowPipeline,
+    PipelineStage,
+    # N3 – Transactional App State Store
+    AppStateStore,
+    StateTransaction,
+    # N4 – Adaptive Constraint Layout v2
+    ConstraintAttr,
+    ConstraintLayoutEngine,
+    ConstraintSet,
+    AdaptivePolicy,
+    LayoutConstraint,
+    resolve_adaptive_policy,
+    # N5 – Unified Virtualization Core
+    MeasurePolicy,
+    RecyclePool,
+    VirtualizationCore,
+    VirtualizedWindow,
+    # N6 – Interaction State Machine
+    InteractionContext,
+    InteractionPhase,
+    InteractionStateMachine,
+    InteractionTransition,
+    # N7 – Schema-Driven Form Runtime
+    FieldGraphSchema,
+    FieldSchema,
+    SchemaFormRuntime,
+    ValidationPolicy,
+    # N8 – Portable Snapshot & Migration Layer
+    MigrationRegistry,
+    MigrationStep,
+    SchemaVersion,
+    SnapshotMigrator,
+    make_snapshot,
+    read_version,
     RoutedFeature,
     SceneSpatialIndex,
     SceneSnapshot,
@@ -153,6 +193,7 @@ _SYSTEMS_TAB_ENTRIES = (
     ("cache", "Cache"),
     ("shortcuts", "Shortcuts"),
     ("arch2", "New Arch"),
+    ("arch3", "New Sys"),
 )
 _SYSTEMS_TAB_SPECS = build_tab_builder_specs(_SYSTEMS_TAB_ENTRIES)
 
@@ -620,6 +661,21 @@ class SystemsDemoFeature(RoutedFeature):
         self._arch_field_validator: Optional[AsyncFieldValidator] = None
         self._arch_form_validator: Optional[AsyncFormValidator] = None
 
+        # New Sys tab (N1–N8 second Oracle round)
+        self._ns_status_label: Optional[LabelControl] = None
+        self._ns_scope_stack: Optional[ScopeStack] = None
+        self._ns_pipeline: Optional[DataflowPipeline] = None
+        self._ns_store: Optional[AppStateStore] = None
+        self._ns_store_sel = None  # StateSelector[str]
+        self._ns_store_label: Optional[LabelControl] = None
+        self._ns_ism: Optional[InteractionStateMachine] = None
+        self._ns_ism_label: Optional[LabelControl] = None
+        self._ns_schema_runtime: Optional[SchemaFormRuntime] = None
+        self._ns_schema_label: Optional[LabelControl] = None
+        self._ns_migrator: Optional[SnapshotMigrator] = None
+        self._ns_snap_version = SchemaVersion(1, 0)
+        self._ns_snap_label: Optional[LabelControl] = None
+
         register_tab_update_handlers(
             self._tab_updates,
             (
@@ -630,6 +686,7 @@ class SystemsDemoFeature(RoutedFeature):
                 ("tilemap", self._update_tilemap_tab_frame),
                 ("progress", self._update_progress_tab_frame),
                 ("arch2", self._update_arch2_tab_frame),
+                ("arch3", self._update_arch3_tab_frame),
             ),
         )
 
@@ -2073,6 +2130,298 @@ class SystemsDemoFeature(RoutedFeature):
         if self._arch_form_validator is not None:
             self._arch_form_validator.update(dt)
             self._update_arch_form_status()
+
+    # ------------------------------------------------------------------
+    # Tab: New Sys — N1 ServiceScope, N2 DataflowPipeline, N3 AppStateStore,
+    #               N4 AdaptiveConstraintLayout, N5 VirtualizationCore,
+    #               N6 InteractionStateMachine, N7 SchemaFormRuntime,
+    #               N8 SnapshotMigrator
+    # ------------------------------------------------------------------
+
+    _NS_V1 = SchemaVersion(1, 0)
+    _NS_V2 = SchemaVersion(2, 0)
+    _NS_V3 = SchemaVersion(3, 0)
+
+    def _build_arch3_tab(self, host, rect: Rect) -> list:
+        from pygame import Rect as _Rect
+        ctx = TabLayoutContext(self.window, rect)
+
+        ctx.add_label(
+            "ns_title", 40,
+            "N1–N8 systems: ServiceScope · DataflowPipeline · AppStateStore · "
+            "ConstraintLayout v2 · VirtualizationCore · InteractionSM · "
+            "SchemaFormRuntime · SnapshotMigrator",
+            advance=46,
+        )
+
+        # ── N1: Scoped Service Graph ────────────────────────────────────
+        _DB_KEY: ServiceKey[str] = ServiceKey("db_url")
+        self._ns_scope_stack = ScopeStack()
+        self._ns_scope_stack.root.bind(_DB_KEY, "postgres://prod/main")
+
+        # ── N2: Cancelable Dataflow Pipeline ───────────────────────────
+        self._ns_pipeline = DataflowPipeline([
+            PipelineStage("trim", lambda v, t: v.strip()),
+            PipelineStage("upper", lambda v, t: v.upper()),
+            PipelineStage("tag", lambda v, t: f"[PROCESSED] {v}"),
+        ])
+
+        # ── N3: Transactional App State Store ──────────────────────────
+        self._ns_store = AppStateStore({"counter": 0, "user": "guest"})
+        self._ns_store_sel = self._ns_store.select(
+            lambda s: f"counter={s.get('counter', 0)}, user={s.get('user', '?')!r}"
+        )
+
+        # ── N6: Interaction State Machine ──────────────────────────────
+        self._ns_ism = InteractionStateMachine.with_standard_pointer_transitions()
+        self._ns_ism.add_transition(InteractionTransition(
+            InteractionPhase.HOVER, "click", InteractionPhase.SELECTED,
+        ))
+
+        # ── N7: Schema-Driven Form Runtime ────────────────────────────
+        _schema = FieldGraphSchema([
+            FieldSchema("name", required=True,
+                        validators=[lambda v: None if len(str(v)) >= 2 else "Too short"]),
+            FieldSchema("email", required=True,
+                        validators=[lambda v: None if "@" in str(v) else "Invalid email"]),
+            FieldSchema("newsletter", field_type=bool, default=False),
+            FieldSchema("promo_code",
+                        depends_on=["newsletter"],
+                        visible_when=lambda vals: bool(vals.get("newsletter"))),
+        ])
+        self._ns_schema_runtime = SchemaFormRuntime(_schema, ValidationPolicy.ON_CHANGE)
+
+        # ── N8: Snapshot & Migration Layer ────────────────────────────
+        _reg = MigrationRegistry()
+        _reg.register(MigrationStep(
+            self._NS_V1, self._NS_V2,
+            lambda d: {**d, "score": d.get("score", 0) * 10, "schema": 2},
+        ))
+        _reg.register(MigrationStep(
+            self._NS_V2, self._NS_V3,
+            lambda d: {**d, "rank": "gold" if d.get("score", 0) >= 100 else "silver", "schema": 3},
+        ))
+        self._ns_migrator = SnapshotMigrator(_reg)
+        self._ns_snap_version = self._NS_V1
+
+        # ── Status label ───────────────────────────────────────────────
+        self._ns_store_label = ctx.add_label(
+            "ns_store_lbl", 22,
+            f"AppStateStore → {self._ns_store_sel.value}",
+            advance=28,
+        )
+        self._ns_ism_label = ctx.add_label(
+            "ns_ism_lbl", 22,
+            f"InteractionSM phase: {self._ns_ism.phase.name}",
+            advance=28,
+        )
+        self._ns_snap_label = ctx.add_label(
+            "ns_snap_lbl", 22,
+            f"Snapshot v{self._ns_snap_version} — press 'Migrate +1' to advance",
+            advance=28,
+        )
+        self._ns_schema_label = ctx.add_label(
+            "ns_schema_lbl", 22,
+            "SchemaFormRuntime: set name+email to validate",
+            advance=28,
+        )
+
+        # ── Action buttons ────────────────────────────────────────────
+        ctx.add_button_row(height=28, gap=8, width=148, advance=36, specs=(
+            ("ns_scope_btn", "N1: Scope Child", self._ns_demo_scope),
+            ("ns_pipe_btn", "N2: Run Pipeline", self._ns_demo_pipeline),
+            ("ns_store_btn", "N3: Dispatch", self._ns_demo_store),
+        ))
+        ctx.add_button_row(height=28, gap=8, width=148, advance=36, specs=(
+            ("ns_layout_btn", "N4: Solve Layout", self._ns_demo_layout),
+            ("ns_virt_btn", "N5: Virt Window", self._ns_demo_virt),
+            ("ns_ism_btn", "N6: Advance SM", self._ns_demo_ism),
+        ))
+        ctx.add_button_row(height=28, gap=8, width=148, advance=36, specs=(
+            ("ns_form_btn", "N7: Validate Form", self._ns_demo_form),
+            ("ns_migrate_btn", "N8: Migrate +1", self._ns_demo_migrate),
+        ))
+
+        self._ns_status_label = ctx.add_label(
+            "ns_status",
+            max(50, ctx.remaining_height(margin=ctx.pad)),
+            "Press any button to exercise the system.",
+        )
+        return ctx.build()
+
+    def _update_arch3_tab_frame(self, _host, _dt: float) -> None:
+        """Refresh reactive labels from store selector."""
+        if self._ns_store_sel is not None and self._ns_store_label is not None:
+            self._ns_store_label.text = (
+                f"AppStateStore → {self._ns_store_sel.value}"
+            )
+
+    # ── N1 ──────────────────────────────────────────────────────────────
+    def _ns_demo_scope(self) -> None:
+        if self._ns_scope_stack is None:
+            return
+        _KEY: ServiceKey[str] = ServiceKey("db_url")
+        # Root already has a binding; child overrides it
+        with self._ns_scope_stack.push() as child:
+            child.bind(_KEY, "postgres://staging/test")
+            child_val = child.get(_KEY)
+        root_val = self._ns_scope_stack.root.get_optional(_KEY)
+        self._ns_set_status(
+            f"N1 ServiceScope:\n"
+            f"  root binding  → {root_val!r}\n"
+            f"  child override → {child_val!r} (disposed on exit)"
+        )
+
+    # ── N2 ──────────────────────────────────────────────────────────────
+    def _ns_demo_pipeline(self) -> None:
+        if self._ns_pipeline is None:
+            return
+        handle = self._ns_pipeline.run("  hello world  ")
+        result = handle.result if handle.is_done and not handle.is_cancelled else "cancelled"
+        self._ns_set_status(
+            f"N2 DataflowPipeline (trim→upper→tag):\n  input:  '  hello world  '\n  output: {result!r}"
+        )
+
+    # ── N3 ──────────────────────────────────────────────────────────────
+    def _ns_demo_store(self) -> None:
+        if self._ns_store is None:
+            return
+        with StateTransaction(self._ns_store):
+            old = self._ns_store.get("counter", 0)
+            self._ns_store.dispatch({"counter": int(old) + 1, "user": "demo_user"})
+        self._ns_set_status(
+            f"N3 AppStateStore dispatched in transaction:\n  {self._ns_store_sel.value if self._ns_store_sel else '?'}"
+        )
+
+    # ── N4 ──────────────────────────────────────────────────────────────
+    def _ns_demo_layout(self) -> None:
+        from pygame import Rect as _Rect
+        engine = ConstraintLayoutEngine()
+        engine.set_initial_rect("header", _Rect(0, 0, 600, 40))
+        engine.set_initial_rect("body",   _Rect(0, 0, 600, 200))
+        cs = ConstraintSet()
+        cs.add(LayoutConstraint("header", ConstraintAttr.LEFT,   0))
+        cs.add(LayoutConstraint("header", ConstraintAttr.TOP,    0))
+        cs.add(LayoutConstraint("header", ConstraintAttr.WIDTH,  1.0, is_fraction=True))
+        cs.add(LayoutConstraint("header", ConstraintAttr.HEIGHT, 40))
+        cs.add(LayoutConstraint("body",   ConstraintAttr.LEFT,   0))
+        cs.add(LayoutConstraint("body",   ConstraintAttr.TOP,    40))
+        cs.add(LayoutConstraint("body",   ConstraintAttr.WIDTH,  1.0, is_fraction=True))
+        container = _Rect(0, 0, 760, 400)
+        # AdaptivePolicy selects constraints based on viewport width
+        policies = [
+            AdaptivePolicy("desktop", 700, list(cs.all_constraints)),
+            AdaptivePolicy("mobile",  0,   [LayoutConstraint("header", ConstraintAttr.HEIGHT, 56)]),
+        ]
+        active_policy = resolve_adaptive_policy(policies, container)
+        result = engine.solve(cs, container)
+        self._ns_set_status(
+            f"N4 ConstraintLayoutEngine (container 760×400):\n"
+            f"  policy={active_policy.name!r}\n"
+            f"  header={result['header']}\n"
+            f"  body  ={result['body']}"
+        )
+
+    # ── N5 ──────────────────────────────────────────────────────────────
+    def _ns_demo_virt(self) -> None:
+        mp = MeasurePolicy(item_height=32)
+        win = VirtualizedWindow(viewport_height=160, overscan=2, policy=mp)
+        pool: RecyclePool[str] = RecyclePool(lambda: "cell")
+        bound_calls: list = []
+
+        def _bind(cell, idx):
+            bound_calls.append(idx)
+
+        core: VirtualizationCore[str] = VirtualizationCore(win, pool, _bind)
+        pairs = core.refresh(scroll_offset=96, item_count=50)
+        indices = [idx for idx, _ in pairs]
+        first, last = win.visible_range()
+        self._ns_set_status(
+            f"N5 VirtualizationCore (32px items, 160px viewport, scroll=96):\n"
+            f"  visible range: [{first}, {last}]  rendered: {len(pairs)} cells\n"
+            f"  pool size: {pool.pool_size}  bound indices: {indices}"
+        )
+
+    # ── N6 ──────────────────────────────────────────────────────────────
+    def _ns_demo_ism(self) -> None:
+        if self._ns_ism is None:
+            return
+        phase = self._ns_ism.phase
+        # Cycle through a plausible sequence
+        _sequence = {
+            InteractionPhase.IDLE:     ("pointer_enter", "IDLE → HOVER"),
+            InteractionPhase.HOVER:    ("pointer_down",  "HOVER → PRESSED"),
+            InteractionPhase.PRESSED:  ("pointer_up",    "PRESSED → HOVER"),
+            InteractionPhase.SELECTED: ("reset",         "SELECTED → ? (reset)"),
+            InteractionPhase.CANCELLED:("reset",         "CANCELLED → IDLE"),
+        }
+        event_kind, description = _sequence.get(phase, ("cancel", f"{phase.name} → CANCELLED"))
+        ctx = InteractionContext(event_kind=event_kind)
+        fired = self._ns_ism.handle_event(ctx)
+        new_phase = self._ns_ism.phase
+        if self._ns_ism_label is not None:
+            self._ns_ism_label.text = f"InteractionSM phase: {new_phase.name}"
+        self._ns_set_status(
+            f"N6 InteractionStateMachine:\n"
+            f"  event='{event_kind}' fired={fired}\n"
+            f"  {phase.name} → {new_phase.name}\n  ({description})"
+        )
+
+    # ── N7 ──────────────────────────────────────────────────────────────
+    def _ns_demo_form(self) -> None:
+        if self._ns_schema_runtime is None:
+            return
+        rt = self._ns_schema_runtime
+        # Toggle between a valid and an invalid payload to show form lifecycle
+        name_val = rt.get_value("name")
+        if str(name_val).strip() == "":
+            rt.set_value("name", "Alice")
+            rt.set_value("email", "alice@example.com")
+            rt.set_value("newsletter", True)
+            rt.set_value("promo_code", "SUMMER25")
+            action = "populated with valid values"
+        else:
+            rt.set_value("name", "")
+            rt.set_value("email", "not-an-email")
+            rt.set_value("newsletter", False)
+            action = "reset to invalid state"
+        valid = rt.validate_all()
+        errors = {n: rt.get_errors(n) for n in rt.field_names() if rt.get_errors(n)}
+        visible = [n for n in rt.field_names() if rt.is_visible(n)]
+        if self._ns_schema_label is not None:
+            self._ns_schema_label.text = (
+                f"SchemaFormRuntime valid={valid} | visible fields: {visible}"
+            )
+        self._ns_set_status(
+            f"N7 SchemaFormRuntime ({action}):\n"
+            f"  valid={valid}  visible={visible}\n"
+            f"  errors={errors}"
+        )
+
+    # ── N8 ──────────────────────────────────────────────────────────────
+    def _ns_demo_migrate(self) -> None:
+        if self._ns_migrator is None:
+            return
+        current_v = self._ns_snap_version
+        target_v = SchemaVersion(current_v.major + 1, 0)
+        snap = make_snapshot(current_v, {"score": 5 if current_v == self._NS_V1 else 50})
+        can = self._ns_migrator.can_migrate(current_v, target_v)
+        if can:
+            result = self._ns_migrator.migrate(snap, target_v)
+            self._ns_snap_version = target_v
+            migrated_data = result["data"]
+            label = f"v{current_v} → v{target_v}: {migrated_data}"
+        else:
+            # Wrap around back to v1
+            self._ns_snap_version = self._NS_V1
+            label = f"No path v{current_v}→v{target_v}; reset to v{self._NS_V1}"
+        if self._ns_snap_label is not None:
+            self._ns_snap_label.text = f"Snapshot now v{self._ns_snap_version}"
+        self._ns_set_status(f"N8 SnapshotMigrator:\n  {label}")
+
+    def _ns_set_status(self, message: str) -> None:
+        if self._ns_status_label is not None:
+            self._ns_status_label.text = message
 
     def _update_arch_status(self, message: str) -> None:
         if self._arch_status_label is None:

@@ -551,6 +551,103 @@ from .state.undo_context_manager import UndoContextManager
 
 from .forms.async_form_validator import AsyncFieldValidator, AsyncFormValidator
 
+# ============================================================================
+# TIER 25: SCOPED SERVICE GRAPH
+# ============================================================================
+# Hierarchical typed dependency injection scopes.
+
+from .app.service_scope import ServiceKey, ServiceScope, ScopeStack
+
+# ============================================================================
+# TIER 26: CANCELABLE DATAFLOW PIPELINE
+# ============================================================================
+# Thread-safe multi-stage processing pipeline with stale-gen cancellation.
+
+from .scheduling.dataflow_pipeline import (
+    CancellationToken,
+    PipelineStage,
+    DataflowPipeline,
+    PipelineHandle,
+)
+
+# ============================================================================
+# TIER 27: TRANSACTIONAL APP STATE STORE
+# ============================================================================
+# Single source-of-truth state with selectors, transactions, and snapshots.
+
+from .state.app_state_store import (
+    AppStateStore,
+    StateSelector,
+    StateTransaction,
+)
+
+# ============================================================================
+# TIER 28: ADAPTIVE CONSTRAINT LAYOUT v2
+# ============================================================================
+# Declarative priority-based constraint solver with adaptive viewport policies.
+
+from .layout.adaptive_constraint_layout import (
+    ConstraintAttr,
+    LayoutConstraint,
+    ConstraintSet,
+    ConstraintLayoutEngine,
+    AdaptivePolicy,
+    resolve_adaptive_policy,
+)
+
+# ============================================================================
+# TIER 29: UNIFIED VIRTUALIZATION CORE
+# ============================================================================
+# List/tree/grid windowing engine with recycle pool and identity tracking.
+
+from .controls.data.virtualization_core import (
+    MeasureMode,
+    MeasurePolicy,
+    VirtualizedWindow,
+    RecyclePool,
+    VirtualizationCore,
+)
+
+# ============================================================================
+# TIER 30: INTERACTION STATE MACHINE FRAMEWORK
+# ============================================================================
+# Pointer/keyboard/gesture phase tracking with guarded transitions.
+
+from .events.interaction_state_machine import (
+    InteractionPhase,
+    InteractionContext,
+    InteractionTransition,
+    InteractionStateMachine,
+)
+
+# ============================================================================
+# TIER 31: SCHEMA-DRIVEN FORM RUNTIME
+# ============================================================================
+# Field graph, dependency visibility, and policy-based validation.
+
+from .forms.schema_form_runtime import (
+    FieldSchema,
+    FieldGraphSchema,
+    ValidationPolicy,
+    SchemaFormRuntime,
+)
+
+# ============================================================================
+# TIER 32: PORTABLE SNAPSHOT & MIGRATION LAYER
+# ============================================================================
+# Versioned persistence with BFS migration graph and composable steps.
+
+from .persistence.snapshot_migration import (
+    SchemaVersion,
+    VersionedSnapshot,
+    MigrationStep,
+    MigrationRegistry,
+    SnapshotMigrator,
+    MigrationError,
+    make_snapshot,
+    read_version,
+)
+
 
 # ============================================================================
 # PUBLIC API DEFINITION
@@ -1019,4 +1116,49 @@ __all__ = [
     "apply_host_main_accessibility",
     # Tier 19: INFRASTRUCTURE
     "UiEngine",
+    # Tier 25: SCOPED SERVICE GRAPH
+    "ServiceKey",
+    "ServiceScope",
+    "ScopeStack",
+    # Tier 26: CANCELABLE DATAFLOW PIPELINE
+    "CancellationToken",
+    "PipelineStage",
+    "DataflowPipeline",
+    "PipelineHandle",
+    # Tier 27: TRANSACTIONAL APP STATE STORE
+    "AppStateStore",
+    "StateSelector",
+    "StateTransaction",
+    # Tier 28: ADAPTIVE CONSTRAINT LAYOUT v2
+    "ConstraintAttr",
+    "LayoutConstraint",
+    "ConstraintSet",
+    "ConstraintLayoutEngine",
+    "AdaptivePolicy",
+    "resolve_adaptive_policy",
+    # Tier 29: UNIFIED VIRTUALIZATION CORE
+    "MeasureMode",
+    "MeasurePolicy",
+    "VirtualizedWindow",
+    "RecyclePool",
+    "VirtualizationCore",
+    # Tier 30: INTERACTION STATE MACHINE FRAMEWORK
+    "InteractionPhase",
+    "InteractionContext",
+    "InteractionTransition",
+    "InteractionStateMachine",
+    # Tier 31: SCHEMA-DRIVEN FORM RUNTIME
+    "FieldSchema",
+    "FieldGraphSchema",
+    "ValidationPolicy",
+    "SchemaFormRuntime",
+    # Tier 32: PORTABLE SNAPSHOT & MIGRATION LAYER
+    "SchemaVersion",
+    "VersionedSnapshot",
+    "MigrationStep",
+    "MigrationRegistry",
+    "SnapshotMigrator",
+    "MigrationError",
+    "make_snapshot",
+    "read_version",
 ]
